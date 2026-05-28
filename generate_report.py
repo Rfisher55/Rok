@@ -111,14 +111,14 @@ def run():
         [t for t, _ in top_tickers]
         + [t for t in extra if t not in seen]
         + [t for t in seed if t not in seen and t not in extra]
-    ))[:40]
+    ))[:60]
 
     # ── Per-ticker sentiment ──────────────────────────────────────
-    ticker_sentiment = sentiment.per_ticker_sentiment(all_posts, ticker_list[:25])
+    ticker_sentiment = sentiment.per_ticker_sentiment(all_posts, ticker_list[:30])
 
     # ── Stock data ────────────────────────────────────────────────
     stock_data = []
-    for ticker in ticker_list[:30]:
+    for ticker in ticker_list[:60]:
         data = _safe(yahoo_finance.get_stock_data, ticker, default=lambda: None, label=f"Stock:{ticker}")
         if data:
             data["sentiment"] = ticker_sentiment.get(ticker, {})
@@ -173,6 +173,36 @@ def run():
         f"Sells: {len(analysis.get('sell_signals', []))}"
     )
 
+    # ── Build signal lookup for screener ─────────────────────────
+    signal_lookup = {}
+    for sig in analysis.get("buy_signals", []):
+        signal_lookup[sig["ticker"]] = {"type": "buy", "strength": sig.get("signal_strength", 5)}
+    for sig in analysis.get("sell_signals", []):
+        signal_lookup[sig["ticker"]] = {"type": "sell", "strength": sig.get("signal_strength", 5)}
+    for sig in analysis.get("watch_list", []):
+        signal_lookup[sig["ticker"]] = {"type": "watch", "strength": 5}
+
+    for stock in stock_data:
+        t = stock["ticker"]
+        sig = signal_lookup.get(t, {})
+        stock["rok_signal"] = sig.get("type", "neutral")
+        stock["signal_strength"] = sig.get("strength", 0)
+
+    # ── Enrich signals with price sparklines ──────────────────────
+    price_lookup = {s["ticker"]: s["price"] for s in stock_data}
+    all_signals = (
+        analysis.get("buy_signals", [])
+        + analysis.get("sell_signals", [])
+        + analysis.get("watch_list", [])
+    )
+    for sig in all_signals:
+        ticker = sig.get("ticker", "")
+        if ticker:
+            sig["price_history"] = _safe(
+                yahoo_finance.get_price_history, ticker, 30,
+                default=list, label=f"Hist:{ticker}",
+            )
+
     # ── History tracking ──────────────────────────────────────────
     history_path = Path(__file__).parent / "docs" / "history.json"
     history = {"runs": []}
@@ -198,6 +228,32 @@ def run():
     })
     # Keep last 52 runs (1 year of weekly data)
     history["runs"] = history["runs"][-52:]
+
+    # ── Track record: compare last run's picks to current prices ──
+    track_record = []
+    if len(history["runs"]) >= 2:
+        prev_run = history["runs"][-2]
+        for sig in prev_run.get("buy_signals", []):
+            ticker = sig.get("ticker")
+            entry = sig.get("price")
+            if not ticker or not entry:
+                continue
+            current = price_lookup.get(ticker)
+            if not current:
+                sd = _safe(yahoo_finance.get_stock_data, ticker, default=lambda: None, label=f"Track:{ticker}")
+                current = sd["price"] if sd else None
+            if current and entry:
+                pct = round((current - entry) / entry * 100, 1)
+                track_record.append({
+                    "ticker": ticker,
+                    "entry_price": entry,
+                    "current_price": round(current, 2),
+                    "pct_change": pct,
+                    "target": sig.get("target"),
+                    "date": prev_run.get("date", ""),
+                })
+        track_record.sort(key=lambda x: abs(x["pct_change"]), reverse=True)
+        logger.info(f"Track record: {len(track_record)} picks evaluated")
 
     # ── Build page data ───────────────────────────────────────────
     page_data = {
@@ -245,6 +301,9 @@ def run():
             "technical": len(ta_data),
         },
         "recent_runs": history["runs"][-8:],
+        "track_record": track_record,
+        "generated_timestamp": datetime.utcnow().isoformat() + "Z",
+        "stock_universe": stock_data,
     }
 
     # ── Render HTML ───────────────────────────────────────────────
