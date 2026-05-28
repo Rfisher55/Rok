@@ -58,7 +58,6 @@ def get_put_call_ratio() -> dict:
         pcr = data.get("data", {}).get("total_put_call_ratio")
         equity_pcr = data.get("data", {}).get("equity_put_call_ratio")
         if pcr is None:
-            # Try alternate key
             for key in ["putCallRatio", "put_call_ratio", "pcr"]:
                 if key in data:
                     pcr = data[key]
@@ -80,11 +79,10 @@ def get_put_call_ratio() -> dict:
 def get_market_breadth() -> dict:
     """
     Market breadth indicators via yfinance:
-    advance/decline ratio, new highs/lows proxies using ETF data.
+    advance/decline ratio, sector performance, new highs/lows proxies.
     """
     breadth = {}
     try:
-        # Use sector ETFs as proxy for breadth
         sector_etfs = {
             "XLK": "Technology", "XLF": "Financials", "XLE": "Energy",
             "XLV": "Healthcare", "XLY": "Consumer Disc", "XLP": "Consumer Staples",
@@ -93,15 +91,18 @@ def get_market_breadth() -> dict:
         }
         up_sectors = []
         down_sectors = []
+        sector_performance = {}
         for etf, name in sector_etfs.items():
             try:
                 hist = yf.Ticker(etf).history(period="2d")
                 if not hist.empty and len(hist) >= 2:
                     chg = (float(hist["Close"].iloc[-1]) - float(hist["Close"].iloc[-2])) / float(hist["Close"].iloc[-2]) * 100
+                    chg = round(chg, 2)
+                    sector_performance[name] = chg
                     if chg > 0:
-                        up_sectors.append({"sector": name, "change_pct": round(chg, 2)})
+                        up_sectors.append({"sector": name, "change_pct": chg})
                     else:
-                        down_sectors.append({"sector": name, "change_pct": round(chg, 2)})
+                        down_sectors.append({"sector": name, "change_pct": chg})
             except Exception:
                 pass
 
@@ -112,9 +113,9 @@ def get_market_breadth() -> dict:
             "breadth_pct": round(len(up_sectors) / total * 100, 0) if total else 50,
             "top_sectors": sorted(up_sectors, key=lambda x: x["change_pct"], reverse=True)[:3],
             "worst_sectors": sorted(down_sectors, key=lambda x: x["change_pct"])[:3],
+            "sector_performance": sector_performance,
         }
 
-        # NYSE advance/decline via Yahoo (^ADVN, ^DECN)
         for sym, key in [("^ADVN", "advancers"), ("^DECN", "decliners")]:
             try:
                 hist = yf.Ticker(sym).history(period="1d")
@@ -175,8 +176,6 @@ def get_unusual_options_activity() -> list:
         )
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "lxml")
-
-        # Try multiple selectors since Finviz changes layout
         rows = soup.select("table#screener-table tr") or soup.select("tr.styled-row") or []
         for row in rows[:20]:
             cols = row.find_all("td")
