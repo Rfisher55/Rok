@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROK — Stock Intelligence Briefing</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-logo">ROK</span>
+        <div class="brand-sub">
+          <span class="brand-tagline">STOCK INTELLIGENCE BRIEFING</span>
+          <span class="brand-date" id="analysisDate">Loading...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="indices-bar" id="indicesBar"></div>
+        <div class="sentiment-badge" id="sentimentBadge">—</div>
+        <button class="refresh-btn" id="refreshBtn" onclick="triggerRefresh()">
+          <span class="refresh-icon">↻</span> REFRESH
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="rok-message-bar" id="rokMessageBar" style="display:none">
+    <span class="rok-label">ROK SAYS</span>
+    <span class="rok-message-text" id="rokMessageText"></span>
+  </div>
+
+  <main class="main">
+
+    <!-- SUMMARY + STATS -->
+    <section class="summary-row">
+      <div class="week-summary-card">
+        <div class="card-label">WEEKLY MARKET OVERVIEW</div>
+        <p class="week-summary-text" id="weekSummary">Loading intelligence...</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-num" id="statReddit">—</div>
+          <div class="stat-label">Reddit Posts</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statNews">—</div>
+          <div class="stat-label">News Articles</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statStocks">—</div>
+          <div class="stat-label">Stocks Analyzed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statSec">—</div>
+          <div class="stat-label">SEC Filings</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statEarnings">—</div>
+          <div class="stat-label">Earnings Ahead</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num" id="statOptions">—</div>
+          <div class="stat-label">Options Alerts</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEAR/GREED + SENTIMENT ROW -->
+    <section class="metrics-row">
+      <div class="gauge-card">
+        <div class="card-label">CNN FEAR / GREED INDEX</div>
+        <div class="gauge-track">
+          <div class="gauge-fill" id="gaugeFill"></div>
+        </div>
+        <div class="gauge-markers">
+          <span>FEAR</span><span>NEUTRAL</span><span>GREED</span>
+        </div>
+        <div class="gauge-score" id="gaugeScore">—/10</div>
+      </div>
+      <div class="social-sentiment-card">
+        <div class="card-label">SOCIAL SENTIMENT BREAKDOWN</div>
+        <div class="sentiment-bars" id="sentimentBars">
+          <div class="sent-bar-wrap">
+            <span class="sent-bar-label bullish-label">BULLISH</span>
+            <div class="sent-bar-track"><div class="sent-bar bullish-bar" id="bullBar" style="width:0%"></div></div>
+            <span class="sent-bar-pct" id="bullPct">—%</span>
+          </div>
+          <div class="sent-bar-wrap">
+            <span class="sent-bar-label bearish-label">BEARISH</span>
+            <div class="sent-bar-track"><div class="sent-bar bearish-bar" id="bearBar" style="width:0%"></div></div>
+            <span class="sent-bar-pct" id="bearPct">—%</span>
+          </div>
+          <div class="sent-bar-wrap">
+            <span class="sent-bar-label neutral-label">NEUTRAL</span>
+            <div class="sent-bar-track"><div class="sent-bar neutral-bar" id="neutBar" style="width:0%"></div></div>
+            <span class="sent-bar-pct" id="neutPct">—%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTOR HEAT -->
+    <section class="sector-row" id="sectorRow" style="display:none">
+      <div class="sector-card hot">
+        <div class="sector-icon">🔥</div>
+        <div>
+          <div class="sector-type">HOTTEST SECTOR</div>
+          <div class="sector-text" id="sectorHot"></div>
+        </div>
+      </div>
+      <div class="sector-card cold">
+        <div class="sector-icon">❄️</div>
+        <div>
+          <div class="sector-type">COLDEST SECTOR</div>
+          <div class="sector-text" id="sectorCold"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRENDING TICKERS -->
+    <section class="trending-section" id="trendingSection" style="display:none">
+      <div class="section-header">
+        <h2 class="section-title">TRENDING TICKERS</h2>
+        <span class="section-sub">Most mentioned across Reddit & News this week</span>
+      </div>
+      <div class="ticker-tape" id="tickerTape"></div>
+    </section>
+
+    <!-- BUY SIGNALS -->
+    <section class="signals-section">
+      <div class="section-header">
+        <h2 class="section-title buy-title">BUY SIGNALS</h2>
+        <span class="section-sub" id="buyCount">—</span>
+      </div>
+      <div class="cards-grid" id="buyCards">
+        <div class="loading-card">Loading buy signals...</div>
+      </div>
+    </section>
+
+    <!-- SELL SIGNALS -->
+    <section class="signals-section">
+      <div class="section-header">
+        <h2 class="section-title sell-title">SELL / AVOID</h2>
+        <span class="section-sub" id="sellCount">—</span>
+      </div>
+      <div class="cards-grid" id="sellCards">
+        <div class="loading-card">Loading sell signals...</div>
+      </div>
+    </section>
+
+    <!-- SHORT SQUEEZE ALERTS -->
+    <section class="signals-section" id="squeezeSection" style="display:none">
+      <div class="section-header">
+        <h2 class="section-title squeeze-title">SHORT SQUEEZE ALERTS</h2>
+        <span class="section-sub">High short interest + rising sentiment = potential squeeze</span>
+      </div>
+      <div class="squeeze-grid" id="squeezeCards"></div>
+    </section>
+
+    <!-- EARNINGS PLAYS -->
+    <section class="signals-section" id="earningsSection" style="display:none">
+      <div class="section-header">
+        <h2 class="section-title earnings-title">EARNINGS PLAYS</h2>
+        <span class="section-sub">Upcoming catalysts — position before the print</span>
+      </div>
+      <div class="earnings-grid" id="earningsCards"></div>
+    </section>
+
+    <!-- WATCH LIST -->
+    <section class="signals-section">
+      <div class="section-header">
+        <h2 class="section-title watch-title">WATCH LIST</h2>
+        <span class="section-sub" id="watchCount">—</span>
+      </div>
+      <div class="cards-grid" id="watchCards">
+        <div class="loading-card">Loading watch list...</div>
+      </div>
+    </section>
+
+    <!-- NOTABLE TRENDS -->
+    <section class="trends-section" id="trendsSection" style="display:none">
+      <div class="section-header">
+        <h2 class="section-title">NOTABLE TRENDS THIS WEEK</h2>
+      </div>
+      <div class="trends-list" id="trendsList"></div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-brand">ROK</span>
+      <span class="footer-text">
+        Intelligence sourced from Reddit, financial news, SEC EDGAR, Yahoo Finance, CNN Fear/Greed, and options flow.
+        Not financial advice. Do your own due diligence before trading.
+      </span>
+      <span class="footer-status" id="footerStatus">Loading...</span>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
