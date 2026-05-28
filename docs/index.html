@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROK — BULLISH · May 28, 2026 04:18 PM UTC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  --gold: #D4A017; --gold-bright: #FFD700; --gold-dim: #A07810;
+  --gold-subtle: rgba(212,160,23,0.12);
+  --black: #080808; --black-2: #0f0f0f; --black-3: #141414; --black-4: #1a1a1a;
+  --white: #f0f0f0; --white-dim: #aaaaaa; --white-muted: #666;
+  --green: #00d084; --green-dim: rgba(0,208,132,0.15);
+  --red: #ff4444; --red-dim: rgba(255,68,68,0.15);
+  --blue: #4488ff; --orange: #ff8800;
+  --font: 'Inter',-apple-system,sans-serif; --display: 'Bebas Neue','Inter',sans-serif;
+  --border: 1px solid rgba(212,160,23,0.2);
+  --border-sub: 1px solid rgba(255,255,255,0.06);
+  --r: 8px; --rl: 12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--white);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+.hdr{position:sticky;top:0;z-index:100;background:rgba(8,8,8,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(212,160,23,.3);padding:0 2rem}
+.hdr-in{max-width:1400px;margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.brand{display:flex;align-items:center;gap:1rem}
+.logo{font-family:var(--display);font-size:2.8rem;letter-spacing:.15em;color:var(--gold-bright);text-shadow:0 0 30px rgba(255,215,0,.5),0 0 60px rgba(255,215,0,.2);line-height:1}
+.brand-sub{display:flex;flex-direction:column;gap:2px}
+.tagline{font-size:9px;font-weight:700;letter-spacing:.25em;color:var(--gold-dim);text-transform:uppercase}
+.upd{font-size:11px;color:var(--white-muted);letter-spacing:.05em}
+.hdr-r{display:flex;align-items:center;gap:1rem;flex-wrap:nowrap}
+.sbadge{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.12em;border:1px solid currentColor;text-transform:uppercase;white-space:nowrap}
+.sbadge.BULLISH{color:var(--green);background:var(--green-dim)}
+.sbadge.BEARISH{color:var(--red);background:var(--red-dim)}
+.sbadge.NEUTRAL,.sbadge.MIXED{color:var(--gold);background:var(--gold-subtle)}
+.rok-bar{background:linear-gradient(90deg,var(--black-3),rgba(212,160,23,.08),var(--black-3));border-bottom:var(--border);padding:10px 2rem;display:flex;align-items:center;gap:1rem}
+.rok-lbl{font-size:10px;font-weight:800;letter-spacing:.2em;color:var(--gold-bright);white-space:nowrap;border:1px solid var(--gold-dim);padding:3px 8px;border-radius:3px;flex-shrink:0}
+.rok-msg{font-size:13px;color:var(--white-dim);font-style:italic}
+.main{max-width:1400px;margin:0 auto;padding:2rem;display:flex;flex-direction:column;gap:2.5rem}
+.sum-row{display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start}
+.sum-card{background:var(--black-3);border:var(--border);border-radius:var(--rl);padding:1.5rem;position:relative;overflow:hidden}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.clabel{font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--gold-dim);margin-bottom:.75rem;text-transform:uppercase}
+.sum-txt{font-size:15px;line-height:1.7;color:var(--white-dim)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(212,160,23,.1);border:var(--border);border-radius:var(--rl);overflow:hidden;min-width:260px}
+.sbox{background:var(--black-3);padding:1rem;text-align:center}
+.snum{font-family:var(--display);font-size:1.8rem;color:var(--gold-bright);line-height:1;letter-spacing:.05em}
+.slbl{font-size:9px;color:var(--white-muted);letter-spacing:.1em;margin-top:3px;text-transform:uppercase}
+.met-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.gauge-card,.sent-card{background:var(--black-3);border:var(--border);border-radius:var(--rl);padding:1.25rem 1.5rem}
+.gauge-track{height:10px;background:linear-gradient(90deg,#ff4444,#ff8800,#ffd700,#88cc00,#00d084);border-radius:5px;position:relative;overflow:visible;margin:1rem 0 .5rem}
+.gauge-pin{position:absolute;top:50%;transform:translateY(-50%);width:18px;height:18px;background:white;border-radius:50%;border:3px solid var(--black);box-shadow:0 0 12px rgba(255,255,255,.6)}
+.gauge-mkrs{display:flex;justify-content:space-between;font-size:9px;color:var(--white-muted);letter-spacing:.05em;text-transform:uppercase}
+.gauge-score{text-align:center;font-family:var(--display);font-size:1.8rem;color:var(--gold-bright);margin-top:6px;letter-spacing:.1em}
+.sbars{display:flex;flex-direction:column;gap:10px;margin-top:1rem}
+.sbar-row{display:flex;align-items:center;gap:10px}
+.sbar-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;width:60px;flex-shrink:0}
+.bull-l{color:var(--green)}.bear-l{color:var(--red)}.neut-l{color:var(--white-muted)}
+.sbar-track{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden}
+.sbar{height:100%;border-radius:4px}
+.bull-b{background:var(--green)}.bear-b{background:var(--red)}.neut-b{background:var(--white-muted)}
+.sbar-pct{font-size:12px;font-weight:600;width:36px;text-align:right;color:var(--white-dim)}
+.sec-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.sec-card{background:var(--black-3);border:var(--border);border-radius:var(--rl);padding:1.25rem;display:flex;align-items:flex-start;gap:1rem}
+.sec-card.hot{border-color:rgba(255,136,0,.4)}.sec-card.cold{border-color:rgba(68,136,255,.4)}
+.sec-ico{font-size:1.5rem;line-height:1}
+.sec-type{font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--white-muted);margin-bottom:4px;text-transform:uppercase}
+.sec-txt{font-size:13px;color:var(--white-dim);line-height:1.5}
+.tape{display:flex;flex-wrap:wrap;gap:8px;margin-top:1rem}
+.chip{background:var(--black-4);border:var(--border);border-radius:4px;padding:5px 10px;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.08em;display:flex;align-items:center;gap:6px}
+.chip .cnt{font-size:10px;font-weight:400;color:var(--white-muted)}
+.sec-hdr{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.25rem}
+.sec-ttl{font-family:var(--display);font-size:1.6rem;letter-spacing:.12em;color:var(--gold)}
+.buy-ttl{color:var(--green)}.sell-ttl{color:var(--red)}.watch-ttl{color:var(--gold)}.earn-ttl{color:var(--blue)}
+.sec-sub{font-size:11px;color:var(--white-muted);letter-spacing:.05em}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem}
+.card{background:var(--black-3);border-radius:var(--rl);padding:1.5rem;position:relative;overflow:hidden;border:1px solid transparent;animation:fu .4s ease both}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.card.buy{border-color:rgba(0,208,132,.3);background:linear-gradient(135deg,var(--black-3),rgba(0,208,132,.04))}
+.card.buy::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);box-shadow:0 0 12px var(--green)}
+.card.sell{border-color:rgba(255,68,68,.3);background:linear-gradient(135deg,var(--black-3),rgba(255,68,68,.04))}
+.card.sell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red);box-shadow:0 0 12px var(--red)}
+.card.watch{border-color:rgba(212,160,23,.3);background:linear-gradient(135deg,var(--black-3),rgba(212,160,23,.04))}
+.card.watch::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold)}
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.c-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem}
+.c-ticker-blk{display:flex;flex-direction:column;gap:2px}
+.c-ticker{font-family:var(--display);font-size:2rem;letter-spacing:.1em;line-height:1}
+.card.buy .c-ticker{color:var(--green)}.card.sell .c-ticker{color:var(--red)}.card.watch .c-ticker{color:var(--gold-bright)}
+.c-co{font-size:11px;color:var(--white-muted)}
+.c-badges{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.str-badge{font-size:10px;font-weight:700;letter-spacing:.1em;padding:3px 8px;border-radius:3px;text-transform:uppercase}
+.card.buy .str-badge{background:var(--green-dim);color:var(--green)}
+.card.sell .str-badge{background:var(--red-dim);color:var(--red)}
+.card.watch .str-badge{background:var(--gold-subtle);color:var(--gold)}
+.risk-b{font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid rgba(255,255,255,.1);color:var(--white-muted)}
+.risk-b.High{border-color:rgba(255,68,68,.4);color:var(--red)}
+.risk-b.Medium{border-color:rgba(255,215,0,.3);color:var(--gold)}
+.risk-b.Low{border-color:rgba(0,208,132,.3);color:var(--green)}
+.dsigs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.dsig{font-size:9px;font-weight:600;letter-spacing:.08em;padding:2px 6px;border-radius:3px;text-transform:uppercase;background:rgba(255,255,255,.05);color:var(--white-muted);border:1px solid rgba(255,255,255,.08)}
+.dsig.reddit{color:#FF4500;border-color:rgba(255,69,0,.3);background:rgba(255,69,0,.08)}
+.dsig.options{color:var(--blue);border-color:rgba(68,136,255,.3);background:rgba(68,136,255,.08)}
+.dsig.earnings{color:var(--gold);border-color:rgba(212,160,23,.3);background:rgba(212,160,23,.08)}
+.price-row{display:flex;align-items:center;gap:1rem;margin-bottom:1rem;padding:.75rem;background:rgba(0,0,0,.3);border-radius:6px;flex-wrap:wrap}
+.p-cur{font-size:18px;font-weight:700;color:var(--white)}
+.p-tgt{font-size:12px;color:var(--white-muted);display:flex;align-items:center;gap:4px}
+.p-arr{color:var(--green);font-size:14px}
+.t-hz{margin-left:auto;font-size:10px;color:var(--white-muted);border:1px solid rgba(255,255,255,.1);padding:2px 6px;border-radius:10px}
+.catalyst{background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:4px;padding:6px 10px;margin-bottom:10px;font-size:11px;color:var(--gold)}
+.catalyst::before{content:'⚡ '}
+.reasons{list-style:none;margin-bottom:1rem;display:flex;flex-direction:column;gap:6px}
+.reasons li{font-size:12px;color:var(--white-dim);display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.reasons li::before{content:'▸';color:var(--gold-dim);font-size:10px;margin-top:3px;flex-shrink:0}
+.urg{font-size:10px;font-weight:700;letter-spacing:.1em;padding:3px 8px;border-radius:3px;text-transform:uppercase;margin-bottom:10px;display:inline-block}
+.urg.IMMEDIATE{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,68,68,.4)}
+.rok-take{background:rgba(212,160,23,.07);border-left:2px solid var(--gold-dim);padding:8px 10px;border-radius:0 4px 4px 0;font-size:12px;font-style:italic;color:var(--white-dim);line-height:1.5}
+.rok-take::before{content:'ROK: ';font-style:normal;font-weight:700;color:var(--gold);font-size:10px;letter-spacing:.1em}
+.w-trigger{background:rgba(0,0,0,.3);border-radius:6px;padding:10px;margin-bottom:8px}
+.w-tlbl{font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--gold-dim);margin-bottom:4px;text-transform:uppercase}
+.w-ttxt{font-size:12px;color:var(--white-dim)}
+.w-risk{font-size:11px;color:var(--red);display:flex;align-items:center;gap:6px}
+.w-risk::before{content:'⚠'}
+.w-pot{font-size:11px;color:var(--green);margin-top:6px}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.ecard{background:var(--black-3);border:1px solid rgba(68,136,255,.3);border-radius:var(--rl);padding:1.25rem;position:relative;overflow:hidden;animation:fu .4s ease both}
+.ecard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue)}
+.e-ticker{font-family:var(--display);font-size:1.8rem;color:var(--blue);letter-spacing:.1em;margin-bottom:4px}
+.e-date{font-size:11px;color:var(--white-muted);margin-bottom:8px}
+.e-dir{font-size:10px;font-weight:700;letter-spacing:.1em;padding:3px 8px;border-radius:3px;text-transform:uppercase;display:inline-block;margin-bottom:8px}
+.e-dir.CALL{background:var(--green-dim);color:var(--green)}
+.e-dir.PUT{background:var(--red-dim);color:var(--red)}
+.e-dir.STRADDLE{background:rgba(68,136,255,.1);color:var(--blue)}
+.e-play{font-size:12px;color:var(--white-dim)}
+.trends{display:flex;flex-direction:column;gap:8px}
+.trend{background:var(--black-3);border-left:3px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:12px 16px;font-size:14px;color:var(--white-dim);display:flex;align-items:center;gap:12px}
+.t-num{font-family:var(--display);font-size:1.4rem;color:var(--gold-dim);width:28px;flex-shrink:0}
+.ftr{border-top:var(--border);margin-top:2rem;padding:1.5rem 2rem;background:var(--black-2)}
+.ftr-in{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.ftr-brand{font-family:var(--display);font-size:1.4rem;color:var(--gold-dim);letter-spacing:.2em}
+.ftr-txt{font-size:11px;color:var(--white-muted);flex:1}
+.ftr-time{font-size:10px;color:var(--white-muted);white-space:nowrap}
+@media(max-width:900px){.sum-row,.sec-row,.met-row{grid-template-columns:1fr}.cgrid{grid-template-columns:1fr}.main{padding:1rem}.logo{font-size:2rem}}
+  </style>
+</head>
+<body>
+<header class="hdr"><div class="hdr-in"><div class="brand"><span class="logo">ROK</span><div class="brand-sub"><span class="tagline">STOCK INTELLIGENCE BRIEFING</span><span class="upd">May 28, 2026 04:18 PM UTC</span></div></div><div class="hdr-r"><div class="sbadge BULLISH">BULLISH</div></div></div></header>
+<div class="rok-bar"><span class="rok-lbl">ROK SAYS</span><span class="rok-msg">Big week — five major earnings prints, AI running hot, and Iran deal killing the oil fear trade all at once. Stack AVGO and CRWD calls before they report, grab AS on the dip for the 37% target, and stay away from the sub-dollar Reddit trash like TOP. Inflation data is the only thing that can wreck this — watch the Fed commentary closely.</span></div>
+<main class="main">
+<section class="sum-row"><div class="sum-card"><div class="clabel">WEEKLY MARKET OVERVIEW</div><p class="sum-txt">Markets grinding higher with SPY +0.5% and QQQ +0.8% as US-Iran deal hopes crush oil fears and lift tech. Fear/Greed at 60.9 (Greed) with VIX down 2.1% to 15.94 — risk appetite is healthy but not euphoric. AI and cybersecurity are the clear momentum plays this week with AVGO, CRWD, and PANW all reporting within 7 days.</p></div><div class="stats"><div class="sbox"><div class="snum">170</div><div class="slbl">News Articles</div></div><div class="sbox"><div class="snum">80</div><div class="slbl">SEC Filings</div></div><div class="sbox"><div class="snum">25</div><div class="slbl">Earnings Ahead</div></div><div class="sbox"><div class="snum">20</div><div class="slbl">Options Alerts</div></div></div></section>
+<section class="met-row"><div class="gauge-card"><div class="clabel">CNN FEAR / GREED INDEX</div><div class="gauge-track"><div class="gauge-pin" style="left:calc(61% - 9px)"></div></div><div class="gauge-mkrs"><span>FEAR</span><span>NEUTRAL</span><span>GREED</span></div><div class="gauge-score">60.9/100 — Greed</div></div><div class="sent-card"><div class="clabel">SOCIAL SENTIMENT BREAKDOWN</div><div class="sbars"><div class="sbar-row"><span class="sbar-lbl bull-l">BULLISH</span><div class="sbar-track"><div class="sbar bull-b" style="width:13%"></div></div><span class="sbar-pct">13%</span></div><div class="sbar-row"><span class="sbar-lbl bear-l">BEARISH</span><div class="sbar-track"><div class="sbar bear-b" style="width:6%"></div></div><span class="sbar-pct">6%</span></div><div class="sbar-row"><span class="sbar-lbl neut-l">NEUTRAL</span><div class="sbar-track"><div class="sbar neut-b" style="width:81%"></div></div><span class="sbar-pct">81%</span></div></div></div></section>
+<section class="sec-row"><div class="sec-card hot"><div class="sec-ico">🔥</div><div><div class="sec-type">HOTTEST SECTOR</div><div class="sec-txt">Technology/AI — Snowflake surging on enterprise AI demand, Groq raising $650M, AVGO/CRWD/DELL all reporting this week</div></div></div><div class="sec-card cold"><div class="sec-ico">❄️</div><div><div class="sec-type">COLDEST SECTOR</div><div class="sec-txt">Real Estate/Housing — Mortgage rates at 6.53% nine-month high, Fed rate cuts off the table</div></div></div></section>
+<section><div class="sec-hdr"><h2 class="sec-ttl">TRENDING TICKERS</h2><span class="sec-sub">Most mentioned across Reddit &amp; News</span></div><div class="tape"><div class="chip">$AVGO<span class="cnt"></span></div><div class="chip">$CRWD<span class="cnt"></span></div><div class="chip">$AI<span class="cnt">10</span></div><div class="chip">$AS<span class="cnt">39</span></div><div class="chip">$AMP<span class="cnt">9</span></div><div class="chip">$TECH<span class="cnt">7</span></div><div class="chip">$BANK<span class="cnt">7</span></div><div class="chip">$DELL<span class="cnt"></span></div><div class="chip">$PANW<span class="cnt"></span></div><div class="chip">$COST<span class="cnt"></span></div></div></section>
+<section><div class="sec-hdr"><h2 class="sec-ttl buy-ttl">BUY SIGNALS</h2><span class="sec-sub">6 signals identified</span></div><div class="cgrid">
+<div class="card buy"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$AVGO</div><div class="c-co">Broadcom Inc.</div></div><div class="c-badges"><span class="str-badge">STRONG · 9/10</span><span class="risk-b Medium">Medium</span></div></div><div class="dsigs"><span class="dsig earnings">earnings</span><span class="dsig news">news</span><span class="dsig options">options</span></div><div class="catalyst">Q2 2026 earnings this week — AI infrastructure demand at peak with EPS estimate $2.39</div><ul class="reasons"><li>Biggest semi name on the earnings calendar this week</li><li>AI chip demand at full velocity — Snowflake surging on enterprise AI, Groq raising $650M</li><li>Semi cycle hot across Micron and Sandisk — AVGO directly benefits</li><li>VIX at 15.94 means options are cheap — defined risk earnings play</li></ul><div class="rok-take">AVGO into earnings with AI tailwinds is the highest conviction play on the board. Buy any dip pre-earnings.</div></div>
+<div class="card buy"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$CRWD</div><div class="c-co">CrowdStrike Holdings</div></div><div class="c-badges"><span class="str-badge">STRONG · 8/10</span><span class="risk-b Medium">Medium</span></div></div><div class="dsigs"><span class="dsig earnings">earnings</span><span class="dsig news">news</span><span class="dsig options">options</span></div><div class="catalyst">Q1 2027 earnings this week — cybersecurity sector on fire, EPS estimate $1.07</div><ul class="reasons"><li>Cybersecurity called out as top sector play in multiple headlines</li><li>Iran geopolitical tensions sustain enterprise security budgets</li><li>PANW also reporting same week — sector narrative momentum</li></ul><div class="rok-take">Cyber is the hottest sub-sector. CRWD is the king. Earnings beat incoming.</div></div>
+<div class="card buy"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$AS</div><div class="c-co">Amer Sports Inc.</div></div><div class="c-badges"><span class="str-badge">MODERATE · 6/10</span><span class="risk-b Medium">Medium</span></div></div><div class="dsigs"><span class="dsig reddit">reddit</span><span class="dsig news">news</span></div><div class="price-row"><span class="p-cur">$36.29</span><span class="p-tgt"><span class="p-arr">→</span> $49.72</span><span class="t-hz">1-3 months</span></div><div class="catalyst">Strong_buy analyst rating with 37% upside — most mentioned ticker with 82 social mentions</div><ul class="reasons"><li>37% upside to $49.72 analyst target</li><li>82 social mentions — most of any tracked ticker</li><li>Price dip today while sentiment stays positive — buy the divergence</li></ul><div class="rok-take">Most-mentioned with a strong_buy and 37% to target. The dip today is your entry.</div></div>
+<div class="card buy"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$AMP</div><div class="c-co">Ameriprise Financial</div></div><div class="c-badges"><span class="str-badge">MODERATE · 7/10</span><span class="risk-b Low">Low</span></div></div><div class="dsigs"><span class="dsig news">news</span><span class="dsig earnings">earnings</span></div><div class="price-row"><span class="p-cur">$438.34</span><span class="p-tgt"><span class="p-arr">→</span> $540.82</span><span class="t-hz">1-3 months</span></div><div class="catalyst">PE 10.9 with buy rating and 23% upside — cheapest name in a greed market</div><ul class="reasons"><li>PE of only 10.9 — massively undervalued vs the market</li><li>Analyst buy with $540.82 target = 23% upside</li><li>Canada big banks all beat today — financial sector health confirmed</li></ul><div class="rok-take">Cheap financials with a buy rating while the sector shows strength. Boring money-maker of the week.</div></div>
+</div></section>
+<section><div class="sec-hdr"><h2 class="sec-ttl sell-ttl">SELL / AVOID</h2><span class="sec-sub">3 signals identified</span></div><div class="cgrid">
+<div class="card sell"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$TOP</div><div class="c-co">TOP Financial Group</div></div><div class="c-badges"><span class="str-badge">MODERATE · 6/10</span></div></div><span class="urg IMMEDIATE">IMMEDIATE</span><div class="price-row"><span class="p-cur">$0.95</span></div><ul class="reasons"><li>Sub-dollar stock with no PE, no analyst, no price target</li><li>Volume of only 51k — illiquid trap</li><li>Reddit pump with no fundamental floor</li></ul><div class="rok-take">Under a dollar, no coverage. Reddit pumps on stocks like this end one way. Get out.</div></div>
+<div class="card sell"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$COST</div><div class="c-co">Costco Wholesale</div></div><div class="c-badges"><span class="str-badge">WEAK · 5/10</span></div></div><span class="urg IMMEDIATE">REDUCE POSITION</span><ul class="reasons"><li>Earnings this week — priced for perfection, any miss gets crushed</li><li>Inflation firming — margin squeeze risk real</li></ul><div class="rok-take">Great company but priced for perfection into earnings. Trim, buy back cheaper after.</div></div>
+</div></section>
+<section><div class="sec-hdr"><h2 class="sec-ttl earn-ttl">EARNINGS PLAYS</h2><span class="sec-sub">Position before the print</span></div><div class="egrid">
+<div class="ecard"><div class="e-ticker">$AVGO</div><div class="e-date">This week AMC</div><span class="e-dir CALL">CALL</span><div class="e-play">Beat expected — AI chip demand at peak, semi sector strong. EPS $2.39 looks beatable.</div></div>
+<div class="ecard"><div class="e-ticker">$CRWD</div><div class="e-date">This week AMC</div><span class="e-dir CALL">CALL</span><div class="e-play">Beat expected — cyber spending accelerating, Iran tensions keeping budgets elevated. EPS $1.07 conservative.</div></div>
+<div class="ecard"><div class="e-ticker">$DELL</div><div class="e-date">This week AMC</div><span class="e-dir CALL">CALL</span><div class="e-play">Beat expected — AI server infrastructure buildout real, data center capex flowing. EPS $2.96.</div></div>
+<div class="ecard"><div class="e-ticker">$PANW</div><div class="e-date">This week AMC</div><span class="e-dir CALL">CALL</span><div class="e-play">Beat expected — platformization story intact, government contracts sustained. EPS $0.80 looks low.</div></div>
+<div class="ecard"><div class="e-ticker">$COST</div><div class="e-date">This week AMC</div><span class="e-dir STRADDLE">STRADDLE</span><div class="e-play">Volatile — EPS $4.92 with inflation headwinds. Binary risk event.</div></div>
+</div></section>
+<section><div class="sec-hdr"><h2 class="sec-ttl watch-ttl">WATCH LIST</h2><span class="sec-sub">5 positions on radar</span></div><div class="cgrid">
+<div class="card watch"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$PANW</div><div class="c-co">Palo Alto Networks</div></div><div class="c-badges"><span class="str-badge">WATCHING</span></div></div><div class="rok-take" style="margin-bottom:10px">Earnings this week alongside CRWD — cybersecurity double-header. EPS $0.80.</div><div class="w-trigger"><div class="w-tlbl">BUY TRIGGER</div><div class="w-ttxt">Post-earnings gap up confirmation above key resistance</div></div><div class="w-risk">Stretched valuation — any guidance miss gets sold hard</div><div class="w-pot">⬆ Potential: +18.5%</div></div>
+<div class="card watch"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$DELL</div><div class="c-co">Dell Technologies</div></div><div class="c-badges"><span class="str-badge">WATCHING</span></div></div><div class="rok-take" style="margin-bottom:10px">AI server infrastructure cycle — Dell is a primary beneficiary. EPS $2.96.</div><div class="w-trigger"><div class="w-tlbl">BUY TRIGGER</div><div class="w-ttxt">Earnings beat with AI server revenue guidance raise</div></div><div class="w-risk">PC segment weakness could drag the headline number</div><div class="w-pot">⬆ Potential: +22%</div></div>
+<div class="card watch"><div class="c-hdr"><div class="c-ticker-blk"><div class="c-ticker">$MDB</div><div class="c-co">MongoDB Inc.</div></div><div class="c-badges"><span class="str-badge">WATCHING</span></div></div><div class="rok-take" style="margin-bottom:10px">Cloud database play benefiting from AI workload explosion. EPS $1.18.</div><div class="w-trigger"><div class="w-tlbl">BUY TRIGGER</div><div class="w-ttxt">Atlas cloud revenue growth above 25% YoY</div></div><div class="w-risk">Snowflake surge this week overshadowing the story</div><div class="w-pot">⬆ Potential: +28%</div></div>
+</div></section>
+<section><div class="sec-hdr"><h2 class="sec-ttl">NOTABLE TRENDS THIS WEEK</h2></div><div class="trends">
+<div class="trend"><span class="t-num">01</span>US-Iran peace deal progress is the macro catalyst — oil pulling back while equities surge, geopolitical risk premium deflating rapidly</div>
+<div class="trend"><span class="t-num">02</span>AI infrastructure spending at peak velocity — Snowflake surging, Groq raising $650M, AVGO/CRDO/DELL all reporting earnings this week</div>
+<div class="trend"><span class="t-num">03</span>Cybersecurity is the hottest sub-sector — CRWD and PANW both reporting, Iran tensions keeping government cyber budgets elevated</div>
+<div class="trend"><span class="t-num">04</span>Inflation re-acceleration is the key tail risk — Fed eyeing rate hike, mortgage rates at 6.53% nine-month high</div>
+<div class="trend"><span class="t-num">05</span>Financial sector quietly strong — Canada big banks all beat, AMP at PE 10.9 with buy rating signals credit fears easing</div>
+</div></section>
+</main>
+<footer class="ftr"><div class="ftr-in"><span class="ftr-brand">ROK</span><span class="ftr-txt">Intelligence from Reddit, news, SEC EDGAR, Yahoo Finance, CNN Fear/Greed &amp; options flow. Not financial advice.</span><span class="ftr-time">May 28, 2026 04:18 PM UTC</span></div></footer>
+</body>
+</html>
