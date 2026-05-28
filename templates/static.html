@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>ROK — {{ data.market_sentiment }} · {{ data.analysis_date }}</title>
 <meta name="description" content="ROK AI Stock Intelligence — live buy/sell signals, screener, sector heat map."/>
+<meta name="theme-color" content="#050505"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ROK"/>
+<link rel="manifest" href="manifest.json"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -270,7 +275,141 @@ input,button{font-family:var(--font)}
 @media(max-width:1200px){.sig-layout{grid-template-columns:1fr 1fr}.mkt-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.sig-layout{grid-template-columns:1fr}.mkt-grid{grid-template-columns:1fr}.intel-grid{grid-template-columns:1fr}.sr-row{grid-template-columns:1fr}.tape-row{grid-template-columns:1fr}}
 @media(max-width:768px){.idx-bar{display:none}.tab-pane{padding:.9rem 1rem}.stats-row{grid-template-columns:repeat(4,1fr)}.sc-grid{grid-template-columns:repeat(2,1fr)}.track-grid{grid-template-columns:repeat(3,1fr)}.tab-search{display:none}.sc-sort{display:none}}
-@media(max-width:480px){.sc-grid{grid-template-columns:1fr 1fr}.track-grid{grid-template-columns:repeat(2,1fr)}.stats-row{grid-template-columns:repeat(2,1fr)}.tab-btn{padding:.65rem .7rem;font-size:9px;letter-spacing:.04em}.tab-btn .badge{display:none}.hdr-in{height:46px;padding:0 .85rem}.logo{font-size:1.9rem}}
+
+/* ── MOBILE: native bottom-nav layout ───────────────────── */
+.mob-srch{display:none}
+@media(max-width:600px){
+  body{padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));font-size:14px}
+
+  /* Compact header */
+  .hdr-in{height:44px;padding:0 1rem}
+  .logo{font-size:1.75rem;letter-spacing:.15em}
+  .brand-tag,.regime{display:none}
+  .sent{font-size:9px;padding:2px 9px}
+  .rok-bar{padding:5px 1rem}
+  .rok-msg{font-size:11px}
+
+  /* Fixed bottom nav — native iOS feel */
+  .tab-nav{
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    border-top:1px solid rgba(212,160,23,.18);border-bottom:none;
+    background:rgba(4,4,6,.97);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+    padding-bottom:env(safe-area-inset-bottom,0px);z-index:200
+  }
+  .tab-nav-in{height:56px;padding:0;max-width:100%;justify-content:space-around}
+  .tab-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;padding:.3rem .15rem;
+    border-bottom:none;border-top:2px solid transparent;
+    font-size:8px;letter-spacing:.07em;color:var(--wh3);white-space:nowrap
+  }
+  .tab-btn::before{font-size:17px;line-height:1;display:block;filter:grayscale(.3)}
+  .tab-btn[data-tab="signals"]::before{content:'⚡'}
+  .tab-btn[data-tab="market"]::before{content:'📊'}
+  .tab-btn[data-tab="screener"]::before{content:'🔍'}
+  .tab-btn[data-tab="intel"]::before{content:'💡'}
+  .tab-btn.active{color:var(--gold-b);border-top-color:var(--gold)}
+  .tab-btn.active::before{filter:none}
+  .tab-btn .badge{display:none}
+  .tab-search{display:none!important}
+
+  /* Sticky search inside content scroll area */
+  .mob-srch{
+    display:flex;padding:.48rem 1rem;
+    position:sticky;top:0;background:rgba(8,8,12,.95);backdrop-filter:blur(12px);
+    border-bottom:var(--border);z-index:99
+  }
+  .mob-srch .search-box{
+    flex:1;font-size:15px;border-radius:22px;padding:.52rem 1.1rem;
+    width:100%;background:rgba(255,255,255,.06);border-color:rgba(212,160,23,.25)
+  }
+
+  /* Tabs + pane */
+  .tab-pane{padding:.75rem .9rem}
+  .stats-row{grid-template-columns:repeat(4,1fr)}
+  .stat-box{padding:.5rem .25rem}
+  .stat-num{font-size:1.05rem}
+  .stat-lbl{font-size:6.5px}
+
+  /* Signal cards */
+  .card{border-radius:16px;padding:1rem 1.05rem}
+  .c-ticker{font-size:1.75rem}
+  .sig-layout{gap:.65rem}
+
+  /* Screener */
+  .sc-grid{grid-template-columns:1fr 1fr;gap:.45rem}
+  .sc-card{padding:.9rem .85rem;border-radius:16px}
+  .sc-ticker{font-size:1.3rem}
+  .sc-price{font-size:14px;font-weight:800}
+  .sc-chg{font-size:11px}
+  .sc-co{max-width:80px;font-size:8.5px}
+  .sc-spark{height:36px;margin:.28rem 0}
+
+  /* Market + Intel */
+  .mkt-card{border-radius:16px;padding:.9rem}
+  .intel-section{border-radius:16px;padding:.9rem}
+  .track-grid{grid-template-columns:repeat(3,1fr)}
+  .mini-grid{grid-template-columns:1fr 1fr}
+
+  /* Modal full sheet */
+  .modal{border-radius:22px 22px 0 0;max-height:96vh}
+
+  /* Footer hidden — bottom nav replaces it */
+  .ftr{display:none}
+
+  /* Sort hidden — accessed via modal */
+  .sc-sort,.sc-cnt{display:none}
+}
+
+/* ── FUTURISTIC THEME ────────────────────────────────────── */
+:root{
+  --glow-buy:0 0 20px rgba(0,208,132,.22),0 0 50px rgba(0,208,132,.09);
+  --glow-sell:0 0 20px rgba(255,68,68,.22),0 0 50px rgba(255,68,68,.09);
+  --glow-gold:0 0 22px rgba(212,160,23,.28),0 0 50px rgba(212,160,23,.1);
+  --blk:#030508;--blk2:#090b0f;--blk3:#0f1115;--blk4:#161a1f;--blk5:#1e2228;
+}
+/* Subtle grid background */
+body::after{content:'';position:fixed;inset:0;background:linear-gradient(rgba(212,160,23,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(212,160,23,.016) 1px,transparent 1px);background-size:46px 46px;pointer-events:none;z-index:-1}
+/* Radial glow from top */
+body::before{content:'';position:fixed;top:-20vh;left:50%;transform:translateX(-50%);width:120vw;height:70vh;background:radial-gradient(ellipse,rgba(212,160,23,.06) 0%,transparent 65%);pointer-events:none;z-index:-1}
+/* Logo */
+.logo{text-shadow:0 0 18px rgba(255,215,0,.65),0 0 45px rgba(255,215,0,.28),0 0 90px rgba(255,215,0,.1)}
+/* Header */
+.hdr{box-shadow:0 1px 0 rgba(212,160,23,.22),0 2px 28px rgba(212,160,23,.07)}
+/* Glassmorphism cards */
+.card,.sc-card,.mkt-card,.intel-section,.mini-card,.track-card,.sum-card{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+/* Signal card neon borders + glows */
+.card.buy{border-color:rgba(0,208,132,.38);box-shadow:var(--glow-buy),0 4px 28px rgba(0,0,0,.6)}
+.card.sell{border-color:rgba(255,68,68,.38);box-shadow:var(--glow-sell),0 4px 28px rgba(0,0,0,.6)}
+.card.watch{border-color:rgba(212,160,23,.32);box-shadow:var(--glow-gold),0 4px 28px rgba(0,0,0,.6)}
+.card:hover{transform:translateY(-3px)}
+/* Screener card glows */
+.sc-card.buy{box-shadow:0 0 14px rgba(0,208,132,.2),0 2px 18px rgba(0,0,0,.5)}
+.sc-card.sell{box-shadow:0 0 14px rgba(255,68,68,.2),0 2px 18px rgba(0,0,0,.5)}
+.sc-card.watch{box-shadow:0 0 14px rgba(212,160,23,.2),0 2px 18px rgba(0,0,0,.5)}
+.sc-card:hover{transform:translateY(-3px);box-shadow:0 0 22px rgba(212,160,23,.22),0 4px 28px rgba(0,0,0,.6)}
+/* Section title glows */
+.ttl-buy{text-shadow:0 0 16px rgba(0,208,132,.35)}
+.ttl-sell{text-shadow:0 0 16px rgba(255,68,68,.35)}
+.ttl-watch{text-shadow:0 0 16px rgba(255,215,0,.35)}
+/* Stats row */
+.stats-row{box-shadow:0 0 0 1px rgba(212,160,23,.1),0 2px 18px rgba(0,0,0,.5)}
+.stat-num{text-shadow:0 0 14px rgba(255,215,0,.25)}
+/* Active tab glow */
+.tab-btn.active{text-shadow:0 0 12px rgba(255,215,0,.45)}
+/* Modal */
+.modal{box-shadow:0 0 50px rgba(212,160,23,.16),0 0 100px rgba(212,160,23,.07),0 -4px 50px rgba(0,0,0,.7)}
+/* Chip glows */
+.chip:hover{background:var(--blk5);box-shadow:0 0 10px rgba(212,160,23,.22)}
+.st-chip:hover{background:var(--blk5);box-shadow:0 0 10px rgba(255,136,0,.22)}
+/* Scrollbar */
+::-webkit-scrollbar-thumb{background:rgba(212,160,23,.38)}
+::-webkit-scrollbar-thumb:hover{background:rgba(212,160,23,.58)}
+/* Live dot */
+.live-dot{box-shadow:0 0 8px rgba(0,208,132,.7)}
+/* ROK message bar */
+.rok-bar{position:relative}
+.rok-bar::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,160,23,.5),transparent)}
 
 /* ── MODAL ──────────────────────────────────────────────── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -355,6 +494,11 @@ input,button{font-family:var(--font)}
 <!-- SCROLLABLE CONTENT -->
 <div class="content">
 
+  <!-- Mobile sticky search (hidden on desktop via CSS) -->
+  <div class="mob-srch">
+    <input id="mob-srch-input" class="search-box" type="search" placeholder="Search ticker or company…" autocomplete="off" spellcheck="false"/>
+  </div>
+
   <!-- ── SIGNALS TAB ─────────────────────────────────────── -->
   <div class="tab-pane active" id="tab-signals">
     <!-- Stats strip -->
@@ -380,7 +524,7 @@ input,button{font-family:var(--font)}
         </div>
         <div class="cgrid">
           {% for s in data.buy_signals %}
-          <div class="card buy">
+          <div class="card buy" onclick="openModal('{{ s.ticker }}')" style="cursor:pointer">
             <div class="c-row1">
               <div class="c-left"><div class="c-ticker">${{ s.ticker }}</div><div class="c-co">{{ s.company }}</div></div>
               <div class="c-right">
@@ -415,7 +559,7 @@ input,button{font-family:var(--font)}
         </div>
         <div class="cgrid">
           {% for s in data.sell_signals %}
-          <div class="card sell">
+          <div class="card sell" onclick="openModal('{{ s.ticker }}')" style="cursor:pointer">
             <div class="c-row1">
               <div class="c-left"><div class="c-ticker">${{ s.ticker }}</div><div class="c-co">{{ s.company }}</div></div>
               <div class="c-right"><span class="str-b">{{ s.signal_strength|default(5) }}/10</span></div>
@@ -438,7 +582,7 @@ input,button{font-family:var(--font)}
         </div>
         <div class="cgrid">
           {% for w in data.watch_list %}
-          <div class="card watch">
+          <div class="card watch" onclick="openModal('{{ w.ticker }}')" style="cursor:pointer">
             <div class="c-row1">
               <div class="c-left"><div class="c-ticker">${{ w.ticker }}</div><div class="c-co">{{ w.company }}</div></div>
               <div class="c-right"><span class="str-b">WATCH</span></div>
@@ -987,6 +1131,8 @@ input,button{font-family:var(--font)}
 
   function switchToScreener(ticker) {
     document.getElementById('stock-search').value = ticker;
+    const mob = document.getElementById('mob-srch-input');
+    if (mob) mob.value = ticker;
     applySearch(ticker);
   }
   window.switchToScreener = switchToScreener;
@@ -1016,12 +1162,33 @@ input,button{font-family:var(--font)}
     setInterval(tick, 30000);
   }
 
+  // ── MOBILE SEARCH ─────────────────────────────────────────
+  const mobSrchEl = document.getElementById('mob-srch-input');
+  if (mobSrchEl) {
+    let deb4;
+    mobSrchEl.addEventListener('input', e => {
+      const v = e.target.value.trim();
+      const main = document.getElementById('stock-search');
+      if (main) main.value = v;
+      clearTimeout(deb4);
+      deb4 = setTimeout(() => applySearch(v), 150);
+    });
+    mobSrchEl.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { mobSrchEl.value = ''; applySearch(''); }
+    });
+  }
+
   // ── INIT ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     initSignalSparks();
     renderScreener();
     screenerBuilt = true;
   });
+
+  // ── SERVICE WORKER ─────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
 })();
 </script>
 </body>

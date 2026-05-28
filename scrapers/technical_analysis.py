@@ -57,14 +57,17 @@ def analyze_ticker(ticker: str) -> dict:
         vol_10d = float(volume.tail(10).mean()) if len(volume) >= 10 else None
         vol_ratio = round(float(volume.iloc[-1]) / vol_10d, 2) if vol_10d and vol_10d > 0 else None
 
+        # 52-week levels
         hist_1y = yf.download(ticker, period="1y", auto_adjust=True, progress=False)
         w52_high = round(float(hist_1y["High"].max()), 2) if not hist_1y.empty else None
         w52_low = round(float(hist_1y["Low"].min()), 2) if not hist_1y.empty else None
         pct_from_high = round((price - w52_high) / w52_high * 100, 1) if w52_high else None
         pct_from_low = round((price - w52_low) / w52_low * 100, 1) if w52_low else None
 
+        # RSI signal
         rsi_sig = "OVERSOLD" if rsi and rsi < 32 else "OVERBOUGHT" if rsi and rsi > 68 else "NEUTRAL"
 
+        # MACD signal (check histogram cross)
         macd_sig_label = "NEUTRAL"
         if len(histogram) >= 2:
             prev = float(histogram.iloc[-2])
@@ -77,6 +80,7 @@ def analyze_ticker(ticker: str) -> dict:
             else:
                 macd_sig_label = "BEARISH"
 
+        # Bollinger signal
         if price > bb_u:
             bb_sig = "BREAKOUT_UPPER"
         elif price < bb_l:

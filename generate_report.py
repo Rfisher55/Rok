@@ -1,6 +1,6 @@
 """
 ROK — Static report generator for GitHub Pages.
-Runs via GitHub Actions every hour. Outputs docs/index.html.
+Runs via GitHub Actions every 6 hours. Outputs docs/index.html.
 """
 import json
 import logging
@@ -46,7 +46,7 @@ def run():
     logger.info("ROK PIPELINE START")
     logger.info("=" * 60)
 
-    # ── Social scraping ────────────────────────────────────────────
+    # ── Social scraping ──────────────────────────────────────────
     reddit_posts = _safe(
         reddit_scraper.scrape_all,
         Config.REDDIT_SUBREDDITS, Config.REDDIT_MAX_POSTS,
@@ -78,7 +78,7 @@ def run():
     put_call_ratio= _safe(market_data.get_put_call_ratio, default=dict, label="PutCall")
     market_breadth= _safe(market_data.get_market_breadth, default=dict, label="Breadth")
 
-    # ── New data sources ────────────────────────────────────────────
+    # ── New data sources ──────────────────────────────────────────
     stocktwits_data = _safe(stocktwits_scraper.get_trending, default=list, label="StockTwits")
     congress_buys   = _safe(
         congressional_trades.get_congress_buys,
@@ -86,7 +86,7 @@ def run():
         default=list, label="Congress",
     )
 
-    # ── Sentiment + ticker extraction ────────────────────────────────
+    # ── Sentiment + ticker extraction ─────────────────────────────
     all_posts = sentiment.score_posts(all_posts)
     agg_sentiment = sentiment.aggregate_sentiment(all_posts)
     top_tickers = ticker_extractor.top_tickers(all_posts, n=40)
@@ -101,6 +101,7 @@ def run():
         t = (s.get("ticker") or "").strip().upper()
         if t and t.isalpha() and len(t) <= 5:
             extra.add(t)
+    # Add congressional buy tickers
     for c in congress_buys[:10]:
         extra.add(c["ticker"])
 
@@ -112,10 +113,10 @@ def run():
         + [t for t in seed if t not in seen and t not in extra]
     ))[:60]
 
-    # ── Per-ticker sentiment ────────────────────────────────────────
+    # ── Per-ticker sentiment ──────────────────────────────────────
     ticker_sentiment = sentiment.per_ticker_sentiment(all_posts, ticker_list[:30])
 
-    # ── Stock data ───────────────────────────────────────────────
+    # ── Stock data ────────────────────────────────────────────────
     stock_data = []
     for ticker in ticker_list[:60]:
         data = _safe(yahoo_finance.get_stock_data, ticker, default=lambda: None, label=f"Stock:{ticker}")
@@ -124,7 +125,7 @@ def run():
             stock_data.append(data)
     logger.info(f"Stock data: {len(stock_data)} tickers")
 
-    # ── Technical analysis ───────────────────────────────────────
+    # ── Technical analysis ────────────────────────────────────────
     ta_tickers = ticker_list[:Config.TA_MAX_TICKERS]
     ta_data = _safe(
         technical_analysis.analyze_multiple,
@@ -133,13 +134,13 @@ def run():
     )
     ta_setups = technical_analysis.find_setups(ta_data) if ta_data else []
 
-    # ── SEC filings ──────────────────────────────────────────────
+    # ── SEC filings ───────────────────────────────────────────────
     sec_filings = _safe(
         lambda: sec_scraper.get_recent_insider_trades(7) + sec_scraper.get_recent_8k_filings(7),
         default=list, label="SEC",
     )
 
-    # ── AI Analysis ─────────────────────────────────────────────
+    # ── AI Analysis ───────────────────────────────────────────────
     logger.info("Calling Claude AI...")
     analysis = claude_analyzer.run_analysis(
         api_key=Config.ANTHROPIC_API_KEY,
@@ -172,7 +173,7 @@ def run():
         f"Sells: {len(analysis.get('sell_signals', []))}"
     )
 
-    # ── Build signal lookup for screener ───────────────────────────
+    # ── Build signal lookup for screener ─────────────────────────
     signal_lookup = {}
     for sig in analysis.get("buy_signals", []):
         signal_lookup[sig["ticker"]] = {"type": "buy", "strength": sig.get("signal_strength", 5)}
@@ -187,7 +188,7 @@ def run():
         stock["rok_signal"] = sig.get("type", "neutral")
         stock["signal_strength"] = sig.get("strength", 0)
 
-    # ── Enrich signals with price sparklines ────────────────────────
+    # ── Enrich signals with price sparklines ──────────────────────
     price_lookup = {s["ticker"]: s["price"] for s in stock_data}
     all_signals = (
         analysis.get("buy_signals", [])
@@ -197,9 +198,7 @@ def run():
     for sig in all_signals:
         ticker = sig.get("ticker", "")
         if ticker:
-            # Use price_history from stock_data if available (avoids extra API call)
-            existing = next((s.get("price_history") for s in stock_data if s["ticker"] == ticker), None)
-            sig["price_history"] = existing or _safe(
+            sig["price_history"] = _safe(
                 yahoo_finance.get_price_history, ticker, 30,
                 default=list, label=f"Hist:{ticker}",
             )
@@ -227,6 +226,7 @@ def run():
             for s in analysis.get("sell_signals", [])
         ],
     })
+    # Keep last 52 runs (1 year of weekly data)
     history["runs"] = history["runs"][-52:]
 
     # ── Track record: compare last run's picks to current prices ──
@@ -306,7 +306,7 @@ def run():
         "stock_universe": stock_data,
     }
 
-    # ── Render HTML ─────────────────────────────────────────────
+    # ── Render HTML ───────────────────────────────────────────────
     template_dir = Path(__file__).parent / "templates"
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(template_dir)),

@@ -58,6 +58,7 @@ def get_put_call_ratio() -> dict:
         pcr = data.get("data", {}).get("total_put_call_ratio")
         equity_pcr = data.get("data", {}).get("equity_put_call_ratio")
         if pcr is None:
+            # Try alternate key
             for key in ["putCallRatio", "put_call_ratio", "pcr"]:
                 if key in data:
                     pcr = data[key]
@@ -79,10 +80,11 @@ def get_put_call_ratio() -> dict:
 def get_market_breadth() -> dict:
     """
     Market breadth indicators via yfinance:
-    advance/decline ratio, sector performance, new highs/lows proxies.
+    advance/decline ratio, new highs/lows proxies using ETF data.
     """
     breadth = {}
     try:
+        # Use sector ETFs as proxy for breadth
         sector_etfs = {
             "XLK": "Technology", "XLF": "Financials", "XLE": "Energy",
             "XLV": "Healthcare", "XLY": "Consumer Disc", "XLP": "Consumer Staples",
@@ -116,6 +118,7 @@ def get_market_breadth() -> dict:
             "sector_performance": sector_performance,
         }
 
+        # NYSE advance/decline via Yahoo (^ADVN, ^DECN)
         for sym, key in [("^ADVN", "advancers"), ("^DECN", "decliners")]:
             try:
                 hist = yf.Ticker(sym).history(period="1d")
@@ -176,6 +179,8 @@ def get_unusual_options_activity() -> list:
         )
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "lxml")
+
+        # Try multiple selectors since Finviz changes layout
         rows = soup.select("table#screener-table tr") or soup.select("tr.styled-row") or []
         for row in rows[:20]:
             cols = row.find_all("td")

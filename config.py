@@ -33,25 +33,38 @@ class Config:
 
     # RSS news feeds — expanded to 20+ sources for maximum coverage
     NEWS_FEEDS = [
+        # Yahoo Finance
         "https://finance.yahoo.com/news/rssindex",
         "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US",
+        # CNBC
         "https://www.cnbc.com/id/100003114/device/rss/rss.html",
         "https://www.cnbc.com/id/10001147/device/rss/rss.html",
         "https://www.cnbc.com/id/15839135/device/rss/rss.html",
+        # MarketWatch
         "https://feeds.marketwatch.com/marketwatch/topstories/",
         "https://feeds.marketwatch.com/marketwatch/marketpulse/",
+        # CNN Money
         "https://rss.cnn.com/rss/money_markets.rss",
         "https://rss.cnn.com/rss/money_latest.rss",
+        # Investing.com
         "https://www.investing.com/rss/news_14.rss",
         "https://www.investing.com/rss/news_25.rss",
+        # Reuters
         "https://feeds.reuters.com/reuters/businessNews",
         "https://feeds.reuters.com/reuters/companyNews",
+        # Seeking Alpha (public)
         "https://seekingalpha.com/market_currents.xml",
+        # Benzinga
         "https://www.benzinga.com/feed",
+        # The Street
         "https://www.thestreet.com/rss/index.xml",
+        # Motley Fool
         "https://www.fool.com/feed/",
+        # InvestorPlace
         "https://investorplace.com/feed/",
+        # Business Insider
         "https://markets.businessinsider.com/rss/news",
+        # Zacks
         "https://www.zacks.com/rss/commentary.php",
     ]
 
@@ -64,5 +77,8 @@ class Config:
     REDDIT_MAX_POSTS = 75
     NEWS_MAX_ITEMS = 30
 
+    # Congressional trade lookback window (days)
     CONGRESS_DAYS_BACK = 45
+
+    # Technical analysis: max tickers to analyze
     TA_MAX_TICKERS = 25
