@@ -2,7 +2,7 @@ name: ROK Intelligence Update
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # Every 6 hours automatically
+    - cron: '0 * * * *'     # Every hour automatically
   workflow_dispatch:          # Manual trigger from GitHub UI
 
 permissions:

@@ -38,13 +38,15 @@ def get_stock_data(ticker: str) -> dict:
         stock = yf.Ticker(ticker)
         info = stock.info
 
-        hist = stock.history(period="5d")
+        hist = stock.history(period="30d")
         if hist.empty:
             return None
 
         price = float(hist["Close"].iloc[-1])
         prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else price
         chg = ((price - prev) / prev * 100) if prev else 0
+
+        price_history = [round(float(p), 2) for p in hist["Close"].tolist()]
 
         # Analyst data
         target = info.get("targetMeanPrice") or info.get("targetHighPrice")
@@ -79,6 +81,7 @@ def get_stock_data(ticker: str) -> dict:
             "upside_to_target": upside,
             "recommendation": info.get("recommendationKey", ""),
             "analyst_count": info.get("numberOfAnalystOpinions"),
+            "price_history": price_history,
             "snapped_at": datetime.utcnow().isoformat(),
         }
     except Exception as e:
@@ -89,3 +92,15 @@ def get_stock_data(ticker: str) -> dict:
 def get_trending_tickers() -> list:
     """Seed ticker list for analysis when social mention list is sparse."""
     return list(dict.fromkeys(_SEED_TICKERS))
+
+
+def get_price_history(ticker: str, days: int = 30) -> list:
+    """Return list of daily close prices for the last N trading days."""
+    try:
+        hist = yf.Ticker(ticker).history(period=f"{days}d")
+        if hist.empty:
+            return []
+        return [round(float(p), 2) for p in hist["Close"].tolist()]
+    except Exception as e:
+        logger.debug(f"Price history {ticker}: {e}")
+        return []
