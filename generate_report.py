@@ -1,6 +1,6 @@
 """
 ROK — Static report generator for GitHub Pages.
-Run by GitHub Actions every 6 hours. Outputs docs/index.html.
+Runs via GitHub Actions every 6 hours. Outputs docs/index.html.
 """
 import json
 import logging
@@ -19,92 +19,91 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _safe(fn, *args, default=None, label=""):
+    try:
+        result = fn(*args)
+        logger.info(f"{label or fn.__name__}: ok ({_size(result)})")
+        return result
+    except Exception as e:
+        logger.warning(f"{label or fn.__name__} failed: {e}")
+        return default() if callable(default) else default
+
+
+def _size(v):
+    if isinstance(v, (list, dict)):
+        return len(v)
+    return "ok"
+
+
 def run():
     from config import Config
     from scrapers import reddit_scraper, news_scraper, yahoo_finance, sec_scraper
     from scrapers import market_data, twitter_scraper
+    from scrapers import stocktwits_scraper, technical_analysis, congressional_trades
     from analyzer import ticker_extractor, claude_analyzer, sentiment
 
-    logger.info("ROK pipeline starting...")
+    logger.info("=" * 60)
+    logger.info("ROK PIPELINE START")
+    logger.info("=" * 60)
 
-    # --- Scrape ---
-    reddit_posts = reddit_scraper.scrape_all(Config.REDDIT_SUBREDDITS, Config.REDDIT_MAX_POSTS)
-    logger.info(f"Reddit: {len(reddit_posts)} posts")
-
-    news_articles = news_scraper.scrape_all(Config.NEWS_FEEDS, Config.NEWS_MAX_ITEMS)
-    logger.info(f"News: {len(news_articles)} articles")
-
+    # ── Social scraping ──────────────────────────────────────────
+    reddit_posts = _safe(
+        reddit_scraper.scrape_all,
+        Config.REDDIT_SUBREDDITS, Config.REDDIT_MAX_POSTS,
+        default=list, label="Reddit",
+    )
+    news_articles = _safe(
+        news_scraper.scrape_all,
+        Config.NEWS_FEEDS, Config.NEWS_MAX_ITEMS,
+        default=list, label="News",
+    )
     twitter_posts = []
     if Config.TWITTER_ENABLED:
-        twitter_posts = twitter_scraper.scrape_tweets(Config.TWITTER_BEARER_TOKEN)
+        twitter_posts = _safe(
+            twitter_scraper.scrape_tweets,
+            Config.TWITTER_BEARER_TOKEN,
+            default=list, label="Twitter",
+        )
 
-    all_text_posts = reddit_posts + news_articles + twitter_posts
+    all_posts = reddit_posts + news_articles + twitter_posts
 
-    # --- Enhanced market data ---
-    fear_greed = {}
-    earnings_cal = []
-    unusual_opts = []
-    most_active = []
-    short_squeeze = []
-    market_indices = {}
-    trending_yahoo = []
+    # ── Market data ───────────────────────────────────────────────
+    fear_greed   = _safe(market_data.get_fear_greed_index, default=dict, label="FearGreed")
+    earnings_cal = _safe(market_data.get_earnings_calendar, 7, default=list, label="Earnings")
+    unusual_opts = _safe(market_data.get_unusual_options_activity, default=list, label="Options")
+    most_active  = _safe(market_data.get_most_active_stocks, default=list, label="MostActive")
+    short_squeeze= _safe(market_data.get_short_squeeze_candidates, default=list, label="ShortSqueeze")
+    market_indices= _safe(market_data.get_market_indices, default=dict, label="Indices")
+    trending_yahoo= _safe(market_data.get_trending_on_yahoo, default=list, label="YahooTrending")
+    put_call_ratio= _safe(market_data.get_put_call_ratio, default=dict, label="PutCall")
+    market_breadth= _safe(market_data.get_market_breadth, default=dict, label="Breadth")
 
-    for name, fn, args in [
-        ("fear_greed", market_data.get_fear_greed_index, []),
-        ("earnings_cal", market_data.get_earnings_calendar, [7]),
-        ("unusual_opts", market_data.get_unusual_options_activity, []),
-        ("most_active", market_data.get_most_active_stocks, []),
-        ("short_squeeze", market_data.get_short_squeeze_candidates, []),
-        ("market_indices", market_data.get_market_indices, []),
-        ("trending_yahoo", market_data.get_trending_on_yahoo, []),
-    ]:
-        try:
-            result = fn(*args)
-            locals_ref = {
-                "fear_greed": fear_greed, "earnings_cal": earnings_cal,
-                "unusual_opts": unusual_opts, "most_active": most_active,
-                "short_squeeze": short_squeeze, "market_indices": market_indices,
-                "trending_yahoo": trending_yahoo,
-            }
-            locals_ref[name] = result
-            # Re-assign to local vars
-            fear_greed = locals_ref["fear_greed"]
-            earnings_cal = locals_ref["earnings_cal"]
-            unusual_opts = locals_ref["unusual_opts"]
-            most_active = locals_ref["most_active"]
-            short_squeeze = locals_ref["short_squeeze"]
-            market_indices = locals_ref["market_indices"]
-            trending_yahoo = locals_ref["trending_yahoo"]
-            logger.info(f"{name}: ok")
-        except Exception as e:
-            logger.warning(f"{name} failed: {e}")
+    # ── New data sources ──────────────────────────────────────────
+    stocktwits_data = _safe(stocktwits_scraper.get_trending, default=list, label="StockTwits")
+    congress_buys   = _safe(
+        congressional_trades.get_congress_buys,
+        Config.CONGRESS_DAYS_BACK,
+        default=list, label="Congress",
+    )
 
-    # Re-run properly (avoid the locals hack above)
-    try: fear_greed = market_data.get_fear_greed_index()
-    except Exception: pass
-    try: earnings_cal = market_data.get_earnings_calendar(7)
-    except Exception: pass
-    try: unusual_opts = market_data.get_unusual_options_activity()
-    except Exception: pass
-    try: most_active = market_data.get_most_active_stocks()
-    except Exception: pass
-    try: short_squeeze = market_data.get_short_squeeze_candidates()
-    except Exception: pass
-    try: market_indices = market_data.get_market_indices()
-    except Exception: pass
-    try: trending_yahoo = market_data.get_trending_on_yahoo()
-    except Exception: pass
+    # ── Sentiment + ticker extraction ─────────────────────────────
+    all_posts = sentiment.score_posts(all_posts)
+    agg_sentiment = sentiment.aggregate_sentiment(all_posts)
+    top_tickers = ticker_extractor.top_tickers(all_posts, n=40)
 
-    # --- Sentiment + tickers ---
-    all_text_posts = sentiment.score_posts(all_text_posts)
-    agg_sentiment = sentiment.aggregate_sentiment(all_text_posts)
-    top_tickers = ticker_extractor.top_tickers(all_text_posts, n=30)
-
+    # Merge Yahoo trending + most active + StockTwits into ticker pool
     extra = set()
-    for s in trending_yahoo[:10] + most_active[:10]:
-        t = s.get("ticker", "").strip().upper()
-        if t and len(t) <= 5:
+    for s in trending_yahoo[:15] + most_active[:15]:
+        t = (s.get("ticker") or "").strip().upper()
+        if t and t.isalpha() and len(t) <= 5:
             extra.add(t)
+    for s in stocktwits_data[:20]:
+        t = (s.get("ticker") or "").strip().upper()
+        if t and t.isalpha() and len(t) <= 5:
+            extra.add(t)
+    # Add congressional buy tickers
+    for c in congress_buys[:10]:
+        extra.add(c["ticker"])
 
     seen = {t for t, _ in top_tickers}
     seed = yahoo_finance.get_trending_tickers()
@@ -112,22 +111,37 @@ def run():
         [t for t, _ in top_tickers]
         + [t for t in extra if t not in seen]
         + [t for t in seed if t not in seen and t not in extra]
-    ))[:30]
+    ))[:40]
 
-    ticker_sentiment = sentiment.per_ticker_sentiment(all_text_posts, ticker_list[:20])
+    # ── Per-ticker sentiment ──────────────────────────────────────
+    ticker_sentiment = sentiment.per_ticker_sentiment(all_posts, ticker_list[:25])
 
+    # ── Stock data ────────────────────────────────────────────────
     stock_data = []
-    for ticker in ticker_list[:25]:
-        data = yahoo_finance.get_stock_data(ticker)
+    for ticker in ticker_list[:30]:
+        data = _safe(yahoo_finance.get_stock_data, ticker, default=lambda: None, label=f"Stock:{ticker}")
         if data:
             data["sentiment"] = ticker_sentiment.get(ticker, {})
             stock_data.append(data)
+    logger.info(f"Stock data: {len(stock_data)} tickers")
 
-    sec_filings = []
-    try: sec_filings = sec_scraper.get_recent_insider_trades(7) + sec_scraper.get_recent_8k_filings(7)
-    except Exception as e: logger.warning(f"SEC failed: {e}")
+    # ── Technical analysis ────────────────────────────────────────
+    ta_tickers = ticker_list[:Config.TA_MAX_TICKERS]
+    ta_data = _safe(
+        technical_analysis.analyze_multiple,
+        ta_tickers, Config.TA_MAX_TICKERS,
+        default=dict, label="TechnicalAnalysis",
+    )
+    ta_setups = technical_analysis.find_setups(ta_data) if ta_data else []
 
-    # --- AI Analysis ---
+    # ── SEC filings ───────────────────────────────────────────────
+    sec_filings = _safe(
+        lambda: sec_scraper.get_recent_insider_trades(7) + sec_scraper.get_recent_8k_filings(7),
+        default=list, label="SEC",
+    )
+
+    # ── AI Analysis ───────────────────────────────────────────────
+    logger.info("Calling Claude AI...")
     analysis = claude_analyzer.run_analysis(
         api_key=Config.ANTHROPIC_API_KEY,
         model=Config.CLAUDE_MODEL,
@@ -142,15 +156,53 @@ def run():
         short_squeeze_candidates=short_squeeze,
         market_indices=market_indices,
         aggregate_sentiment=agg_sentiment,
+        stocktwits_trending=stocktwits_data,
+        technical_data=ta_data,
+        congressional_buys=congress_buys,
+        market_breadth=market_breadth,
+        put_call_ratio=put_call_ratio,
     )
 
     if not analysis:
         logger.error("Analysis returned None — aborting")
         sys.exit(1)
 
-    # Bundle everything the template needs
+    logger.info(
+        f"Analysis: {analysis.get('market_sentiment')} | "
+        f"Buys: {len(analysis.get('buy_signals', []))} | "
+        f"Sells: {len(analysis.get('sell_signals', []))}"
+    )
+
+    # ── History tracking ──────────────────────────────────────────
+    history_path = Path(__file__).parent / "docs" / "history.json"
+    history = {"runs": []}
+    if history_path.exists():
+        try:
+            history = json.loads(history_path.read_text())
+        except Exception:
+            pass
+
+    history["runs"].append({
+        "date": datetime.utcnow().strftime("%Y-%m-%d"),
+        "timestamp": datetime.utcnow().isoformat(),
+        "sentiment": analysis.get("market_sentiment"),
+        "regime": analysis.get("market_regime"),
+        "buy_signals": [
+            {"ticker": s["ticker"], "price": s.get("current_price"), "target": s.get("price_target")}
+            for s in analysis.get("buy_signals", [])
+        ],
+        "sell_signals": [
+            {"ticker": s["ticker"], "price": s.get("current_price")}
+            for s in analysis.get("sell_signals", [])
+        ],
+    })
+    # Keep last 52 runs (1 year of weekly data)
+    history["runs"] = history["runs"][-52:]
+
+    # ── Build page data ───────────────────────────────────────────
     page_data = {
         "analysis_date": datetime.utcnow().strftime("%B %d, %Y %I:%M %p UTC"),
+        "market_regime": analysis.get("market_regime", "UNCERTAIN"),
         "week_summary": analysis.get("week_summary", ""),
         "market_sentiment": analysis.get("market_sentiment", "NEUTRAL"),
         "sentiment_score": analysis.get("sentiment_score", 5),
@@ -158,14 +210,30 @@ def run():
         "sell_signals": analysis.get("sell_signals", []),
         "watch_list": analysis.get("watch_list", []),
         "notable_trends": analysis.get("notable_trends", []),
+        "macro_risks": analysis.get("macro_risks", []),
         "sector_heat": analysis.get("sector_heat", {}),
+        "sector_rotation": analysis.get("sector_rotation", ""),
         "rok_message": analysis.get("rok_message", ""),
         "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []),
         "earnings_plays": analysis.get("earnings_plays", []),
+        "congressional_plays": analysis.get("congressional_plays", []),
+        "technical_breakouts": analysis.get("technical_breakouts", []) or [
+            {
+                "ticker": s["ticker"],
+                "setup_type": s["setup_type"],
+                "description": " | ".join(s["signals"]),
+                "timeframe": "3-7 days",
+            }
+            for s in ta_setups[:4]
+        ],
         "ticker_mentions": top_tickers[:24],
+        "stocktwits_trending": stocktwits_data[:12],
         "fear_greed": fear_greed,
         "market_indices": market_indices,
         "aggregate_sentiment": agg_sentiment,
+        "market_breadth": market_breadth,
+        "put_call_ratio": put_call_ratio,
+        "congressional_buys": congress_buys[:8],
         "source_stats": {
             "reddit": len(reddit_posts),
             "news": len(news_articles),
@@ -173,10 +241,13 @@ def run():
             "sec": len(sec_filings),
             "earnings_upcoming": len(earnings_cal),
             "unusual_options": len(unusual_opts),
+            "congress_trades": len(congress_buys),
+            "technical": len(ta_data),
         },
+        "recent_runs": history["runs"][-8:],
     }
 
-    # --- Render HTML ---
+    # ── Render HTML ───────────────────────────────────────────────
     template_dir = Path(__file__).parent / "templates"
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(template_dir)),
@@ -185,11 +256,15 @@ def run():
     template = env.get_template("static.html")
     html = template.render(data=page_data, data_json=json.dumps(page_data))
 
-    out = Path(__file__).parent / "docs" / "index.html"
-    out.parent.mkdir(exist_ok=True)
-    out.write_text(html, encoding="utf-8")
-    logger.info(f"Report written to {out}")
-    logger.info(f"Sentiment: {page_data['market_sentiment']} | Buys: {len(page_data['buy_signals'])} | Sells: {len(page_data['sell_signals'])}")
+    docs_dir = Path(__file__).parent / "docs"
+    docs_dir.mkdir(exist_ok=True)
+
+    (docs_dir / "index.html").write_text(html, encoding="utf-8")
+    history_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
+
+    logger.info(f"Report written → docs/index.html")
+    logger.info(f"History updated → docs/history.json ({len(history['runs'])} runs)")
+    logger.info("ROK PIPELINE COMPLETE")
 
 
 if __name__ == "__main__":
