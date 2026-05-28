@@ -57,6 +57,15 @@ def get_stock_data(ticker: str) -> dict:
         # Short interest
         short_pct = info.get("shortPercentOfFloat") or info.get("shortRatio")
 
+        earnings_date = None
+        try:
+            eds = info.get('earningsDate') or []
+            if eds:
+                ts = eds[0] if isinstance(eds, list) else eds
+                earnings_date = datetime.utcfromtimestamp(float(ts)).strftime('%b %d')
+        except Exception:
+            pass
+
         return {
             "ticker": ticker.upper(),
             "price": round(price, 2),
@@ -82,6 +91,7 @@ def get_stock_data(ticker: str) -> dict:
             "recommendation": info.get("recommendationKey", ""),
             "analyst_count": info.get("numberOfAnalystOpinions"),
             "price_history": price_history,
+            "earnings_date": earnings_date,
             "snapped_at": datetime.utcnow().isoformat(),
         }
     except Exception as e:
