@@ -4,327 +4,297 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>ROK — {{ data.market_sentiment }} · {{ data.analysis_date }}</title>
-<meta name="description" content="ROK AI Stock Intelligence — live buy/sell signals from Reddit, news, congressional trades, SEC filings, and technical analysis."/>
+<meta name="description" content="ROK AI Stock Intelligence — live buy/sell signals, screener, sector heat map."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --gold:#D4A017;--gold-b:#FFD700;--gold-d:#A07810;--gold-s:rgba(212,160,23,.1);
+  --gold:#D4A017;--gold-b:#FFD700;--gold-d:#A07810;--gold-s:rgba(212,160,23,.12);
   --blk:#050505;--blk2:#0c0c0c;--blk3:#131313;--blk4:#1a1a1a;--blk5:#222;
-  --wh:#e8e8e8;--wh2:#aaa;--wh3:#666;--wh4:#3a3a3a;
-  --green:#00d084;--green-d:rgba(0,208,132,.12);--green-dd:rgba(0,208,132,.06);
-  --red:#ff4444;--red-d:rgba(255,68,68,.12);--red-dd:rgba(255,68,68,.06);
-  --blue:#4488ff;--blue-d:rgba(68,136,255,.12);
-  --orange:#ff8800;--orange-d:rgba(255,136,0,.12);
-  --purple:#9966ff;--purple-d:rgba(153,102,255,.12);
-  --border:1px solid rgba(212,160,23,.15);
-  --border2:1px solid rgba(255,255,255,.06);
-  --r:8px;--rl:12px;--rxl:16px;
+  --wh:#e8e8e8;--wh2:#aaa;--wh3:#555;--wh4:#333;
+  --green:#00d084;--green-d:rgba(0,208,132,.12);--green-dd:rgba(0,208,132,.05);
+  --red:#ff4444;--red-d:rgba(255,68,68,.12);--red-dd:rgba(255,68,68,.05);
+  --blue:#4488ff;--blue-d:rgba(68,136,255,.1);
+  --orange:#ff8800;--orange-d:rgba(255,136,0,.1);
+  --purple:#9966ff;--purple-d:rgba(153,102,255,.1);
+  --border:1px solid rgba(212,160,23,.14);
+  --border2:1px solid rgba(255,255,255,.055);
+  --r:8px;--rl:10px;
   --font:'Inter',-apple-system,sans-serif;
   --display:'Bebas Neue','Inter',sans-serif;
-  --shadow:0 4px 24px rgba(0,0,0,.5);
-  --shadow-lg:0 8px 48px rgba(0,0,0,.6);
+  --sh:0 4px 20px rgba(0,0,0,.45);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:var(--blk);color:var(--wh);font-family:var(--font);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--blk2)}::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:3px}
+body{background:var(--blk);color:var(--wh);font-family:var(--font);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--blk2)}::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:2px}
 a{color:inherit;text-decoration:none}
 input,button{font-family:var(--font)}
 
-/* ─── HEADER ─────────────────────────────────────────────── */
-.hdr{position:sticky;top:0;z-index:300;background:rgba(5,5,5,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(212,160,23,.2)}
-.hdr-in{max-width:1600px;margin:0 auto;height:58px;display:flex;align-items:center;gap:1.2rem;padding:0 2rem}
-.brand{display:flex;align-items:center;gap:.75rem;flex-shrink:0;text-decoration:none}
-.logo{font-family:var(--display);font-size:2.6rem;letter-spacing:.2em;color:var(--gold-b);text-shadow:0 0 30px rgba(255,215,0,.4),0 0 60px rgba(255,215,0,.15);line-height:1}
-.brand-sub{display:flex;flex-direction:column;gap:0}
-.tagline{font-size:8px;font-weight:700;letter-spacing:.3em;color:var(--gold-d);text-transform:uppercase;line-height:1.2}
-.upd-line{font-size:10px;color:var(--wh3);letter-spacing:.04em}
-.indices-ticker{display:flex;gap:1.1rem;flex:1;overflow:hidden;padding:0 .5rem;align-items:center}
-.idx{display:flex;align-items:center;gap:.4rem;white-space:nowrap}
-.idx-name{font-size:10px;font-weight:600;color:var(--wh3);letter-spacing:.06em}
-.idx-price{font-size:12px;font-weight:700;color:var(--wh)}
-.idx-chg{font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:3px}
-.idx-chg.up{color:var(--green);background:var(--green-d)}.idx-chg.down{color:var(--red);background:var(--red-d)}
-.hdr-right{display:flex;align-items:center;gap:.6rem;flex-shrink:0}
-.live-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--wh3);border:1px solid rgba(0,208,132,.2);padding:3px 8px;border-radius:10px;text-transform:uppercase}
-.live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s ease infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.regime-pill{padding:3px 9px;border-radius:4px;font-size:8.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border:1px solid rgba(255,255,255,.12);color:var(--wh3)}
-.sent-pill{padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.12em;border:1px solid currentColor;text-transform:uppercase;white-space:nowrap}
-.sent-pill.BULLISH{color:var(--green);background:var(--green-d)}.sent-pill.BEARISH{color:var(--red);background:var(--red-d)}.sent-pill.NEUTRAL,.sent-pill.MIXED{color:var(--gold);background:var(--gold-s)}
+/* ── HEADER ─────────────────────────────────────────────── */
+.hdr{background:rgba(5,5,5,.98);backdrop-filter:blur(20px);border-bottom:1px solid rgba(212,160,23,.18);flex-shrink:0}
+.hdr-in{max-width:1700px;margin:0 auto;height:52px;display:flex;align-items:center;gap:1rem;padding:0 1.5rem}
+.logo{font-family:var(--display);font-size:2.2rem;letter-spacing:.2em;color:var(--gold-b);text-shadow:0 0 24px rgba(255,215,0,.35);line-height:1;flex-shrink:0}
+.brand-tag{font-size:7.5px;font-weight:700;letter-spacing:.28em;color:var(--gold-d);text-transform:uppercase;margin-left:.2rem;align-self:flex-end;padding-bottom:6px}
+.idx-bar{display:flex;gap:.9rem;flex:1;overflow:hidden;align-items:center;padding:0 .4rem}
+.idx{display:flex;align-items:center;gap:.35rem;white-space:nowrap}
+.idx-n{font-size:9px;font-weight:600;color:var(--wh3);letter-spacing:.07em}
+.idx-p{font-size:11.5px;font-weight:700}
+.idx-c{font-size:9.5px;font-weight:700;padding:1px 4px;border-radius:3px}
+.up{color:var(--green)}.down{color:var(--red)}
+.idx-c.up{background:var(--green-d)}.idx-c.down{background:var(--red-d)}
+.hdr-r{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.live-pill{display:flex;align-items:center;gap:4px;font-size:8.5px;font-weight:600;letter-spacing:.08em;color:var(--wh3);border:1px solid rgba(0,208,132,.2);padding:2px 7px;border-radius:8px;text-transform:uppercase}
+.regime{padding:2px 7px;border-radius:3px;font-size:8px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;border:1px solid rgba(255,255,255,.1);color:var(--wh3)}
+.sent{padding:3px 11px;border-radius:14px;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid currentColor}
+.sent.BULLISH{color:var(--green);background:var(--green-d)}.sent.BEARISH{color:var(--red);background:var(--red-d)}.sent.NEUTRAL,.sent.MIXED{color:var(--gold);background:var(--gold-s)}
 
-/* ─── ROK SAYS BAR ────────────────────────────────────────── */
-.rok-bar{background:linear-gradient(90deg,rgba(13,13,13,0),rgba(212,160,23,.06),rgba(13,13,13,0));border-bottom:var(--border);padding:10px 2rem;display:flex;align-items:flex-start;gap:.9rem}
-.rok-lbl{font-size:8.5px;font-weight:800;letter-spacing:.22em;color:var(--gold-b);border:1px solid var(--gold-d);padding:3px 8px;border-radius:3px;flex-shrink:0;margin-top:2px;text-transform:uppercase;white-space:nowrap}
-.rok-msg{font-size:13px;color:var(--wh2);font-style:italic;line-height:1.6}
+/* ── ROK MESSAGE ────────────────────────────────────────────── */
+.rok-bar{background:linear-gradient(90deg,transparent,rgba(212,160,23,.05),transparent);border-bottom:var(--border);padding:7px 1.5rem;display:flex;align-items:flex-start;gap:.75rem;flex-shrink:0}
+.rok-lbl{font-size:7.5px;font-weight:800;letter-spacing:.22em;color:var(--gold-b);border:1px solid var(--gold-d);padding:2px 6px;border-radius:2px;flex-shrink:0;margin-top:1px;text-transform:uppercase}
+.rok-msg{font-size:12px;color:var(--wh2);font-style:italic;line-height:1.5}
 
-/* ─── SEARCH HERO ───────────────────────────────────────── */
-.search-hero{background:linear-gradient(135deg,var(--blk3),var(--blk2));border-bottom:var(--border);padding:1.5rem 2rem}
-.search-hero-in{max-width:1600px;margin:0 auto}
-.search-label{font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--gold-d);text-transform:uppercase;margin-bottom:.6rem}
-.search-wrap{display:flex;gap:.7rem;max-width:700px}
-.search-input{flex:1;background:var(--blk4);border:1px solid rgba(212,160,23,.25);border-radius:var(--r);padding:.75rem 1.1rem;font-size:15px;color:var(--wh);outline:none;transition:border-color .2s,box-shadow .2s}
-.search-input::placeholder{color:var(--wh3)}
-.search-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,160,23,.1)}
-.search-hint{font-size:10.5px;color:var(--wh3);margin-top:.5rem}
-.search-hint a{color:var(--gold-d)}
+/* ── TAB NAV ────────────────────────────────────────────── */
+.tab-nav{background:var(--blk2);border-bottom:var(--border);flex-shrink:0}
+.tab-nav-in{max-width:1700px;margin:0 auto;display:flex;align-items:center;gap:0;padding:0 1.5rem}
+.tab-btn{padding:.7rem 1.2rem;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--wh3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;position:relative}
+.tab-btn:hover{color:var(--wh2)}
+.tab-btn.active{color:var(--gold-b);border-bottom-color:var(--gold)}
+.tab-btn .badge{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:8px;font-size:8px;font-weight:700;margin-left:5px;background:rgba(255,255,255,.08);color:var(--wh3)}
+.tab-btn.active .badge{background:var(--gold-s);color:var(--gold)}
+.tab-search{margin-left:auto;display:flex;align-items:center;gap:.5rem;padding:.45rem 0}
+.search-box{background:var(--blk4);border:1px solid rgba(212,160,23,.2);border-radius:6px;padding:.35rem .85rem;font-size:12.5px;color:var(--wh);outline:none;width:240px;transition:border-color .2s,box-shadow .2s}
+.search-box::placeholder{color:var(--wh3)}
+.search-box:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(212,160,23,.08)}
 
-/* ─── MAIN ──────────────────────────────────────────────── */
-.main{max-width:1600px;margin:0 auto;padding:1.75rem 2rem;display:flex;flex-direction:column;gap:2.25rem}
-.sec-hdr{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.1rem;flex-wrap:wrap}
-.sec-ttl{font-family:var(--display);font-size:1.5rem;letter-spacing:.1em}
-.sec-sub{font-size:10.5px;color:var(--wh3);letter-spacing:.04em}
-.clbl{font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--gold-d);margin-bottom:.6rem;text-transform:uppercase}
-.ttl-buy{color:var(--green)}.ttl-sell{color:var(--red)}.ttl-watch{color:var(--gold-b)}.ttl-squeeze{color:var(--orange)}.ttl-earn{color:var(--blue)}.ttl-congress{color:var(--purple)}.ttl-tech{color:var(--blue)}.ttl-risk{color:var(--red)}
+/* ── CONTENT AREA ───────────────────────────────────────────── */
+.content{flex:1;overflow-y:auto;overflow-x:hidden}
+.tab-pane{display:none;max-width:1700px;margin:0 auto;padding:1.25rem 1.5rem}
+.tab-pane.active{display:block}
 
-/* ─── SNAPSHOT ROW ────────────────────────────────────────────── */
-.snapshot-row{display:grid;grid-template-columns:1fr 440px;gap:1.5rem;align-items:start}
-.sum-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1.4rem 1.6rem;position:relative;overflow:hidden}
-.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-.sum-txt{font-size:14.5px;line-height:1.75;color:var(--wh2)}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(212,160,23,.08);border:var(--border);border-radius:var(--rl);overflow:hidden}
-.stat-box{background:var(--blk3);padding:.8rem .5rem;text-align:center}
-.stat-num{font-family:var(--display);font-size:1.55rem;color:var(--gold-b);line-height:1;letter-spacing:.04em}
-.stat-lbl{font-size:8px;color:var(--wh3);letter-spacing:.1em;margin-top:2px;text-transform:uppercase}
+/* ── SECTION LABEL ──────────────────────────────────────────── */
+.s-hdr{display:flex;align-items:baseline;gap:.7rem;margin-bottom:.9rem;flex-wrap:wrap}
+.s-ttl{font-family:var(--display);font-size:1.3rem;letter-spacing:.1em}
+.s-sub{font-size:9.5px;color:var(--wh3);letter-spacing:.04em}
+.clbl{font-size:8.5px;font-weight:700;letter-spacing:.18em;color:var(--gold-d);margin-bottom:.5rem;text-transform:uppercase}
+.ttl-buy{color:var(--green)}.ttl-sell{color:var(--red)}.ttl-watch{color:var(--gold-b)}.ttl-sq{color:var(--orange)}.ttl-earn{color:var(--blue)}.ttl-cong{color:var(--purple)}.ttl-risk{color:var(--red)}
 
-/* ─── MARKET PULSE ─────────────────────────────────────────────── */
-.pulse-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
-.pulse-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1.1rem 1.25rem}
-.gauge-track{height:9px;background:linear-gradient(90deg,#ff4444,#ff8800,#ffd700,#88cc00,#00d084);border-radius:5px;position:relative;margin:.7rem 0 .4rem}
-.gauge-pin{position:absolute;top:50%;transform:translateY(-50%);width:16px;height:16px;background:white;border-radius:50%;border:2px solid var(--blk);box-shadow:0 0 8px rgba(255,255,255,.5)}
-.gauge-mkrs{display:flex;justify-content:space-between;font-size:8px;color:var(--wh3);text-transform:uppercase;letter-spacing:.05em}
-.gauge-score{text-align:center;font-family:var(--display);font-size:1.4rem;color:var(--gold-b);margin-top:4px;letter-spacing:.08em}
-.sbars{display:flex;flex-direction:column;gap:8px;margin-top:.65rem}
-.sbar-row{display:flex;align-items:center;gap:8px}
-.sbar-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;width:54px;flex-shrink:0;text-transform:uppercase}
+/* ── SIGNALS TAB LAYOUT ───────────────────────────────────────── */
+.sig-layout{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;align-items:start}
+.sig-col-hdr{margin-bottom:.75rem}
+
+/* ── SIGNAL CARDS ────────────────────────────────────────────── */
+.cgrid{display:flex;flex-direction:column;gap:.6rem}
+.card{background:var(--blk3);border-radius:var(--rl);padding:1rem 1.1rem;position:relative;overflow:hidden;border:1px solid transparent;transition:transform .18s,box-shadow .18s}
+.card:hover{transform:translateY(-2px);box-shadow:var(--sh)}
+.card.buy{border-color:rgba(0,208,132,.22);background:linear-gradient(135deg,var(--blk3),var(--green-dd))}
+.card.buy::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green)}
+.card.sell{border-color:rgba(255,68,68,.22);background:linear-gradient(135deg,var(--blk3),var(--red-dd))}
+.card.sell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red)}
+.card.watch{border-color:rgba(212,160,23,.2);background:linear-gradient(135deg,var(--blk3),rgba(212,160,23,.03))}
+.card.watch::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold)}
+.c-row1{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.5rem}
+.c-left{display:flex;align-items:baseline;gap:.5rem;min-width:0}
+.c-ticker{font-family:var(--display);font-size:1.6rem;letter-spacing:.1em;line-height:1;flex-shrink:0}
+.card.buy .c-ticker{color:var(--green)}.card.sell .c-ticker{color:var(--red)}.card.watch .c-ticker{color:var(--gold-b)}
+.c-co{font-size:9px;color:var(--wh3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.c-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.str-b{font-size:8px;font-weight:700;letter-spacing:.09em;padding:2px 6px;border-radius:3px;text-transform:uppercase}
+.card.buy .str-b{background:var(--green-d);color:var(--green)}.card.sell .str-b{background:var(--red-d);color:var(--red)}.card.watch .str-b{background:var(--gold-s);color:var(--gold)}
+.risk-b{font-size:7.5px;padding:1px 5px;border-radius:3px;border:1px solid rgba(255,255,255,.08);color:var(--wh3)}
+.risk-b.High,.risk-b.Speculative{border-color:rgba(255,68,68,.3);color:var(--red)}.risk-b.Low{border-color:rgba(0,208,132,.22);color:var(--green)}.risk-b.Medium{border-color:rgba(255,215,0,.2);color:var(--gold)}
+.prow{display:flex;align-items:center;gap:.6rem;margin-bottom:.45rem;padding:.4rem .65rem;background:rgba(0,0,0,.22);border-radius:5px;flex-wrap:wrap}
+.p-cur{font-size:14px;font-weight:700}.p-tgt{font-size:10px;color:var(--wh2)}.p-arr{color:var(--green)}.p-stop{font-size:10px;color:var(--red)}.t-hz{margin-left:auto;font-size:8.5px;color:var(--wh3);border:1px solid rgba(255,255,255,.08);padding:1px 6px;border-radius:8px}
+.spark{height:40px;margin:.3rem 0;border-radius:4px;overflow:hidden;background:rgba(0,0,0,.12)}
+.spark canvas{width:100%!important}
+.dsigs{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px}
+.dsig{font-size:7.5px;font-weight:600;letter-spacing:.05em;padding:1px 5px;border-radius:3px;text-transform:uppercase;background:rgba(255,255,255,.04);color:var(--wh3);border:1px solid rgba(255,255,255,.07)}
+.dsig.reddit{color:#FF4500;border-color:rgba(255,69,0,.2);background:rgba(255,69,0,.05)}.dsig.options{color:var(--blue);border-color:rgba(68,136,255,.2);background:var(--blue-d)}.dsig.earnings{color:var(--gold);border-color:rgba(212,160,23,.2);background:var(--gold-s)}.dsig.insider,.dsig.short_squeeze{color:var(--orange);border-color:rgba(255,136,0,.18);background:var(--orange-d)}.dsig.congressional{color:var(--purple);border-color:rgba(153,102,255,.2);background:var(--purple-d)}
+.reasons{list-style:none;display:flex;flex-direction:column;gap:3px;margin-bottom:.5rem}
+.reasons li{font-size:11px;color:var(--wh2);display:flex;align-items:flex-start;gap:6px;line-height:1.45}
+.reasons li::before{content:'▸';color:var(--gold-d);font-size:8px;margin-top:2px;flex-shrink:0}
+.rok-take{background:rgba(212,160,23,.05);border-left:2px solid var(--gold-d);padding:5px 8px;border-radius:0 4px 4px 0;font-size:11px;font-style:italic;color:var(--wh2);line-height:1.45}
+.rok-take::before{content:'ROK: ';font-style:normal;font-weight:700;color:var(--gold);font-size:8px;letter-spacing:.12em}
+.urg{font-size:8px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:3px;text-transform:uppercase;display:inline-block;margin-bottom:6px}
+.urg.IMMEDIATE{background:var(--red-d);color:var(--red)}.urg.THIS-WEEK{background:var(--orange-d);color:var(--orange)}
+.catalyst{background:rgba(212,160,23,.05);border:1px solid rgba(212,160,23,.14);border-radius:4px;padding:4px 7px;margin-bottom:5px;font-size:10px;color:var(--gold)}
+.w-trigger{background:rgba(0,0,0,.2);border-radius:5px;padding:6px 9px;margin-bottom:5px}
+.w-tlbl{font-size:7.5px;font-weight:700;letter-spacing:.15em;color:var(--gold-d);margin-bottom:2px;text-transform:uppercase}
+.w-ttxt{font-size:11px;color:var(--wh2)}
+.w-risk{font-size:10px;color:var(--red)}.w-pot{font-size:10px;color:var(--green);margin-top:4px}
+
+/* ── MARKET TAB ───────────────────────────────────────────── */
+.mkt-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.mkt-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1rem 1.1rem}
+.gauge-track{height:8px;background:linear-gradient(90deg,#ff4444,#ff8800,#ffd700,#88cc00,#00d084);border-radius:4px;position:relative;margin:.6rem 0 .35rem}
+.gauge-pin{position:absolute;top:50%;transform:translateY(-50%);width:14px;height:14px;background:white;border-radius:50%;border:2px solid var(--blk)}
+.gauge-mkrs{display:flex;justify-content:space-between;font-size:7.5px;color:var(--wh3);text-transform:uppercase;letter-spacing:.05em}
+.gauge-score{text-align:center;font-family:var(--display);font-size:1.3rem;color:var(--gold-b);margin-top:3px;letter-spacing:.06em}
+.sbars{display:flex;flex-direction:column;gap:7px;margin-top:.55rem}
+.sbar-row{display:flex;align-items:center;gap:7px}
+.sbar-lbl{font-size:8.5px;font-weight:700;letter-spacing:.08em;width:50px;flex-shrink:0;text-transform:uppercase}
 .bull-l{color:var(--green)}.bear-l{color:var(--red)}.neut-l{color:var(--wh3)}
-.sbar-track{flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.sbar-track{flex:1;height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
 .sbar{height:100%;border-radius:3px}
 .bull-b{background:var(--green)}.bear-b{background:var(--red)}.neut-b{background:var(--wh3)}
-.sbar-pct{font-size:11px;font-weight:600;width:32px;text-align:right;color:var(--wh2)}
-.metric-val{font-family:var(--display);font-size:1.75rem;color:var(--gold-b);margin:.25rem 0;line-height:1}
-.metric-sub{font-size:11px;color:var(--wh3)}
-.pcr-sig{display:inline-block;padding:2px 8px;border-radius:3px;font-size:9.5px;font-weight:700;letter-spacing:.1em;margin-top:4px;text-transform:uppercase}
+.sbar-pct{font-size:10px;font-weight:600;width:28px;text-align:right;color:var(--wh2)}
+.metric-val{font-family:var(--display);font-size:1.6rem;color:var(--gold-b);margin:.2rem 0;line-height:1}
+.metric-sub{font-size:10px;color:var(--wh3)}
+.pcr-sig{display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.1em;margin-top:3px;text-transform:uppercase}
 .pcr-sig.FEAR{color:var(--red);background:var(--red-d)}.pcr-sig.GREED{color:var(--green);background:var(--green-d)}.pcr-sig.NEUTRAL,.pcr-sig.UNKNOWN{color:var(--wh3);background:rgba(255,255,255,.05)}
-.breadth-bar{height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;margin:.5rem 0 .25rem}
+.breadth-bar{height:4px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;margin:.45rem 0 .2rem}
 .breadth-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red) 0%,var(--green) 100%)}
 
-/* ─── SECTOR HEAT MAP ────────────────────────────────────────── */
-.sheat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem}
-.sheat-card{background:var(--blk3);border:var(--border2);border-radius:var(--r);padding:.65rem .85rem;transition:border-color .15s}
-.sheat-card:hover{border-color:rgba(255,255,255,.15)}
-.sheat-name{font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem}
-.sheat-bar-track{height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-bottom:.28rem}
+/* ── SECTOR HEAT MAP ──────────────────────────────────────────── */
+.sheat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.4rem;margin-top:.75rem}
+.sheat-card{background:var(--blk3);border:var(--border2);border-radius:var(--r);padding:.55rem .75rem;transition:border-color .12s}
+.sheat-card:hover{border-color:rgba(255,255,255,.13)}
+.sheat-name{font-size:8.5px;font-weight:600;letter-spacing:.07em;color:var(--wh3);text-transform:uppercase;margin-bottom:.25rem}
+.sheat-bar-track{height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-bottom:.22rem}
 .sheat-fill{height:100%;border-radius:2px}
 .sheat-fill.up{background:var(--green)}.sheat-fill.down{background:var(--red)}
-.sheat-pct{font-size:12.5px;font-weight:700}
+.sheat-pct{font-size:12px;font-weight:700}
 .sheat-pct.up{color:var(--green)}.sheat-pct.down{color:var(--red)}
 
-/* ─── SECTOR CARDS ─────────────────────────────────────────────── */
-.sector-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
-.sector-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1rem 1.2rem;display:flex;align-items:flex-start;gap:.8rem}
-.sector-card.hot{border-color:rgba(255,136,0,.3)}.sector-card.cold{border-color:rgba(68,136,255,.3)}
-.sector-ico{font-size:1.3rem;line-height:1;margin-top:2px}
-.sector-type{font-size:8px;font-weight:700;letter-spacing:.2em;color:var(--wh3);margin-bottom:3px;text-transform:uppercase}
-.sector-txt{font-size:13px;color:var(--wh2);line-height:1.5}
-.rot-txt{font-size:12px;color:var(--wh2);font-style:italic;margin-top:.7rem;padding:.5rem .8rem;background:rgba(212,160,23,.06);border-left:2px solid var(--gold-d);border-radius:0 4px 4px 0}
+/* ── SNAPSHOT STATS ───────────────────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(8,1fr);gap:1px;background:rgba(212,160,23,.07);border:var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:1rem}
+.stat-box{background:var(--blk3);padding:.65rem .4rem;text-align:center}
+.stat-num{font-family:var(--display);font-size:1.3rem;color:var(--gold-b);line-height:1;letter-spacing:.04em}
+.stat-lbl{font-size:7.5px;color:var(--wh3);letter-spacing:.08em;margin-top:2px;text-transform:uppercase}
 
-/* ─── TRENDING TAPE ────────────────────────────────────────────── */
-.tape-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-.tape-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1rem 1.2rem}
-.tape{display:flex;flex-wrap:wrap;gap:6px;margin-top:.6rem}
-.chip{background:var(--blk4);border:var(--border);border-radius:4px;padding:4px 9px;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.07em;cursor:pointer;transition:background .15s}
-.chip:hover{background:var(--blk5)}.chip .cnt{font-size:9px;font-weight:400;color:var(--wh3);margin-left:3px}
-.st-chip{background:var(--blk4);border:1px solid rgba(255,136,0,.2);border-radius:4px;padding:4px 9px;font-size:12px;font-weight:700;color:var(--orange);letter-spacing:.07em;cursor:pointer;transition:background .15s}
-.st-chip:hover{background:var(--blk5)}.st-chip .cnt{font-size:9px;font-weight:400;color:var(--wh3);margin-left:3px}
+/* ── MARKET SUMMARY ───────────────────────────────────────────── */
+.sum-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1rem 1.2rem;margin-bottom:1rem;position:relative;overflow:hidden}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.sum-txt{font-size:13px;line-height:1.7;color:var(--wh2)}
 
-/* ─── SIGNAL CARDS ─────────────────────────────────────────────── */
-.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:1rem}
-.card{background:var(--blk3);border-radius:var(--rl);padding:1.4rem 1.5rem;position:relative;overflow:hidden;border:1px solid transparent;transition:transform .2s,box-shadow .2s;animation:fadeUp .35s ease both}
-.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.card.buy{border-color:rgba(0,208,132,.25);background:linear-gradient(135deg,var(--blk3),var(--green-dd))}
-.card.buy::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green);box-shadow:0 0 12px var(--green)}
-.card.sell{border-color:rgba(255,68,68,.25);background:linear-gradient(135deg,var(--blk3),var(--red-dd))}
-.card.sell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red);box-shadow:0 0 12px var(--red)}
-.card.watch{border-color:rgba(212,160,23,.25);background:linear-gradient(135deg,var(--blk3),rgba(212,160,23,.04))}
-.card.watch::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold)}
-.card.congress{border-color:rgba(153,102,255,.25);background:linear-gradient(135deg,var(--blk3),rgba(153,102,255,.04))}
-.card.congress::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--purple);box-shadow:0 0 12px var(--purple)}
-.card.technical{border-color:rgba(68,136,255,.25);background:linear-gradient(135deg,var(--blk3),rgba(68,136,255,.04))}
-.card.technical::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue)}
-.c-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.8rem}
-.c-ticker-blk{display:flex;flex-direction:column;gap:2px}
-.c-ticker{font-family:var(--display);font-size:2rem;letter-spacing:.1em;line-height:1}
-.card.buy .c-ticker{color:var(--green)}.card.sell .c-ticker{color:var(--red)}.card.watch .c-ticker{color:var(--gold-b)}.card.congress .c-ticker{color:var(--purple)}.card.technical .c-ticker{color:var(--blue)}
-.c-co{font-size:10px;color:var(--wh3)}
-.c-badges{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-.str-badge{font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 8px;border-radius:3px;text-transform:uppercase}
-.card.buy .str-badge{background:var(--green-d);color:var(--green)}.card.sell .str-badge{background:var(--red-d);color:var(--red)}.card.watch .str-badge{background:var(--gold-s);color:var(--gold)}.card.congress .str-badge{background:var(--purple-d);color:var(--purple)}.card.technical .str-badge{background:var(--blue-d);color:var(--blue)}
-.risk-b{font-size:8px;padding:2px 6px;border-radius:3px;border:1px solid rgba(255,255,255,.1);color:var(--wh3)}
-.risk-b.High,.risk-b.Speculative{border-color:rgba(255,68,68,.3);color:var(--red)}.risk-b.Medium{border-color:rgba(255,215,0,.22);color:var(--gold)}.risk-b.Low{border-color:rgba(0,208,132,.22);color:var(--green)}
-.dsigs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.dsig{font-size:8px;font-weight:600;letter-spacing:.06em;padding:2px 6px;border-radius:3px;text-transform:uppercase;background:rgba(255,255,255,.04);color:var(--wh3);border:1px solid rgba(255,255,255,.07)}
-.dsig.reddit{color:#FF4500;border-color:rgba(255,69,0,.2);background:rgba(255,69,0,.06)}.dsig.options{color:var(--blue);border-color:rgba(68,136,255,.2);background:rgba(68,136,255,.06)}.dsig.earnings{color:var(--gold);border-color:rgba(212,160,23,.2);background:rgba(212,160,23,.06)}.dsig.insider{color:var(--orange);border-color:rgba(255,136,0,.2);background:rgba(255,136,0,.06)}.dsig.news,.dsig.technical{color:var(--wh2);border-color:rgba(255,255,255,.12)}.dsig.congressional{color:var(--purple);border-color:rgba(153,102,255,.2);background:rgba(153,102,255,.06)}.dsig.short_squeeze{color:var(--orange);border-color:rgba(255,136,0,.2);background:rgba(255,136,0,.06)}
-.price-row{display:flex;align-items:center;gap:.8rem;margin-bottom:.8rem;padding:.6rem .85rem;background:rgba(0,0,0,.25);border-radius:6px;flex-wrap:wrap}
-.p-cur{font-size:17px;font-weight:700;color:var(--wh)}.p-tgt{font-size:11.5px;color:var(--wh2);display:flex;align-items:center;gap:3px}.p-arr{color:var(--green);font-size:12px}.p-stop{font-size:11px;color:var(--red)}
-.t-hz{margin-left:auto;font-size:9px;color:var(--wh3);border:1px solid rgba(255,255,255,.1);padding:2px 7px;border-radius:10px}
-.sparkline-wrap{height:52px;margin:.55rem 0;border-radius:4px;overflow:hidden;background:rgba(0,0,0,.15)}
-.sparkline-wrap canvas{width:100%!important}
-.tech-setup{background:rgba(68,136,255,.07);border:1px solid rgba(68,136,255,.18);border-radius:4px;padding:5px 9px;margin-bottom:7px;font-size:10px;color:var(--blue)}
-.opts-play{background:rgba(255,136,0,.06);border:1px solid rgba(255,136,0,.16);border-radius:4px;padding:5px 9px;margin-bottom:7px;font-size:10px;color:var(--orange)}
-.catalyst{background:rgba(212,160,23,.06);border:1px solid rgba(212,160,23,.16);border-radius:4px;padding:5px 9px;margin-bottom:7px;font-size:10px;color:var(--gold)}
-.catalyst::before{content:'🎯 '}
-.reasons{list-style:none;margin-bottom:.75rem;display:flex;flex-direction:column;gap:5px}
-.reasons li{font-size:12px;color:var(--wh2);display:flex;align-items:flex-start;gap:7px;line-height:1.5}
-.reasons li::before{content:'▸';color:var(--gold-d);font-size:9px;margin-top:3px;flex-shrink:0}
-.urg{font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 9px;border-radius:3px;text-transform:uppercase;display:inline-block;margin-bottom:8px}
-.urg.IMMEDIATE{background:var(--red-d);color:var(--red)}.urg.THIS-WEEK{background:var(--orange-d);color:var(--orange)}.urg.REDUCE-POSITION{background:var(--gold-s);color:var(--gold)}
-.rok-take{background:rgba(212,160,23,.06);border-left:2px solid var(--gold-d);padding:7px 10px;border-radius:0 4px 4px 0;font-size:12px;font-style:italic;color:var(--wh2);line-height:1.55}
-.rok-take::before{content:'ROK: ';font-style:normal;font-weight:700;color:var(--gold);font-size:8.5px;letter-spacing:.12em}
+/* ── SECTOR ROTATION ───────────────────────────────────────────── */
+.sr-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.75rem}
+.sr-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:.8rem 1rem;display:flex;align-items:flex-start;gap:.65rem}
+.sr-card.hot{border-color:rgba(255,136,0,.25)}.sr-card.cold{border-color:rgba(68,136,255,.25)}
+.sr-ico{font-size:1.1rem;line-height:1;margin-top:1px}
+.sr-type{font-size:7.5px;font-weight:700;letter-spacing:.18em;color:var(--wh3);margin-bottom:2px;text-transform:uppercase}
+.sr-txt{font-size:12px;color:var(--wh2);line-height:1.4}
+.rot-txt{font-size:11px;color:var(--wh2);font-style:italic;padding:.45rem .75rem;background:rgba(212,160,23,.05);border-left:2px solid var(--gold-d);border-radius:0 4px 4px 0;margin-bottom:.75rem}
 
-/* ─── WATCH CARDS ──────────────────────────────────────────────── */
-.w-trigger{background:rgba(0,0,0,.25);border-radius:6px;padding:8px 11px;margin-bottom:7px}
-.w-tlbl{font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--gold-d);margin-bottom:3px;text-transform:uppercase}
-.w-ttxt{font-size:12px;color:var(--wh2)}
-.w-risk{font-size:11px;color:var(--red);display:flex;align-items:center;gap:5px}.w-risk::before{content:'⚠ '}
-.w-pot{font-size:11px;color:var(--green);margin-top:5px}
+/* ── TRENDING TAPE ───────────────────────────────────────────── */
+.tape-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.tape-card{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:.8rem 1rem}
+.tape{display:flex;flex-wrap:wrap;gap:5px;margin-top:.5rem}
+.chip{background:var(--blk4);border:var(--border);border-radius:3px;padding:3px 8px;font-size:11.5px;font-weight:700;color:var(--gold);letter-spacing:.07em;cursor:pointer;transition:background .12s}
+.chip:hover{background:var(--blk5)}.chip .cnt{font-size:8.5px;font-weight:400;color:var(--wh3);margin-left:2px}
+.st-chip{background:var(--blk4);border:1px solid rgba(255,136,0,.18);border-radius:3px;padding:3px 8px;font-size:11.5px;font-weight:700;color:var(--orange);letter-spacing:.07em;cursor:pointer;transition:background .12s}
+.st-chip:hover{background:var(--blk5)}.st-chip .cnt{font-size:8.5px;font-weight:400;color:var(--wh3);margin-left:2px}
 
-/* ─── SPECIAL CARD GRIDS ────────────────────────────────────────────── */
-.squeeze-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.9rem}
-.squeeze-card{background:var(--blk3);border:1px solid rgba(255,136,0,.22);border-radius:var(--rl);padding:1.1rem;animation:fadeUp .35s ease both}
-.squeeze-card::before{content:'';display:block;height:2px;background:var(--orange);box-shadow:0 0 8px var(--orange);border-radius:2px;margin-bottom:.8rem}
-.sq-ticker{font-family:var(--display);font-size:1.7rem;color:var(--orange);letter-spacing:.1em}.sq-float{font-size:11px;color:var(--wh2);margin:.25rem 0}.sq-vel{font-size:9px;font-weight:600;letter-spacing:.08em;padding:2px 7px;border-radius:3px;display:inline-block;margin-bottom:5px;text-transform:uppercase}
-.sq-vel.rising{color:var(--green);background:var(--green-d)}.sq-vel.stable{color:var(--gold);background:var(--gold-s)}.sq-vel.dropping{color:var(--red);background:var(--red-d)}
-.sq-setup{font-size:12px;color:var(--wh3)}
-.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem}
-.ecard{background:var(--blk3);border:1px solid rgba(68,136,255,.2);border-radius:var(--rl);padding:1.1rem;animation:fadeUp .35s ease both}
-.ecard::before{content:'';display:block;height:2px;background:var(--blue);border-radius:2px;margin-bottom:.8rem}
-.e-ticker{font-family:var(--display);font-size:1.7rem;color:var(--blue);letter-spacing:.1em}
-.e-date{font-size:10px;color:var(--wh3);margin:.2rem 0}.e-eps{font-size:9.5px;color:var(--wh3);margin-bottom:5px}
-.e-dir{font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:6px;text-transform:uppercase}
-.e-dir.CALL{color:var(--green);background:var(--green-d)}.e-dir.PUT{color:var(--red);background:var(--red-d)}.e-dir.STRADDLE{color:var(--blue);background:var(--blue-d)}
-.e-play{font-size:12px;color:var(--wh2)}
-.cong-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.9rem}
-.cong-card{background:var(--blk3);border:1px solid rgba(153,102,255,.2);border-radius:var(--rl);padding:1.1rem;animation:fadeUp .35s ease both}
-.cong-card::before{content:'';display:block;height:2px;background:var(--purple);border-radius:2px;margin-bottom:.8rem}
-.cong-ticker{font-family:var(--display);font-size:1.7rem;color:var(--purple);letter-spacing:.1em}
-.cong-count{font-size:11px;color:var(--wh2);margin:.25rem 0}.cong-members{font-size:10px;color:var(--wh3);font-style:italic;margin-bottom:5px}.cong-why{font-size:12px;color:var(--wh2)}
-.tech-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem}
-.tech-card{background:var(--blk3);border:1px solid rgba(68,136,255,.2);border-radius:var(--rl);padding:1.1rem;animation:fadeUp .35s ease both}
-.tech-card::before{content:'';display:block;height:2px;background:var(--blue);border-radius:2px;margin-bottom:.8rem}
-.tech-ticker{font-family:var(--display);font-size:1.7rem;color:var(--blue);letter-spacing:.1em}
-.tech-type{font-size:8.5px;font-weight:700;letter-spacing:.1em;color:var(--blue);margin:.2rem 0;text-transform:uppercase;opacity:.7}
-.tech-desc{font-size:12px;color:var(--wh2);margin-bottom:5px}.tech-tf{font-size:9.5px;color:var(--wh3)}
-
-/* ─── LISTS (risks / trends) ────────────────────────────────────────────── */
-.risks-list,.trends-list{display:flex;flex-direction:column;gap:.5rem}
-.risk-item{background:var(--blk3);border:var(--border);border-left:3px solid var(--red);border-radius:0 var(--r) var(--r) 0;padding:.8rem 1rem;font-size:13px;color:var(--wh2);display:flex;align-items:flex-start;gap:.8rem}
-.risk-num{font-family:var(--display);font-size:1.1rem;color:var(--red);opacity:.45;flex-shrink:0;width:22px}
-.trend-item{background:var(--blk3);border:var(--border);border-left:3px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:.8rem 1rem;font-size:13px;color:var(--wh2);display:flex;align-items:flex-start;gap:.8rem}
-.trend-num{font-family:var(--display);font-size:1.1rem;color:var(--gold-d);flex-shrink:0;width:22px}
-
-/* ─── STOCK UNIVERSE SCREENER ───────────────────────────────────────── */
-.screener-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem;margin-bottom:1rem}
-.sc-ftabs{display:flex;gap:.4rem;flex-wrap:wrap}
-.sc-ftab{background:var(--blk4);border:var(--border2);border-radius:6px;padding:.35rem .9rem;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--wh3);cursor:pointer;transition:all .15s;text-transform:uppercase}
-.sc-ftab:hover{color:var(--wh2);border-color:rgba(255,255,255,.15)}
-.sc-ftab.active{background:var(--gold-s);border-color:var(--gold-d);color:var(--gold)}
-.sc-ftab.active.buy{background:var(--green-d);border-color:rgba(0,208,132,.3);color:var(--green)}
-.sc-ftab.active.sell{background:var(--red-d);border-color:rgba(255,68,68,.3);color:var(--red)}
-.sc-ftab.active.watch{background:var(--gold-s);border-color:var(--gold-d);color:var(--gold)}
-.sc-count{font-size:10px;color:var(--wh3);margin-left:auto}
-.sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.6rem}
-.sc-card{background:var(--blk3);border-radius:var(--r);padding:.9rem;border:var(--border2);transition:transform .18s,border-color .15s,box-shadow .18s;cursor:pointer;position:relative;overflow:hidden}
+/* ── SCREENER TAB ───────────────────────────────────────────── */
+.sc-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin-bottom:.85rem}
+.sc-tabs{display:flex;gap:.35rem;flex-wrap:wrap}
+.sc-tab{background:var(--blk4);border:var(--border2);border-radius:5px;padding:.3rem .8rem;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--wh3);cursor:pointer;transition:all .12s;text-transform:uppercase;border:none}
+.sc-tab:hover{color:var(--wh2)}
+.sc-tab.active{background:var(--gold-s);border:1px solid var(--gold-d);color:var(--gold)}
+.sc-tab.active.buy{background:var(--green-d);border-color:rgba(0,208,132,.28);color:var(--green)}
+.sc-tab.active.sell{background:var(--red-d);border-color:rgba(255,68,68,.28);color:var(--red)}
+.sc-tab.active.watch{background:var(--gold-s);border-color:var(--gold-d);color:var(--gold)}
+.sc-cnt{font-size:9.5px;color:var(--wh3);margin-left:auto}
+.sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:.5rem}
+.sc-card{background:var(--blk3);border-radius:var(--r);padding:.8rem;border:var(--border2);transition:transform .15s,border-color .12s;cursor:pointer;position:relative;overflow:hidden}
 .sc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.sc-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:rgba(255,255,255,.14)}
-.sc-card.buy{border-color:rgba(0,208,132,.2)}.sc-card.buy::before{background:var(--green)}
-.sc-card.sell{border-color:rgba(255,68,68,.2)}.sc-card.sell::before{background:var(--red)}
-.sc-card.watch{border-color:rgba(212,160,23,.2)}.sc-card.watch::before{background:var(--gold)}
+.sc-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.12)}
+.sc-card.buy{border-color:rgba(0,208,132,.18)}.sc-card.buy::before{background:var(--green)}
+.sc-card.sell{border-color:rgba(255,68,68,.18)}.sc-card.sell::before{background:var(--red)}
+.sc-card.watch{border-color:rgba(212,160,23,.18)}.sc-card.watch::before{background:var(--gold)}
 .sc-card.neutral::before{background:var(--wh4)}
-.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem}
-.sc-ticker{font-family:var(--display);font-size:1.35rem;letter-spacing:.08em;line-height:1}
+.sc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem}
+.sc-ticker{font-family:var(--display);font-size:1.25rem;letter-spacing:.07em;line-height:1}
 .sc-card.buy .sc-ticker{color:var(--green)}.sc-card.sell .sc-ticker{color:var(--red)}.sc-card.watch .sc-ticker{color:var(--gold-b)}.sc-card.neutral .sc-ticker{color:var(--wh)}
-.sc-co{font-size:9px;color:var(--wh3);margin-top:1px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sc-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.sc-sig{font-size:8px;font-weight:700;letter-spacing:.1em;padding:2px 6px;border-radius:3px;text-transform:uppercase}
+.sc-co{font-size:8.5px;color:var(--wh3);max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-r{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.sc-sig{font-size:7.5px;font-weight:700;letter-spacing:.09em;padding:1px 5px;border-radius:3px;text-transform:uppercase}
 .sc-sig.buy{background:var(--green-d);color:var(--green)}.sc-sig.sell{background:var(--red-d);color:var(--red)}.sc-sig.watch{background:var(--gold-s);color:var(--gold)}
-.sc-price{font-size:14px;font-weight:700;color:var(--wh)}.sc-price.up{color:var(--green)}.sc-price.down{color:var(--red)}
-.sc-chg{font-size:10.5px;font-weight:600}.sc-chg.up{color:var(--green)}.sc-chg.down{color:var(--red)}
-.sc-spark{height:36px;margin:.4rem 0;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.15)}
+.sc-price{font-size:13px;font-weight:700}
+.sc-price.up{color:var(--green)}.sc-price.down{color:var(--red)}
+.sc-chg{font-size:9.5px;font-weight:600}.sc-chg.up{color:var(--green)}.sc-chg.down{color:var(--red)}
+.sc-spark{height:32px;margin:.35rem 0;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.12)}
 .sc-spark canvas{width:100%!important}
-.sc-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:.4rem}
-.sc-sector{font-size:8.5px;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,.05);color:var(--wh3);border:1px solid rgba(255,255,255,.07)}
-.sc-pe{font-size:8.5px;padding:1px 5px;border-radius:3px;background:rgba(212,160,23,.07);color:var(--gold-d)}
-.sc-upside{font-size:8.5px;padding:1px 5px;border-radius:3px;font-weight:600}
-.sc-upside.up{background:rgba(0,208,132,.08);color:var(--green)}.sc-upside.down{background:rgba(255,68,68,.08);color:var(--red)}
-.sc-rec{font-size:8.5px;padding:1px 5px;border-radius:3px;background:rgba(68,136,255,.08);color:var(--blue);text-transform:capitalize}
-.screener-empty{text-align:center;padding:3rem;color:var(--wh3);font-size:14px}
-.screener-empty a{color:var(--gold-d);text-decoration:underline}
+.sc-meta{display:flex;flex-wrap:wrap;gap:3px;margin-top:.35rem}
+.sc-sector{font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(255,255,255,.05);color:var(--wh3)}
+.sc-pe{font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(212,160,23,.06);color:var(--gold-d)}
+.sc-upside{font-size:8px;padding:1px 4px;border-radius:3px;font-weight:600}
+.sc-upside.up{background:rgba(0,208,132,.07);color:var(--green)}.sc-upside.down{background:rgba(255,68,68,.07);color:var(--red)}
+.sc-rec{font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(68,136,255,.07);color:var(--blue);text-transform:capitalize}
+.sc-empty{text-align:center;padding:2.5rem;color:var(--wh3);font-size:13px;grid-column:1/-1}
+.sc-empty a{color:var(--gold-d);text-decoration:underline}
 
-/* ─── TRACK RECORD ──────────────────────────────────────────────── */
-.track-header{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.9rem}
-.track-wr{font-size:12px;color:var(--wh2)}
-.track-wr strong{color:var(--green)}
-.track-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:.65rem}
-.track-card{background:var(--blk3);border:var(--border2);border-radius:var(--r);padding:.9rem;text-align:center;position:relative;overflow:hidden}
+/* ── INTEL TAB ───────────────────────────────────────────── */
+.intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.intel-section{background:var(--blk3);border:var(--border);border-radius:var(--rl);padding:1rem 1.1rem}
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:.55rem;margin-top:.6rem}
+.mini-card{background:var(--blk4);border-radius:var(--r);padding:.75rem;border:var(--border2)}
+.mini-ticker{font-family:var(--display);font-size:1.35rem;letter-spacing:.1em}
+.sq-ticker{color:var(--orange)}.e-ticker{color:var(--blue)}.cong-ticker{color:var(--purple)}
+.mini-sub{font-size:10px;color:var(--wh2);margin:.2rem 0}
+.mini-tag{font-size:8px;font-weight:700;letter-spacing:.09em;padding:1px 6px;border-radius:3px;display:inline-block;margin-bottom:4px;text-transform:uppercase}
+.mini-tag.CALL{color:var(--green);background:var(--green-d)}.mini-tag.PUT{color:var(--red);background:var(--red-d)}.mini-tag.STRADDLE{color:var(--blue);background:var(--blue-d)}
+.mini-tag.rising{color:var(--green);background:var(--green-d)}.mini-tag.stable{color:var(--gold);background:var(--gold-s)}.mini-tag.dropping{color:var(--red);background:var(--red-d)}
+.mini-txt{font-size:11px;color:var(--wh3)}
+.list{display:flex;flex-direction:column;gap:.4rem;margin-top:.5rem}
+.list-item{display:flex;align-items:flex-start;gap:.65rem;padding:.6rem .75rem;background:var(--blk4);border-radius:5px;border-left:2px solid var(--wh4);font-size:12px;color:var(--wh2)}
+.list-item.risk{border-left-color:var(--red)}.list-item.trend{border-left-color:var(--gold)}
+.list-n{font-family:var(--display);font-size:.95rem;opacity:.4;flex-shrink:0;width:18px}
+.track-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.45rem;margin-top:.6rem}
+.track-card{background:var(--blk4);border-radius:var(--r);padding:.75rem;text-align:center;position:relative;overflow:hidden}
 .track-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .track-card.win::before{background:var(--green)}.track-card.loss::before{background:var(--red)}.track-card.flat::before{background:var(--wh4)}
-.track-ticker{font-family:var(--display);font-size:1.45rem;letter-spacing:.08em;margin-bottom:.25rem}
-.track-card.win .track-ticker{color:var(--green)}.track-card.loss .track-ticker{color:var(--red)}.track-card.flat .track-ticker{color:var(--wh)}
-.track-pct{font-size:1.25rem;font-weight:800;line-height:1}
+.track-t{font-family:var(--display);font-size:1.25rem;letter-spacing:.07em;margin-bottom:.15rem}
+.track-card.win .track-t{color:var(--green)}.track-card.loss .track-t{color:var(--red)}.track-card.flat .track-t{color:var(--wh)}
+.track-pct{font-size:1.1rem;font-weight:800;line-height:1}
 .track-card.win .track-pct{color:var(--green)}.track-card.loss .track-pct{color:var(--red)}.track-card.flat .track-pct{color:var(--wh3)}
-.track-prices{font-size:9px;color:var(--wh3);margin-top:.3rem}
-.track-date{font-size:8px;color:var(--wh3);margin-top:2px;opacity:.5}
+.track-p{font-size:8.5px;color:var(--wh3);margin-top:.25rem}
 
-/* ─── FOOTER ───────────────────────────────────────────────────── */
-.ftr{border-top:var(--border);padding:1.25rem 2rem;background:var(--blk2);margin-top:1rem}
-.ftr-in{max-width:1600px;margin:0 auto;display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap}
-.ftr-brand{font-family:var(--display);font-size:1.3rem;color:var(--gold-d);letter-spacing:.2em;flex-shrink:0;margin-top:2px}
-.ftr-txt{font-size:10px;color:var(--wh3);flex:1;line-height:1.7}
-.ftr-time{font-size:9.5px;color:var(--wh3);white-space:nowrap;flex-shrink:0}
-.disclaimer{font-size:9.5px;color:var(--wh3);margin-top:.2rem;opacity:.55}
+/* ── FOOTER ───────────────────────────────────────────────── */
+.ftr{border-top:var(--border);padding:.8rem 1.5rem;background:var(--blk2);flex-shrink:0;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.ftr-brand{font-family:var(--display);font-size:1.1rem;color:var(--gold-d);letter-spacing:.2em;flex-shrink:0}
+.ftr-txt{font-size:9px;color:var(--wh3);flex:1;line-height:1.6}
+.disclaimer{font-size:8.5px;color:var(--wh3);opacity:.5;margin-top:.1rem}
+.ftr-time{font-size:9px;color:var(--wh3);white-space:nowrap;flex-shrink:0}
 
-/* ─── RESPONSIVE ───────────────────────────────────────────────────── */
-@media(max-width:1100px){.snapshot-row{grid-template-columns:1fr}.pulse-row{grid-template-columns:1fr 1fr}}
-@media(max-width:900px){.pulse-row,.sector-row,.tape-row{grid-template-columns:1fr}.cgrid{grid-template-columns:1fr}}
-@media(max-width:768px){.main{padding:1rem}.hdr-in{padding:0 1rem}.indices-ticker{display:none}.logo{font-size:2.2rem}.search-hero{padding:1rem}.sc-grid{grid-template-columns:repeat(2,1fr)}.track-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:480px){.sc-grid{grid-template-columns:1fr 1fr}.track-grid{grid-template-columns:repeat(2,1fr)}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media(max-width:1200px){.sig-layout{grid-template-columns:1fr 1fr}.mkt-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.sig-layout{grid-template-columns:1fr}.mkt-grid{grid-template-columns:1fr}.intel-grid{grid-template-columns:1fr}.sr-row{grid-template-columns:1fr}.tape-row{grid-template-columns:1fr}}
+@media(max-width:768px){.idx-bar{display:none}.tab-pane{padding:.9rem 1rem}.stats-row{grid-template-columns:repeat(4,1fr)}.sc-grid{grid-template-columns:repeat(2,1fr)}.track-grid{grid-template-columns:repeat(3,1fr)}.tab-search{display:none}}
+@media(max-width:480px){.sc-grid{grid-template-columns:1fr 1fr}.track-grid{grid-template-columns:repeat(2,1fr)}.stats-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-{# ── HEADER ───────────────────────────────────────────────────────── #}
+<!-- HEADER -->
 <header class="hdr">
   <div class="hdr-in">
-    <a class="brand" href="#">
+    <a href="#" style="display:flex;align-items:baseline;gap:.3rem;text-decoration:none;flex-shrink:0">
       <span class="logo">ROK</span>
-      <div class="brand-sub">
-        <span class="tagline">STOCK INTELLIGENCE</span>
-        <span class="upd-line">{{ data.analysis_date }}</span>
-      </div>
+      <span class="brand-tag">STOCK INTELLIGENCE</span>
     </a>
-    <div class="indices-ticker">
+    <div class="idx-bar">
       {% for name, d in data.market_indices.items() %}
       {% set chg = d.change_pct|default(0) %}
       <div class="idx">
-        <span class="idx-name">{{ name }}</span>
-        <span class="idx-price">{% if name == 'VIX' %}{{ d.price }}{% else %}${{ d.price }}{% endif %}</span>
-        <span class="idx-chg {{ 'up' if chg >= 0 else 'down' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</span>
+        <span class="idx-n">{{ name }}</span>
+        <span class="idx-p">{% if name == 'VIX' %}{{ d.price }}{% else %}${{ d.price }}{% endif %}</span>
+        <span class="idx-c {{ 'up' if chg >= 0 else 'down' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</span>
       </div>
       {% endfor %}
     </div>
-    <div class="hdr-right">
+    <div class="hdr-r">
       <div class="live-pill"><span class="live-dot"></span><span id="update-timer">live</span></div>
-      {% if data.market_regime %}<span class="regime-pill">{{ data.market_regime }}</span>{% endif %}
-      <span class="sent-pill {{ data.market_sentiment }}">{{ data.market_sentiment }}</span>
+      {% if data.market_regime %}<span class="regime">{{ data.market_regime }}</span>{% endif %}
+      <span class="sent {{ data.market_sentiment }}">{{ data.market_sentiment }}</span>
     </div>
   </div>
 </header>
 
-{# ── ROK SAYS ─────────────────────────────────────────────────────────── #}
+<!-- ROK MESSAGE -->
 {% if data.rok_message %}
 <div class="rok-bar">
   <span class="rok-lbl">ROK SAYS</span>
@@ -332,567 +302,445 @@ input,button{font-family:var(--font)}
 </div>
 {% endif %}
 
-{# ── SEARCH HERO ───────────────────────────────────────────────────────── #}
-<div class="search-hero">
-  <div class="search-hero-in">
-    <div class="search-label">STOCK SEARCH — {{ data.source_stats.stocks|default(0) }} tickers analyzed today</div>
-    <div class="search-wrap">
-      <input id="stock-search" class="search-input" type="text" placeholder="Search any ticker or company name... (e.g. NVDA, Apple, TSLA)" autocomplete="off" spellcheck="false"/>
+<!-- TAB NAV -->
+<nav class="tab-nav">
+  <div class="tab-nav-in">
+    <button class="tab-btn active" data-tab="signals">
+      SIGNALS
+      <span class="badge">{{ (data.buy_signals|length) + (data.sell_signals|length) }}</span>
+    </button>
+    <button class="tab-btn" data-tab="market">MARKET</button>
+    <button class="tab-btn" data-tab="screener">
+      SCREENER
+      <span class="badge">{{ data.stock_universe|default([])|length }}</span>
+    </button>
+    <button class="tab-btn" data-tab="intel">INTEL</button>
+    <div class="tab-search">
+      <input id="stock-search" class="search-box" type="text" placeholder="Search ticker or company…" autocomplete="off" spellcheck="false"/>
     </div>
-    <div class="search-hint">Search through all analyzed stocks → or scroll down to the Stock Universe screener</div>
   </div>
-</div>
+</nav>
 
-<main class="main">
+<!-- SCROLLABLE CONTENT -->
+<div class="content">
 
-{# ── SNAPSHOT ──────────────────────────────────────────────────────────── #}
-<section class="snapshot-row">
-  <div class="sum-card">
-    <div class="clbl">ROK MARKET INTELLIGENCE BRIEFING</div>
-    <p class="sum-txt">{{ data.week_summary }}</p>
-  </div>
-  <div>
-    <div class="stats-grid">
+  <!-- ── SIGNALS TAB ────────────────────────────────────────────────── -->
+  <div class="tab-pane active" id="tab-signals">
+    <div class="stats-row">
       {% set ss = data.source_stats %}
-      <div class="stat-box"><div class="stat-num">{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}</div><div class="stat-lbl">Reddit Posts</div></div>
-      <div class="stat-box"><div class="stat-num">{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}</div><div class="stat-lbl">News Articles</div></div>
-      <div class="stat-box"><div class="stat-num">{{ ss.stocks }}</div><div class="stat-lbl">Stocks Tracked</div></div>
-      <div class="stat-box"><div class="stat-num">{{ ss.sec }}</div><div class="stat-lbl">SEC Filings</div></div>
-      <div class="stat-box"><div class="stat-num">{{ ss.earnings_upcoming }}</div><div class="stat-lbl">Earnings Ahead</div></div>
-      <div class="stat-box"><div class="stat-num">{{ ss.unusual_options }}</div><div class="stat-lbl">Options Alerts</div></div>
-      <div class="stat-box"><div class="stat-num">{{ ss.congress_trades|default(0) }}</div><div class="stat-lbl">Congress Buys</div></div>
+      <div class="stat-box"><div class="stat-num">{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}</div><div class="stat-lbl">Reddit</div></div>
+      <div class="stat-box"><div class="stat-num">{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}</div><div class="stat-lbl">News</div></div>
+      <div class="stat-box"><div class="stat-num">{{ ss.stocks }}</div><div class="stat-lbl">Stocks</div></div>
+      <div class="stat-box"><div class="stat-num">{{ ss.sec }}</div><div class="stat-lbl">SEC</div></div>
+      <div class="stat-box"><div class="stat-num">{{ ss.earnings_upcoming }}</div><div class="stat-lbl">Earnings</div></div>
+      <div class="stat-box"><div class="stat-num">{{ ss.unusual_options }}</div><div class="stat-lbl">Options</div></div>
+      <div class="stat-box"><div class="stat-num">{{ ss.congress_trades|default(0) }}</div><div class="stat-lbl">Congress</div></div>
       <div class="stat-box"><div class="stat-num">{{ ss.technical|default(0) }}</div><div class="stat-lbl">TA Setups</div></div>
     </div>
-  </div>
-</section>
-
-{# ── MARKET PULSE ───────────────────────────────────────────────────────── #}
-<section class="pulse-row">
-  <div class="pulse-card">
-    <div class="clbl">CNN FEAR / GREED INDEX</div>
-    {% set fg = data.fear_greed %}{% set fgs = fg.score|default(50) %}{% set pct = [[fgs,2]|max,98]|min %}
-    <div class="gauge-track"><div class="gauge-pin" style="left:calc({{ pct }}% - 8px)"></div></div>
-    <div class="gauge-mkrs"><span>FEAR</span><span>NEUTRAL</span><span>GREED</span></div>
-    <div class="gauge-score">{{ fgs }}/100 — {{ fg.rating|default('Neutral') }}</div>
-  </div>
-  <div class="pulse-card">
-    <div class="clbl">SOCIAL SENTIMENT</div>
-    {% set agg = data.aggregate_sentiment %}
-    <div class="sbars">
-      <div class="sbar-row"><span class="sbar-lbl bull-l">BULLISH</span><div class="sbar-track"><div class="sbar bull-b" style="width:{{ agg.bullish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bullish_pct|default(0) }}%</span></div>
-      <div class="sbar-row"><span class="sbar-lbl bear-l">BEARISH</span><div class="sbar-track"><div class="sbar bear-b" style="width:{{ agg.bearish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bearish_pct|default(0) }}%</span></div>
-      <div class="sbar-row"><span class="sbar-lbl neut-l">NEUTRAL</span><div class="sbar-track"><div class="sbar neut-b" style="width:{{ agg.neutral_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.neutral_pct|default(0) }}%</span></div>
-    </div>
-  </div>
-  <div class="pulse-card">
-    <div class="clbl">PUT / CALL RATIO</div>
-    {% set pcr = data.put_call_ratio|default({}) %}
-    <div class="metric-val">{{ pcr.total|default('—') }}</div>
-    <div class="metric-sub">Equity PCR: {{ pcr.equity|default('—') }}</div>
-    {% if pcr.signal %}<span class="pcr-sig {{ pcr.signal }}">{{ pcr.signal }}</span>{% endif %}
-    {% set breadth = data.market_breadth|default({}) %}
-    {% if breadth.breadth_pct is defined %}
-    <div style="margin-top:.8rem">
-      <div class="clbl" style="margin-bottom:.35rem">MARKET BREADTH</div>
-      <div class="breadth-bar"><div class="breadth-fill" style="width:{{ breadth.breadth_pct }}%"></div></div>
-      <div class="metric-sub">{{ breadth.breadth_pct }}% advancing{% if breadth.advance_decline_ratio %} · A/D {{ breadth.advance_decline_ratio }}{% endif %}</div>
-    </div>
-    {% endif %}
-  </div>
-</section>
-
-{# ── SECTOR HEAT MAP ──────────────────────────────────────────────────────── #}
-{% set sp = data.market_breadth.sector_performance|default({}) %}
-{% if sp %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl">SECTOR HEAT MAP</h2><span class="sec-sub">Today's performance by sector</span></div>
-  <div class="sheat-grid">
-    {% for name, chg in sp.items()|sort(attribute='1')|reverse %}
-    {% set cls = 'up' if chg >= 0 else 'down' %}
-    <div class="sheat-card">
-      <div class="sheat-name">{{ name }}</div>
-      <div class="sheat-bar-track"><div class="sheat-fill {{ cls }}" style="width:{{ [chg|abs * 30, 100]|min }}%"></div></div>
-      <div class="sheat-pct {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── SECTOR ROTATION ──────────────────────────────────────────────────────── #}
-{% set heat = data.sector_heat|default({}) %}
-{% if heat.hottest or heat.coldest %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl">SECTOR ROTATION</h2></div>
-  <div class="sector-row">
-    {% if heat.hottest %}<div class="sector-card hot"><div class="sector-ico">🔥</div><div><div class="sector-type">HOTTEST</div><div class="sector-txt">{{ heat.hottest }}</div></div></div>{% endif %}
-    {% if heat.coldest %}<div class="sector-card cold"><div class="sector-ico">❄️</div><div><div class="sector-type">COLDEST</div><div class="sector-txt">{{ heat.coldest }}</div></div></div>{% endif %}
-  </div>
-  {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
-</section>
-{% endif %}
-
-{# ── BUY SIGNALS ───────────────────────────────────────────────────────── #}
-{% if data.buy_signals %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-buy">BUY SIGNALS</h2><span class="sec-sub">{{ data.buy_signals|length }} high-conviction signal{{ 's' if data.buy_signals|length != 1 }}</span></div>
-  <div class="cgrid">
-    {% for s in data.buy_signals %}
-    <div class="card buy" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="c-hdr">
-        <div class="c-ticker-blk"><div class="c-ticker">${{ s.ticker }}</div><div class="c-co">{{ s.company }}</div></div>
-        <div class="c-badges">
-          {% set st = s.signal_strength|default(5) %}
-          <span class="str-badge">{% if st >= 8 %}STRONG{% elif st >= 6 %}MODERATE{% else %}WEAK{% endif %} · {{ st }}/10</span>
-          {% if s.risk_level %}<span class="risk-b {{ s.risk_level }}">{{ s.risk_level }}</span>{% endif %}
+    <div class="sig-layout">
+      <!-- BUY -->
+      <div>
+        <div class="sig-col-hdr"><div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-buy">BUY SIGNALS</h2><span class="s-sub">{{ data.buy_signals|length }} signal{{ 's' if data.buy_signals|length != 1 }}</span></div></div>
+        <div class="cgrid">
+          {% for s in data.buy_signals %}
+          <div class="card buy">
+            <div class="c-row1">
+              <div class="c-left"><div class="c-ticker">${{ s.ticker }}</div><div class="c-co">{{ s.company }}</div></div>
+              <div class="c-right">
+                {% set st = s.signal_strength|default(5) %}
+                <span class="str-b">{% if st >= 8 %}STRONG{% elif st >= 6 %}MOD{% else %}WEAK{% endif %} {{ st }}/10</span>
+                {% if s.risk_level %}<span class="risk-b {{ s.risk_level }}">{{ s.risk_level }}</span>{% endif %}
+              </div>
+            </div>
+            {% if s.data_signals %}<div class="dsigs">{% for sig in s.data_signals %}<span class="dsig {{ sig }}">{{ sig }}</span>{% endfor %}</div>{% endif %}
+            {% if s.current_price or s.price_target %}
+            <div class="prow">
+              {% if s.current_price %}<span class="p-cur">${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
+              {% if s.price_target %}<span class="p-tgt"><span class="p-arr">→</span>${{ '%.2f'|format(s.price_target) }}</span>{% endif %}
+              {% if s.stop_loss %}<span class="p-stop">↓${{ '%.2f'|format(s.stop_loss) }}</span>{% endif %}
+              {% if s.time_horizon %}<span class="t-hz">{{ s.time_horizon }}</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if s.price_history and s.price_history|length > 5 %}<div class="spark"><canvas id="spark-b{{ loop.index }}" height="40"></canvas></div>{% endif %}
+            {% if s.catalyst %}<div class="catalyst">{{ s.catalyst }}</div>{% endif %}
+            {% if s.reasons %}<ul class="reasons">{% for r in s.reasons[:2] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+            {% if s.rok_take %}<div class="rok-take">{{ s.rok_take }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          {% if not data.buy_signals %}<div style="color:var(--wh3);font-size:12px;padding:.5rem">No buy signals this run.</div>{% endif %}
         </div>
       </div>
-      {% if s.data_signals %}<div class="dsigs">{% for sig in s.data_signals %}<span class="dsig {{ sig }}">{{ sig }}</span>{% endfor %}</div>{% endif %}
-      {% if s.current_price or s.price_target %}
-      <div class="price-row">
-        {% if s.current_price %}<span class="p-cur">${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
-        {% if s.price_target %}<span class="p-tgt"><span class="p-arr">→</span>${{ '%.2f'|format(s.price_target) }}</span>{% endif %}
-        {% if s.stop_loss %}<span class="p-stop">↓ ${{ '%.2f'|format(s.stop_loss) }}</span>{% endif %}
-        {% if s.time_horizon %}<span class="t-hz">{{ s.time_horizon }}</span>{% endif %}
+      <!-- SELL -->
+      <div>
+        <div class="sig-col-hdr"><div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-sell">SELL / AVOID</h2><span class="s-sub">{{ data.sell_signals|length }} signal{{ 's' if data.sell_signals|length != 1 }}</span></div></div>
+        <div class="cgrid">
+          {% for s in data.sell_signals %}
+          <div class="card sell">
+            <div class="c-row1">
+              <div class="c-left"><div class="c-ticker">${{ s.ticker }}</div><div class="c-co">{{ s.company }}</div></div>
+              <div class="c-right"><span class="str-b">{{ s.signal_strength|default(5) }}/10</span></div>
+            </div>
+            {% if s.urgency %}<span class="urg {{ s.urgency.replace(' ', '-') }}">{{ s.urgency }}</span>{% endif %}
+            {% if s.current_price %}<div class="prow"><span class="p-cur">${{ '%.2f'|format(s.current_price) }}</span></div>{% endif %}
+            {% if s.price_history and s.price_history|length > 5 %}<div class="spark"><canvas id="spark-s{{ loop.index }}" height="40"></canvas></div>{% endif %}
+            {% if s.reasons %}<ul class="reasons">{% for r in s.reasons[:2] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+            {% if s.rok_take %}<div class="rok-take">{{ s.rok_take }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          {% if not data.sell_signals %}<div style="color:var(--wh3);font-size:12px;padding:.5rem">No sell signals this run.</div>{% endif %}
+        </div>
       </div>
-      {% endif %}
-      {% if s.price_history and s.price_history|length > 5 %}
-      <div class="sparkline-wrap"><canvas id="spark-b{{ loop.index }}" height="52"></canvas></div>
-      {% endif %}
-      {% if s.technical_setup %}<div class="tech-setup">📊 {{ s.technical_setup }}</div>{% endif %}
-      {% if s.options_play %}<div class="opts-play">⚡ {{ s.options_play }}</div>{% endif %}
-      {% if s.catalyst %}<div class="catalyst">{{ s.catalyst }}</div>{% endif %}
-      {% if s.reasons %}<ul class="reasons">{% for r in s.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
-      {% if s.rok_take %}<div class="rok-take">{{ s.rok_take }}</div>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── SELL / AVOID ────────────────────────────────────────────────────────── #}
-{% if data.sell_signals %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-sell">SELL / AVOID</h2><span class="sec-sub">{{ data.sell_signals|length }} signal{{ 's' if data.sell_signals|length != 1 }} — stay away or exit</span></div>
-  <div class="cgrid">
-    {% for s in data.sell_signals %}
-    <div class="card sell" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="c-hdr">
-        <div class="c-ticker-blk"><div class="c-ticker">${{ s.ticker }}</div><div class="c-co">{{ s.company }}</div></div>
-        <div class="c-badges"><span class="str-badge">{{ s.signal_strength|default(5) }}/10</span></div>
+      <!-- WATCH -->
+      <div>
+        <div class="sig-col-hdr"><div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-watch">WATCH LIST</h2><span class="s-sub">{{ data.watch_list|length }} on radar</span></div></div>
+        <div class="cgrid">
+          {% for w in data.watch_list %}
+          <div class="card watch">
+            <div class="c-row1">
+              <div class="c-left"><div class="c-ticker">${{ w.ticker }}</div><div class="c-co">{{ w.company }}</div></div>
+              <div class="c-right"><span class="str-b">WATCH</span></div>
+            </div>
+            <div class="rok-take" style="margin-bottom:7px">{{ w.why_watching }}</div>
+            <div class="w-trigger"><div class="w-tlbl">TRIGGER</div><div class="w-ttxt">{{ w.trigger }}</div></div>
+            {% if w.risk %}<div class="w-risk" style="margin-top:4px">⚠ {{ w.risk }}</div>{% endif %}
+            {% if w.potential %}<div class="w-pot">⬆ +{{ w.potential }}%</div>{% endif %}
+          </div>
+          {% endfor %}
+          {% if not data.watch_list %}<div style="color:var(--wh3);font-size:12px;padding:.5rem">No watch list this run.</div>{% endif %}
+        </div>
       </div>
-      {% if s.urgency %}<span class="urg {{ s.urgency.replace(' ', '-') }}">{{ s.urgency }}</span>{% endif %}
-      {% if s.current_price %}<div class="price-row"><span class="p-cur">${{ '%.2f'|format(s.current_price) }}</span></div>{% endif %}
-      {% if s.price_history and s.price_history|length > 5 %}
-      <div class="sparkline-wrap"><canvas id="spark-s{{ loop.index }}" height="52"></canvas></div>
-      {% endif %}
-      {% if s.reasons %}<ul class="reasons">{% for r in s.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
-      {% if s.rok_take %}<div class="rok-take">{{ s.rok_take }}</div>{% endif %}
     </div>
-    {% endfor %}
   </div>
-</section>
-{% endif %}
 
-{# ── SHORT SQUEEZE ───────────────────────────────────────────────────────── #}
-{% if data.short_squeeze_alerts %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-squeeze">SHORT SQUEEZE ALERTS</h2><span class="sec-sub">High short interest + rising social velocity</span></div>
-  <div class="squeeze-grid">
-    {% for s in data.short_squeeze_alerts %}
-    <div class="squeeze-card" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="sq-ticker">${{ s.ticker }}</div>
-      <div class="sq-float">Short Float: <strong>{{ s.short_float }}</strong></div>
-      {% if s.social_velocity %}<span class="sq-vel {{ s.social_velocity }}">{{ s.social_velocity }} velocity</span>{% endif %}
-      <div class="sq-setup">{{ s.setup }}</div>
+  <!-- ── MARKET TAB ────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-market">
+    <div class="sum-card">
+      <div class="clbl">ROK INTELLIGENCE BRIEFING</div>
+      <p class="sum-txt">{{ data.week_summary }}</p>
     </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── EARNINGS PLAYS ───────────────────────────────────────────────────────── #}
-{% if data.earnings_plays %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-earn">EARNINGS PLAYS</h2><span class="sec-sub">Position before the print</span></div>
-  <div class="egrid">
-    {% for e in data.earnings_plays %}
-    <div class="ecard" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="e-ticker">${{ e.ticker }}</div>
-      <div class="e-date">{{ e.earnings_date }}</div>
-      <div class="e-eps">EPS estimate: {{ e.eps_estimate|default('n/a') }}</div>
-      <span class="e-dir {{ e.direction }}">{{ e.direction }}</span>
-      <div class="e-play">{{ e.play }}</div>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── WATCH LIST ─────────────────────────────────────────────────────────── #}
-{% if data.watch_list %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-watch">WATCH LIST</h2><span class="sec-sub">{{ data.watch_list|length }} position{{ 's' if data.watch_list|length != 1 }} on radar</span></div>
-  <div class="cgrid">
-    {% for w in data.watch_list %}
-    <div class="card watch" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="c-hdr">
-        <div class="c-ticker-blk"><div class="c-ticker">${{ w.ticker }}</div><div class="c-co">{{ w.company }}</div></div>
-        <div class="c-badges"><span class="str-badge">WATCHING</span></div>
+    <div class="mkt-grid" style="margin-bottom:1.1rem">
+      <div class="mkt-card">
+        <div class="clbl">CNN FEAR / GREED</div>
+        {% set fg = data.fear_greed %}{% set fgs = fg.score|default(50) %}{% set pct = [[fgs,2]|max,98]|min %}
+        <div class="gauge-track"><div class="gauge-pin" style="left:calc({{ pct }}% - 7px)"></div></div>
+        <div class="gauge-mkrs"><span>FEAR</span><span>NEUTRAL</span><span>GREED</span></div>
+        <div class="gauge-score">{{ fgs }}/100 — {{ fg.rating|default('Neutral') }}</div>
       </div>
-      <div class="rok-take" style="margin-bottom:10px">{{ w.why_watching }}</div>
-      <div class="w-trigger"><div class="w-tlbl">BUY TRIGGER</div><div class="w-ttxt">{{ w.trigger }}</div></div>
-      {% if w.risk %}<div class="w-risk">{{ w.risk }}</div>{% endif %}
-      {% if w.potential %}<div class="w-pot">⬆ Upside: +{{ w.potential }}%</div>{% endif %}
+      <div class="mkt-card">
+        <div class="clbl">SOCIAL SENTIMENT</div>
+        {% set agg = data.aggregate_sentiment %}
+        <div class="sbars">
+          <div class="sbar-row"><span class="sbar-lbl bull-l">BULL</span><div class="sbar-track"><div class="sbar bull-b" style="width:{{ agg.bullish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bullish_pct|default(0) }}%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl bear-l">BEAR</span><div class="sbar-track"><div class="sbar bear-b" style="width:{{ agg.bearish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bearish_pct|default(0) }}%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl neut-l">NEUT</span><div class="sbar-track"><div class="sbar neut-b" style="width:{{ agg.neutral_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.neutral_pct|default(0) }}%</span></div>
+        </div>
+      </div>
+      <div class="mkt-card">
+        <div class="clbl">PUT / CALL RATIO</div>
+        {% set pcr = data.put_call_ratio|default({}) %}
+        <div class="metric-val">{{ pcr.total|default('—') }}</div>
+        <div class="metric-sub">Equity PCR: {{ pcr.equity|default('—') }}</div>
+        {% if pcr.signal %}<span class="pcr-sig {{ pcr.signal }}">{{ pcr.signal }}</span>{% endif %}
+        {% set breadth = data.market_breadth|default({}) %}
+        {% if breadth.breadth_pct is defined %}
+        <div style="margin-top:.75rem">
+          <div class="clbl" style="margin-bottom:.3rem">MARKET BREADTH</div>
+          <div class="breadth-bar"><div class="breadth-fill" style="width:{{ breadth.breadth_pct }}%"></div></div>
+          <div class="metric-sub">{{ breadth.breadth_pct }}% advancing{% if breadth.advance_decline_ratio %} · A/D {{ breadth.advance_decline_ratio }}{% endif %}</div>
+        </div>
+        {% endif %}
+      </div>
     </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── STOCK UNIVERSE SCREENER ───────────────────────────────────────────────────── #}
-<section id="screener">
-  <div class="sec-hdr"><h2 class="sec-ttl">STOCK UNIVERSE</h2><span class="sec-sub">All {{ data.stock_universe|default([])|length }} analyzed tickers — live prices, signals, charts</span></div>
-  <div class="screener-controls">
-    <div class="sc-ftabs">
-      <button class="sc-ftab active" data-filter="all">ALL</button>
-      <button class="sc-ftab buy" data-filter="buy">BUY</button>
-      <button class="sc-ftab sell" data-filter="sell">SELL</button>
-      <button class="sc-ftab watch" data-filter="watch">WATCH</button>
-      <button class="sc-ftab" data-filter="neutral">NEUTRAL</button>
-    </div>
-    <span class="sc-count" id="sc-count"></span>
-  </div>
-  <div id="sc-grid" class="sc-grid">
-    <div class="screener-empty">Loading stock universe...</div>
-  </div>
-</section>
-
-{# ── TRENDING TAPE ─────────────────────────────────────────────────────────── #}
-{% if data.ticker_mentions or data.stocktwits_trending %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl">TRENDING NOW</h2><span class="sec-sub">Reddit · News · StockTwits</span></div>
-  <div class="tape-row">
-    {% if data.ticker_mentions %}
-    <div class="tape-card">
-      <div class="clbl">REDDIT + NEWS MENTIONS</div>
-      <div class="tape">{% for t, c in data.ticker_mentions %}<div class="chip" onclick="searchTicker('{{ t }}')">${{ t }}<span class="cnt">{% if c > 0 %}{{ c }}{% endif %}</span></div>{% endfor %}</div>
+    {% set sp = data.market_breadth.sector_performance|default({}) %}
+    {% if sp %}
+    <div class="s-hdr"><h2 class="s-ttl">SECTOR HEAT MAP</h2><span class="s-sub">Today's performance</span></div>
+    <div class="sheat-grid" style="margin-bottom:1.1rem">
+      {% for name, chg in sp.items()|sort(attribute='1')|reverse %}
+      {% set cls = 'up' if chg >= 0 else 'down' %}
+      <div class="sheat-card">
+        <div class="sheat-name">{{ name }}</div>
+        <div class="sheat-bar-track"><div class="sheat-fill {{ cls }}" style="width:{{ [chg|abs * 30, 100]|min }}%"></div></div>
+        <div class="sheat-pct {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
+      </div>
+      {% endfor %}
     </div>
     {% endif %}
-    {% if data.stocktwits_trending %}
-    <div class="tape-card">
-      <div class="clbl">STOCKTWITS TRENDING</div>
-      <div class="tape">{% for s in data.stocktwits_trending %}<div class="st-chip" onclick="searchTicker('{{ s.ticker }}')">${{ s.ticker }}<span class="cnt">{{ s.watchlist_count|default('') }}</span></div>{% endfor %}</div>
+    {% set heat = data.sector_heat|default({}) %}
+    {% if heat.hottest or heat.coldest %}
+    <div class="s-hdr"><h2 class="s-ttl">SECTOR ROTATION</h2></div>
+    <div class="sr-row">
+      {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">HOTTEST</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
+      {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
+    </div>
+    {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
+    {% endif %}
+    {% if data.ticker_mentions or data.stocktwits_trending %}
+    <div class="s-hdr"><h2 class="s-ttl">TRENDING NOW</h2><span class="s-sub">Reddit · News · StockTwits</span></div>
+    <div class="tape-row">
+      {% if data.ticker_mentions %}
+      <div class="tape-card">
+        <div class="clbl">REDDIT + NEWS</div>
+        <div class="tape">{% for t, c in data.ticker_mentions %}<div class="chip" onclick="switchToScreener('{{ t }}')">${{ t }}<span class="cnt">{% if c > 0 %}{{ c }}{% endif %}</span></div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% if data.stocktwits_trending %}
+      <div class="tape-card">
+        <div class="clbl">STOCKTWITS</div>
+        <div class="tape">{% for s in data.stocktwits_trending %}<div class="st-chip" onclick="switchToScreener('{{ s.ticker }}')">${{ s.ticker }}<span class="cnt">{{ s.watchlist_count|default('') }}</span></div>{% endfor %}</div>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
   </div>
-</section>
-{% endif %}
 
-{# ── TECHNICAL BREAKOUTS ─────────────────────────────────────────────────────── #}
-{% if data.technical_breakouts %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-tech">TECHNICAL BREAKOUTS</h2><span class="sec-sub">Live RSI · MACD · Bollinger Band setups</span></div>
-  <div class="tech-grid">
-    {% for t in data.technical_breakouts %}
-    <div class="tech-card" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="tech-ticker">${{ t.ticker }}</div>
-      <div class="tech-type">{{ t.setup_type.replace('_', ' ') }}</div>
-      <div class="tech-desc">{{ t.description }}</div>
-      <div class="tech-tf">Timeframe: {{ t.timeframe }}</div>
+  <!-- ── SCREENER TAB ────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-screener">
+    <div class="sc-controls">
+      <div class="sc-tabs">
+        <button class="sc-tab active" data-filter="all">ALL</button>
+        <button class="sc-tab buy" data-filter="buy">BUY</button>
+        <button class="sc-tab sell" data-filter="sell">SELL</button>
+        <button class="sc-tab watch" data-filter="watch">WATCH</button>
+        <button class="sc-tab" data-filter="neutral">NEUTRAL</button>
+      </div>
+      <span class="sc-cnt" id="sc-cnt"></span>
     </div>
-    {% endfor %}
+    <div id="sc-grid" class="sc-grid"><div class="sc-empty">Loading…</div></div>
   </div>
-</section>
-{% endif %}
 
-{# ── CONGRESSIONAL TRADES ──────────────────────────────────────────────────────── #}
-{% set cong_items = data.congressional_plays if data.congressional_plays else data.congressional_buys|default([]) %}
-{% if cong_items %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-congress">CONGRESSIONAL TRADES</h2><span class="sec-sub">STOCK Act disclosures — 45-day delay · Follow the insiders</span></div>
-  <div class="cong-grid">
-    {% for c in cong_items[:8] %}
-    <div class="cong-card" style="animation-delay:{{ loop.index0 * 0.06 }}s">
-      <div class="cong-ticker">${{ c.ticker }}</div>
-      <div class="cong-count">{{ c.buy_count }} buy{{ 's' if c.buy_count != 1 }}{% if c.member_count is defined %} · {{ c.member_count }} member{{ 's' if c.member_count != 1 }}{% endif %}</div>
-      <div class="cong-members">{{ c.members_preview }}</div>
-      <div class="cong-why">{{ c.why_notable|default('Multiple members accumulating — notable clustering under STOCK Act') }}</div>
+  <!-- ── INTEL TAB ────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-intel">
+    <div class="intel-grid">
+      {% if data.macro_risks %}
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl ttl-risk">MACRO RISKS</h2></div>
+        <div class="list">{% for r in data.macro_risks %}<div class="list-item risk"><span class="list-n">{{ '%02d'|format(loop.index) }}</span>{{ r }}</div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% if data.notable_trends %}
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl">NOTABLE TRENDS</h2></div>
+        <div class="list">{% for t in data.notable_trends %}<div class="list-item trend"><span class="list-n">{{ '%02d'|format(loop.index) }}</span>{{ t }}</div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% if data.earnings_plays %}
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl ttl-earn">EARNINGS PLAYS</h2></div>
+        <div class="mini-grid">{% for e in data.earnings_plays %}<div class="mini-card"><div class="mini-ticker e-ticker">${{ e.ticker }}</div><div class="mini-sub">{{ e.earnings_date }}</div><span class="mini-tag {{ e.direction }}">{{ e.direction }}</span><div class="mini-txt">{{ e.play }}</div></div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% if data.short_squeeze_alerts %}
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl ttl-sq">SHORT SQUEEZE</h2></div>
+        <div class="mini-grid">{% for s in data.short_squeeze_alerts %}<div class="mini-card"><div class="mini-ticker sq-ticker">${{ s.ticker }}</div><div class="mini-sub">Float: {{ s.short_float }}</div>{% if s.social_velocity %}<span class="mini-tag {{ s.social_velocity }}">{{ s.social_velocity }}</span>{% endif %}<div class="mini-txt">{{ s.setup }}</div></div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% set cong_items = data.congressional_plays if data.congressional_plays else data.congressional_buys|default([]) %}
+      {% if cong_items %}
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl ttl-cong">CONGRESSIONAL TRADES</h2><span class="s-sub">STOCK Act · 45-day delay</span></div>
+        <div class="mini-grid">{% for c in cong_items[:8] %}<div class="mini-card"><div class="mini-ticker cong-ticker">${{ c.ticker }}</div><div class="mini-sub">{{ c.buy_count }} buy{{ 's' if c.buy_count != 1 }}</div><div class="mini-txt">{{ c.members_preview }}</div></div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% if data.technical_breakouts %}
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--blue)">TECHNICAL BREAKOUTS</h2></div>
+        <div class="mini-grid">{% for t in data.technical_breakouts %}<div class="mini-card"><div class="mini-ticker" style="color:var(--blue)">${{ t.ticker }}</div><div class="mini-sub" style="color:var(--blue);font-size:8.5px;text-transform:uppercase;letter-spacing:.07em">{{ t.setup_type.replace('_',' ') }}</div><div class="mini-txt">{{ t.description }}</div><div style="font-size:8.5px;color:var(--wh3);margin-top:3px">{{ t.timeframe }}</div></div>{% endfor %}</div>
+      </div>
+      {% endif %}
+      {% if data.track_record %}
+      {% set wins = data.track_record | selectattr('pct_change', 'gt', 2) | list | length %}
+      {% set total_tr = data.track_record | length %}
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--gold-b)">ROK TRACK RECORD</h2><span class="s-sub">Previous picks · live P&amp;L · {{ wins }}/{{ total_tr }} up &gt;2%</span></div>
+        <div class="track-grid">{% for t in data.track_record %}{% set cls = 'win' if t.pct_change > 2 else 'loss' if t.pct_change < -2 else 'flat' %}<div class="track-card {{ cls }}"><div class="track-t">{{ t.ticker }}</div><div class="track-pct">{{ '+' if t.pct_change >= 0 else '' }}{{ t.pct_change }}%</div><div class="track-p">${{ t.entry_price }} → ${{ t.current_price }}</div></div>{% endfor %}</div>
+      </div>
+      {% endif %}
     </div>
-    {% endfor %}
   </div>
-</section>
-{% endif %}
 
-{# ── MACRO RISKS ────────────────────────────────────────────────────────── #}
-{% if data.macro_risks %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl ttl-risk">MACRO RISKS</h2><span class="sec-sub">Top tail risks this week</span></div>
-  <div class="risks-list">
-    {% for r in data.macro_risks %}
-    <div class="risk-item"><span class="risk-num">{{ '%02d'|format(loop.index) }}</span>{{ r }}</div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── NOTABLE TRENDS ────────────────────────────────────────────────────────── #}
-{% if data.notable_trends %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl">NOTABLE TRENDS</h2><span class="sec-sub">Key market themes</span></div>
-  <div class="trends-list">
-    {% for t in data.notable_trends %}
-    <div class="trend-item"><span class="trend-num">{{ '%02d'|format(loop.index) }}</span>{{ t }}</div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{# ── ROK TRACK RECORD ────────────────────────────────────────────────────────── #}
-{% if data.track_record %}
-{% set wins = data.track_record | selectattr('pct_change', 'gt', 2) | list | length %}
-{% set total_tr = data.track_record | length %}
-<section>
-  <div class="sec-hdr"><h2 class="sec-ttl" style="color:var(--gold-b)">ROK TRACK RECORD</h2><span class="sec-sub">Previous run's buy signals — live P&L</span></div>
-  <div class="track-header">
-    <span class="track-wr">Win rate: <strong>{{ wins }}/{{ total_tr }}</strong> picks up &gt;2%</span>
-  </div>
-  <div class="track-grid">
-    {% for t in data.track_record %}
-    {% set cls = 'win' if t.pct_change > 2 else 'loss' if t.pct_change < -2 else 'flat' %}
-    <div class="track-card {{ cls }}">
-      <div class="track-ticker">{{ t.ticker }}</div>
-      <div class="track-pct">{{ '+' if t.pct_change >= 0 else '' }}{{ t.pct_change }}%</div>
-      <div class="track-prices">${{ t.entry_price }} → ${{ t.current_price }}</div>
-      {% if t.date %}<div class="track-date">Signal: {{ t.date }}</div>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-</main>
+</div>
 
 <footer class="ftr">
-  <div class="ftr-in">
-    <span class="ftr-brand">ROK</span>
-    <div>
-      <div class="ftr-txt">Intelligence aggregated from 15 Reddit communities, 20+ financial news feeds, StockTwits, SEC EDGAR insider trades &amp; 8-K filings, Yahoo Finance live data, CNN Fear/Greed index, CBOE put/call ratio, congressional STOCK Act disclosures, and real-time technical analysis (RSI / MACD / Bollinger Bands). Updated every hour via GitHub Actions.</div>
-      <div class="disclaimer">Not financial advice. AI-generated signals for educational purposes only. Always do your own due diligence before trading. Past signals do not guarantee future results.</div>
-    </div>
-    <span class="ftr-time">{{ data.analysis_date }}</span>
+  <span class="ftr-brand">ROK</span>
+  <div>
+    <div class="ftr-txt">Reddit · News · StockTwits · SEC EDGAR · Yahoo Finance · CNN Fear/Greed · CBOE Put/Call · Congressional STOCK Act · RSI/MACD/BB Technical Analysis. Updated hourly via GitHub Actions.</div>
+    <div class="disclaimer">Not financial advice. AI-generated signals for educational purposes only. Do your own due diligence.</div>
   </div>
+  <span class="ftr-time">{{ data.analysis_date }}</span>
 </footer>
 
 <script id="page-data" type="application/json">{{ data_json | safe }}</script>
 <script>
-(function() {
+(function () {
   'use strict';
   const ROK = JSON.parse(document.getElementById('page-data').textContent);
+  Chart.defaults.animation.duration = 300;
 
-  // ── CHART.JS SPARKLINES ────────────────────────────────────────────────
-  Chart.defaults.animation.duration = 400;
-
-  function drawSpark(canvasId, prices, color) {
-    const el = document.getElementById(canvasId);
+  function drawSpark(id, prices, color) {
+    const el = document.getElementById(id);
     if (!el || !prices || prices.length < 4) return;
-    const rgba = color + '10';
+    if (Chart.getChart(el)) return;
     new Chart(el, {
       type: 'line',
       data: {
         labels: prices.map((_, i) => i),
-        datasets: [{
-          data: prices,
-          borderColor: color,
-          borderWidth: 1.5,
-          fill: true,
-          backgroundColor: rgba,
-          tension: 0.4,
-          pointRadius: 0,
-          pointHoverRadius: 0,
-        }]
+        datasets: [{ data: prices, borderColor: color, borderWidth: 1.4, fill: true,
+          backgroundColor: color + '10', tension: 0.4, pointRadius: 0 }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: { x: { display: false }, y: { display: false } },
-        elements: { line: { borderCapStyle: 'round' } },
+        scales: { x: { display: false }, y: { display: false } }
       }
     });
   }
 
-  function initSignalSparklines() {
+  function initSignalSparks() {
     (ROK.buy_signals || []).forEach((s, i) => {
-      const ph = s.price_history;
-      if (ph && ph.length > 4) drawSpark('spark-b' + (i + 1), ph, '#00d084');
+      if (s.price_history && s.price_history.length > 4)
+        drawSpark('spark-b' + (i + 1), s.price_history, '#00d084');
     });
     (ROK.sell_signals || []).forEach((s, i) => {
-      const ph = s.price_history;
-      if (ph && ph.length > 4) drawSpark('spark-s' + (i + 1), ph, '#ff4444');
+      if (s.price_history && s.price_history.length > 4)
+        drawSpark('spark-s' + (i + 1), s.price_history, '#ff4444');
     });
   }
 
-  // ── STOCK SCREENER ───────────────────────────────────────────────────────
-  let activeFilter = 'all';
-  let activeQuery = '';
+  // TAB SWITCHING
+  let screenerBuilt = false;
 
-  function formatNum(n) {
-    if (n == null) return '—';
-    return n >= 1e12 ? (n / 1e12).toFixed(1) + 'T' :
-           n >= 1e9  ? (n / 1e9).toFixed(1) + 'B' :
-           n >= 1e6  ? (n / 1e6).toFixed(1) + 'M' : n.toLocaleString();
+  function showTab(id) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+    if (id === 'screener' && !screenerBuilt) { renderScreener(); screenerBuilt = true; }
   }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  });
+
+  // SCREENER
+  let scFilter = 'all', scQuery = '';
 
   function renderScreener() {
     const stocks = ROK.stock_universe || [];
     const grid = document.getElementById('sc-grid');
-    const count = document.getElementById('sc-count');
+    const cnt = document.getElementById('sc-cnt');
     if (!grid) return;
 
-    let filtered = stocks;
-    if (activeQuery) {
-      const q = activeQuery.toLowerCase();
-      filtered = filtered.filter(s =>
-        s.ticker.toLowerCase().startsWith(q) ||
-        s.ticker.toLowerCase().includes(q) ||
-        (s.company_name || '').toLowerCase().includes(q)
-      );
+    let list = stocks;
+    if (scQuery) {
+      const q = scQuery.toLowerCase();
+      list = list.filter(s => s.ticker.toLowerCase().includes(q) || (s.company_name || '').toLowerCase().includes(q));
     }
-    if (activeFilter !== 'all') {
-      filtered = filtered.filter(s => s.rok_signal === activeFilter);
-    }
+    if (scFilter !== 'all') list = list.filter(s => s.rok_signal === scFilter);
 
-    filtered.sort((a, b) => {
-      const order = { buy: 0, sell: 1, watch: 2, neutral: 3 };
-      const ao = order[a.rok_signal] ?? 3, bo = order[b.rok_signal] ?? 3;
-      if (ao !== bo) return ao - bo;
-      return Math.abs(b.change_pct || 0) - Math.abs(a.change_pct || 0);
+    list.sort((a, b) => {
+      const o = { buy: 0, sell: 1, watch: 2, neutral: 3 };
+      const d = (o[a.rok_signal] ?? 3) - (o[b.rok_signal] ?? 3);
+      return d !== 0 ? d : Math.abs(b.change_pct || 0) - Math.abs(a.change_pct || 0);
     });
 
-    if (count) count.textContent = filtered.length + ' stock' + (filtered.length !== 1 ? 's' : '');
+    if (cnt) cnt.textContent = list.length + ' stocks';
 
-    if (filtered.length === 0) {
-      const yahooLink = activeQuery
-        ? `<a href="https://finance.yahoo.com/quote/${activeQuery.toUpperCase().replace(/[^A-Z0-9]/g,'')}" target="_blank" rel="noopener">Look up ${activeQuery.toUpperCase()} on Yahoo Finance</a>`
+    if (!list.length) {
+      const link = scQuery
+        ? `<a href="https://finance.yahoo.com/quote/${scQuery.toUpperCase().replace(/[^A-Z0-9]/g, '')}" target="_blank" rel="noopener">Look up on Yahoo Finance</a>`
         : '';
-      grid.innerHTML = `<div class="screener-empty">No stocks matching your criteria${yahooLink ? '<br>' + yahooLink : ''}</div>`;
+      grid.innerHTML = `<div class="sc-empty">No stocks found${link ? ' — ' + link : ''}</div>`;
       return;
     }
 
-    grid.innerHTML = filtered.map((s, i) => {
+    grid.innerHTML = list.map((s, i) => {
       const sig = s.rok_signal || 'neutral';
       const chg = s.change_pct || 0;
       const cc = chg >= 0 ? 'up' : 'down';
       const ph = s.price_history || [];
-      const hasChart = ph.length > 3;
-      const sigBadge = sig !== 'neutral' ? `<span class="sc-sig ${sig}">${sig.toUpperCase()}</span>` : '';
-      const upside = s.upside_to_target;
-      const upsideHtml = upside != null
-        ? `<span class="sc-upside ${upside >= 0 ? 'up' : 'down'}">${upside >= 0 ? '+' : ''}${upside}%↑</span>`
-        : '';
-      return `<div class="sc-card ${sig}" data-i="${i}" onclick="window.open('https://finance.yahoo.com/quote/${s.ticker}','_blank','noopener')">
+      const badge = sig !== 'neutral' ? `<span class="sc-sig ${sig}">${sig.toUpperCase()}</span>` : '';
+      const up = s.upside_to_target;
+      const upHtml = up != null ? `<span class="sc-upside ${up >= 0 ? 'up' : 'down'}">${up >= 0 ? '+' : ''}${up}%↑</span>` : '';
+      return `<div class="sc-card ${sig}" onclick="window.open('https://finance.yahoo.com/quote/${s.ticker}','_blank','noopener')">
         <div class="sc-top">
-          <div>
-            <div class="sc-ticker">${s.ticker}</div>
-            <div class="sc-co">${(s.company_name || '').substring(0, 22)}</div>
-          </div>
-          <div class="sc-right">
-            ${sigBadge}
-            <div class="sc-price ${cc}">${s.price != null ? '$' + s.price.toFixed(2) : '—'}</div>
-            <div class="sc-chg ${cc}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>
-          </div>
+          <div><div class="sc-ticker">${s.ticker}</div><div class="sc-co">${(s.company_name || '').substring(0, 20)}</div></div>
+          <div class="sc-r">${badge}<div class="sc-price ${cc}">${s.price != null ? '$' + s.price.toFixed(2) : '—'}</div><div class="sc-chg ${cc}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div></div>
         </div>
-        ${hasChart ? `<div class="sc-spark" id="scw-${i}"><canvas id="sc-spark-${i}" height="36"></canvas></div>` : ''}
+        ${ph.length > 3 ? `<div class="sc-spark"><canvas id="scs-${i}" height="32"></canvas></div>` : ''}
         <div class="sc-meta">
           ${s.sector ? `<span class="sc-sector">${s.sector.split('/')[0].trim()}</span>` : ''}
           ${s.pe_ratio != null && s.pe_ratio > 0 ? `<span class="sc-pe">PE ${s.pe_ratio.toFixed(1)}</span>` : ''}
-          ${upsideHtml}
-          ${s.recommendation ? `<span class="sc-rec">${s.recommendation.replace(/_/g,' ')}</span>` : ''}
+          ${upHtml}
+          ${s.recommendation ? `<span class="sc-rec">${s.recommendation.replace(/_/g, ' ')}</span>` : ''}
         </div>
       </div>`;
     }).join('');
 
-    filtered.forEach((s, i) => {
+    list.forEach((s, i) => {
       const ph = s.price_history || [];
       if (ph.length > 3) {
         const isUp = ph[ph.length - 1] >= ph[0];
-        const color = s.rok_signal === 'sell' ? '#ff4444' : (isUp ? '#00d084' : '#ff4444');
-        const existing = Chart.getChart(`sc-spark-${i}`);
-        if (existing) existing.destroy();
-        drawSpark(`sc-spark-${i}`, ph, color);
+        const c = s.rok_signal === 'sell' ? '#ff4444' : (isUp ? '#00d084' : '#ff4444');
+        const ex = Chart.getChart(`scs-${i}`);
+        if (ex) ex.destroy();
+        drawSpark(`scs-${i}`, ph, c);
       }
     });
   }
 
-  // ── FILTER TABS ───────────────────────────────────────────────────────
-  function initFilterTabs() {
-    document.querySelectorAll('.sc-ftab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.sc-ftab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        activeFilter = tab.dataset.filter;
-        renderScreener();
-      });
-    });
-  }
-
-  // ── SEARCH ────────────────────────────────────────────────────────────
-  function searchTicker(ticker) {
-    const input = document.getElementById('stock-search');
-    if (input) {
-      input.value = ticker;
-      activeQuery = ticker;
-      activeFilter = 'all';
-      document.querySelectorAll('.sc-ftab').forEach(t => t.classList.remove('active'));
-      const allTab = document.querySelector('.sc-ftab[data-filter="all"]');
-      if (allTab) allTab.classList.add('active');
+  document.querySelectorAll('.sc-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.sc-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      scFilter = tab.dataset.filter;
       renderScreener();
-      document.getElementById('screener')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-  window.searchTicker = searchTicker;
-
-  function initSearch() {
-    const input = document.getElementById('stock-search');
-    if (!input) return;
-    let debounce;
-    input.addEventListener('input', (e) => {
-      clearTimeout(debounce);
-      debounce = setTimeout(() => {
-        activeQuery = e.target.value.trim();
-        renderScreener();
-        if (activeQuery.length >= 1) {
-          document.getElementById('screener')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 150);
     });
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { input.value = ''; activeQuery = ''; renderScreener(); }
-    });
-  }
+  });
 
-  // ── LIVE TIMER ──────────────────────────────────────────────────────────
-  function initTimer() {
-    const ts = ROK.generated_timestamp;
-    const timer = document.getElementById('update-timer');
-    if (!ts || !timer) return;
-    const genTime = new Date(ts);
-    const update = () => {
-      const mins = Math.floor((Date.now() - genTime) / 60000);
-      timer.textContent = mins < 1 ? 'live' : mins < 60 ? `${mins}m ago` : `${Math.floor(mins / 60)}h ago`;
-    };
-    update();
-    setInterval(update, 30000);
-  }
-
-  // ── INIT ───────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    initSignalSparklines();
+  // SEARCH — types in box → auto-switches to Screener tab
+  function applySearch(q) {
+    scQuery = q;
     renderScreener();
-    initFilterTabs();
-    initSearch();
-    initTimer();
+    showTab('screener');
+    screenerBuilt = true;
+  }
+
+  function switchToScreener(ticker) {
+    const el = document.getElementById('stock-search');
+    if (el) el.value = ticker;
+    applySearch(ticker);
+  }
+  window.switchToScreener = switchToScreener;
+
+  const searchEl = document.getElementById('stock-search');
+  if (searchEl) {
+    let deb;
+    searchEl.addEventListener('input', e => {
+      clearTimeout(deb);
+      deb = setTimeout(() => applySearch(e.target.value.trim()), 150);
+    });
+    searchEl.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { searchEl.value = ''; applySearch(''); }
+    });
+  }
+
+  // LIVE TIMER
+  const ts = ROK.generated_timestamp;
+  const timerEl = document.getElementById('update-timer');
+  if (ts && timerEl) {
+    const gen = new Date(ts);
+    const tick = () => {
+      const m = Math.floor((Date.now() - gen) / 60000);
+      timerEl.textContent = m < 1 ? 'live' : m < 60 ? `${m}m ago` : `${Math.floor(m / 60)}h ago`;
+    };
+    tick();
+    setInterval(tick, 30000);
+  }
+
+  // INIT
+  document.addEventListener('DOMContentLoaded', () => {
+    initSignalSparks();
+    renderScreener();
+    screenerBuilt = true;
   });
 })();
 </script>
