@@ -11,121 +11,93 @@ def run_scrape_and_analyze(app):
         from config import Config
         from app_factory import db
         from database.models import WeeklyAnalysis
-        from scrapers import reddit_scraper, news_scraper, yahoo_finance, sec_scraper, twitter_scraper
-        from scrapers import market_data
+        from scrapers import (
+            reddit_scraper, news_scraper, yahoo_finance, sec_scraper,
+            twitter_scraper, market_data,
+            stocktwits_scraper, technical_analysis, congressional_trades,
+        )
         from analyzer import ticker_extractor, claude_analyzer, sentiment
 
         logger.info("ROK pipeline starting...")
 
-        # --- Scrape all sources ---
-        reddit_posts = reddit_scraper.scrape_all(
-            Config.REDDIT_SUBREDDITS, Config.REDDIT_MAX_POSTS
-        )
+        # ── Social ────────────────────────────────────────────────
+        reddit_posts = reddit_scraper.scrape_all(Config.REDDIT_SUBREDDITS, Config.REDDIT_MAX_POSTS)
         news_articles = news_scraper.scrape_all(Config.NEWS_FEEDS, Config.NEWS_MAX_ITEMS)
-
         twitter_posts = []
         if Config.TWITTER_ENABLED:
-            twitter_posts = twitter_scraper.scrape_tweets(Config.TWITTER_BEARER_TOKEN)
+            try:
+                twitter_posts = twitter_scraper.scrape_tweets(Config.TWITTER_BEARER_TOKEN)
+            except Exception as e:
+                logger.warning(f"Twitter: {e}")
 
-        all_text_posts = reddit_posts + news_articles + twitter_posts
+        all_posts = reddit_posts + news_articles + twitter_posts
 
-        # --- Enhanced market data (non-blocking) ---
-        fear_greed = {}
-        earnings_cal = []
-        unusual_opts = []
-        most_active = []
-        short_squeeze = []
-        market_indices = {}
-        trending_yahoo = []
+        # ── Market data ───────────────────────────────────────────
+        def _try(fn, *args, default=None):
+            try:
+                return fn(*args)
+            except Exception as e:
+                logger.warning(f"{fn.__name__}: {e}")
+                return default() if callable(default) else default
 
-        try:
-            fear_greed = market_data.get_fear_greed_index()
-            logger.info(f"Fear/Greed: {fear_greed.get('score')} ({fear_greed.get('rating')})")
-        except Exception as e:
-            logger.warning(f"Fear/Greed failed: {e}")
+        fear_greed    = _try(market_data.get_fear_greed_index, default=dict)
+        earnings_cal  = _try(market_data.get_earnings_calendar, 7, default=list)
+        unusual_opts  = _try(market_data.get_unusual_options_activity, default=list)
+        most_active   = _try(market_data.get_most_active_stocks, default=list)
+        short_squeeze = _try(market_data.get_short_squeeze_candidates, default=list)
+        market_indices= _try(market_data.get_market_indices, default=dict)
+        trending_yahoo= _try(market_data.get_trending_on_yahoo, default=list)
+        put_call_ratio= _try(market_data.get_put_call_ratio, default=dict)
+        market_breadth= _try(market_data.get_market_breadth, default=dict)
 
-        try:
-            earnings_cal = market_data.get_earnings_calendar(days_ahead=7)
-            logger.info(f"Earnings calendar: {len(earnings_cal)} upcoming")
-        except Exception as e:
-            logger.warning(f"Earnings calendar failed: {e}")
+        # ── New sources ───────────────────────────────────────────
+        stocktwits_data = _try(stocktwits_scraper.get_trending, default=list)
+        congress_buys   = _try(congressional_trades.get_congress_buys, Config.CONGRESS_DAYS_BACK, default=list)
 
-        try:
-            unusual_opts = market_data.get_unusual_options_activity()
-            logger.info(f"Unusual options: {len(unusual_opts)} entries")
-        except Exception as e:
-            logger.warning(f"Unusual options failed: {e}")
+        # ── Sentiment + tickers ───────────────────────────────────
+        all_posts = sentiment.score_posts(all_posts)
+        agg_sentiment = sentiment.aggregate_sentiment(all_posts)
+        top_tickers = ticker_extractor.top_tickers(all_posts, n=40)
 
-        try:
-            most_active = market_data.get_most_active_stocks()
-            logger.info(f"Most active: {len(most_active)} stocks")
-        except Exception as e:
-            logger.warning(f"Most active failed: {e}")
-
-        try:
-            short_squeeze = market_data.get_short_squeeze_candidates()
-            logger.info(f"Short squeeze candidates: {len(short_squeeze)}")
-        except Exception as e:
-            logger.warning(f"Short squeeze failed: {e}")
-
-        try:
-            market_indices = market_data.get_market_indices()
-            logger.info(f"Market indices: {list(market_indices.keys())}")
-        except Exception as e:
-            logger.warning(f"Market indices failed: {e}")
-
-        try:
-            trending_yahoo = market_data.get_trending_on_yahoo()
-            logger.info(f"Yahoo trending: {len(trending_yahoo)}")
-        except Exception as e:
-            logger.warning(f"Yahoo trending failed: {e}")
-
-        # --- Sentiment analysis ---
-        all_text_posts = sentiment.score_posts(all_text_posts)
-        agg_sentiment = sentiment.aggregate_sentiment(all_text_posts)
-
-        # --- Extract trending tickers ---
-        top_tickers = ticker_extractor.top_tickers(all_text_posts, n=30)
-
-        # Add Yahoo trending + most active to ticker pool
-        extra_tickers = set()
-        for s in trending_yahoo[:10]:
-            t = s.get("ticker", "").strip().upper()
-            if t and len(t) <= 5:
-                extra_tickers.add(t)
-        for s in most_active[:10]:
-            t = s.get("ticker", "").strip().upper()
-            if t and len(t) <= 5:
-                extra_tickers.add(t)
+        extra = set()
+        for s in trending_yahoo[:15] + most_active[:15]:
+            t = (s.get("ticker") or "").strip().upper()
+            if t and t.isalpha() and len(t) <= 5:
+                extra.add(t)
+        for s in stocktwits_data[:20]:
+            t = (s.get("ticker") or "").strip().upper()
+            if t and t.isalpha() and len(t) <= 5:
+                extra.add(t)
+        for c in congress_buys[:10]:
+            extra.add(c["ticker"])
 
         seen = {t for t, _ in top_tickers}
-        seed_tickers = yahoo_finance.get_trending_tickers()
-        all_candidate_tickers = (
+        seed = yahoo_finance.get_trending_tickers()
+        ticker_list = list(dict.fromkeys(
             [t for t, _ in top_tickers]
-            + [t for t in extra_tickers if t not in seen]
-            + [t for t in seed_tickers if t not in seen and t not in extra_tickers]
-        )
+            + [t for t in extra if t not in seen]
+            + [t for t in seed if t not in seen and t not in extra]
+        ))[:40]
 
-        ticker_list = list(dict.fromkeys(all_candidate_tickers))[:30]
+        ticker_sentiment = sentiment.per_ticker_sentiment(all_posts, ticker_list[:25])
 
-        # --- Per-ticker sentiment ---
-        ticker_sentiment = sentiment.per_ticker_sentiment(all_text_posts, ticker_list[:20])
-
-        # --- Fetch stock data ---
         stock_data = []
-        for ticker in ticker_list[:25]:
-            data = yahoo_finance.get_stock_data(ticker)
+        for ticker in ticker_list[:30]:
+            data = _try(yahoo_finance.get_stock_data, ticker)
             if data:
-                # Enrich with sentiment
-                sent = ticker_sentiment.get(ticker, {})
-                data["sentiment"] = sent
+                data["sentiment"] = ticker_sentiment.get(ticker, {})
                 stock_data.append(data)
 
-        # --- SEC filings ---
-        sec_filings = sec_scraper.get_recent_insider_trades(days_back=7)
-        sec_filings += sec_scraper.get_recent_8k_filings(days_back=7)
+        # ── Technical analysis ────────────────────────────────────
+        ta_data = _try(technical_analysis.analyze_multiple, ticker_list[:Config.TA_MAX_TICKERS], Config.TA_MAX_TICKERS, default=dict)
+        ta_setups = technical_analysis.find_setups(ta_data or {})
 
-        # --- AI Analysis ---
+        sec_filings = _try(
+            lambda: sec_scraper.get_recent_insider_trades(7) + sec_scraper.get_recent_8k_filings(7),
+            default=list,
+        )
+
+        # ── AI analysis ───────────────────────────────────────────
         analysis = claude_analyzer.run_analysis(
             api_key=Config.ANTHROPIC_API_KEY,
             model=Config.CLAUDE_MODEL,
@@ -140,13 +112,17 @@ def run_scrape_and_analyze(app):
             short_squeeze_candidates=short_squeeze,
             market_indices=market_indices,
             aggregate_sentiment=agg_sentiment,
+            stocktwits_trending=stocktwits_data,
+            technical_data=ta_data,
+            congressional_buys=congress_buys,
+            market_breadth=market_breadth,
+            put_call_ratio=put_call_ratio,
         )
 
         if not analysis:
             logger.error("Analysis failed — skipping DB write")
             return
 
-        # --- Persist ---
         record = WeeklyAnalysis(
             analysis_date=datetime.utcnow(),
             week_summary=analysis.get("week_summary", ""),
@@ -169,6 +145,13 @@ def run_scrape_and_analyze(app):
                 "aggregate_sentiment": agg_sentiment,
                 "earnings_upcoming": len(earnings_cal),
                 "unusual_options_count": len(unusual_opts),
+                "congress_buys_count": len(congress_buys),
+                "market_regime": analysis.get("market_regime", ""),
+                "macro_risks": analysis.get("macro_risks", []),
+                "congressional_plays": analysis.get("congressional_plays", []),
+                "technical_breakouts": analysis.get("technical_breakouts", []),
+                "put_call_ratio": put_call_ratio,
+                "market_breadth": market_breadth,
             }),
         )
         db.session.add(record)
