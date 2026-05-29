@@ -1264,6 +1264,7 @@ body.beginner-mode #beginner-banner { display:block }
     <!-- Full Trade Plans for Top ROK Picks (JS-populated) -->
     <div id="sig-trade-plans" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-social-buzz" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-congressional-live" style="display:none;margin-bottom:.85rem"></div>
 
     
     
@@ -1556,6 +1557,7 @@ body.beginner-mode #beginner-banner { display:block }
 
     <!-- Smart Buy Timing Score (JS-populated) -->
     <div id="mkt-buy-timing" style="display:none;margin-bottom:.85rem"></div>
+    <div id="mkt-health-score" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
@@ -2086,6 +2088,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-attribution" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-rebalance" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-correlation" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -2841,10 +2844,10 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
-    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); }
+    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); }
     if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -3806,9 +3809,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); }
   }
   window.showTab = showTab;
@@ -5154,6 +5157,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioRebalance();
     renderPortfolioTaxTips();
     renderPortfolioBeta();
+    renderPortfolioCorrelation();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -9810,6 +9814,192 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderSocialBuzzRadar = renderSocialBuzzRadar;
+
+  // ── MARKET HEALTH SCORE ───────────────────────────────
+  function renderMarketHealthScore() {
+    const el = document.getElementById('mkt-health-score');
+    if (!el) return;
+    // Live data
+    const spyLp = liveprices['SPY'];
+    const vixLp = liveprices['VIX'] || liveprices['^VIX'];
+    const spyChg = spyLp ? spyLp.change_pct : null;
+    // Static ROK data
+    const fg = ROK.fear_greed || {};
+    const fgScore = fg.value || fg.score || 50;
+    const breadthData = ROK.market_breadth || {};
+    const breadthPct = breadthData.breadth_pct != null ? breadthData.breadth_pct : 50;
+    const pcRatio = (ROK.put_call_ratio || {}).total || 1.0;
+    const aggSent = (ROK.aggregate_sentiment || {}).bullish_pct || 50;
+    // Score calculation (0-10)
+    let score = 5.0;
+    const factors = [];
+    // Factor 1: Fear/Greed (0-10 → ±2)
+    const fgNorm = fgScore / 100; // 0 to 1
+    const fgContrib = (fgNorm - 0.5) * 4; // -2 to +2
+    score += fgContrib;
+    factors.push({ label: 'Fear/Greed', value: `${fgScore} (${fg.label || fg.rating || '—'})`, contrib: fgContrib });
+    // Factor 2: Market Breadth (0-100% → ±2)
+    const bNorm = breadthPct / 100;
+    const bContrib = (bNorm - 0.5) * 4;
+    score += bContrib;
+    factors.push({ label: 'Breadth', value: `${breadthPct}% advancing`, contrib: bContrib });
+    // Factor 3: SPY momentum (live ±2)
+    if (spyChg != null) {
+      const sContrib = Math.max(-2, Math.min(2, spyChg * 0.5));
+      score += sContrib;
+      factors.push({ label: 'SPY today', value: `${spyChg >= 0 ? '+' : ''}${spyChg.toFixed(2)}%`, contrib: sContrib });
+    }
+    // Factor 4: VIX level (±1.5)
+    if (vixLp && vixLp.price) {
+      const vix = vixLp.price;
+      const vContrib = vix < 15 ? 1.5 : vix < 20 ? 0.5 : vix < 25 ? -0.5 : vix < 30 ? -1 : -1.5;
+      score += vContrib;
+      factors.push({ label: 'VIX', value: `${vix.toFixed(1)}`, contrib: vContrib });
+    }
+    // Factor 5: Put/Call ratio (±1)
+    const pcContrib = pcRatio < 0.8 ? 1 : pcRatio < 1.0 ? 0.3 : pcRatio < 1.2 ? -0.5 : -1;
+    score += pcContrib;
+    factors.push({ label: 'Put/Call', value: pcRatio.toFixed(2), contrib: pcContrib });
+    score = Math.max(1, Math.min(10, score));
+    const rounded = Math.round(score * 10) / 10;
+    const scoreColor = rounded >= 7 ? 'var(--g)' : rounded >= 5 ? 'var(--au)' : 'var(--r)';
+    const verdict = rounded >= 8 ? 'Excellent — Strong Buying Conditions' : rounded >= 7 ? 'Good — Market Favors Buyers' : rounded >= 6 ? 'Decent — Proceed Normally' : rounded >= 5 ? 'Mixed — Be Selective' : rounded >= 4 ? 'Weak — Caution Advised' : 'Poor — Risk-Off Mode';
+    const verdictDesc = rounded >= 7
+      ? 'Multiple indicators are aligned bullishly. This is a favorable environment to enter positions on ROK buy signals.'
+      : rounded >= 5
+        ? 'The market is showing mixed signals. Stick to high-conviction setups and size positions conservatively.'
+        : 'Multiple risk factors are elevated. Consider reducing position sizes or waiting for a better entry window.';
+    const factorRows = factors.map(f => {
+      const cColor = f.contrib > 0.1 ? 'var(--g)' : f.contrib < -0.1 ? 'var(--r)' : 'var(--wh3)';
+      const sign = f.contrib >= 0 ? '+' : '';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.035)">
+        <span style="font-size:10px;color:var(--wh2)">${f.label}</span>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <span style="font-size:9.5px;color:var(--wh3)">${f.value}</span>
+          <span style="font-size:9.5px;font-weight:800;color:${cColor};min-width:30px;text-align:right">${sign}${f.contrib.toFixed(1)}</span>
+        </div>
+      </div>`;
+    }).join('');
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid ${scoreColor.replace('var(--g)', 'rgba(0,255,136,.2)').replace('var(--au)', 'rgba(255,215,0,.2)').replace('var(--r)', 'rgba(255,34,85,.2)')};border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem">🏥 MARKET HEALTH SCORE</div>
+      <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.65rem">
+        <div style="text-align:center;background:rgba(0,0,0,.25);border-radius:12px;padding:.6rem 1rem;border:2px solid ${scoreColor.replace('var(--g)', 'rgba(0,255,136,.4)').replace('var(--au)', 'rgba(255,215,0,.35)').replace('var(--r)', 'rgba(255,34,85,.4)')}">
+          <div style="font-size:30px;font-weight:900;color:${scoreColor};line-height:1;font-family:var(--disp)">${rounded.toFixed(1)}</div>
+          <div style="font-size:8px;color:var(--wh4);margin-top:2px">out of 10</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:800;color:var(--wh);margin-bottom:.2rem">${verdict}</div>
+          <div style="font-size:10px;color:var(--wh3);line-height:1.45">${verdictDesc}</div>
+        </div>
+      </div>
+      <div style="font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--wh4);margin-bottom:.3rem">SCORE BREAKDOWN</div>
+      ${factorRows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.5rem">Score = composite of Fear/Greed index, market breadth, SPY momentum, VIX fear level, and options put/call ratio. Updates live on price refresh.</div>
+    </div>`;
+  }
+  window.renderMarketHealthScore = renderMarketHealthScore;
+
+  // ── CONGRESSIONAL LIVE OVERLAY ────────────────────────
+  function renderCongressionalLive() {
+    const el = document.getElementById('sig-congressional-live');
+    if (!el) return;
+    const buys = ROK.congressional_buys || ROK.congressional_plays || [];
+    if (!buys.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const rows = buys.slice(0, 6).map(c => {
+      const lp = liveprices[c.ticker];
+      const chgPct = lp ? lp.change_pct : null;
+      const price = lp ? lp.price : null;
+      const chgColor = chgPct == null ? 'var(--wh3)' : chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      const chgStr = chgPct != null ? `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%` : '';
+      const priceStr = price ? `$${price.toFixed(2)}` : '';
+      const buySigStyle = buys.find(b => b.ticker === c.ticker) && chgPct != null && chgPct > 0
+        ? 'background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.25)'
+        : 'background:rgba(153,85,255,.06);border-color:rgba(153,85,255,.15)';
+      const memberCount = c.buy_count || 1;
+      const memberStr = memberCount === 1 ? '1 member' : `${memberCount} members`;
+      const latestDate = c.latest_date ? ` · ${c.latest_date}` : '';
+      return `<div style="${buySigStyle};border:1px solid;border-radius:10px;padding:.6rem .8rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="switchToScreener('${c.ticker}')">
+        <div style="font-family:var(--disp);font-size:15px;font-weight:900;color:var(--p);min-width:50px">$${c.ticker}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9.5px;font-weight:700;color:var(--wh2)">${memberStr} bought${latestDate}</div>
+          <div style="font-size:9px;color:var(--wh4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.members_preview || ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:11px;font-weight:700;color:var(--wh)">${priceStr}</div>
+          <div style="font-size:10px;font-weight:700;color:${chgColor}">${chgStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(153,85,255,.2);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--p);text-transform:uppercase;margin-bottom:.3rem">🏛️ SENATORS BOUGHT THESE — LIVE PRICES</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.7rem;line-height:1.45">Congress members must disclose trades within 45 days. Historically they beat the market by ~10%/year. These are their recent buys — with today's live price moves.</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.3rem">Source: STOCK Act disclosures · Tap any row to view in screener · Not a guarantee of future returns</div>
+    </div>`;
+  }
+  window.renderCongressionalLive = renderCongressionalLive;
+
+  // ── PORTFOLIO CORRELATION SCORE ───────────────────────
+  function renderPortfolioCorrelation() {
+    const el = document.getElementById('port-correlation');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (tickers.length < 3) { el.style.display = 'none'; return; }
+    const changes = tickers.map(t => {
+      const lp = liveprices[t];
+      return lp && lp.change_pct != null ? lp.change_pct : null;
+    }).filter(v => v !== null);
+    if (changes.length < 3) { el.style.display = 'none'; return; }
+    const up = changes.filter(c => c > 0).length;
+    const down = changes.filter(c => c < 0).length;
+    const total = changes.length;
+    const corrPct = Math.max(up, down) / total;
+    const dominantDir = up >= down ? 'up' : 'down';
+    el.style.display = 'block';
+    // Color: high correlation is a risk
+    const warnColor = corrPct >= 0.85 ? 'var(--r)' : corrPct >= 0.7 ? 'var(--au)' : 'var(--g)';
+    const corrLabel = corrPct >= 0.85 ? 'HIGH CORRELATION ⚠' : corrPct >= 0.7 ? 'MODERATE CORRELATION' : 'WELL DIVERSIFIED ✓';
+    const corrDesc = corrPct >= 0.85
+      ? `${Math.round(corrPct * 100)}% of your holdings are moving ${dominantDir === 'up' ? 'UP' : 'DOWN'} together today. This means your portfolio isn't well diversified — if the market drops, everything drops at once.`
+      : corrPct >= 0.7
+        ? `${Math.round(corrPct * 100)}% of holdings trending the same direction today. Moderate correlation — adding stocks from different sectors would reduce risk.`
+        : `Your holdings are moving independently today — good diversification! When some stocks are down, others are holding up.`;
+    // Show per-stock mini bars
+    const stockRows = tickers.map(t => {
+      const lp = liveprices[t];
+      if (!lp || lp.change_pct == null) return '';
+      const c = lp.change_pct;
+      const cColor = c >= 0 ? 'var(--g)' : 'var(--r)';
+      const barW = Math.min(100, Math.abs(c) * 20);
+      return `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem">
+        <span style="font-size:9.5px;font-weight:700;color:var(--wh);min-width:40px">$${t}</span>
+        <div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;position:relative">
+          <div style="position:absolute;${c >= 0 ? 'left:50%' : 'right:50%'};width:${barW/2}%;height:100%;background:${cColor};border-radius:3px"></div>
+        </div>
+        <span style="font-size:9px;color:${cColor};min-width:38px;text-align:right">${c >= 0 ? '+' : ''}${c.toFixed(2)}%</span>
+      </div>`;
+    }).filter(Boolean).join('');
+    const diversityTip = corrPct >= 0.7
+      ? `<div style="font-size:9.5px;color:var(--wh3);margin-top:.5rem;padding:.4rem .6rem;background:rgba(255,136,0,.06);border-left:2px solid var(--au);border-radius:0 6px 6px 0">💡 Tip: Add stocks from different sectors (healthcare, energy, utilities) to reduce correlation and protect against market swings.</div>`
+      : '';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid ${corrPct >= 0.85 ? 'rgba(255,34,85,.2)' : corrPct >= 0.7 ? 'rgba(255,215,0,.2)' : 'rgba(0,255,136,.15)'};border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:${warnColor};text-transform:uppercase;margin-bottom:.3rem">🔗 PORTFOLIO CORRELATION</div>
+      <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.55rem">
+        <div style="font-size:22px;font-weight:900;color:${warnColor};font-family:var(--disp)">${Math.round(corrPct * 100)}%</div>
+        <div>
+          <div style="font-size:11px;font-weight:800;color:var(--wh)">${corrLabel}</div>
+          <div style="font-size:10px;color:var(--wh3);line-height:1.4;margin-top:.1rem">${corrDesc}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:.3rem">${stockRows}</div>
+      ${diversityTip}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.5rem">Today's directional correlation based on live price moves. True correlation requires multiple days of data — this shows current market behavior only.</div>
+    </div>`;
+  }
+  window.renderPortfolioCorrelation = renderPortfolioCorrelation;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
