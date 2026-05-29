@@ -950,32 +950,52 @@ body.beginner-mode #beginner-banner { display:block }
   </div>
 </header>
 
-<!-- TICKER TAPE -->
-{% set tape_items = data.buy_signals[:5] + data.sell_signals[:3] + data.watch_list[:3] %}
-{% if tape_items %}
-<div class="ticker-tape">
-  <div class="ticker-scroll">
+<!-- TICKER TAPE (live-updated by JS) -->
+<div class="ticker-tape" id="ticker-tape-bar">
+  <div id="ticker-scroll-inner" class="ticker-scroll">
+    {# Static fallback items rendered by Jinja for initial load #}
+    {% set tape_items = (data.buy_signals[:5] + data.sell_signals[:3] + data.watch_list[:3]) %}
     {% for s in tape_items %}{% set sig = 'buy' if s in data.buy_signals else 'sell' if s in data.sell_signals else 'watch' %}
-    {% set chg_pct = ((s.price_target / s.current_price - 1) * 100)|round(1) if (s.price_target and s.current_price and s.current_price > 0) else none %}
-    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')">
+    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')" data-tape-ticker="{{ s.ticker }}">
       <span class="tick-lbl">{{ sig|upper }}</span>
       <span>${{ s.ticker }}</span>
-      {% if s.current_price %}<span>${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
-      {% if chg_pct is not none %}<span class="tick-chg {{ 'up' if chg_pct >= 0 else 'down' }}">{{ '+' if chg_pct >= 0 else '' }}{{ chg_pct }}%↑</span>{% endif %}
+      <span class="tick-price">{% if s.current_price %}${{ '%.2f'|format(s.current_price) }}{% endif %}</span>
+      <span class="tick-chg">{% if s.change_pct is defined and s.change_pct is not none %}{{ '+' if s.change_pct >= 0 else '' }}{{ '%.2f'|format(s.change_pct) }}%{% endif %}</span>
     </div>
     {% endfor %}
+    {% if not tape_items %}
+    {# Placeholder items shown until JS populates #}
+    {% set mkt_items = [('SPY','S&P 500'),('QQQ','Nasdaq'),('AAPL','Apple'),('MSFT','Microsoft'),('NVDA','Nvidia'),('TSLA','Tesla'),('AMZN','Amazon'),('META','Meta'),('GOOGL','Google')] %}
+    {% for sym, name in mkt_items %}
+    <div class="tick-item" onclick="openModal('{{ sym }}')" data-tape-ticker="{{ sym }}">
+      <span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span>
+      <span>${{ sym }}</span>
+      <span class="tick-price"></span>
+      <span class="tick-chg"></span>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {# Duplicate for seamless loop #}
     {% for s in tape_items %}{% set sig = 'buy' if s in data.buy_signals else 'sell' if s in data.sell_signals else 'watch' %}
-    {% set chg_pct = ((s.price_target / s.current_price - 1) * 100)|round(1) if (s.price_target and s.current_price and s.current_price > 0) else none %}
-    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')">
+    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')" data-tape-ticker="{{ s.ticker }}">
       <span class="tick-lbl">{{ sig|upper }}</span>
       <span>${{ s.ticker }}</span>
-      {% if s.current_price %}<span>${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
-      {% if chg_pct is not none %}<span class="tick-chg {{ 'up' if chg_pct >= 0 else 'down' }}">{{ '+' if chg_pct >= 0 else '' }}{{ chg_pct }}%↑</span>{% endif %}
+      <span class="tick-price">{% if s.current_price %}${{ '%.2f'|format(s.current_price) }}{% endif %}</span>
+      <span class="tick-chg">{% if s.change_pct is defined and s.change_pct is not none %}{{ '+' if s.change_pct >= 0 else '' }}{{ '%.2f'|format(s.change_pct) }}%{% endif %}</span>
     </div>
     {% endfor %}
+    {% if not tape_items %}
+    {% for sym, name in [('SPY','S&P 500'),('QQQ','Nasdaq'),('AAPL','Apple'),('MSFT','Microsoft'),('NVDA','Nvidia'),('TSLA','Tesla'),('AMZN','Amazon'),('META','Meta'),('GOOGL','Google')] %}
+    <div class="tick-item" onclick="openModal('{{ sym }}')" data-tape-ticker="{{ sym }}">
+      <span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span>
+      <span>${{ sym }}</span>
+      <span class="tick-price"></span>
+      <span class="tick-chg"></span>
+    </div>
+    {% endfor %}
+    {% endif %}
   </div>
 </div>
-{% endif %}
 
 <!-- ROK MOOD BAR -->
 {% if data.market_mood or data.rok_message %}
@@ -1491,6 +1511,12 @@ body.beginner-mode #beginner-banner { display:block }
 
     <!-- Live commodities + crypto (JS-populated) -->
     <div id="mkt-commodities" style="display:none;margin-bottom:.85rem"></div>
+
+    <!-- Live market breadth bar (JS-populated) -->
+    <div id="mkt-live-breadth" style="display:none;margin-bottom:.7rem"></div>
+
+    <!-- Live gainers & losers leaderboard (JS-populated) -->
+    <div id="mkt-gainers-losers" style="margin-bottom:.85rem"></div>
 
     <!-- Live market news feed (JS-populated) -->
     <div id="mkt-news-feed" style="display:none;margin-bottom:.85rem"></div>
@@ -2061,6 +2087,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-active-alerts" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-earnings-cal" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
@@ -2500,6 +2527,25 @@ body.beginner-mode #beginner-banner { display:block }
       if (priceEl) { priceEl.textContent = '$' + price.toFixed(2); priceEl.className = 'sc-price ' + (changePct >= 0 ? 'up' : 'down'); }
       if (chgEl) { chgEl.textContent = (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%'; chgEl.className = 'sc-chg ' + (changePct >= 0 ? 'up' : 'down'); }
     });
+    // Update market tab index cards
+    document.querySelectorAll(`[data-idx-ticker="${ticker}"]`).forEach(card => {
+      const priceEl = card.querySelector('[data-idx-price]');
+      const chgEl = card.querySelector('[data-idx-chg]');
+      if (priceEl) {
+        const isMajorIndex = price >= 1000;
+        priceEl.textContent = (ticker !== '^VIX' ? '$' : '') + (isMajorIndex ? price.toLocaleString('en-US', {maximumFractionDigits:2}) : price.toFixed(2));
+      }
+      if (chgEl) {
+        chgEl.textContent = (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%';
+        chgEl.style.color = changePct >= 0 ? 'var(--g)' : 'var(--r)';
+      }
+      card.style.borderColor = changePct >= 0 ? 'rgba(0,255,136,.2)' : 'rgba(255,34,85,.2)';
+    });
+    // Update portfolio card live prices
+    document.querySelectorAll(`[data-port-ticker="${ticker}"]`).forEach(el => {
+      const priceEl = el.querySelector('.port-live-price');
+      if (priceEl) priceEl.textContent = '$' + price.toFixed(2);
+    });
     // Update trade ruler pin position with live price
     const det = sigDetails[ticker];
     if (det && det.stop_loss && det.price_target) {
@@ -2555,7 +2601,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (btn) btn.classList.add('spinning');
 
     // Collect all tickers + always include major indices
-    const tickers = new Set(['SPY', 'QQQ', '^VIX']);
+    const tickers = new Set(['SPY', 'QQQ', 'DIA', 'IWM', '^VIX']);
     (ROK.buy_signals || []).forEach(s => tickers.add(s.ticker));
     (ROK.sell_signals || []).forEach(s => tickers.add(s.ticker));
     (ROK.watch_list || []).forEach(s => tickers.add(s.ticker));
@@ -2619,9 +2665,10 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); }
+    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
     renderLivePortStrip();
+    updateTickerTape();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -3215,17 +3262,43 @@ body.beginner-mode #beginner-banner { display:block }
       'Sunday prep: review your watchlist for the week ahead 🗓️',
     ];
     const tip = tips[now.getDay()];
+
+    // Live SPY/QQQ data pill
+    const spy = liveprices['SPY'];
+    const qqq = liveprices['QQQ'];
+    const spyPill = spy && spy.change_pct != null
+      ? `<span class="mbrf-pill ${spy.change_pct >= 0 ? 'g' : 'r'}">SPY ${spy.change_pct >= 0 ? '+' : ''}${spy.change_pct.toFixed(2)}%</span>`
+      : '';
+    const qqqPill = qqq && qqq.change_pct != null
+      ? `<span class="mbrf-pill ${qqq.change_pct >= 0 ? 'g' : 'r'}">QQQ ${qqq.change_pct >= 0 ? '+' : ''}${qqq.change_pct.toFixed(2)}%</span>`
+      : '';
+
+    // Intraday timing guidance (ET hours approximate)
+    const etNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const etH = etNow.getHours(), etM = etNow.getMinutes();
+    const etTime = etH + etM / 60;
+    let timingTip = '';
+    if (isMarketOpen) {
+      if (etTime < 10) timingTip = '⚡ First 30 min: most volatile. Wait for opening range to set before entering.';
+      else if (etTime < 12) timingTip = '✅ Mid-morning: good time to enter — volatility settling, trend clearer.';
+      else if (etTime < 14) timingTip = '😴 Lunch hour: low volume, choppy. Avoid new entries.';
+      else if (etTime < 15.5) timingTip = '📈 Power hour: strong momentum moves. Watch your signals closely.';
+      else timingTip = '⚠️ Last 30 min: institutional rebalancing. Gaps/reversals common. Stay cautious.';
+    }
+
     el.innerHTML = `<div class="mbrf-card">
       <div class="mbrf-greeting">${greeting} · ${day}</div>
       <div class="mbrf-headline">${headline}</div>
       ${portLine ? `<div class="mbrf-sub">${portLine}</div>` : ''}
       <div class="mbrf-pills">
         <span class="mbrf-pill ${mktClass}">${mktStatus}</span>
+        ${spyPill}${qqqPill}
         ${buys > 0 ? `<span class="mbrf-pill g">${buys} BUY${buys!==1?'s':''}</span>` : ''}
         ${sells > 0 ? `<span class="mbrf-pill r">${sells} SELL${sells!==1?'s':''}</span>` : ''}
         ${watches > 0 ? `<span class="mbrf-pill au">${watches} WATCH</span>` : ''}
         ${ROK.vix_value ? `<span class="mbrf-pill b">VIX ${ROK.vix_value}</span>` : ''}
       </div>
+      ${timingTip ? `<div class="mbrf-sub" style="font-size:10px;margin-top:.2rem;padding:.3rem .55rem;background:rgba(0,204,255,.05);border-radius:6px;border:1px solid rgba(0,204,255,.1)">${timingTip}</div>` : ''}
       <div class="mbrf-sub" style="font-size:10px;margin-top:.15rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.05)">💡 ${tip}</div>
     </div>`;
   }
@@ -3322,7 +3395,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -4041,6 +4114,92 @@ body.beginner-mode #beginner-banner { display:block }
   }
   window.renderPortfolioHealthCheck = renderPortfolioHealthCheck;
 
+  // ── LIVE EARNINGS CALENDAR (for portfolio stocks) ────────
+  let _earningsCache = {};  // ticker → { date, daysUntil, eps_est }
+  async function fetchPortfolioEarnings() {
+    const el = document.getElementById('port-earnings-cal');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+
+    // Fetch from Yahoo Finance quote for earnings dates we don't have yet
+    const toFetch = tickers.filter(t => !_earningsCache[t]);
+    if (toFetch.length) {
+      try {
+        const syms = toFetch.join(',');
+        const r = await fetch(
+          `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=earningsTimestamp,earningsTimestampStart,earningsTimestampEnd,epsForward`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        if (r.ok) {
+          const j = await r.json();
+          (j?.quoteResponse?.result || []).forEach(q => {
+            const ts = q.earningsTimestamp || q.earningsTimestampStart;
+            if (ts) {
+              const d = new Date(ts * 1000);
+              const daysUntil = Math.round((d - Date.now()) / 86400000);
+              _earningsCache[q.symbol] = { date: d, daysUntil, eps: q.epsForward };
+            } else {
+              _earningsCache[q.symbol] = null;
+            }
+          });
+        }
+      } catch { /* silent */ }
+    }
+
+    // Build the earnings list
+    const upcoming = [];
+    tickers.forEach(t => {
+      const c = _earningsCache[t];
+      if (c && c.daysUntil >= -3 && c.daysUntil <= 45) {
+        const stock = (ROK.stock_universe || []).find(s => s.ticker === t);
+        upcoming.push({
+          ticker: t,
+          name: stock ? (stock.company_name || t) : t,
+          ...c
+        });
+      }
+    });
+
+    if (!upcoming.length) { el.style.display = 'none'; return; }
+    upcoming.sort((a, b) => a.daysUntil - b.daysUntil);
+
+    const rows = upcoming.map(e => {
+      const urgency = e.daysUntil <= 1 ? 'var(--r)' : e.daysUntil <= 7 ? 'var(--au)' : 'var(--wh3)';
+      const when = e.daysUntil < 0 ? `${Math.abs(e.daysUntil)}d ago` : e.daysUntil === 0 ? 'TODAY' : e.daysUntil === 1 ? 'Tomorrow' : `${e.daysUntil}d`;
+      const icon = e.daysUntil <= 1 ? '🚨' : e.daysUntil <= 7 ? '📅' : '📆';
+      const tip = e.daysUntil <= 7
+        ? `<div style="font-size:9px;color:var(--wh4);margin-top:1px">Stocks can move ±5-15% on earnings day — consider sizing down</div>`
+        : '';
+      return `<div onclick="openModal('${e.ticker}')" style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .55rem;border-radius:8px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background=''">
+        <div>
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <span style="font-size:.85rem">${icon}</span>
+            <span style="font-size:10.5px;font-weight:800;color:var(--wh)">${e.ticker}</span>
+            <span style="font-size:9.5px;color:var(--wh3)">${e.name.substring(0, 18)}</span>
+          </div>
+          ${tip}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:11px;font-weight:800;color:${urgency}">${when}</div>
+          <div style="font-size:8.5px;color:var(--wh4)">${e.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,215,0,.12);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:rgba(255,215,0,.7);text-transform:uppercase;margin-bottom:.45rem;display:flex;align-items:center;justify-content:space-between">
+        <span>📅 UPCOMING EARNINGS (YOUR STOCKS)</span>
+        <span style="color:var(--g);font-size:7px">● LIVE</span>
+      </div>
+      ${rows}
+      <div style="font-size:9px;color:var(--wh4);margin-top:.4rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.4rem">💡 <strong>Before earnings:</strong> reduce position size to protect against surprise moves.</div>
+    </div>`;
+  }
+  window.fetchPortfolioEarnings = fetchPortfolioEarnings;
+
   // ── LIVE PORTFOLIO STRIP ─────────────────────────────────
   function renderLivePortStrip() {
     const strip = document.getElementById('live-port-strip');
@@ -4272,6 +4431,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
+    fetchPortfolioEarnings();
     renderDiversificationCheck();
     const grid = document.getElementById('portfolio-grid');
     if (!grid) return;
@@ -4419,7 +4579,37 @@ body.beginner-mode #beginner-banner { display:block }
     const alertsHtml = alerts.length ? `<div class="port-alerts">${alerts.map(a=>
       `<div class="port-alert-item ${a.includes('SELL')||a.includes('⚠')?'sell':'target'}">${a}</div>`
     ).join('')}</div>` : '';
-    grid.innerHTML = alertsHtml + `<div class="port-grid">${cards}</div>`;
+
+    // Best trade highlight
+    let bestTradeHtml = '';
+    if (tickers.length >= 2) {
+      let bestTicker = null, bestPct = -Infinity;
+      tickers.forEach(t => {
+        const e = p[t]; const lp2 = liveprices[t];
+        const st2 = (ROK.stock_universe || []).find(s => s.ticker === t);
+        const cur2 = lp2 ? lp2.price : (st2 ? st2.price : null);
+        if (cur2 && e.price) {
+          const pct2 = (cur2 - e.price) / e.price * 100;
+          if (pct2 > bestPct) { bestPct = pct2; bestTicker = t; }
+        }
+      });
+      if (bestTicker && bestPct > 3) {
+        const st2 = (ROK.stock_universe || []).find(s => s.ticker === bestTicker);
+        const companyName = st2 ? (st2.company_name || bestTicker) : bestTicker;
+        bestTradeHtml = `<div onclick="openModal('${bestTicker}')" style="cursor:pointer;background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,255,136,.03));border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:.55rem .85rem;margin-bottom:.55rem;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:rgba(0,255,136,.6);text-transform:uppercase">🏆 YOUR BEST PICK</div>
+            <div style="font-size:13px;font-weight:800;color:var(--wh);margin-top:1px">${bestTicker} <span style="font-size:10px;color:var(--wh4);font-weight:400">${companyName.substring(0,20)}</span></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.3rem;font-weight:900;color:var(--g)">+${bestPct.toFixed(1)}%</div>
+            <div style="font-size:9px;color:var(--wh4)">since you bought</div>
+          </div>
+        </div>`;
+      }
+    }
+
+    grid.innerHTML = alertsHtml + bestTradeHtml + `<div class="port-grid">${cards}</div>`;
     // Draw sparklines for portfolio holdings
     tickers.forEach(ticker => {
       const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
@@ -4749,6 +4939,25 @@ body.beginner-mode #beginner-banner { display:block }
           ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none" title="${s.vol_ratio.toFixed(1)}x normal volume — unusual trading activity. Big money (hedge funds/institutions) may be moving this stock.">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
         </div>
         ${strengthHtml}
+        ${(() => {
+          const wl = s.week_low, wh = s.week_high;
+          if (wl == null || wh == null || price == null || wh <= wl) return '';
+          const range = wh - wl;
+          const pos = Math.min(100, Math.max(0, (price - wl) / range * 100));
+          const belowHigh = ((wh - price) / wh * 100);
+          const col = pos > 80 ? 'var(--r)' : pos > 50 ? 'var(--au)' : 'var(--g)';
+          const lbl = pos > 80 ? 'Near 52W high' : pos > 50 ? `${belowHigh.toFixed(0)}% below high` : `${belowHigh.toFixed(0)}% below high`;
+          return `<div style="margin-top:.4rem" title="52-week range: $${wl.toFixed(2)} – $${wh.toFixed(2)}. Current price is ${pos.toFixed(0)}% through the range.">
+            <div style="height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden;position:relative">
+              <div style="height:100%;width:${pos}%;background:${col};border-radius:2px;transition:width .5s ease"></div>
+            </div>
+            <div style="font-size:7.5px;color:var(--wh4);display:flex;justify-content:space-between;margin-top:1.5px">
+              <span>52W $${wl.toFixed(0)}</span>
+              <span style="color:${col}">${lbl}</span>
+              <span>$${wh.toFixed(0)}</span>
+            </div>
+          </div>`;
+        })()}
         ${sig === 'buy' && (sigDet.catalyst || sigDet.rok_take) ? `<div style="font-size:9px;color:var(--wh3);line-height:1.4;margin-top:.35rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${(sigDet.catalyst || sigDet.rok_take || '').substring(0,90)}</div>` : ''}
         ${(() => {
           const portEntry = getPortfolio()[s.ticker];
@@ -5424,6 +5633,134 @@ body.beginner-mode #beginner-banner { display:block }
   }
   window.fetchLiveCommodities = fetchLiveCommodities;
 
+  // ── LIVE GAINERS & LOSERS LEADERBOARD ────────────────
+  function renderGainersLosers() {
+    const el = document.getElementById('mkt-gainers-losers');
+    if (!el) return;
+
+    // Gather all stocks with live price data
+    const universe = ROK.stock_universe || [];
+    const all = universe.map(s => {
+      const lp = liveprices[s.ticker];
+      const chg = lp ? lp.change_pct : (s.change_pct || null);
+      const price = lp ? lp.price : s.price;
+      return { ticker: s.ticker, name: (s.company_name || s.ticker).substring(0, 18), chg, price, sig: s.rok_signal };
+    }).filter(s => s.chg != null && s.price != null);
+
+    if (all.length < 3) {
+      // Build fallback from screener_data if universe is empty
+      el.innerHTML = '';
+      return;
+    }
+
+    const sorted = [...all].sort((a, b) => b.chg - a.chg);
+    const gainers = sorted.filter(s => s.chg > 0).slice(0, 5);
+    const losers = sorted.filter(s => s.chg < 0).slice(-5).reverse();
+
+    const rowHtml = (list, isGainer) => list.map(s => {
+      const cc = isGainer ? 'var(--g)' : 'var(--r)';
+      const arrow = isGainer ? '▲' : '▼';
+      const sigBadge = s.sig === 'buy' ? `<span style="font-size:6.5px;padding:1px 3px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.25);border-radius:4px;color:var(--g);margin-left:3px">BUY</span>`
+        : s.sig === 'sell' ? `<span style="font-size:6.5px;padding:1px 3px;background:rgba(255,34,85,.1);border:1px solid rgba(255,34,85,.25);border-radius:4px;color:var(--r);margin-left:3px">SELL</span>` : '';
+      return `<div onclick="openModal('${s.ticker}')" style="display:flex;align-items:center;justify-content:space-between;padding:.35rem .5rem;border-radius:7px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background=''">
+        <div style="min-width:0">
+          <div style="font-size:10px;font-weight:800;color:var(--wh);display:flex;align-items:center">${s.ticker}${sigBadge}</div>
+          <div style="font-size:8.5px;color:var(--wh4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px">${s.name}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:11px;font-weight:800;color:${cc}">${arrow} ${Math.abs(s.chg).toFixed(2)}%</div>
+          <div style="font-size:9px;color:var(--wh4)">$${s.price.toFixed(2)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.55rem;display:flex;justify-content:space-between;align-items:center">
+        <span>📊 TODAY'S MOVERS</span>
+        <span style="color:var(--g);font-size:7px">● LIVE · ${all.length} stocks</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--g);letter-spacing:.08em;margin-bottom:.25rem;padding-left:.5rem">🚀 TOP GAINERS</div>
+          ${gainers.length ? rowHtml(gainers, true) : '<div style="font-size:9px;color:var(--wh4);padding:.5rem">No gainers yet</div>'}
+        </div>
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--r);letter-spacing:.08em;margin-bottom:.25rem;padding-left:.5rem">📉 TOP LOSERS</div>
+          ${losers.length ? rowHtml(losers, false) : '<div style="font-size:9px;color:var(--wh4);padding:.5rem">No losers yet</div>'}
+        </div>
+      </div>
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.05)">💡 Tap any stock to see full details. Gainers with a BUY badge are ROK-recommended.</div>
+    </div>`;
+  }
+  window.renderGainersLosers = renderGainersLosers;
+
+  // ── LIVE MARKET BREADTH (computed from universe) ─────
+  function renderLiveMarketBreadth() {
+    const el = document.getElementById('mkt-live-breadth');
+    if (!el) return;
+    const universe = ROK.stock_universe || [];
+    if (!universe.length) { el.style.display = 'none'; return; }
+
+    let advancing = 0, declining = 0, unchanged = 0;
+    let bigGainers = 0, bigLosers = 0; // ≥2%
+    universe.forEach(s => {
+      const lp = liveprices[s.ticker];
+      const chg = lp ? lp.change_pct : (s.change_pct || null);
+      if (chg == null) return;
+      if (chg >= 0.2) { advancing++; if (chg >= 2) bigGainers++; }
+      else if (chg <= -0.2) { declining++; if (chg <= -2) bigLosers++; }
+      else unchanged++;
+    });
+    const total = advancing + declining + unchanged;
+    if (total < 3) { el.style.display = 'none'; return; }
+
+    const advPct = (advancing / total * 100).toFixed(0);
+    const decPct = (declining / total * 100).toFixed(0);
+    const unchPct = 100 - parseInt(advPct) - parseInt(decPct);
+    const sentiment = advancing > declining * 1.5 ? 'BULLISH' : declining > advancing * 1.5 ? 'BEARISH' : 'MIXED';
+    const sentColor = sentiment === 'BULLISH' ? 'var(--g)' : sentiment === 'BEARISH' ? 'var(--r)' : 'var(--au)';
+    const adRatio = declining > 0 ? (advancing / declining).toFixed(1) : advancing + ':0';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.6rem .85rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+        <span style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--wh3)">📊 LIVE MARKET BREADTH · ${total} STOCKS</span>
+        <span style="font-size:9.5px;font-weight:800;color:${sentColor}">${sentiment}</span>
+      </div>
+      <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:.35rem">
+        <div style="width:${advPct}%;background:var(--g);transition:width .5s ease"></div>
+        <div style="width:${unchPct}%;background:rgba(255,255,255,.12)"></div>
+        <div style="width:${decPct}%;background:var(--r);transition:width .5s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px">
+        <span style="color:var(--g)">▲ ${advancing} rising (${advPct}%)</span>
+        <span style="color:var(--wh4)">${adRatio} A/D ratio</span>
+        <span style="color:var(--r)">▼ ${declining} falling (${decPct}%)</span>
+      </div>
+      ${bigGainers + bigLosers > 0 ? `<div style="font-size:8.5px;color:var(--wh4);margin-top:.3rem">${bigGainers > 0 ? `<span style="color:var(--g)">+2% moves: ${bigGainers}</span> · ` : ''}${bigLosers > 0 ? `<span style="color:var(--r)">-2% moves: ${bigLosers}</span>` : ''}</div>` : ''}
+    </div>`;
+  }
+  window.renderLiveMarketBreadth = renderLiveMarketBreadth;
+
+  // ── LIVE TICKER TAPE UPDATE ───────────────────────────
+  function updateTickerTape() {
+    // Update prices in all ticker tape items from liveprices
+    document.querySelectorAll('[data-tape-ticker]').forEach(el => {
+      const ticker = el.dataset.tapeTicker;
+      const lp = liveprices[ticker];
+      if (!lp) return;
+      const priceEl = el.querySelector('.tick-price');
+      const chgEl = el.querySelector('.tick-chg');
+      if (priceEl && lp.price != null) priceEl.textContent = '$' + lp.price.toFixed(2);
+      if (chgEl && lp.change_pct != null) {
+        const c = lp.change_pct;
+        chgEl.textContent = (c >= 0 ? '+' : '') + c.toFixed(2) + '%';
+        chgEl.className = 'tick-chg ' + (c >= 0 ? 'up' : 'down');
+      }
+    });
+  }
+  window.updateTickerTape = updateTickerTape;
+
   // ── UPCOMING EVENTS CALENDAR ─────────────────────────
   function renderUpcomingEvents() {
     const el = document.getElementById('mkt-events');
@@ -5899,6 +6236,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     renderLivePortStrip();
+    updateTickerTape();
     updateMarketLiveBrief();
     fetchLiveFearGreed();
     initTipRotator();
@@ -6047,6 +6385,24 @@ body.beginner-mode #beginner-banner { display:block }
           sessionStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
           showAppAlert(`📅 ${ticker} reports earnings ${stock.earnings_date} — expect volatility! Consider sizing down before then.`, 'info', 9000);
         }
+      }
+      // P&L milestone celebrations
+      if (entry.price && curPrice) {
+        const pct = (curPrice - entry.price) / entry.price * 100;
+        const milestones = [10, 25, 50, 100];
+        milestones.forEach(m => {
+          if (pct >= m) {
+            const mKey = `milestone_${ticker}_${m}`;
+            if (!sent[mKey]) {
+              sent[mKey] = 1;
+              sessionStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
+              const emoji = m >= 100 ? '🎉🔥' : m >= 50 ? '🚀' : m >= 25 ? '💰' : '✅';
+              showAppAlert(`${emoji} ${ticker} hit +${m}%! Your investment is up ${pct.toFixed(1)}%. ${m >= 25 ? 'Consider taking some profits!' : 'ROK is working.'}`, 'good', 8000);
+              if (m >= 25) setTimeout(launchConfetti, 200);
+              playAlertSound('buy');
+            }
+          }
+        });
       }
     });
   }
@@ -6275,6 +6631,14 @@ body.beginner-mode #beginner-banner { display:block }
     'Volume': { title: 'Trading Volume', body: `Volume = <strong>how many shares were traded today</strong>.\n\nHigh volume means lots of people are buying or selling that stock. This is important because:\n\n🔥 <strong>High volume on a price UP move</strong> = Strong buy signal — big money (institutions, hedge funds) may be entering\n⚠️ <strong>High volume on a price DOWN move</strong> = Danger signal — big money may be selling\n😴 <strong>Low volume</strong> = Less conviction — the move might not be sustained\n\nROK flags stocks with volume >1.5x their normal average.` },
     'Insider': { title: 'Insider Buying', body: `"Insiders" are <strong>people who work at the company</strong> — CEOs, CFOs, board members. They must report when they buy or sell their own company's stock.\n\n💡 When insiders BUY their own stock, it's a strong signal they think the stock will go UP. They have inside knowledge (legally public knowledge that must be filed).\n\n📊 Studies show stocks with heavy insider buying outperform the market by 5-8% on average.\n\n⚠️ Insider SELLING is less meaningful — they might need cash for personal reasons. Insider BUYING is the stronger signal.` },
     'Put/Call': { title: 'Put/Call Ratio', body: `Options let traders bet on whether stocks will go UP (call options) or DOWN (put options).\n\nThe <strong>Put/Call ratio</strong> shows how many "down bets" vs "up bets" are being placed by big money.\n\n📈 <strong>Below 0.8</strong> = More upside bets = Bullish (hedge funds think market will go up)\n⚖️ <strong>0.8-1.0</strong> = Neutral/balanced\n📉 <strong>Above 1.2</strong> = More downside bets = Bearish (hedge funds are hedging against a drop)\n\n💡 This is one way to see what the "smart money" institutions are thinking about market direction.` },
+    'Earnings': { title: 'Earnings Report', body: `Every 3 months, public companies report their <strong>earnings</strong> — basically their financial report card.\n\n📅 <strong>Earnings date</strong> = the day the company reveals if they made money or not.\n\n📈 <strong>Beat estimates</strong> = Made MORE profit than Wall St expected → stock usually jumps\n📉 <strong>Miss estimates</strong> = Made LESS profit than expected → stock usually drops\n\n⚠️ Stocks can move ±5-20% on earnings day — it's like a coin flip even if the signal looks good. ROK recommends sizing down before earnings unless it's an earnings play.\n\n💡 After earnings pass (good or bad), the volatility usually settles and better entry points appear.` },
+    'Short Squeeze': { title: 'Short Squeeze', body: `A short squeeze is one of the most explosive stock moves — here's how it works:\n\n🐻 <strong>Short sellers</strong> borrow shares and sell them, betting the price will go DOWN so they can buy them back cheaper.\n\n⚡ When the stock goes UP instead, short sellers panic and BUY frantically to limit losses. This buying causes the stock to shoot up FASTER — the "squeeze."\n\n🚀 Famous examples: GameStop (GME) went from $4 to $483 in a short squeeze in 2021.\n\n💡 ROK flags stocks with high "short interest" — these have the most potential for explosive moves if the stock breaks upward. High risk, high reward.` },
+    'Technical Breakout': { title: 'Technical Breakout', body: `A technical breakout happens when a stock <strong>breaks through a key price level</strong> that it's been stuck below for a while.\n\n📊 Think of it like a dam breaking — once it crosses a "resistance" level, pent-up buying pressure floods in.\n\n📈 <strong>What ROK looks for:</strong>\n• Price breaking above a 52-week high\n• Price crossing above its 200-day moving average\n• Breaking out of a consolidation pattern\n\n💡 Breakouts are often accompanied by high volume (the "confirmation"). A breakout on low volume is less reliable.` },
+    'Catalyst': { title: 'Catalyst', body: `A catalyst is an <strong>event or news item that causes a stock to move sharply</strong>.\n\n🔥 Common catalysts:\n• Earnings beat (profits higher than expected)\n• New product launch or partnership deal\n• FDA approval (for biotech/pharma stocks)\n• Analyst upgrade (Wall St raises their recommendation)\n• Short squeeze setup\n• Congressional/insider buying\n\n💡 ROK specifically looks for stocks with upcoming catalysts — buying BEFORE the catalyst can capture the biggest move. After the news hits, it's often "buy the rumor, sell the news."` },
+    'Moving Average': { title: 'Moving Average (MA)', body: `A moving average smooths out a stock's price over time to show the <strong>overall trend direction</strong>.\n\n📊 The two most watched:\n• <strong>50-day MA</strong>: Short/medium term trend\n• <strong>200-day MA</strong>: Long-term trend (the most important)\n\n🟢 <strong>Price above 200-day MA</strong> = Bullish — stock is in an uptrend\n🔴 <strong>Price below 200-day MA</strong> = Bearish — stock is in a downtrend\n\n💡 When the 50-day MA crosses ABOVE the 200-day MA, it's called a "Golden Cross" — historically a strong buy signal. The reverse (Death Cross) is bearish.` },
+    'Analyst': { title: 'Wall Street Analyst Ratings', body: `Wall Street analysts are <strong>professional researchers</strong> at major banks (Goldman Sachs, Morgan Stanley, etc.) who study companies and issue buy/sell recommendations.\n\n⭐ <strong>Rating levels:</strong>\n• Strong Buy / Buy = Most bullish\n• Outperform / Overweight = Slightly bullish\n• Hold / Neutral = No strong opinion\n• Underperform / Underweight = Slightly bearish\n• Sell = Most bearish\n\n💡 <strong>Consensus</strong> means the average opinion of multiple analysts. When 10+ analysts all say "Buy," that's strong conviction.\n\n⚠️ Analysts are sometimes wrong — especially about timing. Use analyst ratings as one input, not the only input.` },
+    'Congressional': { title: 'Congressional Trading', body: `Members of Congress can legally trade stocks and must <strong>disclose their trades within 30-45 days</strong>.\n\nStudies show that congressional stock trades BEAT the market by an average of 12% per year — far better than professional fund managers.\n\n🏛️ <strong>Why it matters:</strong> Politicians often know about upcoming regulations, government contracts, and economic policies before the public does.\n\n💡 When ROK shows a "Senator Bought" badge, it means a U.S. Senator or Representative recently bought that stock — considered a bullish signal.\n\n📊 You can verify these trades yourself at housestockwatcher.com or senatestockwatcher.com.` },
+    'Sector': { title: 'Stock Sectors', body: `The stock market is divided into <strong>11 major sectors</strong> based on what type of business the company is in.\n\n🔧 Technology (XLK): Apple, Microsoft, Nvidia\n💊 Healthcare (XLV): Johnson & Johnson, Pfizer\n⚡ Energy (XLE): ExxonMobil, Chevron\n🏦 Financials (XLF): JPMorgan, Berkshire\n🛒 Consumer (XLY): Amazon, Tesla\n🏭 Industrials (XLI): Boeing, Caterpillar\n\n💡 <strong>Why sectors matter:</strong> When one sector is hot (like AI/Technology), stocks in that sector get a tailwind. Diversifying across 3+ sectors reduces risk.` },
   };
 
   function showGlossary(term) {
