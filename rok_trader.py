@@ -288,16 +288,17 @@ def _roc(closes, period=5):
 
 def _vwap(hourly):
     """Compute VWAP with ±2σ bands from today's hourly bars.
-    Returns (vwap, position_pct, vwap_zscore).
-    vwap_zscore: price's z-score from VWAP (>2 = overbought band, <-2 = oversold band)."""
+    Returns (vwap, position_pct, vwap_zscore, vwap_reclaim).
+    vwap_zscore: price's z-score from VWAP (>2 = overbought band, <-2 = oversold band).
+    vwap_reclaim: True if price dipped below VWAP intraday and has since reclaimed it."""
     if hourly is None:
-        return None, 50.0, 0.0
+        return None, 50.0, 0.0, False
     try:
         if "Volume" not in hourly.columns or "Close" not in hourly.columns:
-            return None, 50.0, 0.0
+            return None, 50.0, 0.0, False
         h = hourly.dropna(subset=["Close", "Volume"])
         if len(h) < 2:
-            return None, 50.0, 0.0
+            return None, 50.0, 0.0, False
         # Use last 8 bars (≈1 trading day in hourly)
         h = h.iloc[-8:]
         tp = (h["High"] + h["Low"] + h["Close"]) / 3
@@ -314,9 +315,22 @@ def _vwap(hourly):
         vwap_std = float((cum_var / cum_v).iloc[-1]) ** 0.5 if cum_vol > 0 else 0
         vwap_z   = (price - vwap) / vwap_std if vwap_std > 0 else 0
 
-        return round(vwap, 2), round(vwap_pos, 2), round(vwap_z, 2)
+        # VWAP reclaim: price dipped below VWAP intraday then closed back above it
+        vwap_reclaim = False
+        if len(h) >= 4 and vwap > 0:
+            tp_list   = list(tp)
+            vwap_list = list(vwap_v)
+            # Last bar must be above VWAP
+            if tp_list[-1] > vwap_list[-1] * 1.001:
+                # Any of the previous 1-4 bars must have been below VWAP
+                for i in range(max(0, len(tp_list) - 5), len(tp_list) - 1):
+                    if tp_list[i] < vwap_list[i] * 0.999:
+                        vwap_reclaim = True
+                        break
+
+        return round(vwap, 2), round(vwap_pos, 2), round(vwap_z, 2), vwap_reclaim
     except Exception:
-        return None, 50.0, 0.0
+        return None, 50.0, 0.0, False
 
 
 def _williams_r(closes, highs, lows, period=10):
@@ -719,14 +733,20 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             chg       = signals.get("change_pct", 0)
             w_r       = signals.get("williams_r", -50)
             rs5       = signals.get("rs5", 0)
-            at_brk    = signals.get("at_breakout", False)
-            consec    = signals.get("consec_green", 0)
-            near_s    = signals.get("near_support", False)
-            vol_dry   = signals.get("vol_dry_up", False)
+            at_brk      = signals.get("at_breakout", False)
+            consec      = signals.get("consec_green", 0)
+            near_s      = signals.get("near_support", False)
+            vol_dry     = signals.get("vol_dry_up", False)
+            vwap_rcl    = signals.get("vwap_reclaim", False)
+            nr7         = signals.get("nr7_signal", False)
+            ttm         = signals.get("ttm_squeeze_fired", False)
             extras = []
-            if at_brk:  extras.append("BREAKOUT above resistance")
-            if near_s:  extras.append("at support level")
-            if vol_dry: extras.append("volume dry-up (selling exhaustion)")
+            if at_brk:    extras.append("BREAKOUT above resistance")
+            if vwap_rcl:  extras.append("VWAP reclaim (intraday dip bought)")
+            if ttm:       extras.append("TTM squeeze breakout")
+            if near_s:    extras.append("at support level")
+            if vol_dry:   extras.append("volume dry-up (selling exhaustion)")
+            if nr7:       extras.append("NR7 coiling — volatility expansion imminent")
             if consec >= 3: extras.append(f"{consec} consecutive green days")
             tech_context = (
                 f"\nTechnical: RSI={rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
@@ -1430,6 +1450,7 @@ def _extract(daily, hourly):
     intraday          = 0.0
     vwap_pos          = 0.0
     vwap_z            = 0.0
+    vwap_reclaim      = False
     williams_r        = -50.0
     macd_slope_val    = 0.0
     ttm_squeeze_fired = False
@@ -1458,7 +1479,7 @@ def _extract(daily, hourly):
         if len(hc) >= 20:
             bb_pos = _bollinger(hc)
 
-        _, vwap_pos, vwap_z = _vwap(h)
+        _, vwap_pos, vwap_z, vwap_reclaim = _vwap(h)
 
         if "High" in h.columns and "Low" in h.columns:
             hh = list(h["High"])
@@ -1645,6 +1666,7 @@ def _extract(daily, hourly):
         "near_support":        near_support,
         "nr7_signal":          nr7_signal,
         "inside_bar":          inside_bar,
+        "vwap_reclaim":        vwap_reclaim,
     }
 
 
@@ -1980,6 +2002,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # These patterns precede large directional moves — buy the squeeze
     if d.get("nr7_signal", False): s += 8
     if d.get("inside_bar", False): s += 6
+
+    # VWAP reclaim: price dipped below VWAP intraday then reclaimed — institutions stepped in (+14)
+    # One of the highest-conviction intraday signals; stops triggered below VWAP then buyers return
+    if d.get("vwap_reclaim", False): s += 14
 
     # Market regime adjustment
     s += regime_adj
@@ -2673,9 +2699,10 @@ def run():
                 "at_breakout":  live.get(tk, {}).get("at_breakout", False),
                 "vol_dry_up":   live.get(tk, {}).get("vol_dry_up", False),
                 "consec_green": live.get(tk, {}).get("consec_green", 0),
-                "ttm_squeeze":  live.get(tk, {}).get("ttm_squeeze_fired", False),
-                "nr7":          live.get(tk, {}).get("nr7_signal", False),
-                "inside_bar":   live.get(tk, {}).get("inside_bar", False),
+                "ttm_squeeze":    live.get(tk, {}).get("ttm_squeeze_fired", False),
+                "nr7":            live.get(tk, {}).get("nr7_signal", False),
+                "inside_bar":     live.get(tk, {}).get("inside_bar", False),
+                "vwap_reclaim":   live.get(tk, {}).get("vwap_reclaim", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]

@@ -54333,11 +54333,12 @@ window.renderSectorRotation = renderSectorRotation;
             const border   = isHeld ? '1.5px solid rgba(255,213,0,.4)' : i === 0 ? '1.5px solid rgba(0,255,136,.35)' : '1px solid rgba(255,255,255,.07)';
             const bgGrad   = i === 0 ? 'rgba(0,255,136,.05)' : 'rgba(255,255,255,.02)';
             const signalTags = [];
-            if (s.at_breakout) signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.2);color:#00ff88;padding:1px 3px;border-radius:3px">BREAKOUT</span>');
-            if (s.ttm_squeeze) signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(130,177,255,.2);color:#82b1ff;padding:1px 3px;border-radius:3px">SQUEEZE</span>');
-            if (s.nr7)         signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,152,0,.18);color:#ff9800;padding:1px 3px;border-radius:3px">NR7</span>');
-            if (s.inside_bar)  signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,152,0,.12);color:#ffa726;padding:1px 3px;border-radius:3px">INSIDE</span>');
-            if (s.vol_dry_up)  signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,215,0,.15);color:#ffd54f;padding:1px 3px;border-radius:3px">VOL DRY</span>');
+            if (s.vwap_reclaim) signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,200,.22);color:#00ffc8;padding:1px 4px;border-radius:3px;letter-spacing:.03em">VWAP↑</span>');
+            if (s.at_breakout)  signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.2);color:#00ff88;padding:1px 3px;border-radius:3px">BREAKOUT</span>');
+            if (s.ttm_squeeze)  signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(130,177,255,.2);color:#82b1ff;padding:1px 3px;border-radius:3px">SQUEEZE</span>');
+            if (s.nr7)          signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,152,0,.18);color:#ff9800;padding:1px 3px;border-radius:3px">NR7</span>');
+            if (s.inside_bar)   signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,152,0,.12);color:#ffa726;padding:1px 3px;border-radius:3px">INSIDE</span>');
+            if (s.vol_dry_up)   signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,215,0,.15);color:#ffd54f;padding:1px 3px;border-radius:3px">VOL DRY</span>');
             if (s.consec_green >= 3) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.12);color:#4caf50;padding:1px 3px;border-radius:3px">${s.consec_green}🟢</span>`);
             html += `<div style="background:${bgGrad};border:${border};border-radius:9px;padding:.55rem .65rem;display:flex;flex-direction:column;gap:.2rem;position:relative">
               ${i===0 ? '<div style="position:absolute;top:-1px;right:-1px;background:#00ff88;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:0 9px 0 5px;letter-spacing:.05em">TOP</div>' : ''}
@@ -54470,12 +54471,11 @@ window.renderSectorRotation = renderSectorRotation;
     if (intelEl) {
       const trades = (data.trades || []).slice(0, 30);
       const positions = (data.positions || []);
-      // Show bot error/status banner
-      if (data.error) {
-        intelEl.innerHTML = `<div style="background:rgba(255,34,85,.1);border:1px solid rgba(255,34,85,.3);border-radius:8px;padding:.6rem .85rem;margin-bottom:.6rem;font-size:10px;color:var(--r)">${data.error}</div>`;
-        return;
-      }
+      // Show bot error/status banner (prepend, don't bail — sector heatmap still needs to render)
       let html = '';
+      if (data.error) {
+        html += `<div style="background:rgba(255,34,85,.1);border:1px solid rgba(255,34,85,.3);border-radius:8px;padding:.6rem .85rem;margin-bottom:.6rem;font-size:10px;color:var(--r)">⚠️ ${data.error}</div>`;
+      }
       if (trades.length === 0 && positions.length === 0) {
         html += `<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;margin-bottom:.5rem">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
       }
@@ -54576,6 +54576,12 @@ window.renderSectorRotation = renderSectorRotation;
           const vrBadge = s.vol_ratio > 2 ? `<span style="background:rgba(0,255,136,.15);color:#00ff88;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">${s.vol_ratio}x VOL</span>` :
                           s.vol_ratio > 1.3 ? `<span style="background:rgba(255,215,0,.1);color:#ffd54f;font-size:6.5px;font-weight:700;padding:1px 4px;border-radius:3px">${s.vol_ratio}x</span>` : '';
           const cat = s.catalyst ? `<span style="font-size:7.5px;color:#82b1ff">${s.catalyst}</span>` : '';
+          const sigBadges = [
+            s.vwap_reclaim ? '<span style="background:rgba(0,255,200,.2);color:#00ffc8;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">VWAP↑</span>' : '',
+            s.at_breakout  ? '<span style="background:rgba(0,255,136,.15);color:#00ff88;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">BRKOUT</span>' : '',
+            s.ttm_squeeze  ? '<span style="background:rgba(130,177,255,.15);color:#82b1ff;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">SQZ</span>' : '',
+            s.nr7          ? '<span style="background:rgba(255,152,0,.15);color:#ff9800;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">NR7</span>' : '',
+          ].filter(Boolean).join('');
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
             <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
               <span style="font-family:var(--disp);color:var(--au);min-width:42px;font-size:.95rem">\$${s.ticker}</span>
@@ -54584,6 +54590,7 @@ window.renderSectorRotation = renderSectorRotation;
               <span style="font-size:8px;font-weight:700;color:${chgCol}">${(s.chg_pct||0)>=0?'+':''}${(s.chg_pct||0).toFixed(2)}%</span>
               <span style="font-size:7.5px;color:#4a6fa5">${s.sector||''}</span>
               ${vrBadge}
+              ${sigBadges}
               ${s.rsi ? `<span style="font-size:7.5px;color:#888">RSI ${s.rsi}</span>` : ''}
               ${s.rs5 != null ? `<span style="font-size:7.5px;color:${s.rs5>=0?'#00b87a':'#ef5350'}">RS5 ${s.rs5>=0?'+':''}${s.rs5}%</span>` : ''}
               ${s.sent ? `<span style="font-size:7.5px;color:${s.sent>=3?'var(--g)':s.sent<=-3?'var(--r)':'var(--wh4)'};margin-left:auto">AI ${s.sent>=0?'+':''}${s.sent}</span>` : ''}
