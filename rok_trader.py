@@ -886,9 +886,10 @@ def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
                 continue
 
             put_call = put_vol / max(1, call_vol)
-            # Avg 30-day call OI as baseline
-            # Bullish signals: put/call ratio < 0.5 (calls dominate) + call vol > 3x put vol
-            bullish = (put_call < 0.5 and call_vol > put_vol * 2)
+            # Bullish: put/call < 0.5 AND calls >> puts (institutional accumulation)
+            # Also bullish if OI heavily skewed to calls (dark pool positioning)
+            oi_bull_skew = (call_oi > put_oi * 2 and call_oi > 1000)
+            bullish = (put_call < 0.5 and call_vol > put_vol * 2) or oi_bull_skew
             bearish = (put_call > 2.0 and put_vol > call_vol * 2)
 
             if bullish or bearish:
@@ -1927,10 +1928,14 @@ def run():
     # Avoid new buys in first 10 min (wild open volatility) or last 20 min (end-of-day moves)
     _open_guard  = market_open and _minutes_since_open < 10
     _close_guard = market_open and _minutes_to_close < 20
+    # Market close cleanup: last 8 min before close, liquidate losing positions > -3%
+    _close_cleanup = market_open and _minutes_to_close < 8
     if _open_guard:
         logger.info(f"OPEN GUARD: {_minutes_since_open:.0f} min since open — skipping new buys")
     if _close_guard:
         logger.info(f"CLOSE GUARD: {_minutes_to_close:.0f} min to close — skipping new buys")
+    if _close_cleanup:
+        logger.info(f"CLOSE CLEANUP: {_minutes_to_close:.0f} min to close — will liquidate losers")
 
     # Account
     acct          = alpaca_get("/v2/account")
@@ -2149,7 +2154,13 @@ def run():
             if pnl_pct <= -(STOP_LOSS_PCT * 100):
                 reason = f"stop loss ({pnl_pct:+.1f}%)"
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
-                reason = f"profit target ({pnl_pct:+.1f}%)"
+                # Let strong momentum runners extend to 30% before selling
+                live_sig_ext = live.get(sym, {})
+                still_strong = (live_sig_ext.get("macd_slope", 0) or 0) > 0 and (live_sig_ext.get("roc5", 0) or 0) > 3
+                if still_strong and pnl_pct < 30:
+                    logger.info(f"HOLD {sym} — extending target to 30% (momentum strong, {pnl_pct:+.1f}%)")
+                else:
+                    reason = f"profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -dyn_trail and pnl_pct > 0:
                 reason = f"trailing stop ({trail_drop:.1f}% / thr={dyn_trail:.1f}% from peak ${peak:.2f})"
             elif age_days >= MAX_HOLD_DAYS and pnl_pct < 2:
@@ -2177,6 +2188,10 @@ def run():
                     elif rsi_div_live and pnl_pct > 4:
                         # Bearish RSI divergence while in profit = early exit to lock gains
                         reason = f"RSI bearish divergence ({pnl_pct:+.1f}%)"
+
+            # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
+            if not reason and _close_cleanup and pnl_pct < -3:
+                reason = f"close cleanup — avoid overnight loss ({pnl_pct:+.1f}%)"
 
             # Track ever-hit-5pct milestone for breakeven lock
             if pnl_pct >= 5 and sym in peaks:
