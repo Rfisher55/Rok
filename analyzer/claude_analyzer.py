@@ -212,7 +212,17 @@ Respond ONLY with this exact JSON structure (no other text):
       "timeframe": "days to play out"
     }}
   ],
-  "rok_message": "Write like texting a friend. Max 4 sentences. Name the single best buy right now and why. Name the biggest risk to watch. e.g. 'My top pick is NVDA right now — AI chip demand is exploding and analysts see 38% upside. Congress members have been quietly buying it too. Biggest risk this week is AVGO earnings — if they disappoint, the whole AI trade could get hit. Stay tight on stops if you're in anything geopolitical.'"
+  "rok_message": "Write like texting a friend. Max 4 sentences. Name the single best buy right now and why. Reference held positions by ticker. Name the biggest risk to watch. e.g. 'My top pick right now is NVDA — AI chip demand is exploding. Your AAPL position is showing some weakness, I'd consider trimming if it breaks below $185. Biggest risk this week is the Fed meeting on Wednesday.'",
+  "position_analysis": [
+    {{
+      "ticker": "XXXX",
+      "action": "HOLD" | "TRIM" | "SELL" | "STRONG_HOLD" | "ADD",
+      "confidence": <1-10>,
+      "thesis": "1-2 sentences: why hold or exit — plain English, reference signals",
+      "risk": "Biggest threat to this position in plain English",
+      "target": <float — price target or exit level if applicable, or null>
+    }}
+  ]
 }}
 
 Rules:
@@ -340,24 +350,57 @@ def build_prompt(
         for b in (insider_buys or [])[:15]
     ) or "  No recent insider purchases"
 
-    # Current positions context
+    # Current positions context — rich signal data for per-position AI guidance
     positions_str = ""
+    pos_detail_lines = []
     if current_positions:
-        pos_lines = []
-        for p in current_positions[:10]:
+        for p in current_positions[:12]:
             tk   = p.get("ticker", "")
             pnl  = p.get("pnl_pct", 0) or 0
             cost = p.get("cost", 0) or 0
             cur  = p.get("price", 0) or 0
             val  = p.get("market_val", 0) or 0
             ls   = p.get("live_signals", {}) or {}
-            rsi  = ls.get("rsi", "")
-            edaystr = f" EARNINGS IN {p.get('earnings_days')}d ⚠" if p.get("earnings_days") is not None and p.get("earnings_days") <= 10 else ""
-            pos_lines.append(
-                f"  ${tk}: {pnl:+.1f}% | cost ${cost:.2f} → ${cur:.2f} | val ${val:,.0f}"
-                f" | RSI={rsi}{edaystr}"
+            rsi  = ls.get("rsi", "n/a")
+            psar_bull = ls.get("psar_bull", True)
+            st_bull   = ls.get("supertrend_bull", True)
+            mfi       = ls.get("mfi", "n/a")
+            roc5      = ls.get("roc5", 0) or 0
+            adx       = ls.get("adx", 0) or 0
+            vwap_pos  = ls.get("vwap_pos", 0) or 0
+            mtf_tri   = ls.get("mtf_triple", False)
+            accum     = ls.get("accum_score", 0) or 0
+            news_acc  = ls.get("news_accelerating", False)
+            gex_sqz   = ls.get("squeeze_potential", False)
+            short_fl  = ls.get("short_float", 0) or 0
+            # Score degradation
+            sh = p.get("score_history", [])
+            scores = [h.get("s") for h in sh if isinstance(h.get("s"), (int, float))]
+            if len(scores) >= 3:
+                score_trend = f"{scores[0]}→{scores[-1]} ({'↓DEG' if scores[0] - scores[-1] >= 15 else '→stable' if abs(scores[0]-scores[-1]) < 5 else '↑rising'})"
+            else:
+                score_trend = f"score={scores[-1] if scores else 'n/a'}"
+            edaystr = f" ⚠EARNINGS IN {p.get('earnings_days')}d" if p.get("earnings_days") is not None and p.get("earnings_days") <= 10 else ""
+            # Signal flags for AI
+            flags = []
+            if not psar_bull: flags.append("PSAR_FLIPPED_BEARISH")
+            if not st_bull:   flags.append("SUPERTREND_BEARISH")
+            if isinstance(rsi, (int, float)) and rsi > 72: flags.append(f"RSI_OVERBOUGHT({rsi:.0f})")
+            if isinstance(rsi, (int, float)) and rsi < 35: flags.append(f"RSI_OVERSOLD({rsi:.0f})")
+            if isinstance(mfi, (int, float)) and mfi > 80:  flags.append(f"MFI_OVERBOUGHT({mfi:.0f})")
+            if mtf_tri:  flags.append("TRIPLE_TF_ALIGNED")
+            if accum >= 8: flags.append(f"STRONG_ACCUMULATION({accum}/10)")
+            if news_acc: flags.append("NEWS_ACCELERATING")
+            if gex_sqz:  flags.append("GAMMA_SQUEEZE_SETUP")
+            if short_fl > 0.15: flags.append(f"HIGH_SHORT_{round(short_fl*100)}pct")
+            if roc5 > 5:  flags.append(f"MOMENTUM_STRONG(+{roc5:.1f}%)")
+            if roc5 < -4: flags.append(f"MOMENTUM_WEAK({roc5:.1f}%)")
+            flag_str = " | ".join(flags) if flags else "no_flags"
+            pos_detail_lines.append(
+                f"  ${tk}: P&L {pnl:+.1f}% | cost ${cost:.2f} → ${cur:.2f} | val ${val:,.0f}"
+                f" | signals: {score_trend} | {flag_str}{edaystr}"
             )
-        positions_str = "\n".join(pos_lines)
+        positions_str = "\n".join(pos_detail_lines)
     else:
         positions_str = "  No open positions"
 
@@ -365,12 +408,16 @@ def build_prompt(
     scan_str = ""
     if scan_top:
         scan_lines = []
-        for s in scan_top[:6]:
+        for s in scan_top[:8]:
             tk = s.get("ticker", "")
             sc = s.get("score", 0)
             gr = s.get("grade", "")
-            cat = s.get("catalyst", "")[:50]
-            scan_lines.append(f"  ${tk} score={sc} grade={gr} | {cat}")
+            cat = s.get("catalyst", "")[:60]
+            mtf = "3TF✓" if s.get("mtf_triple") else ""
+            acc = f"ACC{s.get('accum_score',0)}" if (s.get("accum_score") or 0) >= 6 else ""
+            sqz = "γSQZ" if s.get("squeeze_potential") else ""
+            tags = " ".join(t for t in [mtf, acc, sqz] if t)
+            scan_lines.append(f"  ${tk} score={sc} grade={gr}{' ['+tags+']' if tags else ''} | {cat}")
         scan_str = "\n".join(scan_lines)
     else:
         scan_str = "  No recent scan data"
@@ -403,13 +450,24 @@ def build_prompt(
 
 ━━━ LIVE TRADING CONTEXT (PRIORITY — ROK BOT IS ACTIVELY HOLDING THESE) ━━━
 
-OPEN POSITIONS (match your analysis to these):
+OPEN POSITIONS WITH LIVE TECHNICAL SIGNALS:
 {positions_str}
 
-LAST SCAN TOP CANDIDATES (most recent bot scan results):
+Signal key: PSAR_FLIPPED_BEARISH=exit warning, SUPERTREND_BEARISH=trend turned down,
+RSI_OVERBOUGHT=likely to pull back, TRIPLE_TF_ALIGNED=weekly+daily+hourly all bullish,
+STRONG_ACCUMULATION=institutional buying, GAMMA_SQUEEZE_SETUP=short covering potential,
+HIGH_SHORT=short squeeze fuel, NEWS_ACCELERATING=catalyst building, ↓DEG=score dropping
+
+LAST SCAN TOP CANDIDATES (bot's freshest buy ideas):
 {scan_str}
 
-CRITICAL: In your buy_signals and sell_signals, specifically include any of the OPEN POSITIONS that are showing concerning signals (earnings risk, overbought, deteriorating momentum) as sell signals. Also provide position-specific commentary in the rok_message field — tell the user what's happening with their specific holdings and what to watch for.
+CRITICAL INSTRUCTIONS:
+1. For EACH open position, generate a position_analysis entry with: action (HOLD/TRIM/SELL/STRONG_HOLD),
+   confidence (1-10), thesis (why hold or exit), risk (biggest threat), and target (price target or exit level)
+2. Flag any position with PSAR_FLIPPED_BEARISH + SUPERTREND_BEARISH + negative P&L as urgent sell
+3. Flag any position with TRIPLE_TF_ALIGNED + STRONG_ACCUMULATION as strong hold
+4. Mention specific held tickers by name in rok_message — users see this as their pocket guide
+5. Include top scan candidates as new buy ideas if they have strong signals
 """
 
 
@@ -462,6 +520,10 @@ def run_analysis(
         result.setdefault("congressional_plays", [])
         result.setdefault("technical_breakouts", [])
         result.setdefault("sector_rotation", "")
+        result.setdefault("position_analysis", [])
+        for pa in result.get("position_analysis", []):
+            pa.setdefault("confidence", 5)
+            pa.setdefault("target", None)
         for buy in result.get("buy_signals", []):
             buy.setdefault("stop_loss", None)
             buy.setdefault("options_play", None)

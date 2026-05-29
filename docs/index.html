@@ -54829,6 +54829,11 @@ window.renderSectorRotation = renderSectorRotation;
             ];
             return allSigs.find(s => s.ticker === p.ticker) || null;
           })();
+          // Per-position AI analysis from position_analysis field
+          const posAI = (() => {
+            if (!_intelCache || !_intelCache.position_analysis) return null;
+            return (_intelCache.position_analysis || []).find(pa => pa.ticker === p.ticker) || null;
+          })();
           const lsRsi = ls.rsi != null ? `<span style="font-size:6.5px;color:${ls.rsi>65?'#ef5350':ls.rsi<40?'#00ff88':'#888'}">RSI${Math.round(ls.rsi)}</span>` : '';
           const lsVwap = ls.vwap_pos != null ? `<span style="font-size:6.5px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#555'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP</span>` : '';
           const lsRcl = ls.vwap_reclaim ? `<span style="font-size:6.5px;font-weight:800;color:#00ffc8">VWAP↑</span>` : '';
@@ -54963,6 +54968,21 @@ window.renderSectorRotation = renderSectorRotation;
                   return `<div style="margin-top:.2rem;background:rgba(0,0,0,.3);border-left:2px solid ${ic}55;border-radius:4px;padding:.2rem .45rem">
                     <span style="font-size:6px;font-weight:900;color:${ic};letter-spacing:.06em">${il} </span>
                     <span style="font-size:6.5px;color:#888;line-height:1.4">${reason}</span>
+                  </div>`;
+                })() : ''}
+                ${posAI ? (() => {
+                  const ac = {'SELL':'#ef5350','TRIM':'#ffa726','HOLD':'#69f0ae','STRONG_HOLD':'#00ff88','ADD':'#00e5ff'}[posAI.action] || '#888';
+                  const conf = posAI.confidence || 5;
+                  const thesis = (posAI.thesis || '').slice(0, 100);
+                  const risk = (posAI.risk || '').slice(0, 60);
+                  const tgt = posAI.target ? ` · target $${posAI.target}` : '';
+                  return `<div style="margin-top:.25rem;background:rgba(0,0,0,.35);border:1px solid ${ac}22;border-radius:5px;padding:.25rem .5rem">
+                    <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+                      <span style="font-size:7px;font-weight:900;color:${ac};letter-spacing:.08em">${posAI.action}</span>
+                      <span style="font-size:6px;color:#555">AI conf ${conf}/10${tgt}</span>
+                    </div>
+                    ${thesis ? `<div style="font-size:6.5px;color:#aaa;line-height:1.4">${thesis}</div>` : ''}
+                    ${risk ? `<div style="font-size:6px;color:#ef535077;margin-top:.1rem">⚠ ${risk}</div>` : ''}
                   </div>`;
                 })() : ''}
               </div>
