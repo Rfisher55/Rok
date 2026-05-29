@@ -610,11 +610,21 @@ def market_regime():
       score:     -3 (extreme bear) to +3 (strong bull)
     """
     try:
-        # Fetch 250 days so we can compute the 200-day EMA
-        spy = yf.download("SPY ^VIX", period="250d", interval="1d",
-                          auto_adjust=True, progress=False)
-        spy_closes = list(spy["Close"]["SPY"].dropna())
-        vix_closes = list(spy["Close"]["^VIX"].dropna())
+        # Fetch 250 days for SPY, VIX, QQQ (risk-on), IWM (small cap), HYG (credit risk)
+        raw = yf.download("SPY QQQ IWM HYG ^VIX", period="250d", interval="1d",
+                          group_by="ticker", auto_adjust=True, progress=False)
+
+        def _get_closes(sym):
+            try:
+                return list(raw["Close"][sym].dropna())
+            except Exception:
+                return []
+
+        spy_closes = _get_closes("SPY")
+        vix_closes = _get_closes("^VIX")
+        qqq_closes = _get_closes("QQQ")
+        iwm_closes = _get_closes("IWM")
+        hyg_closes = _get_closes("HYG")
 
         vix = float(vix_closes[-1]) if vix_closes else 20.0
 
@@ -650,6 +660,29 @@ def market_regime():
                     pos200 = (spy_current - ema200) / ema200 * 100
                     if pos200 > 5:    score += 1   # well above 200d = healthy bull
                     elif pos200 < -5: score -= 1   # below 200d = bear territory
+
+        # Risk-on indicator: QQQ outperforming SPY = tech/growth leading (bull signal)
+        if len(qqq_closes) >= 5 and len(spy_closes) >= 5:
+            qqq_5d = (qqq_closes[-1] - qqq_closes[-5]) / qqq_closes[-5] * 100
+            spy_5d = (spy_closes[-1] - spy_closes[-5]) / spy_closes[-5] * 100
+            qqq_rel = qqq_5d - spy_5d
+            if   qqq_rel > 2.0:  score += 1  # QQQ leading = risk-on
+            elif qqq_rel < -2.0: score -= 1  # QQQ lagging = risk-off, rotate defensive
+
+        # Small cap signal: IWM vs SPY — small caps lead bull markets
+        if len(iwm_closes) >= 5 and len(spy_closes) >= 5:
+            iwm_5d = (iwm_closes[-1] - iwm_closes[-5]) / iwm_closes[-5] * 100
+            iwm_rel = iwm_5d - spy_5d if len(spy_closes) >= 5 else 0
+            if   iwm_rel > 2.0:  score += 1  # small caps leading = broad participation
+            elif iwm_rel < -2.0: score -= 1  # small caps lagging = narrow/defensive market
+
+        # Credit market signal: HYG (high yield bonds) relative to recent average
+        # HYG rising = credit stress reducing = risk-on; HYG falling = stress rising = risk-off
+        if len(hyg_closes) >= 20:
+            hyg_ema20 = _ema(hyg_closes, 20)
+            hyg_pos = (hyg_closes[-1] - hyg_ema20) / hyg_ema20 * 100 if hyg_ema20 else 0
+            if   hyg_pos > 0.5:  score += 1  # credit market healthy
+            elif hyg_pos < -0.5: score -= 1  # credit stress = be careful
 
         if vix > VIX_EXTREME_THRESH:  score -= 3   # extreme panic
         elif vix > VIX_HIGH_THRESH:   score -= 2
