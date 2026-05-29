@@ -54511,13 +54511,14 @@ window.renderSectorRotation = renderSectorRotation;
           const lsVwap = ls.vwap_pos != null ? `<span style="font-size:6.5px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#555'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP</span>` : '';
           const lsRcl = ls.vwap_reclaim ? `<span style="font-size:6.5px;font-weight:800;color:#00ffc8">VWAP↑</span>` : '';
           const lsRoc = ls.roc5 != null ? `<span style="font-size:6.5px;color:${ls.roc5>2?'#00ff88':ls.roc5<-2?'#ef5350':'#888'}">${ls.roc5>=0?'+':''}${ls.roc5.toFixed(1)}%5d</span>` : '';
+          const lsAdx = ls.adx > 0 ? `<span style="font-size:6.5px;color:${ls.adx>=35?'#00e5ff':ls.adx>=25?'#80deea':ls.adx<15?'#555':'#aaa'}">ADX${Math.round(ls.adx)}</span>` : '';
           html += `<div style="background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden">
             <div style="position:absolute;top:0;left:0;height:100%;width:${barW}%;background:${barCol};pointer-events:none"></div>
             <div style="position:relative;display:flex;align-items:center;gap:.6rem">
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-                ${(lsRsi||lsVwap||lsRcl||lsRoc) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}</div>` : ''}
+                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}</div>` : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>

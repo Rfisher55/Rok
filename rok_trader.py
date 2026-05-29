@@ -370,6 +370,41 @@ def _williams_r(closes, highs, lows, period=10):
     return round(-100 * (hh - closes[-1]) / (hh - ll), 1)
 
 
+def _adx(high, low, close, period=14):
+    """Average Directional Index — measures trend strength (0-100). >25 = trending."""
+    if len(close) < period + 2:
+        return 0.0
+    try:
+        import numpy as np
+        h = np.array(high, dtype=float)
+        l = np.array(low,  dtype=float)
+        c = np.array(close,dtype=float)
+        # True range
+        tr = np.maximum(h[1:] - l[1:], np.maximum(np.abs(h[1:] - c[:-1]), np.abs(l[1:] - c[:-1])))
+        # Directional movement
+        up   = h[1:] - h[:-1]
+        dn   = l[:-1] - l[1:]
+        pdm  = np.where((up > dn) & (up > 0), up, 0.0)
+        ndm  = np.where((dn > up) & (dn > 0), dn, 0.0)
+        # Smoothed (Wilder's)
+        def _wilder(arr, p):
+            out = np.zeros(len(arr))
+            out[p-1] = arr[:p].sum()
+            for i in range(p, len(arr)):
+                out[i] = out[i-1] - out[i-1]/p + arr[i]
+            return out
+        atr14 = _wilder(tr,  period)
+        pdm14 = _wilder(pdm, period)
+        ndm14 = _wilder(ndm, period)
+        pdi = np.where(atr14 > 0, 100 * pdm14 / atr14, 0.0)
+        ndi = np.where(atr14 > 0, 100 * ndm14 / atr14, 0.0)
+        dx  = np.where((pdi + ndi) > 0, 100 * np.abs(pdi - ndi) / (pdi + ndi), 0.0)
+        adx = _wilder(dx, period)
+        return round(float(adx[-1]), 1)
+    except Exception:
+        return 0.0
+
+
 def _macd_slope(closes):
     """MACD histogram slope: positive = momentum building, negative = fading."""
     if len(closes) < 27:
@@ -1753,6 +1788,14 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # ADX — trend strength (0-100): >25 = strong trend, <20 = choppy/ranging
+    adx_val = 0.0
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 30:
+            adx_val = _adx(list(daily["High"]), list(daily["Low"]), list(daily["Close"]), period=14)
+    except Exception:
+        pass
+
     # Inside bar / NR7 narrow range volatility contraction
     # NR7: today's range is the narrowest in 7 days = coiling before a breakout
     # Inside bar: today's high < yesterday's high AND today's low > yesterday's low = consolidation
@@ -1946,6 +1989,7 @@ def _extract(daily, hourly):
         "vwap_reclaim":        vwap_reclaim,
         "orb_breakout":        orb_breakout,
         "gap_and_hold":        gap_and_hold,
+        "adx":                 round(adx_val, 1),
     }
 
 
@@ -2301,6 +2345,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Gap and hold: gapped up 1.5%+ and is holding above the gap — buyers own the tape (+10)
     if d.get("gap_and_hold", False): s += 10
 
+    # ADX trend strength: high ADX confirms momentum signals, low ADX = choppy market
+    adx = d.get("adx", 0) or 0
+    if adx >= 35:  s += 8    # very strong trend — momentum strategies highly reliable
+    elif adx >= 25: s += 4   # trending — signals more reliable
+    elif adx < 15: s -= 5    # choppy market — signals less reliable
+
     # Market regime adjustment
     s += regime_adj
 
@@ -2590,10 +2640,12 @@ def run():
             rsi_bull_t = sig.get("rsi_bull_divergence", False)
             vol_dry_t  = sig.get("vol_dry_up", False)
             roc5_t   = sig.get("roc5", 0) or 0
+            adx_t = sig.get("adx", 0) or 0
             # Classic mean reversion: deeply oversold, bouncing on divergence, near EMA50 support
+            # Low ADX (<20) = choppy, perfect for mean reversion; avoid trending stocks for MR
             if (stoch_k_t < 15 and rsi_t < 35 and ema50_t > -8
                     and (rsi_bull_t or vol_dry_t) and price_t >= 5
-                    and roc5_t > -15):   # not in a full collapse
+                    and roc5_t > -15 and adx_t < 30):   # not in a full collapse, not in strong downtrend
                 mean_rev_cands.add(tk)
         if mean_rev_cands:
             logger.info(f"Mean-reversion bounce setups: {', '.join(sorted(mean_rev_cands))}")
@@ -3268,12 +3320,14 @@ def run():
             if not sig:
                 return {}
             return {
-                "rsi":        round(sig.get("daily_rsi", 50), 1),
-                "vwap_pos":   round(sig.get("vwap_pos", 0), 2),
-                "roc5":       round(sig.get("roc5", 0), 2),
-                "macd_slope": round(sig.get("macd_slope", 0), 4),
-                "vol_ratio":  round(sig.get("vol_ratio", 1), 2),
+                "rsi":          round(sig.get("daily_rsi", 50), 1),
+                "vwap_pos":     round(sig.get("vwap_pos", 0), 2),
+                "roc5":         round(sig.get("roc5", 0), 2),
+                "macd_slope":   round(sig.get("macd_slope", 0), 4),
+                "vol_ratio":    round(sig.get("vol_ratio", 1), 2),
                 "vwap_reclaim": sig.get("vwap_reclaim", False),
+                "adx":          round(sig.get("adx", 0), 1),
+                "adx_trend":    "strong" if sig.get("adx", 0) >= 25 else ("weak" if sig.get("adx", 0) < 15 else "moderate"),
             }
 
         tlog["positions"] = [
