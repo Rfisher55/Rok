@@ -54629,6 +54629,18 @@ window.renderSectorRotation = renderSectorRotation;
       } else {
         const totalUnreal = positions.reduce((s,p) => s + (p.pnl_usd||0), 0);
         const totalUnrealCol = totalUnreal >= 0 ? '#00ff88' : '#ef5350';
+        // Alert: positions within 2% of stop loss
+        const nearStop = positions.filter(p => p.pnl_pct != null && p.pnl_pct <= -5 && p.pnl_pct > -7);
+        const atStop = positions.filter(p => p.pnl_pct != null && p.pnl_pct <= -7);
+        if (atStop.length > 0) {
+          html += `<div style="background:rgba(255,34,85,.15);border:1px solid rgba(255,34,85,.4);border-radius:7px;padding:.4rem .6rem;margin-bottom:.4rem;font-size:8.5px;font-weight:800;color:#ef5350">
+            ⚠️ STOP LOSS ALERT: ${atStop.map(p => '$'+p.ticker).join(', ')} at stop — bot will sell next cycle
+          </div>`;
+        } else if (nearStop.length > 0) {
+          html += `<div style="background:rgba(255,152,0,.1);border:1px solid rgba(255,152,0,.3);border-radius:7px;padding:.35rem .55rem;margin-bottom:.4rem;font-size:8px;color:#ff9800">
+            ⚡ Near stop: ${nearStop.map(p => '$'+p.ticker+' ('+p.pnl_pct.toFixed(1)+'%)').join(' · ')}
+          </div>`;
+        }
         html += `<div style="font-size:8px;color:${totalUnrealCol};font-weight:700;margin-bottom:.4rem">Unrealized P&L: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</div>`;
         html += `<div style="display:flex;flex-direction:column;gap:.4rem">`;
         positions.forEach(p => {

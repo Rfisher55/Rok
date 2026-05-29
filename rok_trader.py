@@ -2354,8 +2354,19 @@ def run():
                     reason = f"profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -dyn_trail and pnl_pct > 0:
                 reason = f"trailing stop ({trail_drop:.1f}% / thr={dyn_trail:.1f}% from peak ${peak:.2f})"
-            elif age_days >= MAX_HOLD_DAYS and pnl_pct < 2:
-                reason = f"stale position ({age_days}d, {pnl_pct:+.1f}%)"
+            elif pnl_pct < 2:
+                # Adaptive hold time: strong momentum stocks get more time to work
+                live_sig_age = live.get(sym, {})
+                m_slope_age = live_sig_age.get("macd_slope", 0) or 0
+                roc5_age    = live_sig_age.get("roc5", 0) or 0
+                # Strong uptrend: extend hold to 8 days
+                adaptive_max = MAX_HOLD_DAYS
+                if m_slope_age > 0 and roc5_age > 2:
+                    adaptive_max = 8
+                elif m_slope_age < 0 and roc5_age < 0:
+                    adaptive_max = 3  # weak momentum: exit sooner
+                if age_days >= adaptive_max:
+                    reason = f"stale position ({age_days:.0f}d, {pnl_pct:+.1f}%)"
             elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= 0.5:
                 reason = f"breakeven lock ({pnl_pct:+.1f}%)"
             else:
