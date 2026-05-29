@@ -1078,6 +1078,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="stat-box" title="Technical chart breakout patterns"><div class="stat-num" data-final="{{ ss.technical|default(0) }}">{{ ss.technical|default(0) }}</div><div class="stat-lbl">⚡ Patterns</div></div>
     </div>
 
+    <!-- ROK track record (JS-populated from localStorage) -->
+    <div id="rok-track-record" style="display:none;margin-bottom:.75rem"></div>
+
     <!-- HOW THIS WORKS — beginner explainer (collapsed) -->
     <details style="margin-bottom:.75rem;background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:10px;overflow:hidden">
       <summary style="padding:.65rem 1rem;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--b);list-style:none;display:flex;align-items:center;gap:.5rem;-webkit-tap-highlight-color:transparent">
@@ -2407,7 +2410,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     updateTopMovers();
     renderRecentlyViewed();
     renderTodaysTasks();
+    renderROKTrackRecord();
     updateMarketLiveBrief();
+    if (activeTab === 'market') { renderSectorHeatmap(); renderUpcomingEvents(); }
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2811,7 +2816,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); }
     if (id === 'portfolio') renderPortfolio();
   }
@@ -4221,6 +4226,50 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
 
   // ── TODAY'S PERSONALIZED TASKS ──────────────────────────
+  function renderROKTrackRecord() {
+    const el = document.getElementById('rok-track-record');
+    if (!el) return;
+    const hist = JSON.parse(localStorage.getItem('rok_signal_history_v2') || '[]');
+    if (hist.length < 2) { el.style.display = 'none'; return; }
+    // For each signal, compute performance using live price if available
+    let wins = 0, losses = 0, totalPct = 0, count = 0;
+    const recent = hist.slice(-20); // last 20 signals
+    recent.forEach(h => {
+      const lp = liveprices[h.ticker];
+      const curPrice = lp ? lp.price : null;
+      if (!curPrice || !h.entryPrice) return;
+      const pct = (curPrice - h.entryPrice) / h.entryPrice * 100;
+      totalPct += pct;
+      count++;
+      if (pct > 0) wins++;
+      else if (pct < -2) losses++;
+    });
+    if (count < 2) { el.style.display = 'none'; return; }
+    const winRate = Math.round(wins / count * 100);
+    const avgPct = (totalPct / count).toFixed(1);
+    const color = parseFloat(avgPct) >= 0 ? 'var(--g)' : 'var(--r)';
+    el.style.display = 'block';
+    el.innerHTML = `<details style="background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.12);border-radius:10px;overflow:hidden">
+      <summary style="padding:.55rem .85rem;cursor:pointer;font-size:10.5px;font-weight:700;color:var(--g);list-style:none;display:flex;align-items:center;gap:.5rem">
+        <span>📈</span>
+        <span>ROK'S TRACK RECORD — ${winRate}% win rate on last ${count} picks</span>
+        <span style="font-size:9px;color:var(--wh3);margin-left:auto">tap to see</span>
+      </summary>
+      <div style="padding:.5rem .85rem .75rem;font-size:11px;color:var(--wh2)">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.55rem">
+          <div style="text-align:center;padding:.45rem;background:var(--blk4);border-radius:8px"><div style="font-size:1.2rem;font-weight:900;color:${color}">${avgPct}%</div><div style="font-size:8.5px;color:var(--wh4)">Avg return</div></div>
+          <div style="text-align:center;padding:.45rem;background:var(--blk4);border-radius:8px"><div style="font-size:1.2rem;font-weight:900;color:var(--g)">${winRate}%</div><div style="font-size:8.5px;color:var(--wh4)">Win rate</div></div>
+          <div style="text-align:center;padding:.45rem;background:var(--blk4);border-radius:8px"><div style="font-size:1.2rem;font-weight:900;color:var(--wh)">${count}</div><div style="font-size:8.5px;color:var(--wh4)">Picks tracked</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--wh4);line-height:1.5">
+          📊 Based on your device's local data — tracks ROK BUY signals vs their live price since you first saw them. ${count < 10 ? `Building up... needs ${10-count} more signals to be statistically meaningful.` : 'Results are live — updates every price refresh.'}
+        </div>
+        <div style="font-size:9px;color:var(--wh4);margin-top:.35rem;font-style:italic">Past performance ≠ future results. Not financial advice.</div>
+      </div>
+    </details>`;
+  }
+  window.renderROKTrackRecord = renderROKTrackRecord;
+
   function renderTodaysTasks() {
     const el = document.getElementById('todays-tasks');
     if (!el) return;
@@ -4305,7 +4354,15 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     el.style.display = 'block';
     el.className = 'tasks-card';
-    el.innerHTML = `<div style="font-size:8.5px;font-weight:800;letter-spacing:.18em;color:var(--b);text-transform:uppercase;margin-bottom:.4rem">📋 YOUR ACTION LIST · ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+
+    // Streak display
+    const streakData = JSON.parse(localStorage.getItem('rok_streak_v1') || '{"streak":0}');
+    const streak = streakData.streak || 0;
+    const streakHtml = streak >= 2
+      ? `<span style="float:right;font-size:9px;color:${streak >= 7 ? 'var(--au)' : 'var(--wh3)'};font-weight:700">${streak >= 7 ? '🔥' : '✓'} ${streak}-day streak</span>`
+      : '';
+
+    el.innerHTML = `<div style="font-size:8.5px;font-weight:800;letter-spacing:.18em;color:var(--b);text-transform:uppercase;margin-bottom:.4rem">📋 YOUR ACTION LIST · ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}${streakHtml}</div>
       ${tasks.map(t => `<div class="task-item"><span class="ti">${t.icon}</span><span>${t.text}</span></div>`).join('')}`;
   }
   window.renderTodaysTasks = renderTodaysTasks;
@@ -4792,6 +4849,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     updateMarketStatus();
     setInterval(updateMarketStatus, 60000);
     renderTodaysTasks();
+    renderROKTrackRecord();
     updateMarketLiveBrief();
     fetchLiveFearGreed();
     initTipRotator();
@@ -4809,10 +4867,56 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       setTimeout(showOnboarding, 600);
     }
 
+    // ── VISIT STREAK TRACKER ──────────────────────────────
+    (function() {
+      const today = new Date().toISOString().slice(0, 10);
+      const STREAK_KEY = 'rok_streak_v1';
+      const data = JSON.parse(localStorage.getItem(STREAK_KEY) || '{"streak":0,"last":""}');
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (data.last === today) return; // already visited today
+      data.streak = (data.last === yesterday) ? data.streak + 1 : 1;
+      data.last = today;
+      localStorage.setItem(STREAK_KEY, JSON.stringify(data));
+      // Show streak milestone toast
+      const streak = data.streak;
+      if (streak > 1) {
+        const milestones = { 3: '3-day', 7: '7-day', 14: '2-week', 30: '30-day', 50: '50-day', 100: '100-day' };
+        const isMilestone = milestones[streak];
+        if (isMilestone || streak % 10 === 0) {
+          setTimeout(() => showAppAlert(`🔥 ${streak}-day streak! You've checked ROK ${streak} days in a row. Consistency = better trades.`, 'info', 8000), 3000);
+        }
+      }
+    })();
+
     // Live price refresh every 3 minutes
     setInterval(refreshLivePrices, 3 * 60 * 1000);
     // Initial refresh after 5 seconds (let page settle)
     setTimeout(refreshLivePrices, 5000);
+
+    // ── SIGNAL HISTORY TRACKING ──────────────────────────
+    (function() {
+      const HIST_KEY = 'rok_signal_history_v2';
+      const today = new Date().toISOString().slice(0, 10);
+      const hist = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+      // Record today's buy signals (deduplicated by ticker+date)
+      (ROK.buy_signals || []).forEach(s => {
+        if (!s.ticker || !s.current_price) return;
+        if (!hist.find(h => h.ticker === s.ticker && h.date === today)) {
+          hist.push({
+            ticker: s.ticker,
+            date: today,
+            entryPrice: s.current_price,
+            target: s.price_target || null,
+            stopLoss: s.stop_loss || null,
+            strength: s.signal_strength || 5,
+          });
+        }
+      });
+      // Keep last 90 days of signals (cap at 200 entries)
+      const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+      const trimmed = hist.filter(h => h.date >= cutoff).slice(-200);
+      localStorage.setItem(HIST_KEY, JSON.stringify(trimmed));
+    })();
   });
 
   // ── SERVICE WORKER ─────────────────────────────────────────
