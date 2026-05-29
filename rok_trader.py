@@ -680,17 +680,29 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
         # Build technical context string if signals provided
         tech_context = ""
         if signals:
-            rsi     = signals.get("rsi", 50)
-            roc5    = signals.get("roc5", 0)
-            stoch_k = signals.get("stoch_k", 50)
-            ema50   = signals.get("price_vs_ema50", 0)
-            vr      = signals.get("vol_ratio", 1)
-            chg     = signals.get("change_pct", 0)
-            w_r     = signals.get("williams_r", -50)
+            rsi       = signals.get("rsi", 50)
+            roc5      = signals.get("roc5", 0)
+            stoch_k   = signals.get("stoch_k", 50)
+            ema50     = signals.get("price_vs_ema50", 0)
+            vr        = signals.get("vol_ratio", 1)
+            chg       = signals.get("change_pct", 0)
+            w_r       = signals.get("williams_r", -50)
+            rs5       = signals.get("rs5", 0)
+            at_brk    = signals.get("at_breakout", False)
+            consec    = signals.get("consec_green", 0)
+            near_s    = signals.get("near_support", False)
+            vol_dry   = signals.get("vol_dry_up", False)
+            extras = []
+            if at_brk:  extras.append("BREAKOUT above resistance")
+            if near_s:  extras.append("at support level")
+            if vol_dry: extras.append("volume dry-up (selling exhaustion)")
+            if consec >= 3: extras.append(f"{consec} consecutive green days")
             tech_context = (
-                f"\nTechnical snapshot: RSI={rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
+                f"\nTechnical: RSI={rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
                 f"5d_ROC={roc5:+.1f}%, EMA50_pos={ema50:+.1f}%, "
-                f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, W%%R={w_r:.0f}"
+                f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, W%R={w_r:.0f}, "
+                f"RS5_vs_SPY={rs5:+.1f}%"
+                + (f"\nSetup flags: {', '.join(extras)}" if extras else "")
             )
 
         r = requests.post(
@@ -702,16 +714,16 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             },
             json={
                 "model":      model,
-                "max_tokens": 120,
+                "max_tokens": 140,
                 "messages": [{
                     "role":    "user",
                     "content": (
-                        f"You are an expert quantitative stock trader. Rate the SHORT-TERM (1-5 day) "
-                        f"trading outlook for {ticker} from -10 (very bearish) to +10 (very bullish).\n"
-                        f"Consider: earnings beats/misses, FDA/regulatory, M&A, guidance, upgrades/downgrades, "
-                        f"macro risk, and technical momentum (RSI divergence, volume surge, trend).\n"
+                        f"You are an expert quantitative stock trader analyzing {ticker} for a 1-5 day swing trade.\n"
+                        f"Rate the short-term outlook from -10 (very bearish) to +10 (very bullish).\n"
+                        f"Focus on: catalysts (earnings/FDA/M&A), institutional interest, "
+                        f"sector momentum, and technical confirmation.\n"
                         f"Headlines:{tech_context}\n{text}\n\n"
-                        f"Return ONLY JSON: {{\"s\":<number>,\"c\":\"<catalyst in 3 words>\"}}"
+                        f"Return ONLY JSON: {{\"s\":<-10 to 10>,\"c\":\"<catalyst in 3 words>\"}}"
                     ),
                 }],
             },
@@ -2587,17 +2599,21 @@ def run():
         # Write diagnostics so dashboard can show why no trades happened
         tlog["last_scan_top"] = [
             {
-                "ticker":     tk,
-                "score":      sc,
-                "sent":       round(sent, 1),
-                "sector":     sec,
-                "catalyst":   cat,
-                "price":      round(live.get(tk, {}).get("price", 0), 2),
-                "vol_ratio":  round(live.get(tk, {}).get("vol_ratio", 1), 2),
-                "rsi":        round(live.get(tk, {}).get("daily_rsi", 50), 1),
-                "chg_pct":    round(live.get(tk, {}).get("change_pct", 0), 2),
-                "rs5":        round(live.get(tk, {}).get("rs5", 0), 2),
-                "stop_price": round(live.get(tk, {}).get("price", 0) * (1 - STOP_LOSS_PCT), 2),
+                "ticker":      tk,
+                "score":       sc,
+                "sent":        round(sent, 1),
+                "sector":      sec,
+                "catalyst":    cat,
+                "price":       round(live.get(tk, {}).get("price", 0), 2),
+                "vol_ratio":   round(live.get(tk, {}).get("vol_ratio", 1), 2),
+                "rsi":         round(live.get(tk, {}).get("daily_rsi", 50), 1),
+                "chg_pct":     round(live.get(tk, {}).get("change_pct", 0), 2),
+                "rs5":         round(live.get(tk, {}).get("rs5", 0), 2),
+                "stop_price":  round(live.get(tk, {}).get("price", 0) * (1 - STOP_LOSS_PCT), 2),
+                "at_breakout": live.get(tk, {}).get("at_breakout", False),
+                "vol_dry_up":  live.get(tk, {}).get("vol_dry_up", False),
+                "consec_green":live.get(tk, {}).get("consec_green", 0),
+                "ttm_squeeze": live.get(tk, {}).get("ttm_squeeze_fired", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
