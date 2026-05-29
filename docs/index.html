@@ -3270,6 +3270,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-tax-check-now" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-bot-activity" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-projected-val" style="display:none;margin-bottom:.85rem"></div>
+    <div id="port-perf-chart" style="margin-bottom:.85rem"></div>
     <div id="port-rok-live-feed" style="margin-bottom:.85rem"></div>
     <div id="port-crypto-feed" style="margin-bottom:.85rem"></div>
     <div id="port-sector-rotation" style="margin-bottom:.85rem"></div>
@@ -4166,6 +4167,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderTradeLog();
      renderRsiLiveScan();
      renderRelativePower();
+     renderPerfChart();
      renderRokLiveFeed();
      renderCryptoFeed();
      renderSectorRotation();
@@ -5275,6 +5277,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderTradeLog();
      renderRsiLiveScan();
      renderRelativePower();
+     renderPerfChart();
      renderRokLiveFeed();
      renderCryptoFeed();
      renderSectorRotation();
@@ -6916,6 +6919,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderProjectedVal();
      renderScorecardNow();
      renderTradeLog();
+     renderPerfChart();
      renderRokLiveFeed();
      renderCryptoFeed();
      renderSectorRotation();
@@ -53218,6 +53222,65 @@ function _renderRokLiveFeedData(el, data) {
   </div>`;
 }
 window.renderRokLiveFeed = renderRokLiveFeed;
+
+// ── Portfolio Performance Chart ──────────────────────────────────────────────
+async function renderPerfChart() {
+  const el = document.getElementById('port-perf-chart');
+  if (!el) return;
+  try {
+    const r    = await fetch('trades.json?t=' + Date.now());
+    const data = r.ok ? await r.json() : null;
+    if (!data) { el.innerHTML = ''; return; }
+
+    const history = (data.perf_history || []);
+    const portVal = data.portfolio_value || 0;
+    const stats   = data.stats || {};
+
+    if (!portVal && !history.length) { el.innerHTML = ''; return; }
+
+    // Build SVG sparkline from history
+    let sparkline = '';
+    if (history.length >= 2) {
+      const vals   = history.map(h => h.v);
+      const minV   = Math.min(...vals);
+      const maxV   = Math.max(...vals);
+      const range  = maxV - minV || 1;
+      const W = 300, H = 50;
+      const pts = vals.map((v, i) => {
+        const x = Math.round((i / (vals.length - 1)) * W);
+        const y = Math.round(H - ((v - minV) / range) * H);
+        return `${x},${y}`;
+      }).join(' ');
+      const isUp = vals[vals.length-1] >= vals[0];
+      const col  = isUp ? '#66bb6a' : '#ef5350';
+      sparkline = `<svg width="${W}" height="${H}" style="display:block;margin:.3rem 0">
+        <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" opacity="0.8"/>
+        <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="3" fill="${col}"/>
+      </svg>`;
+    }
+
+    const startVal = history.length ? history[0].v : portVal;
+    const totalRet = startVal > 0 ? ((portVal - startVal) / startVal * 100) : 0;
+    const retCol   = totalRet >= 0 ? '#66bb6a' : '#ef5350';
+    const wr       = (stats.wins||0) + (stats.losses||0) > 0
+      ? Math.round((stats.wins||0) / ((stats.wins||0)+(stats.losses||0)) * 100) : null;
+
+    el.innerHTML = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:8px;padding:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.3rem">
+        <span style="color:#82b1ff;font-size:.82rem;font-weight:700">Portfolio Performance</span>
+        <span style="color:${retCol};font-weight:700;font-size:.9rem">${totalRet>=0?'+':''}${totalRet.toFixed(2)}% all-time</span>
+      </div>
+      <div style="display:flex;gap:16px;margin-bottom:.3rem;flex-wrap:wrap">
+        <span style="color:#555;font-size:.72rem">Value <span style="color:#82b1ff;font-weight:700">$${portVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span></span>
+        <span style="color:#555;font-size:.72rem">Cash <span style="color:#64b5f6">$${(data.buying_power||0).toLocaleString('en-US',{maximumFractionDigits:0})}</span></span>
+        ${wr !== null ? `<span style="color:#555;font-size:.72rem">Win Rate <span style="color:#ffd54f;font-weight:700">${wr}%</span></span>` : ''}
+        <span style="color:#555;font-size:.72rem">${stats.wins||0}W/${stats.losses||0}L</span>
+      </div>
+      ${sparkline || '<div style="color:#2a3a5a;font-size:.7rem;padding:.3rem 0">Chart builds as bot runs during market hours</div>'}
+    </div>`;
+  } catch { el.innerHTML = ''; }
+}
+window.renderPerfChart = renderPerfChart;
 
 // ── Crypto Live Feed ─────────────────────────────────────────────────────────
 async function renderCryptoFeed() {

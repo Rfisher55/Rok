@@ -1593,10 +1593,21 @@ def run():
     tlog["buying_power"]    = round(buying_power, 2)
     tlog["regime"]          = regime
 
+    # Append to portfolio performance history (last 500 snapshots)
+    snap = {
+        "t": now_utc.isoformat(),
+        "v": round(portfolio_val, 2),
+        "c": round(buying_power, 2),
+    }
+    history = tlog.setdefault("perf_history", [])
+    history.append(snap)
+    tlog["perf_history"] = history[-500:]
+
     _save(TRADES_FILE, tlog)
     logger.info(
         f"Cycle done. Trades: {'yes' if made_trades else 'none'}. "
-        f"Regime: {regime['regime']}. Log: {len(tlog['trades'])} entries."
+        f"Regime: {regime['regime']}. Portfolio: ${portfolio_val:,.0f}. "
+        f"Log: {len(tlog['trades'])} entries."
     )
 
 
