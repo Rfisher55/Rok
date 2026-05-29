@@ -6459,6 +6459,17 @@ def run():
     tlog["macro_day"]       = macro_day
     tlog["open_positions"]  = len(tlog.get("positions", []))
     tlog["scan_universe"]   = len(candidates)
+    tlog["market_open"]     = market_open
+    tlog["minutes_since_open"]  = _minutes_since_open if market_open else None
+    tlog["minutes_to_close"]    = _minutes_to_close   if market_open else None
+    # Market timing quality: 0=avoid, 1=neutral, 2=good, 3=prime
+    _timing_q = 0
+    if market_open and not _open_guard and not _close_guard:
+        if 180 <= _minutes_since_open <= 225:    _timing_q = 3  # power hour
+        elif 30  <= _minutes_since_open <= 90:   _timing_q = 3  # morning sweet spot
+        elif 90  <= _minutes_since_open <= 180:  _timing_q = 1  # lunch lull
+        else:                                    _timing_q = 2  # normal
+    tlog["timing_quality"]  = _timing_q
     tlog["drawdown_pct"]    = round(drawdown_pct, 2)
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)

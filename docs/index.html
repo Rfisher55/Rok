@@ -54428,6 +54428,22 @@ window.renderSectorRotation = renderSectorRotation;
         </div>
         ${regime.regime ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:13px;font-weight:800;color:${regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)'};">${regime.regime.toUpperCase()}</div><div style="font-size:8px;color:var(--wh3)">VIX ${(regime.vix||0).toFixed(1)} ${macroDay}</div></div>` : ''}
         ${scanSize ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Scanner</div><div style="font-size:13px;font-weight:800;color:var(--wh)">${scanSize}</div><div style="font-size:8px;color:${statusColor}">${data.status||'—'}</div></div>` : ''}
+        ${(() => {
+          // Market timing quality tile
+          const tq = data.timing_quality;
+          const mOpen = data.market_open;
+          const minsOpen = data.minutes_since_open;
+          const minsClose = data.minutes_to_close;
+          if (!mOpen) return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:11px;font-weight:800;color:#555">CLOSED</div></div>`;
+          const timingLabels = {3:'PRIME ⚡', 2:'GOOD', 1:'CAUTION', 0:'WAIT'};
+          const timingColors = {3:'#00ff88', 2:'#69f0ae', 1:'#ffd54f', 0:'#ef5350'};
+          const timingNotes = {3: minsOpen<=90?'Morning sweet spot':'Power hour', 2:'Good trading conditions', 1:'Lunch lull — widen criteria', 0:'First/last 10 min — avoid'};
+          const tLabel = tq != null ? (timingLabels[tq]||'OK') : '—';
+          const tColor = tq != null ? (timingColors[tq]||'#888') : '#888';
+          const tNote = tq != null ? (timingNotes[tq]||'') : '';
+          const closeStr = minsClose != null && minsClose < 120 ? `${minsClose}m to close` : '';
+          return `<div style="background:rgba(0,0,0,.2);border:1px solid ${tColor}33;border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Timing</div><div style="font-size:11px;font-weight:900;color:${tColor}">${tLabel}</div><div style="font-size:7.5px;color:var(--wh4)">${tNote}${closeStr ? ' · '+closeStr : ''}</div></div>`;
+        })()}
       </div>`;
     }
 
@@ -54695,6 +54711,62 @@ window.renderSectorRotation = renderSectorRotation;
       if (trades.length === 0 && positions.length === 0) {
         html += `<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;margin-bottom:.5rem">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
       }
+      // Smart exit recommendation: compute based on live_signals + pnl
+      function positionAction(ls, pnl_pct) {
+        if (!ls) return {action:'HOLD', col:'#555', conf:0, reasons:[]};
+        const bearish = [], bullish = [], caution = [];
+        // Bearish signals
+        if (ls.psar_bull === false && ls.psar > 0) bearish.push('SAR flip');
+        if (ls.supertrend_bull === false)           bearish.push('ST bearish');
+        if ((ls.rsi||50) > 75)                      bearish.push('RSI overbought');
+        if (ls.mfi_overbought)                      bearish.push('MFI overbought');
+        if (ls.three_black_crows)                   bearish.push('3BC pattern');
+        if (ls.bearish_engulfing)                   bearish.push('Bear engulf');
+        if (ls.shooting_star)                       bearish.push('Shooting star');
+        if (ls.double_top)                          bearish.push('Double top');
+        // Caution flags
+        if ((ls.rsi||50) > 68 && pnl_pct > 5)     caution.push('RSI high + gain');
+        if (ls.lr_above_channel && ls.lr_r2 > 0.8) caution.push('Overbought trend');
+        if ((ls.vol_ratio||1) > 3 && pnl_pct > 8)  caution.push('Vol spike + extended');
+        if (ls.pm_big_gap_down)                     caution.push('PM gap down');
+        // Bullish signals
+        if (ls.psar_bull)                           bullish.push('SAR bullish');
+        if (ls.supertrend_bull)                     bullish.push('ST bullish');
+        if (ls.mtf_triple)                          bullish.push('3TF aligned');
+        else if (ls.mtf_aligned)                    bullish.push('MTF aligned');
+        if (ls.three_white_soldiers)                bullish.push('3WS pattern');
+        if (ls.morning_star || ls.bullish_engulfing) bullish.push('Bull pattern');
+        if (ls.news_accelerating)                   bullish.push('News building');
+        if ((ls.accum_score||0) >= 6)               bullish.push('Accumulating');
+        if (ls.vwap_reclaim)                        bullish.push('VWAP reclaim');
+        if (ls.pm_big_gap_up)                       bullish.push('PM gap up');
+        const bCount = bearish.length, gCount = bullish.length, cCount = caution.length;
+        let action, col, conf, reasons;
+        if (bCount >= 3 || (bCount >= 2 && pnl_pct > 5)) {
+          action = 'SELL'; col = '#ef5350'; conf = Math.min(100, bCount * 30 + (pnl_pct > 5 ? 20 : 0));
+          reasons = bearish.slice(0,3);
+        } else if (bCount >= 2 && cCount >= 1 && pnl_pct > 8) {
+          action = 'TRIM'; col = '#ff7043'; conf = 65;
+          reasons = [...bearish, ...caution].slice(0,3);
+        } else if (bCount >= 1 && pnl_pct > 12) {
+          action = 'TRIM'; col = '#ffa726'; conf = 55;
+          reasons = ['Extended gain', ...bearish].slice(0,3);
+        } else if (gCount >= 3) {
+          action = 'STRONG HOLD'; col = '#00ff88'; conf = Math.min(100, gCount * 25);
+          reasons = bullish.slice(0,3);
+        } else if (gCount >= 2) {
+          action = 'HOLD'; col = '#69f0ae'; conf = 70;
+          reasons = bullish.slice(0,2);
+        } else if (bCount === 0 && cCount === 0) {
+          action = 'HOLD'; col = '#888'; conf = 50;
+          reasons = ['No exit signals'];
+        } else {
+          action = 'WATCH'; col = '#ffd54f'; conf = 40;
+          reasons = [...caution, ...bearish].slice(0,2);
+        }
+        return {action, col, conf, reasons};
+      }
+
       if (positions.length) {
         html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Open Positions (${positions.length})</div>`;
         html += `<div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem">`;
@@ -54707,6 +54779,7 @@ window.renderSectorRotation = renderSectorRotation;
           const barW = Math.min(Math.abs(pct) * 3, 100);
           const barCol = pct >= 0 ? 'rgba(0,255,136,.35)' : 'rgba(255,34,85,.35)';
           const ls = p.live_signals || {};
+          const posAct = positionAction(ls, pct);
           const lsRsi = ls.rsi != null ? `<span style="font-size:6.5px;color:${ls.rsi>65?'#ef5350':ls.rsi<40?'#00ff88':'#888'}">RSI${Math.round(ls.rsi)}</span>` : '';
           const lsVwap = ls.vwap_pos != null ? `<span style="font-size:6.5px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#555'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP</span>` : '';
           const lsRcl = ls.vwap_reclaim ? `<span style="font-size:6.5px;font-weight:800;color:#00ffc8">VWAP↑</span>` : '';
@@ -54787,6 +54860,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
                 <div style="font-size:8px;color:var(--wh3)">${pnlUsd}</div>
+                <div style="margin-top:.2rem;font-size:7px;font-weight:900;color:${posAct.col};border:1px solid ${posAct.col}55;border-radius:4px;padding:1px 5px;letter-spacing:.05em;white-space:nowrap" title="${posAct.reasons.join(' · ')}">${posAct.action}</div>
               </div>
               <div style="background:${sideCol};color:#000;font-size:7px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:.05em">${sideLbl}</div>
             </div>
