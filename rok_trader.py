@@ -405,6 +405,49 @@ def _adx(high, low, close, period=14):
         return 0.0
 
 
+def _ichimoku(high, low, close):
+    """
+    Ichimoku Cloud analysis.
+    Returns dict: above_cloud, cloud_bullish, tk_ks_bullish, chikou_bullish
+    - above_cloud: price is above Senkou Span A and B (strong bull)
+    - cloud_bullish: Senkou A > B (bullish cloud)
+    - tk_ks_bullish: Tenkan-Sen (9) > Kijun-Sen (26) — TK cross
+    - chikou_bullish: Chikou Span (26d lagged close) above past price
+    """
+    if len(close) < 52:
+        return {"above_cloud": False, "cloud_bullish": False, "tk_ks_bullish": False, "chikou_bullish": False}
+    try:
+        h = list(high)
+        l = list(low)
+        c = list(close)
+        def midpoint(h_s, l_s, n):
+            return (max(h_s[-n:]) + min(l_s[-n:])) / 2
+
+        tenkan  = midpoint(h, l, 9)    # Conversion line
+        kijun   = midpoint(h, l, 26)   # Base line
+        ssa     = (tenkan + kijun) / 2              # Senkou A (26d ahead)
+        ssb     = midpoint(h, l, 52) if len(h) >= 52 else (tenkan + kijun) / 2  # Senkou B (52d)
+        price   = c[-1]
+        # Cloud boundary for current price comparison
+        cloud_top = max(ssa, ssb)
+        cloud_bot = min(ssa, ssb)
+        above_cloud  = price > cloud_top
+        below_cloud  = price < cloud_bot
+        cloud_bullish = ssa > ssb   # Green cloud = bullish
+        tk_ks_bullish = tenkan > kijun
+        # Chikou span: today's close vs close 26 days ago
+        chikou_bullish = c[-1] > c[-26] if len(c) >= 26 else False
+        return {
+            "above_cloud":    above_cloud,
+            "below_cloud":    below_cloud,
+            "cloud_bullish":  cloud_bullish,
+            "tk_ks_bullish":  tk_ks_bullish,
+            "chikou_bullish": chikou_bullish,
+        }
+    except Exception:
+        return {"above_cloud": False, "cloud_bullish": False, "tk_ks_bullish": False, "chikou_bullish": False}
+
+
 def _macd_slope(closes):
     """MACD histogram slope: positive = momentum building, negative = fading."""
     if len(closes) < 27:
@@ -1887,6 +1930,14 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Ichimoku Cloud — comprehensive trend/support/resistance analysis
+    ichimoku = {"above_cloud": False, "cloud_bullish": False, "tk_ks_bullish": False, "chikou_bullish": False}
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 52:
+            ichimoku = _ichimoku(list(daily["High"]), list(daily["Low"]), list(daily["Close"]))
+    except Exception:
+        pass
+
     # Inside bar / NR7 narrow range volatility contraction
     # NR7: today's range is the narrowest in 7 days = coiling before a breakout
     # Inside bar: today's high < yesterday's high AND today's low > yesterday's low = consolidation
@@ -2098,6 +2149,10 @@ def _extract(daily, hourly):
         "gap_and_hold":        gap_and_hold,
         "adx":                 round(adx_val, 1),
         "intraday_tq":         round(intraday_trend_quality, 2),
+        "ichimoku_above":      ichimoku.get("above_cloud", False),
+        "ichimoku_bull_cloud": ichimoku.get("cloud_bullish", False),
+        "ichimoku_tk_bull":    ichimoku.get("tk_ks_bullish", False),
+        "ichimoku_chikou":     ichimoku.get("chikou_bullish", False),
     }
 
 
@@ -2464,6 +2519,19 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if   itq >= 0.66:  s += 8   # 2+ higher highs — clear uptrend all day
     elif itq >= 0.33:  s += 4   # 1 higher high — mild uptrend
     elif itq <= -0.66: s -= 5   # 2+ lower highs — fading/distribution pattern
+
+    # Ichimoku Cloud — comprehensive trend confirmation (up to +14 for full alignment)
+    ichi_above = d.get("ichimoku_above", False)
+    ichi_bull  = d.get("ichimoku_bull_cloud", False)
+    ichi_tk    = d.get("ichimoku_tk_bull", False)
+    ichi_chi   = d.get("ichimoku_chikou", False)
+    ichi_signals = sum([ichi_above, ichi_bull, ichi_tk, ichi_chi])
+    if   ichi_signals == 4: s += 14   # full Ichimoku alignment = highest conviction
+    elif ichi_signals == 3: s +=  9
+    elif ichi_signals == 2: s +=  4
+    elif ichi_signals == 0 and d.get("ichimoku_above") is not None:
+        # Explicitly computed and all signals bearish
+        s -= 5
 
     # Market regime adjustment
     s += regime_adj
@@ -3322,6 +3390,10 @@ def run():
                 "rsi_bull_div":   live.get(tk, {}).get("rsi_bull_divergence", False),
                 "breakout_52w":   tk in breakout_52w_cands,
                 "earnings_beat":  tk in earnings_beats,
+                "ichimoku":       sum([live.get(tk,{}).get("ichimoku_above", False),
+                                       live.get(tk,{}).get("ichimoku_bull_cloud", False),
+                                       live.get(tk,{}).get("ichimoku_tk_bull", False),
+                                       live.get(tk,{}).get("ichimoku_chikou", False)]),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
