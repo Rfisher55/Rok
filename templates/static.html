@@ -814,7 +814,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       {% endfor %}
     </div>
     <div class="hdr-r">
-      <div class="live-pill"><span class="live-dot"></span><span id="update-timer">live</span></div>
+      <div class="live-pill" title="Time until next ROK update"><span class="live-dot"></span><span id="update-timer">live</span></div>
+      <div id="data-age-pill" style="display:none;padding:.25rem .55rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;font-size:8.5px;font-weight:600;letter-spacing:.05em;color:var(--wh3)" title="How old the analysis data is"></div>
       <div id="mkt-status-pill" class="mkt-status-pill closed"><span class="mkt-status-dot"></span><span id="mkt-status-txt">CLOSED</span></div>
       {% if data.market_regime %}<span class="regime">{{ data.market_regime }}</span>{% endif %}
       <span class="sent {{ data.market_sentiment }}">{{ data.market_sentiment }}</span>
@@ -1112,6 +1113,20 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: ${{ '%.2f'|format(s.stop_loss) }} ({{ loss_pct }}%)</span> — sell here to protect yourself if it goes wrong</div>
               {% endif %}
             </div>
+            {# STEP-BY-STEP ACTION PLAN for beginners #}
+            <details style="margin-top:.45rem;background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:8px;overflow:hidden" onclick="event.stopPropagation()">
+              <summary style="padding:.45rem .65rem;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--b);list-style:none;display:flex;align-items:center;gap:.4rem;-webkit-tap-highlight-color:transparent">
+                <span>📋</span><span>STEP-BY-STEP: HOW TO BUY THIS</span>
+              </summary>
+              <div style="padding:.3rem .65rem .6rem;font-size:11px;color:var(--wh2);line-height:1.75">
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">1.</span><span>Open your brokerage app — <strong>Robinhood, Fidelity, Schwab, or Webull</strong> all work</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">2.</span><span>Search for <strong style="color:var(--au)">${{ s.ticker }}</strong>{% if s.company %} ({{ s.company[:30] }}){% endif %}</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">3.</span><span>Tap <strong>Buy</strong> → choose <strong>Market Order</strong> → enter how many shares or a dollar amount</span></div>
+                {% if s.stop_loss %}<div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">4.</span><span>Set a <strong style="color:var(--r)">price alert at ${{ '%.2f'|format(s.stop_loss) }}</strong> — if it drops here, consider selling to limit your loss</span></div>{% endif %}
+                {% if s.price_target %}<div style="display:flex;gap:.5rem;align-items:flex-start"><span style="color:var(--g);font-weight:800;min-width:16px">{{ '5.' if s.stop_loss else '4.' }}</span><span>Check back when price reaches <strong style="color:var(--g)">${{ '%.2f'|format(s.price_target) }}</strong> — that's ROK's target to take profits</span></div>{% endif %}
+                <div style="margin-top:.55rem;padding:.35rem .55rem;background:rgba(255,215,0,.06);border-radius:6px;border:1px solid rgba(255,215,0,.12);font-size:10px;color:var(--wh3)">💡 After buying, tap <strong style="color:var(--g)">💰 BOUGHT IT</strong> below so ROK can track it for you and tell you when to sell.</div>
+              </div>
+            </details>
             <div style="display:flex;gap:.4rem;margin-top:.5rem">
               <button class="bought-btn buy-action" id="btn-{{ s.ticker }}" style="flex:1" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})">💰 BOUGHT IT</button>
               <button onclick="event.stopPropagation();shareSignal('{{ s.ticker }}','{{ s.catalyst or s.rok_take or '' }}',{{ s.current_price or 0 }},{{ s.price_target or 0 }})" style="padding:.6rem .8rem;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Share this trade idea">📤</button>
@@ -1724,26 +1739,41 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 <!-- BUY DIALOG -->
 <div id="buy-dialog-overlay" class="modal-overlay" style="align-items:flex-end">
   <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.25);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;margin:0 auto">
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.65rem">
       <span style="font-size:2rem">💰</span>
       <div>
         <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase">Adding to My Stocks</div>
         <div id="buy-dialog-ticker" style="font-family:var(--disp);font-size:1.6rem;color:var(--g)"></div>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--wh3);margin-bottom:.5rem" id="buy-dialog-sub"></div>
-    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem">
-      <span style="font-size:1.2rem;color:var(--wh3)">$</span>
-      <input id="buy-dialog-price" type="number" step="0.01" min="0.01"
-        style="flex:1;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.3);border-radius:10px;padding:.75rem 1rem;font-size:1.2rem;font-weight:700;color:var(--g);outline:none;font-family:var(--font)"
-        placeholder="Price you paid per share"
-        onkeydown="if(event.key==='Enter')confirmBoughtIt()"/>
+    <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem" id="buy-dialog-sub"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem">
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem">PRICE YOU PAID / SHARE</div>
+        <div style="position:relative">
+          <span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--wh3);font-size:14px">$</span>
+          <input id="buy-dialog-price" type="number" step="0.01" min="0.01"
+            style="width:100%;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.3);border-radius:10px;padding:.6rem .6rem .6rem 1.5rem;font-size:1.1rem;font-weight:700;color:var(--g);outline:none;font-family:var(--font);box-sizing:border-box"
+            placeholder="e.g. 195.50"
+            oninput="updateBuyCalc()"
+            onkeydown="if(event.key==='Enter')confirmBoughtIt()"/>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem"># OF SHARES BOUGHT</div>
+        <input id="buy-dialog-shares" type="number" step="1" min="1"
+          style="width:100%;background:rgba(0,204,255,.06);border:1px solid rgba(0,204,255,.25);border-radius:10px;padding:.6rem .75rem;font-size:1.1rem;font-weight:700;color:var(--b);outline:none;font-family:var(--font);box-sizing:border-box"
+          placeholder="e.g. 5"
+          oninput="updateBuyCalc()"
+          onkeydown="if(event.key==='Enter')confirmBoughtIt()"/>
+      </div>
     </div>
+    <div id="buy-dialog-calc" style="min-height:28px;margin-bottom:.65rem;font-size:11px;color:var(--wh3)"></div>
     <div style="display:flex;gap:.6rem">
       <button onclick="cancelBoughtIt()" style="flex:1;padding:.75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
       <button onclick="confirmBoughtIt()" style="flex:2;padding:.75rem;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.35);border-radius:10px;color:var(--g);font-size:14px;font-weight:800;cursor:pointer;touch-action:manipulation">✓ ADD TO MY STOCKS</button>
     </div>
-    <div style="text-align:center;font-size:10px;color:var(--wh4);margin-top:.7rem">ROK will track your gain/loss and alert you when to sell</div>
+    <div style="text-align:center;font-size:10px;color:var(--wh4);margin-top:.7rem">ROK tracks your gain/loss in real time and alerts you when to sell</div>
   </div>
 </div>
 
@@ -2290,28 +2320,67 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   // ── CUSTOM ADD-TO-PORTFOLIO DIALOG ───────────────────────
   let _boughtItResolve = null;
 
+  let _boughtItTicker = '';
+  let _boughtItTarget = 0;
+
+  window.updateBuyCalc = function() {
+    const priceEl = document.getElementById('buy-dialog-price');
+    const sharesEl = document.getElementById('buy-dialog-shares');
+    const calcEl = document.getElementById('buy-dialog-calc');
+    if (!calcEl) return;
+    const price = parseFloat(priceEl?.value) || 0;
+    const shares = parseInt(sharesEl?.value) || 0;
+    if (!price || !shares) { calcEl.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>'; return; }
+    const invested = price * shares;
+    const tgt = _boughtItTarget;
+    let html = `<span style="color:var(--wh2)">You invested <strong style="color:var(--au)">$${invested.toFixed(2)}</strong> (${shares} share${shares!==1?'s':''} × $${price.toFixed(2)})</span>`;
+    if (tgt > 0 && price > 0) {
+      const gain = shares * (tgt - price);
+      const gainPct = ((tgt - price) / price * 100).toFixed(1);
+      html += ` · <span style="color:var(--g)">Target gain: +$${gain.toFixed(0)} (+${gainPct}%)</span>`;
+    }
+    calcEl.innerHTML = html;
+  };
+
   function showBoughtItDialog(ticker, suggestedPrice) {
     return new Promise(resolve => {
       _boughtItResolve = resolve;
+      _boughtItTicker = ticker;
       const det = sigDetails[ticker] || {};
       const lp = liveprices[ticker];
       const price = lp ? lp.price : suggestedPrice;
+      _boughtItTarget = det.price_target ? Number(det.price_target) : 0;
       const overlay = document.getElementById('buy-dialog-overlay');
       const t = document.getElementById('buy-dialog-ticker');
       const inp = document.getElementById('buy-dialog-price');
+      const sharesInp = document.getElementById('buy-dialog-shares');
       const sub = document.getElementById('buy-dialog-sub');
+      const calc = document.getElementById('buy-dialog-calc');
       if (t) t.textContent = '$' + ticker;
-      if (inp) { inp.value = price > 0 ? price.toFixed(2) : ''; inp.placeholder = 'e.g. ' + (price > 0 ? price.toFixed(2) : '100.00'); }
-      if (sub) sub.textContent = price > 0 ? `Live price: $${price.toFixed(2)} · Target: ${det.price_target ? '$'+Number(det.price_target).toFixed(2) : 'n/a'}` : 'Enter the price you paid per share';
+      if (inp) { inp.value = price > 0 ? price.toFixed(2) : ''; }
+      if (sharesInp) sharesInp.value = '';
+      if (calc) calc.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>';
+      if (sub) {
+        const parts = [];
+        if (price > 0) parts.push(`Current price: $${price.toFixed(2)}`);
+        if (det.price_target) parts.push(`Target: $${Number(det.price_target).toFixed(2)}`);
+        if (det.stop_loss) parts.push(`Stop loss: $${Number(det.stop_loss).toFixed(2)}`);
+        sub.textContent = parts.join(' · ') || 'Enter the price you paid per share';
+      }
       if (overlay) overlay.classList.add('open');
       setTimeout(() => { if (inp) inp.focus(); }, 100);
     });
   }
   window.confirmBoughtIt = function() {
     const inp = document.getElementById('buy-dialog-price');
+    const sharesInp = document.getElementById('buy-dialog-shares');
     const v = parseFloat(inp?.value);
+    const sh = parseInt(sharesInp?.value) || 0;
     document.getElementById('buy-dialog-overlay')?.classList.remove('open');
-    if (_boughtItResolve) { _boughtItResolve(isNaN(v) || v <= 0 ? null : v); _boughtItResolve = null; }
+    if (_boughtItResolve) {
+      _boughtItResolve(isNaN(v) || v <= 0 ? null : { price: v, shares: sh > 0 ? sh : null });
+      _boughtItResolve = null;
+    }
   };
   window.cancelBoughtIt = function() {
     document.getElementById('buy-dialog-overlay')?.classList.remove('open');
@@ -2331,18 +2400,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     }
     const lp = liveprices[ticker];
     const suggested = lp ? lp.price : (price > 0 ? price : 0);
-    let usePrice = suggested;
-    if (!usePrice) {
-      usePrice = await showBoughtItDialog(ticker, 0);
-      if (!usePrice) return;
-    }
-    p[ticker] = { price: usePrice, date: new Date().toISOString() };
+    const result = await showBoughtItDialog(ticker, suggested);
+    if (!result) return;
+    const usePrice = result.price || result; // backwards compat
+    const useShares = result.shares || null;
+    p[ticker] = { price: usePrice, shares: useShares, date: new Date().toISOString() };
     savePortfolio(p);
     updateBoughtBtn(ticker, true);
     if (activeTab === 'screener') renderScreener();
     const btn = document.getElementById('btn-' + ticker);
     if (btn) { btn.textContent = '✓ ADDED TO MY STOCKS!'; btn.classList.add('owned'); }
-    showAppAlert(`${ticker} added to My Stocks at $${usePrice.toFixed(2)}`);
+    const sharesTxt = useShares ? ` · ${useShares} share${useShares!==1?'s':''}` : '';
+    showAppAlert(`${ticker} added to My Stocks at $${Number(usePrice).toFixed(2)}${sharesTxt}`);
     renderPortfolioSummary();
   }
   window.boughtIt = boughtIt;
@@ -2395,17 +2464,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const curPrice = lp ? lp.price : (stock ? stock.price : null);
       if (curPrice && entry.price) { totalPct += (curPrice - entry.price) / entry.price * 100; count++; }
     });
-    // Calculate dollar amounts assuming each position = $1000 at entry
-    let totalInvested = 0, totalNow = 0;
+    // Calculate dollar P&L: use actual shares when available, else $1000 estimate
+    let totalInvested = 0, totalNow = 0, hasRealShares = false;
     tickers.forEach(ticker => {
       const entry = p[ticker];
       const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
       const lp = liveprices[ticker];
       const curPrice = lp ? lp.price : (stock ? stock.price : null);
       if (curPrice && entry.price && entry.price > 0) {
-        const shares = 1000 / entry.price;
-        totalInvested += shares * entry.price;
-        totalNow += shares * curPrice;
+        const sh = entry.shares || (1000 / entry.price);
+        if (entry.shares) hasRealShares = true;
+        totalInvested += sh * entry.price;
+        totalNow += sh * curPrice;
       }
     });
     const totalDollarGain = totalNow - totalInvested;
@@ -2413,15 +2483,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const cc = avgPct >= 0 ? 'var(--g)' : 'var(--r)';
     const moneyColor = totalDollarGain >= 0 ? 'var(--g)' : 'var(--r)';
     const dollarFmt = totalDollarGain >= 0
-      ? `+$${totalDollarGain.toFixed(0)}`
-      : `-$${Math.abs(totalDollarGain).toFixed(0)}`;
+      ? `+$${totalDollarGain.toFixed(hasRealShares ? 2 : 0)}`
+      : `-$${Math.abs(totalDollarGain).toFixed(hasRealShares ? 2 : 0)}`;
+    const pnlLabel = hasRealShares ? 'Real P&amp;L' : 'Est. P&amp;L*';
     sumEl.innerHTML = `<div class="port-summary" style="grid-template-columns:repeat(4,1fr)">
       <div class="port-sum-box"><div class="port-sum-val" style="color:var(--au)">${tickers.length}</div><div class="port-sum-lbl">Tracking</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${cc}">${avgPct>=0?'+':''}${avgPct.toFixed(1)}%</div><div class="port-sum-lbl">Avg Return</div></div>
-      <div class="port-sum-box"><div class="port-sum-val" style="color:${moneyColor};font-size:1.1rem">${totalInvested > 0 ? dollarFmt : '—'}</div><div class="port-sum-lbl">Total P&amp;L*</div></div>
+      <div class="port-sum-box"><div class="port-sum-val" style="color:${moneyColor};font-size:1.1rem">${totalInvested > 0 ? dollarFmt : '—'}</div><div class="port-sum-lbl">${pnlLabel}</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${alerts?'var(--r)':'var(--g)'}">${alerts}</div><div class="port-sum-lbl">Alerts</div></div>
     </div>
-    ${totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position at entry price</div>` : ''}`;
+    ${!hasRealShares && totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position. Add shares when tracking for real P&amp;L</div>` : ''}`;
   }
 
   // Phase 6: Share portfolio
@@ -2544,14 +2615,24 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
             </div>
           </div>`;
       }
-      const dollarGain = currentPrice && buyPrice ? ((currentPrice - buyPrice) / buyPrice * 1000).toFixed(0) : null;
-      const dollarGainHtml = dollarGain ? `<div style="font-size:9px;color:${pct >= 0 ? 'var(--g)' : 'var(--r)'};margin-top:1px">${pct >= 0 ? '+' : ''}$${dollarGain} on $1k</div>` : '';
+      const numShares = entry.shares || null;
+      let dollarGainHtml = '';
+      if (numShares && currentPrice && buyPrice) {
+        const realGain = numShares * (currentPrice - buyPrice);
+        const realColor = realGain >= 0 ? 'var(--g)' : 'var(--r)';
+        dollarGainHtml = `<div style="font-size:10px;font-weight:700;color:${realColor};margin-top:1px">${realGain>=0?'+':'-'}$${Math.abs(realGain).toFixed(2)} actual</div>`;
+      } else if (currentPrice && buyPrice) {
+        const est = ((currentPrice - buyPrice) / buyPrice * 1000).toFixed(0);
+        dollarGainHtml = `<div style="font-size:9px;color:${pct >= 0 ? 'var(--g)' : 'var(--r)'};margin-top:1px">${pct >= 0 ? '+' : ''}$${est} on $1k</div>`;
+      }
+      const sharesTagHtml = numShares ? `<div style="font-size:8.5px;color:var(--wh3);">${numShares} share${numShares!==1?'s':''}</div>` : '';
 
       return `<div class="port-card" onclick="openModal('${ticker}')">
         <div class="port-top">
           <div>
             <div class="port-ticker ${sigClass}">$${ticker}</div>
             <div class="port-name">${((stock && stock.company_name) || '').substring(0,24)}</div>
+            ${sharesTagHtml}
             ${addedDate ? `<div class="port-added">Added ${addedDate}</div>` : ''}
           </div>
           <div style="text-align:right">
@@ -2786,6 +2867,24 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     };
     tick();
     setInterval(tick, 1000);
+  }
+
+  // ── ANALYSIS AGE INDICATOR ────────────────────────────────
+  const agePill = document.getElementById('data-age-pill');
+  if (agePill && ts) {
+    const genTime = new Date(ts);
+    const updateAge = () => {
+      const mins = Math.floor((Date.now() - genTime) / 60000);
+      if (mins < 1) { agePill.style.display = 'none'; return; }
+      agePill.style.display = 'flex';
+      agePill.style.alignItems = 'center';
+      agePill.style.gap = '3px';
+      const color = mins < 20 ? 'var(--g)' : mins < 45 ? 'var(--au)' : 'var(--wh3)';
+      agePill.style.color = color;
+      agePill.textContent = mins < 60 ? `${mins}m old` : `${Math.floor(mins/60)}h old`;
+    };
+    updateAge();
+    setInterval(updateAge, 60000);
   }
 
   // ── MOBILE SEARCH ─────────────────────────────────────────
