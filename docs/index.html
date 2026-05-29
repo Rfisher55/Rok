@@ -3271,6 +3271,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-bot-activity" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-projected-val" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-rok-live-feed" style="margin-bottom:.85rem"></div>
+    <div id="port-crypto-feed" style="margin-bottom:.85rem"></div>
+    <div id="port-sector-rotation" style="margin-bottom:.85rem"></div>
     <div id="port-scorecard-now" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-trade-log" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-diversify"></div>
@@ -4165,6 +4167,8 @@ body.beginner-mode #beginner-banner { display:block }
      renderRsiLiveScan();
      renderRelativePower();
      renderRokLiveFeed();
+     renderCryptoFeed();
+     renderSectorRotation();
   checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -5272,6 +5276,8 @@ body.beginner-mode #beginner-banner { display:block }
      renderRsiLiveScan();
      renderRelativePower();
      renderRokLiveFeed();
+     renderCryptoFeed();
+     renderSectorRotation();
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
   }
   window.showTab = showTab;
@@ -6911,6 +6917,8 @@ body.beginner-mode #beginner-banner { display:block }
      renderScorecardNow();
      renderTradeLog();
      renderRokLiveFeed();
+     renderCryptoFeed();
+     renderSectorRotation();
     renderPortfolioHealthCheck();
     renderPortfolioRiskScore();
     renderPortfolioAutopilot();
@@ -53210,6 +53218,118 @@ function _renderRokLiveFeedData(el, data) {
   </div>`;
 }
 window.renderRokLiveFeed = renderRokLiveFeed;
+
+// ── Crypto Live Feed ─────────────────────────────────────────────────────────
+async function renderCryptoFeed() {
+  const el = document.getElementById('port-crypto-feed');
+  if (!el) return;
+  try {
+    const r    = await fetch('trades.json?t=' + Date.now());
+    const data = r.ok ? await r.json() : null;
+    if (!data) { el.innerHTML = ''; return; }
+
+    const cryptoPos = (data.positions || []).filter(p =>
+      p.ticker && p.ticker.includes('/'));
+    const cryptoTrades = (data.trades || []).filter(t =>
+      t.ticker && t.ticker.includes('/')).slice(0, 8);
+
+    if (!cryptoPos.length && !cryptoTrades.length) {
+      el.innerHTML = `<div style="background:#0d1a0d;border:1px solid #1a3a1a;border-radius:8px;padding:.75rem">
+        <div style="color:#81c784;font-size:.82rem;font-weight:700;margin-bottom:.3rem">Crypto Trading</div>
+        <div style="color:#3a5a3a;font-size:.75rem">Bot scanning BTC/USD, ETH/USD, SOL/USD, AVAX/USD — 24/7 including weekends</div>
+      </div>`;
+      return;
+    }
+
+    const posRows = cryptoPos.map(p => {
+      const col = p.pnl_pct >= 0 ? '#81c784' : '#ef9a9a';
+      const icon = {'BTC/USD':'₿','ETH/USD':'Ξ','SOL/USD':'◎','AVAX/USD':'A'}[p.ticker] || p.ticker.split('/')[0];
+      return `<div style="display:flex;align-items:center;gap:8px;padding:.22rem 0;border-bottom:1px solid #1a2a1a">
+        <span style="color:#81c784;font-size:.9rem">${icon}</span>
+        <span style="color:#ccc;font-weight:700;font-size:.82rem;flex:1">${p.ticker}</span>
+        <span style="color:#555;font-size:.7rem">$${(p.market_val||0).toFixed(0)}</span>
+        <span style="color:${col};font-weight:700">${p.pnl_pct>=0?'+':''}${(p.pnl_pct||0).toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+
+    const tradeRows = cryptoTrades.map(t => {
+      const col = t.action==='BUY'?'#81c784':t.action==='SELL'?'#ef9a9a':'#ffcc80';
+      const dt  = new Date(t.time).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;align-items:center;gap:6px;padding:.22rem 0;border-bottom:1px solid #1a2a1a">
+        <span style="background:${col}22;color:${col};font-size:.68rem;padding:1px 5px;border-radius:3px;min-width:32px;text-align:center">${t.action}</span>
+        <span style="color:#ccc;font-weight:700;font-size:.82rem;flex:1">${t.ticker}</span>
+        <span style="color:#666;font-size:.7rem">$${(+(t.notional||t.qty||0)).toFixed(0)}</span>
+        <span style="color:#444;font-size:.65rem">${dt}</span>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div style="background:#0d1a0d;border:1px solid #1e4a1e;border-radius:8px;padding:.75rem">
+      <div style="color:#81c784;font-size:.85rem;font-weight:700;margin-bottom:.4rem">Crypto Positions (24/7)</div>
+      ${cryptoPos.length ? posRows + '<div style="height:.4rem"></div>' : ''}
+      ${cryptoTrades.length ? `<div style="color:#3a6a3a;font-size:.66rem;font-weight:600;text-transform:uppercase;margin-bottom:.2rem">Recent Crypto Trades</div>${tradeRows}` : ''}
+    </div>`;
+  } catch { el.innerHTML = ''; }
+}
+window.renderCryptoFeed = renderCryptoFeed;
+
+// ── Sector Rotation Panel ────────────────────────────────────────────────────
+async function renderSectorRotation() {
+  const el = document.getElementById('port-sector-rotation');
+  if (!el) return;
+  try {
+    const r    = await fetch('trades.json?t=' + Date.now());
+    const data = r.ok ? await r.json() : null;
+    if (!data) { el.innerHTML = ''; return; }
+
+    // Derive sector breakdown from positions
+    const secMap = {
+      'AAPL':'Tech','MSFT':'Tech','NVDA':'Tech','GOOGL':'Tech','META':'Tech',
+      'AVGO':'Tech','AMD':'Tech','ORCL':'Tech','CRM':'Tech','PLTR':'Tech',
+      'JPM':'Finance','V':'Finance','MA':'Finance','BAC':'Finance','GS':'Finance',
+      'UNH':'Health','JNJ':'Health','ABT':'Health','MRK':'Health','AMGN':'Health',
+      'AMZN':'Cons Tech','TSLA':'Cons Tech','NFLX':'Cons Tech','UBER':'Cons Tech',
+      'XOM':'Energy','CVX':'Energy','OXY':'Energy','ENPH':'Energy','FSLR':'Energy',
+      'CAT':'Industrial','HON':'Industrial','BA':'Industrial','GE':'Industrial',
+      'WMT':'Consumer','HD':'Consumer','MCD':'Consumer','KO':'Consumer',
+      'COIN':'Crypto','MSTR':'Crypto','IBIT':'Crypto',
+    };
+
+    const pos = (data.positions || []).filter(p => !p.ticker?.includes('/'));
+    if (!pos.length) { el.innerHTML = ''; return; }
+
+    const bySec = {};
+    let totalVal = 0;
+    for (const p of pos) {
+      const sec = secMap[p.ticker] || 'Other';
+      if (!bySec[sec]) bySec[sec] = {val:0, pnl:0, count:0};
+      bySec[sec].val   += (p.market_val || 0);
+      bySec[sec].pnl   += (p.pnl_usd   || 0);
+      bySec[sec].count += 1;
+      totalVal += (p.market_val || 0);
+    }
+
+    const rows = Object.entries(bySec)
+      .sort((a,b) => b[1].val - a[1].val)
+      .map(([sec, v]) => {
+        const pct = totalVal ? (v.val / totalVal * 100).toFixed(0) : 0;
+        const col = v.pnl >= 0 ? '#81c784' : '#ef9a9a';
+        return `<div style="display:flex;align-items:center;gap:6px;padding:.2rem 0;border-bottom:1px solid #1a1a1a">
+          <span style="color:#aaa;font-size:.78rem;width:80px">${sec}</span>
+          <div style="flex:1;background:#1a1a1a;border-radius:2px;height:5px">
+            <div style="background:#82b1ff;width:${pct}%;height:5px;border-radius:2px"></div>
+          </div>
+          <span style="color:#555;font-size:.68rem;width:25px;text-align:right">${pct}%</span>
+          <span style="color:${col};font-size:.72rem;width:55px;text-align:right">${v.pnl>=0?'+':''}$${v.pnl.toFixed(0)}</span>
+        </div>`;
+      }).join('');
+
+    el.innerHTML = `<div style="background:#0a0a12;border:1px solid #1e2a4a;border-radius:8px;padding:.75rem">
+      <div style="color:#82b1ff;font-size:.82rem;font-weight:700;margin-bottom:.4rem">Sector Allocation</div>
+      ${rows}
+    </div>`;
+  } catch { el.innerHTML = ''; }
+}
+window.renderSectorRotation = renderSectorRotation;
 
   //  SENTIMENT DIVERGENCE ALERT
   function renderSentimentDivergence() {
