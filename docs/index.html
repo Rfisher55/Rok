@@ -54440,6 +54440,8 @@ window.renderSectorRotation = renderSectorRotation;
             ${regime.above_200 !== undefined ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">SPY 200d</div><div style="font-size:11px;font-weight:900;color:${regime.above_200?'#00ff88':'#ef5350'}">${regime.above_200?'ABOVE':'BELOW'}</div></div>` : ''}
             ${drawdownPct > 1 ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Drawdown</div><div style="font-size:14px;font-weight:900;color:#ef5350">-${drawdownPct.toFixed(1)}%</div></div>` : ''}
             ${bAdvPct !== undefined ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Breadth</div><div style="font-size:14px;font-weight:900;color:${bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#ffd54f'}">${bAdvPct}%</div></div>` : ''}
+            ${data.market_quality != null ? (() => { const mq = data.market_quality; const mqCol = mq >= 65 ? '#00ff88' : mq >= 50 ? '#ffd54f' : mq >= 35 ? '#ff9800' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Mkt Quality</div><div style="font-size:14px;font-weight:900;color:${mqCol}">${mq}/100</div></div>`; })() : ''}
+            ${data.effective_min_score != null && data.effective_min_score !== 18 ? `<div style="text-align:center"><div style="font-size:8px;color:#ff9800;font-weight:700;text-transform:uppercase">Min Score</div><div style="font-size:11px;font-weight:900;color:#ff9800">${data.effective_min_score}↑</div></div>` : ''}
           </div>
         </div>
         <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600;margin-bottom:.3rem">
@@ -54455,10 +54457,10 @@ window.renderSectorRotation = renderSectorRotation;
       const secEntries = Object.entries(sectorRot).sort((a,b) => b[1]-a[1]);
       if (secEntries.length > 0) {
         const secHtml = secEntries.map(([sec,val]) => {
-          const col = val >= 5 ? '#00ff88' : val >= 2 ? '#4caf50' : val > 0 ? '#388e3c' :
-                      val <= -5 ? '#ef5350' : val <= -2 ? '#e57373' : val < 0 ? '#b71c1c' : '#555';
-          const bg  = val >= 3 ? 'rgba(0,255,136,.12)' : val <= -3 ? 'rgba(255,34,85,.1)' : 'rgba(255,255,255,.03)';
-          const barW = Math.min(Math.abs(val) / 8 * 100, 100);
+          const col = val >= 6 ? '#00ff88' : val >= 3 ? '#4caf50' : val > 0 ? '#388e3c' :
+                      val <= -6 ? '#ef5350' : val <= -3 ? '#e57373' : val < 0 ? '#b71c1c' : '#555';
+          const bg  = val >= 4 ? 'rgba(0,255,136,.12)' : val <= -4 ? 'rgba(255,34,85,.1)' : 'rgba(255,255,255,.03)';
+          const barW = Math.min(Math.abs(val) / 12 * 100, 100);
           const barCol = val >= 0 ? 'rgba(0,255,136,.25)' : 'rgba(255,34,85,.2)';
           return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem .4rem;background:${bg};border-radius:5px">
             <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600">${sec}</span>
@@ -54603,6 +54605,12 @@ window.renderSectorRotation = renderSectorRotation;
             s.at_breakout   ? '<span style="background:rgba(0,255,136,.15);color:#00ff88;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">BRKOUT</span>' : '',
             s.ttm_squeeze   ? '<span style="background:rgba(130,177,255,.15);color:#82b1ff;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">SQZ</span>' : '',
             s.nr7           ? '<span style="background:rgba(255,152,0,.15);color:#ff9800;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">NR7</span>' : '',
+            s.vol_surge     ? '<span style="background:rgba(0,200,255,.15);color:#40c4ff;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">SURGE</span>' : '',
+            s.pre_earnings  ? '<span style="background:rgba(200,130,255,.15);color:#ce93d8;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">PRE-EPS</span>' : '',
+            s.options_flow  ? '<span style="background:rgba(255,183,77,.15);color:#ffcc02;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">CALLS</span>' : '',
+            s.rsi_bull_div  ? '<span style="background:rgba(0,255,136,.1);color:#69f0ae;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">RSI↑DIV</span>' : '',
+            (s.persist_count >= 3) ? '<span style="background:rgba(255,215,0,.2);color:#ffd54f;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">🔁×'+s.persist_count+'</span>' :
+            (s.persist_count >= 2) ? '<span style="background:rgba(255,215,0,.12);color:#ffd54f;font-size:6.5px;font-weight:700;padding:1px 4px;border-radius:3px">×'+s.persist_count+'</span>' : '',
           ].filter(Boolean).join('');
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
             <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">

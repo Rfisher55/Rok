@@ -113,9 +113,27 @@ SECTOR_MAP = {
     "LMT":"industrial","NOC":"industrial","ACN":"industrial",
     # Crypto / Speculative
     "COIN":"crypto","MSTR":"crypto","SOFI":"crypto","IBIT":"crypto","RIVN":"crypto",
+    # Utilities
+    "NEE":"utilities","DUK":"utilities","SO":"utilities","D":"utilities",
+    "AEP":"utilities","EXC":"utilities","SRE":"utilities","PCG":"utilities",
+    "ED":"utilities","WEC":"utilities","XEL":"utilities","ES":"utilities",
+    # Materials
+    "LIN":"materials","APD":"materials","SHW":"materials","FCX":"materials",
+    "NEM":"materials","NUE":"materials","VMC":"materials","MLM":"materials",
+    "ECL":"materials","ALB":"materials","CTVA":"materials","CF":"materials",
+    # Real Estate
+    "PLD":"real_estate","AMT":"real_estate","EQIX":"real_estate","CCI":"real_estate",
+    "SPG":"real_estate","O":"real_estate","VICI":"real_estate","WY":"real_estate",
+    "PSA":"real_estate","EQR":"real_estate","WELL":"real_estate","DLR":"real_estate",
+    # Communication Services
+    "GOOG":"comm_services","DIS":"comm_services","CMCSA":"comm_services",
+    "T":"comm_services","VZ":"comm_services","TMUS":"comm_services",
+    "CHTR":"comm_services","WBD":"comm_services","PARA":"comm_services",
+    "EA":"comm_services","TTWO":"comm_services","OMC":"comm_services",
     # ETFs
     "SPY":"etf","QQQ":"etf","IWM":"etf","XLK":"etf","XLF":"etf",
-    "XLE":"etf","XLV":"etf","XLRE":"etf",
+    "XLE":"etf","XLV":"etf","XLRE":"etf","XLU":"etf","XLB":"etf",
+    "XLC":"etf","XLY":"etf","XLI":"etf",
 }
 
 # ── Base universe ─────────────────────────────────────────────────────────────
@@ -129,10 +147,18 @@ BASE_UNIVERSE = [
     "CAT","DE","HON","BA","RTX","GE","UPS","ETN","LMT","NOC",
     "NFLX","UBER","BKNG","ACN","SPGI","MMC","PYPL",
     "PLTR","COIN","MSTR","SOFI","IBIT","AMD",
-    "SPY","QQQ","IWM","XLK","XLF","XLE","XLV","XLRE",
+    "SPY","QQQ","IWM","XLK","XLF","XLE","XLV","XLRE","XLU","XLB","XLC",
     "SHOP","SQ","RBLX","HOOD","DKNG","ABNB","DASH","ROKU",
     "RIVN","SMCI","ARM","DELL","SNOW","DDOG","NET","CRWD","AXON",
     "ENPH","FSLR","CEG","VST","GEV",
+    # Utilities
+    "NEE","DUK","SO","D","AEP","EXC","SRE","XEL",
+    # Materials
+    "LIN","APD","SHW","FCX","NEM","NUE","ECL","ALB",
+    # Real Estate
+    "PLD","AMT","EQIX","CCI","SPG","O","VICI","PSA","WELL","DLR",
+    # Communication Services
+    "GOOG","DIS","CMCSA","T","VZ","TMUS","CHTR","EA","TTWO",
 ]
 
 # ── Alpaca API helpers ────────────────────────────────────────────────────────
@@ -468,49 +494,123 @@ SECTOR_ETFS = {
     "consumer":      "XLP",
     "consumer_tech": "XLY",
     "industrial":    "XLI",
+    "utilities":     "XLU",
+    "materials":     "XLB",
+    "real_estate":   "XLRE",
+    "comm_services": "XLC",
     "crypto":        "IBIT",
 }
 
 def sector_rotation() -> dict:
     """
-    Rank sectors by 1-day and 5-day ETF performance.
-    Returns {sector: adj_score} where adj_score is -8 to +8.
+    Rank sectors by 1-day, 5-day, and 20-day ETF performance.
+    Returns {sector: adj_score} where adj_score is -12 to +12.
+    3-timeframe momentum: recent (1d) + short-term (5d) + medium-term (20d).
     Hot sectors get a bonus; cold sectors get a penalty.
     """
     etfs = list(SECTOR_ETFS.values())
     try:
         kw  = dict(group_by="ticker", auto_adjust=True, progress=False)
-        raw = yf.download(" ".join(etfs), period="10d", interval="1d", **kw)
+        raw = yf.download(" ".join(etfs), period="30d", interval="1d", **kw)
         adj = {}
+        detail = {}
         for sec, etf in SECTOR_ETFS.items():
             try:
                 if len(etfs) == 1:
                     closes = list(raw["Close"].dropna())
                 else:
-                    closes = list(raw["Close"][etf].dropna())
+                    col = raw["Close"]
+                    closes = list(col[etf].dropna()) if etf in col.columns else []
                 if len(closes) < 2:
                     adj[sec] = 0
                     continue
-                chg1d = (closes[-1] - closes[-2]) / closes[-2] * 100
-                chg5d = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
-                score = 0
-                if   chg1d > 2:   score += 4
-                elif chg1d > 0.5: score += 2
-                elif chg1d < -2:  score -= 4
-                elif chg1d < -0.5: score -= 2
-                if   chg5d > 4:   score += 4
-                elif chg5d > 1:   score += 2
-                elif chg5d < -4:  score -= 4
-                elif chg5d < -1:  score -= 2
-                adj[sec] = max(-8, min(8, score))
+                chg1d  = (closes[-1] - closes[-2]) / closes[-2] * 100
+                chg5d  = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5  else 0
+                chg20d = (closes[-1] - closes[-20]) / closes[-20] * 100 if len(closes) >= 20 else 0
+                sc = 0
+                # 1-day momentum (weight: ±4)
+                if   chg1d > 2.0:  sc += 4
+                elif chg1d > 0.5:  sc += 2
+                elif chg1d > 0.1:  sc += 1
+                elif chg1d < -2.0: sc -= 4
+                elif chg1d < -0.5: sc -= 2
+                elif chg1d < -0.1: sc -= 1
+                # 5-day momentum (weight: ±4)
+                if   chg5d > 5.0:  sc += 4
+                elif chg5d > 2.0:  sc += 2
+                elif chg5d > 0.5:  sc += 1
+                elif chg5d < -5.0: sc -= 4
+                elif chg5d < -2.0: sc -= 2
+                elif chg5d < -0.5: sc -= 1
+                # 20-day trend (weight: ±4)
+                if   chg20d > 8.0:  sc += 4
+                elif chg20d > 3.0:  sc += 2
+                elif chg20d > 1.0:  sc += 1
+                elif chg20d < -8.0: sc -= 4
+                elif chg20d < -3.0: sc -= 2
+                elif chg20d < -1.0: sc -= 1
+                adj[sec]    = max(-12, min(12, sc))
+                detail[sec] = {"1d": round(chg1d,2), "5d": round(chg5d,2), "20d": round(chg20d,2)}
             except Exception:
                 adj[sec] = 0
-        hot = sorted(adj.items(), key=lambda x: -x[1])[:3]
-        logger.info(f"Sector rotation: {' | '.join(f'{s}:{v:+d}' for s,v in hot)}")
+        hot  = sorted(adj.items(), key=lambda x: -x[1])[:3]
+        cold = sorted(adj.items(), key=lambda x:  x[1])[:2]
+        logger.info(f"Sector rotation hot:  {' | '.join(f'{s}:{v:+d}' for s,v in hot)}")
+        logger.info(f"Sector rotation cold: {' | '.join(f'{s}:{v:+d}' for s,v in cold)}")
         return adj
     except Exception as e:
         logger.debug(f"Sector rotation error: {e}")
         return {}
+
+_CORR_CACHE: dict = {}   # {frozenset({a,b}): corr_coef}
+
+def is_correlated_with_held(candidate: str, held_syms: list, threshold: float = 0.85) -> bool:
+    """
+    Returns True if candidate has >threshold return correlation with any held position
+    over the last 30 trading days. Prevents doubling down on the same market exposure.
+    """
+    if not held_syms:
+        return False
+    try:
+        all_syms = [candidate] + held_syms
+        raw = yf.download(" ".join(all_syms), period="40d", interval="1d",
+                          group_by="ticker", auto_adjust=True, progress=False)
+        if raw.empty:
+            return False
+        def _returns(sym):
+            try:
+                col = raw["Close"]
+                s = col[sym].dropna() if sym in col.columns else col.dropna()
+                return s.pct_change().dropna()
+            except Exception:
+                return None
+        cand_ret = _returns(candidate)
+        if cand_ret is None or len(cand_ret) < 20:
+            return False
+        for h in held_syms:
+            key = frozenset([candidate, h])
+            if key in _CORR_CACHE:
+                corr = _CORR_CACHE[key]
+            else:
+                held_ret = _returns(h)
+                if held_ret is None or len(held_ret) < 20:
+                    continue
+                combined = cand_ret.align(held_ret, join="inner")[0]
+                held_aln = cand_ret.align(held_ret, join="inner")[1]
+                if len(combined) < 15:
+                    continue
+                try:
+                    corr = float(combined.corr(held_aln))
+                except Exception:
+                    corr = 0.0
+                _CORR_CACHE[key] = corr
+            if corr >= threshold:
+                logger.debug(f"Corr guard: {candidate} ↔ {h} corr={corr:.2f} ≥ {threshold} — skip")
+                return True
+        return False
+    except Exception as e:
+        logger.debug(f"Corr guard error for {candidate}: {e}")
+        return False
 
 
 # ── Pre-market gap scanner ────────────────────────────────────────────────────
@@ -573,21 +673,41 @@ def get_premarket_gaps(fractionable_set: set) -> list:
 
 # ── Macro event calendar (FOMC, CPI, NFP) ────────────────────────────────────
 # Dates when market moves wildly — reduce size, skip new buys same day
-# FOMC decision dates 2025-2026 (announced months in advance by the Fed)
-_MACRO_EVENTS = {
+# FOMC decision dates 2025-2026
+_FOMC_DATES = {
     "2025-03-19", "2025-05-07", "2025-06-18", "2025-07-30",
     "2025-09-17", "2025-10-29", "2025-12-10",
     "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17",
     "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
 }
+# CPI release dates 2025-2026 (BLS schedule, typically 2nd/3rd Tuesday of month 8:30AM ET)
+_CPI_DATES = {
+    "2025-01-15", "2025-02-12", "2025-03-12", "2025-04-10",
+    "2025-05-13", "2025-06-11", "2025-07-15", "2025-08-12",
+    "2025-09-10", "2025-10-15", "2025-11-13", "2025-12-10",
+    "2026-01-14", "2026-02-11", "2026-03-11", "2026-04-15",
+    "2026-05-13", "2026-06-10", "2026-07-15", "2026-08-12",
+    "2026-09-09", "2026-10-14", "2026-11-12", "2026-12-09",
+}
+# Non-Farm Payrolls 2025-2026 (BLS, first Friday of each month 8:30AM ET)
+_NFP_DATES = {
+    "2025-01-10", "2025-02-07", "2025-03-07", "2025-04-04",
+    "2025-05-02", "2025-06-06", "2025-07-03", "2025-08-01",
+    "2025-09-05", "2025-10-03", "2025-11-07", "2025-12-05",
+    "2026-01-09", "2026-02-06", "2026-03-06", "2026-04-03",
+    "2026-05-01", "2026-06-05", "2026-07-02", "2026-08-07",
+    "2026-09-04", "2026-10-02", "2026-11-06", "2026-12-04",
+}
+_MACRO_EVENTS = _FOMC_DATES | _CPI_DATES | _NFP_DATES
 
 def near_macro_event(days_before: int = 1) -> bool:
-    """True if today or tomorrow is a major macro event (FOMC, etc.)."""
+    """True if today or tomorrow is a major macro event (FOMC, CPI, NFP)."""
     today = datetime.now(timezone.utc).date()
     for d in range(days_before + 1):
         check = (today + timedelta(days=d)).isoformat()
         if check in _MACRO_EVENTS:
-            logger.info(f"Macro event in {d}d ({check}) — cautious mode")
+            event_type = "FOMC" if check in _FOMC_DATES else "CPI" if check in _CPI_DATES else "NFP"
+            logger.info(f"{event_type} macro event in {d}d ({check}) — cautious mode")
             return True
     return False
 
@@ -1079,6 +1199,23 @@ def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
             bullish = (put_call < 0.5 and call_vol > put_vol * 2) or oi_bull_skew
             bearish = (put_call > 2.0 and put_vol > call_vol * 2)
 
+            # Sweep detection: look for calls trading at/near ask with large premium
+            sweep_bullish = False
+            try:
+                cur_price = yf.Ticker(sym).fast_info.get("lastPrice", 0) or 0
+                if cur_price > 0 and not calls.empty:
+                    # Near-the-money calls (within 5% of current price) with volume > OI (fresh)
+                    ntm = calls[(calls["strike"] >= cur_price * 0.95) & (calls["strike"] <= cur_price * 1.10)]
+                    if not ntm.empty:
+                        ntm_vol = int(ntm["volume"].fillna(0).sum())
+                        ntm_oi  = int(ntm["openInterest"].fillna(0).sum())
+                        ntm_premium = float((ntm["lastPrice"].fillna(0) * ntm["volume"].fillna(0)).sum()) * 100
+                        if ntm_vol > ntm_oi * 0.5 and ntm_premium > 50_000:  # fresh buying, $50k+ premium
+                            sweep_bullish = True
+            except Exception:
+                pass
+            bullish = bullish or sweep_bullish
+
             if bullish or bearish:
                 result[sym] = {
                     "call_vol":       call_vol,
@@ -1088,6 +1225,7 @@ def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
                     "put_call":       round(put_call, 2),
                     "bullish":        bullish,
                     "bearish":        bearish,
+                    "sweep":          sweep_bullish,
                 }
             checked += 1
         except Exception:
@@ -2621,12 +2759,20 @@ def run():
 
             # ── Full exit conditions ──
             reason = None
+            # ATR-adaptive stop loss: 2.5× ATR from entry, capped at STOP_LOSS_PCT
+            _atr_sig = live.get(sym, {})
+            _atr_val = _atr_sig.get("atr") if _atr_sig else None
+            if _atr_val and cost > 0:
+                _atr_pct = _atr_val / cost * 100
+                _atr_stop_pct = min(STOP_LOSS_PCT * 100, max(3.0, _atr_pct * 2.5))
+            else:
+                _atr_stop_pct = STOP_LOSS_PCT * 100
             # Pre-earnings sell: exit ANY position within 2 days of earnings to avoid binary risk
             # We rode the pre-earnings drift — now protect profits before the volatile event
             if has_earnings_soon(sym, days=2):
                 reason = f"pre-earnings exit (earnings in <2d, {pnl_pct:+.1f}%)"
-            elif pnl_pct <= -(STOP_LOSS_PCT * 100):
-                reason = f"stop loss ({pnl_pct:+.1f}%)"
+            elif pnl_pct <= -_atr_stop_pct:
+                reason = f"stop loss ({pnl_pct:+.1f}% ≤ -{_atr_stop_pct:.1f}%)"
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
                 # Let strong momentum runners extend to 30% before selling
                 live_sig_ext = live.get(sym, {})
@@ -2792,6 +2938,17 @@ def run():
     if _consecutive_losses:
         logger.info(f"Consecutive loss guard: last 3 trades lost ({[round(p,1) for p in _last3_pnl]}) — skipping new buys this cycle")
 
+    # Dynamic score threshold: raise bar when market is fearful or below 200MA
+    _vix_now_buy = vix or 20.0
+    _above_200   = regime.get("above_200", True)
+    if _vix_now_buy >= 30 or not _above_200:
+        _eff_min_score = MIN_BUY_SCORE + 15   # need much stronger signal in bear market
+        logger.info(f"Regime guard: raising MIN_BUY_SCORE to {_eff_min_score} (VIX={_vix_now_buy:.0f}, above200={_above_200})")
+    elif _vix_now_buy >= 22:
+        _eff_min_score = MIN_BUY_SCORE + 8    # elevated uncertainty
+    else:
+        _eff_min_score = MIN_BUY_SCORE
+
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
         # Sector counts for diversification
         sector_counts = {}
@@ -2811,14 +2968,25 @@ def run():
                 except Exception:
                     pass
 
-        # Signal persistence: stocks that were in the top scan last run get a bonus
-        # They've been consistently strong — higher conviction than a one-run flash
+        # Signal persistence: track consecutive scans where a stock appears in top candidates
+        # 1 run = +9 bonus, 2 runs = +13 bonus, 3+ runs = +17 bonus (sustained accumulation)
         prev_top = {entry.get("ticker"): entry.get("score", 0)
                     for entry in tlog.get("last_scan_top", [])
                     if entry.get("ticker")}
-        _persistent_cands = {tk for tk, sc in prev_top.items() if sc >= MIN_BUY_SCORE}
+        _prev_persist = tlog.get("last_scan_persistence", {})   # {ticker: consecutive_count}
+        _curr_persist = {}
+        for tk in prev_top:
+            _curr_persist[tk] = _prev_persist.get(tk, 0) + 1
+        tlog["last_scan_persistence"] = _curr_persist
+        def _persist_bonus(tk):
+            cnt = _curr_persist.get(tk, 0)
+            if   cnt >= 3: return 17
+            elif cnt >= 2: return 13
+            elif cnt >= 1: return 9
+            return 0
+        _persistent_cands = {tk for tk in prev_top if prev_top[tk] >= MIN_BUY_SCORE}
         if _persistent_cands:
-            logger.info(f"Persistent signal candidates (seen last run): {', '.join(sorted(_persistent_cands))}")
+            logger.info(f"Persistent signal candidates: {' | '.join(f'{tk}({_curr_persist.get(tk,0)}runs)' for tk in sorted(_persistent_cands))}")
 
         # Technical pass — include sector rotation + gap + squeeze + earnings + mean-rev bonuses
         tech_scores = {
@@ -2828,7 +2996,7 @@ def run():
                                 + (12 if tk in squeeze_cands else 0)
                                 + (11 if tk in vol_surge_cands else 0)
                                 + (8  if tk in recent_sells else 0)
-                                + (9  if tk in _persistent_cands else 0)   # seen last run too
+                                + _persist_bonus(tk)                       # 0/9/13/17 by run count
                                 + (14 if tk in bullish_options else 0)
                                 + (18 if tk in earnings_beats else 0)
                                 + (12 if tk in pre_earn_cands else 0)      # pre-earnings drift
@@ -2836,7 +3004,7 @@ def run():
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
-            [(tk, sc) for tk, sc in tech_scores.items() if sc >= MIN_BUY_SCORE - 5],
+            [(tk, sc) for tk, sc in tech_scores.items() if sc >= _eff_min_score - 5],
             key=lambda x: -x[1],
         )[:15]
 
@@ -2876,6 +3044,11 @@ def run():
                 logger.debug(f"SKIP {tk} — avg volume {_avg_vol_pre:,} < 100k minimum")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"low liquidity ({_avg_vol_pre//1000}k avg vol)"})
                 continue
+            # Correlation guard: skip if >0.85 correlated with a held position
+            _held_syms = [s for s in longs if s != tk]
+            if is_correlated_with_held(tk, _held_syms, threshold=0.85):
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": "corr≥0.85 w/ held position"})
+                continue
             # Use Sonnet for top 3 candidates (better reasoning), Haiku for rest
             rank = len(final_scores)
             use_sonnet = (rank < 3) and _time_ok(200)
@@ -2889,7 +3062,7 @@ def run():
             vol_surge_adj  = 11 if tk in vol_surge_cands else 0
             options_adj    = 14 if tk in bullish_options else 0
             reentry_adj    = 8  if tk in recent_sells else 0
-            persist_adj    = 9  if tk in _persistent_cands else 0
+            persist_adj    = _persist_bonus(tk)
             earnings_adj   = 18 if tk in earnings_beats else 0
             pre_earn_adj   = 12 if tk in pre_earn_cands else 0
             mean_rev_adj   = 10 if tk in mean_rev_cands else 0
@@ -2897,7 +3070,7 @@ def run():
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj)
-            if final_sc >= MIN_BUY_SCORE:
+            if final_sc >= _eff_min_score:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
                 if gap_adj:        extras.append("gap")
@@ -2905,14 +3078,14 @@ def run():
                 if vol_surge_adj:  extras.append("vol-surge")
                 if options_adj:    extras.append("call-flow")
                 if reentry_adj:    extras.append("re-entry")
-                if persist_adj:    extras.append("persistent")
+                if persist_adj:    extras.append(f"persistent×{_curr_persist.get(tk,0)}")
                 if earnings_adj:   extras.append("earnings-beat")
                 if pre_earn_adj:   extras.append("pre-earnings")
                 if mean_rev_adj:   extras.append("mean-rev")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
                 _rejected_log.append({"ticker": tk, "score": final_sc,
-                                       "reason": f"AI sent={sent:+.0f} → final {final_sc} < {MIN_BUY_SCORE}"})
+                                       "reason": f"AI sent={sent:+.0f} → final {final_sc} < {_eff_min_score}"})
 
         final_scores.sort(key=lambda x: -x[1])
 
@@ -2939,13 +3112,18 @@ def run():
                 "vwap_reclaim":   live.get(tk, {}).get("vwap_reclaim", False),
                 "orb_breakout":   live.get(tk, {}).get("orb_breakout", False),
                 "gap_and_hold":   live.get(tk, {}).get("gap_and_hold", False),
+                "persist_count":  _curr_persist.get(tk, 0),
+                "vol_surge":      tk in vol_surge_cands,
+                "pre_earnings":   tk in pre_earn_cands,
+                "options_flow":   tk in bullish_options,
+                "rsi_bull_div":   live.get(tk, {}).get("rsi_bull_divergence", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
         tlog["last_scan_rejected"] = _rejected_log[:8]
 
         if not final_scores:
-            logger.info(f"No longs passed threshold {MIN_BUY_SCORE}.")
+            logger.info(f"No longs passed threshold {_eff_min_score} (base={MIN_BUY_SCORE}).")
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
@@ -2971,7 +3149,12 @@ def run():
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
-                    stop_price = round(price * (1 - STOP_LOSS_PCT), 2)
+                    # ATR-based stop: 2.5x ATR below entry, capped at STOP_LOSS_PCT
+                    if atr and price > 0:
+                        _atr_stop_buy = min(STOP_LOSS_PCT, max(0.03, (atr / price) * 2.5))
+                    else:
+                        _atr_stop_buy = STOP_LOSS_PCT
+                    stop_price = round(price * (1 - _atr_stop_buy), 2)
                     # Smart order type: limit orders for value/mean-rev setups,
                     # market orders for strong momentum (we want in now, not at a limit)
                     is_strong_momo = sc >= 70 or tk in gap_ups or tk in vol_surge_cands
@@ -3163,9 +3346,33 @@ def run():
     tlog["avg_win_pct"]     = _avg_win
     tlog["avg_loss_pct"]    = _avg_loss
     tlog["portfolio_heat"]  = round(_portfolio_heat, 2)
-    tlog["sector_rotation"] = sector_adjs   # {sector: adj_score} for dashboard heatmap
-    tlog["sharpe_ratio"]    = _sharpe_ratio
-    tlog["max_drawdown"]    = round(_max_dd, 2)
+    tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
+    tlog["sharpe_ratio"]       = _sharpe_ratio
+    tlog["max_drawdown"]       = round(_max_dd, 2)
+    try:
+        tlog["effective_min_score"] = _eff_min_score
+    except NameError:
+        tlog["effective_min_score"] = MIN_BUY_SCORE
+
+    # Market quality score: 0-100, composite of VIX, breadth, regime, sector momentum
+    try:
+        _mq = 50  # neutral baseline
+        _vix_mq = regime.get("vix", 20.0) or 20.0
+        if   _vix_mq < 15:  _mq += 20
+        elif _vix_mq < 18:  _mq += 12
+        elif _vix_mq < 22:  _mq +=  5
+        elif _vix_mq < 28:  _mq -=  5
+        elif _vix_mq < 35:  _mq -= 15
+        else:                _mq -= 25
+        _mq += 10 if regime.get("above_200", True) else -10
+        _mq += 8  if regime.get("spy_trend", 0) > 1 else (-6 if regime.get("spy_trend", 0) < -1 else 0)
+        _mq += 8  if breadth.get("adv_pct", 50) > 65 else (-8 if breadth.get("adv_pct", 50) < 35 else 0)
+        _hot_sectors = sum(1 for v in sector_adjs.values() if v >= 4)
+        _cold_sectors = sum(1 for v in sector_adjs.values() if v <= -4)
+        _mq += (_hot_sectors - _cold_sectors) * 2
+        tlog["market_quality"] = max(0, min(100, round(_mq)))
+    except Exception:
+        tlog["market_quality"] = 50
 
     # Plain-English summary of this cycle's decision for the dashboard
     try:
