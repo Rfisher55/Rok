@@ -54476,6 +54476,21 @@ window.renderSectorRotation = renderSectorRotation;
         html += `</div>`;
       }
       if (trades.length) {
+        // Mini win/loss streak visualization
+        const closedTrades = trades.filter(t => t.pnl_pct != null && (t.action==='SELL'||t.action==='COVER')).slice(0,20);
+        if (closedTrades.length > 0) {
+          html += `<div style="margin-bottom:.6rem">
+            <div style="font-size:8px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Recent Trade Results (newest→oldest)</div>
+            <div style="display:flex;gap:2px;align-items:flex-end;height:28px">`;
+          closedTrades.forEach(t => {
+            const pv = t.pnl_pct;
+            const col = pv >= 0 ? '#00ff88' : '#ef5350';
+            const h = Math.max(4, Math.min(28, Math.abs(pv) * 2.5));
+            html += `<div title="${t.ticker}: ${pv>=0?'+':''}${pv.toFixed(1)}%" style="flex:1;background:${col};border-radius:2px 2px 0 0;height:${h}px;opacity:.85;min-width:4px;cursor:default"></div>`;
+          });
+          html += `</div></div>`;
+        }
+
         html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Recent Trades</div>`;
         html += `<div style="display:flex;flex-direction:column;gap:.25rem">`;
         trades.forEach(t => {
@@ -54564,6 +54579,9 @@ window.renderSectorRotation = renderSectorRotation;
       const regime = data.regime || {};
       const regCol = regime.regime==='bull'?'#00ff88':regime.regime==='bear'?'#ef5350':'#ffd54f';
 
+      const heat = data.portfolio_heat || 0;
+      const heatCol = heat > 3 ? '#00ff88' : heat < -3 ? '#ef5350' : '#aaa';
+
       let html = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:12px;padding:.85rem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;flex-wrap:wrap;gap:.4rem">
           <div>
@@ -54573,6 +54591,7 @@ window.renderSectorRotation = renderSectorRotation;
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
             ${minsAgo !== null ? `<span style="font-size:8px;font-weight:700;color:${minsAgo<10?'#00ff88':minsAgo<30?'#ffd54f':'#555'};border:1px solid;border-color:${minsAgo<10?'rgba(0,255,136,.3)':minsAgo<30?'rgba(255,215,0,.25)':'rgba(255,255,255,.1)'};border-radius:20px;padding:2px 8px">BOT ${minsAgo<60?minsAgo+'m':Math.floor(minsAgo/60)+'h'} ago</span>` : ''}
             ${regime.regime ? `<span style="font-size:8px;font-weight:800;color:${regCol};border:1px solid;border-radius:20px;padding:2px 8px;border-color:${regCol}40">${regime.regime.toUpperCase()} · VIX ${(regime.vix||0).toFixed(1)}</span>` : ''}
+            ${Math.abs(heat) > 0.5 ? `<span style="font-size:8px;font-weight:700;color:${heatCol};border:1px solid ${heatCol}44;border-radius:20px;padding:2px 8px">Heat ${heat>=0?'+':''}${heat.toFixed(1)}%</span>` : ''}
             <span style="font-size:8px;color:#64b5f6">Cash \$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
           </div>
         </div>`;

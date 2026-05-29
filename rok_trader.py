@@ -2290,6 +2290,22 @@ def run():
     # ── BUY: long positions ───────────────────────────────────────────────
     open_long_slots = MAX_POSITIONS - len(longs)
 
+    # Portfolio heat: compute total unrealized P&L across all open positions
+    # Use this to subtly adjust position sizing (house money = can be slightly bolder)
+    _total_unrealized_pnl = 0.0
+    try:
+        for pos in positions:
+            cost_p  = float(pos.get("avg_entry_price", 0))
+            qty_p   = abs(float(pos.get("qty", 0)))
+            cur_p   = float(pos.get("current_price") or cost_p)
+            if cost_p > 0 and qty_p > 0:
+                _total_unrealized_pnl += (cur_p - cost_p) * qty_p
+    except Exception:
+        pass
+    _portfolio_heat = _total_unrealized_pnl / portfolio_val * 100 if portfolio_val > 0 else 0
+    if abs(_portfolio_heat) > 1:
+        logger.info(f"Portfolio heat: {_portfolio_heat:+.1f}% (${_total_unrealized_pnl:+,.0f} unrealized)")
+
     # Consecutive loss guard: if last 3 closed trades are all losses, skip new buys this cycle
     _recent_trades = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
     _recent_trades.sort(key=lambda t: t.get("time", ""), reverse=True)
@@ -2428,6 +2444,12 @@ def run():
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct)
+                    # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
+                    # allow slightly larger positions; if deeply underwater, shrink further
+                    if _portfolio_heat > 5:
+                        notional = min(notional * 1.1, portfolio_val * MAX_POSITION_PCT * 1.2)
+                    elif _portfolio_heat < -5:
+                        notional = notional * 0.8
                     # Size up further for strong catalysts or squeeze setups (on top of Kelly)
                     if catalyst and sent >= 5:
                         notional = min(notional * 1.4, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
@@ -2564,6 +2586,7 @@ def run():
     tlog["profit_factor"]   = _profit_factor
     tlog["avg_win_pct"]     = _avg_win
     tlog["avg_loss_pct"]    = _avg_loss
+    tlog["portfolio_heat"]  = round(_portfolio_heat, 2)
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
