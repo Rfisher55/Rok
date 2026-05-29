@@ -2,7 +2,7 @@ name: ROK Intelligence Update
 
 on:
   schedule:
-    - cron: '0 * * * *'     # Every hour automatically
+    - cron: '*/15 * * * *'   # Every 15 minutes
   workflow_dispatch:          # Manual trigger from GitHub UI
 
 permissions:
@@ -38,5 +38,16 @@ jobs:
           git config user.name "ROK Intelligence Bot"
           git config user.email "rok-bot@users.noreply.github.com"
           git add docs/
-          git diff --staged --quiet || git commit -m "ROK update — $(date -u '+%B %d %Y %H:%M UTC')"
+          git diff --staged --quiet || git commit -m "$(python3 -c "
+          import json, pathlib
+          try:
+            h = json.loads(pathlib.Path('docs/history.json').read_text())
+            runs = h.get('runs', [])
+            last = runs[-1] if runs else {}
+            buys = len(last.get('buy_signals', []))
+            sells = len(last.get('sell_signals', []))
+            print(f'ROK update — $(date -u +\"%B %d %Y %H:%M UTC\") | {buys} buys | {sells} sells')
+          except:
+            print('ROK update — $(date -u +\"%B %d %Y %H:%M UTC\")')
+          ")"
           git push origin HEAD:main
