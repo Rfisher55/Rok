@@ -2417,6 +2417,26 @@ body.beginner-mode #beginner-banner { display:block }
       const priceEl = el.querySelector('.port-live-price');
       if (priceEl) priceEl.textContent = '$' + price.toFixed(2);
     });
+    // Update today's move bar on signal cards
+    if (changePct != null) {
+      document.querySelectorAll(`[data-sig-ticker="${ticker}"]`).forEach(card => {
+        let bar = card.querySelector('.sig-live-bar');
+        if (!bar) {
+          bar = document.createElement('div');
+          bar.className = 'sig-live-bar';
+          bar.style.cssText = 'height:2px;border-radius:1px;margin-top:4px;transition:width .5s ease;overflow:hidden;background:rgba(255,255,255,.06)';
+          bar.innerHTML = '<div class="sig-live-bar-fill" style="height:100%;border-radius:1px;transition:all .5s ease"></div>';
+          const btnRow = card.querySelector('.c-btns');
+          if (btnRow) btnRow.insertAdjacentElement('beforebegin', bar);
+          else card.appendChild(bar);
+        }
+        const fill = bar.querySelector('.sig-live-bar-fill');
+        const pct = Math.min(100, Math.abs(changePct) * 10); // scale: 10% move = 100% bar
+        const color = changePct >= 0 ? '#00ff88' : '#ff2255';
+        if (fill) { fill.style.width = pct + '%'; fill.style.background = color; fill.title = `Today: ${changePct>=0?'+':''}${changePct.toFixed(2)}%`; }
+      });
+    }
+
     // Update trade ruler pin position with live price
     const det = sigDetails[ticker];
     if (det && det.stop_loss && det.price_target) {
@@ -4198,6 +4218,30 @@ body.beginner-mode #beginner-banner { display:block }
     if (sellSigs.length > 0) {
       score -= sellSigs.length * 15;
       issues.push({ icon: '🚨', msg: `ROK says <strong style="color:var(--r)">SELL ${sellSigs.join(', ')}</strong> — you still own ${sellSigs.length === 1 ? 'it' : 'them'}. Consider acting.` });
+    }
+
+    // Check for over-sized positions using live prices (>30% = concentrated)
+    let totalVal = 0;
+    const posVals = {};
+    tickers.forEach(t => {
+      const lp = liveprices[t];
+      const entry = p[t];
+      if (!lp?.price) return;
+      const sh = entry?.shares || 1;
+      const val = lp.price * sh;
+      posVals[t] = val;
+      totalVal += val;
+    });
+    if (totalVal > 0) {
+      const overweight = Object.entries(posVals).filter(([, v]) => v / totalVal > 0.35);
+      overweight.forEach(([t, v]) => {
+        const pct = Math.round(v / totalVal * 100);
+        score -= 10;
+        issues.push({ icon: '⚖️', msg: `<strong>${t}</strong> is ${pct}% of your portfolio (over 35%). Consider trimming to reduce single-stock risk.` });
+      });
+      if (!overweight.length && tickers.length >= 3) {
+        wins.push({ icon: '✅', msg: 'No single position dominates your portfolio — well balanced.' });
+      }
     }
 
     // Check market regime
