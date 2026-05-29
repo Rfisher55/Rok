@@ -54849,6 +54849,37 @@ window.renderSectorRotation = renderSectorRotation;
             if (pct >= 8) return `<span style="font-size:6px;color:#f48fb1" title="Short interest ${pct}% of float${sr>=1?' — '+sr.toFixed(1)+' days to cover':''}">SI${pct}%${dtc}</span>`;
             return '';
           })();
+          // Score degradation tracker — detects systematic weakening before price drops
+          const lsScoreDeg = (() => {
+            const hist = (p.score_history || []).filter(h => typeof h.s === 'number');
+            if (hist.length < 3) return '';
+            const scores = hist.map(h => h.s);
+            const latest = scores[scores.length - 1];
+            const oldest = scores[0];
+            const drop = oldest - latest;  // positive = degrading
+            const recent3 = scores.slice(-3);
+            const consecutiveDrop = recent3.length >= 3 && recent3[0] > recent3[1] && recent3[1] > recent3[2];
+            // Spark-bar of last 6 scores for trend visualization
+            const sparkScores = scores.slice(-6);
+            const sparkMax = Math.max(...sparkScores, 1);
+            const sparkMin = Math.min(...sparkScores, 0);
+            const sparkRange = sparkMax - sparkMin || 1;
+            const sparkBars = sparkScores.map(s => {
+              const h = Math.max(2, Math.round(((s - sparkMin) / sparkRange) * 8));
+              const c = s === sparkMax ? '#00e676' : s === sparkMin ? '#ef5350' : '#555';
+              return `<span style="display:inline-block;width:3px;height:${h}px;background:${c};vertical-align:bottom;margin-right:1px"></span>`;
+            }).join('');
+            if (drop >= 15 && consecutiveDrop) {
+              return `<span style="font-size:6px;font-weight:900;color:#ef5350;background:rgba(255,34,85,.12);border-radius:3px;padding:0 3px" title="Score degrading: ${oldest}→${latest} (−${drop}pts in ${hist.length} scans) — consider exit">⚠DEG${drop}pts ${sparkBars}</span>`;
+            }
+            if (drop >= 10) {
+              return `<span style="font-size:6px;color:#ffa726;background:rgba(255,167,38,.08);border-radius:3px;padding:0 3px" title="Score weakening: ${oldest}→${latest} (−${drop}pts)">↓−${drop}pts ${sparkBars}</span>`;
+            }
+            if (latest > oldest + 8) {
+              return `<span style="font-size:6px;color:#69f0ae" title="Score improving: ${oldest}→${latest} (+${latest-oldest}pts)">↑+${latest-oldest}pts ${sparkBars}</span>`;
+            }
+            return sparkScores.length >= 4 ? `<span title="Score history: ${scores.slice(-6).join('→')}">${sparkBars}</span>` : '';
+          })();
           const lsVwapBand = (() => {
             if (!ls.vwap_b1u || !p.price) return '';
             const pr = p.price;
@@ -54894,14 +54925,22 @@ window.renderSectorRotation = renderSectorRotation;
             const dd = (p.price - p.peak_price) / p.peak_price * 100;
             return dd < -1 ? `<span style="font-size:6.5px;color:#ef5350" title="Drawdown from peak">▼${Math.abs(dd).toFixed(1)}%peak</span>` : '';
           })() : '';
-          html += `<div style="background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,255,255,.06)${distToStop != null && distToStop < 2 ? ';border-color:rgba(255,34,85,.4)' : ''};position:relative;overflow:hidden">
+          const _scoreDegAlert = (() => {
+            const hist = (p.score_history || []).filter(h => typeof h.s === 'number');
+            if (hist.length < 3) return false;
+            const scores = hist.map(h => h.s);
+            const drop = scores[0] - scores[scores.length - 1];
+            const recent3 = scores.slice(-3);
+            return drop >= 15 && recent3.length >= 3 && recent3[0] > recent3[1] && recent3[1] > recent3[2];
+          })();
+          html += `<div style="background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid ${_scoreDegAlert ? 'rgba(255,167,38,.5)' : distToStop != null && distToStop < 2 ? 'rgba(255,34,85,.4)' : 'rgba(255,255,255,.06)'};position:relative;overflow:hidden">
             <div style="position:absolute;top:0;left:0;height:100%;width:${barW}%;background:${barCol};pointer-events:none"></div>
             <div style="position:relative;display:flex;align-items:center;gap:.6rem">
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
-                ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
+                ${(distStopHtml||peakPctStr||lsScoreDeg||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';

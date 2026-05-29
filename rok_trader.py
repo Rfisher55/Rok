@@ -6564,6 +6564,19 @@ def run():
             made_trades = True
 
     # ── Save state + dashboard snapshot ──────────────────────────────────
+    # Update score history for all held positions BEFORE saving peaks
+    # Keeps a rolling 12-scan window (~60 min) to detect score degradation
+    if live and held:
+        for _h_sym in list(held.keys()):
+            _h_sig = live.get(_h_sym, {})
+            if not _h_sig:
+                continue
+            _h_sc = score(_h_sym, _h_sig, regime_adj=regime_adj)
+            if _h_sym not in peaks or not isinstance(peaks.get(_h_sym), dict):
+                peaks[_h_sym] = {"peak": _h_sig.get("price", 0), "time": now_utc.isoformat(), "half_out": False}
+            _sh = peaks[_h_sym].setdefault("score_history", [])
+            _sh.append({"s": _h_sc, "t": now_utc.isoformat()})
+            peaks[_h_sym]["score_history"] = _sh[-12:]  # keep last 12 (1hr at 5min intervals)
     _save(PEAK_FILE, peaks)
 
     try:
@@ -6664,6 +6677,7 @@ def run():
                 "peak_price": peaks.get(p.get("symbol", ""), {}).get("peak", 0) if isinstance(peaks.get(p.get("symbol", "")), dict) else 0,
                 "earnings_days": get_earnings_days(p.get("symbol", "")),
                 "live_signals": _pos_signals(p.get("symbol", "")),
+                "score_history": peaks.get(p.get("symbol", ""), {}).get("score_history", []) if isinstance(peaks.get(p.get("symbol", "")), dict) else [],
             }
             for p in curr
         ]
