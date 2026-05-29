@@ -2068,6 +2068,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-goal-tracker" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
     <div id="port-active-alerts" style="display:none;margin-bottom:.65rem"></div>
+    <div id="port-attribution" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-rebalance" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -2467,6 +2468,32 @@ body.beginner-mode #beginner-banner { display:block }
     return p && c && p !== c;
   }
 
+  // Notify user if any starred stock just got a new BUY signal
+  (function() {
+    const WLALERT_KEY = 'rok_wl_alert_v1';
+    const sent = JSON.parse(sessionStorage.getItem(WLALERT_KEY) || '{}');
+    const upgrades = [];
+    starred.forEach(ticker => {
+      if (sent[ticker]) return;
+      const prev = prevSigs[ticker];
+      const curr = currSigs[ticker];
+      if (curr === 'buy' && prev && prev !== 'buy') {
+        upgrades.push(ticker);
+        sent[ticker] = 1;
+      }
+    });
+    if (upgrades.length) {
+      sessionStorage.setItem(WLALERT_KEY, JSON.stringify(sent));
+      setTimeout(() => {
+        upgrades.forEach(t => {
+          const st = (ROK.stock_universe || []).find(s => s.ticker === t);
+          const name = st?.company_name ? ` (${st.company_name.substring(0,20)})` : '';
+          showAppAlert(`⭐ ${t}${name} on your watchlist just got a ROK BUY signal! Tap to review →`, 'good', 9000);
+        });
+      }, 2000);
+    }
+  })();
+
   // ── STARS (persistent via localStorage) ───────────────────
   const STAR_KEY = 'rok_starred_v1';
   const starred = new Set(JSON.parse(localStorage.getItem(STAR_KEY) || '[]'));
@@ -2799,7 +2826,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); }
     if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -3763,7 +3790,7 @@ body.beginner-mode #beginner-banner { display:block }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); }
   }
   window.showTab = showTab;
@@ -5105,6 +5132,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioSummary();
     renderPortfolioDailyDrawdown();
     renderPortfolioWinLoss();
+    renderPortfolioAttribution();
     renderPortfolioRebalance();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
@@ -9325,6 +9353,67 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderPortfolioRebalance = renderPortfolioRebalance;
+
+  // ── PORTFOLIO PERFORMANCE ATTRIBUTION ───────────────────
+  function renderPortfolioAttribution() {
+    const el = document.getElementById('port-attribution');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (tickers.length < 2) { el.style.display = 'none'; return; }
+
+    const positions = [];
+    tickers.forEach(ticker => {
+      const entry = port[ticker];
+      const lp = liveprices[ticker];
+      const st = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const price = lp?.price || st?.price || entry.price;
+      if (!price || !entry.price) return;
+      const sh = entry.shares || (1000 / entry.price);
+      const value = sh * price;
+      const gainPct = (price - entry.price) / entry.price * 100;
+      const gainDollar = sh * (price - entry.price);
+      const todayChg = lp?.change_pct ?? null;
+      const todayDollar = todayChg != null ? sh * price * todayChg / 100 : null;
+      positions.push({ ticker, value, gainPct, gainDollar, todayChg, todayDollar });
+    });
+
+    if (!positions.length) { el.style.display = 'none'; return; }
+
+    // Sort by gainDollar (best to worst)
+    const sorted = [...positions].sort((a, b) => b.gainDollar - a.gainDollar);
+    const top = sorted.slice(0, 2); // top contributors
+    const bottom = sorted.slice(-2).reverse(); // bottom contributors
+    const hasTodayData = positions.some(p => p.todayDollar != null);
+
+    const renderRow = (p, type) => {
+      const isPositive = p.gainDollar >= 0;
+      const color = isPositive ? 'var(--g)' : 'var(--r)';
+      const icon = isPositive ? '↑' : '↓';
+      const todayStr = p.todayDollar != null ? ` · today ${p.todayDollar>=0?'+':'-'}$${Math.abs(p.todayDollar).toFixed(0)}` : '';
+      return `<div onclick="openModal('${p.ticker}')" style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;border-radius:6px;background:${isPositive?'rgba(0,255,136,.03)':'rgba(255,34,85,.025)'};cursor:pointer">
+        <span style="font-size:.85rem;flex-shrink:0">${icon}</span>
+        <span style="font-family:var(--disp);font-size:.85rem;font-weight:900;color:var(--wh);flex-shrink:0">${p.ticker}</span>
+        <span style="font-size:9px;color:${color};font-weight:700;flex:1">${p.gainPct>=0?'+':''}${p.gainPct.toFixed(1)}% · ${p.gainDollar>=0?'+':'-'}$${Math.abs(p.gainDollar).toFixed(0)}${todayStr}</span>
+      </div>`;
+    };
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.65rem .9rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase;margin-bottom:.4rem">📊 PERFORMANCE ATTRIBUTION</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
+        <div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--g);text-transform:uppercase;margin-bottom:.2rem">🏆 Top Contributors</div>
+          ${top.map(p => renderRow(p, 'top')).join('')}
+        </div>
+        <div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--r);text-transform:uppercase;margin-bottom:.2rem">⚠ Biggest Drags</div>
+          ${bottom.map(p => renderRow(p, 'bottom')).join('')}
+        </div>
+      </div>
+    </div>`;
+  }
+  window.renderPortfolioAttribution = renderPortfolioAttribution;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
