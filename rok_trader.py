@@ -1810,16 +1810,49 @@ def market_regime():
         except Exception:
             pass
 
+        # VIX term structure: compare VIX9D (short-term) vs VIX (30-day) vs VIX3M
+        # Backwardation (VIX9D > VIX) = acute fear = amplified risk; contango = normal
+        vix9d = vix
+        vix3m = vix
+        vts_regime = "contango"   # normal; or "backwardation" / "inverted"
+        try:
+            vts_raw = yf.download("^VIX9D ^VIX3M", period="5d", interval="1d",
+                                   progress=False, auto_adjust=True)
+            def _vts_c(sym):
+                try:
+                    return list(vts_raw["Close"][sym].dropna())
+                except Exception:
+                    return []
+            v9  = _vts_c("^VIX9D")
+            v3m = _vts_c("^VIX3M")
+            if v9:  vix9d = float(v9[-1])
+            if v3m: vix3m = float(v3m[-1])
+            if vix9d > vix * 1.05 and vix > vix3m:
+                # Full backwardation: short-term fear > 30d fear > 3m fear
+                vts_regime = "backwardation"
+                score -= 2   # acute stress = reduce conviction
+            elif vix9d > vix * 1.05:
+                vts_regime = "inverted"
+                score -= 1   # partial inversion = caution
+            elif vix3m > vix * 1.05:
+                vts_regime = "contango"   # healthy long-term vol > short-term = normal
+                score += 1   # ideal buying conditions
+        except Exception:
+            pass
+
         if score >= 2:    regime = "bull"
         elif score <= -2: regime = "bear"
         else:             regime = "neutral"
 
         logger.info(
             f"Market regime: {regime} | SPY trend: {spy_trend:+.1f}% | "
-            f"VIX: {vix:.1f} | Above 200d: {above_200} | score: {score}"
+            f"VIX: {vix:.1f} (9d:{vix9d:.1f} 3m:{vix3m:.1f} {vts_regime}) | "
+            f"Above 200d: {above_200} | score: {score}"
         )
         return {"regime": regime, "vix": vix, "spy_trend": spy_trend,
-                "score": score, "above_200": above_200}
+                "score": score, "above_200": above_200,
+                "vix9d": round(vix9d, 1), "vix3m": round(vix3m, 1),
+                "vts_regime": vts_regime}
 
     except Exception as e:
         logger.warning(f"Regime check failed: {e}")
@@ -2547,8 +2580,47 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append("20-EMA trend reversal with volume + RSI recovery")
             if signals.get("bull_flag"):
                 extras.append("bull flag pattern (tight consolidation after flagpole)")
-            if signals.get("mtf_aligned"):
+            if signals.get("mtf_triple"):
+                extras.append("TRIPLE timeframe aligned (weekly+daily+hourly all bullish — rare, highest conviction)")
+            elif signals.get("mtf_aligned"):
                 extras.append("multi-timeframe confirmed (daily + hourly aligned)")
+            # New signals
+            if signals.get("three_white_soldiers"):
+                extras.append("Three White Soldiers candlestick pattern — 3 consecutive strong bull bars (institutional continuation)")
+            elif signals.get("morning_star"):
+                extras.append("Morning Star reversal — dark candle → doji → bull candle (institutional capitulation reversal)")
+            elif signals.get("bullish_engulfing"):
+                extras.append("Bullish Engulfing — larger green bar fully engulfs prior red bar (buyer takeover)")
+            elif signals.get("hammer"):
+                extras.append("Hammer reversal — long lower wick showing buyers absorbed all selling pressure")
+            if signals.get("psar_bull"):
+                psar_lvl = signals.get("psar", 0)
+                extras.append(f"Parabolic SAR bullish (trailing stop ${psar_lvl:.2f}) — accelerating trend confirmation")
+            if signals.get("price_accel_pos"):
+                pa = signals.get("price_accel", 0)
+                extras.append(f"Price acceleration +{pa:.1f}% — ROC speeding up; institutional accumulation before RSI shows it")
+            if signals.get("unusual_calls"):
+                extras.append(f"Unusual call volume (PCR={signals.get('options_pcr',1):.2f}) — big money buying calls; institutional directional bet")
+            elif signals.get("options_bull"):
+                extras.append(f"Bullish options flow (PCR={signals.get('options_pcr',1):.2f}) — more calls than puts; market makers hedging bullish")
+            piv_s1 = signals.get("pivot_s1", 0)
+            piv_s2 = signals.get("pivot_s2", 0)
+            price_v = signals.get("price", 0)
+            if piv_s1 > 0 and price_v > 0 and abs(price_v - piv_s1) / price_v < 0.015:
+                extras.append(f"At Pivot S1 support ${piv_s1:.2f} — institutional intraday buy zone")
+            elif piv_s2 > 0 and price_v > 0 and abs(price_v - piv_s2) / price_v < 0.015:
+                extras.append(f"At Pivot S2 support ${piv_s2:.2f} — deep institutional support level")
+            if signals.get("news_accelerating"):
+                n24 = signals.get("news_count_24h", 0)
+                extras.append(f"News velocity accelerating ({n24} articles in 24h) — catalyst building, institutional awareness rising")
+            if signals.get("pm_big_gap_up"):
+                pm_pct = signals.get("pm_gap_pct", 0)
+                extras.append(f"Pre-market gap up {pm_pct:+.1f}% — institutional positioning before open")
+            if signals.get("squeeze_potential"):
+                extras.append("Gamma squeeze potential — large put wall below + negative dealer GEX; explosive upside fuel")
+            if signals.get("accum_score", 0) >= 8:
+                acc = signals.get("accum_score", 0)
+                extras.append(f"Smart accumulation score {acc}/10 — OBV+Force Index+MFI all confirm institutional buying")
             tech_context = (
                 f"\nTechnical: RSI={rsi:.0f}, DailyRSI={daily_rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
                 f"BB%={bb_pos:.0f}, W%R={w_r:.0f}, ADX={adx_v:.0f}, "
@@ -6344,6 +6416,17 @@ def run():
                         reason += f" [@S2${_piv_s2:.2f}]"
                     if _piv_r1 > 0 and price > _piv_r1 * 0.999:
                         reason += f" [abv-R1${_piv_r1:.2f}]"
+                    # New signals
+                    if _d_buy.get("mtf_triple"):           reason += " [3TF✓]"
+                    if _d_buy.get("news_accelerating"):
+                        reason += f" [NEWS↑{_d_buy.get('news_count_24h',0)}art]"
+                    if _d_buy.get("pm_big_gap_up"):
+                        reason += f" [PM+{_d_buy.get('pm_gap_pct',0):.1f}%]"
+                    if _d_buy.get("squeeze_potential"):    reason += " [γSQZ]"
+                    if (_d_buy.get("accum_score", 0) or 0) >= 8:
+                        reason += f" [ACC{_d_buy.get('accum_score',0)}]"
+                    if tk in vol_surge_cands and tk in squeeze_cands:
+                        reason += " [VOL+SQZ]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=live.get(tk, {}))
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
