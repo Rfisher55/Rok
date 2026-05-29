@@ -4238,11 +4238,12 @@ def bearish_score(tk, d):
 
 # ── Position sizing ───────────────────────────────────────────────────────────
 def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
-                  score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5):
+                  score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5,
+                  true_beta=1.0):
     """
-    ATR-based risk sizing with full Kelly criterion for high-conviction trades.
+    ATR-based risk sizing with full Kelly criterion and beta-adjusted position sizing.
     Full Kelly: f* = (W*B - L) / B  where W=win%, L=loss%, B=avg_win/avg_loss (payoff)
-    Shrinks position when portfolio is in drawdown or market is volatile.
+    Beta adjustment: high-beta stocks get smaller positions (equal-risk sizing).
     """
     vix_scale = 1.0
     if vix > VIX_EXTREME_THRESH:   vix_scale = 0.4
@@ -4258,12 +4259,19 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
     elif drawdown_pct > 5:   vix_scale *= 0.65  # -5%+ drawdown: defensive
     elif drawdown_pct > 2:   vix_scale *= 0.85  # -2%+ drawdown: slightly cautious
 
+    # Beta-adjusted position sizing: equal-risk allocation across different beta stocks
+    # A 2.0-beta stock moves 2× the market — size it at 1/2 of a 1.0-beta position
+    # for equal market-risk exposure. Cap beta effect between 0.5× and 1.25×.
+    beta_adj = 1.0
+    if true_beta and true_beta > 0:
+        beta_adj = max(0.5, min(1.25, 1.0 / true_beta))
+
     if atr and atr > 0 and price > 0:
         stop_dist   = 2 * atr
-        dollar_risk = portfolio_val * RISK_PER_TRADE_PCT * vix_scale
+        dollar_risk = portfolio_val * RISK_PER_TRADE_PCT * vix_scale * beta_adj
         notional    = (dollar_risk / stop_dist) * price
     else:
-        notional = portfolio_val * MAX_POSITION_PCT * vix_scale
+        notional = portfolio_val * MAX_POSITION_PCT * vix_scale * beta_adj
 
     # Full Kelly criterion for high-conviction signals
     # f* = (W*B - (1-W)) / B  where B = payoff ratio (avg_win / avg_loss)
@@ -5282,10 +5290,11 @@ def run():
                     d        = live[tk]
                     price    = d["price"]
                     atr      = d.get("atr")
+                    _tk_beta = d.get("true_beta", 1.0) or 1.0
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct,
-                                             payoff_ratio=_payoff_ratio)
+                                             payoff_ratio=_payoff_ratio, true_beta=_tk_beta)
                     # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
                     # allow slightly larger positions; if deeply underwater, shrink further
                     if _portfolio_heat > 5:
@@ -5416,10 +5425,11 @@ def run():
                         logger.debug(f"SKIP SHORT {tk} — ADX={_adx_short:.0f} too low (choppy market, false breakdowns)")
                         continue
                     atr      = d.get("atr")
+                    _tk_beta_s = d.get("true_beta", 1.0) or 1.0
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct,
-                                             payoff_ratio=_payoff_ratio)
+                                             payoff_ratio=_payoff_ratio, true_beta=_tk_beta_s)
                     notional = round(notional * 0.6, 2)   # size shorts smaller
                     if notional < 1:
                         continue
