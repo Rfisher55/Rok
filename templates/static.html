@@ -2294,19 +2294,19 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     });
   }
 
-  // ── LIVE TIMER → "Next: Xm" countdown ─────────────────────
+  // ── LIVE TIMER → "Next: Xm Ys" countdown ──────────────────
   const ts = ROK.generated_timestamp;
   const timerEl = document.getElementById('update-timer');
-  if (ts && timerEl) {
+  if (timerEl) {
     const tick = () => {
       const now = new Date();
-      // Show countdown to next 15-min boundary
-      const m = now.getMinutes();
-      const minsLeft = 15 - (m % 15);
-      timerEl.textContent = `Next: ${minsLeft}m`;
+      const totalSecs = 15 * 60 - (now.getMinutes() % 15) * 60 - now.getSeconds();
+      const m = Math.floor(totalSecs / 60);
+      const s = totalSecs % 60;
+      timerEl.textContent = totalSecs > 90 ? `Next: ${m}m` : `Next: ${m}m ${String(s).padStart(2,'0')}s`;
     };
     tick();
-    setInterval(tick, 30000);
+    setInterval(tick, 1000);
   }
 
   // ── MOBILE SEARCH ─────────────────────────────────────────
