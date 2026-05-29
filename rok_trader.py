@@ -2742,25 +2742,30 @@ def run():
         )
 
         # Earnings filter + sector filter + AI sentiment pass
-        final_scores = []
+        final_scores  = []
+        _rejected_log = []   # track rejections with reasons for dashboard
         for tk, tech_sc in candidates_buy:
             sec = SECTOR_MAP.get(tk, "other")
             if sector_counts.get(sec, 0) >= MAX_SECTOR_LONGS:
                 logger.info(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{MAX_SECTOR_LONGS})")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"sector {sec} full"})
                 continue
             if has_earnings_soon(tk):
                 logger.info(f"SKIP {tk} — earnings within 3 days")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": "earnings in <3d"})
                 continue
             # Minimum price filter: skip penny stocks (wide spreads, unreliable fills)
             _d_pre = live.get(tk, {})
             _price_pre = _d_pre.get("price", 0) or 0
             if _price_pre < 2.0:
                 logger.debug(f"SKIP {tk} — price ${_price_pre:.2f} < $2 minimum")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"price ${_price_pre:.2f} too low"})
                 continue
             # Minimum average volume filter: 100k shares/day to ensure liquidity
             _avg_vol_pre = _d_pre.get("avg_vol_14", 0) or 0
             if 0 < _avg_vol_pre < 100_000:
                 logger.debug(f"SKIP {tk} — avg volume {_avg_vol_pre:,} < 100k minimum")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"low liquidity ({_avg_vol_pre//1000}k avg vol)"})
                 continue
             # Use Sonnet for top 3 candidates (better reasoning), Haiku for rest
             rank = len(final_scores)
@@ -2772,23 +2777,29 @@ def run():
             sec_adj       = sector_adjs.get(sec, 0)
             gap_adj       = 10 if tk in gap_ups else 0
             squeeze_adj   = 12 if tk in squeeze_cands else 0
+            vol_surge_adj = 11 if tk in vol_surge_cands else 0
             options_adj   = 14 if tk in bullish_options else 0
             reentry_adj   = 8  if tk in recent_sells else 0
             earnings_adj  = 18 if tk in earnings_beats else 0
             mean_rev_adj  = 10 if tk in mean_rev_cands else 0
             final_sc      = score(tk, live[tk], sentiment=sent,
                                   regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
-                                            + options_adj + reentry_adj + earnings_adj + mean_rev_adj)
+                                            + vol_surge_adj + options_adj + reentry_adj
+                                            + earnings_adj + mean_rev_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
                 if gap_adj:       extras.append("gap")
                 if squeeze_adj:   extras.append("squeeze")
+                if vol_surge_adj: extras.append("vol-surge")
                 if options_adj:   extras.append("call-flow")
                 if reentry_adj:   extras.append("re-entry")
                 if earnings_adj:  extras.append("earnings-beat")
                 if mean_rev_adj:  extras.append("mean-rev")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
+            else:
+                _rejected_log.append({"ticker": tk, "score": final_sc,
+                                       "reason": f"AI sent={sent:+.0f} → final {final_sc} < {MIN_BUY_SCORE}"})
 
         final_scores.sort(key=lambda x: -x[1])
 
@@ -2818,11 +2829,7 @@ def run():
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
-        tlog["last_scan_rejected"] = [
-            {"ticker": tk, "score": sc}
-            for tk, sc in candidates_buy[:5]
-            if not any(tk == f[0] for f in final_scores)
-        ]
+        tlog["last_scan_rejected"] = _rejected_log[:8]
 
         if not final_scores:
             logger.info(f"No longs passed threshold {MIN_BUY_SCORE}.")
