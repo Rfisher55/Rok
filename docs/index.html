@@ -2344,6 +2344,12 @@ body.beginner-mode #beginner-banner { display:block }
   <div class="tab-pane" id="tab-intel">
     <div class="intel-grid">
 
+      <!-- ROK AI Market Intelligence (from intel_report.json, updated every 15 min) -->
+      <div class="intel-section" style="grid-column:1/-1" id="intel-market-intelligence-section">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--au)"> ROK AI MARKET INTELLIGENCE</h2><span class="s-sub">Claude AI analysis · news · Reddit · congressional trades · refreshes every 15 min</span></div>
+        <div id="intel-ai-report" style="font-size:11px;color:var(--wh4);padding:.5rem 0">Loading market intelligence…</div>
+      </div>
+
       <!-- Live intel sections — populated by JS from trades.json -->
       <div class="intel-section" style="grid-column:1/-1" id="intel-rok-trades-section">
         <div class="s-hdr"><h2 class="s-ttl" style="color:var(--g)"> ROK AUTO-TRADER — LIVE ACTIVITY</h2><span class="s-sub">Real buys/sells executed automatically · refreshes every 30s</span></div>
@@ -4792,7 +4798,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderRokLiveFeed();
      renderCryptoFeed();
      renderSectorRotation();
-    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
+    if (id === 'intel') { fetchIntelReport(); fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
   }
   window.showTab = showTab;
 
@@ -52611,6 +52617,156 @@ function renderRelativePower() {
   </div>`;
 }
 window.renderRelativePower = renderRelativePower;
+
+// ── ROK AI Market Intelligence (from intel_report.json) ──────────────────────
+let _intelCache = null;
+let _intelCacheTs = 0;
+
+async function fetchIntelReport() {
+  const el = document.getElementById('intel-ai-report');
+  if (!el) return;
+
+  // Use cache if < 5 minutes old
+  if (_intelCache && Date.now() - _intelCacheTs < 5 * 60 * 1000) {
+    _renderIntelReport(el, _intelCache);
+    return;
+  }
+
+  el.innerHTML = '<div style="color:var(--wh4);font-size:11px;padding:.5rem 0">Loading AI intelligence…</div>';
+  try {
+    const urls = ['./intel_report.json', '/docs/intel_report.json'];
+    let intel = null;
+    for (const url of urls) {
+      try {
+        const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+        if (r.ok) { intel = await r.json(); break; }
+      } catch {}
+    }
+    if (!intel) throw new Error('not found');
+    _intelCache = intel;
+    _intelCacheTs = Date.now();
+    _renderIntelReport(el, intel);
+  } catch {
+    el.innerHTML = '<div style="color:var(--wh4);font-size:11px;padding:.5rem 0">Intelligence report unavailable — will retry next cycle (every 15 min).</div>';
+  }
+}
+
+function _renderIntelReport(el, intel) {
+  const sent = (intel.market_sentiment || 'NEUTRAL').toUpperCase();
+  const sentColor = sent === 'BULLISH' ? 'var(--g)' : sent === 'BEARISH' ? 'var(--r)' : 'var(--au)';
+  const regime = intel.market_regime || 'UNCERTAIN';
+  const genAt = intel.generated_at ? new Date(intel.generated_at) : null;
+  const ago = genAt ? (() => {
+    const m = Math.round((Date.now() - genAt.getTime()) / 60000);
+    return m < 2 ? 'just now' : m < 60 ? `${m}m ago` : `${Math.round(m/60)}h ago`;
+  })() : '';
+
+  // Market mood / summary
+  const summaryHtml = intel.week_summary ? `
+    <div style="background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.3);border-radius:6px;padding:.65rem .85rem;margin-bottom:.75rem;font-size:11px;color:var(--wh2);line-height:1.6">
+      ${intel.week_summary}
+    </div>` : '';
+
+  // ROK message
+  const msgHtml = intel.rok_message ? `
+    <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:.75rem;margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--g);margin-bottom:.35rem">ROK SAYS</div>
+      <div style="font-size:12px;color:var(--wh);line-height:1.6">${intel.rok_message}</div>
+    </div>` : '';
+
+  // Buy signals
+  const buys = (intel.buy_signals || []).slice(0, 6);
+  const buysHtml = buys.length ? `
+    <div style="margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--g);margin-bottom:.4rem"> TOP BUY SIGNALS (${buys.length})</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem">
+        ${buys.map(s => {
+          const upside = s.current_price && s.price_target
+            ? `+${(((s.price_target - s.current_price) / s.current_price) * 100).toFixed(0)}%` : '';
+          const rsi = s.rsi ? `RSI ${s.rsi}` : '';
+          return `<div style="background:var(--blk4);border-radius:8px;padding:.5rem .7rem;border-left:3px solid rgba(0,255,136,.4);border:1px solid rgba(0,255,136,.12)">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+              <span style="font-weight:800;color:var(--g);font-size:13px">${s.ticker}</span>
+              ${s.company ? `<span style="color:var(--wh3);font-size:10px">${s.company}</span>` : ''}
+              ${s.current_price ? `<span style="color:var(--wh);font-size:11px;font-weight:700;margin-left:auto">$${(+s.current_price).toFixed(2)}</span>` : ''}
+              ${upside ? `<span style="color:var(--g);font-size:10px;font-weight:700">${upside} target</span>` : ''}
+              ${rsi ? `<span style="color:var(--wh3);font-size:9px">${rsi}</span>` : ''}
+            </div>
+            ${s.catalyst ? `<div style="font-size:10.5px;color:var(--wh2);line-height:1.5">${s.catalyst}</div>` : ''}
+            ${s.rok_take ? `<div style="font-size:10px;color:var(--g);font-style:italic;margin-top:.2rem">"${s.rok_take}"</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  // Sell signals
+  const sells = (intel.sell_signals || []).slice(0, 3);
+  const sellsHtml = sells.length ? `
+    <div style="margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--r);margin-bottom:.4rem"> SELL SIGNALS (${sells.length})</div>
+      <div style="display:flex;flex-direction:column;gap:.35rem">
+        ${sells.map(s => `<div style="background:rgba(255,34,85,.05);border-radius:8px;padding:.45rem .7rem;border:1px solid rgba(255,34,85,.15)">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+            <span style="font-weight:800;color:var(--r);font-size:13px">${s.ticker}</span>
+            ${s.urgency ? `<span style="background:rgba(255,34,85,.15);color:var(--r);font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">${s.urgency}</span>` : ''}
+          </div>
+          ${s.rok_take ? `<div style="font-size:10px;color:var(--wh2)">${s.rok_take}</div>` : ''}
+        </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  // Notable trends
+  const trends = (intel.notable_trends || []).slice(0, 3);
+  const trendsHtml = trends.length ? `
+    <div style="margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--b);margin-bottom:.4rem"> NOTABLE TRENDS</div>
+      ${trends.map(t => `<div style="font-size:10.5px;color:var(--wh2);padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.5">${t}</div>`).join('')}
+    </div>` : '';
+
+  // Macro risks
+  const risks = (intel.macro_risks || []).slice(0, 3);
+  const risksHtml = risks.length ? `
+    <div style="margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--or);margin-bottom:.4rem"> MACRO RISKS TO WATCH</div>
+      ${risks.map(r => `<div style="font-size:10.5px;color:var(--wh2);padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.5">${r}</div>`).join('')}
+    </div>` : '';
+
+  // News items
+  const news = (intel.news_items || []).slice(0, 8);
+  const newsHtml = news.length ? `
+    <div style="margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--wh3);margin-bottom:.4rem"> LATEST NEWS</div>
+      ${news.map(n => {
+        const sCol = (n.sentiment||0) > 0.05 ? 'var(--g)' : (n.sentiment||0) < -0.05 ? 'var(--r)' : 'var(--wh4)';
+        return `<div style="display:flex;align-items:flex-start;gap:.4rem;padding:.22rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <span style="width:4px;height:4px;background:${sCol};border-radius:50%;flex-shrink:0;margin-top:5px"></span>
+          <span style="font-size:10.5px;color:var(--wh2);line-height:1.45;flex:1">${n.title}</span>
+          <span style="font-size:9px;color:var(--wh4);flex-shrink:0">${(n.source||'').replace(/^.*\//,'').split('.')[0]}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  // Source stats
+  const stats = intel.source_stats || {};
+  const statsHtml = Object.keys(stats).length ? `
+    <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem">
+      ${Object.entries(stats).filter(([,v])=>v>0).map(([k,v])=>`
+        <span style="font-size:8px;color:var(--wh4);background:rgba(255,255,255,.04);border-radius:4px;padding:1px 5px">${k}: ${v}</span>
+      `).join('')}
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.7rem;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:800;color:${sentColor};text-shadow:0 0 12px ${sentColor}44">${sent}</span>
+      <span style="font-size:10px;color:var(--wh3);background:rgba(255,255,255,.05);border-radius:4px;padding:2px 7px">${regime}</span>
+      ${intel.buy_count != null ? `<span style="font-size:10px;color:var(--g)">${intel.buy_count} buys</span>` : ''}
+      ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
+      ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
+    </div>
+    ${summaryHtml}${msgHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+  `;
+}
+window.fetchIntelReport = fetchIntelReport;
 
 async function renderRokLiveFeed() {
   const el = document.getElementById('port-rok-live-feed');

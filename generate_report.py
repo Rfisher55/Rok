@@ -1,15 +1,14 @@
 """
-ROK — Static report generator for GitHub Pages.
-Runs via GitHub Actions every 15 minutes. Outputs docs/index.html.
+ROK — Market intelligence pipeline for GitHub Pages.
+Runs via GitHub Actions every 15 minutes.
+Writes docs/intel_report.json (read by the trading dashboard via JS fetch).
+Does NOT overwrite docs/index.html — the trading dashboard owns that file.
 """
 import json
 import logging
-import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
-
-import jinja2
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,36 +18,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _compute_sector_heat(stock_data, signal_lookup):
-    """Compute sector-level stats from stock data as sector_heat fallback."""
-    sector_map = {}
-    for s in stock_data:
-        raw = s.get("sector") or ""
-        sector = raw.split("/")[0].strip() if raw else None
-        if not sector:
-            continue
-        if sector not in sector_map:
-            sector_map[sector] = {"count": 0, "buys": 0, "sells": 0, "chg_sum": 0.0}
-        m = sector_map[sector]
-        m["count"] += 1
-        sig = signal_lookup.get(s.get("ticker", ""), {}).get("type", "neutral")
-        if sig == "buy":
-            m["buys"] += 1
-        elif sig == "sell":
-            m["sells"] += 1
-        m["chg_sum"] += s.get("change_pct") or 0.0
-    result = {}
-    for sector, v in sector_map.items():
-        if v["count"] > 0:
-            avg_chg = round(v["chg_sum"] / v["count"], 2)
-            result[sector] = {
-                "change_pct": avg_chg,
-                "buy_count": v["buys"],
-                "sell_count": v["sells"],
-                "stock_count": v["count"],
-                "signal": "bullish" if v["buys"] > v["sells"] else "bearish" if v["sells"] > v["buys"] else "neutral",
-            }
-    return result
+class _Encoder(json.JSONEncoder):
+    """Handle datetime/date objects that scrapers sometimes return."""
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        try:
+            return super().default(obj)
+        except TypeError:
+            return str(obj)
 
 
 def _safe(fn, *args, default=None, label=""):
@@ -67,15 +45,52 @@ def _size(v):
     return "ok"
 
 
+def _sanitize(obj):
+    """Recursively convert any datetime objects to ISO strings so JSON serialization never fails."""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize(i) for i in obj]
+    return obj
+
+
 def run():
+    try:
+        _run()
+    except Exception as e:
+        logger.error(f"Pipeline error: {e}", exc_info=True)
+        # Write a minimal fallback intel_report.json so the dashboard
+        # doesn't break if it tries to fetch this file.
+        docs_dir = Path(__file__).parent / "docs"
+        docs_dir.mkdir(exist_ok=True)
+        fallback = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "error": str(e),
+            "market_sentiment": "UNKNOWN",
+            "buy_signals": [],
+            "sell_signals": [],
+            "watch_list": [],
+            "notable_trends": [],
+            "rok_message": "Intelligence update unavailable — will retry shortly.",
+        }
+        (docs_dir / "intel_report.json").write_text(
+            json.dumps(fallback, cls=_Encoder, indent=2), encoding="utf-8"
+        )
+        logger.info("Wrote fallback intel_report.json")
+
+
+def _run():
     from config import Config
     from scrapers import reddit_scraper, news_scraper, yahoo_finance, sec_scraper
     from scrapers import market_data, twitter_scraper
     from scrapers import stocktwits_scraper, technical_analysis, congressional_trades
-    from analyzer import ticker_extractor, claude_analyzer, sentiment
+    from analyzer import ticker_extractor, claude_analyzer
+    from analyzer import sentiment as sentiment_mod
 
     logger.info("=" * 60)
-    logger.info("ROK PIPELINE START")
+    logger.info("ROK INTELLIGENCE PIPELINE START")
     logger.info("=" * 60)
 
     # ── Social scraping ──────────────────────────────────────────
@@ -119,11 +134,10 @@ def run():
     )
 
     # ── Sentiment + ticker extraction ─────────────────────────────
-    all_posts = sentiment.score_posts(all_posts)
-    agg_sentiment = sentiment.aggregate_sentiment(all_posts)
+    all_posts = sentiment_mod.score_posts(all_posts)
+    agg_sentiment = sentiment_mod.aggregate_sentiment(all_posts)
     top_tickers = ticker_extractor.top_tickers(all_posts, n=40)
 
-    # Merge Yahoo trending + most active + StockTwits into ticker pool
     extra = set()
     for s in trending_yahoo[:15] + most_active[:15]:
         t = (s.get("ticker") or "").strip().upper()
@@ -133,7 +147,6 @@ def run():
         t = (s.get("ticker") or "").strip().upper()
         if t and t.isalpha() and len(t) <= 5:
             extra.add(t)
-    # Add congressional buy tickers
     for c in congress_buys[:10]:
         extra.add(c["ticker"])
 
@@ -145,8 +158,7 @@ def run():
         + [t for t in (seed or []) if t not in seen and t not in extra]
     ))[:60]
 
-    # ── Per-ticker sentiment ──────────────────────────────────────
-    ticker_sentiment = sentiment.per_ticker_sentiment(all_posts, ticker_list[:30])
+    ticker_sentiment = sentiment_mod.per_ticker_sentiment(all_posts, ticker_list[:30])
 
     # ── Stock data ────────────────────────────────────────────────
     stock_data = []
@@ -173,8 +185,10 @@ def run():
     )
     insider_buys = _safe(sec_scraper.get_insider_buys, 14, default=list, label="InsiderBuys")
 
-    # ── Load history (for last_analysis fallback) ─────────────────
-    history_path = Path(__file__).parent / "docs" / "history.json"
+    # ── Load history ──────────────────────────────────────────────
+    docs_dir = Path(__file__).parent / "docs"
+    docs_dir.mkdir(exist_ok=True)
+    history_path = docs_dir / "history.json"
     history = {"runs": []}
     if history_path.exists():
         try:
@@ -186,7 +200,6 @@ def run():
     logger.info("Calling Claude AI...")
     analysis = None
 
-    # Only call Claude if API key is present
     if Config.ANTHROPIC_API_KEY:
         analysis = _safe(
             lambda: claude_analyzer.run_analysis(
@@ -214,141 +227,80 @@ def run():
             label="ClaudeAI",
         )
     else:
-        logger.warning("ANTHROPIC_API_KEY not set — skipping AI analysis, using cached data")
+        logger.warning("ANTHROPIC_API_KEY not set — skipping AI analysis")
 
-    # ── Fallback: reuse last successful analysis from history ─────
+    # ── Fallback to cached analysis ───────────────────────────────
     if not analysis:
         cached = history.get("last_analysis")
         if cached:
             logger.info("Using cached last_analysis from history.json")
             analysis = cached
         else:
-            logger.error("No analysis and no cached analysis available — aborting")
-            sys.exit(1)
+            logger.warning("No analysis and no cache — writing minimal fallback")
+            analysis = {
+                "market_sentiment": "UNKNOWN",
+                "market_regime": "UNCERTAIN",
+                "week_summary": "Intelligence data loading...",
+                "buy_signals": [],
+                "sell_signals": [],
+                "watch_list": [],
+                "notable_trends": [],
+                "macro_risks": [],
+                "rok_message": "Connecting to AI analysis — check back shortly.",
+            }
     else:
-        # Save successful analysis for future fallback
         history["last_analysis"] = analysis
-        logger.info("Saved analysis to history.last_analysis for fallback")
 
-    logger.info(
-        f"Analysis: {analysis.get('market_sentiment')} | "
-        f"Buys: {len(analysis.get('buy_signals', []))} | "
-        f"Sells: {len(analysis.get('sell_signals', []))}"
-    )
+    # ── Build price lookup from stock_data ────────────────────────
+    price_lookup = {s["ticker"]: s["price"] for s in stock_data if s}
+    stock_data_lookup = {s["ticker"]: s for s in stock_data if s}
 
-    # ── Build signal lookup for screener ─────────────────────────
+    # ── Enrich signals ────────────────────────────────────────────
     signal_lookup = {}
     for sig in analysis.get("buy_signals", []):
         signal_lookup[sig["ticker"]] = {"type": "buy", "strength": sig.get("signal_strength", 5)}
     for sig in analysis.get("sell_signals", []):
         signal_lookup[sig["ticker"]] = {"type": "sell", "strength": sig.get("signal_strength", 5)}
-    for sig in analysis.get("watch_list", []):
-        signal_lookup[sig["ticker"]] = {"type": "watch", "strength": 5}
 
-    for stock in stock_data:
-        t = stock["ticker"]
-        sig = signal_lookup.get(t, {})
-        stock["rok_signal"] = sig.get("type", "neutral")
-        stock["signal_strength"] = sig.get("strength", 0)
-
-    # ── Enrich signals with price sparklines ──────────────────────
-    stock_data_lookup = {s["ticker"]: s for s in stock_data if s}
-    price_lookup = {s["ticker"]: s["price"] for s in stock_data}
     all_signals = (
         analysis.get("buy_signals", [])
         + analysis.get("sell_signals", [])
         + analysis.get("watch_list", [])
     )
     for sig in all_signals:
-        ticker = sig.get("ticker", "")
-        if ticker:
-            sig["price_history"] = _safe(
-                yahoo_finance.get_price_history, ticker, 30,
-                default=list, label=f"Hist:{ticker}",
-            )
-
-    # ── Enrich signals with Yahoo Finance data ────────────────────
-    for sig in all_signals:
         t = sig.get("ticker", "")
         if not t:
             continue
         sd = stock_data_lookup.get(t)
         if sd:
-            # Fill missing price fields
             if not sig.get("current_price") and sd.get("price"):
                 sig["current_price"] = sd["price"]
             if not sig.get("company") and sd.get("company_name"):
                 sig["company"] = sd["company_name"]
-            # Use analyst consensus target if AI didn't set one
             if not sig.get("price_target") and sd.get("analyst_target"):
                 sig["price_target"] = sd["analyst_target"]
-            # Auto-calculate stop loss at 8% below entry if not set
             if not sig.get("stop_loss") and sig.get("current_price"):
                 sig["stop_loss"] = round(sig["current_price"] * 0.92, 2)
             if not sig.get("sector"):
                 sig["sector"] = sd.get("sector", "")
-            # Volume spike and RSI — prefer TA data (60d window) over yahoo 30d
             ta = ta_data.get(t, {}) if ta_data else {}
             if not sig.get("vol_ratio"):
                 sig["vol_ratio"] = ta.get("volume_ratio") or sd.get("vol_ratio")
             if not sig.get("rsi"):
                 sig["rsi"] = ta.get("rsi") or sd.get("rsi")
-            # 52-week position data
-            if ta:
-                sig["pct_from_52w_high"] = ta.get("pct_from_52w_high")
-                sig["week_52_high"] = ta.get("week_52_high")
-                sig["macd_signal"] = ta.get("macd_signal_label")
-            # Analyst consensus data
-            if not sig.get("analyst_count") and sd.get("analyst_count"):
-                sig["analyst_count"] = sd["analyst_count"]
-            if not sig.get("recommendation") and sd.get("recommendation"):
-                sig["recommendation"] = sd["recommendation"]
-            # Earnings date warning
-            if not sig.get("earnings_date") and sd.get("earnings_date"):
-                sig["earnings_date"] = sd["earnings_date"]
-            # Build data_signals from available sources
-            if not sig.get("data_signals"):
-                dsigs = []
-                # Check congressional buys
-                if any(c.get("ticker") == t for c in congress_buys[:20]):
-                    dsigs.append("congressional")
-                # Check SEC filings or insider buys for insider trades
-                if any(
-                    isinstance(f, dict) and f.get("ticker") == t
-                    for f in (sec_filings or []) + (insider_buys or [])
-                ):
-                    dsigs.append("insider")
-                # Check unusual options
-                if any(
-                    isinstance(o, dict) and o.get("ticker") == t
-                    for o in (unusual_opts or [])
-                ):
-                    dsigs.append("options")
-                # Reddit presence
-                reddit_tickers = [tp[0] for tp in (top_tickers or [])]
-                if t in reddit_tickers[:20]:
-                    dsigs.append("reddit")
-                sig["data_signals"] = dsigs
-        # Apply defaults for missing fields
+
+        # Price sparkline (last 30 days)
+        sig["price_history"] = _safe(
+            yahoo_finance.get_price_history, t, 30,
+            default=list, label=f"Hist:{t}",
+        ) or []
+
         if not sig.get("signal_strength"):
             sig["signal_strength"] = 6
-        if not sig.get("risk_level"):
-            # Calculate risk level from beta and market cap
-            beta = sd.get("beta") if sd else None
-            mc = sd.get("market_cap") if sd else None
-            if beta and beta > 1.8:
-                sig["risk_level"] = "High"
-            elif beta and beta < 0.7:
-                sig["risk_level"] = "Low"
-            elif mc and mc >= 100_000_000_000:  # $100B+ = mega cap = lower risk
-                sig["risk_level"] = "Low"
-            elif mc and mc < 2_000_000_000:  # <$2B = small cap = higher risk
-                sig["risk_level"] = "High"
-            else:
-                sig["risk_level"] = "Medium"
         if not sig.get("time_horizon"):
             sig["time_horizon"] = "1-3 months"
-    logger.info("Signal enrichment complete")
+        if not sig.get("risk_level"):
+            sig["risk_level"] = "Medium"
 
     # ── History tracking ──────────────────────────────────────────
     history["runs"].append({
@@ -365,10 +317,9 @@ def run():
             for s in analysis.get("sell_signals", [])
         ],
     })
-    # Keep last 96 runs (24 hours of 15-min data × 4)
     history["runs"] = history["runs"][-96:]
 
-    # ── Track record: compare last run's picks to current prices ──
+    # ── Track record ──────────────────────────────────────────────
     track_record = []
     if len(history["runs"]) >= 2:
         prev_run = history["runs"][-2]
@@ -379,8 +330,8 @@ def run():
                 continue
             current = price_lookup.get(ticker)
             if not current:
-                sd = _safe(yahoo_finance.get_stock_data, ticker, default=lambda: None, label=f"Track:{ticker}")
-                current = sd["price"] if sd else None
+                sd2 = _safe(yahoo_finance.get_stock_data, ticker, default=lambda: None)
+                current = sd2["price"] if sd2 else None
             if current and entry:
                 pct = round((current - entry) / entry * 100, 1)
                 track_record.append({
@@ -388,111 +339,55 @@ def run():
                     "entry_price": entry,
                     "current_price": round(current, 2),
                     "pct_change": pct,
-                    "target": sig.get("target"),
                     "date": prev_run.get("date", ""),
                 })
         track_record.sort(key=lambda x: abs(x["pct_change"]), reverse=True)
-        logger.info(f"Track record: {len(track_record)} picks evaluated")
 
-    # ── Compute history bullish summary ──────────────────────────
-    recent_runs = history["runs"][-8:]
-    bullish_count = sum(1 for r in recent_runs if (r.get("sentiment") or "").upper() == "BULLISH")
-    history_summary = f"ROK was bullish {bullish_count} out of the last {len(recent_runs)} runs"
-
-    # ── Plain-language market mood ────────────────────────────────
-    sentiment = (analysis.get("market_sentiment") or "NEUTRAL").upper()
+    # ── Market mood plain-language ────────────────────────────────
+    mkt_sent = (analysis.get("market_sentiment") or "NEUTRAL").upper()
     fg_score = (fear_greed or {}).get("score", 50)
-    buy_count_now = len(analysis.get("buy_signals", []))
-    if sentiment == "BULLISH" and buy_count_now >= 5:
-        market_mood = f"🟢 Markets are looking strong — ROK found {buy_count_now} stocks worth buying right now"
-    elif sentiment == "BULLISH":
-        market_mood = f"🟢 Markets are leaning bullish — ROK sees some opportunities"
-    elif sentiment == "BEARISH":
-        market_mood = "🔴 Markets are under pressure — ROK recommends being careful"
-    elif fg_score and fg_score < 30:
-        market_mood = "🟡 Fear is high but that often means buying opportunities are near"
-    else:
-        market_mood = "🟡 Markets are mixed — ROK is watching closely for clear signals"
-
-    # ── Build page data ───────────────────────────────────────────
     buy_count = len(analysis.get("buy_signals", []))
-    sell_count = len(analysis.get("sell_signals", []))
+    if mkt_sent == "BULLISH" and buy_count >= 5:
+        market_mood = f"Markets are strong — ROK found {buy_count} stocks worth watching right now"
+    elif mkt_sent == "BULLISH":
+        market_mood = "Markets are leaning bullish — ROK sees some opportunities"
+    elif mkt_sent == "BEARISH":
+        market_mood = "Markets are under pressure — ROK recommends caution"
+    elif fg_score and fg_score < 30:
+        market_mood = "Fear is high — that often means buying opportunities are near"
+    else:
+        market_mood = "Markets are mixed — ROK is watching closely for clear signals"
 
-    page_data = {
-        "analysis_date": datetime.utcnow().strftime("%B %d, %Y %I:%M %p UTC"),
+    # ── Build intel_report output ─────────────────────────────────
+    intel = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "market_regime": analysis.get("market_regime", "UNCERTAIN"),
-        "week_summary": analysis.get("week_summary", ""),
         "market_sentiment": analysis.get("market_sentiment", "NEUTRAL"),
         "sentiment_score": analysis.get("sentiment_score", 5),
+        "week_summary": analysis.get("week_summary", ""),
+        "market_mood": market_mood,
+        "rok_message": analysis.get("rok_message", ""),
         "buy_signals": analysis.get("buy_signals", []),
         "sell_signals": analysis.get("sell_signals", []),
         "watch_list": analysis.get("watch_list", []),
         "notable_trends": analysis.get("notable_trends", []),
         "macro_risks": analysis.get("macro_risks", []),
-        "sector_heat": analysis.get("sector_heat", {}) or _compute_sector_heat(stock_data, signal_lookup),
+        "sector_heat": analysis.get("sector_heat", {}),
         "sector_rotation": analysis.get("sector_rotation", ""),
-        "rok_message": analysis.get("rok_message", ""),
-        "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []) or [
-            {
-                "ticker": s.get("ticker", ""),
-                "short_float": "High short interest",
-                "setup": s.get("company", ""),
-                "social_velocity": "high",
-            }
-            for s in (short_squeeze or [])[:6]
-            if s.get("ticker") and s.get("ticker").isalpha() and len(s.get("ticker","")) <= 5
-        ],
-        "earnings_plays": analysis.get("earnings_plays", []) or [
-            {
-                "ticker": e.get("ticker", ""),
-                "earnings_date": e.get("date", ""),
-                "direction": "NEUTRAL",
-                "play": f"Reports {e.get('timing', 'soon')}. Watch for surprise beats/misses.",
-            }
-            for e in (earnings_cal or [])[:6]
-            if e.get("ticker")
-        ],
+        "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []),
+        "earnings_plays": analysis.get("earnings_plays", []),
         "congressional_plays": analysis.get("congressional_plays", []),
-        "technical_breakouts": analysis.get("technical_breakouts", []) or [
-            {
-                "ticker": s["ticker"],
-                "setup_type": s["setup_type"],
-                "description": " | ".join(s["signals"]),
-                "timeframe": "3-7 days",
-            }
-            for s in ta_setups[:4]
-        ],
+        "technical_breakouts": analysis.get("technical_breakouts", []),
+        "fear_greed": fear_greed or {},
+        "market_indices": market_indices or {},
+        "market_breadth": market_breadth or {},
+        "put_call_ratio": put_call_ratio or {},
         "ticker_mentions": top_tickers[:24],
         "stocktwits_trending": stocktwits_data[:12],
-        "fear_greed": fear_greed,
-        "market_indices": market_indices,
-        "aggregate_sentiment": agg_sentiment,
-        "market_breadth": market_breadth,
-        "put_call_ratio": put_call_ratio,
         "congressional_buys": congress_buys[:8],
-        "source_stats": {
-            "reddit": len(reddit_posts),
-            "news": len(news_articles),
-            "stocks": len(stock_data),
-            "sec": len(sec_filings),
-            "earnings_upcoming": len(earnings_cal),
-            "unusual_options": len(unusual_opts),
-            "congress_trades": len(congress_buys),
-            "technical": len(ta_data),
-            "insider_buys": len(insider_buys),
-        },
-        "recent_runs": recent_runs,
-        "history_summary": history_summary,
-        "market_mood": market_mood,
-        "track_record": track_record,
-        "generated_timestamp": datetime.now(timezone.utc).isoformat(),
-        "stock_universe": stock_data,
-        "buy_count": buy_count,
-        "sell_count": sell_count,
         "insider_buys": insider_buys[:12],
-        # Backwards-compat aliases used in template
-        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
-        "run_history": history["runs"][-8:],
+        "track_record": track_record[:10],
+        "recent_runs": history["runs"][-8:],
         "news_items": [
             {
                 "title": a.get("title", ""),
@@ -501,38 +396,37 @@ def run():
                 "sentiment": a.get("sentiment_score", 0),
                 "tickers": a.get("mentioned_tickers", []),
             }
-            for a in news_articles[:20]
+            for a in news_articles[:30]
             if a.get("title")
         ],
-        "reddit_posts": reddit_posts[:10],
-        "trending_tickers": [{"ticker": t, "count": c} for t, c in top_tickers[:15]],
-        "portfolio": [],
-        "sparklines": {},
-        "fear_greed_history": [],
-        "market_pulse": {
-            "vix": (market_indices or {}).get("VIX", {}).get("price"),
-            "put_call_ratio": (put_call_ratio or {}).get("total"),
-            "sp500_change": (market_indices or {}).get("S&P 500", {}).get("change_pct"),
-            "nasdaq_change": (market_indices or {}).get("NASDAQ", {}).get("change_pct"),
+        "source_stats": {
+            "reddit": len(reddit_posts),
+            "news": len(news_articles),
+            "stocks": len(stock_data),
+            "sec": len(sec_filings or []),
+            "earnings_upcoming": len(earnings_cal or []),
+            "unusual_options": len(unusual_opts or []),
+            "congress_trades": len(congress_buys or []),
+            "technical": len(ta_data or {}),
+            "insider_buys": len(insider_buys or []),
         },
+        "buy_count": buy_count,
+        "sell_count": len(analysis.get("sell_signals", [])),
     }
 
-    # ── Render HTML ───────────────────────────────────────────────
-    template_dir = Path(__file__).parent / "templates"
-    env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(template_dir)),
-        autoescape=jinja2.select_autoescape(["html"]),
-    )
-    template = env.get_template("static.html")
-    html = template.render(data=page_data, data_json=json.dumps(page_data))
+    # Sanitize all datetime objects before JSON serialization
+    intel = _sanitize(intel)
 
-    docs_dir = Path(__file__).parent / "docs"
-    docs_dir.mkdir(exist_ok=True)
+    # ── Write output files ────────────────────────────────────────
+    intel_json = json.dumps(intel, cls=_Encoder, indent=2)
+    (docs_dir / "intel_report.json").write_text(intel_json, encoding="utf-8")
+    logger.info(f"Intel report written → docs/intel_report.json ({len(intel_json)} chars)")
 
-    (docs_dir / "index.html").write_text(html, encoding="utf-8")
-    history_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
+    # Update history
+    history_path.write_text(json.dumps(_sanitize(history), cls=_Encoder, indent=2), encoding="utf-8")
+    logger.info(f"History updated → docs/history.json ({len(history['runs'])} runs)")
 
-    # ── Write prices.json for JS fallback ─────────────────────────
+    # Write prices.json for JS fallback
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     prices_dict = {}
     for s in stock_data:
@@ -543,13 +437,11 @@ def run():
                 "change_pct": s.get("change_pct"),
                 "updated": now_iso,
             }
-    (docs_dir / "prices.json").write_text(json.dumps(prices_dict), encoding="utf-8")
-
-    logger.info(f"Report written → docs/index.html ({len(html)} chars)")
+    (docs_dir / "prices.json").write_text(json.dumps(prices_dict, cls=_Encoder), encoding="utf-8")
     logger.info(f"Prices written → docs/prices.json ({len(prices_dict)} tickers)")
-    logger.info(f"History updated → docs/history.json ({len(history['runs'])} runs)")
-    logger.info(f"Summary: {buy_count} buys | {sell_count} sells")
-    logger.info("ROK PIPELINE COMPLETE")
+
+    logger.info(f"Summary: {buy_count} buys | {len(analysis.get('sell_signals', []))} sells")
+    logger.info("ROK INTELLIGENCE PIPELINE COMPLETE")
 
 
 if __name__ == "__main__":

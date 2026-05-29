@@ -11,6 +11,7 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 12
 
     steps:
       - name: Checkout main branch
@@ -28,26 +29,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Generate ROK report
+      - name: Generate ROK intelligence report
+        continue-on-error: true   # never let a crash block the commit step
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python generate_report.py
 
-      - name: Commit and push updated report
+      - name: Commit and push intel data
         run: |
           git config user.name "ROK Intelligence Bot"
           git config user.email "rok-bot@users.noreply.github.com"
-          git add docs/
-          git diff --staged --quiet || git commit -m "$(python3 -c "
-          import json, pathlib
-          try:
-            h = json.loads(pathlib.Path('docs/history.json').read_text())
-            runs = h.get('runs', [])
-            last = runs[-1] if runs else {}
-            buys = len(last.get('buy_signals', []))
-            sells = len(last.get('sell_signals', []))
-            print(f'ROK update — $(date -u +\"%B %d %Y %H:%M UTC\") | {buys} buys | {sells} sells')
-          except:
-            print('ROK update — $(date -u +\"%B %d %Y %H:%M UTC\")')
-          ")"
-          git push origin HEAD:main
+          git add docs/intel_report.json docs/history.json docs/prices.json
+          git diff --staged --quiet || git commit -m "Intel update — $(date -u +'%b %d %H:%M UTC')"
+          git pull --rebase origin main || true
+          git push origin HEAD:main || true
