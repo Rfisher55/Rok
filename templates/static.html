@@ -806,10 +806,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div class="idx-bar">
       {% for name, d in data.market_indices.items() %}
       {% set chg = d.change_pct|default(0) %}
-      <div class="idx">
+      {% set sym_map = {'S&P 500': 'SPY', 'NASDAQ': 'QQQ', 'DOW': 'DIA', 'Russell 2000': 'IWM', 'VIX': '^VIX'} %}
+      {% set etf = sym_map.get(name, '') %}
+      <div class="idx" {% if etf %}data-idx-ticker="{{ etf }}"{% endif %}>
         <span class="idx-n">{{ name }}</span>
-        <span class="idx-p">{% if name == 'VIX' %}{{ d.price }}{% else %}${{ d.price }}{% endif %}</span>
-        <span class="idx-c {{ 'up' if chg >= 0 else 'down' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</span>
+        <span class="idx-p" {% if etf %}data-idx-price="{{ etf }}"{% endif %}>{% if name == 'VIX' %}{{ d.price }}{% else %}${{ '{:,.2f}'.format(d.price|default(0)) }}{% endif %}</span>
+        <span class="idx-c {{ 'up' if chg >= 0 else 'down' }}" {% if etf %}data-idx-chg="{{ etf }}"{% endif %}>{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</span>
       </div>
       {% endfor %}
     </div>
@@ -947,6 +949,25 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <div style="font-size:11.5px;color:var(--wh2);line-height:1.5;font-style:italic">{{ (data.week_summary or data.rok_message)[:160] }}{% if (data.week_summary or data.rok_message)|length > 160 %}…{% endif %}</div>
       </div>
       {% endif %}
+    </div>
+
+    {# Plain-English "what to do" guidance box for beginners #}
+    <div style="background:linear-gradient(135deg,rgba({{ '0,255,136' if sent == 'BULLISH' else '255,34,85' if sent == 'BEARISH' else '255,215,0' }},.06),rgba(0,0,0,.15));border:1px solid rgba({{ '0,255,136' if sent == 'BULLISH' else '255,34,85' if sent == 'BEARISH' else '255,215,0' }},.2);border-radius:12px;padding:.8rem 1rem;margin-bottom:.75rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.18em;color:{{ 'var(--g)' if sent == 'BULLISH' else 'var(--r)' if sent == 'BEARISH' else 'var(--au)' }};text-transform:uppercase;margin-bottom:.3rem">🎯 WHAT SHOULD YOU DO RIGHT NOW?</div>
+      <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.35rem">
+        {% if sent == 'BULLISH' and buy_n >= 3 %}📈 Good time to invest — ROK found {{ buy_n }} stocks it likes{% elif sent == 'BULLISH' and buy_n > 0 %}📈 Cautiously optimistic — {{ buy_n }} buy signal{{ 's' if buy_n != 1 }} available{% elif sent == 'BULLISH' %}🟢 Market is bullish but ROK needs more conviction before recommending buys{% elif sent == 'BEARISH' %}🛡️ Defensive mode — protect what you have{% else %}🟡 Mixed signals — small positions only{% endif %}
+      </div>
+      <div style="font-size:11.5px;color:var(--wh2);line-height:1.65">
+        {% if sent == 'BULLISH' and buy_n > 0 %}
+          Scroll down to see ROK's {{ buy_n }} buy recommendation{{ 's' if buy_n != 1 }}. If you're new, start with the top pick and invest only what you can afford to lose. <strong>Always set a stop loss.</strong>
+        {% elif sent == 'BULLISH' %}
+          The market looks healthy but ROK doesn't see clear entry points yet. <strong>Wait for stronger signals</strong> — check back in 15 minutes or watch the stocks in the 👀 WATCH LIST.
+        {% elif sent == 'BEARISH' %}
+          Markets are under pressure. If you own stocks, check your <strong>💼 MY STOCKS</strong> tab for sell alerts. Avoid buying new positions until the market stabilizes.
+        {% else %}
+          ROK sees mixed conditions. If you're invested, hold your positions. If you're looking to buy, consider <strong>half-positions</strong> — invest half your normal amount and wait for more clarity.
+        {% endif %}
+      </div>
     </div>
 
     {% if data.buy_signals %}
@@ -2051,8 +2072,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const btn = document.getElementById('refresh-btn');
     if (btn) btn.classList.add('spinning');
 
-    // Collect all tickers
-    const tickers = new Set();
+    // Collect all tickers + always include major indices
+    const tickers = new Set(['SPY', 'QQQ', '^VIX']);
     (ROK.buy_signals || []).forEach(s => tickers.add(s.ticker));
     (ROK.sell_signals || []).forEach(s => tickers.add(s.ticker));
     (ROK.watch_list || []).forEach(s => tickers.add(s.ticker));
@@ -2077,6 +2098,21 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       // Update stock_universe in memory for portfolio calculations
       const su = (ROK.stock_universe || []).find(s => s.ticker === ticker);
       if (su) { su.price = d.price; su.change_pct = d.change_pct; }
+    });
+
+    // Update header index bar with live prices
+    document.querySelectorAll('[data-idx-ticker]').forEach(el => {
+      const sym = el.dataset.idxTicker;
+      const d = liveprices[sym];
+      if (!d) return;
+      const priceEl = el.querySelector('[data-idx-price]');
+      const chgEl = el.querySelector('[data-idx-chg]');
+      if (priceEl) priceEl.textContent = sym === '^VIX' ? d.price.toFixed(2) : '$' + d.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      if (chgEl) {
+        const chg = d.change_pct;
+        chgEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+        chgEl.className = 'idx-c ' + (chg >= 0 ? 'up' : 'down');
+      }
     });
 
     lastRefreshTime = new Date();
@@ -2913,11 +2949,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         ${ph.length > 3 ? `<div class="sc-spark"><canvas id="scs-${i}" height="32"></canvas></div>` : ''}
         <div class="sc-meta">
           ${s.sector ? `<span class="sc-sector">${s.sector.split('/')[0].trim()}</span>` : ''}
-          ${s.pe_ratio != null && s.pe_ratio > 0 ? `<span class="sc-pe">PE ${s.pe_ratio.toFixed(1)}</span>` : ''}
+          ${s.pe_ratio != null && s.pe_ratio > 0 ? `<span class="sc-pe" title="P/E Ratio: ${s.pe_ratio.toFixed(1)}. Below 20 = potentially cheap. Above 30 = expensive relative to earnings.">PE ${s.pe_ratio.toFixed(1)}</span>` : ''}
           ${upHtml}
           ${earnHtml}
-          ${s.rsi != null ? `<span class="rsi-badge ${s.rsi > 70 ? 'overbought' : s.rsi < 30 ? 'oversold' : 'neutral'}" style="font-size:7.5px;padding:1px 4px">RSI ${Math.round(s.rsi)}</span>` : ''}
-          ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
+          ${s.rsi != null ? `<span class="rsi-badge ${s.rsi > 70 ? 'overbought' : s.rsi < 30 ? 'oversold' : 'neutral'}" style="font-size:7.5px;padding:1px 4px" title="${s.rsi > 70 ? 'RSI ' + Math.round(s.rsi) + ' = OVERBOUGHT: Stock may be due for a pullback' : s.rsi < 30 ? 'RSI ' + Math.round(s.rsi) + ' = OVERSOLD: Stock may be due for a bounce up' : 'RSI ' + Math.round(s.rsi) + ' = Neutral momentum'}">RSI ${Math.round(s.rsi)}</span>` : ''}
+          ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none" title="${s.vol_ratio.toFixed(1)}x normal volume — unusual trading activity. Big money (hedge funds/institutions) may be moving this stock.">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
         </div>
         ${portBtn}
       </div>`;
