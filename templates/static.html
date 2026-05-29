@@ -2142,6 +2142,11 @@ body.beginner-mode #beginner-banner { display:block }
 
 </div><!-- /content -->
 
+<!-- LIVE PORTFOLIO STRIP -->
+<div id="live-port-strip" style="display:none;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);padding:.35rem 1rem;overflow:hidden">
+  <div id="live-port-strip-inner" style="font-size:10.5px;display:flex;align-items:center;gap:1.2rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;cursor:pointer" onclick="showTab('portfolio')"></div>
+</div>
+
 <!-- BEGINNER TIP BAR -->
 <div style="background:rgba(0,204,255,.05);border-top:1px solid rgba(0,204,255,.1);padding:.55rem 1rem;text-align:center">
   <span id="tip-rotator" style="font-size:11px;color:var(--wh3);line-height:1.5;transition:opacity .3s ease;display:block">Loading tip…</span>
@@ -2616,6 +2621,7 @@ body.beginner-mode #beginner-banner { display:block }
     updateMarketLiveBrief();
     if (activeTab === 'market') { renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
+    renderLivePortStrip();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -3996,6 +4002,37 @@ body.beginner-mode #beginner-banner { display:block }
     </details>`;
   }
   window.renderPortfolioHealthCheck = renderPortfolioHealthCheck;
+
+  // ── LIVE PORTFOLIO STRIP ─────────────────────────────────
+  function renderLivePortStrip() {
+    const strip = document.getElementById('live-port-strip');
+    const inner = document.getElementById('live-port-strip-inner');
+    if (!strip || !inner) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { strip.style.display = 'none'; return; }
+    let totalToday = 0, totalVal = 0;
+    const chips = tickers.map(ticker => {
+      const lp = liveprices[ticker];
+      const entry = p[ticker];
+      if (!lp || lp.change_pct == null) return null;
+      const shares = entry?.shares || 1;
+      const val = lp.price * shares;
+      const todayChg = lp.change_pct / 100 * val;
+      totalToday += todayChg;
+      totalVal += val;
+      const color = lp.change_pct >= 0 ? 'var(--g)' : 'var(--r)';
+      return `<span style="white-space:nowrap;flex-shrink:0"><span style="color:var(--wh3);font-size:9px">${ticker}</span> <span style="color:${color};font-weight:700">${lp.change_pct>=0?'+':''}${lp.change_pct.toFixed(2)}%</span></span>`;
+    }).filter(Boolean);
+    if (!chips.length) { strip.style.display = 'none'; return; }
+    const totalColor = totalToday >= 0 ? 'var(--g)' : 'var(--r)';
+    strip.style.display = 'block';
+    inner.innerHTML = `<span style="flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--wh3);white-space:nowrap">💼 TODAY:</span>
+      <span style="flex-shrink:0;font-weight:800;color:${totalColor};white-space:nowrap">${totalToday>=0?'+':''}$${Math.abs(totalToday).toFixed(2)}</span>
+      <span style="flex-shrink:0;color:var(--wh4);font-size:8px">·</span>
+      ${chips.join('<span style="color:var(--wh4);font-size:9px;flex-shrink:0">·</span>')}`;
+  }
+  window.renderLivePortStrip = renderLivePortStrip;
 
   // ── ACTIVE ALERTS PANEL ─────────────────────────────────
   function renderActiveAlertsPanel() {
@@ -5786,6 +5823,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderTodaysTasks();
     renderROKTrackRecord();
     renderMorningBriefing();
+    renderLivePortStrip();
     updateMarketLiveBrief();
     fetchLiveFearGreed();
     initTipRotator();
@@ -5852,6 +5890,28 @@ body.beginner-mode #beginner-banner { display:block }
       const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
       const trimmed = hist.filter(h => h.date >= cutoff).slice(-200);
       localStorage.setItem(HIST_KEY, JSON.stringify(trimmed));
+    })();
+
+    // ── "NEW SIGNALS" BADGE ───────────────────────────────
+    (function() {
+      const LAST_KEY = 'rok_last_signal_set_v1';
+      const currentTickers = (ROK.buy_signals || []).map(s => s.ticker).sort().join(',');
+      const lastTickers = localStorage.getItem(LAST_KEY) || '';
+      if (lastTickers && lastTickers !== currentTickers) {
+        const newTickers = currentTickers.split(',').filter(t => !lastTickers.includes(t));
+        if (newTickers.length > 0) {
+          // Add NEW badge to signals tab
+          const sigBtn = document.querySelector('[data-tab="signals"]');
+          if (sigBtn) {
+            const newBadge = document.createElement('span');
+            newBadge.textContent = 'NEW';
+            newBadge.style.cssText = 'position:absolute;top:4px;right:-2px;background:var(--r);color:white;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:8px;letter-spacing:.05em;animation:pulseDot 2s infinite';
+            sigBtn.appendChild(newBadge);
+          }
+          setTimeout(() => showAppAlert(`⚡ New signals since your last visit: ${newTickers.map(t=>'$'+t).join(', ')}`, 'info', 7000), 2000);
+        }
+      }
+      localStorage.setItem(LAST_KEY, currentTickers);
     })();
   });
 
