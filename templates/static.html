@@ -1337,19 +1337,25 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </div>
     <!-- Market indices quick ref -->
     {% if data.market_indices %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.45rem;margin-bottom:1rem">
+    {% set sym_map = {'S&P 500': 'SPY', 'NASDAQ': 'QQQ', 'DOW': 'DIA', 'Russell 2000': 'IWM', 'VIX': '^VIX'} %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.45rem;margin-bottom:1rem">
       {% for name, d in data.market_indices.items() %}
       {% set chg = d.change_pct|default(0) %}
       {% set price_val = d.price|default(0) %}
-      <div style="background:var(--blk3);border:1px solid {{ 'rgba(0,255,136,.2)' if chg >= 0 else 'rgba(255,34,85,.2)' }};border-radius:10px;padding:.65rem .75rem;text-align:center">
+      {% set etf = sym_map.get(name, '') %}
+      <div {% if etf %}data-idx-ticker="{{ etf }}"{% endif %} id="mkt-tab-idx-{{ loop.index }}" style="background:var(--blk3);border:1px solid {{ 'rgba(0,255,136,.2)' if chg >= 0 else 'rgba(255,34,85,.2)' }};border-radius:10px;padding:.65rem .75rem;text-align:center">
         <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">{{ name }}</div>
-        <div style="font-size:{% if price_val >= 10000 %}11px{% elif price_val >= 1000 %}13px{% else %}14px{% endif %};font-weight:800;color:var(--wh)">{% if name != 'VIX' %}${% endif %}{{ '{:,.2f}'.format(price_val) }}</div>
-        <div style="font-size:11px;font-weight:700;color:{{ 'var(--g)' if chg >= 0 else 'var(--r)' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
+        <div {% if etf %}data-idx-price="{{ etf }}"{% endif %} style="font-size:{% if price_val >= 10000 %}11px{% elif price_val >= 1000 %}13px{% else %}14px{% endif %};font-weight:800;color:var(--wh)">{% if name != 'VIX' %}${% endif %}{{ '{:,.2f}'.format(price_val) }}</div>
+        <div {% if etf %}data-idx-chg="{{ etf }}"{% endif %} style="font-size:11px;font-weight:700;color:{{ 'var(--g)' if chg >= 0 else 'var(--r)' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
         {% if d.change is defined %}<div style="font-size:9px;color:{{ 'var(--g)' if chg >= 0 else 'var(--r)' }};opacity:.75">{{ '+' if d.change >= 0 else '' }}{{ '%.2f'|format(d.change) }}</div>{% endif %}
+        {% if etf %}<div style="font-size:8px;color:rgba(0,255,136,.4);margin-top:2px">● LIVE</div>{% endif %}
       </div>
       {% endfor %}
     </div>
     {% endif %}
+
+    <!-- Live market briefing (JS-populated) -->
+    <div id="mkt-live-brief" style="display:none;margin-bottom:.85rem;padding:.75rem 1rem;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(0,255,136,.03));border:1px solid rgba(0,204,255,.18);border-radius:12px"></div>
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
@@ -2284,6 +2290,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     updateLiveMarketMood();
     updateTopMovers();
     renderTodaysTasks();
+    updateMarketLiveBrief();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2628,7 +2635,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); updateTopMovers(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); }
+    if (id === 'market') updateMarketLiveBrief();
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -3819,6 +3827,44 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.renderTodaysTasks = renderTodaysTasks;
 
+  // ── MARKET TAB LIVE BRIEF ────────────────────────────────
+  function updateMarketLiveBrief() {
+    const el = document.getElementById('mkt-live-brief');
+    if (!el) return;
+    const spy = liveprices['SPY'];
+    const qqq = liveprices['QQQ'];
+    const vix = liveprices['^VIX'];
+    if (!spy && !qqq) { el.style.display = 'none'; return; }
+    const spyChg = spy ? spy.change_pct : 0;
+    const qqqChg = qqq ? qqq.change_pct : 0;
+    const vixVal = vix ? vix.price : null;
+
+    // Plain English summary
+    let headline, detail;
+    if (spyChg >= 1.5) {
+      headline = `📈 Big green day — S&P 500 up ${spyChg.toFixed(2)}%`;
+      detail = 'The broad market is surging. Buy signals are more likely to work in your favor today. Good time to consider entries.';
+    } else if (spyChg >= 0.5) {
+      headline = `🟢 Mild gains — market inching higher`;
+      detail = `S&P 500 up ${spyChg.toFixed(2)}% today. Decent environment for buys — look for stocks outperforming the index.`;
+    } else if (spyChg >= -0.5) {
+      headline = `⬜ Flat market — mostly sideways`;
+      detail = 'The market is going nowhere fast. Stock-picking matters more on days like this — focus on individual signals.';
+    } else if (spyChg >= -1.5) {
+      headline = `🟡 Mild selling — caution advised`;
+      detail = `S&P 500 down ${Math.abs(spyChg).toFixed(2)}% today. Not a great day to buy aggressively. Wait for the dip to stabilize.`;
+    } else {
+      headline = `🔴 Market selloff — protect your gains`;
+      detail = `S&P 500 down ${Math.abs(spyChg).toFixed(2)}% — significant selling pressure. Check your stop-losses and avoid new positions unless you see very strong conviction.`;
+    }
+    const vixNote = vixVal ? (vixVal > 25 ? ` VIX ${vixVal.toFixed(0)} = high fear/volatility — expect big price swings today.` : vixVal < 15 ? ` VIX ${vixVal.toFixed(0)} = calm market conditions.` : '') : '';
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    el.style.display = 'block';
+    el.innerHTML = `<div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--b);text-transform:uppercase;margin-bottom:.3rem">📡 LIVE MARKET UPDATE · ${time}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.2rem">${headline}</div>
+      <div style="font-size:11px;color:var(--wh2);line-height:1.55">${detail}${vixNote}</div>`;
+  }
+
   // ── TOP MOVERS STRIP ────────────────────────────────────
   function updateTopMovers() {
     const el = document.getElementById('sc-movers');
@@ -4027,6 +4073,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     updateMarketStatus();
     setInterval(updateMarketStatus, 60000);
     renderTodaysTasks();
+    updateMarketLiveBrief();
     initTipRotator();
 
     // Count-up for each stat-num
