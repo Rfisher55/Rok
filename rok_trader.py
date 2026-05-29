@@ -953,6 +953,54 @@ def is_correlated_with_held(candidate: str, held_syms: list, threshold: float = 
         return False
 
 
+_SECTOR_TREND_CACHE: dict = {}
+
+def get_sector_etf_trend() -> dict:
+    """
+    Compute trend status for each sector ETF.
+    Returns {sector: {'above_ema20': bool, 'chg1d': float, 'chg5d': float, 'bullish': bool}}
+    Called once per run and cached. Provides sector-level confirmation filter.
+    """
+    global _SECTOR_TREND_CACHE
+    if _SECTOR_TREND_CACHE:
+        return _SECTOR_TREND_CACHE
+    try:
+        etfs = list(SECTOR_ETFS.values())
+        raw  = yf.download(" ".join(etfs), period="30d", interval="1d",
+                           group_by="ticker", auto_adjust=True, progress=False)
+        result = {}
+        for sec, etf in SECTOR_ETFS.items():
+            try:
+                closes = list(raw["Close"][etf].dropna()) if etf in raw["Close"] else []
+                if len(closes) < 5:
+                    result[sec] = {"above_ema20": True, "chg1d": 0, "chg5d": 0, "bullish": True}
+                    continue
+                chg1d  = (closes[-1] - closes[-2]) / closes[-2] * 100
+                chg5d  = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
+                above_ema20 = True
+                if len(closes) >= 20:
+                    ema20 = _ema(closes, 20)
+                    above_ema20 = closes[-1] >= ema20 * 0.99 if ema20 else True
+                # Bullish: above EMA20 AND at least flat on the day (or recovering)
+                bullish = above_ema20 and chg5d > -5.0
+                result[sec] = {
+                    "above_ema20": above_ema20,
+                    "chg1d":       round(chg1d, 2),
+                    "chg5d":       round(chg5d, 2),
+                    "bullish":     bullish,
+                }
+            except Exception:
+                result[sec] = {"above_ema20": True, "chg1d": 0, "chg5d": 0, "bullish": True}
+        _SECTOR_TREND_CACHE = result
+        bearish_secs = [s for s, d in result.items() if not d["bullish"]]
+        if bearish_secs:
+            logger.info(f"Sector ETF bearish (filter active): {', '.join(bearish_secs)}")
+        return result
+    except Exception as e:
+        logger.debug(f"Sector ETF trend error: {e}")
+        return {}
+
+
 # ── Pre-market gap scanner ────────────────────────────────────────────────────
 def get_premarket_gaps(fractionable_set: set) -> list:
     """
@@ -3461,6 +3509,9 @@ def run():
     # Sector rotation (computed before AI context so it can be included in prompt)
     sector_adjs  = sector_rotation()   # {sector: -8..+8}
 
+    # Sector ETF trend confirmation: identify bearish sectors to filter out buys
+    sector_etf_trends = get_sector_etf_trend()
+
     # Market breadth (computed before AI context for richer prompt)
     breadth = get_market_breadth()
 
@@ -3883,6 +3934,32 @@ def run():
     if _consecutive_losses:
         logger.info(f"Consecutive loss guard: last 3 trades lost ({[round(p,1) for p in _last3_pnl]}) — skipping new buys this cycle")
 
+    # Portfolio beta estimation: estimate aggregate market exposure of open positions
+    # Uses 63-day RS vs SPY as a beta proxy (positively correlated with actual beta)
+    # If portfolio beta > 1.5 we're overexposed to market risk — raise buying threshold
+    _port_beta_est = 0.0
+    try:
+        if longs:
+            _beta_sum  = 0.0
+            _beta_n    = 0
+            _spy_perf  = _fetch_spy_perf()
+            for _psym, _ppos in longs.items():
+                _psig = live.get(_psym, {})
+                _rs63 = _psig.get("rs63", 0) or 0
+                _roc5 = _psig.get("roc5", 0) or 0
+                _adx  = _psig.get("adx",  0) or 0
+                # Rough beta proxy: high RS63 + high ROC + high ADX = high beta stock
+                # Calibrated to approximate: beta = 1 + RS63/30 (a simple linear model)
+                _beta_est = 1.0 + (_rs63 / 30.0) + (_roc5 / 50.0)
+                _beta_est = max(0.3, min(2.5, _beta_est))
+                _beta_sum += _beta_est
+                _beta_n   += 1
+            _port_beta_est = round(_beta_sum / max(1, _beta_n), 2)
+            if _port_beta_est > 1.5:
+                logger.info(f"Portfolio beta estimate: {_port_beta_est:.2f} (high-beta portfolio — risk elevated)")
+    except Exception:
+        pass
+
     # Dynamic score threshold: raise bar when market is fearful or below 200MA
     _vix_now_buy = vix or 20.0
     _above_200   = regime.get("above_200", True)
@@ -3903,6 +3980,12 @@ def run():
     if _vix_spike:
         _eff_min_score += 8
         logger.info(f"VIX spike guard active — raising threshold to {_eff_min_score}")
+
+    # Portfolio beta guard: high-beta portfolio + new high-beta buy = double the risk
+    # Add +5 to threshold when portfolio is already high-beta (>1.5 estimate)
+    if _port_beta_est > 1.5:
+        _eff_min_score += 5
+        logger.info(f"Portfolio beta guard: beta≈{_port_beta_est:.2f} — raising threshold to {_eff_min_score}")
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
         # Sector counts for diversification
@@ -3983,6 +4066,16 @@ def run():
                 logger.info(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{MAX_SECTOR_LONGS})")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"sector {sec} full"})
                 continue
+            # Sector ETF confirmation: skip individual stock buy if the whole sector is bearish
+            # Exception: mean-reversion setups in bearish sectors are fine (buying the dip)
+            _sec_etf = sector_etf_trends.get(sec, {})
+            if _sec_etf and not _sec_etf.get("bullish", True) and tk not in mean_rev_cands:
+                _etf_5d = _sec_etf.get("chg5d", 0)
+                # Only block if sector is truly falling (not just underperforming)
+                if _etf_5d < -3.0:
+                    logger.info(f"SKIP {tk} — sector {sec} ETF falling ({_etf_5d:+.1f}%5d)")
+                    _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"sector ETF selling off ({_etf_5d:+.1f}%5d)"})
+                    continue
             if has_earnings_soon(tk):
                 logger.info(f"SKIP {tk} — earnings within 3 days")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": "earnings in <3d"})
