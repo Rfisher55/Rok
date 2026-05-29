@@ -857,14 +857,14 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Stats strip -->
     <div class="stats-row">
       {% set ss = data.source_stats %}
-      <div class="stat-box"><div class="stat-num" data-final="{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}">{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}</div><div class="stat-lbl">Reddit</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}">{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}</div><div class="stat-lbl">News</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{{ ss.stocks }}">{{ ss.stocks }}</div><div class="stat-lbl">Stocks</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{{ ss.sec }}">{{ ss.sec }}</div><div class="stat-lbl">SEC</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{{ ss.earnings_upcoming }}">{{ ss.earnings_upcoming }}</div><div class="stat-lbl">Earnings</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{{ ss.unusual_options }}">{{ ss.unusual_options }}</div><div class="stat-lbl">Options</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{{ ss.congress_trades|default(0) }}">{{ ss.congress_trades|default(0) }}</div><div class="stat-lbl">Congress</div></div>
-      <div class="stat-box"><div class="stat-num" data-final="{{ ss.technical|default(0) }}">{{ ss.technical|default(0) }}</div><div class="stat-lbl">TA Setups</div></div>
+      <div class="stat-box" title="Reddit posts analyzed"><div class="stat-num" data-final="{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}">{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}</div><div class="stat-lbl">📱 Reddit</div></div>
+      <div class="stat-box" title="News articles scanned"><div class="stat-num" data-final="{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}">{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}</div><div class="stat-lbl">📰 News</div></div>
+      <div class="stat-box" title="Stocks scanned with live data"><div class="stat-num" data-final="{{ ss.stocks }}">{{ ss.stocks }}</div><div class="stat-lbl">📊 Stocks</div></div>
+      <div class="stat-box" title="SEC insider trade filings"><div class="stat-num" data-final="{{ ss.sec }}">{{ ss.sec }}</div><div class="stat-lbl">👔 Insider</div></div>
+      <div class="stat-box" title="Companies reporting earnings soon"><div class="stat-num" data-final="{{ ss.earnings_upcoming }}">{{ ss.earnings_upcoming }}</div><div class="stat-lbl">📅 Earnings</div></div>
+      <div class="stat-box" title="Unusual options activity detected"><div class="stat-num" data-final="{{ ss.unusual_options }}">{{ ss.unusual_options }}</div><div class="stat-lbl">🐋 Options</div></div>
+      <div class="stat-box" title="Congressional STOCK Act disclosures"><div class="stat-num" data-final="{{ ss.congress_trades|default(0) }}">{{ ss.congress_trades|default(0) }}</div><div class="stat-lbl">🏛️ Congress</div></div>
+      <div class="stat-box" title="Technical chart breakout patterns"><div class="stat-num" data-final="{{ ss.technical|default(0) }}">{{ ss.technical|default(0) }}</div><div class="stat-lbl">⚡ Patterns</div></div>
     </div>
 
     <!-- 3-column signal layout -->
@@ -1120,6 +1120,48 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
     </div>
     {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
+    {% endif %}
+
+    <!-- Top Movers from stock universe -->
+    {% set universe = data.stock_universe|default([]) %}
+    {% if universe %}
+    {% set gainers = universe | sort(attribute='change_pct', reverse=True) %}
+    {% set losers = universe | sort(attribute='change_pct') %}
+    <div class="s-hdr"><h2 class="s-ttl">🚀 BIGGEST MOVERS TODAY</h2><span class="s-sub">Stocks ROK is watching that moved the most</span></div>
+    <div class="tape-row" style="margin-bottom:1.1rem">
+      <div class="tape-card">
+        <div class="clbl" style="color:var(--g)">📈 BIGGEST GAINERS</div>
+        <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">
+          {% for s in gainers[:5] %}
+          {% if s.change_pct is defined and s.change_pct > 0 %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(0,255,136,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(0,255,136,.1)" onclick="switchToScreener('{{ s.ticker }}')">
+            <div>
+              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--g);letter-spacing:.05em">${{ s.ticker }}</span>
+              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem">{{ s.company_name|default('')|truncate(20,true,'') }}</span>
+            </div>
+            <span style="font-size:13px;font-weight:800;color:var(--g)">+{{ '%.1f'|format(s.change_pct) }}%</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      <div class="tape-card">
+        <div class="clbl" style="color:var(--r)">📉 BIGGEST LOSERS</div>
+        <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">
+          {% for s in losers[:5] %}
+          {% if s.change_pct is defined and s.change_pct < 0 %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(255,34,85,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(255,34,85,.1)" onclick="switchToScreener('{{ s.ticker }}')">
+            <div>
+              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--r);letter-spacing:.05em">${{ s.ticker }}</span>
+              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem">{{ s.company_name|default('')|truncate(20,true,'') }}</span>
+            </div>
+            <span style="font-size:13px;font-weight:800;color:var(--r)">{{ '%.1f'|format(s.change_pct) }}%</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
     {% endif %}
 
     <!-- Trending tape -->
