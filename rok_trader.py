@@ -1359,7 +1359,7 @@ def run():
         diag["last_updated"] = run_start.isoformat()
         diag["error"] = "ALPACA_KEY_ID or ALPACA_SECRET_KEY secrets not set in GitHub repository"
         _save(TRADES_FILE, diag)
-        sys.exit(1)
+        return  # let git commit step run
 
     # Market clock
     market_open = False
@@ -1378,7 +1378,7 @@ def run():
         diag["last_updated"] = run_start.isoformat()
         diag["error"] = f"Cannot reach Alpaca API: {e}"
         _save(TRADES_FILE, diag)
-        sys.exit(1)
+        return  # let git commit step run
 
     # Time-of-day flags (ET) — derived from next_close timestamp
     _now_et   = datetime.now(timezone.utc).astimezone()

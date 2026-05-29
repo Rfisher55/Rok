@@ -5,7 +5,7 @@ on:
     # ── US Equity market hours: every 5 min, Mon-Fri, 9:30 AM - 4:05 PM ET ──
     # 9:30-10 AM ET = 13:30-14:00 UTC
     - cron: '30,35,40,45,50,55 13 * * 1-5'
-    # 10 AM - 8 PM ET = 14:00-20:00 UTC (every 5 min)
+    # 10 AM - 4 PM ET = 14:00-20:00 UTC (every 5 min)
     - cron: '*/5 14,15,16,17,18,19 * * 1-5'
     # 4:00-4:05 PM ET = 20:00-20:05 UTC
     - cron: '0,5 20 * * 1-5'
@@ -39,6 +39,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run trading bot
+        continue-on-error: true   # always run commit step even if bot crashes
         env:
           ALPACA_KEY_ID:     ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
