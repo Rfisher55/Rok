@@ -4104,6 +4104,22 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Near support: buying at proven demand zone (+6)
     if d.get("near_support", False): s += 6
 
+    # Pivot point proximity: price near S1/S2 = daily institutional support bounce (+5)
+    # Pivot near R1/R2 = resistance ceiling, reduce conviction (-3)
+    _pprice = d.get("price", 0) or d.get("close", 0) or 0
+    _ps1 = d.get("pivot_s1", 0) or 0
+    _ps2 = d.get("pivot_s2", 0) or 0
+    _pr1 = d.get("pivot_r1", 0) or 0
+    _pr2 = d.get("pivot_r2", 0) or 0
+    if _pprice > 0 and _ps1 > 0 and abs(_pprice - _ps1) / _pprice < 0.015:
+        s += 5   # price within 1.5% of S1 = daily support bounce
+    elif _pprice > 0 and _ps2 > 0 and abs(_pprice - _ps2) / _pprice < 0.015:
+        s += 6   # price within 1.5% of S2 = stronger support
+    if _pprice > 0 and _pr2 > 0 and _pprice >= _pr2 * 0.995:
+        s -= 3   # approaching/at R2 = heavy resistance overhead
+    elif _pprice > 0 and _pr1 > 0 and _pprice >= _pr1 * 0.998:
+        s -= 2   # at R1 = first resistance level
+
     # Fibonacci retracement support: bouncing off 38.2/50/61.8% level = institutional buy zone (+9)
     if d.get("fib_support", False):    s += 9
     if d.get("fib_resistance", False): s -= 5
@@ -4978,6 +4994,17 @@ def run():
                                 f"proactive exit ({pnl_pct:+.1f}%)"
                             )
 
+            # Pivot point resistance exit: price reached R2 level = institutional sell zone
+            # R2 is where most short-sellers enter and longs take profits; high hit-rate exit
+            if not reason:
+                _piv_r2_exit = (_atr_sig.get("pivot_r2", 0) or 0)
+                _piv_r1_exit = (_atr_sig.get("pivot_r1", 0) or 0)
+                _live_rsi_exit = (live.get(sym, {}).get("daily_rsi", 50) or 50)
+                if _piv_r2_exit > 0 and price >= _piv_r2_exit * 0.998 and pnl_pct > 4:
+                    reason = f"pivot R2 resistance (price ${price:.2f} ≥ R2 ${_piv_r2_exit:.2f}, {pnl_pct:+.1f}%)"
+                elif _piv_r1_exit > 0 and price >= _piv_r1_exit * 0.998 and pnl_pct > 6 and _live_rsi_exit > 72:
+                    reason = f"pivot R1 + overbought (price ${price:.2f} ≥ R1 ${_piv_r1_exit:.2f}, RSI={_live_rsi_exit:.0f}, {pnl_pct:+.1f}%)"
+
             # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
             if not reason and _close_cleanup and pnl_pct < -3:
                 reason = f"close cleanup — avoid overnight loss ({pnl_pct:+.1f}%)"
@@ -5517,11 +5544,26 @@ def run():
                         reason += f" [POC-BRK ${_d_buy.get('poc_price', 0)}]"
                     elif _d_buy.get("above_poc"):
                         reason += f" [abv-POC ${_d_buy.get('poc_price', 0)}]"
-                    if _d_buy.get("donchian_up"):   reason += " [DON-BRK]"
-                    if _d_buy.get("ha_bull"):        reason += f" [HA×{_d_buy.get('ha_consec_bull',0)}]"
-                    if _d_buy.get("mfi_bull_div"):   reason += f" [MFI-div{_d_buy.get('mfi',50):.0f}]"
-                    if _d_buy.get("supertrend_bull"): reason += f" [ST${_d_buy.get('supertrend_stop',0):.1f}]"
-                    if _d_buy.get("rvol_surge"):      reason += f" [RVOL{_d_buy.get('rvol',1):.1f}x]"
+                    if _d_buy.get("donchian_up"):          reason += " [DON-BRK]"
+                    if _d_buy.get("ha_bull"):               reason += f" [HA×{_d_buy.get('ha_consec_bull',0)}]"
+                    if _d_buy.get("mfi_bull_div"):          reason += f" [MFI-div{_d_buy.get('mfi',50):.0f}]"
+                    if _d_buy.get("supertrend_bull"):       reason += f" [ST${_d_buy.get('supertrend_stop',0):.1f}]"
+                    if _d_buy.get("rvol_surge"):            reason += f" [RVOL{_d_buy.get('rvol',1):.1f}x]"
+                    # Candlestick confirmation tags
+                    if _d_buy.get("three_white_soldiers"):  reason += " [3-WS]"
+                    if _d_buy.get("morning_star"):          reason += " [M-STAR]"
+                    if _d_buy.get("bullish_engulfing"):     reason += " [BULL-ENG]"
+                    if _d_buy.get("hammer"):                reason += " [HAMMER]"
+                    # Pivot point proximity (buying near S1/S2 = strong institutional support)
+                    _piv_s1 = _d_buy.get("pivot_s1", 0) or 0
+                    _piv_s2 = _d_buy.get("pivot_s2", 0) or 0
+                    _piv_r1 = _d_buy.get("pivot_r1", 0) or 0
+                    if _piv_s1 > 0 and abs(price - _piv_s1) / price < 0.015:
+                        reason += f" [@S1${_piv_s1:.2f}]"
+                    elif _piv_s2 > 0 and abs(price - _piv_s2) / price < 0.015:
+                        reason += f" [@S2${_piv_s2:.2f}]"
+                    if _piv_r1 > 0 and price > _piv_r1 * 0.999:
+                        reason += f" [abv-R1${_piv_r1:.2f}]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=live.get(tk, {}))
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
@@ -5633,6 +5675,17 @@ def run():
                 "force_index_div":    sig.get("force_index_div", False),
                 "true_beta":       round(sig.get("true_beta", 1), 2),
                 "true_alpha":      round(sig.get("true_alpha", 0), 1),
+                "pivot":           round(sig.get("pivot", 0), 2),
+                "pivot_r1":        round(sig.get("pivot_r1", 0), 2),
+                "pivot_r2":        round(sig.get("pivot_r2", 0), 2),
+                "pivot_s1":        round(sig.get("pivot_s1", 0), 2),
+                "pivot_s2":        round(sig.get("pivot_s2", 0), 2),
+                "ha_bull":         sig.get("ha_bull", False),
+                "ha_consec_bull":  sig.get("ha_consec_bull", 0),
+                "hammer":          sig.get("hammer", False),
+                "bullish_engulfing": sig.get("bullish_engulfing", False),
+                "morning_star":    sig.get("morning_star", False),
+                "three_white_soldiers": sig.get("three_white_soldiers", False),
             }
 
         tlog["positions"] = [
