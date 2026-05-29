@@ -1,0 +1,38 @@
+name: ROK Auto Trader
+
+on:
+  schedule:
+    # Every 30 minutes, Mon–Fri, 9:30 AM – 4:00 PM Eastern (13:30–20:00 UTC)
+    - cron: '30 13 * * 1-5'
+    - cron: '0,30 14,15,16,17,18,19 * * 1-5'
+    - cron: '0 20 * * 1-5'
+  workflow_dispatch:   # Manual trigger from GitHub Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run trading bot
+        env:
+          ALPACA_KEY_ID:     ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+        run: python rok_trader.py
