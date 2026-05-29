@@ -880,22 +880,58 @@ _BEAR_CATALYSTS = [
 
 def get_earnings_beat_candidates(candidates: list) -> set:
     """
-    Find stocks that recently beat earnings estimates and are gapping up.
-    These are high-probability continuation setups (earnings momentum).
+    Find stocks that recently beat earnings estimates and are reacting positively.
+    Catches both same-day beats AND post-earnings drift (PEAD) for up to 3 days.
     Returns set of ticker symbols.
     """
     beats = set()
+    cand_set = set(candidates) if not isinstance(candidates, set) else candidates
     try:
-        # Use yfinance screener for recent earnings beats
+        # Primary: use yfinance screener for recent earnings beats
         res = yf.screen("earnings_beat")
-        for q in (res.get("quotes") or [])[:20]:
+        for q in (res.get("quotes") or [])[:25]:
             sym   = q.get("symbol", "")
             chg   = q.get("regularMarketChangePercent", 0) or 0
-            # Only take stocks up 2%+ on earnings day (positive reaction)
-            if sym and sym in candidates and chg >= 2.0:
-                beats.add(sym)
+            eps_surprise = q.get("epsActual", 0) or 0
+            eps_estimate = q.get("epsEstimated", 0) or 0
+            # Take stocks up 2%+ on earnings OR with large EPS beat (>20% surprise)
+            if sym and sym in cand_set:
+                eps_beat_pct = 0.0
+                if eps_estimate and eps_estimate != 0:
+                    eps_beat_pct = (eps_actual - eps_estimate) / abs(eps_estimate) * 100 if (eps_actual := eps_surprise) else 0
+                if chg >= 2.0 or eps_beat_pct >= 20:
+                    beats.add(sym)
     except Exception:
         pass
+
+    # Secondary: look at day_gainers + earnings beat screener combo
+    try:
+        res2 = yf.screen("day_gainers")
+        for q in (res2.get("quotes") or [])[:20]:
+            sym   = q.get("symbol", "")
+            chg   = q.get("regularMarketChangePercent", 0) or 0
+            # Check earnings date — if earnings was within last 3 days AND stock is up 4%+
+            if sym and sym in cand_set and chg >= 4.0:
+                try:
+                    cal = yf.Ticker(sym).calendar
+                    if cal is not None and not cal.empty:
+                        dates = cal.get("Earnings Date", [])
+                        if dates:
+                            from datetime import date as _date
+                            today = _date.today()
+                            for ed in (dates if hasattr(dates, '__iter__') else [dates]):
+                                try:
+                                    ed_date = ed.date() if hasattr(ed, 'date') else ed
+                                    if 0 <= (today - ed_date).days <= 3:
+                                        beats.add(sym)
+                                        break
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
     if beats:
         logger.info(f"Earnings beat candidates: {', '.join(sorted(beats))}")
     return beats
@@ -912,6 +948,38 @@ def detect_catalyst(headlines: list) -> tuple[float, str]:
     boost = min(15, len(bull_hits) * 6) - min(15, len(bear_hits) * 6)
     label = (bull_hits[0] if bull_hits else (bear_hits[0] if bear_hits else ""))
     return float(boost), label
+
+
+def get_52w_breakout_candidates(fractionable_set: set) -> set:
+    """
+    Find stocks breaking out to new 52-week highs with volume confirmation.
+    William O'Neil's #1 institutional buying signal — strong stocks get stronger.
+    Returns set of tickers at/near 52-week highs with ≥1.5x average volume.
+    """
+    breakouts = set()
+    try:
+        for screen in ("day_gainers", "most_actives"):
+            res = yf.screen(screen)
+            for q in (res.get("quotes") or [])[:30]:
+                sym = q.get("symbol", "")
+                if not sym or sym not in fractionable_set:
+                    continue
+                price   = q.get("regularMarketPrice", 0) or 0
+                high52w = q.get("fiftyTwoWeekHigh", 0) or 0
+                avg_vol = q.get("averageDailyVolume3Month", 0) or 0
+                cur_vol = q.get("regularMarketVolume", 0) or 0
+                chg_pct = q.get("regularMarketChangePercent", 0) or 0
+                if (high52w > 0 and price > 0
+                        and price >= high52w * 0.99   # within 1% of 52w high
+                        and chg_pct >= 1.0             # up at least 1% today
+                        and avg_vol > 0 and cur_vol >= avg_vol * 1.5  # volume confirmation
+                        and price >= 5.0):             # not a penny stock
+                    breakouts.add(sym)
+    except Exception as e:
+        logger.debug(f"52W breakout screener error: {e}")
+    if breakouts:
+        logger.info(f"52-week high breakouts: {', '.join(sorted(breakouts))}")
+    return breakouts
 
 
 # ── AI news sentiment ─────────────────────────────────────────────────────────
@@ -2705,6 +2773,11 @@ def run():
     earnings_beats   = get_earnings_beat_candidates(set(candidates)) if _time_ok(230) else set()
     pre_earn_cands   = get_pre_earnings_candidates(candidates[:50], live) if _time_ok(225) else set()
 
+    # 52-week breakout screener — stocks at new annual highs with volume (O'Neil CAN SLIM)
+    breakout_52w_cands = get_52w_breakout_candidates(set(candidates)) if _time_ok(220) else set()
+    if breakout_52w_cands:
+        logger.info(f"52W breakout candidates: {', '.join(sorted(breakout_52w_cands))}")
+
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
     now_utc     = datetime.now(timezone.utc)
@@ -3090,7 +3163,8 @@ def run():
                                 + (14 if tk in bullish_options else 0)
                                 + (18 if tk in earnings_beats else 0)
                                 + (12 if tk in pre_earn_cands else 0)      # pre-earnings drift
-                                + (10 if tk in mean_rev_cands else 0))    # mean reversion bounce
+                                + (10 if tk in mean_rev_cands else 0)      # mean reversion bounce
+                                + (15 if tk in breakout_52w_cands else 0)) # 52-week high breakout
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -3156,10 +3230,12 @@ def run():
             earnings_adj   = 18 if tk in earnings_beats else 0
             pre_earn_adj   = 12 if tk in pre_earn_cands else 0
             mean_rev_adj   = 10 if tk in mean_rev_cands else 0
+            breakout_adj   = 15 if tk in breakout_52w_cands else 0
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
-                                             + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj)
+                                             + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
+                                             + breakout_adj)
             if final_sc >= _eff_min_score:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
@@ -3172,6 +3248,7 @@ def run():
                 if earnings_adj:   extras.append("earnings-beat")
                 if pre_earn_adj:   extras.append("pre-earnings")
                 if mean_rev_adj:   extras.append("mean-rev")
+                if breakout_adj:   extras.append("52W-breakout")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
                 _rejected_log.append({"ticker": tk, "score": final_sc,
@@ -3207,6 +3284,8 @@ def run():
                 "pre_earnings":   tk in pre_earn_cands,
                 "options_flow":   tk in bullish_options,
                 "rsi_bull_div":   live.get(tk, {}).get("rsi_bull_divergence", False),
+                "breakout_52w":   tk in breakout_52w_cands,
+                "earnings_beat":  tk in earnings_beats,
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
