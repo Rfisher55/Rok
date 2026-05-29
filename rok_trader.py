@@ -740,9 +740,13 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             vwap_rcl    = signals.get("vwap_reclaim", False)
             nr7         = signals.get("nr7_signal", False)
             ttm         = signals.get("ttm_squeeze_fired", False)
+            orb         = signals.get("orb_breakout", False)
+            gap_hold    = signals.get("gap_and_hold", False)
             extras = []
-            if at_brk:    extras.append("BREAKOUT above resistance")
+            if orb:       extras.append("ORB breakout (cleared first-hour high)")
             if vwap_rcl:  extras.append("VWAP reclaim (intraday dip bought)")
+            if gap_hold:  extras.append("gap and hold (gapped up, holding gains)")
+            if at_brk:    extras.append("BREAKOUT above resistance")
             if ttm:       extras.append("TTM squeeze breakout")
             if near_s:    extras.append("at support level")
             if vol_dry:   extras.append("volume dry-up (selling exhaustion)")
@@ -1619,6 +1623,45 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Opening Range Breakout (ORB): price clears the first-hour high on good volume
+    # One of the most reliable institutional intraday signals — algos and funds chase ORBs
+    orb_breakout = False
+    try:
+        if hourly is not None and "High" in hourly.columns and "Close" in hourly.columns:
+            h_orb = hourly.dropna(subset=["Close"])
+            if len(h_orb) >= 3 and "Volume" in h_orb.columns:
+                # Opening range = first 1-2 bars of the session (today's early hours)
+                # Use the first bar's high as the breakout level
+                orb_high = float(h_orb["High"].iloc[0])
+                cur_price_h = float(h_orb["Close"].iloc[-1])
+                cur_vol_h   = float(h_orb["Volume"].iloc[-1])
+                avg_vol_h   = float(h_orb["Volume"].mean())
+                # ORB confirmed: price cleared first-hour high AND current volume is healthy
+                if (cur_price_h > orb_high * 1.002       # at least 0.2% above ORB high
+                        and cur_vol_h >= avg_vol_h * 0.6  # not just a thin-volume drift
+                        and len(h_orb) >= 3):              # session is more than 1-2 bars old
+                    orb_breakout = True
+    except Exception:
+        pass
+
+    # Gap and hold: price opens with a gap up ≥1.5% vs yesterday's close and holds above it
+    # Institutional confirmation — no one is selling into the gap
+    gap_and_hold = False
+    try:
+        dc = list(daily["Close"])
+        dc_open = list(daily["Open"]) if "Open" in daily.columns else []
+        if len(dc) >= 2 and len(dc_open) >= 1:
+            yesterday_close = dc[-2]
+            today_open      = dc_open[-1]
+            today_price     = dc[-1]
+            gap_pct = (today_open - yesterday_close) / yesterday_close * 100
+            # Gap up ≥ 1.5% and current price is still above 90% of the gap level
+            gap_fill_level  = yesterday_close + (today_open - yesterday_close) * 0.90
+            if gap_pct >= 1.5 and today_price >= gap_fill_level:
+                gap_and_hold = True
+    except Exception:
+        pass
+
     # Relative strength vs SPY (1-day and 5-day)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
@@ -1667,6 +1710,8 @@ def _extract(daily, hourly):
         "nr7_signal":          nr7_signal,
         "inside_bar":          inside_bar,
         "vwap_reclaim":        vwap_reclaim,
+        "orb_breakout":        orb_breakout,
+        "gap_and_hold":        gap_and_hold,
     }
 
 
@@ -2006,6 +2051,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # VWAP reclaim: price dipped below VWAP intraday then reclaimed — institutions stepped in (+14)
     # One of the highest-conviction intraday signals; stops triggered below VWAP then buyers return
     if d.get("vwap_reclaim", False): s += 14
+
+    # Opening Range Breakout: cleared the first-hour high on volume — algo algos and funds chase (+13)
+    if d.get("orb_breakout", False): s += 13
+
+    # Gap and hold: gapped up 1.5%+ and is holding above the gap — buyers own the tape (+10)
+    if d.get("gap_and_hold", False): s += 10
 
     # Market regime adjustment
     s += regime_adj
@@ -2703,6 +2754,8 @@ def run():
                 "nr7":            live.get(tk, {}).get("nr7_signal", False),
                 "inside_bar":     live.get(tk, {}).get("inside_bar", False),
                 "vwap_reclaim":   live.get(tk, {}).get("vwap_reclaim", False),
+                "orb_breakout":   live.get(tk, {}).get("orb_breakout", False),
+                "gap_and_hold":   live.get(tk, {}).get("gap_and_hold", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
