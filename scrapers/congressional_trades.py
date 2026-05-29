@@ -1,6 +1,5 @@
 """
-Congressional stock trades from House Stock Watcher + Senate Stock Watcher.
-Both are free public S3 datasets compiled from official STOCK Act disclosures.
+Congressional stock trades from House Stock Watcher + Senate Stock Watcher + QuiverQuant.
 """
 import logging
 import requests
@@ -11,7 +10,11 @@ logger = logging.getLogger(__name__)
 
 _HOUSE_URL = "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json"
 _SENATE_URL = "https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions_for_all_senators.json"
-_HEADERS = {"User-Agent": "ROK-StockAdvisor/1.0 (research tool)"}
+_QUIVER_URL = "https://api.quiverquant.com/beta/live/congresstrading"
+_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json",
+}
 
 
 def _parse_date(s: str):
@@ -91,21 +94,58 @@ def _fetch_senate(cutoff: datetime) -> list:
     return trades
 
 
+def _fetch_quiverquant(cutoff: datetime) -> list:
+    """Fallback: QuiverQuant public congressional trading endpoint."""
+    trades = []
+    try:
+        r = requests.get(_QUIVER_URL, headers=_HEADERS, timeout=15)
+        r.raise_for_status()
+        for t in r.json():
+            date = _parse_date(t.get("Date") or t.get("TransactionDate") or "")
+            if not date or date < cutoff:
+                continue
+            ticker = (t.get("Ticker") or "").strip().upper()
+            if not ticker or not ticker.isalpha() or len(ticker) > 5:
+                continue
+            action_raw = (t.get("Transaction") or t.get("Type") or "").lower()
+            action = "BUY" if "purchase" in action_raw or "buy" in action_raw else "SELL" if "sale" in action_raw or "sell" in action_raw else ""
+            if not action:
+                continue
+            trades.append({
+                "ticker": ticker,
+                "action": action,
+                "member": t.get("Representative") or t.get("Senator") or "Unknown",
+                "chamber": "Congress",
+                "amount": t.get("Range") or "",
+                "date": date.strftime("%Y-%m-%d"),
+                "asset": (t.get("Asset") or "")[:80],
+            })
+    except Exception as e:
+        logger.debug(f"QuiverQuant congressional: {e}")
+    return trades
+
+
 def get_recent_trades(days_back: int = 45) -> list:
     """All recent congressional trades, sorted newest first."""
     cutoff = datetime.now() - timedelta(days=days_back)
     trades = _fetch_house(cutoff) + _fetch_senate(cutoff)
+    if not trades:
+        # Try QuiverQuant as fallback
+        logger.info("S3 sources empty — trying QuiverQuant for congressional trades")
+        trades = _fetch_quiverquant(cutoff)
     trades.sort(key=lambda x: x["date"], reverse=True)
     return trades[:200]
 
 
-def get_congress_buys(days_back: int = 45) -> list:
+def get_congress_buys(days_back: int = 90) -> list:
     """
     Aggregated congressional buys by ticker — most-bought first.
     Returns list of dicts: ticker, buy_count, sell_count, member_count, members_preview, latest_date.
     """
     cutoff = datetime.now() - timedelta(days=days_back)
     all_trades = _fetch_house(cutoff) + _fetch_senate(cutoff)
+    if not all_trades:
+        all_trades = _fetch_quiverquant(cutoff)
 
     by_ticker: dict = defaultdict(lambda: {
         "ticker": "",

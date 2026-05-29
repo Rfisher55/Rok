@@ -46,35 +46,55 @@ def get_fear_greed_index() -> dict:
 
 
 def get_put_call_ratio() -> dict:
-    """CBOE total equity put/call ratio from their public stats endpoint."""
+    """CBOE total equity put/call ratio — tries multiple endpoints."""
+    urls = [
+        "https://cdn.cboe.com/api/global/us_options_market_statistics/daily-market-statistics.json",
+        "https://www.cboe.com/us/options/market_statistics/daily_market_statistics.json",
+        "https://data.cboe.com/api/global/us_options_market_statistics/daily-market-statistics.json",
+    ]
+    for url in urls:
+        try:
+            r = requests.get(url, headers=_JSON, timeout=10)
+            if not r.ok:
+                continue
+            data = r.json()
+            # Try nested and flat formats
+            pcr = (data.get("data") or data).get("total_put_call_ratio") or data.get("total_put_call_ratio")
+            equity_pcr = (data.get("data") or data).get("equity_put_call_ratio") or data.get("equity_put_call_ratio")
+            if pcr is None:
+                # Search all keys
+                flat = data.get("data", data)
+                for key in flat:
+                    if "put" in str(key).lower() and "call" in str(key).lower() and "total" in str(key).lower():
+                        pcr = flat[key]
+                        break
+                    if "equity" in str(key).lower() and "put" in str(key).lower():
+                        equity_pcr = equity_pcr or flat[key]
+            if pcr is not None:
+                pcr = float(pcr)
+                return {
+                    "total": round(pcr, 3),
+                    "equity": round(float(equity_pcr), 3) if equity_pcr else None,
+                    "signal": "FEAR" if pcr > 1.2 else "GREED" if pcr < 0.7 else "NEUTRAL",
+                }
+        except Exception as e:
+            logger.debug(f"Put/Call ratio {url}: {e}")
+
+    # Fallback: estimate from yfinance VIX — high VIX implies high put buying
     try:
-        r = requests.get(
-            "https://cdn.cboe.com/api/global/us_options_market_statistics/daily-market-statistics.json",
-            headers=_JSON,
-            timeout=10,
-        )
-        r.raise_for_status()
-        data = r.json()
-        pcr = data.get("data", {}).get("total_put_call_ratio")
-        equity_pcr = data.get("data", {}).get("equity_put_call_ratio")
-        if pcr is None:
-            # Try alternate key
-            for key in ["putCallRatio", "put_call_ratio", "pcr"]:
-                if key in data:
-                    pcr = data[key]
-                    break
-        return {
-            "total": round(float(pcr), 3) if pcr else None,
-            "equity": round(float(equity_pcr), 3) if equity_pcr else None,
-            "signal": (
-                "FEAR" if pcr and float(pcr) > 1.2
-                else "GREED" if pcr and float(pcr) < 0.7
-                else "NEUTRAL"
-            ),
-        }
-    except Exception as e:
-        logger.debug(f"Put/Call ratio: {e}")
-        return {"total": None, "equity": None, "signal": "UNKNOWN"}
+        vix = yf.Ticker("^VIX").history(period="1d")
+        if not vix.empty:
+            vix_level = float(vix["Close"].iloc[-1])
+            estimated_pcr = round(0.7 + vix_level / 100, 3)
+            return {
+                "total": estimated_pcr,
+                "equity": None,
+                "signal": "FEAR" if vix_level > 25 else "GREED" if vix_level < 15 else "NEUTRAL",
+                "note": "estimated from VIX",
+            }
+    except Exception:
+        pass
+    return {"total": None, "equity": None, "signal": "UNKNOWN"}
 
 
 def get_market_breadth() -> dict:
