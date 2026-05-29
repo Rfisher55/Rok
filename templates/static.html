@@ -1362,12 +1362,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="mkt-card">
         <div class="clbl">😨 ARE PEOPLE SCARED OR GREEDY?</div>
         {% set fg = data.fear_greed %}{% set fgs = fg.score|default(50) %}{% set pct = [[fgs,2]|max,98]|min %}
-        <div class="gauge-track"><div class="gauge-pin" style="left:calc({{ pct }}% - 7px)"></div></div>
+        <div class="gauge-track"><div class="gauge-pin" id="fg-gauge-pin" style="left:calc({{ pct }}% - 7px)"></div></div>
         <div class="gauge-mkrs"><span>😨 FEAR</span><span>NEUTRAL</span><span>🤑 GREED</span></div>
-        <div class="gauge-score">{{ fgs }}/100 — {{ fg.rating|default('Neutral') }}</div>
-        <div style="font-size:10px;color:var(--wh3);margin-top:.5rem;line-height:1.5">
+        <div class="gauge-score" id="fg-gauge-score">{{ fgs }}/100 — {{ fg.rating|default('Neutral') }}</div>
+        <div style="font-size:10px;color:var(--wh3);margin-top:.5rem;line-height:1.5" id="fg-gauge-explain">
           {% if fgs < 30 %}🟢 Everyone is scared = often a great time to buy stocks at a discount{% elif fgs > 70 %}🔴 Everyone is greedy = stocks are expensive, be more careful{% else %}🟡 Markets are calm — normal conditions{% endif %}
         </div>
+        <div style="font-size:8px;color:var(--g);opacity:.7;margin-top:3px" id="fg-live-badge" style="display:none">● LIVE DATA</div>
       </div>
       <div class="mkt-card">
         <div class="clbl">📱 WHAT PEOPLE ARE SAYING ONLINE</div>
@@ -2029,6 +2030,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
       <div id="buy-pct-hint" style="font-size:10px;color:var(--wh3);margin-top:.25rem;min-height:16px"></div>
     </div>
+    <div style="margin-bottom:.65rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem">MY REASON FOR BUYING (OPTIONAL — your trade journal)</div>
+      <textarea id="buy-dialog-note" rows="2"
+        style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.5rem .7rem;font-size:13px;color:var(--wh2);outline:none;font-family:var(--font);box-sizing:border-box;resize:vertical;min-height:48px"
+        placeholder="e.g. Senate bought last week, AI tailwind, I expect earnings beat…"></textarea>
+    </div>
     <div style="display:flex;gap:.6rem">
       <button onclick="cancelBoughtIt()" style="flex:1;padding:.75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
       <button onclick="confirmBoughtIt()" style="flex:2;padding:.75rem;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.35);border-radius:10px;color:var(--g);font-size:14px;font-weight:800;cursor:pointer;touch-action:manipulation">✓ ADD TO MY STOCKS</button>
@@ -2636,7 +2643,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); }
-    if (id === 'market') updateMarketLiveBrief();
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -2740,6 +2747,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (projEl) projEl.style.display = 'none';
       const acctSzEl = document.getElementById('buy-account-size');
       if (acctSzEl) { const saved = localStorage.getItem(ACCT_KEY); if (saved) acctSzEl.value = saved; }
+      const noteEl = document.getElementById('buy-dialog-note');
+      if (noteEl) noteEl.value = '';
       if (sub) {
         const parts = [];
         if (price > 0) parts.push(`Current price: $${price.toFixed(2)}`);
@@ -2764,11 +2773,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   window.confirmBoughtIt = function() {
     const inp = document.getElementById('buy-dialog-price');
     const sharesInp = document.getElementById('buy-dialog-shares');
+    const noteEl = document.getElementById('buy-dialog-note');
     const v = parseFloat(inp?.value);
     const sh = parseInt(sharesInp?.value) || 0;
+    const note = noteEl ? noteEl.value.trim() : '';
     document.getElementById('buy-dialog-overlay')?.classList.remove('open');
     if (_boughtItResolve) {
-      _boughtItResolve(isNaN(v) || v <= 0 ? null : { price: v, shares: sh > 0 ? sh : null });
+      _boughtItResolve(isNaN(v) || v <= 0 ? null : { price: v, shares: sh > 0 ? sh : null, note: note || undefined });
       _boughtItResolve = null;
     }
   };
@@ -2815,7 +2826,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (!result) return;
     const usePrice = result.price || result; // backwards compat
     const useShares = result.shares || null;
-    p[ticker] = { price: usePrice, shares: useShares, date: new Date().toISOString() };
+    const useNote = result.note || null;
+    p[ticker] = { price: usePrice, shares: useShares, date: new Date().toISOString(), ...(useNote ? { note: useNote } : {}) };
     savePortfolio(p);
     updateBoughtBtn(ticker, true);
     if (activeTab === 'screener') renderScreener();
@@ -3249,6 +3261,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           <span class="port-rec-msg">${recMsg}</span>
         </div>
         ${stock && stock.earnings_date ? `<div style="padding:.3rem .65rem .5rem;font-size:10px;color:var(--au);display:flex;align-items:center;gap:.35rem;border-top:1px solid rgba(255,215,0,.1)"><span>📅</span><span><strong>Earnings coming up: ${stock.earnings_date}</strong> — expect more volatility around this date. Consider reducing size before earnings if you're unsure.</span></div>` : ''}
+        ${entry.note ? `<div style="padding:.3rem .65rem .5rem;font-size:10px;color:var(--wh3);display:flex;align-items:flex-start;gap:.35rem;border-top:1px solid rgba(255,255,255,.04)"><span>📝</span><span style="font-style:italic">${entry.note}</span></div>` : ''}
       </div>`;
     }).join('');
     const alertsHtml = alerts.length ? `<div class="port-alerts">${alerts.map(a=>
@@ -3827,6 +3840,31 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.renderTodaysTasks = renderTodaysTasks;
 
+  // ── LIVE FEAR & GREED ────────────────────────────────────
+  async function fetchLiveFearGreed() {
+    try {
+      const r = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) return;
+      const j = await r.json();
+      const score = Math.round(j?.fear_and_greed?.score || 0);
+      if (!score) return;
+      const rating = j?.fear_and_greed?.rating || (score < 30 ? 'Extreme Fear' : score < 45 ? 'Fear' : score < 55 ? 'Neutral' : score < 75 ? 'Greed' : 'Extreme Greed');
+      const pct = Math.min(98, Math.max(2, score));
+      const pin = document.getElementById('fg-gauge-pin');
+      const scoreEl = document.getElementById('fg-gauge-score');
+      const explainEl = document.getElementById('fg-gauge-explain');
+      const badge = document.getElementById('fg-live-badge');
+      if (pin) pin.style.left = `calc(${pct}% - 7px)`;
+      if (scoreEl) scoreEl.textContent = `${score}/100 — ${rating}`;
+      if (explainEl) {
+        if (score < 30) explainEl.textContent = '🟢 Everyone is scared = often a great time to buy stocks at a discount';
+        else if (score > 70) explainEl.textContent = '🔴 Everyone is greedy = stocks are expensive, be more careful';
+        else explainEl.textContent = '🟡 Markets are calm — normal conditions';
+      }
+      if (badge) { badge.style.display = 'block'; }
+    } catch { /* silent */ }
+  }
+
   // ── MARKET TAB LIVE BRIEF ────────────────────────────────
   function updateMarketLiveBrief() {
     const el = document.getElementById('mkt-live-brief');
@@ -4074,6 +4112,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     setInterval(updateMarketStatus, 60000);
     renderTodaysTasks();
     updateMarketLiveBrief();
+    fetchLiveFearGreed();
     initTipRotator();
 
     // Count-up for each stat-num
