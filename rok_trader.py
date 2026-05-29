@@ -1129,7 +1129,7 @@ _NEWS_VEL_CACHE: dict = {}
 def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
     """News velocity: count of yfinance news items in 24h vs prior 24h window.
     Accelerating news flow = catalyst building (often precedes big moves).
-    Returns: count_24h, count_48h, velocity (ratio), accelerating (bool).
+    Returns: count_24h, count_48h, velocity (ratio), accelerating (bool), headlines.
     """
     import time as _time
     now = _time.time()
@@ -1137,7 +1137,7 @@ def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
         cached, ts = _NEWS_VEL_CACHE[sym]
         if now - ts < max_age_sec:
             return cached
-    result = {"count_24h": 0, "count_48h": 0, "velocity": 0.0, "accelerating": False}
+    result = {"count_24h": 0, "count_48h": 0, "velocity": 0.0, "accelerating": False, "headlines": []}
     try:
         news = yf.Ticker(sym).news[:15]
         if news:
@@ -1145,11 +1145,22 @@ def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
             count_48h = sum(1 for n in news if 86400 <= (now - n.get("providerPublishTime", 0)) < 172800)
             velocity  = (count_24h - count_48h) / max(1.0, count_48h)
             accel     = count_24h > count_48h + 1 and count_24h >= 3
+            # Store top 4 recent headlines with timestamp
+            _headlines = []
+            for n in sorted(news, key=lambda x: x.get("providerPublishTime", 0), reverse=True)[:4]:
+                title = n.get("title", "")
+                pub   = n.get("providerPublishTime", 0)
+                src   = n.get("publisher", "")
+                url   = n.get("link", "") or n.get("url", "")
+                if title:
+                    age_h = round((now - pub) / 3600, 1) if pub else None
+                    _headlines.append({"t": title[:120], "s": src[:30], "h": age_h, "u": url})
             result = {
-                "count_24h":   count_24h,
-                "count_48h":   count_48h,
-                "velocity":    round(velocity, 2),
+                "count_24h":    count_24h,
+                "count_48h":    count_48h,
+                "velocity":     round(velocity, 2),
                 "accelerating": accel,
+                "headlines":    _headlines,
             }
     except Exception:
         pass
@@ -6931,6 +6942,9 @@ def run():
                 "analyst_net_rev":    sig.get("analyst_net_rev", 0),
                 "analyst_price_tgt":  sig.get("analyst_price_tgt", 0.0),
                 "analyst_upside_pct": sig.get("analyst_upside_pct", 0.0),
+                # News headlines for position card (from _news_velocity cache)
+                "news_headlines":     _NEWS_VEL_CACHE.get(sym, ({}, 0))[0].get("headlines", [])
+                                      if sym in _NEWS_VEL_CACHE else [],
             }
 
         tlog["positions"] = [

@@ -55002,6 +55002,25 @@ window.renderSectorRotation = renderSectorRotation;
                     ${risk ? `<div style="font-size:6px;color:#ef535077;margin-top:.1rem">⚠ ${risk}</div>` : ''}
                   </div>`;
                 })() : ''}
+                ${(() => {
+                  // Latest news headlines for this position
+                  const headlines = ls.news_headlines || [];
+                  if (!headlines.length) return '';
+                  const items = headlines.slice(0, 3).map(h => {
+                    const ageStr = h.h != null ? (h.h < 1 ? `${Math.round(h.h*60)}m` : `${h.h.toFixed(0)}h`) : '';
+                    const src = h.s ? ` · ${h.s}` : '';
+                    const linkOpen = h.u ? `<a href="${h.u}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">` : '';
+                    const linkClose = h.u ? '</a>' : '';
+                    return `<div style="border-top:1px solid rgba(255,255,255,.04);padding:.2rem 0;line-height:1.3">
+                      ${linkOpen}<span style="font-size:6.5px;color:#9e9e9e">${h.t}</span>${linkClose}
+                      <span style="font-size:5.5px;color:#444;margin-left:.3rem">${ageStr}${src}</span>
+                    </div>`;
+                  }).join('');
+                  return `<div style="margin-top:.3rem;background:rgba(0,0,0,.2);border-radius:4px;padding:.2rem .45rem">
+                    <div style="font-size:5.5px;color:#444;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.1rem">News</div>
+                    ${items}
+                  </div>`;
+                })()}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
