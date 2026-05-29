@@ -1246,6 +1246,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-pre-close-prep" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-news-impact-live" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-smart-stop-guide" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-watchlist-pulse" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-indicator-school" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-best-fit" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-risk-check" style="display:none;margin-bottom:.85rem"></div>
@@ -1913,6 +1914,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="mkt-intraday-pulse" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-vix-live" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-market-temp" style="display:none;margin-bottom:.85rem"></div>
+    <div id="mkt-spy-vs-sectors" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-divergence" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
@@ -2722,6 +2724,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-goal-runway" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-sector-pnl" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-size-health" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-weekly-recap" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-risk-adjusted-grade" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-quarterly-perf" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-position-ladder" style="display:none;margin-bottom:.75rem"></div>
@@ -33064,7 +33067,145 @@ body.beginner-mode #beginner-banner { display:block }
   }
   window.renderSizeHealth = renderSizeHealth;
 
+  // ── WATCHLIST PULSE ────────────────────────────────────
+  function renderWatchlistPulse() {
+    const el = document.getElementById('sig-watchlist-pulse');
+    if (!el) return;
+    const lp = window._livePrices || {};
+    const tickers = ['SPY','QQQ','AAPL','MSFT','NVDA','AMD','TSLA','AMZN','META','GOOGL','JPM','XLK','XLF','XLE','XLV','IWM','GLD','TLT'];
+    const rows = tickers.map(t => {
+      const d = lp[t];
+      if (!d || d.price == null) return null;
+      const chg = d.change_pct || 0;
+      const color = chg > 1 ? '#00e676' : chg > 0 ? '#69f0ae' : chg < -1 ? '#ff5252' : chg < 0 ? '#ff8a80' : '#aaa';
+      const arrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '–';
+      const vol = d.vol_ratio ? (d.vol_ratio > 1.5 ? `<span style="color:#ffd740;font-size:.7rem;">🔥${d.vol_ratio.toFixed(1)}x vol</span>` : '') : '';
+      const bar = Math.min(Math.abs(chg) * 20, 100);
+      const barColor = chg >= 0 ? '#00e676' : '#ff5252';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #222;">
+        <span style="width:52px;font-weight:700;font-size:.8rem;color:#e0e0e0;">${t}</span>
+        <span style="width:58px;font-size:.8rem;color:#ccc;">$${d.price.toFixed(2)}</span>
+        <div style="flex:1;background:#1a1a2e;border-radius:3px;height:6px;overflow:hidden;">
+          <div style="width:${bar}%;background:${barColor};height:100%;border-radius:3px;"></div>
+        </div>
+        <span style="width:54px;text-align:right;font-size:.8rem;color:${color};font-weight:700;">${arrow} ${Math.abs(chg).toFixed(2)}%</span>
+        ${vol}
+      </div>`;
+    }).filter(Boolean);
+    if (!rows.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.innerHTML = `<div style="font-size:.75rem;font-weight:700;color:#b0bec5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Watchlist Live Pulse</div>
+      ${rows.join('')}
+      <div style="font-size:.7rem;color:#666;margin-top:6px;text-align:right;">Live momentum bars • vol ratio highlights unusual activity</div>`;
+  }
+  window.renderWatchlistPulse = renderWatchlistPulse;
 
+  // ── SPY VS SECTORS ─────────────────────────────────────
+  function renderSpyVsSectors() {
+    const el = document.getElementById('mkt-spy-vs-sectors');
+    if (!el) return;
+    const lp = window._livePrices || {};
+    const items = [
+      { t:'SPY', label:'S&P 500', color:'#7c4dff' },
+      { t:'QQQ', label:'Nasdaq', color:'#00b0ff' },
+      { t:'XLK', label:'Tech', color:'#69f0ae' },
+      { t:'XLF', label:'Finance', color:'#ffd740' },
+      { t:'XLE', label:'Energy', color:'#ff9100' },
+      { t:'XLV', label:'Health', color:'#f48fb1' },
+      { t:'XLC', label:'Comm', color:'#80deea' },
+      { t:'XLI', label:'Industrl', color:'#bcaaa4' },
+      { t:'XLY', label:'Consumer', color:'#ce93d8' },
+      { t:'IWM', label:'Small Cap', color:'#80cbc4' }
+    ];
+    const data = items.map(it => {
+      const d = lp[it.t];
+      return d && d.change_pct != null ? { ...it, chg: d.change_pct } : null;
+    }).filter(Boolean);
+    if (data.length < 3) { el.style.display = 'none'; return; }
+    const maxAbs = Math.max(...data.map(d => Math.abs(d.chg)), 0.01);
+    const spy = data.find(d => d.t === 'SPY');
+    const spyChg = spy ? spy.chg : 0;
+    const rows = data.map(d => {
+      const pct = (d.chg / maxAbs) * 100;
+      const vs = d.chg - spyChg;
+      const vsStr = vs >= 0 ? `+${vs.toFixed(2)}%` : `${vs.toFixed(2)}%`;
+      const vsColor = vs > 0 ? '#00e676' : vs < 0 ? '#ff5252' : '#aaa';
+      const barWidth = Math.abs(pct);
+      const barColor = d.chg >= 0 ? '#00e676' : '#ff5252';
+      const label = d.t === 'SPY' ? `<b style="color:#fff">${d.label}</b>` : d.label;
+      return `<div style="display:flex;align-items:center;gap:6px;margin:3px 0;">
+        <span style="width:60px;font-size:.75rem;color:${d.color};">${label}</span>
+        <div style="flex:1;position:relative;height:14px;background:#1a1a2e;border-radius:3px;overflow:hidden;">
+          <div style="position:absolute;${d.chg >= 0 ? 'left:50%' : `right:50%`};width:${barWidth / 2}%;background:${barColor};height:100%;"></div>
+        </div>
+        <span style="width:44px;text-align:right;font-size:.75rem;color:${d.chg >= 0 ? '#00e676' : '#ff5252'};font-weight:700;">${d.chg >= 0 ? '+' : ''}${d.chg.toFixed(2)}%</span>
+        <span style="width:46px;text-align:right;font-size:.7rem;color:${vsColor};">${d.t !== 'SPY' ? vsStr : ''}</span>
+      </div>`;
+    });
+    el.style.display = '';
+    el.innerHTML = `<div style="font-size:.75rem;font-weight:700;color:#b0bec5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">SPY vs Sectors — Today</div>
+      ${rows.join('')}
+      <div style="font-size:.7rem;color:#666;margin-top:6px;text-align:right;">Right column = vs SPY alpha</div>`;
+  }
+  window.renderSpyVsSectors = renderSpyVsSectors;
+
+  // ── WEEKLY RECAP ───────────────────────────────────────
+  function renderWeeklyRecap() {
+    const el = document.getElementById('port-weekly-recap');
+    if (!el) return;
+    const port = JSON.parse(localStorage.getItem('rok_portfolio_v2') || '[]');
+    const lp = window._livePrices || {};
+    if (!port.length) { el.style.display = 'none'; return; }
+    const snap = JSON.parse(localStorage.getItem('rok_monthly_snap_v1') || '{}');
+    let totalCost = 0, totalNow = 0, totalGain = 0;
+    const rows = port.map(h => {
+      const d = lp[h.ticker];
+      if (!d || !d.price) return null;
+      const cost = (h.avg_cost || 0) * (h.shares || 0);
+      const now = d.price * (h.shares || 0);
+      const gain = now - cost;
+      const gainPct = cost > 0 ? (gain / cost) * 100 : 0;
+      totalCost += cost; totalNow += now; totalGain += gain;
+      const color = gain >= 0 ? '#00e676' : '#ff5252';
+      return `<div style="display:flex;align-items:center;gap:4px;padding:3px 0;border-bottom:1px solid #1e1e2e;">
+        <span style="width:52px;font-weight:700;font-size:.8rem;color:#e0e0e0;">${h.ticker}</span>
+        <span style="flex:1;font-size:.75rem;color:#aaa;">${(h.shares||0).toFixed(0)} sh @ $${(h.avg_cost||0).toFixed(2)}</span>
+        <span style="width:60px;text-align:right;font-size:.75rem;color:#ccc;">$${now.toFixed(0)}</span>
+        <span style="width:60px;text-align:right;font-size:.75rem;color:${color};font-weight:700;">${gain >= 0 ? '+' : ''}$${gain.toFixed(0)} (${gainPct.toFixed(1)}%)</span>
+      </div>`;
+    }).filter(Boolean);
+    if (!rows.length) { el.style.display = 'none'; return; }
+    const totalPct = totalCost > 0 ? ((totalNow - totalCost) / totalCost * 100) : 0;
+    const totColor = totalGain >= 0 ? '#00e676' : '#ff5252';
+    const weekKey = (() => {
+      const now = new Date();
+      const day = now.getDay();
+      const monday = new Date(now); monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      return monday.toISOString().slice(0,10);
+    })();
+    const weekSnap = snap[weekKey] || null;
+    let weekSummary = '';
+    if (weekSnap && weekSnap.value && totalNow > 0) {
+      const weekChg = totalNow - weekSnap.value;
+      const weekPct = weekSnap.value > 0 ? (weekChg / weekSnap.value * 100) : 0;
+      const wColor = weekChg >= 0 ? '#00e676' : '#ff5252';
+      weekSummary = `<div style="margin-bottom:8px;padding:6px 10px;background:#0d1117;border-radius:6px;border-left:3px solid ${wColor};">
+        <span style="font-size:.75rem;color:#aaa;">Week so far: </span>
+        <span style="font-weight:700;color:${wColor};">${weekChg >= 0 ? '+' : ''}$${weekChg.toFixed(0)} (${weekPct.toFixed(2)}%)</span>
+        <span style="font-size:.7rem;color:#555;margin-left:8px;">since Mon open</span>
+      </div>`;
+    }
+    el.style.display = '';
+    el.innerHTML = `<div style="font-size:.75rem;font-weight:700;color:#b0bec5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Weekly Portfolio Recap</div>
+      ${weekSummary}
+      ${rows.join('')}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid #333;">
+        <span style="font-size:.8rem;color:#aaa;font-weight:700;">Total Portfolio</span>
+        <span style="font-size:.85rem;color:${totColor};font-weight:900;">${totalGain >= 0 ? '+' : ''}$${totalGain.toFixed(0)} (${totalPct.toFixed(2)}%)</span>
+      </div>
+      <div style="font-size:.7rem;color:#666;margin-top:4px;text-align:right;">vs your avg cost basis • live prices</div>`;
+  }
+  window.renderWeeklyRecap = renderWeeklyRecap;
 
 
 
