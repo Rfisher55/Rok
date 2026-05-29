@@ -335,6 +335,54 @@ def _bollinger(closes, period=20, num_std=2):
         return 50.0
     return round((closes[-1] - lower) / (upper - lower) * 100, 1)
 
+def _vcp_pattern(highs, lows, closes, volumes=None, lookback: int = 30) -> bool:
+    """
+    Volatility Contraction Pattern (VCP) — Mark Minervini's signature setup.
+    Stock forming tighter and tighter base with declining volume = spring loading.
+    Detect 3 contracting price segments, each with lower range AND lower volume.
+    Returns True if VCP structure detected (breakout imminent).
+    """
+    n = min(lookback, len(closes))
+    if n < 12:
+        return False
+    try:
+        c = closes[-n:]
+        h = highs[-n:]
+        l = lows[-n:]
+        v = list(volumes[-n:]) if volumes and len(volumes) >= n else None
+
+        seg = n // 3
+        ranges = []
+        avg_vols = []
+        for i in range(3):
+            start = i * seg
+            end   = (i + 1) * seg
+            r = max(h[start:end]) - min(l[start:end])
+            ranges.append(r)
+            if v:
+                avg_vols.append(sum(v[start:end]) / max(1, end - start))
+
+        # Check contracting ranges: each segment must be tighter than the last
+        if not (ranges[0] > ranges[1] > ranges[2]):
+            return False
+        # Contraction threshold: last segment must be ≤60% of first segment
+        if ranges[2] > ranges[0] * 0.6:
+            return False
+        # Volume contraction (if available): volume should be declining
+        if avg_vols and len(avg_vols) == 3:
+            if not (avg_vols[0] > avg_vols[1] and avg_vols[2] <= avg_vols[1] * 1.1):
+                return False
+        # Price near top of range (poised for breakout, not at the low)
+        recent_range = max(h[-seg:]) - min(l[-seg:])
+        if recent_range > 0:
+            price_pos = (c[-1] - min(l[-seg:])) / recent_range
+            if price_pos < 0.5:   # price at lower half of range = not ready
+                return False
+        return True
+    except Exception:
+        return False
+
+
 def _obv_trend(closes, volumes, lookback: int = 20) -> dict:
     """
     On-Balance Volume (OBV): cumulative volume with direction.
@@ -1714,6 +1762,8 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append("EMA5>EMA10>EMA20>EMA50 — full bull alignment (all timeframes agree)")
             if signals.get("ema_stacked_bear"):
                 extras.append("EMA stack fully bearish (all EMAs declining)")
+            if signals.get("vcp"):
+                extras.append("VCP: Volatility Contraction Pattern — 3 tightening contractions, volume drying up (Minervini spring-loaded base)")
             if signals.get("obv_rising"):
                 extras.append("OBV rising (On-Balance Volume up ≥2% — institutional accumulation signal)")
             if signals.get("kc_breakout"):
@@ -2673,6 +2723,16 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Volatility Contraction Pattern (VCP): Mark Minervini's signature base setup
+    vcp = False
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 12:
+            _vols = list(daily["Volume"]) if "Volume" in daily.columns else None
+            vcp = _vcp_pattern(list(daily["High"]), list(daily["Low"]), list(daily["Close"]),
+                               volumes=_vols, lookback=30)
+    except Exception:
+        pass
+
     # On-Balance Volume (OBV): rising OBV = accumulation (smart money buying quietly)
     obv_rising = False
     obv_slope_pct = 0.0
@@ -3094,6 +3154,7 @@ def _extract(daily, hourly):
         "kc_oversold":         kc_oversold,
         "obv_rising":          obv_rising,
         "obv_slope_pct":       round(obv_slope_pct, 1),
+        "vcp":                 vcp,
         "cup_handle":          cup_handle.get("breakout_ready", False),
         "cup_handle_pivot":    cup_handle.get("pivot_price", 0.0),
         "cup_depth_pct":       cup_handle.get("cup_depth_pct", 0.0),
@@ -3298,6 +3359,7 @@ def momentum_grade(d, final_score=0):
     if d.get("higher_lows", False):           criteria += 1  # ascending support structure
     if d.get("double_bottom", False):         criteria += 1  # W-pattern bullish reversal
     if d.get("ema_stacked_bull", False):      criteria += 2  # EMA stack aligned (high quality trend)
+    if d.get("vcp", False):                   criteria += 2  # VCP: spring-loaded contraction base
 
     # Score contribution
     if   final_score >= 80: criteria += 2
@@ -3622,6 +3684,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Momentum acceleration: ROC5 rising faster than prior ROC5 (+10)
     # Catches stocks early in a new breakout — before everyone piles in
     if d.get("mom_accel", False): s += 10
+
+    # Volatility Contraction Pattern (VCP): Minervini's spring-loaded base setup (+12)
+    # 3 contracting price segments + volume dry-up = stock ready to explode higher
+    if d.get("vcp", False): s += 12
 
     # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+7)
     if d.get("obv_rising", False): s += 7
@@ -4633,6 +4699,7 @@ def run():
                 if live.get(tk, {}).get("poc_breakout"):    extras.append("POC-BRK")
                 elif live.get(tk, {}).get("above_poc"):    extras.append("abv-POC")
                 if live.get(tk, {}).get("ema_stacked_bull"): extras.append("EMA-stack")
+                if live.get(tk, {}).get("vcp"):               extras.append("VCP")
                 if live.get(tk, {}).get("obv_rising"):        extras.append("OBV↑")
                 if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
                 elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
@@ -4700,6 +4767,7 @@ def run():
                 "kc_breakout":      live.get(tk, {}).get("kc_breakout", False),
                 "kc_oversold":      live.get(tk, {}).get("kc_oversold", False),
                 "obv_rising":       live.get(tk, {}).get("obv_rising", False),
+                "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
