@@ -2265,6 +2265,19 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Multi-timeframe confluence: daily and hourly signals aligned?
+    # True when BOTH daily and hourly confirm the same direction
+    mtf_aligned = False   # daily uptrend + hourly uptrend = high confidence
+    mtf_conflict = False  # daily downtrend + hourly uptrend = false signal risk
+    try:
+        _daily_up   = daily_trend > 0.2 and daily_rsi > 45    # daily uptrend
+        _hourly_up  = ema_cross > 0.1 and rsi_val > 45        # hourly uptrend
+        _daily_down = daily_trend < -0.2 and daily_rsi < 55
+        mtf_aligned  = _daily_up and _hourly_up
+        mtf_conflict = _daily_down and _hourly_up   # trying to buy against daily trend
+    except Exception:
+        pass
+
     # Relative strength vs SPY (1-day, 5-day, 63-day quarterly)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
@@ -2300,6 +2313,8 @@ def _extract(daily, hourly):
         "rs1":             rs1,
         "rs5":             rs5,
         "rs63":            rs63,
+        "mtf_aligned":     mtf_aligned,
+        "mtf_conflict":    mtf_conflict,
         "atr":             round(atr_val, 3) if atr_val else None,
         "stoch_k":            round(stoch_k, 1),
         "stoch_d":            round(stoch_d, 1),
@@ -2543,6 +2558,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif daily_tr > 0.1:  s +=  4
     elif daily_tr < -0.5: s -= 10
     elif daily_tr < -0.1: s -=  5
+
+    # Multi-timeframe confluence: bonus when daily+hourly both confirm direction (+12/-10)
+    # MTF alignment is the single strongest quality filter — reduces false signals significantly
+    if d.get("mtf_aligned", False):   s += 12   # daily uptrend + hourly uptrend = highest conviction
+    if d.get("mtf_conflict", False):  s -= 10   # fighting the daily trend = high failure rate
 
     # Daily RSI confirmation (+8/-8)
     if   50 < daily_rsi < 70: s += 8
@@ -3676,6 +3696,7 @@ def run():
                                        live.get(tk,{}).get("ichimoku_chikou", False)]),
                 "fib_support":    live.get(tk, {}).get("fib_support", False),
                 "macd_bull_div":  live.get(tk, {}).get("macd_bull_div", False),
+                "mtf_aligned":    live.get(tk, {}).get("mtf_aligned", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
