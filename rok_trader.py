@@ -559,6 +559,71 @@ def _williams_r(closes, highs, lows, period=10):
     return round(-100 * (hh - closes[-1]) / (hh - ll), 1)
 
 
+def _price_acceleration(closes, period=10):
+    """Price Acceleration Filter: measures rate-of-change of rate-of-change (2nd derivative).
+    Positive acceleration = momentum building (institutional accumulation accelerating).
+    Negative acceleration = momentum decaying (smart money distributing).
+    Returns (acceleration, is_accelerating, is_decelerating).
+    """
+    if len(closes) < period + 5:
+        return 0.0, False, False
+    try:
+        # ROC at t and t-5: daily pct change smoothed
+        def roc(c, i, n=5):
+            if i >= n and c[i-n] != 0:
+                return (c[i] - c[i-n]) / c[i-n] * 100
+            return 0.0
+        n = len(closes)
+        roc_now  = roc(closes, n-1, period)
+        roc_prev = roc(closes, n-1-5, period)
+        accel = roc_now - roc_prev
+        is_accelerating = accel > 1.0    # momentum gaining ≥1% over 5 days
+        is_decelerating = accel < -1.0   # momentum losing ≥1% over 5 days
+        return round(accel, 3), is_accelerating, is_decelerating
+    except Exception:
+        return 0.0, False, False
+
+
+def _linear_regression_channel(closes, period=20):
+    """Linear regression channel: price relative to its linear trend.
+    Returns (slope_pct, r_squared, above_channel, below_channel, channel_width_pct).
+    - slope_pct: annualized trend slope (%)
+    - r_squared: trend linearity (>0.85 = very linear, <0.5 = choppy)
+    - above_channel: price >1 std dev above regression line (overbought)
+    - below_channel: price <1 std dev below regression line (oversold/bouncing)
+    """
+    if len(closes) < period:
+        return 0.0, 0.0, False, False, 0.0
+    try:
+        y = closes[-period:]
+        x = list(range(period))
+        n = period
+        sx  = sum(x)
+        sy  = sum(y)
+        sxy = sum(x[i]*y[i] for i in range(n))
+        sxx = sum(xi*xi for xi in x)
+        slope = (n*sxy - sx*sy) / (n*sxx - sx*sx)
+        intercept = (sy - slope*sx) / n
+        fitted = [intercept + slope*i for i in x]
+        residuals = [y[i] - fitted[i] for i in range(n)]
+        std = (sum(r*r for r in residuals) / n) ** 0.5
+        # R-squared
+        y_mean = sy / n
+        ss_tot = sum((yi - y_mean)**2 for yi in y)
+        ss_res = sum(r*r for r in residuals)
+        r2 = 1.0 - ss_res/ss_tot if ss_tot > 0 else 0.0
+        cur_price = y[-1]
+        cur_fitted = fitted[-1]
+        above_channel = (cur_price > cur_fitted + std) if std > 0 else False
+        below_channel = (cur_price < cur_fitted - std) if std > 0 else False
+        # Annualize slope: slope is per bar (daily), multiply by 252
+        slope_pct = (slope / (cur_fitted if cur_fitted else 1)) * 252 * 100
+        channel_width_pct = (2 * std / cur_price * 100) if cur_price > 0 else 0.0
+        return round(slope_pct, 2), round(r2, 3), above_channel, below_channel, round(channel_width_pct, 2)
+    except Exception:
+        return 0.0, 0.0, False, False, 0.0
+
+
 def _force_index(closes, volumes, period=13):
     """Elder's Force Index: price-change × volume, smoothed with EMA.
     Positive = buying force (bulls in control). Negative = selling force.
@@ -3271,6 +3336,32 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Price Acceleration: rate of change of ROC (2nd derivative)
+    price_accel      = 0.0
+    price_accel_pos  = False
+    price_accel_neg  = False
+    try:
+        if "Close" in daily.columns and len(daily) >= 15:
+            price_accel, price_accel_pos, price_accel_neg = _price_acceleration(
+                list(daily["Close"]), period=10
+            )
+    except Exception:
+        pass
+
+    # Linear Regression Channel: price vs trend line, R-squared linearity score
+    lr_slope     = 0.0
+    lr_r2        = 0.0
+    lr_above_ch  = False
+    lr_below_ch  = False
+    lr_ch_width  = 0.0
+    try:
+        if "Close" in daily.columns and len(daily) >= 20:
+            lr_slope, lr_r2, lr_above_ch, lr_below_ch, lr_ch_width = _linear_regression_channel(
+                list(daily["Close"]), period=20
+            )
+    except Exception:
+        pass
+
     # Bull flag: flagpole (strong surge) followed by tight consolidation → breakout
     # One of the highest-probability momentum continuation patterns
     bull_flag = False
@@ -3698,6 +3789,14 @@ def _extract(daily, hourly):
         "pivot_s2":            pivot_levels.get("s2", 0),
         "psar":                psar_val,
         "psar_bull":           psar_bull,
+        "price_accel":         price_accel,
+        "price_accel_pos":     price_accel_pos,
+        "price_accel_neg":     price_accel_neg,
+        "lr_slope":            lr_slope,
+        "lr_r2":               lr_r2,
+        "lr_above_channel":    lr_above_ch,
+        "lr_below_channel":    lr_below_ch,
+        "lr_channel_width":    lr_ch_width,
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "macd_bull_div":       macd_div.get("bullish_div", False),
@@ -4327,6 +4426,23 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Parabolic SAR: trend-following trailing stop alignment
     if d.get("psar_bull", True):   s += 5   # SAR below price = uptrend intact
     else:                           s -= 4   # SAR above price = downtrend signal
+
+    # Price Acceleration: momentum building (2nd derivative positive) = institutional accumulation
+    if d.get("price_accel_pos", False):   s += 6   # ROC accelerating ≥1%
+    elif d.get("price_accel_neg", False): s -= 5   # ROC decelerating ≥1% = fading momentum
+
+    # Linear Regression Channel: trend quality and position within channel
+    _lr_r2 = d.get("lr_r2", 0) or 0
+    if d.get("lr_below_channel", False) and _lr_r2 > 0.7:
+        s += 5   # Price pulled back below trend line in strong trend = mean-reversion buy
+    elif d.get("lr_above_channel", False) and _lr_r2 > 0.8:
+        s -= 3   # Extended above trend in very linear uptrend = caution (overbought vs trend)
+    # High R² trend with positive slope = strong directional momentum
+    _lr_slope = d.get("lr_slope", 0) or 0
+    if _lr_r2 > 0.85 and _lr_slope > 20:   # >20% annualized, very linear
+        s += 4
+    elif _lr_r2 > 0.70 and _lr_slope > 10:  # >10% annualized, fairly linear
+        s += 2
 
     # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
     if d.get("higher_lows", False): s += 6
@@ -5498,6 +5614,13 @@ def run():
                 "true_alpha":         live.get(tk, {}).get("true_alpha", 0.0),
                 "psar":               live.get(tk, {}).get("psar", 0.0),
                 "psar_bull":          live.get(tk, {}).get("psar_bull", True),
+                "price_accel":        live.get(tk, {}).get("price_accel", 0.0),
+                "price_accel_pos":    live.get(tk, {}).get("price_accel_pos", False),
+                "price_accel_neg":    live.get(tk, {}).get("price_accel_neg", False),
+                "lr_slope":           live.get(tk, {}).get("lr_slope", 0.0),
+                "lr_r2":              live.get(tk, {}).get("lr_r2", 0.0),
+                "lr_below_channel":   live.get(tk, {}).get("lr_below_channel", False),
+                "lr_above_channel":   live.get(tk, {}).get("lr_above_channel", False),
                 "ha_bull":            live.get(tk, {}).get("ha_bull", False),
                 "ha_consec_bull":     live.get(tk, {}).get("ha_consec_bull", 0),
                 "donchian_up":        live.get(tk, {}).get("donchian_up", False),
@@ -5773,6 +5896,12 @@ def run():
                 "pivot_s2":        round(sig.get("pivot_s2", 0), 2),
                 "psar":            round(sig.get("psar", 0), 3),
                 "psar_bull":       sig.get("psar_bull", True),
+                "price_accel":     round(sig.get("price_accel", 0), 3),
+                "price_accel_pos": sig.get("price_accel_pos", False),
+                "lr_slope":        round(sig.get("lr_slope", 0), 1),
+                "lr_r2":           round(sig.get("lr_r2", 0), 3),
+                "lr_below_channel": sig.get("lr_below_channel", False),
+                "lr_above_channel": sig.get("lr_above_channel", False),
                 "ha_bull":         sig.get("ha_bull", False),
                 "ha_consec_bull":  sig.get("ha_consec_bull", 0),
                 "hammer":          sig.get("hammer", False),
