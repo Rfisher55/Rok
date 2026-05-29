@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
-<title>ROK — {{ data.market_sentiment }} · {{ data.analysis_date }}</title>
+<title>ROK — Stock Intelligence · Live Trading</title>
 <meta name="description" content="ROK AI Stock Intelligence — live buy/sell signals, screener, sector heat map."/>
 <meta name="theme-color" content="#020408"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -1026,23 +1026,18 @@ body.beginner-mode #beginner-banner { display:block }
       <span class="brand-tag">STOCK INTELLIGENCE</span>
     </a>
     <div class="idx-bar">
-      {% for name, d in data.market_indices.items() %}
-      {% set chg = d.change_pct|default(0) %}
-      {% set sym_map = {'S&P 500': 'SPY', 'NASDAQ': 'QQQ', 'DOW': 'DIA', 'Russell 2000': 'IWM', 'VIX': '^VIX'} %}
-      {% set etf = sym_map.get(name, '') %}
-      <div class="idx" {% if etf %}data-idx-ticker="{{ etf }}"{% endif %}>
-        <span class="idx-n">{{ name }}</span>
-        <span class="idx-p" {% if etf %}data-idx-price="{{ etf }}"{% endif %}>{% if name == 'VIX' %}{{ d.price }}{% else %}${{ '{:,.2f}'.format(d.price|default(0)) }}{% endif %}</span>
-        <span class="idx-c {{ 'up' if chg >= 0 else 'down' }}" {% if etf %}data-idx-chg="{{ etf }}"{% endif %}>{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</span>
-      </div>
-      {% endfor %}
+      <div class="idx" data-idx-ticker="SPY"><span class="idx-n">S&amp;P 500</span><span class="idx-p" data-idx-price="SPY">—</span><span class="idx-c" data-idx-chg="SPY">—</span></div>
+      <div class="idx" data-idx-ticker="QQQ"><span class="idx-n">NASDAQ</span><span class="idx-p" data-idx-price="QQQ">—</span><span class="idx-c" data-idx-chg="QQQ">—</span></div>
+      <div class="idx" data-idx-ticker="DIA"><span class="idx-n">DOW</span><span class="idx-p" data-idx-price="DIA">—</span><span class="idx-c" data-idx-chg="DIA">—</span></div>
+      <div class="idx" data-idx-ticker="IWM"><span class="idx-n">Russell 2000</span><span class="idx-p" data-idx-price="IWM">—</span><span class="idx-c" data-idx-chg="IWM">—</span></div>
+      <div class="idx" data-idx-ticker="^VIX"><span class="idx-n">VIX</span><span class="idx-p" data-idx-price="^VIX">—</span><span class="idx-c" data-idx-chg="^VIX">—</span></div>
     </div>
     <div class="hdr-r">
       <div class="live-pill" title="Time until next ROK update"><span class="live-dot"></span><span id="update-timer">live</span></div>
       <div id="data-age-pill" style="display:none;padding:.25rem .55rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;font-size:8.5px;font-weight:600;letter-spacing:.05em;color:var(--wh3)" title="How old the analysis data is"></div>
       <div id="mkt-status-pill" class="mkt-status-pill closed"><span class="mkt-status-dot"></span><span id="mkt-status-txt">CLOSED</span></div>
-      {% if data.market_regime %}<span class="regime">{{ data.market_regime }}</span>{% endif %}
-      <span class="sent {{ data.market_sentiment }}">{{ data.market_sentiment }}</span>
+      <span class="regime" id="hdr-regime" style="display:none"></span>
+      <span class="sent" id="hdr-sentiment"></span>
       <button class="refresh-btn" id="refresh-btn" onclick="refreshLivePrices()" title="Refresh prices">↻</button>
       <button id="beginner-mode-btn" onclick="toggleBeginnerMode()" title="Toggle beginner mode (hides technical indicators)" style="background:none;border:1px solid rgba(255,255,255,.1);color:var(--wh4);border-radius:20px;padding:.2rem .55rem;font-size:9px;font-weight:700;letter-spacing:.06em;cursor:pointer;font-family:var(--font);touch-action:manipulation;white-space:nowrap"> LEARN</button>
       <button class="onboard-help-btn" onclick="showOnboarding()" title="How to use ROK">?</button>
@@ -1053,64 +1048,31 @@ body.beginner-mode #beginner-banner { display:block }
 <!-- MOBILE LIVE INDEX STRIP (hidden on desktop, visible on mobile ≤768px) -->
 <div class="mob-idx-strip" id="mob-idx-strip">
   <div class="mob-idx-scroll" id="mob-idx-scroll">
-    {% set sym_map = {'S&P 500': 'SPY', 'NASDAQ': 'QQQ', 'DOW': 'DIA', 'Russell 2000': 'IWM', 'VIX': '^VIX'} %}
-    {% for name, d in data.market_indices.items() %}
-    {% set etf = sym_map.get(name, '') %}
-    {% set chg = d.change_pct|default(0) %}
-    {% if not loop.first %}<div class="mob-idx-div"></div>{% endif %}
-    <div class="mob-idx-item" {% if etf %}data-mob-idx="{{ etf }}"{% endif %} onclick="openModal('{{ etf }}')">
-      <span class="mob-idx-lbl">{{ name }}</span>
-      <span class="mob-idx-price" {% if etf %}data-mob-price="{{ etf }}"{% endif %}>{% if name == 'VIX' %}{{ d.price }}{% else %}${{ '{:,.2f}'.format(d.price|default(0)) }}{% endif %}</span>
-      <span class="mob-idx-chg {{ 'up' if chg >= 0 else 'down' }}" {% if etf %}data-mob-chg="{{ etf }}"{% endif %}>{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</span>
-    </div>
-    {% endfor %}
+    <div class="mob-idx-item" data-mob-idx="SPY" onclick="openModal('SPY')"><span class="mob-idx-lbl">S&amp;P 500</span><span class="mob-idx-price" data-mob-price="SPY">—</span><span class="mob-idx-chg" data-mob-chg="SPY">—</span></div>
+    <div class="mob-idx-div"></div>
+    <div class="mob-idx-item" data-mob-idx="QQQ" onclick="openModal('QQQ')"><span class="mob-idx-lbl">NASDAQ</span><span class="mob-idx-price" data-mob-price="QQQ">—</span><span class="mob-idx-chg" data-mob-chg="QQQ">—</span></div>
+    <div class="mob-idx-div"></div>
+    <div class="mob-idx-item" data-mob-idx="DIA" onclick="openModal('DIA')"><span class="mob-idx-lbl">DOW</span><span class="mob-idx-price" data-mob-price="DIA">—</span><span class="mob-idx-chg" data-mob-chg="DIA">—</span></div>
+    <div class="mob-idx-div"></div>
+    <div class="mob-idx-item" data-mob-idx="IWM" onclick="openModal('IWM')"><span class="mob-idx-lbl">Russell 2000</span><span class="mob-idx-price" data-mob-price="IWM">—</span><span class="mob-idx-chg" data-mob-chg="IWM">—</span></div>
+    <div class="mob-idx-div"></div>
+    <div class="mob-idx-item" data-mob-idx="^VIX" onclick="openModal('^VIX')"><span class="mob-idx-lbl">VIX</span><span class="mob-idx-price" data-mob-price="^VIX">—</span><span class="mob-idx-chg" data-mob-chg="^VIX">—</span></div>
   </div>
 </div>
 
 <!-- TICKER TAPE (live-updated by JS) -->
 <div class="ticker-tape" id="ticker-tape-bar">
   <div id="ticker-scroll-inner" class="ticker-scroll">
-    {# Static fallback items rendered by Jinja for initial load #}
-    {% set tape_items = (data.buy_signals[:5] + data.sell_signals[:3] + data.watch_list[:3]) %}
-    {% for s in tape_items %}{% set sig = 'buy' if s in data.buy_signals else 'sell' if s in data.sell_signals else 'watch' %}
-    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')" data-tape-ticker="{{ s.ticker }}">
-      <span class="tick-lbl">{{ sig|upper }}</span>
-      <span>${{ s.ticker }}</span>
-      <span class="tick-price">{% if s.current_price %}${{ '%.2f'|format(s.current_price) }}{% endif %}</span>
-      <span class="tick-chg">{% if s.change_pct is defined and s.change_pct is not none %}{{ '+' if s.change_pct >= 0 else '' }}{{ '%.2f'|format(s.change_pct) }}%{% endif %}</span>
-    </div>
-    {% endfor %}
-    {% if not tape_items %}
-    {# Placeholder items shown until JS populates #}
-    {% set mkt_items = [('SPY','S&P 500'),('QQQ','Nasdaq'),('AAPL','Apple'),('MSFT','Microsoft'),('NVDA','Nvidia'),('TSLA','Tesla'),('AMZN','Amazon'),('META','Meta'),('GOOGL','Google')] %}
-    {% for sym, name in mkt_items %}
-    <div class="tick-item" onclick="openModal('{{ sym }}')" data-tape-ticker="{{ sym }}">
-      <span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span>
-      <span>${{ sym }}</span>
-      <span class="tick-price"></span>
-      <span class="tick-chg"></span>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {# Duplicate for seamless loop #}
-    {% for s in tape_items %}{% set sig = 'buy' if s in data.buy_signals else 'sell' if s in data.sell_signals else 'watch' %}
-    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')" data-tape-ticker="{{ s.ticker }}">
-      <span class="tick-lbl">{{ sig|upper }}</span>
-      <span>${{ s.ticker }}</span>
-      <span class="tick-price">{% if s.current_price %}${{ '%.2f'|format(s.current_price) }}{% endif %}</span>
-      <span class="tick-chg">{% if s.change_pct is defined and s.change_pct is not none %}{{ '+' if s.change_pct >= 0 else '' }}{{ '%.2f'|format(s.change_pct) }}%{% endif %}</span>
-    </div>
-    {% endfor %}
-    {% if not tape_items %}
-    {% for sym, name in [('SPY','S&P 500'),('QQQ','Nasdaq'),('AAPL','Apple'),('MSFT','Microsoft'),('NVDA','Nvidia'),('TSLA','Tesla'),('AMZN','Amazon'),('META','Meta'),('GOOGL','Google')] %}
-    <div class="tick-item" onclick="openModal('{{ sym }}')" data-tape-ticker="{{ sym }}">
-      <span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span>
-      <span>${{ sym }}</span>
-      <span class="tick-price"></span>
-      <span class="tick-chg"></span>
-    </div>
-    {% endfor %}
-    {% endif %}
+    <!-- Placeholder tickers — JS replaces these with live data -->
+    <div class="tick-item" onclick="openModal('SPY')" data-tape-ticker="SPY"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$SPY</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('QQQ')" data-tape-ticker="QQQ"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$QQQ</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('AAPL')" data-tape-ticker="AAPL"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$AAPL</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('NVDA')" data-tape-ticker="NVDA"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$NVDA</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('MSFT')" data-tape-ticker="MSFT"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$MSFT</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('TSLA')" data-tape-ticker="TSLA"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$TSLA</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('META')" data-tape-ticker="META"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$META</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('AMZN')" data-tape-ticker="AMZN"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$AMZN</span><span class="tick-price"></span><span class="tick-chg"></span></div>
+    <div class="tick-item" onclick="openModal('GOOGL')" data-tape-ticker="GOOGL"><span style="font-size:7px;opacity:.4;letter-spacing:.1em">LIVE</span><span>$GOOGL</span><span class="tick-price"></span><span class="tick-chg"></span></div>
   </div>
 </div>
 
@@ -1121,24 +1083,22 @@ body.beginner-mode #beginner-banner { display:block }
 </div>
 
 <!-- ROK MOOD BAR -->
-{% if data.market_mood or data.rok_message %}
-<div class="rok-bar">
+<div class="rok-bar" id="rok-bar" style="display:none">
   <span class="rok-lbl">ROK</span>
-  <span class="rok-msg">{% if data.market_mood %}{{ data.market_mood }}{% if data.rok_message %} · {{ data.rok_message[:120] }}{% endif %}{% else %}{{ data.rok_message }}{% endif %}</span>
+  <span class="rok-msg" id="rok-msg"></span>
 </div>
-{% endif %}
 
 <!-- TAB NAV -->
 <nav class="tab-nav">
   <div class="tab-nav-in">
     <button class="tab-btn active" data-tab="signals">
       SIGNALS
-      <span class="badge">{{ (data.buy_signals|length) + (data.sell_signals|length) }}</span>
+      <span class="badge" id="signals-badge"></span>
     </button>
     <button class="tab-btn" data-tab="market">MARKET</button>
     <button class="tab-btn" data-tab="screener">
       SCREENER
-      <span class="badge">{{ data.stock_universe|default([])|length }}</span>
+      <span class="badge" id="screener-badge"></span>
     </button>
     <button class="tab-btn" data-tab="intel"> INSIDER INTEL</button>
     <button class="tab-btn" data-tab="portfolio">MY STOCKS<span class="badge" id="portfolio-badge"></span><span id="portfolio-alert-dot" style="display:none;position:absolute;top:8px;right:6px;width:8px;height:8px;background:var(--r);border-radius:50%;box-shadow:0 0 6px rgba(255,34,85,.8)"></span></button>
@@ -1473,82 +1433,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-relative-power" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-profit-calc" style="margin-bottom:.85rem"></div>
 
-    {# Quick market snapshot row #}
-    {% set sent = data.market_sentiment|upper %}
-    {% set fgs = data.fear_greed.score|default(50) if data.fear_greed else 50 %}
-    {% set buy_n = data.buy_signals|length %}
-    {% set sell_n = data.sell_signals|length %}
-    {# Compute ROK Market Score 0-100: sentiment + fear/greed + buy ratio #}
-    {% set sent_pts = 35 if sent == 'BULLISH' else 10 if sent == 'BEARISH' else 20 %}
-    {% set fg_pts = 25 if fgs < 30 else 5 if fgs > 75 else 15 %}
-    {% set ratio_pts = [buy_n / (buy_n + sell_n + 1) * 25, 25]|min|round(0)|int if (buy_n + sell_n) > 0 else 12 %}
-    {% set data_pts = [data.source_stats.news|default(0) / 10, 15]|min|round(0)|int %}
-    {% set mkt_score = sent_pts + fg_pts + ratio_pts + data_pts %}
-    {% set mkt_score_color = 'var(--g)' if mkt_score >= 60 else 'var(--r)' if mkt_score < 35 else 'var(--au)' %}
-    {% set mkt_score_label = 'GREAT TIME TO BUY' if mkt_score >= 60 else 'USE CAUTION' if mkt_score < 35 else 'DECENT CONDITIONS' %}
-
-    <div style="display:flex;gap:.5rem;align-items:stretch;flex-wrap:wrap;margin-bottom:.75rem">
-      {# ROK Market Score — big visual #}
-      <div style="flex:0 0 auto;background:linear-gradient(135deg,rgba(0,0,0,.4),rgba(0,0,0,.2));border:2px solid {{ mkt_score_color }};border-radius:14px;padding:.75rem 1.1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 0 20px {{ mkt_score_color }}22">
-        <div style="text-align:center">
-          <div style="font-family:var(--disp);font-size:2.2rem;font-weight:900;color:{{ mkt_score_color }};line-height:1;text-shadow:0 0 16px {{ mkt_score_color }}88">{{ mkt_score }}</div>
-          <div style="font-size:7px;font-weight:700;letter-spacing:.15em;color:var(--wh4);text-transform:uppercase">/ 100</div>
-        </div>
-        <div>
-          <div style="font-size:7.5px;font-weight:700;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase">ROK MARKET SCORE</div>
-          <div style="font-size:11px;font-weight:800;color:{{ mkt_score_color }}">{{ mkt_score_label }}</div>
-        </div>
-      </div>
-
-      <div style="flex:0 0 auto;background:{% if sent == 'BULLISH' %}rgba(0,255,136,.08){% elif sent == 'BEARISH' %}rgba(255,34,85,.08){% else %}rgba(255,215,0,.06){% endif %};border:1px solid {% if sent == 'BULLISH' %}rgba(0,255,136,.2){% elif sent == 'BEARISH' %}rgba(255,34,85,.2){% else %}rgba(255,215,0,.16){% endif %};border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
-        <span style="font-size:1.3rem">{% if sent == 'BULLISH' %}{% elif sent == 'BEARISH' %}{% else %}{% endif %}</span>
-        <div>
-          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Market</div>
-          <div style="font-size:14px;font-weight:900;color:{% if sent == 'BULLISH' %}var(--g){% elif sent == 'BEARISH' %}var(--r){% else %}var(--au){% endif %}">{{ sent }}</div>
-        </div>
-      </div>
-      <div style="flex:0 0 auto;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.18);border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
-        <span style="font-size:1.3rem"></span>
-        <div>
-          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Buy Signals</div>
-          <div style="font-size:14px;font-weight:900;color:var(--g)">{{ buy_n }}</div>
-        </div>
-      </div>
-      {% if fgs %}
-      <div style="flex:0 0 auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
-        <span style="font-size:1.3rem">{% if fgs < 30 %}{% elif fgs > 70 %}{% else %}{% endif %}</span>
-        <div>
-          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Fear/Greed</div>
-          <div style="font-size:14px;font-weight:900;color:{% if fgs < 30 %}var(--g){% elif fgs > 70 %}var(--r){% else %}var(--au){% endif %}">{{ fgs|round(0)|int }}</div>
-        </div>
-      </div>
-      {% endif %}
-      {% if data.week_summary or data.rok_message %}
-      <div style="flex:1;min-width:160px;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(255,215,0,.04));border:1px solid rgba(0,204,255,.15);border-radius:10px;padding:.6rem .85rem;position:relative;overflow:hidden">
-        <div style="font-size:7.5px;font-weight:800;letter-spacing:.18em;color:var(--b);text-transform:uppercase;margin-bottom:.25rem"> ROK'S TAKE</div>
-        <div style="font-size:11.5px;color:var(--wh2);line-height:1.5;font-style:italic">{{ (data.week_summary or data.rok_message)[:160] }}{% if (data.week_summary or data.rok_message)|length > 160 %}…{% endif %}</div>
-      </div>
-      {% endif %}
-    </div>
-
-    {# Plain-English "what to do" guidance box for beginners #}
-    <div style="background:linear-gradient(135deg,rgba({{ '0,255,136' if sent == 'BULLISH' else '255,34,85' if sent == 'BEARISH' else '255,215,0' }},.06),rgba(0,0,0,.15));border:1px solid rgba({{ '0,255,136' if sent == 'BULLISH' else '255,34,85' if sent == 'BEARISH' else '255,215,0' }},.2);border-radius:12px;padding:.8rem 1rem;margin-bottom:.75rem">
-      <div style="font-size:8px;font-weight:800;letter-spacing:.18em;color:{{ 'var(--g)' if sent == 'BULLISH' else 'var(--r)' if sent == 'BEARISH' else 'var(--au)' }};text-transform:uppercase;margin-bottom:.3rem"> WHAT SHOULD YOU DO RIGHT NOW?</div>
-      <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.35rem">
-        {% if sent == 'BULLISH' and buy_n >= 3 %} Good time to invest — ROK found {{ buy_n }} stocks it likes{% elif sent == 'BULLISH' and buy_n > 0 %} Cautiously optimistic — {{ buy_n }} buy signal{{ 's' if buy_n != 1 }} available{% elif sent == 'BULLISH' %} Market is bullish but ROK needs more conviction before recommending buys{% elif sent == 'BEARISH' %} Defensive mode — protect what you have{% else %} Mixed signals — small positions only{% endif %}
-      </div>
-      <div style="font-size:11.5px;color:var(--wh2);line-height:1.65">
-        {% if sent == 'BULLISH' and buy_n > 0 %}
-          Scroll down to see ROK's {{ buy_n }} buy recommendation{{ 's' if buy_n != 1 }}. If you're new, start with the top pick and invest only what you can afford to lose. <strong>Never put more than 5-10% of your money in any single stock.</strong>
-        {% elif sent == 'BULLISH' %}
-          The market looks healthy but ROK doesn't see clear entry points yet. <strong>Wait for stronger signals</strong> — check back in 15 minutes or watch the stocks in the  WATCH LIST.
-        {% elif sent == 'BEARISH' %}
-          Markets are under pressure. If you own stocks, check your <strong> MY STOCKS</strong> tab for sell alerts. Avoid opening new positions until conditions improve — protecting capital is more important than missing gains.
-        {% else %}
-          ROK sees mixed conditions. If you're invested, hold your positions. If you're looking to buy, consider <strong>smaller position sizes</strong> (half your normal amount) and wait for clearer signals — patience is a trading skill.
-        {% endif %}
-      </div>
-    </div>
+    <!-- ROK market score and conditions — populated by JS from trades.json -->
+    <div id="rok-market-snapshot" style="margin-bottom:.75rem"></div>
 
     <!-- Morning briefing — populated by JS -->
     <div id="morning-briefing"></div>
@@ -1562,45 +1448,35 @@ body.beginner-mode #beginner-banner { display:block }
     <!-- Live market today — populated by JS after prices refresh -->
     <div id="live-market-mood" style="display:none;margin-bottom:.65rem"></div>
 
-    {% if data.buy_signals %}
-    {% set top = data.buy_signals[0] %}
-    {% set top_upside = ((top.price_target / top.current_price - 1) * 100)|round(0)|int if (top.price_target and top.current_price and top.current_price > 0) else 0 %}
     <div class="top-pick-banner">
       <span class="tp-lbl"> ROK'S TOP PICK TODAY</span>
-      <span class="tp-ticker">${{ top.ticker }}</span>
-      <span class="tp-why">{{ top.catalyst or top.rok_take or 'Strong buy signal — multiple data sources agree' }}{% if top_upside > 0 %} — {{ top_upside }}% upside to target{% endif %}</span>
-      <button onclick="openModal('{{ top.ticker }}')">SEE WHY →</button>
+      <span class="tp-ticker">$</span>
+      <span class="tp-why"> — % upside to target</span>
+      <button onclick="openModal('')">SEE WHY →</button>
     </div>
-    {# "NEW TO INVESTING?" quick-start box — shows if there are macro risks #}
-    {% if data.macro_risks %}
     <details style="margin-bottom:.65rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.14);border-radius:10px;overflow:hidden">
       <summary style="padding:.55rem .85rem;cursor:pointer;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--au);list-style:none;display:flex;align-items:center;justify-content:space-between;-webkit-tap-highlight-color:transparent">
         <span> RISKS TO KNOW ABOUT RIGHT NOW</span><span style="font-size:9px;color:var(--wh3)">tap to expand</span>
       </summary>
       <div style="padding:.3rem .85rem .7rem">
-        {% for risk in data.macro_risks %}
-        <div style="display:flex;gap:.5rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04){% if loop.last %};border-bottom:none{% endif %}">
+        <div style="display:flex;gap:.5rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04);border-bottom:none">
           <span style="font-size:.9rem;flex-shrink:0"></span>
-          <div style="font-size:11px;color:var(--wh2);line-height:1.55">{{ risk }}</div>
+          <div style="font-size:11px;color:var(--wh2);line-height:1.55"></div>
         </div>
-        {% endfor %}
         <div style="margin-top:.5rem;font-size:10px;color:var(--wh3);padding:.35rem .5rem;background:rgba(255,215,0,.05);border-radius:6px"> <strong>What to do:</strong> These risks don't mean "don't invest" — they mean keep your stop-loss orders in place and don't bet more than you can afford to lose.</div>
       </div>
     </details>
-    {% endif %}
-    {% endif %}
 
     <!-- Stats strip -->
     <div class="stats-row">
-      {% set ss = data.source_stats %}
-      <div class="stat-box" title="Reddit posts analyzed"><div class="stat-num" data-final="{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}">{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}</div><div class="stat-lbl"> Reddit</div></div>
-      <div class="stat-box" title="News articles scanned"><div class="stat-num" data-final="{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}">{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}</div><div class="stat-lbl"> News</div></div>
-      <div class="stat-box" title="Stocks scanned with live data"><div class="stat-num" data-final="{{ ss.stocks }}">{{ ss.stocks }}</div><div class="stat-lbl"> Stocks</div></div>
-      <div class="stat-box" title="CEO/executive insider purchases (Form 4)"><div class="stat-num" data-final="{{ ss.insider_buys|default(ss.sec) }}">{{ ss.insider_buys|default(ss.sec) }}</div><div class="stat-lbl"> CEO Buys</div></div>
-      <div class="stat-box" title="Companies reporting earnings soon"><div class="stat-num" data-final="{{ ss.earnings_upcoming }}">{{ ss.earnings_upcoming }}</div><div class="stat-lbl"> Earnings</div></div>
-      <div class="stat-box" title="Unusual options activity detected"><div class="stat-num" data-final="{{ ss.unusual_options }}">{{ ss.unusual_options }}</div><div class="stat-lbl"> Options</div></div>
-      <div class="stat-box" title="Congressional STOCK Act disclosures"><div class="stat-num" data-final="{{ ss.congress_trades|default(0) }}">{{ ss.congress_trades|default(0) }}</div><div class="stat-lbl"> Congress</div></div>
-      <div class="stat-box" title="Technical chart breakout patterns"><div class="stat-num" data-final="{{ ss.technical|default(0) }}">{{ ss.technical|default(0) }}</div><div class="stat-lbl"> Patterns</div></div>
+      <div class="stat-box" title="Reddit posts analyzed"><div class="stat-num" data-final="k">k</div><div class="stat-lbl"> Reddit</div></div>
+      <div class="stat-box" title="News articles scanned"><div class="stat-num" data-final="k">k</div><div class="stat-lbl"> News</div></div>
+      <div class="stat-box" title="Stocks scanned with live data"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Stocks</div></div>
+      <div class="stat-box" title="CEO/executive insider purchases (Form 4)"><div class="stat-num" data-final=""></div><div class="stat-lbl"> CEO Buys</div></div>
+      <div class="stat-box" title="Companies reporting earnings soon"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Earnings</div></div>
+      <div class="stat-box" title="Unusual options activity detected"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Options</div></div>
+      <div class="stat-box" title="Congressional STOCK Act disclosures"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Congress</div></div>
+      <div class="stat-box" title="Technical chart breakout patterns"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Patterns</div></div>
     </div>
 
     <!-- ROK track record (JS-populated from localStorage) -->
@@ -1613,7 +1489,7 @@ body.beginner-mode #beginner-banner { display:block }
         <span>HOW DID ROK FIND THESE? (TAP TO SEE)</span>
       </summary>
       <div style="padding:.5rem 1rem .85rem;font-size:11px;color:var(--wh2);line-height:1.7">
-        ROK just analyzed <strong>{{ data.source_stats.reddit|default(0) + data.source_stats.news|default(0) }} posts &amp; articles</strong>, scanned <strong>{{ data.source_stats.stocks|default(0) }} stocks</strong>, and checked for:
+        ROK just analyzed <strong> posts &amp; articles</strong>, scanned <strong> stocks</strong>, and checked for:
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.35rem;margin-top:.55rem">
           <div style="display:flex;align-items:center;gap:.4rem"><span></span><span>Congressional stock buys</span></div>
           <div style="display:flex;align-items:center;gap:.4rem"><span></span><span>CEO/executive purchases</span></div>
@@ -1634,153 +1510,103 @@ body.beginner-mode #beginner-banner { display:block }
       <!-- BUY column -->
       <div>
         <div class="sig-col-hdr">
-          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-buy"> BUY THESE</h2><span class="s-sub">{{ data.buy_signals|length }} stock{{ 's' if data.buy_signals|length != 1 }} ROK likes right now</span></div>
+          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-buy"> BUY THESE</h2><span class="s-sub"> stock ROK likes right now</span></div>
         </div>
         <div class="cgrid">
-          {% for s in data.buy_signals %}
-          <div class="card buy" onclick="openModal('{{ s.ticker }}')" data-sig-ticker="{{ s.ticker }}" style="cursor:pointer">
-            {% set st = s.signal_strength|default(5) %}
-            {% set score = st * 10 %}
-            {% set circ = 100 %}
-            {% set dash = (score / 100 * circ)|round(1) %}
+          <div class="card buy" onclick="openModal('')" data-sig-ticker="" style="cursor:pointer">
             <div class="c-row1">
               <div class="c-left">
-                <div class="c-ticker">${{ s.ticker }}</div>
-                <div class="c-co">{{ s.company }}</div>
-                {% if s.sector %}<div style="font-size:8px;color:var(--wh3);margin-top:2px;letter-spacing:.05em">{{ s.sector.split('/')[0].strip() }}</div>{% endif %}
+                <div class="c-ticker">$</div>
+                <div class="c-co"></div>
+                <div style="font-size:8px;color:var(--wh3);margin-top:2px;letter-spacing:.05em"></div>
               </div>
               <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
-                <div class="rok-score" title="ROK Confidence Score: {{ score }}/100. 80+ = very strong signal. 60+ = good signal. Below 60 = proceed with caution." style="cursor:help">
+                <div class="rok-score" title="ROK Confidence Score: /100. 80+ = very strong signal. 60+ = good signal. Below 60 = proceed with caution." style="cursor:help">
                   <svg viewBox="0 0 36 36">
                     <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
                     <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
-                      stroke-dasharray="{{ dash }} {{ circ }}" stroke-dashoffset="0"/>
-                    <text class="rok-score-num" x="18" y="16">{{ score }}</text>
+                      stroke-dasharray=" " stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16"></text>
                     <text class="rok-score-lbl" x="18" y="23">SCORE</text>
                   </svg>
                 </div>
                 <div class="c-right">
-                  <span class="str-b">{% if st >= 8 %}STRONG BUY{% elif st >= 6 %}MODERATE BUY{% else %}BUY{% endif %}</span>
-                  <span class="risk-b risk-b-dynamic {{ s.risk_level|default('') }}">{% if s.risk_level %}{{ s.risk_level }} Risk{% endif %}</span>
+                  <span class="str-b">STRONG BUYMODERATE BUYBUY</span>
+                  <span class="risk-b risk-b-dynamic "> Risk</span>
                 </div>
               </div>
             </div>
-            {% if s.data_signals %}
             <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
-              {% for sig in s.data_signals %}
-              <span class="dsig-plain {{ sig }}">
-                {% if sig == 'congressional' %} Senator Bought{% elif sig == 'insider' %} CEO Bought{% elif sig == 'options' %} Hedge Fund Bet{% elif sig == 'reddit' %} Reddit Buzz{% elif sig == 'news' %} News Catalyst{% elif sig == 'technical' %} Momentum{% elif sig == 'earnings' %} Earnings Play{% elif sig == 'short_squeeze' %} Squeeze Setup{% else %}{{ sig }}{% endif %}
+              <span class="dsig-plain ">
+                 Senator Bought CEO Bought Hedge Fund Bet Reddit Buzz News Catalyst Momentum Earnings Play Squeeze Setup
               </span>
-              {% endfor %}
             </div>
-            {% endif %}
-            {% if s.vol_ratio and s.vol_ratio > 1.8 or s.rsi or s.pct_from_52w_high is defined %}
             <div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:3px">
-              {% if s.vol_ratio and s.vol_ratio > 1.8 %}<span class="vol-badge"> {{ '%.1f'|format(s.vol_ratio) }}x VOL</span>{% endif %}
-              {% if s.rsi %}<span class="rsi-badge {{ 'overbought' if s.rsi > 70 else 'oversold' if s.rsi < 30 else 'neutral' }}">RSI {{ s.rsi|round(0)|int }}</span>{% endif %}
-              {% if s.pct_from_52w_high is defined and s.pct_from_52w_high is not none %}
-              {% set d52 = s.pct_from_52w_high|round(0)|int %}
-              <span style="font-size:8.5px;padding:2px 6px;border-radius:10px;{{ 'background:rgba(0,255,136,.08);color:var(--g);border:1px solid rgba(0,255,136,.2)' if d52 > -10 else 'background:rgba(0,204,255,.06);color:var(--b);border:1px solid rgba(0,204,255,.15)' }}">{{ d52 }}% from 52W high</span>
-              {% endif %}
+              <span class="vol-badge"> x VOL</span>
+              <span class="rsi-badge ">RSI </span>
+              <span style="font-size:8.5px;padding:2px 6px;border-radius:10px;">% from 52W high</span>
             </div>
-            {% endif %}
-            {% if s.analyst_count and s.analyst_count > 0 %}
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:5px;padding:.3rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border:1px solid rgba(0,255,136,.1)">
               <span style="font-size:10px"></span>
-              <span style="font-size:10.5px;color:var(--wh2)"><strong style="color:var(--g)">{{ s.analyst_count }} Wall St analyst{{ 's' if s.analyst_count != 1 }}</strong> cover this stock{% if s.recommendation %} — consensus: <strong style="color:var(--g);text-transform:uppercase">{{ s.recommendation.replace('-', ' ') }}</strong>{% endif %}</span>
+              <span style="font-size:10.5px;color:var(--wh2)"><strong style="color:var(--g)"> Wall St analyst</strong> cover this stock — consensus: <strong style="color:var(--g);text-transform:uppercase"></strong></span>
             </div>
-            {% endif %}
-            {% if s.earnings_date %}
             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:5px;padding:.3rem .55rem;background:rgba(255,215,0,.05);border-radius:7px;border:1px solid rgba(255,215,0,.18)">
               <span style="font-size:10px"></span>
-              <span style="font-size:10.5px;color:var(--au)"><strong>Earnings: {{ s.earnings_date }}</strong> — stocks often move ±10% on earnings day. Consider sizing down before then.</span>
+              <span style="font-size:10.5px;color:var(--au)"><strong>Earnings: </strong> — stocks often move ±10% on earnings day. Consider sizing down before then.</span>
             </div>
-            {% endif %}
-            {% if s.current_price or s.price_target %}
             <div class="prow">
-              {% if s.current_price %}<span class="p-cur" data-ticker="{{ s.ticker }}" data-price="{{ s.current_price }}">${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
-              {% if s.price_target %}
-              {% set upside_pct = ((s.price_target / s.current_price - 1) * 100)|round(0)|int if s.current_price and s.current_price > 0 else 0 %}
-              <span class="p-tgt"><span class="p-arr">→</span>${{ '%.2f'|format(s.price_target) }}</span>
-              {% if upside_pct > 0 %}<span class="upside-badge">+{{ upside_pct }}% upside</span>{% endif %}
-              {% endif %}
-              {% if s.stop_loss %}<span class="p-stop">↓${{ '%.2f'|format(s.stop_loss) }}</span>{% endif %}
-              {% if s.time_horizon %}<span class="t-hz">{{ s.time_horizon }}</span>{% endif %}
+              <span class="p-cur" data-ticker="" data-price="">$</span>
+              <span class="p-tgt"><span class="p-arr">→</span>$</span>
+              <span class="upside-badge">+% upside</span>
+              <span class="p-stop">↓$</span>
+              <span class="t-hz"></span>
             </div>
-            {% endif %}
-            {# Trade ruler: visual stop → now → target bar #}
-            {% if s.stop_loss and s.current_price and s.price_target and s.current_price > 0 %}
-            {% set rng = s.price_target - s.stop_loss %}
-            {% if rng > 0 %}
-            {% set raw_pct = ((s.current_price - s.stop_loss) / rng * 100) %}
-            {% set curr_pct = [raw_pct, 2]|max %}
-            {% set curr_pct = [curr_pct, 97]|min %}
-            {% set rr_risk = s.current_price - s.stop_loss %}
-            {% set rr_reward = s.price_target - s.current_price %}
-            {% set rr = (rr_reward / rr_risk)|round(1) if rr_risk > 0 else 0 %}
             <div class="trade-ruler">
               <div class="trade-ruler-bar">
-                <div class="trade-ruler-safe" style="width:{{ curr_pct }}%"></div>
-                <div class="trade-ruler-upside" style="left:{{ curr_pct }}%;right:0"></div>
-                <div class="trade-ruler-pin" data-ruler-ticker="{{ s.ticker }}" style="left:{{ curr_pct }}%"></div>
+                <div class="trade-ruler-safe" style="width:%"></div>
+                <div class="trade-ruler-upside" style="left:%;right:0"></div>
+                <div class="trade-ruler-pin" data-ruler-ticker="" style="left:%"></div>
               </div>
               <div class="trade-ruler-lbl-row">
-                <span class="trl-stop"> ${{ '%.0f'|format(s.stop_loss) }}</span>
-                <span class="trl-now" style="left:{{ curr_pct }}%">NOW</span>
-                <span class="trl-tgt"> ${{ '%.0f'|format(s.price_target) }}</span>
+                <span class="trl-stop"> $</span>
+                <span class="trl-now" style="left:%">NOW</span>
+                <span class="trl-tgt"> $</span>
               </div>
             </div>
-            {% if rr > 0 %}<div class="rr-row"><span class="rr-label">Risk/Reward:</span><span class="rr-risk">-${{ '%.0f'|format(rr_risk) }}</span><span class="rr-sep">→</span><span class="rr-reward">+${{ '%.0f'|format(rr_reward) }}</span><span class="rr-val">(1 : {{ rr }})</span></div>{% endif %}
-            {% endif %}
-            {% endif %}
-            {% if s.price_history and s.price_history|length > 5 %}<div class="spark"><canvas id="spark-b{{ loop.index }}" height="40"></canvas></div>{% endif %}
-            {% if s.catalyst %}<div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase"> WHY IT'S MOVING: </strong>{{ s.catalyst }}</div>{% endif %}
-            {% if s.reasons %}<ul class="reasons">{% for r in s.reasons[:3] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
-            {% if s.rok_take %}<div class="rok-take" style="font-size:12px">{{ s.rok_take }}</div>{% endif %}
+            <div class="rr-row"><span class="rr-label">Risk/Reward:</span><span class="rr-risk">-$</span><span class="rr-sep">→</span><span class="rr-reward">+$</span><span class="rr-val">(1 : )</span></div>
+            <div class="spark"><canvas id="spark-b" height="40"></canvas></div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase"> WHY IT'S MOVING: </strong></div>
+            <ul class="reasons"><li></li></ul>
+            <div class="rok-take" style="font-size:12px"></div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
               <div class="wim-lbl"> WHAT THIS MEANS FOR YOU</div>
-              {% if s.price_target and s.current_price and s.current_price > 0 %}
-              {% set gain_pct = ((s.price_target / s.current_price - 1) * 100)|round(1) %}
-              {% set gain_1k = ((s.price_target / s.current_price - 1) * 1000)|round(0)|int %}
-              {# Estimate annualized return based on time horizon #}
-              {% set th = s.time_horizon or '3 months' %}
-              {% set weeks = 8 %}
-              {% if '1-2 week' in th %}{% set weeks = 1.5 %}{% elif '2-4 week' in th %}{% set weeks = 3 %}{% elif '1-3 month' in th %}{% set weeks = 8 %}{% elif '3-6 month' in th %}{% set weeks = 18 %}{% elif '6-12 month' in th %}{% set weeks = 36 %}{% endif %}
-              {% set annualized = ((gain_pct / 100 + 1) ** (52 / weeks) - 1) * 100 %}
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+${{ gain_1k }} (+{{ gain_pct }}%)</strong> in {{ th }}</div>
-              {% if annualized > 20 %}<div style="font-size:10px;color:rgba(0,255,136,.7);margin-top:3px">That's roughly <strong>{{ annualized|round(0)|int }}% annualized</strong> — the S&amp;P 500 average is ~10%/year</div>{% endif %}
-              {% else %}
-              <div class="wim-txt">ROK sees this stock moving higher in {{ s.time_horizon or '3-6 months' }}</div>
-              {% endif %}
-              {% if s.stop_loss and s.current_price %}
-              {% set loss_pct = ((s.stop_loss / s.current_price - 1) * 100)|round(0)|int %}
-              <div class="stop-explainer"><span style="color:var(--r)"> Stop loss: ${{ '%.2f'|format(s.stop_loss) }} ({{ loss_pct }}%)</span> — sell here to protect yourself if it goes wrong</div>
-              {% endif %}
+              
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$ (+%)</strong> in </div>
+              <div style="font-size:10px;color:rgba(0,255,136,.7);margin-top:3px">That's roughly <strong>% annualized</strong> — the S&amp;P 500 average is ~10%/year</div>
+              <div class="wim-txt">ROK sees this stock moving higher in </div>
+              <div class="stop-explainer"><span style="color:var(--r)"> Stop loss: $ (%)</span> — sell here to protect yourself if it goes wrong</div>
             </div>
-            {# STEP-BY-STEP ACTION PLAN for beginners #}
             <details style="margin-top:.45rem;background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:8px;overflow:hidden" onclick="event.stopPropagation()">
               <summary style="padding:.45rem .65rem;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--b);list-style:none;display:flex;align-items:center;gap:.4rem;-webkit-tap-highlight-color:transparent">
                 <span></span><span>STEP-BY-STEP: HOW TO BUY THIS</span>
               </summary>
               <div style="padding:.3rem .65rem .6rem;font-size:11px;color:var(--wh2);line-height:1.75">
                 <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">1.</span><span>Open your brokerage app — <strong>Robinhood, Fidelity, Schwab, or Webull</strong> all work</span></div>
-                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">2.</span><span>Search for <strong style="color:var(--au)">${{ s.ticker }}</strong>{% if s.company %} ({{ s.company[:30] }}){% endif %}</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">2.</span><span>Search for <strong style="color:var(--au)">$</strong> ()</span></div>
                 <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">3.</span><span>Tap <strong>Buy</strong> → choose <strong>Market Order</strong> → enter how many shares or a dollar amount</span></div>
-                {% if s.stop_loss %}<div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">4.</span><span>Set a <strong style="color:var(--r)">price alert at ${{ '%.2f'|format(s.stop_loss) }}</strong> — if it drops here, consider selling to limit your loss</span></div>{% endif %}
-                {% if s.price_target %}<div style="display:flex;gap:.5rem;align-items:flex-start"><span style="color:var(--g);font-weight:800;min-width:16px">{{ '5.' if s.stop_loss else '4.' }}</span><span>Check back when price reaches <strong style="color:var(--g)">${{ '%.2f'|format(s.price_target) }}</strong> — that's ROK's target to take profits</span></div>{% endif %}
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">4.</span><span>Set a <strong style="color:var(--r)">price alert at $</strong> — if it drops here, consider selling to limit your loss</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start"><span style="color:var(--g);font-weight:800;min-width:16px"></span><span>Check back when price reaches <strong style="color:var(--g)">$</strong> — that's ROK's target to take profits</span></div>
                 <div style="margin-top:.55rem;padding:.35rem .55rem;background:rgba(255,215,0,.06);border-radius:6px;border:1px solid rgba(255,215,0,.12);font-size:10px;color:var(--wh3)"> After buying, tap <strong style="color:var(--g)"> BOUGHT IT</strong> below so ROK can track it for you and tell you when to sell.</div>
               </div>
             </details>
             <div style="display:flex;gap:.4rem;margin-top:.5rem">
-              <button class="bought-btn buy-action" id="btn-{{ s.ticker }}" style="flex:1" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})"> BOUGHT IT</button>
-              <button onclick="event.stopPropagation();showGuidance('{{ s.ticker }}',event)" style="padding:.6rem .8rem;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.18);border-radius:10px;color:var(--au);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Should I buy this? Get personalized guidance"></button>
-              <button onclick="event.stopPropagation();copyTradeSetup('{{ s.ticker }}',{{ s.current_price or 0 }},{{ s.price_target or 0 }},{{ s.stop_loss or 0 }})" style="padding:.6rem .8rem;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.18);border-radius:10px;color:var(--g);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Copy trade setup to clipboard"></button>
-              <button onclick="event.stopPropagation();shareSignal('{{ s.ticker }}','{{ s.catalyst or s.rok_take or '' }}',{{ s.current_price or 0 }},{{ s.price_target or 0 }})" style="padding:.6rem .8rem;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Share this trade idea"></button>
+              <button class="bought-btn buy-action" id="btn-" style="flex:1" onclick="event.stopPropagation();boughtIt('',)"> BOUGHT IT</button>
+              <button onclick="event.stopPropagation();showGuidance('',event)" style="padding:.6rem .8rem;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.18);border-radius:10px;color:var(--au);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Should I buy this? Get personalized guidance"></button>
+              <button onclick="event.stopPropagation();copyTradeSetup('',,,)" style="padding:.6rem .8rem;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.18);border-radius:10px;color:var(--g);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Copy trade setup to clipboard"></button>
+              <button onclick="event.stopPropagation();shareSignal('','',,)" style="padding:.6rem .8rem;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Share this trade idea"></button>
             </div>
           </div>
-          {% endfor %}
-          {% if not data.buy_signals %}
           <div style="padding:1rem .85rem">
             <div style="font-size:2rem;margin-bottom:.5rem"></div>
             <div style="font-size:13px;font-weight:800;color:var(--wh);margin-bottom:.5rem">No strong buy signals right now</div>
@@ -1794,113 +1620,95 @@ body.beginner-mode #beginner-banner { display:block }
             </div>
             <button onclick="showTab('screener')" style="width:100%;padding:.6rem;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation"> Browse All Stocks in Screener →</button>
           </div>
-          {% endif %}
         </div>
       </div>
 
       <!-- SELL column -->
       <div>
         <div class="sig-col-hdr">
-          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-sell"> SELL / AVOID</h2><span class="s-sub">{{ data.sell_signals|length }} — get out or stay away</span></div>
+          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-sell"> SELL / AVOID</h2><span class="s-sub"> — get out or stay away</span></div>
         </div>
         <div class="cgrid">
-          {% for s in data.sell_signals %}
-          {% set st = s.signal_strength|default(5) %}
-          {% set score = st * 10 %}
-          {% set dash = (score / 100 * 100)|round(1) %}
-          <div class="card sell" onclick="openModal('{{ s.ticker }}')" style="cursor:pointer">
+          <div class="card sell" onclick="openModal('')" style="cursor:pointer">
             <div class="c-row1">
               <div class="c-left">
-                <div class="c-ticker">${{ s.ticker }}</div>
-                <div class="c-co">{{ s.company }}</div>
-                {% if s.sector %}<div style="font-size:8px;color:var(--wh3);margin-top:2px">{{ s.sector.split('/')[0].strip() }}</div>{% endif %}
+                <div class="c-ticker">$</div>
+                <div class="c-co"></div>
+                <div style="font-size:8px;color:var(--wh3);margin-top:2px"></div>
               </div>
               <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
-                <div class="rok-score" title="ROK Danger Score: {{ score }}/100. 80+ = strong sell signal, high conviction. 60+ = caution, consider reducing. Below 50 = mild warning." style="cursor:help">
+                <div class="rok-score" title="ROK Danger Score: /100. 80+ = strong sell signal, high conviction. 60+ = caution, consider reducing. Below 50 = mild warning." style="cursor:help">
                   <svg viewBox="0 0 36 36">
                     <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
                     <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
-                      stroke-dasharray="{{ dash }} 100" stroke-dashoffset="0"/>
-                    <text class="rok-score-num" x="18" y="16">{{ score }}</text>
+                      stroke-dasharray=" 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16"></text>
                     <text class="rok-score-lbl" x="18" y="23">DANGER</text>
                   </svg>
                 </div>
                 <div class="c-right"><span class="str-b">AVOID</span></div>
               </div>
             </div>
-            {% if s.urgency %}<span class="urg {{ s.urgency.replace(' ', '-') }}"> {{ s.urgency }}</span>{% endif %}
-            {% if s.current_price %}<div class="prow"><span class="p-cur" data-ticker="{{ s.ticker }}" data-price="{{ s.current_price }}">${{ '%.2f'|format(s.current_price) }}</span></div>{% endif %}
-            {% if s.price_history and s.price_history|length > 5 %}<div class="spark"><canvas id="spark-s{{ loop.index }}" height="40"></canvas></div>{% endif %}
-            {% if s.reasons %}<ul class="reasons">{% for r in s.reasons[:3] %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
-            {% if s.rok_take %}<div class="rok-take" style="font-size:12px">{{ s.rok_take }}</div>{% endif %}
+            <span class="urg "> </span>
+            <div class="prow"><span class="p-cur" data-ticker="" data-price="">$</span></div>
+            <div class="spark"><canvas id="spark-s" height="40"></canvas></div>
+            <ul class="reasons"><li></li></ul>
+            <div class="rok-take" style="font-size:12px"></div>
             <div class="what-it-means" style="background:rgba(255,34,85,.06);border-color:rgba(255,34,85,.2)">
               <div class="wim-lbl" style="color:var(--r)"> WHY THIS IS DANGEROUS</div>
-              <div class="wim-txt">{% if s.reasons %}{{ s.reasons[0] }}{% else %}ROK's analysis suggests staying away from this stock.{% endif %}</div>
+              <div class="wim-txt">ROK's analysis suggests staying away from this stock.</div>
             </div>
             <details style="margin:.45rem 0;background:rgba(255,34,85,.04);border:1px solid rgba(255,34,85,.15);border-radius:8px;overflow:hidden" onclick="event.stopPropagation()">
               <summary style="padding:.4rem .65rem;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--r);list-style:none;display:flex;align-items:center;gap:.4rem;-webkit-tap-highlight-color:transparent">
                 <span></span><span>WHAT SHOULD I DO IF I OWN THIS?</span>
               </summary>
               <div style="padding:.3rem .65rem .6rem;font-size:11px;color:var(--wh2);line-height:1.75">
-                {% if s.urgency == 'IMMEDIATE' %}
                 <div style="font-size:11px;font-weight:700;color:var(--r);margin-bottom:.4rem"> ROK says SELL IMMEDIATELY — don't wait</div>
-                {% endif %}
-                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">1.</span><span>Open your brokerage app and search for <strong style="color:var(--r)">${{ s.ticker }}</strong></span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">1.</span><span>Open your brokerage app and search for <strong style="color:var(--r)">$</strong></span></div>
                 <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">2.</span><span>Tap <strong>Sell</strong> → choose <strong>Market Order</strong> to sell at the current price</span></div>
                 <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">3.</span><span>Selling now is better than waiting — the longer you hold, the more you may lose</span></div>
-                {% if not s.urgency or s.urgency != 'IMMEDIATE' %}
                 <div style="margin-top:.4rem;font-size:10px;color:var(--wh3);background:rgba(255,215,0,.05);border-radius:5px;padding:.3rem .5rem"> If you don't own this stock, simply avoid it for now. ROK will update when the situation changes.</div>
-                {% endif %}
               </div>
             </details>
-            <button class="bought-btn sell-action" id="btn-{{ s.ticker }}" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})"> I OWN THIS — TRACK IN MY STOCKS</button>
+            <button class="bought-btn sell-action" id="btn-" onclick="event.stopPropagation();boughtIt('',)"> I OWN THIS — TRACK IN MY STOCKS</button>
           </div>
-          {% endfor %}
-          {% if not data.sell_signals %}
           <div style="padding:.75rem;text-align:center">
             <div style="font-size:1.5rem;margin-bottom:.3rem"></div>
             <div style="font-size:12px;color:var(--g);font-weight:700;margin-bottom:.2rem">Nothing to avoid right now</div>
             <div style="font-size:10.5px;color:var(--wh3);line-height:1.5">ROK sees no major red flags. If you own stocks, check your portfolio for alerts.</div>
           </div>
-          {% endif %}
         </div>
       </div>
 
       <!-- WATCH column -->
       <div>
         <div class="sig-col-hdr">
-          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-watch"> KEEP AN EYE ON</h2><span class="s-sub">{{ data.watch_list|length }} — not yet, but close</span></div>
+          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-watch"> KEEP AN EYE ON</h2><span class="s-sub"> — not yet, but close</span></div>
         </div>
         <div class="cgrid">
-          {% for w in data.watch_list %}
-          <div class="card watch" onclick="openModal('{{ w.ticker }}')" style="cursor:pointer">
+          <div class="card watch" onclick="openModal('')" style="cursor:pointer">
             <div class="c-row1">
               <div class="c-left">
-                <div class="c-ticker">${{ w.ticker }}</div>
-                <div class="c-co">{{ w.company }}</div>
+                <div class="c-ticker">$</div>
+                <div class="c-co"></div>
               </div>
               <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
-                {% if w.potential %}
-                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+{{ w.potential }}%?</span>
-                {% endif %}
+                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+%?</span>
                 <span class="str-b">WATCH</span>
               </div>
             </div>
-            <div class="rok-take" style="margin-bottom:7px;font-size:12px">{{ w.why_watching }}</div>
+            <div class="rok-take" style="margin-bottom:7px;font-size:12px"></div>
             <div class="w-trigger">
               <div class="w-tlbl"> WHAT NEEDS TO HAPPEN</div>
-              <div class="w-ttxt">{{ w.trigger }}</div>
+              <div class="w-ttxt"></div>
             </div>
-            {% if w.risk %}<div class="w-risk" style="margin-top:5px;font-size:10.5px"> Downside: {{ w.risk }}</div>{% endif %}
-            <button class="bought-btn watch-action" id="btn-{{ w.ticker }}" onclick="event.stopPropagation();boughtIt('{{ w.ticker }}',0)"> TRACK THIS STOCK</button>
+            <div class="w-risk" style="margin-top:5px;font-size:10.5px"> Downside: </div>
+            <button class="bought-btn watch-action" id="btn-" onclick="event.stopPropagation();boughtIt('',0)"> TRACK THIS STOCK</button>
           </div>
-          {% endfor %}
-          {% if not data.watch_list %}
           <div style="padding:.75rem;text-align:center">
             <div style="font-size:1.5rem;margin-bottom:.3rem"></div>
             <div style="font-size:11px;color:var(--wh3);line-height:1.5">No stocks are close enough to a signal to watch right now.</div>
           </div>
-          {% endif %}
         </div>
       </div>
 
@@ -1915,26 +1723,18 @@ body.beginner-mode #beginner-banner { display:block }
   <div class="tab-pane" id="tab-market">
     <div class="sum-card">
       <div class="clbl"> TODAY'S MARKET BRIEFING</div>
-      <p class="sum-txt">{{ data.week_summary }}</p>
+      <p class="sum-txt"></p>
     </div>
     <!-- Market indices quick ref -->
-    {% if data.market_indices %}
-    {% set sym_map = {'S&P 500': 'SPY', 'NASDAQ': 'QQQ', 'DOW': 'DIA', 'Russell 2000': 'IWM', 'VIX': '^VIX'} %}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.45rem;margin-bottom:1rem">
-      {% for name, d in data.market_indices.items() %}
-      {% set chg = d.change_pct|default(0) %}
-      {% set price_val = d.price|default(0) %}
-      {% set etf = sym_map.get(name, '') %}
-      <div {% if etf %}data-idx-ticker="{{ etf }}"{% endif %} id="mkt-tab-idx-{{ loop.index }}" style="background:var(--blk3);border:1px solid {{ 'rgba(0,255,136,.2)' if chg >= 0 else 'rgba(255,34,85,.2)' }};border-radius:10px;padding:.65rem .75rem;text-align:center">
-        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">{{ name }}</div>
-        <div {% if etf %}data-idx-price="{{ etf }}"{% endif %} style="font-size:{% if price_val >= 10000 %}11px{% elif price_val >= 1000 %}13px{% else %}14px{% endif %};font-weight:800;color:var(--wh)">{% if name != 'VIX' %}${% endif %}{{ '{:,.2f}'.format(price_val) }}</div>
-        <div {% if etf %}data-idx-chg="{{ etf }}"{% endif %} style="font-size:11px;font-weight:700;color:{{ 'var(--g)' if chg >= 0 else 'var(--r)' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
-        {% if d.change is defined %}<div style="font-size:9px;color:{{ 'var(--g)' if chg >= 0 else 'var(--r)' }};opacity:.75">{{ '+' if d.change >= 0 else '' }}{{ '%.2f'|format(d.change) }}</div>{% endif %}
-        {% if etf %}<div style="font-size:8px;color:rgba(0,255,136,.4);margin-top:2px"> LIVE</div>{% endif %}
+      <div data-idx-ticker="" id="mkt-tab-idx-" style="background:var(--blk3);border:1px solid ;border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem"></div>
+        <div data-idx-price="" style="font-size:13px;font-weight:800;color:var(--wh)">—</div>
+        <div data-idx-chg="" style="font-size:11px;font-weight:700;color:">%</div>
+        <div style="font-size:9px;color:;opacity:.75"></div>
+        <div style="font-size:8px;color:rgba(0,255,136,.4);margin-top:2px"> LIVE</div>
       </div>
-      {% endfor %}
     </div>
-    {% endif %}
 
     <!-- Live SPY/QQQ chart (JS-populated) -->
     <div id="mkt-spy-chart" style="display:none;margin-bottom:.85rem"></div>
@@ -2284,171 +2084,122 @@ body.beginner-mode #beginner-banner { display:block }
     <div class="mkt-grid" style="margin-bottom:1.1rem">
       <div class="mkt-card">
         <div class="clbl"> ARE PEOPLE SCARED OR GREEDY?</div>
-        {% set fg = data.fear_greed %}{% set fgs = fg.score|default(50) %}{% set pct = [[fgs,2]|max,98]|min %}
-        <div class="gauge-track"><div class="gauge-pin" id="fg-gauge-pin" style="left:calc({{ pct }}% - 7px)"></div></div>
+        
+        <div class="gauge-track"><div class="gauge-pin" id="fg-gauge-pin" style="left:calc(% - 7px)"></div></div>
         <div class="gauge-mkrs"><span> FEAR</span><span>NEUTRAL</span><span> GREED</span></div>
-        <div class="gauge-score" id="fg-gauge-score">{{ fgs }}/100 — {{ fg.rating|default('Neutral') }}</div>
+        <div class="gauge-score" id="fg-gauge-score">/100 — </div>
         <div style="font-size:10px;color:var(--wh3);margin-top:.5rem;line-height:1.5" id="fg-gauge-explain">
-          {% if fgs < 30 %} Everyone is scared = often a great time to buy stocks at a discount{% elif fgs > 70 %} Everyone is greedy = stocks are expensive, be more careful{% else %} Markets are calm — normal conditions{% endif %}
+           Everyone is scared = often a great time to buy stocks at a discount Everyone is greedy = stocks are expensive, be more careful Markets are calm — normal conditions
         </div>
         <div style="font-size:8px;color:var(--g);opacity:.7;margin-top:3px" id="fg-live-badge" style="display:none"> LIVE DATA</div>
       </div>
       <div class="mkt-card">
         <div class="clbl"> WHAT PEOPLE ARE SAYING ONLINE</div>
-        {% set agg = data.aggregate_sentiment %}
         <div class="sbars">
-          <div class="sbar-row"><span class="sbar-lbl bull-l"></span><div class="sbar-track"><div class="sbar bull-b" style="width:{{ agg.bullish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bullish_pct|default(0) }}%</span></div>
-          <div class="sbar-row"><span class="sbar-lbl bear-l"></span><div class="sbar-track"><div class="sbar bear-b" style="width:{{ agg.bearish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bearish_pct|default(0) }}%</span></div>
-          <div class="sbar-row"><span class="sbar-lbl neut-l"></span><div class="sbar-track"><div class="sbar neut-b" style="width:{{ agg.neutral_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.neutral_pct|default(0) }}%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl bull-l"></span><div class="sbar-track"><div class="sbar bull-b" style="width:%"></div></div><span class="sbar-pct">%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl bear-l"></span><div class="sbar-track"><div class="sbar bear-b" style="width:%"></div></div><span class="sbar-pct">%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl neut-l"></span><div class="sbar-track"><div class="sbar neut-b" style="width:%"></div></div><span class="sbar-pct">%</span></div>
         </div>
-        <div style="font-size:9.5px;color:var(--wh3);margin-top:.45rem">Reddit · News · StockTwits · {{ agg.total_posts|default(0) }} posts analyzed</div>
+        <div style="font-size:9.5px;color:var(--wh3);margin-top:.45rem">Reddit · News · StockTwits ·  posts analyzed</div>
       </div>
       <div class="mkt-card">
         <div class="clbl"> ARE BIG FUNDS BULLISH OR BEARISH?</div>
-        {% set pcr = data.put_call_ratio|default({}) %}
-        <div class="metric-val">{{ pcr.total|default('—') }}</div>
-        <div class="metric-sub" style="margin-bottom:.35rem"><span class="glossary-term" data-term="Put/Call">Put/Call ratio</span>{% if pcr.equity %} · Equity: {{ pcr.equity }}{% endif %}</div>
-        {% if pcr.signal %}<span class="pcr-sig {{ pcr.signal }}">{% if pcr.signal == 'GREED' %} Funds betting UP{% elif pcr.signal == 'FEAR' %} Funds betting DOWN{% else %} {{ pcr.signal }}{% endif %}</span>{% endif %}
+        <div class="metric-val"></div>
+        <div class="metric-sub" style="margin-bottom:.35rem"><span class="glossary-term" data-term="Put/Call">Put/Call ratio</span> · Equity: </div>
+        <span class="pcr-sig "> Funds betting UP Funds betting DOWN </span>
         <div style="font-size:10px;color:var(--wh3);margin-top:.45rem;line-height:1.5">
           Below 0.8 = hedge funds buying calls (bullish). Above 1.2 = buying puts (bearish).
         </div>
-        {% set breadth = data.market_breadth|default({}) %}
-        {% if breadth.breadth_pct is defined %}
         <div style="margin-top:.75rem">
           <div class="clbl" style="margin-bottom:.3rem"> HOW MANY STOCKS ARE RISING?</div>
-          <div class="breadth-bar"><div class="breadth-fill" style="width:{{ breadth.breadth_pct }}%"></div></div>
-          <div class="metric-sub">{{ breadth.breadth_pct }}% of stocks are going up today{% if breadth.advance_decline_ratio %} ({{ breadth.advance_decline_ratio }} gainers per loser){% endif %}</div>
+          <div class="breadth-bar"><div class="breadth-fill" style="width:%"></div></div>
+          <div class="metric-sub">% of stocks are going up today ( gainers per loser)</div>
         </div>
-        {% endif %}
       </div>
     </div>
 
     <!-- Sector heat map -->
-    {% set sp = data.market_breadth.sector_performance|default({}) %}
-    {% if sp %}
     <div class="s-hdr"><h2 class="s-ttl"> WHICH INDUSTRIES ARE WINNING TODAY?</h2><span class="s-sub">Green = going up · Red = going down</span></div>
     <div class="sheat-grid" style="margin-bottom:1.1rem">
-      {% for name, chg in sp.items()|sort(attribute='1')|reverse %}
-      {% set cls = 'up' if chg >= 0 else 'down' %}
       <div class="sheat-card">
-        <div class="sheat-name">{{ name }}</div>
-        <div class="sheat-bar-track"><div class="sheat-fill {{ cls }}" style="width:{{ [chg|abs * 30, 100]|min }}%"></div></div>
-        <div class="sheat-pct {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
+        <div class="sheat-name"></div>
+        <div class="sheat-bar-track"><div class="sheat-fill " style="width:%"></div></div>
+        <div class="sheat-pct ">%</div>
       </div>
-      {% endfor %}
     </div>
-    {% endif %}
 
     <!-- Sector rotation -->
-    {% set heat = data.sector_heat|default({}) %}
-    {% if heat %}
     <div class="s-hdr"><h2 class="s-ttl"> WHERE IS MONEY FLOWING?</h2><span class="s-sub">Which sectors are hot or cold right now</span></div>
-    {% if heat.hottest or heat.coldest %}
     <div class="sr-row">
-      {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico"></div><div><div class="sr-type">HOTTEST SECTOR</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
-      {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico"></div><div><div class="sr-type">COLDEST SECTOR</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
+      <div class="sr-card hot"><div class="sr-ico"></div><div><div class="sr-type">HOTTEST SECTOR</div><div class="sr-txt"></div></div></div>
+      <div class="sr-card cold"><div class="sr-ico"></div><div><div class="sr-type">COLDEST SECTOR</div><div class="sr-txt"></div></div></div>
     </div>
-    {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
-    {% else %}
-    {% set sorted_sectors = heat.items()|list|sort(attribute='1.change_pct', reverse=True) %}
+    <div class="rot-txt"></div>
     <div class="sec-flow-grid">
-      {% for name, info in sorted_sectors %}
-      {% set chg = info.change_pct|default(0)|float %}
-      {% set sig = info.signal|default('neutral') %}
-      {% set cls = 'g' if chg > 0.5 else ('r' if chg < -0.5 else 'n') %}
-      <div class="sec-flow-card {{ cls }}">
-        <div class="sec-flow-name">{{ name }}</div>
-        <div class="sec-flow-chg {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.1f'|format(chg) }}%</div>
+      <div class="sec-flow-card ">
+        <div class="sec-flow-name"></div>
+        <div class="sec-flow-chg ">%</div>
         <div class="sec-flow-meta">
-          <span class="sec-flow-sig {{ sig }}">{{ '' if sig=='bullish' else ('' if sig=='bearish' else '') }} {{ sig|title }}</span>
-          {% if info.buy_count is defined %}<span class="sec-flow-cnt">{{ info.buy_count }}B {{ info.sell_count|default(0) }}S</span>{% endif %}
+          <span class="sec-flow-sig "> </span>
+          <span class="sec-flow-cnt">B S</span>
         </div>
-        {% if info.note %}<div class="sec-flow-note">{{ info.note }}</div>{% endif %}
+        <div class="sec-flow-note"></div>
       </div>
-      {% endfor %}
     </div>
-    {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
-    {% endif %}
-    {% endif %}
+    <div class="rot-txt"></div>
 
     <!-- Top Movers from stock universe -->
-    {% set universe = data.stock_universe|default([]) %}
-    {% if universe %}
-    {% set gainers = universe | sort(attribute='change_pct', reverse=True) %}
-    {% set losers = universe | sort(attribute='change_pct') %}
     <div class="s-hdr"><h2 class="s-ttl"> BIGGEST MOVERS TODAY</h2><span class="s-sub">Stocks ROK is watching that moved the most</span></div>
     <div class="tape-row" style="margin-bottom:1.1rem">
       <div class="tape-card">
         <div class="clbl" style="color:var(--g)"> BIGGEST GAINERS</div>
         <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">
-          {% for s in gainers[:5] %}
-          {% if s.change_pct is defined and s.change_pct > 0 %}
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(0,255,136,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(0,255,136,.1)" onclick="switchToScreener('{{ s.ticker }}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(0,255,136,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(0,255,136,.1)" onclick="switchToScreener('')">
             <div>
-              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--g);letter-spacing:.05em">${{ s.ticker }}</span>
-              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem">{{ s.company_name|default('')|truncate(20,true,'') }}</span>
+              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--g);letter-spacing:.05em">$</span>
+              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem"></span>
             </div>
-            <span style="font-size:13px;font-weight:800;color:var(--g)">+{{ '%.1f'|format(s.change_pct) }}%</span>
+            <span style="font-size:13px;font-weight:800;color:var(--g)">+%</span>
           </div>
-          {% endif %}
-          {% endfor %}
         </div>
       </div>
       <div class="tape-card">
         <div class="clbl" style="color:var(--r)"> BIGGEST LOSERS</div>
         <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">
-          {% for s in losers[:5] %}
-          {% if s.change_pct is defined and s.change_pct < 0 %}
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(255,34,85,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(255,34,85,.1)" onclick="switchToScreener('{{ s.ticker }}')">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(255,34,85,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(255,34,85,.1)" onclick="switchToScreener('')">
             <div>
-              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--r);letter-spacing:.05em">${{ s.ticker }}</span>
-              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem">{{ s.company_name|default('')|truncate(20,true,'') }}</span>
+              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--r);letter-spacing:.05em">$</span>
+              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem"></span>
             </div>
-            <span style="font-size:13px;font-weight:800;color:var(--r)">{{ '%.1f'|format(s.change_pct) }}%</span>
+            <span style="font-size:13px;font-weight:800;color:var(--r)">%</span>
           </div>
-          {% endif %}
-          {% endfor %}
         </div>
       </div>
     </div>
-    {% endif %}
 
     <!-- Trending tape -->
-    {% if data.ticker_mentions or data.stocktwits_trending %}
     <div class="s-hdr"><h2 class="s-ttl"> WHAT EVERYONE IS TALKING ABOUT</h2><span class="s-sub">Tap any stock to see it in the screener</span></div>
     <div class="tape-row">
-      {% if data.ticker_mentions %}
       <div class="tape-card">
         <div class="clbl">REDDIT + NEWS</div>
-        <div class="tape">{% for t, c in data.ticker_mentions %}<div class="chip" onclick="switchToScreener('{{ t }}')">${{ t }}<span class="cnt">{% if c > 0 %}{{ c }}{% endif %}</span></div>{% endfor %}</div>
+        <div class="tape"><div class="chip" onclick="switchToScreener('')">$<span class="cnt"></span></div></div>
       </div>
-      {% endif %}
-      {% if data.stocktwits_trending %}
       <div class="tape-card">
         <div class="clbl">STOCKTWITS</div>
-        <div class="tape">{% for s in data.stocktwits_trending %}<div class="st-chip" onclick="switchToScreener('{{ s.ticker }}')">${{ s.ticker }}<span class="cnt">{{ s.watchlist_count|default('') }}</span></div>{% endfor %}</div>
+        <div class="tape"><div class="st-chip" onclick="switchToScreener('')">$<span class="cnt"></span></div></div>
       </div>
-      {% endif %}
     </div>
-    {% endif %}
 
     <!-- ROK Run History -->
-    {% if data.recent_runs and data.recent_runs|length > 1 %}
-    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl"> ROK'S RECENT TRACK RECORD</h2><span class="s-sub">Last {{ data.recent_runs|length }} runs · each bar = one analysis</span></div>
+    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl"> ROK'S RECENT TRACK RECORD</h2><span class="s-sub">Last  runs · each bar = one analysis</span></div>
     <div style="background:var(--blk3);border:var(--bdr);border-radius:var(--r12);padding:.85rem 1rem;margin-bottom:1rem">
       <div class="run-timeline">
-        {% set max_buys = (data.recent_runs | map(attribute='buy_signals') | map('length') | list | max) or 1 %}
-        {% for run in data.recent_runs %}
-        {% set buys = run.buy_signals|default([])|length %}
-        {% set sent = (run.sentiment or 'NEUTRAL')|upper %}
-        {% set bar_h = [[buys / max_buys * 100, 10]|max, 100]|min %}
-        <div class="run-bar {{ sent|lower }}" style="height:{{ bar_h }}%">
-          <div class="run-bar-tooltip">{{ run.date|default('') }}<br>{{ sent }} · {{ buys }} buy{{ 's' if buys != 1 }}</div>
+        <div class="run-bar " style="height:%">
+          <div class="run-bar-tooltip"><br> ·  buy</div>
         </div>
-        {% endfor %}
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:.45rem">
-        <span style="font-size:8.5px;color:var(--wh3)">{{ data.recent_runs[0].date|default('oldest') }}</span>
+        <span style="font-size:8.5px;color:var(--wh3)"></span>
         <div style="display:flex;gap:.65rem;align-items:center">
           <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--g)"><span style="width:8px;height:8px;background:rgba(0,255,136,.5);border-radius:2px;display:inline-block"></span>BULLISH</span>
           <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--r)"><span style="width:8px;height:8px;background:rgba(255,34,85,.5);border-radius:2px;display:inline-block"></span>BEARISH</span>
@@ -2457,72 +2208,48 @@ body.beginner-mode #beginner-banner { display:block }
         <span style="font-size:8.5px;color:var(--wh3)">latest →</span>
       </div>
       <div style="margin-top:.65rem;font-size:12px;color:var(--wh2);padding:.5rem .65rem;background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.25);border-radius:0 6px 6px 0">
-        {{ data.history_summary|default('ROK has been running analysis to find opportunities.') }}
+        
       </div>
     </div>
-    {% endif %}
 
     <!-- Latest News Feed -->
-    {% if data.news_items %}
-    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl"> LATEST MARKET NEWS</h2><span class="s-sub">{{ data.news_items|length }} articles analyzed · click to read</span></div>
+    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl"> LATEST MARKET NEWS</h2><span class="s-sub"> articles analyzed · click to read</span></div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.1rem">
-      {% for item in data.news_items[:12] %}
-      {% set sent = item.sentiment|default(0) %}
-      {% set sent_color = 'var(--g)' if sent > 0.1 else 'var(--r)' if sent < -0.1 else 'var(--wh3)' %}
-      {% set sent_icon = '' if sent > 0.1 else '' if sent < -0.1 else '' %}
-      <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" style="display:block;background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.55rem .85rem;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='rgba(0,204,255,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+      <a href="" target="_blank" rel="noopener noreferrer" style="display:block;background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.55rem .85rem;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='rgba(0,204,255,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
         <div style="display:flex;align-items:flex-start;gap:.55rem">
-          <span style="flex-shrink:0;font-size:.8rem;margin-top:2px">{{ sent_icon }}</span>
+          <span style="flex-shrink:0;font-size:.8rem;margin-top:2px"></span>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;color:var(--wh);line-height:1.45;margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.title }}</div>
+            <div style="font-size:12px;color:var(--wh);line-height:1.45;margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
             <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-              <span style="font-size:9px;color:var(--wh4);letter-spacing:.05em">{{ item.source }}</span>
-              {% if item.tickers %}
+              <span style="font-size:9px;color:var(--wh4);letter-spacing:.05em"></span>
               <div style="display:flex;gap:3px;flex-wrap:wrap">
-                {% for t in item.tickers[:4] %}
-                <span onclick="event.preventDefault();switchToScreener('{{ t }}')" style="font-size:8.5px;padding:1px 5px;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.15);border-radius:6px;color:var(--b);cursor:pointer;font-family:var(--disp)">${{ t }}</span>
-                {% endfor %}
+                <span onclick="event.preventDefault();switchToScreener('')" style="font-size:8.5px;padding:1px 5px;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.15);border-radius:6px;color:var(--b);cursor:pointer;font-family:var(--disp)">$</span>
               </div>
-              {% endif %}
             </div>
           </div>
         </div>
       </a>
-      {% endfor %}
     </div>
-    {% endif %}
 
     <!-- Reddit Buzz -->
-    {% if data.reddit_posts %}
     <div class="s-hdr"><h2 class="s-ttl"> WHAT REDDIT IS SAYING</h2><span class="s-sub">Real retail investor sentiment · r/wallstreetbets + more</span></div>
     <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem">
-      {% for post in data.reddit_posts[:6] %}
-      {% set sent = post.sentiment_score|default(0) %}
-      {% set sent_icon = '' if sent > 0.2 else '' if sent < -0.2 else '' %}
-      {% set src = post.source|default('reddit') %}
-      {% set sub = src.split('/')[-1] if '/' in src else src %}
       <div style="background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.55rem .85rem">
         <div style="display:flex;align-items:flex-start;gap:.5rem">
-          <span style="flex-shrink:0;font-size:.8rem;margin-top:1px">{{ sent_icon }}</span>
+          <span style="flex-shrink:0;font-size:.8rem;margin-top:1px"></span>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;color:var(--wh);line-height:1.4;margin-bottom:.25rem">{{ post.title|default('')|truncate(120,true,'…') }}</div>
+            <div style="font-size:12px;color:var(--wh);line-height:1.4;margin-bottom:.25rem"></div>
             <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-              <span style="font-size:9px;color:var(--wh4)">r/{{ sub }}</span>
-              {% if post.score or post.upvotes %}<span style="font-size:9px;color:var(--au)"> {{ post.score|default(post.upvotes|default(0)) }}</span>{% endif %}
-              {% if post.mentioned_tickers %}
+              <span style="font-size:9px;color:var(--wh4)">r/</span>
+              <span style="font-size:9px;color:var(--au)"> </span>
               <div style="display:flex;gap:3px">
-                {% for t in post.mentioned_tickers[:3] %}
-                <span onclick="switchToScreener('{{ t }}')" style="font-size:8.5px;padding:1px 5px;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.15);border-radius:6px;color:var(--b);cursor:pointer;font-family:var(--disp)">${{ t }}</span>
-                {% endfor %}
+                <span onclick="switchToScreener('')" style="font-size:8.5px;padding:1px 5px;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.15);border-radius:6px;color:var(--b);cursor:pointer;font-family:var(--disp)">$</span>
               </div>
-              {% endif %}
             </div>
           </div>
         </div>
       </div>
-      {% endfor %}
     </div>
-    {% endif %}
 
     <!-- Sector Heatmap (JS-populated) -->
     <div id="sector-heatmap" style="display:none;margin-bottom:1rem">
@@ -2536,7 +2263,7 @@ body.beginner-mode #beginner-banner { display:block }
   <!--  SCREENER TAB  -->
   <div class="tab-pane" id="tab-screener">
     <div style="background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.1);border-radius:10px;padding:.55rem .85rem;margin-bottom:.85rem;font-size:11px;color:var(--wh2);line-height:1.55">
-       <strong style="color:var(--b)">STOCK SCREENER</strong> — Browse all {{ data.stock_universe|default([])|length }} stocks ROK analyzed today.
+       <strong style="color:var(--b)">STOCK SCREENER</strong> — Browse all  stocks ROK analyzed today.
       Filter by <span style="color:var(--g)">BUY</span> / <span style="color:var(--r)">SELL</span> signal, sort by momentum, or search by name. New to investing? Try <strong style="color:var(--au)"> SAFE PICKS</strong> — large-cap buy signals only.
     </div>
     <div class="sc-controls">
@@ -2613,248 +2340,24 @@ body.beginner-mode #beginner-banner { display:block }
   <div class="tab-pane" id="tab-intel">
     <div class="intel-grid">
 
-      <!-- Section 1: SENATORS & CONGRESS BOUGHT THESE -->
-      {% set cong_items = data.congressional_plays if data.congressional_plays else data.congressional_buys|default([]) %}
-      {% if cong_items %}
-      <div class="intel-section" style="grid-column:1/-1">
-        <div class="s-hdr">
-          <h2 class="s-ttl ttl-cong"> SENATORS &amp; CONGRESS BOUGHT THESE</h2>
-          <span class="s-sub">Last 45 days · STOCK Act disclosures</span>
-        </div>
-        <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(153,85,255,.05);border-radius:6px;border-left:2px solid rgba(153,85,255,.3)">
-           <strong style="color:var(--p)">Why this matters:</strong> By law, congress members must disclose stock trades within 45 days. Studies show they outperform the market by ~10% annually. When <em>multiple</em> members buy the same stock, it's worth paying attention.
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.45rem">
-          {% for c in cong_items[:8] %}
-          {% set total = (c.buy_count|default(0)) + (c.sell_count|default(0)) %}
-          {% set buy_pct = (c.buy_count / total * 100)|round(0)|int if total > 0 else 100 %}
-          <div style="background:var(--blk4);border-radius:10px;padding:.65rem .85rem;border:1px solid rgba(153,85,255,.12);display:flex;align-items:center;gap:.75rem;cursor:pointer" onclick="switchToScreener('{{ c.ticker }}')">
-            <div style="font-family:var(--disp);font-size:1.4rem;color:var(--p);letter-spacing:.08em;min-width:52px">${{ c.ticker }}</div>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem;flex-wrap:wrap">
-                <span style="font-size:10px;font-weight:700;color:var(--wh2)">{{ c.buy_count }} member{{ 's' if c.buy_count != 1 }} BOUGHT{% if c.sell_count %} · {{ c.sell_count }} SOLD{% endif %}</span>
-                {% if buy_pct >= 80 %}<span style="font-size:8px;padding:1px 6px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:10px;color:var(--g);font-weight:700">BULLISH</span>{% elif buy_pct >= 50 %}<span style="font-size:8px;padding:1px 6px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:10px;color:var(--au);font-weight:700">MIXED</span>{% endif %}
-                {% if c.latest_date %}<span style="font-size:8.5px;color:var(--wh4)">Latest: {{ c.latest_date }}</span>{% endif %}
-              </div>
-              <div style="font-size:10px;color:var(--wh3)">{{ c.members_preview }}</div>
-            </div>
-            <div style="flex-shrink:0;width:40px;text-align:center">
-              <div style="font-size:11px;font-weight:700;color:var(--p)">{{ buy_pct }}%</div>
-              <div style="font-size:8px;color:var(--wh4)">buys</div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
+      <!-- Live intel sections — populated by JS from trades.json -->
+      <div class="intel-section" style="grid-column:1/-1" id="intel-rok-trades-section">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--g)"> ROK AUTO-TRADER — LIVE ACTIVITY</h2><span class="s-sub">Real buys/sells executed automatically · refreshes every 30s</span></div>
+        <div id="intel-rok-trades" style="font-size:11px;color:var(--wh4);padding:.5rem 0">Loading trade activity…</div>
       </div>
-      {% endif %}
-
-      <!-- Section 1b: SEC INSIDER PURCHASES (CEO/CFO bought their own stock) -->
-      {% if data.insider_buys %}
-      <div class="intel-section">
-        <div class="s-hdr">
-          <h2 class="s-ttl ttl-insider"> EXECUTIVES BUYING THEIR OWN STOCK</h2>
-        </div>
-        <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(255,136,0,.05);border-radius:6px;border-left:2px solid rgba(255,136,0,.3)">
-          When a CEO or CFO spends their own money buying their company's stock, it's a strong bullish signal — they believe the price is going higher.
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.4rem">
-          {% for b in data.insider_buys[:8] %}
-          <div onclick="openModal('{{ b.ticker }}')" style="cursor:pointer;background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,136,0,.12);display:flex;align-items:center;gap:.65rem">
-            <div style="font-family:var(--disp);font-size:1.3rem;color:var(--or);letter-spacing:.06em;min-width:46px">${{ b.ticker }}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:10px;font-weight:700;color:var(--wh2);margin-bottom:.15rem">
-                {{ b.insider_name }}{% if b.title %} <span style="color:var(--wh3);font-weight:400">· {{ b.title }}</span>{% endif %}
-              </div>
-              {% if b.company %}<div style="font-size:8.5px;color:var(--wh4)">{{ b.company[:30] }}</div>{% endif %}
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              {% if b.value_usd and b.value_usd > 0 %}
-              <div style="font-size:11px;font-weight:800;color:var(--or)">
-                {% if b.value_usd >= 1000000 %}${{ '%.1f'|format(b.value_usd/1000000) }}M{% elif b.value_usd >= 1000 %}${{ '{:,}'.format((b.value_usd/1000)|round(0)|int) }}k{% else %}${{ '{:,}'.format(b.value_usd) }}{% endif %}
-              </div>
-              {% elif b.shares %}
-              <div style="font-size:11px;font-weight:800;color:var(--or)">{{ '{:,}'.format(b.shares) }} sh</div>
-              {% endif %}
-              {% if b.date %}<div style="font-size:8px;color:var(--wh4)">{{ b.date }}</div>{% endif %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Section 2: THINGS THAT COULD HURT STOCKS (Macro Risks) -->
-      {% if data.macro_risks %}
-      <div class="intel-section">
-        <div class="s-hdr"><h2 class="s-ttl ttl-risk"> THINGS THAT COULD HURT STOCKS</h2></div>
-        <div class="list">
-          {% for r in data.macro_risks %}
-          <div class="list-item risk"><span class="list-n">{{ '%02d'|format(loop.index) }}</span>{{ r }}</div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Section 3: WHAT'S TRENDING IN THE MARKET (Notable Trends) -->
-      {% if data.notable_trends %}
-      <div class="intel-section">
-        <div class="s-hdr"><h2 class="s-ttl"> WHAT'S TRENDING IN THE MARKET</h2></div>
-        <div class="list">
-          {% for t in data.notable_trends %}
-          <div class="list-item trend"><span class="list-n">{{ '%02d'|format(loop.index) }}</span>{{ t }}</div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Section 4: WHAT SMART MONEY IS DOING (Sector Rotation) -->
-      {% set heat = data.sector_heat|default({}) %}
-      {% if heat or data.sector_rotation %}
-      <div class="intel-section">
-        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--or)"> WHAT SMART MONEY IS DOING</h2></div>
-        {% if data.sector_rotation %}<div class="rot-txt" style="margin-bottom:.75rem">{{ data.sector_rotation }}</div>{% endif %}
-        <div style="font-size:11px;color:var(--wh3);margin-bottom:.6rem;padding:.4rem .65rem;background:rgba(255,136,0,.05);border-radius:5px;border-left:2px solid rgba(255,136,0,.25)">
-          Big hedge funds &amp; institutions move billions between sectors — tracking these flows shows where money is heading next.
-        </div>
-        {% if heat.hottest or heat.coldest %}
-        <div class="sr-row">
-          {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico"></div><div><div class="sr-type">MONEY FLOWING IN</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
-          {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico"></div><div><div class="sr-type">MONEY FLOWING OUT</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
-        </div>
-        {% elif heat %}
-        {% set sorted_sectors = heat.items()|list|sort(attribute='1.change_pct', reverse=True) %}
-        <div class="sec-flow-grid">
-          {% for name, info in sorted_sectors %}
-          {% set chg = info.change_pct|default(0)|float %}
-          {% set sig = info.signal|default('neutral') %}
-          {% set cls = 'g' if chg > 0.5 else ('r' if chg < -0.5 else 'n') %}
-          <div class="sec-flow-card {{ cls }}">
-            <div class="sec-flow-name">{{ name }}</div>
-            <div class="sec-flow-chg {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.1f'|format(chg) }}%</div>
-            <div class="sec-flow-meta">
-              <span class="sec-flow-sig {{ sig }}">{{ '' if sig=='bullish' else ('' if sig=='bearish' else '') }} {{ sig|title }}</span>
-              {% if info.buy_count is defined %}<span class="sec-flow-cnt">{{ info.buy_count }}B {{ info.sell_count|default(0) }}S</span>{% endif %}
-            </div>
-            {% if info.note %}<div class="sec-flow-note">{{ info.note }}</div>{% endif %}
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      <!-- Section 5: STOCKS THAT COULD EXPLODE UP (Short Squeeze) -->
-      {% if data.short_squeeze_alerts %}
-      <div class="intel-section">
-        <div class="s-hdr"><h2 class="s-ttl ttl-sq"> STOCKS THAT COULD EXPLODE UP</h2></div>
-        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.55;padding:.4rem .65rem;background:rgba(255,136,0,.05);border-radius:5px;border-left:2px solid rgba(255,136,0,.25)">
-          Millions of people are betting these stocks fall — if they're wrong, prices could spike fast.
-        </div>
-        <div class="mini-grid">
-          {% for s in data.short_squeeze_alerts %}
-          <div class="mini-card" style="cursor:pointer" onclick="switchToScreener('{{ s.ticker }}')">
-            <div class="mini-ticker sq-ticker">${{ s.ticker }}</div>
-            <div class="mini-sub">{{ s.short_float }} shorted</div>
-            {% if s.social_velocity %}<span class="mini-tag {{ s.social_velocity }}">{{ s.social_velocity }}</span>{% endif %}
-            <div class="mini-txt">{{ s.setup }}</div>
-            <div style="font-size:8px;color:var(--wh3);margin-top:3px">Tap to look up →</div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Section 6: UPCOMING EARNINGS TO WATCH -->
-      {% if data.earnings_plays %}
-      <div class="intel-section">
-        <div class="s-hdr"><h2 class="s-ttl ttl-earn"> UPCOMING EARNINGS TO WATCH</h2></div>
-        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.55;padding:.4rem .65rem;background:rgba(0,204,255,.05);border-radius:5px;border-left:2px solid rgba(0,204,255,.25)">
-          These companies report profits soon — price often jumps or drops 10–20% after the announcement. Watch these, but don't bet big right before earnings.
-        </div>
-        <div class="mini-grid">
-          {% for e in data.earnings_plays %}
-          <div class="mini-card" style="cursor:pointer" onclick="switchToScreener('{{ e.ticker }}')">
-            <div class="mini-ticker e-ticker">${{ e.ticker }}</div>
-            <div class="mini-sub">{{ e.earnings_date }}</div>
-            <span class="mini-tag {{ e.direction }}">{{ e.direction }}</span>
-            <div class="mini-txt">{{ e.play }}</div>
-            <div style="font-size:8px;color:var(--wh3);margin-top:3px">Tap to look up →</div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Section 7: MOMENTUM SIGNALS (Technical Breakouts) -->
-      {% if data.technical_breakouts %}
-      <div class="intel-section">
-        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--b)"> MOMENTUM SIGNALS</h2></div>
-        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.55;padding:.4rem .65rem;background:rgba(0,204,255,.05);border-radius:5px;border-left:2px solid rgba(0,204,255,.2)">
-          These stocks are showing strong chart patterns — price may be about to break out. These are technical signals only; combine with fundamentals before trading.
-        </div>
-        <div class="mini-grid">
-          {% for t in data.technical_breakouts %}
-          <div class="mini-card" style="cursor:pointer" onclick="switchToScreener('{{ t.ticker }}')">
-            <div class="mini-ticker" style="color:var(--b)">${{ t.ticker }}</div>
-            <div class="mini-sub" style="color:var(--b);font-size:8.5px;text-transform:uppercase;letter-spacing:.07em">{{ t.setup_type.replace('_',' ') }}</div>
-            <div class="mini-txt">{{ t.description }}</div>
-            <div style="font-size:8.5px;color:var(--wh3);margin-top:3px">{{ t.timeframe }} · Tap to look up →</div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- ROK Track Record -->
-      {% if data.track_record %}
-      {% set wins = data.track_record | selectattr('pct_change', 'gt', 2) | list | length %}
-      {% set total_tr = data.track_record | length %}
-      <div class="intel-section" style="grid-column:1/-1">
-        <div class="s-hdr">
-          <h2 class="s-ttl" style="color:var(--au)">ROK TRACK RECORD</h2>
-          <span class="s-sub">Previous picks · live P&amp;L · {{ wins }}/{{ total_tr }} up &gt;2%</span>
-        </div>
-        {% if data.history_summary %}
-        <div style="font-size:12px;color:var(--wh2);margin-bottom:.75rem;padding:.45rem .75rem;background:rgba(255,215,0,.05);border-radius:6px;border-left:2px solid rgba(255,215,0,.3)">
-           {{ data.history_summary }}
-        </div>
-        {% endif %}
-        <div class="track-grid">
-          {% for t in data.track_record %}
-          {% set cls = 'win' if t.pct_change > 2 else 'loss' if t.pct_change < -2 else 'flat' %}
-          <div class="track-card {{ cls }}">
-            <div class="track-t">{{ t.ticker }}</div>
-            <div class="track-pct">{{ '+' if t.pct_change >= 0 else '' }}{{ t.pct_change }}%</div>
-            <div class="track-p">${{ t.entry_price }} → ${{ t.current_price }}</div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
 
       <!-- ROK GLOSSARY -->
       <div class="intel-section" style="grid-column:1/-1">
         <div class="s-hdr"><h2 class="s-ttl" style="color:var(--b)"> ROK GLOSSARY — PLAIN ENGLISH</h2><span class="s-sub">What all these terms actually mean</span></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.55rem;margin-top:.35rem">
-          {% for term, def in [
-            ('ROK Score (0-100)', 'How confident ROK is in a signal. 80+ = very strong. 60+ = good. Below 60 = use caution.'),
-            ('Stop Loss', 'The price where you should sell if the trade goes wrong. Like a seatbelt — it limits how much you can lose.'),
-            ('Price Target', "Wall Street analysts' best guess for where a stock is headed. Not a guarantee, but useful as a goal."),
-            ('Risk/Reward (R:R)', 'Compares potential loss to potential gain. 1:2 means risking $1 to make $2. Higher is better.'),
-            ('RSI (Momentum)', 'Measures if a stock is being bought or sold too aggressively. Above 70 = maybe too hot. Below 30 = possibly cheap.'),
-            ('Volume Spike', "Today's trading volume vs the 30-day average. 2x+ means unusual interest — hedge funds or institutions are moving."),
-            ('Congressional Buy', 'A US senator or representative disclosed buying this stock with their own money. Required by law within 45 days.'),
-            ('Insider Buy (Form 4)', "A company executive bought their own company's stock. Insiders only buy with personal money when they expect it to go up."),
-            ('Unusual Options', 'A large fund placed a big bet that this stock moves significantly. These trades often cost $1M+.'),
-            ('Short Squeeze', 'When lots of traders bet a stock falls, but it goes up instead, forcing them to all buy at once — causing a rapid price spike.'),
-            ('Fear & Greed Index', 'CNN measures overall market emotion. High fear (under 30) often means stocks are cheap. High greed (over 70) = be careful.'),
-            ('Put/Call Ratio', 'Measures how many bets hedge funds are making on stocks going down vs up. Below 0.8 = bullish. Above 1.2 = bearish.'),
-          ] %}
-          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)">
-            <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">{{ term }}</div>
-            <div style="font-size:11px;color:var(--wh2);line-height:1.5">{{ def }}</div>
-          </div>
-          {% endfor %}
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">ROK Score (0-100)</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">How confident ROK is in a signal. 80+ = very strong. 60+ = good. Below 60 = use caution.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">Stop Loss</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">The price where you should sell if the trade goes wrong. Like a seatbelt — it limits how much you can lose.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">Price Target</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">Wall Street analysts' best guess for where a stock is headed. Not a guarantee, but useful as a goal.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">RSI (Momentum)</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">Measures if a stock is being bought or sold too aggressively. Above 70 = maybe too hot. Below 30 = possibly cheap.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">Volume Spike</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">Today's trading volume vs the 30-day average. 2x+ means unusual interest — hedge funds or institutions are moving.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">Short Squeeze</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">When lots of traders bet a stock falls, but it goes up instead, forcing them to all buy at once — causing a rapid price spike.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">Trailing Stop</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">ROK automatically sells if a profitable position drops 5% from its peak — locks in gains while letting winners run.</div></div>
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)"><div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">DCA (Dollar-Cost Avg)</div><div style="font-size:11px;color:var(--wh2);line-height:1.5">Buying more of a stock you already own when it dips slightly — lowers your average cost and increases profit potential.</div></div>
         </div>
       </div>
 
@@ -3417,7 +2920,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div class="ftr-txt">Reddit · News · StockTwits · SEC EDGAR · Yahoo Finance · CNN Fear/Greed · CBOE Put/Call · Congressional STOCK Act · Technical momentum signals. Updated every 15 minutes via GitHub Actions.</div>
     <div class="disclaimer">Not financial advice. AI-generated signals for educational purposes only. Do your own due diligence.</div>
   </div>
-  <span class="ftr-time">{{ data.analysis_date }}</span>
+  <span class="ftr-time" id="ftr-time">—</span>
 </footer>
 
 <!-- PRICE UPDATED FLASH -->
@@ -3645,11 +3148,11 @@ body.beginner-mode #beginner-banner { display:block }
   </div>
 </div>
 
-<script id="page-data" type="application/json">{{ data_json | safe }}</script>
+<script id="page-data" type="application/json">{}</script>
 <script>
 (function () {
   'use strict';
-  const ROK = JSON.parse(document.getElementById('page-data').textContent);
+  const ROK = {};
   Chart.defaults.animation.duration = 300;
 
   //  LIVE PRICE CACHE 
@@ -54583,6 +54086,107 @@ window.renderSectorRotation = renderSectorRotation;
     const el = e.target.closest('.glossary-term');
     if (el) { e.stopPropagation(); showGlossary(el.dataset.term || el.textContent.trim()); }
   });
+
+  // ── Load trades.json and populate live trader widgets ───────────────────
+  async function loadTradesData() {
+    let data = null;
+    for (const url of ['trades.json?t='+Date.now(), '/docs/trades.json?t='+Date.now()]) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) { data = await r.json(); break; }
+      } catch {}
+    }
+    if (!data) return;
+
+    // Update footer timestamp
+    const ft = document.getElementById('ftr-time');
+    if (ft && data.last_updated) ft.textContent = new Date(data.last_updated).toLocaleString();
+
+    // Update header regime badge
+    const regime = data.regime || {};
+    const regEl = document.getElementById('hdr-regime');
+    if (regEl && regime.regime) {
+      regEl.textContent = regime.regime.toUpperCase();
+      regEl.style.display = '';
+      regEl.style.color = regime.regime === 'bull' ? 'var(--g)' : regime.regime === 'bear' ? 'var(--r)' : 'var(--au)';
+    }
+
+    // Update market snapshot on signals tab
+    const snap = document.getElementById('rok-market-snapshot');
+    if (snap && data.portfolio_value) {
+      const pv = data.portfolio_value || 0;
+      const bp = data.buying_power || 0;
+      const stats = data.stats || {};
+      const wins = stats.wins || 0;
+      const losses = stats.losses || 0;
+      const total = wins + losses;
+      const winRate = total > 0 ? Math.round(wins/total*100) : 0;
+      const totalPnl = (stats.total_pnl || 0).toFixed(2);
+      const pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
+      snap.innerHTML = `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem">
+        <div style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,0,0,.2));border:1.5px solid rgba(0,255,136,.25);border-radius:12px;padding:.7rem 1rem;display:flex;align-items:center;gap:.7rem">
+          <div><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase">Portfolio</div><div style="font-family:var(--disp);font-size:1.5rem;color:var(--g)">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+          <div><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase">Cash</div><div style="font-size:13px;font-weight:800;color:var(--b)">\$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem">
+          <div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">ROK Bot Performance</div>
+          <div style="display:flex;gap:1rem">
+            <div><div style="font-size:8px;color:var(--wh4)">Win Rate</div><div style="font-size:13px;font-weight:800;color:var(--au)">${winRate}%</div></div>
+            <div><div style="font-size:8px;color:var(--wh4)">Trades</div><div style="font-size:13px;font-weight:800;color:var(--wh)">${total}</div></div>
+            <div><div style="font-size:8px;color:var(--wh4)">P&amp;L</div><div style="font-size:13px;font-weight:800;color:${pnlColor}">${totalPnl >= 0 ? '+' : ''}${totalPnl}%</div></div>
+          </div>
+        </div>
+        ${regime.regime ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:13px;font-weight:800;color:${regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)'};">${regime.regime.toUpperCase()}</div><div style="font-size:8px;color:var(--wh3)">VIX ${(regime.vix||0).toFixed(1)}</div></div>` : ''}
+      </div>`;
+    }
+
+    // Populate Intel tab ROK trades section
+    const intelEl = document.getElementById('intel-rok-trades');
+    if (intelEl) {
+      const trades = (data.trades || []).slice(0, 30);
+      const positions = (data.positions || []);
+      if (trades.length === 0 && positions.length === 0) {
+        intelEl.innerHTML = `<div style="color:var(--wh4);font-size:11px;padding:.5rem 0">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
+        return;
+      }
+      let html = '';
+      if (positions.length) {
+        html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Open Positions (${positions.length})</div>`;
+        html += `<div style="display:flex;flex-direction:column;gap:.3rem;margin-bottom:.75rem">`;
+        positions.forEach(p => {
+          const pnlColor = (p.pnl_pct||0) >= 0 ? 'var(--g)' : 'var(--r)';
+          const side = p.side === 'short' ? '🔻SHORT' : '🟢LONG';
+          html += `<div style="background:var(--blk4);border-radius:8px;padding:.5rem .7rem;display:flex;align-items:center;gap:.6rem;border:1px solid rgba(255,255,255,.05)">
+            <div style="font-family:var(--disp);font-size:1.1rem;color:var(--au);min-width:50px">$${p.ticker}</div>
+            <div style="flex:1;font-size:9px;color:var(--wh3)">${side} · $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div style="font-size:12px;font-weight:800;color:${pnlColor}">${(p.pnl_pct||0) >= 0 ? '+' : ''}${(p.pnl_pct||0).toFixed(2)}%</div>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      if (trades.length) {
+        html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Recent Trades</div>`;
+        html += `<div style="display:flex;flex-direction:column;gap:.25rem">`;
+        trades.forEach(t => {
+          const actionColor = t.action==='BUY'||t.action==='DCA' ? 'var(--g)' : t.action==='SELL'||t.action==='SELL_HALF'||t.action==='COVER' ? 'var(--r)' : 'var(--au)';
+          const timeStr = t.time ? new Date(t.time).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+          const pnl = t.pnl_pct != null ? ` · ${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct.toFixed(2)}%` : '';
+          html += `<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;background:var(--blk4);border-radius:6px;border-left:2px solid ${actionColor}">
+            <span style="font-size:8px;font-weight:800;color:${actionColor};min-width:52px;letter-spacing:.05em">${t.action}</span>
+            <span style="font-family:var(--disp);color:var(--au);font-size:1rem;min-width:40px">$${t.ticker}</span>
+            <span style="flex:1;font-size:9px;color:var(--wh3)">${t.reason||''}</span>
+            <span style="font-size:9px;font-weight:700;color:${t.pnl_pct != null ? (t.pnl_pct>=0?'var(--g)':'var(--r)') : 'var(--wh4)'}">${pnl}</span>
+            <span style="font-size:8px;color:var(--wh4)">${timeStr}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      intelEl.innerHTML = html;
+    }
+  }
+
+  loadTradesData();
+  setInterval(loadTradesData, 30000); // refresh every 30 seconds
 })();
 </script>
 

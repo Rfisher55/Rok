@@ -1341,8 +1341,24 @@ def run():
     def _time_ok(budget_secs=380):
         return _elapsed() < budget_secs
 
+    # Heartbeat: always write a minimal status to trades.json so the dashboard
+    # shows the bot is alive even if an error occurs later in the run
+    try:
+        existing = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": "",
+                                        "portfolio_value": 0, "buying_power": 0})
+        existing["last_updated"] = run_start.isoformat()
+        existing.setdefault("status", "starting")
+        _save(TRADES_FILE, existing)
+    except Exception as _e:
+        logger.warning(f"Heartbeat write failed: {_e}")
+
     if not ALPACA_KEY or not ALPACA_SECRET:
         logger.error("Alpaca keys missing — set ALPACA_KEY_ID + ALPACA_SECRET_KEY as GitHub Secrets.")
+        # Write diagnostic to trades.json so dashboard shows the error
+        diag = _load(TRADES_FILE, {})
+        diag["last_updated"] = run_start.isoformat()
+        diag["error"] = "ALPACA_KEY_ID or ALPACA_SECRET_KEY secrets not set in GitHub repository"
+        _save(TRADES_FILE, diag)
         sys.exit(1)
 
     # Market clock
@@ -1358,6 +1374,10 @@ def run():
             logger.info(f"Market closed. Next open: {clock.get('next_open', '?')}")
     except Exception as e:
         logger.error(f"Alpaca unreachable: {e}")
+        diag = _load(TRADES_FILE, {})
+        diag["last_updated"] = run_start.isoformat()
+        diag["error"] = f"Cannot reach Alpaca API: {e}"
+        _save(TRADES_FILE, diag)
         sys.exit(1)
 
     # Time-of-day flags (ET) — derived from next_close timestamp
@@ -1825,4 +1845,17 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except SystemExit:
+        raise
+    except Exception as _fatal:
+        logger.exception(f"FATAL ERROR in run(): {_fatal}")
+        try:
+            diag = _load(TRADES_FILE, {})
+            diag["last_updated"] = datetime.now(timezone.utc).isoformat()
+            diag["error"] = f"Bot crashed: {_fatal}"
+            _save(TRADES_FILE, diag)
+        except Exception:
+            pass
+        sys.exit(1)
