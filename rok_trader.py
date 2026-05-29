@@ -294,6 +294,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             "ttm_squeeze_fired", "at_breakout", "vwap_reclaim", "gap_and_hold",
             "nr7_signal", "fib_support", "macd_bull_div", "rsi_bull_divergence",
             "ichimoku_above", "orb_breakout", "above_poc",
+            "rvol_surge", "mfi_oversold", "mfi_bull_div", "supertrend_bull",
+            "force_index_div", "force_index_rising", "ha_bull", "donchian_up",
         ]
         e["entry_signals"] = [k for k in _SIGNAL_KEYS if signals.get(k)]
 
@@ -5387,6 +5389,11 @@ def run():
                         reason += f" [POC-BRK ${_d_buy.get('poc_price', 0)}]"
                     elif _d_buy.get("above_poc"):
                         reason += f" [abv-POC ${_d_buy.get('poc_price', 0)}]"
+                    if _d_buy.get("donchian_up"):   reason += " [DON-BRK]"
+                    if _d_buy.get("ha_bull"):        reason += f" [HA×{_d_buy.get('ha_consec_bull',0)}]"
+                    if _d_buy.get("mfi_bull_div"):   reason += f" [MFI-div{_d_buy.get('mfi',50):.0f}]"
+                    if _d_buy.get("supertrend_bull"): reason += f" [ST${_d_buy.get('supertrend_stop',0):.1f}]"
+                    if _d_buy.get("rvol_surge"):      reason += f" [RVOL{_d_buy.get('rvol',1):.1f}x]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=live.get(tk, {}))
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
