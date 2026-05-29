@@ -3673,36 +3673,53 @@ def run():
                     else:
                         _atr_stop_buy = STOP_LOSS_PCT
                     stop_price = round(price * (1 - _atr_stop_buy), 2)
+                    # Compute buy qty for bracket orders (fractional supported on paper)
+                    buy_qty = round(notional / price, 4)
+                    if buy_qty < 0.001:
+                        logger.info(f"SKIP {tk} — calculated qty too small")
+                        continue
+
                     # Smart order type: limit orders for value/mean-rev setups,
                     # market orders for strong momentum (we want in now, not at a limit)
                     is_strong_momo = sc >= 70 or tk in gap_ups or tk in vol_surge_cands
                     if is_strong_momo:
-                        # Market order — high conviction momentum, can't afford to miss the move
+                        # Bracket market order: stop-loss leg protects against fast crashes
                         order_payload = {
-                            "symbol": tk, "notional": str(notional),
+                            "symbol": tk, "qty": str(buy_qty),
                             "side": "buy", "type": "market", "time_in_force": "day",
+                            "order_class": "bracket",
+                            "stop_loss": {"stop_price": str(stop_price)},
                         }
-                        order_type_log = "MARKET"
+                        order_type_log = f"MARKET+STOP@${stop_price}"
                     else:
-                        # Limit order at +0.4% above current: avoids buying on brief spikes,
-                        # still fills almost always under normal conditions
+                        # Bracket limit order at +0.4% above current
                         limit_px = round(price * 1.004, 2)
-                        buy_qty  = round(notional / limit_px, 4)
-                        if buy_qty < 0.001:
+                        lim_qty  = round(notional / limit_px, 4)
+                        if lim_qty < 0.001:
                             logger.info(f"SKIP {tk} — calculated qty too small")
                             continue
                         order_payload = {
-                            "symbol": tk, "qty": str(buy_qty),
+                            "symbol": tk, "qty": str(lim_qty),
                             "side": "buy", "type": "limit",
                             "limit_price": str(limit_px), "time_in_force": "day",
+                            "order_class": "bracket",
+                            "stop_loss": {"stop_price": str(stop_price)},
                         }
-                        order_type_log = f"LIMIT@${limit_px}"
+                        order_type_log = f"LIMIT@${limit_px}+STOP@${stop_price}"
                     logger.info(
                         f"BUY {tk} [{order_type_log}] — ${notional:.0f} @ ~${price:.2f} "
-                        f"| stop ${stop_price} | score {sc} | sent {sent:+.0f}"
+                        f"| stop ${stop_price} ({_atr_stop_buy*100:.1f}%) | score {sc} | sent {sent:+.0f}"
                         + (f" | catalyst: {catalyst}" if catalyst else "")
                     )
-                    alpaca_post("/v2/orders", order_payload)
+                    try:
+                        alpaca_post("/v2/orders", order_payload)
+                    except Exception as _brk_err:
+                        # Bracket orders may fail on paper if unsupported for fractionals
+                        # Fall back to simple market/limit order
+                        logger.debug(f"Bracket order failed ({_brk_err}), falling back to simple order")
+                        simple_payload = {k: v for k, v in order_payload.items()
+                                          if k not in ("order_class", "stop_loss", "take_profit")}
+                        alpaca_post("/v2/orders", simple_payload)
                     reason = f"score={sc} sent={sent:+.0f}"
                     if catalyst:
                         reason += f" [{catalyst}]"
@@ -3791,14 +3808,20 @@ def run():
             if not sig:
                 return {}
             return {
-                "rsi":          round(sig.get("daily_rsi", 50), 1),
-                "vwap_pos":     round(sig.get("vwap_pos", 0), 2),
-                "roc5":         round(sig.get("roc5", 0), 2),
-                "macd_slope":   round(sig.get("macd_slope", 0), 4),
-                "vol_ratio":    round(sig.get("vol_ratio", 1), 2),
-                "vwap_reclaim": sig.get("vwap_reclaim", False),
-                "adx":          round(sig.get("adx", 0), 1),
-                "adx_trend":    "strong" if sig.get("adx", 0) >= 25 else ("weak" if sig.get("adx", 0) < 15 else "moderate"),
+                "rsi":            round(sig.get("daily_rsi", 50), 1),
+                "vwap_pos":       round(sig.get("vwap_pos", 0), 2),
+                "roc5":           round(sig.get("roc5", 0), 2),
+                "macd_slope":     round(sig.get("macd_slope", 0), 4),
+                "vol_ratio":      round(sig.get("vol_ratio", 1), 2),
+                "vwap_reclaim":   sig.get("vwap_reclaim", False),
+                "adx":            round(sig.get("adx", 0), 1),
+                "adx_trend":      "strong" if sig.get("adx", 0) >= 25 else ("weak" if sig.get("adx", 0) < 15 else "moderate"),
+                "rs5":            round(sig.get("rs5", 0), 2),
+                "rs63":           round(sig.get("rs63", 0), 2),
+                "chandelier_stop": round(sig.get("chandelier_stop", 0), 2),
+                "ichimoku":       sum([sig.get("ichimoku_above", False), sig.get("ichimoku_bull_cloud", False),
+                                       sig.get("ichimoku_tk_bull", False), sig.get("ichimoku_chikou", False)]),
+                "macd_bull_div":  sig.get("macd_bull_div", False),
             }
 
         tlog["positions"] = [
