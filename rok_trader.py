@@ -48,7 +48,7 @@ PARTIAL_PROFIT_PCT = 0.10    # take half profit at +10%
 TRAILING_STOP_PCT  = 0.05    # trailing stop: sell if falls 5% from peak
 MIN_BUY_SCORE      = 22      # minimum composite score to enter long
 MIN_SHORT_SCORE    = 18      # min bearish score to enter short
-MAX_HOLD_DAYS      = 7       # exit stale positions after N days
+MAX_HOLD_DAYS      = 5       # exit stale positions after N days
 MAX_SECTOR_LONGS   = 3       # max long positions per sector
 ENABLE_SHORTS      = True    # enable short selling in bear/neutral regime
 VIX_HIGH_THRESH    = 30      # reduce position sizes when VIX above this
@@ -150,6 +150,32 @@ def alpaca_post(path, data):
     r = requests.post(f"{ALPACA_BASE}{path}", headers=_h(), json=data, timeout=15)
     r.raise_for_status()
     return r.json()
+
+
+_ORDER_ENTRY_CACHE: dict = {}
+
+def get_position_entry_times() -> dict:
+    """
+    Fetch recent filled BUY orders from Alpaca to determine when each position was opened.
+    Returns {symbol: filled_at_isostring}. Cached per run.
+    """
+    global _ORDER_ENTRY_CACHE
+    if _ORDER_ENTRY_CACHE:
+        return _ORDER_ENTRY_CACHE
+    try:
+        orders = alpaca_get("/v2/orders?status=closed&limit=200&direction=desc")
+        times: dict = {}
+        for o in (orders or []):
+            sym       = o.get("symbol", "")
+            side      = o.get("side", "")
+            filled_at = o.get("filled_at") or ""
+            if sym and side == "buy" and filled_at and sym not in times:
+                times[sym] = filled_at
+        _ORDER_ENTRY_CACHE = times
+        logger.debug(f"Order entry times loaded for {len(times)} symbols")
+    except Exception as e:
+        logger.debug(f"Order history fetch failed: {e}")
+    return _ORDER_ENTRY_CACHE
 
 
 # ── Persistence ───────────────────────────────────────────────────────────────
@@ -1461,6 +1487,7 @@ def run():
             logger.warning(f"Short management error {sym}: {e}")
 
     # ── MANAGE EXISTING LONGS ─────────────────────────────────────────────
+    order_entry_times = get_position_entry_times()
     for sym, pos in list(longs.items()):
         try:
             cost    = float(pos.get("avg_entry_price", 0))
@@ -1476,9 +1503,9 @@ def run():
             # Trailing peak
             prev_peak  = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else peaks.get(sym, current)
             peak       = max(prev_peak, current)
-            # Use peaks time, then Alpaca's own created_at, then now as last resort
-            alpaca_entry = pos.get("created_at") or ""
-            entry_time   = (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or alpaca_entry or now_utc.isoformat()
+            # Entry time: peaks.json → order history → now (for positions first seen this run)
+            order_entry  = order_entry_times.get(sym, "")
+            entry_time   = (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or order_entry or now_utc.isoformat()
             peaks[sym]   = {
                 "peak":           peak,
                 "time":           entry_time,
