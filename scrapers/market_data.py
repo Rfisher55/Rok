@@ -159,7 +159,14 @@ def get_market_breadth() -> dict:
 
 
 def get_earnings_calendar(days_ahead: int = 7) -> list:
-    """Upcoming earnings from Yahoo Finance earnings calendar."""
+    """Upcoming earnings — Yahoo Finance calendar scrape with yfinance fallback."""
+    earnings = _get_earnings_web(days_ahead)
+    if not earnings:
+        earnings = _get_earnings_yfinance(days_ahead)
+    return earnings
+
+
+def _get_earnings_web(days_ahead: int) -> list:
     earnings = []
     try:
         start = datetime.utcnow().strftime("%Y-%m-%d")
@@ -176,15 +183,63 @@ def get_earnings_calendar(days_ahead: int = 7) -> list:
             for row in table.find_all("tr")[1:35]:
                 cols = row.find_all("td")
                 if len(cols) >= 3:
+                    ticker = cols[0].get_text(strip=True).split()[0].upper()
+                    if not ticker or len(ticker) > 5:
+                        continue
                     earnings.append({
-                        "ticker": cols[0].get_text(strip=True),
+                        "ticker": ticker,
                         "company": cols[1].get_text(strip=True) if len(cols) > 1 else "",
                         "date": cols[2].get_text(strip=True) if len(cols) > 2 else "",
                         "timing": cols[3].get_text(strip=True) if len(cols) > 3 else "",
                         "eps_estimate": cols[4].get_text(strip=True) if len(cols) > 4 else "n/a",
                     })
     except Exception as e:
-        logger.warning(f"Earnings calendar: {e}")
+        logger.warning(f"Earnings calendar web: {e}")
+    return earnings
+
+
+def _get_earnings_yfinance(days_ahead: int) -> list:
+    """Fallback: check yfinance.Ticker.calendar for upcoming earnings on known tickers."""
+    earnings = []
+    candidates = [
+        "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "AVGO",
+        "AMD", "PLTR", "CRWD", "NFLX", "ORCL", "CRM", "ADBE",
+        "JPM", "BAC", "GS", "V", "MA", "PYPL",
+        "LLY", "MRNA", "PFE", "JNJ", "ABBV",
+    ]
+    cutoff = datetime.utcnow() + timedelta(days=days_ahead)
+    for ticker in candidates:
+        try:
+            cal = yf.Ticker(ticker).calendar
+            if cal is None or cal.empty:
+                continue
+            # calendar has 'Earnings Date' column as index or col
+            if "Earnings Date" in cal.index:
+                ed = cal.loc["Earnings Date"]
+                if isinstance(ed, (list, tuple)):
+                    ed = ed[0]
+            elif "Earnings Date" in cal.columns:
+                ed = cal["Earnings Date"].iloc[0]
+            else:
+                continue
+            if hasattr(ed, "to_pydatetime"):
+                ed = ed.to_pydatetime()
+            elif hasattr(ed, "item"):
+                import pandas as pd
+                ed = pd.Timestamp(ed).to_pydatetime()
+            if ed and ed.replace(tzinfo=None) <= cutoff:
+                info = yf.Ticker(ticker).info
+                earnings.append({
+                    "ticker": ticker,
+                    "company": info.get("longName") or info.get("shortName") or ticker,
+                    "date": ed.strftime("%Y-%m-%d"),
+                    "timing": "Before/After Market",
+                    "eps_estimate": str(info.get("epsCurrentYear") or "n/a"),
+                })
+        except Exception:
+            pass
+        if len(earnings) >= 12:
+            break
     return earnings
 
 

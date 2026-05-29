@@ -2684,6 +2684,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <div class="port-rec" style="padding:.5rem .65rem">
           <span class="port-rec-msg">${recMsg}</span>
         </div>
+        ${stock && stock.earnings_date ? `<div style="padding:.3rem .65rem .5rem;font-size:10px;color:var(--au);display:flex;align-items:center;gap:.35rem;border-top:1px solid rgba(255,215,0,.1)"><span>📅</span><span><strong>Earnings coming up: ${stock.earnings_date}</strong> — expect more volatility around this date. Consider reducing size before earnings if you're unsure.</span></div>` : ''}
       </div>`;
     }).join('');
     const alertsHtml = alerts.length ? `<div class="port-alerts">${alerts.map(a=>
@@ -2704,14 +2705,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       return;
     }
     let price = parseFloat(priceEl?.value) || 0;
-    // If no price given, try to fetch from Yahoo
+    // If no price given, try to fetch live price from Yahoo
     if (!price) {
+      showAppAlert(`Fetching live price for $${ticker}...`, 'info');
       try {
         const url = `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${ticker}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
         const json = await res.json();
         const q = json?.quoteResponse?.result?.[0];
-        if (q?.regularMarketPrice) price = q.regularMarketPrice;
+        if (q?.regularMarketPrice) {
+          price = q.regularMarketPrice;
+          liveprices[ticker] = { price, change_pct: q.regularMarketChangePercent || 0 };
+        }
       } catch { /* ignore */ }
     }
     boughtIt(ticker, price);
