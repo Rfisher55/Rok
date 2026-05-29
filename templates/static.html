@@ -1130,6 +1130,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-changes-panel" style="display:none;margin-bottom:.75rem"></div>
     <!-- Full Trade Plans for Top ROK Picks (JS-populated) -->
     <div id="sig-trade-plans" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-indicator-school" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-best-fit" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-risk-check" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-pattern-school" style="display:none;margin-bottom:.85rem"></div>
@@ -1679,6 +1680,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="mkt-commodity-impact" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-global-pulse" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-asset-correlation" style="display:none;margin-bottom:.85rem"></div>
+    <div id="mkt-vix-deep" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-divergence" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
@@ -2390,6 +2392,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-win-streak" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-daily-insights" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-monthly-snap" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-worst-case" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -3145,10 +3148,10 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); renderWatchlistBar(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
-    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); renderCommodityImpact(); renderAssetCorrelation(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderProfitCalc(); renderSignalActionCard(); renderCoachingCard(); renderEntryTiming(); renderROIEstimator(); renderSignalFreshness(); renderPatternSchool(); renderPreTradeRiskCheck(); renderBestFitSignal(); }
+    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); renderCommodityImpact(); renderAssetCorrelation(); renderVIXDeep(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderProfitCalc(); renderSignalActionCard(); renderCoachingCard(); renderEntryTiming(); renderROIEstimator(); renderSignalFreshness(); renderPatternSchool(); renderPreTradeRiskCheck(); renderBestFitSignal(); renderIndicatorSchool(); }
     if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); renderWorstCase(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -4110,9 +4113,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderBestFitSignal(); renderPreTradeRiskCheck(); renderPatternSchool(); renderSignalFreshness(); renderROIEstimator(); renderEntryTiming(); renderTradeJournal(); renderCoachingCard(); renderSignalActionCard(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderAutoAlerts(); renderProfitCalc(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); fetchAndRenderYieldSpread(); renderCommodityImpact(); fetchGlobalPulse(); renderAssetCorrelation(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderPortfolioNotes(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderIndicatorSchool(); renderBestFitSignal(); renderPreTradeRiskCheck(); renderPatternSchool(); renderSignalFreshness(); renderROIEstimator(); renderEntryTiming(); renderTradeJournal(); renderCoachingCard(); renderSignalActionCard(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderAutoAlerts(); renderProfitCalc(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); fetchAndRenderYieldSpread(); renderCommodityImpact(); fetchGlobalPulse(); renderAssetCorrelation(); renderVIXDeep(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderPortfolioNotes(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); renderWorstCase(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
   }
   window.showTab = showTab;
@@ -5475,6 +5478,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderWinStreak();
     renderDailyInsights();
     renderMonthlySnap();
+    renderWorstCase();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -13572,6 +13576,234 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderMonthlySnap = renderMonthlySnap;
+
+  // ── INDICATOR SCHOOL ──────────────────────────────────
+  function renderIndicatorSchool() {
+    const el = document.getElementById('sig-indicator-school');
+    if (!el) return;
+    const sigs = ROK.buy_signals || [];
+    if (!sigs.length) { el.style.display = 'none'; return; }
+
+    // Get first signal to show live values in examples
+    const topSig = sigs[0];
+    const lp = liveprices[topSig.ticker];
+
+    const indicators = [
+      {
+        name: 'RSI (Relative Strength Index)', icon: '📊', color: '#64b5f6',
+        range: '0-100',
+        live: topSig.rsi ? `${topSig.ticker}'s RSI: ${topSig.rsi.toFixed(0)}` : null,
+        below30: 'OVERSOLD — stock may be too cheap. Look for bounce.',
+        above70: 'OVERBOUGHT — stock may be overpriced. Caution on new buys.',
+        ideal: '40-60 is healthy. ROK prefers 45-65 for buy signals.',
+        beginner: 'Think of RSI as a "speed meter." Too fast up = overbought. Too fast down = oversold.'
+      },
+      {
+        name: 'Volume Ratio', icon: '📦', color: '#ff8c00',
+        range: '0.5x - 5x+ average',
+        live: lp && lp.vol_ratio ? `${topSig.ticker}'s vol ratio: ${lp.vol_ratio.toFixed(1)}x` : null,
+        below30: 'LOW VOLUME (< 0.8x) — price move is weak, less reliable. Wait for confirmation.',
+        above70: 'HIGH VOLUME (> 2x) — strong conviction. Institutions are likely involved.',
+        ideal: '1.5x-3x is the sweet spot for reliable breakouts.',
+        beginner: 'Volume is like a vote. 100 people buying = stronger signal than 10 people buying.'
+      },
+      {
+        name: 'Signal Strength %', icon: '⚡', color: '#7c4dff',
+        range: '0-100%',
+        live: topSig.signal_strength ? `${topSig.ticker}'s signal: ${topSig.signal_strength}%` : null,
+        below30: 'WEAK SIGNAL (< 60%) — multiple indicators don\'t agree. Skip or wait.',
+        above70: 'STRONG SIGNAL (> 80%) — most indicators align. Higher confidence setup.',
+        ideal: 'ROK recommends only trading signals above 70%.',
+        beginner: 'Like a weather forecast: 90% chance of rain vs 55% chance. The stronger the signal, the better the setup.'
+      }
+    ];
+
+    el.style.display = '';
+    el.innerHTML = `<div class="card" style="border-left:3px solid #64b5f6">
+      <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.65rem">
+        <span style="font-size:1.2rem">📚</span>
+        <div>
+          <div style="font-weight:700;font-size:.9rem;color:var(--acc)">Indicator School</div>
+          <div style="font-size:.68rem;color:var(--wh4)">What do the numbers in ROK signals actually mean?</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        ${indicators.map(ind => `<div style="padding:.45rem .55rem;background:rgba(255,255,255,.025);border-radius:7px;border-left:2px solid ${ind.color}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.2rem">
+            <div style="font-size:.75rem;font-weight:700;color:${ind.color}">${ind.icon} ${ind.name}</div>
+            ${ind.live ? `<div style="font-size:.62rem;color:var(--wh4);font-style:italic">${ind.live}</div>` : ''}
+          </div>
+          <div style="font-size:.67rem;color:var(--wh3);line-height:1.45;margin-bottom:.25rem">${ind.beginner}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem">
+            <div style="padding:.25rem .35rem;background:rgba(255,34,85,.06);border-radius:4px;font-size:.63rem;color:#ff8c00">${ind.below30}</div>
+            <div style="padding:.25rem .35rem;background:rgba(0,230,118,.06);border-radius:4px;font-size:.63rem;color:#00e676">${ind.above70}</div>
+          </div>
+          <div style="font-size:.62rem;color:var(--wh4);margin-top:.2rem">✓ ${ind.ideal}</div>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:.45rem;font-size:.65rem;color:var(--wh4)">These indicators are updated live. Always use them together — no single indicator tells the whole story.</div>
+    </div>`;
+  }
+  window.renderIndicatorSchool = renderIndicatorSchool;
+
+  // ── VIX DEEP DIVE ──────────────────────────────────────
+  function renderVIXDeep() {
+    const el = document.getElementById('mkt-vix-deep');
+    if (!el) return;
+    const vix = (ROK.market_pulse || {}).vix;
+    if (!vix) { el.style.display = 'none'; return; }
+
+    const VIX_ZONES = [
+      { min:0, max:12, label:'Extreme Calm', color:'#00e676', emoji:'😴', desc:'Markets are incredibly calm. Investors feel very safe. This can be a contrarian warning — complacency often precedes selloffs.' },
+      { min:12, max:18, label:'Normal', color:'#69f0ae', emoji:'😌', desc:'VIX is in the normal range. Markets are stable. Good conditions for buying quality setups with proper stop losses.' },
+      { min:18, max:25, label:'Elevated', color:'#ffd600', emoji:'😐', desc:'Investors are a bit nervous. More volatility expected day-to-day. Reduce position sizes slightly and be patient with entries.' },
+      { min:25, max:30, label:'High Fear', color:'#ff8c00', emoji:'😰', desc:'Market stress is elevated. Stocks can swing 2-4% daily. Only trade the strongest ROK signals. Keep stops tight.' },
+      { min:30, max:40, label:'Extreme Fear', color:'#ff4444', emoji:'😱', desc:'Market panic. Stocks moving wildly. This is where beginners lose money by panic-selling. WAIT — fear peaks are often buy opportunities.' },
+      { min:40, max:999, label:'Crisis Level', color:'#ff2255', emoji:'🔥', desc:'VIX above 40 = market crisis (like COVID crash or 2008). Extreme danger OR extreme opportunity depending on your time horizon.' }
+    ];
+
+    const zone = VIX_ZONES.find(z => vix >= z.min && vix < z.max) || VIX_ZONES[VIX_ZONES.length-1];
+    const spyLp = liveprices['SPY'];
+    const spyChg = spyLp ? (spyLp.change_pct || 0) : 0;
+
+    // Historical context
+    const context = vix < 15 ? 'Historically, VIX below 15 has been rare and suggests market euphoria. SPY has averaged +8% annualized when VIX is this low — but watch for a sudden spike.' :
+      vix < 20 ? 'VIX between 15-20 is historically "normal." S&P 500 returns are typically best when buying during this zone.' :
+      vix < 30 ? 'VIX 20-30 historically corresponds to market corrections (5-15% SPY drops). Patience is key — markets recover, but timing is hard.' :
+      'VIX above 30 has historically been one of the BEST long-term buying opportunities. Short-term pain, long-term gain — if you have conviction and time horizon.';
+
+    // Position size recommendation
+    const posSize = vix < 18 ? 'Full size (100%)' : vix < 25 ? 'Reduced (75-80%)' : vix < 30 ? 'Small (50-60%)' : 'Minimal (25-30%)';
+
+    el.style.display = '';
+    el.innerHTML = `<div class="card" style="border-left:3px solid ${zone.color}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem">
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <span style="font-size:1.3rem">${zone.emoji}</span>
+          <div>
+            <div style="font-weight:700;font-size:.9rem;color:var(--acc)">VIX Deep Dive</div>
+            <div style="font-size:.68rem;color:var(--wh4)">Fear index decoded for beginners</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:1.3rem;font-weight:900;color:${zone.color}">${vix.toFixed(1)}</div>
+          <div style="font-size:.65rem;font-weight:700;color:${zone.color}">${zone.label}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:.5rem;position:relative">
+        <div style="display:flex;height:12px;border-radius:6px;overflow:hidden">
+          <div style="flex:12;background:#00e676"></div>
+          <div style="flex:6;background:#69f0ae"></div>
+          <div style="flex:7;background:#ffd600"></div>
+          <div style="flex:5;background:#ff8c00"></div>
+          <div style="flex:10;background:#ff4444"></div>
+          <div style="flex:10;background:#ff2255"></div>
+        </div>
+        <div style="position:absolute;top:0;left:${Math.min(vix/50*100,98)}%;transform:translateX(-50%);width:3px;height:12px;background:white;border-radius:2px;box-shadow:0 0 4px white"></div>
+        <div style="display:flex;justify-content:space-between;font-size:.55rem;color:var(--wh4);margin-top:.2rem">
+          <span>0</span><span>12</span><span>18</span><span>25</span><span>30</span><span>40</span><span>50+</span>
+        </div>
+      </div>
+      <div style="padding:.4rem .5rem;background:rgba(255,255,255,.03);border-radius:6px;margin-bottom:.4rem">
+        <div style="font-size:.73rem;color:${zone.color};font-weight:600;margin-bottom:.15rem">Today at ${vix.toFixed(1)}: ${zone.desc}</div>
+      </div>
+      <div style="padding:.35rem .45rem;background:rgba(255,255,255,.025);border-radius:5px;margin-bottom:.35rem">
+        <div style="font-size:.68rem;color:var(--wh3);line-height:1.4">${context}</div>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <div style="flex:1;text-align:center;padding:.3rem;background:rgba(255,255,255,.03);border-radius:5px">
+          <div style="font-size:.65rem;color:var(--wh4)">Recommended Position Size</div>
+          <div style="font-size:.75rem;font-weight:700;color:${zone.color}">${posSize}</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:.3rem;background:rgba(255,255,255,.03);border-radius:5px">
+          <div style="font-size:.65rem;color:var(--wh4)">SPY Today</div>
+          <div style="font-size:.75rem;font-weight:700;color:${spyChg>=0?'#00e676':'#ff2255'}">${spyChg>=0?'+':''}${spyChg.toFixed(2)}%</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  window.renderVIXDeep = renderVIXDeep;
+
+  // ── WORST CASE SCENARIO ───────────────────────────────
+  function renderWorstCase() {
+    const el = document.getElementById('port-worst-case');
+    if (!el) return;
+    const port = JSON.parse(localStorage.getItem('rok_portfolio_v2') || '{}');
+    const tickers = Object.keys(port);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+
+    const sigDetails = {};
+    (ROK.buy_signals||[]).forEach(s => { sigDetails[s.ticker] = s; });
+
+    let totalVal = 0, worstCaseVal = 0, bestCaseVal = 0;
+    const scenarios = tickers.map(t => {
+      const e = port[t]; const lp = liveprices[t]; const sig = sigDetails[t];
+      const price = lp ? lp.price : (e.price || 0);
+      if (!price || !e.shares) return null;
+      const val = price * e.shares;
+      const stop = sig ? (sig.stop_loss || price * 0.92) : price * 0.90;
+      const target = sig ? (sig.price_target || sig.target || price * 1.15) : price * 1.15;
+      const worstVal = stop * e.shares;
+      const bestVal = target * e.shares;
+      totalVal += val;
+      worstCaseVal += worstVal;
+      bestCaseVal += bestVal;
+      return { t, val, worstVal, bestVal, stop, target, price, shares: e.shares };
+    }).filter(Boolean);
+
+    if (!scenarios.length || !totalVal) { el.style.display = 'none'; return; }
+
+    const worstLoss = worstCaseVal - totalVal;
+    const bestGain = bestCaseVal - totalVal;
+    const worstPct = worstLoss / totalVal * 100;
+    const bestPct = bestGain / totalVal * 100;
+
+    // Additional risk scenarios
+    const correction20 = totalVal * (1 - 0.20);
+    const bearMarket40 = totalVal * (1 - 0.40);
+
+    el.style.display = '';
+    el.innerHTML = `<div class="card" style="border-left:3px solid #ff2255">
+      <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+        <span style="font-size:1.2rem">🔮</span>
+        <div>
+          <div style="font-weight:700;font-size:.9rem;color:var(--acc)">Scenario Analysis</div>
+          <div style="font-size:.68rem;color:var(--wh4)">What happens if all stop losses are hit — or all targets are hit?</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem">
+        <div style="padding:.45rem;background:rgba(255,34,85,.07);border:1px solid rgba(255,34,85,.2);border-radius:6px;text-align:center">
+          <div style="font-size:.65rem;color:#ff2255;font-weight:700;margin-bottom:.2rem">😱 WORST CASE</div>
+          <div style="font-size:.1rem;color:var(--wh4)">All stops hit</div>
+          <div style="font-size:1rem;font-weight:800;color:#ff2255">${worstPct.toFixed(1)}%</div>
+          <div style="font-size:.72rem;color:#ff2255">$${Math.abs(worstLoss).toFixed(0)} loss</div>
+          <div style="font-size:.62rem;color:var(--wh4)">Portfolio: $${worstCaseVal.toFixed(0)}</div>
+        </div>
+        <div style="padding:.45rem;background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);border-radius:6px;text-align:center">
+          <div style="font-size:.65rem;color:#00e676;font-weight:700;margin-bottom:.2rem">🚀 BEST CASE</div>
+          <div style="font-size:.1rem;color:var(--wh4)">All targets hit</div>
+          <div style="font-size:1rem;font-weight:800;color:#00e676">+${bestPct.toFixed(1)}%</div>
+          <div style="font-size:.72rem;color:#00e676">$${bestGain.toFixed(0)} gain</div>
+          <div style="font-size:.62rem;color:var(--wh4)">Portfolio: $${bestCaseVal.toFixed(0)}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:.4rem">
+        <div style="font-size:.68rem;color:var(--wh4);font-weight:600;margin-bottom:.25rem">Market Scenario Impact</div>
+        <div style="display:flex;flex-direction:column;gap:.2rem">
+          <div style="display:flex;justify-content:space-between;padding:.25rem .4rem;background:rgba(255,255,255,.025);border-radius:4px;font-size:.68rem">
+            <span style="color:var(--wh3)">📉 -20% Market Correction</span>
+            <span style="color:#ff8c00;font-weight:700">~$${(correction20).toFixed(0)} (-$${(totalVal-correction20).toFixed(0)})</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:.25rem .4rem;background:rgba(255,255,255,.025);border-radius:4px;font-size:.68rem">
+            <span style="color:var(--wh3)">🐻 -40% Bear Market</span>
+            <span style="color:#ff2255;font-weight:700">~$${(bearMarket40).toFixed(0)} (-$${(totalVal-bearMarket40).toFixed(0)})</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:.4rem .5rem;background:rgba(255,255,255,.03);border-radius:5px;font-size:.72rem;color:var(--wh3);line-height:1.4">💡 <strong style="color:var(--wh1)">Key insight:</strong> If your worst-case loss would cause real financial hardship, you may be over-invested. The best investors only risk what they can afford to lose completely.</div>
+    </div>`;
+  }
+  window.renderWorstCase = renderWorstCase;
 
   // ── SENTIMENT DIVERGENCE ALERT ────────────────────────
   function renderSentimentDivergence() {
