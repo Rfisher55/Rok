@@ -807,6 +807,38 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 }
 .app-alert.warn{border-color:rgba(255,34,85,.5);color:var(--r);box-shadow:0 0 20px rgba(255,34,85,.2)}
 @keyframes alertSlide{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── PWA INSTALL BANNER ───────────────────────────────────── */
+#pwa-install-banner{
+  position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 64px);left:50%;
+  transform:translateX(-50%) translateY(20px);
+  width:calc(min(460px,100vw - 24px));
+  background:linear-gradient(135deg,rgba(2,4,8,.97),rgba(10,15,22,.98));
+  border:1px solid rgba(0,255,136,.3);border-radius:16px;
+  padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 20px rgba(0,255,136,.08);
+  z-index:2800;opacity:0;pointer-events:none;
+  transition:opacity .35s ease,transform .35s ease
+}
+#pwa-install-banner.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+#pwa-install-banner .pwa-icon{font-size:1.8rem;flex-shrink:0;line-height:1}
+#pwa-install-banner .pwa-text{flex:1;min-width:0}
+#pwa-install-banner .pwa-text strong{font-size:12px;font-weight:800;color:var(--wh);display:block;margin-bottom:1px}
+#pwa-install-banner .pwa-text span{font-size:10.5px;color:var(--wh3);line-height:1.4}
+#pwa-install-banner .pwa-btn{padding:.45rem .85rem;border-radius:10px;border:none;background:var(--g);color:#000;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:var(--font);touch-action:manipulation}
+#pwa-install-banner .pwa-close{background:none;border:none;color:var(--wh4);font-size:1.1rem;cursor:pointer;padding:0;flex-shrink:0;line-height:1;touch-action:manipulation}
+
+/* ── ALERT HISTORY PANEL ─────────────────────────────────── */
+.alert-hist-item{display:flex;align-items:flex-start;gap:.5rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.alert-hist-item:last-child{border-bottom:none}
+.alert-hist-ticker{font-family:var(--disp);font-size:1rem;letter-spacing:.06em;color:var(--wh);min-width:44px}
+.alert-hist-dir{font-size:8px;padding:1px 5px;border-radius:6px;font-weight:700;flex-shrink:0;margin-top:2px}
+.alert-hist-dir.above{background:rgba(0,255,136,.12);color:var(--g);border:1px solid rgba(0,255,136,.2)}
+.alert-hist-dir.below{background:rgba(255,34,85,.1);color:var(--r);border:1px solid rgba(255,34,85,.2)}
+
+/* ── MARKET COUNTDOWN ────────────────────────────────────── */
+#mkt-countdown{display:none;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.12);border-radius:10px;padding:.6rem .9rem;margin-bottom:.7rem;font-size:11px;color:var(--wh2);text-align:center}
+#mkt-countdown .cd-time{font-size:1.3rem;font-weight:900;font-family:var(--disp);color:var(--au);letter-spacing:.05em;display:block;margin:.2rem 0}
 </style>
 </head>
 <body>
@@ -981,6 +1013,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </div>
 
     <!-- Today's personalized action tasks — populated by JS -->
+    <div id="mkt-countdown"></div>
     <div id="todays-tasks" style="display:none"></div>
 
     <!-- Live market today — populated by JS after prices refresh -->
@@ -1575,6 +1608,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem">
       <button class="port-share-btn" id="port-share-btn" onclick="sharePortfolio()" style="display:none">📤 SHARE</button>
       <button id="port-csv-btn" onclick="exportPortfolioCSV()" style="display:none;padding:.55rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;font-size:11px;font-weight:700;color:var(--wh2);cursor:pointer;font-family:var(--font);touch-action:manipulation;align-items:center;gap:.3rem">📥 EXPORT CSV</button>
+      <button id="alert-hist-btn" onclick="toggleAlertHistory()" style="display:none;padding:.55rem 1rem;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.18);border-radius:10px;font-size:11px;font-weight:700;color:rgba(255,120,120,.9);cursor:pointer;font-family:var(--font);touch-action:manipulation">🔔 ALERT HISTORY</button>
+    </div>
+    <!-- Triggered alert history panel -->
+    <div id="alert-history-panel" style="display:none;margin-bottom:.75rem;background:var(--blk3);border:1px solid rgba(255,34,85,.15);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:rgba(255,34,85,.7);margin-bottom:.5rem">🔔 RECENTLY TRIGGERED ALERTS</div>
+      <div id="alert-history-list"></div>
     </div>
     <button class="port-add-btn" onclick="showTab('screener')">🔍 FIND MORE STOCKS IN SCREENER</button>
   </div><!-- /tab-portfolio -->
@@ -1600,6 +1639,17 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
 <!-- GLOBAL ALERT BAR -->
 <div id="app-alerts"></div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="pwa-install-banner">
+  <span class="pwa-icon">📱</span>
+  <div class="pwa-text">
+    <strong>Add ROK to your Home Screen</strong>
+    <span>One tap to open. Works offline. Free — no App Store needed.</span>
+  </div>
+  <button class="pwa-btn" id="pwa-install-btn">Install</button>
+  <button class="pwa-close" id="pwa-dismiss-btn" aria-label="Dismiss">✕</button>
+</div>
 
 <!-- ONBOARDING OVERLAY -->
 <div id="onboard-overlay" class="onboard-overlay">
@@ -1766,6 +1816,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         </select>
       </div>
     </div>
+    <!-- Quick presets -->
+    <div id="alert-presets" style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.5rem"></div>
     <div id="alert-dialog-hint" style="min-height:20px;margin-bottom:.6rem;font-size:10.5px;color:var(--wh3)"></div>
     <div style="display:flex;gap:.55rem">
       <button onclick="cancelAlert()" style="flex:1;padding:.7rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
@@ -2192,6 +2244,58 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           </div>`;
         }
         return '';
+      })()}
+      ${(() => {
+        // Plain-English score card
+        const strength = det.signal_strength || s.signal_strength || 0;
+        if (!strength || sig === 'neutral') return '';
+        const factors = [];
+        // Size safety
+        if (s.market_cap >= 200e9) factors.push({ icon: '🏦', label: 'Size', val: 'Mega-cap — very safe', color: 'var(--g)' });
+        else if (s.market_cap >= 10e9) factors.push({ icon: '🏦', label: 'Size', val: 'Large-cap — relatively safe', color: 'var(--g)' });
+        else if (s.market_cap >= 2e9) factors.push({ icon: '🏦', label: 'Size', val: 'Mid-cap — moderate risk', color: 'var(--au)' });
+        else if (s.market_cap > 0) factors.push({ icon: '🏦', label: 'Size', val: 'Small-cap — higher risk', color: 'var(--r)' });
+        // Momentum (RSI)
+        if (s.rsi != null) {
+          if (s.rsi < 30) factors.push({ icon: '📉', label: 'Momentum', val: `RSI ${Math.round(s.rsi)} — oversold (bounce likely)`, color: 'var(--g)' });
+          else if (s.rsi > 70) factors.push({ icon: '📈', label: 'Momentum', val: `RSI ${Math.round(s.rsi)} — overbought (wait for dip)`, color: 'var(--r)' });
+          else factors.push({ icon: '📊', label: 'Momentum', val: `RSI ${Math.round(s.rsi)} — healthy range`, color: 'var(--wh2)' });
+        }
+        // Valuation (P/E)
+        if (s.pe_ratio != null && s.pe_ratio > 0) {
+          if (s.pe_ratio < 15) factors.push({ icon: '💲', label: 'Valuation', val: `P/E ${s.pe_ratio.toFixed(1)} — cheap vs earnings`, color: 'var(--g)' });
+          else if (s.pe_ratio < 30) factors.push({ icon: '💲', label: 'Valuation', val: `P/E ${s.pe_ratio.toFixed(1)} — fair value`, color: 'var(--wh2)' });
+          else factors.push({ icon: '💲', label: 'Valuation', val: `P/E ${s.pe_ratio.toFixed(1)} — expensive / high-growth`, color: 'var(--au)' });
+        }
+        // Volume
+        if (s.vol_ratio != null) {
+          if (s.vol_ratio > 2) factors.push({ icon: '🔥', label: 'Activity', val: `${s.vol_ratio.toFixed(1)}x normal — big money moving`, color: 'var(--g)' });
+          else if (s.vol_ratio > 1.3) factors.push({ icon: '📦', label: 'Activity', val: `${s.vol_ratio.toFixed(1)}x volume — above average`, color: 'var(--wh2)' });
+          else factors.push({ icon: '😴', label: 'Activity', val: 'Normal volume', color: 'var(--wh3)' });
+        }
+        // Price vs 52W high
+        if (s.pct_from_52w_high != null) {
+          const pct = s.pct_from_52w_high;
+          if (pct < -30) factors.push({ icon: '🏷️', label: 'vs 52W High', val: `${pct.toFixed(0)}% off high — deep discount`, color: 'var(--g)' });
+          else if (pct < -10) factors.push({ icon: '🏷️', label: 'vs 52W High', val: `${pct.toFixed(0)}% off high — discounted`, color: 'var(--wh2)' });
+          else factors.push({ icon: '⚠️', label: 'vs 52W High', val: `${pct.toFixed(0)}% — near yearly high`, color: 'var(--au)' });
+        }
+        const filledBars = Math.round(strength);
+        const barHtml = Array.from({length:10},(_,i)=>`<div style="flex:1;height:4px;border-radius:2px;background:${i<filledBars?(sig==='buy'?'var(--g)':sig==='sell'?'var(--r)':'var(--au)'):'rgba(255,255,255,.08)'}"></div>`).join('');
+        return `<div style="padding:0 1.1rem .75rem">
+          <div style="font-size:8px;font-weight:700;letter-spacing:.16em;color:rgba(0,255,136,.4);text-transform:uppercase;margin-bottom:.4rem">🧮 HOW ROK SCORED THIS</div>
+          <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem">
+            ${barHtml}
+            <span style="font-size:11px;font-weight:800;color:${sig==='buy'?'var(--g)':sig==='sell'?'var(--r)':'var(--au)'};margin-left:2px">${strength}/10</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.25rem">
+            ${factors.map(f => `<div style="display:flex;align-items:center;gap:.5rem;font-size:10.5px">
+              <span style="font-size:.95rem;flex-shrink:0;width:1.1rem;text-align:center">${f.icon}</span>
+              <span style="color:var(--wh4);min-width:68px;font-size:9.5px">${f.label}</span>
+              <span style="color:${f.color}">${f.val}</span>
+            </div>`).join('')}
+          </div>
+        </div>`;
       })()}
       ${reasons.length ? `<div style="padding:0 1.1rem .75rem">
         <div style="font-size:8px;font-weight:700;letter-spacing:.18em;color:rgba(255,215,0,.5);margin-bottom:.45rem;text-transform:uppercase">🧠 WHY ROK LIKES THIS</div>
@@ -2632,6 +2736,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (sb) sb.style.display = tickers.length ? 'flex' : 'none';
     const csvBtn = document.getElementById('port-csv-btn');
     if (csvBtn) csvBtn.style.display = tickers.length ? 'flex' : 'none';
+    const histBtn = document.getElementById('alert-hist-btn');
+    if (histBtn) {
+      const hasHist = (localStorage.getItem('rok_alert_history_v1') || '[]').length > 2;
+      histBtn.style.display = hasHist ? 'inline-flex' : 'none';
+    }
     // Summary boxes
     const sumEl = document.getElementById('portfolio-summary');
     if (!sumEl || !tickers.length) { if(sumEl) sumEl.innerHTML=''; return; }
@@ -3169,6 +3278,43 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (cnt) cnt.textContent = list.length + ' stock' + (list.length !== 1 ? 's' : '') + (scSector ? ` · ${scSector}` : '');
 
     if (!list.length) {
+      if (scFilter === 'beginner') {
+        // No large-cap buy signals → show large-cap watch signals as fallback
+        const largeCaps = (ROK.stock_universe || []).filter(s => s.market_cap && s.market_cap >= 10e9);
+        const watchFallback = sortList(largeCaps.filter(s => s.rok_signal === 'watch')).slice(0, 6);
+        const topLargeCap = sortList(largeCaps.filter(s => s.rok_signal !== 'sell')).slice(0, 4);
+        const showItems = watchFallback.length ? watchFallback : topLargeCap;
+        const itemsHtml = showItems.map(s => {
+          const lp = liveprices[s.ticker];
+          const price = lp ? lp.price : s.price;
+          const chg = lp ? lp.change_pct : (s.change_pct || 0);
+          const mc = s.market_cap;
+          const capLabel = mc >= 200e9 ? 'MEGA CAP' : mc >= 10e9 ? 'LARGE CAP' : 'MID CAP';
+          const sig = s.rok_signal || 'neutral';
+          const sigColor = sig === 'buy' ? 'var(--g)' : sig === 'watch' ? 'var(--au)' : 'var(--wh3)';
+          return `<div style="display:flex;align-items:center;gap:.65rem;padding:.4rem .5rem;background:var(--blk4);border-radius:9px;cursor:pointer;border:1px solid rgba(255,255,255,.05)" onclick="openModal('${s.ticker}')">
+            <div style="font-family:var(--disp);font-size:1.05rem;letter-spacing:.07em;color:var(--wh);min-width:48px">${s.ticker}</div>
+            <div style="flex:1;min-width:0"><div style="font-size:9.5px;color:var(--wh3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(s.company_name||'').substring(0,22)}</div><div style="font-size:8px;color:var(--wh4)">${capLabel}</div></div>
+            <div style="text-align:right;flex-shrink:0"><div style="font-size:10.5px;font-weight:700;color:var(--wh)">${price != null ? '$'+price.toFixed(2) : '—'}</div><div style="font-size:9px;font-weight:700;color:${chg>=0?'var(--g)':'var(--r)'}">${chg>=0?'+':''}${chg.toFixed(2)}%</div></div>
+            <div style="font-size:8px;font-weight:700;color:${sigColor};min-width:36px;text-align:center">${sig.toUpperCase()}</div>
+          </div>`;
+        }).join('');
+        grid.innerHTML = `<div style="grid-column:1/-1;padding:.75rem;background:var(--blk3);border:1px solid rgba(255,215,0,.15);border-radius:12px">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+            <span style="font-size:1.4rem">🛡️</span>
+            <div>
+              <div style="font-size:12px;font-weight:800;color:var(--au)">No safe buy signals right now</div>
+              <div style="font-size:10px;color:var(--wh3)">The AI isn't seeing strong BUY signals in large-cap stocks today — that's actually a sign to be cautious.</div>
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--wh2);line-height:1.6;padding:.5rem .65rem;background:rgba(255,215,0,.04);border-radius:8px;margin-bottom:.65rem">
+            💡 <strong style="color:var(--au)">When there are no safe buys, it's OK to wait.</strong> Experienced investors call this "staying in cash." Your money doesn't shrink by sitting on the sidelines — but it can if you buy into a weak market.
+          </div>
+          ${showItems.length ? `<div style="font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--wh4);margin-bottom:.4rem">LARGE-CAPS TO KEEP AN EYE ON</div><div style="display:flex;flex-direction:column;gap:.3rem">${itemsHtml}</div>` : ''}
+          <button onclick="document.querySelector('[data-filter=all]').click()" style="margin-top:.65rem;width:100%;padding:.5rem;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);border-radius:9px;color:var(--b);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">→ See ALL stocks instead</button>
+        </div>`;
+        return;
+      }
       if (scFilter === 'starred') {
         grid.innerHTML = `<div class="sc-empty" style="grid-column:1/-1;text-align:center;padding:2rem">
           <div style="font-size:2rem;margin-bottom:.5rem">★</div>
@@ -3775,11 +3921,36 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const priceEl = document.getElementById('alert-dialog-price');
     if (det.price_target && dir.value === 'above') { priceEl.value = Number(det.price_target).toFixed(2); }
     else if (det.stop_loss && _alertCurPrice > 0) { priceEl.value = Number(det.stop_loss).toFixed(2); dir.value = 'below'; }
+    // Build quick preset chips
+    const presetsEl = document.getElementById('alert-presets');
+    if (presetsEl) {
+      const presets = [];
+      const cp = _alertCurPrice;
+      if (det.stop_loss) presets.push({ label: `⛔ Stop-loss $${Number(det.stop_loss).toFixed(2)}`, price: Number(det.stop_loss), dir: 'below', desc: 'ROK recommended stop' });
+      if (det.price_target) presets.push({ label: `🎯 Target $${Number(det.price_target).toFixed(2)}`, price: Number(det.price_target), dir: 'above', desc: 'ROK price target' });
+      if (cp > 0) {
+        presets.push({ label: `−5% $${(cp * 0.95).toFixed(2)}`, price: +(cp * 0.95).toFixed(2), dir: 'below', desc: '5% drop protection' });
+        presets.push({ label: `+10% $${(cp * 1.10).toFixed(2)}`, price: +(cp * 1.10).toFixed(2), dir: 'above', desc: '10% gain alert' });
+      }
+      presetsEl.innerHTML = presets.map((pr, i) => `<button onclick="applyAlertPreset(${i})" data-preset-i="${i}" style="font-size:9px;padding:3px 8px;border-radius:8px;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.2);color:var(--au);cursor:pointer;font-family:var(--font);touch-action:manipulation" title="${pr.desc}">${pr.label}</button>`).join('');
+      presetsEl._data = presets;
+    }
     document.getElementById('alert-dialog-overlay').classList.add('open');
     updateAlertCalc();
     setTimeout(() => priceEl.focus(), 150);
   }
   window.openAlertDialog = openAlertDialog;
+
+  function applyAlertPreset(idx) {
+    const presetsEl = document.getElementById('alert-presets');
+    if (!presetsEl || !presetsEl._data) return;
+    const pr = presetsEl._data[idx];
+    if (!pr) return;
+    document.getElementById('alert-dialog-price').value = pr.price.toFixed(2);
+    document.getElementById('alert-dialog-dir').value = pr.dir;
+    updateAlertCalc();
+  }
+  window.applyAlertPreset = applyAlertPreset;
 
   function updateAlertCalc() {
     const price = parseFloat(document.getElementById('alert-dialog-price').value);
@@ -3857,6 +4028,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (Notification.permission === 'granted') {
         try { new Notification('ROK Price Alert 🔔', { body: msg, icon: './icon-192.png' }); } catch(e) {}
       }
+      // Persist to alert history
+      const hist = JSON.parse(localStorage.getItem('rok_alert_history_v1') || '[]');
+      hist.push({ ticker: a.ticker, trigger: a.target, dir: a.direction, price, ts: Date.now() });
+      if (hist.length > 50) hist.splice(0, hist.length - 50);
+      localStorage.setItem('rok_alert_history_v1', JSON.stringify(hist));
+      const hBtn = document.getElementById('alert-hist-btn');
+      if (hBtn) hBtn.style.display = 'inline-flex';
     });
     if (changed) { saveAlerts(alerts); renderAlertStrip(); renderScreener(); }
   }
@@ -3939,6 +4117,14 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         if (Notification.permission === 'granted') {
           new Notification('ROK Alert', { body: msg, icon: './icon-192.png' }).onclick = () => showTab('portfolio');
         }
+        // Record to persistent alert history
+        const hist = JSON.parse(localStorage.getItem('rok_alert_history_v1') || '[]');
+        hist.push({ ticker, trigger: msg.includes('stop') ? stopLoss : priceTarget, dir: msg.includes('stop') ? 'below' : 'above', price: curPrice, ts: Date.now() });
+        if (hist.length > 50) hist.splice(0, hist.length - 50);
+        localStorage.setItem('rok_alert_history_v1', JSON.stringify(hist));
+        // Show history button
+        const hBtn = document.getElementById('alert-hist-btn');
+        if (hBtn) hBtn.style.display = 'inline-flex';
       }
       // Earnings warning (once per session per ticker)
       if (stock && stock.earnings_date) {
@@ -3982,6 +4168,124 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   requestNotifPermission();
   // Check alerts every minute
   setInterval(checkPortfolioAlerts, 60000);
+
+  // ── PWA INSTALL PROMPT ────────────────────────────────────
+  (function() {
+    let _deferredPrompt = null;
+    const DISMISSED_KEY = 'rok_pwa_dismissed_v1';
+    const banner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('pwa-install-btn');
+    const dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+    // Only show if not already installed and not previously dismissed
+    const isDismissed = localStorage.getItem(DISMISSED_KEY);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      _deferredPrompt = e;
+      if (!isDismissed && !isStandalone && banner) {
+        setTimeout(() => banner.classList.add('show'), 30000);
+      }
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', () => {
+        if (!_deferredPrompt) return;
+        _deferredPrompt.prompt();
+        _deferredPrompt.userChoice.then(r => {
+          if (r.outcome === 'accepted') {
+            banner.classList.remove('show');
+            localStorage.setItem(DISMISSED_KEY, '1');
+          }
+          _deferredPrompt = null;
+        });
+      });
+    }
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', () => {
+        banner.classList.remove('show');
+        localStorage.setItem(DISMISSED_KEY, '1');
+      });
+    }
+
+    // If already installed as PWA, remove the banner entirely
+    if (isStandalone && banner) banner.style.display = 'none';
+  })();
+
+  // ── MARKET OPEN COUNTDOWN ─────────────────────────────────
+  (function() {
+    function updateCountdown() {
+      const el = document.getElementById('mkt-countdown');
+      if (!el) return;
+      const ms = getMarketState ? getMarketState() : null;
+      if (!ms) return;
+      const { state } = ms;
+      if (state === 'open') { el.style.display = 'none'; return; }
+
+      const etStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+      const now = new Date(etStr);
+      const day = now.getDay();
+      const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+
+      let targetH, targetM, label;
+      if (state === 'pre') { targetH = 9; targetM = 30; label = 'Market opens in'; }
+      else if (state === 'post') { targetH = 20; targetM = 0; label = 'After-hours ends in'; }
+      else {
+        // Closed — find next open
+        let daysUntil = day === 5 ? 3 : day === 6 ? 2 : 1; // Fri→+3, Sat→+2, else +1
+        const nextOpen = new Date(now);
+        nextOpen.setDate(now.getDate() + daysUntil);
+        nextOpen.setHours(9, 30, 0, 0);
+        const diff = nextOpen - now;
+        if (diff <= 0) { el.style.display = 'none'; return; }
+        const totalS = Math.floor(diff / 1000);
+        const dh = Math.floor(totalS / 3600), dm = Math.floor((totalS % 3600) / 60), ds = totalS % 60;
+        el.style.display = 'block';
+        el.innerHTML = `<span style="font-size:10px;color:var(--wh3);letter-spacing:.08em">🕐 MARKET CLOSED</span><span class="cd-time">${dh}h ${dm}m ${ds}s</span><span style="font-size:9.5px;color:var(--wh4)">until next open · ${day === 5 ? 'Monday' : day === 6 ? 'Monday' : 'tomorrow'} 9:30 AM ET</span>`;
+        return;
+      }
+      const now2 = h * 3600 + m * 60 + s;
+      const target = targetH * 3600 + targetM * 60;
+      const diff = target - now2;
+      if (diff <= 0) { el.style.display = 'none'; return; }
+      const dh = Math.floor(diff / 3600), dm = Math.floor((diff % 3600) / 60), ds = diff % 60;
+      el.style.display = 'block';
+      el.innerHTML = `<span style="font-size:10px;color:var(--wh3);letter-spacing:.08em">⏳ ${state === 'pre' ? 'PRE-MARKET' : 'AFTER-HOURS'}</span><span class="cd-time">${dh > 0 ? dh+'h ' : ''}${dm}m ${String(ds).padStart(2,'0')}s</span><span style="font-size:9.5px;color:var(--wh4)">${label}</span>`;
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  })();
+
+  // ── TRIGGERED ALERT HISTORY ───────────────────────────────
+  function toggleAlertHistory() {
+    const panel = document.getElementById('alert-history-panel');
+    const list = document.getElementById('alert-history-list');
+    if (!panel || !list) return;
+    const isVisible = panel.style.display !== 'none';
+    if (isVisible) { panel.style.display = 'none'; return; }
+
+    const hist = JSON.parse(localStorage.getItem('rok_alert_history_v1') || '[]');
+    if (!hist.length) {
+      list.innerHTML = '<div style="font-size:11px;color:var(--wh4);text-align:center;padding:.75rem">No triggered alerts yet — set price alerts on stocks and ROK will record when they fire.</div>';
+    } else {
+      list.innerHTML = hist.slice().reverse().slice(0, 12).map(h => {
+        const d = new Date(h.ts);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        const dir = h.dir || (h.price > h.trigger ? 'above' : 'below');
+        return `<div class="alert-hist-item">
+          <span class="alert-hist-ticker">${h.ticker}</span>
+          <div style="flex:1;min-width:0">
+            <div style="color:var(--wh);font-size:11px">${h.dir === 'above' ? '↑ Hit' : '↓ Hit'} <strong>$${h.trigger != null ? h.trigger.toFixed(2) : '—'}</strong></div>
+            <div style="font-size:9px;color:var(--wh4)">${dateStr}</div>
+          </div>
+          <span class="alert-hist-dir ${dir}">${dir.toUpperCase()}</span>
+        </div>`;
+      }).join('');
+    }
+    panel.style.display = 'block';
+  }
+  window.toggleAlertHistory = toggleAlertHistory;
 })();
 </script>
 </body>
