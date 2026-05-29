@@ -661,6 +661,84 @@ def _donchian_breakout(closes, highs, lows, period=20):
         return False, False, 50.0
 
 
+def _candlestick_patterns(opens, highs, lows, closes, lookback=3):
+    """Detect key institutional candlestick patterns.
+    Returns dict of booleans: hammer, bullish_engulfing, morning_star, shooting_star,
+    bearish_engulfing, doji, three_white_soldiers, three_black_crows.
+    """
+    result = {
+        "hammer": False, "bullish_engulfing": False, "morning_star": False,
+        "shooting_star": False, "bearish_engulfing": False, "doji": False,
+        "three_white_soldiers": False, "three_black_crows": False,
+    }
+    if len(closes) < 3:
+        return result
+    try:
+        o, h, l, c = opens[-1], highs[-1], lows[-1], closes[-1]
+        po, ph, pl, pc = opens[-2], highs[-2], lows[-2], closes[-2]
+        ppo = opens[-3] if len(opens) >= 3 else po
+        ppc = closes[-3] if len(closes) >= 3 else pc
+        body  = abs(c - o)
+        range_ = h - l if h != l else 0.001
+        pbody = abs(pc - po)
+        is_bull   = c > o
+        is_bear   = c < o
+        is_pbull  = pc > po
+        is_pbear  = pc < po
+        # Hammer: small body at top, long lower wick (≥2×body), tiny upper wick
+        lower_wick = o - l if is_bull else c - l
+        upper_wick = h - c if is_bull else h - o
+        if body > 0 and lower_wick >= 2 * body and upper_wick <= 0.3 * body:
+            result["hammer"] = True
+        # Shooting Star: small body at bottom, long upper wick — bearish reversal
+        if body > 0 and upper_wick >= 2 * body and lower_wick <= 0.3 * body and is_bear:
+            result["shooting_star"] = True
+        # Doji: open ≈ close (within 0.1% of range)
+        if range_ > 0 and body / range_ < 0.1:
+            result["doji"] = True
+        # Bullish Engulfing: current bull candle engulfs prior bear candle
+        if is_bull and is_pbear and o < pc and c > po and body > pbody * 0.9:
+            result["bullish_engulfing"] = True
+        # Bearish Engulfing: current bear engulfs prior bull
+        if is_bear and is_pbull and o > pc and c < po and body > pbody * 0.9:
+            result["bearish_engulfing"] = True
+        # Morning Star: bearish→doji/small→bullish 3-candle reversal
+        pdoji = abs(pc - po) < abs(ph - pl) * 0.15
+        if is_pbear and pdoji and is_bull and c > (po + pc) / 2:
+            result["morning_star"] = True
+        # Three White Soldiers: 3 consecutive bull candles, each closing higher
+        if (len(closes) >= 3 and closes[-3] < closes[-2] < closes[-1]
+                and opens[-3] < closes[-3] and opens[-2] < closes[-2]):
+            result["three_white_soldiers"] = True
+        # Three Black Crows: 3 consecutive bear candles
+        if (len(closes) >= 3 and closes[-3] > closes[-2] > closes[-1]
+                and opens[-3] > closes[-3] and opens[-2] > closes[-2]):
+            result["three_black_crows"] = True
+    except Exception:
+        pass
+    return result
+
+
+def _pivot_points(high, low, close):
+    """Standard pivot points for support/resistance levels.
+    Returns dict: pivot, r1, r2, s1, s2 (price levels).
+    These are used by institutional traders as key intraday targets.
+    """
+    try:
+        pp = (high + low + close) / 3
+        r1 = 2 * pp - low
+        r2 = pp + (high - low)
+        s1 = 2 * pp - high
+        s2 = pp - (high - low)
+        return {
+            "pivot": round(pp, 2),
+            "r1": round(r1, 2), "r2": round(r2, 2),
+            "s1": round(s1, 2), "s2": round(s2, 2),
+        }
+    except Exception:
+        return {}
+
+
 def _mfi(closes, highs, lows, volumes, period=14):
     """Money Flow Index: volume-weighted RSI (0-100).
     MFI < 20 = oversold (institutional accumulation). MFI > 80 = overbought.
@@ -3107,6 +3185,33 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Candlestick patterns: key institutional reversal/continuation signals
+    candle_patterns = {
+        "hammer": False, "bullish_engulfing": False, "morning_star": False,
+        "shooting_star": False, "bearish_engulfing": False,
+        "three_white_soldiers": False, "three_black_crows": False,
+    }
+    try:
+        if all(col in daily.columns for col in ["Open", "High", "Low", "Close"]) and len(daily) >= 3:
+            candle_patterns = _candlestick_patterns(
+                list(daily["Open"]), list(daily["High"]),
+                list(daily["Low"]), list(daily["Close"]), lookback=3
+            )
+    except Exception:
+        pass
+
+    # Pivot points: yesterday's H/L/C → today's support/resistance levels
+    pivot_levels = {}
+    try:
+        if all(col in daily.columns for col in ["High", "Low", "Close"]) and len(daily) >= 2:
+            pivot_levels = _pivot_points(
+                float(daily["High"].iloc[-2]),
+                float(daily["Low"].iloc[-2]),
+                float(daily["Close"].iloc[-2]),
+            )
+    except Exception:
+        pass
+
     # Bull flag: flagpole (strong surge) followed by tight consolidation → breakout
     # One of the highest-probability momentum continuation patterns
     bull_flag = False
@@ -3520,6 +3625,18 @@ def _extract(daily, hourly):
         "donchian_up":         donchian_up,
         "donchian_down":       donchian_down,
         "donchian_pct":        donchian_pct,
+        "hammer":              candle_patterns.get("hammer", False),
+        "bullish_engulfing":   candle_patterns.get("bullish_engulfing", False),
+        "morning_star":        candle_patterns.get("morning_star", False),
+        "shooting_star":       candle_patterns.get("shooting_star", False),
+        "bearish_engulfing":   candle_patterns.get("bearish_engulfing", False),
+        "three_white_soldiers":candle_patterns.get("three_white_soldiers", False),
+        "three_black_crows":   candle_patterns.get("three_black_crows", False),
+        "pivot":               pivot_levels.get("pivot", 0),
+        "pivot_r1":            pivot_levels.get("r1", 0),
+        "pivot_r2":            pivot_levels.get("r2", 0),
+        "pivot_s1":            pivot_levels.get("s1", 0),
+        "pivot_s2":            pivot_levels.get("s2", 0),
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "macd_bull_div":       macd_div.get("bullish_div", False),
@@ -4118,6 +4235,17 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Oversold: price below lower band = mean-reversion setup (+5 for oversold bounces)
     if d.get("kc_breakout", False): s += 9
     elif d.get("kc_oversold", False): s += 5   # mean-reversion candidate
+
+    # Candlestick patterns: institutional reversal and continuation signals
+    # Bullish patterns (entry confirmation)
+    if d.get("three_white_soldiers", False): s += 8   # 3 bull candles = sustained buying
+    if d.get("morning_star", False):          s += 7   # 3-candle bullish reversal
+    if d.get("bullish_engulfing", False):     s += 6   # strong single-candle reversal
+    if d.get("hammer", False):                s += 5   # hammer = buying at lows
+    # Bearish patterns (reduce conviction for longs)
+    if d.get("three_black_crows", False):     s -= 7
+    if d.get("bearish_engulfing", False):     s -= 5
+    if d.get("shooting_star", False):         s -= 4
 
     # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
     if d.get("higher_lows", False): s += 6
