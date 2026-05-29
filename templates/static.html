@@ -2741,14 +2741,40 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
 
   function removeFromPortfolio(ticker) {
-    const p = getPortfolio(); delete p[ticker]; savePortfolio(p);
+    const p = getPortfolio();
+    const savedEntry = { ...p[ticker] };
+    delete p[ticker]; savePortfolio(p);
     renderPortfolio(); renderPortfolioSummary();
     if (activeTab === 'screener') renderScreener();
-    // Hide share button if empty
     const sb = document.getElementById('port-share-btn');
     if (sb) sb.style.display = Object.keys(getPortfolio()).length ? 'flex' : 'none';
+    showUndoToast(`$${ticker} removed from portfolio`, () => {
+      const p2 = getPortfolio(); p2[ticker] = savedEntry; savePortfolio(p2);
+      renderPortfolio(); renderPortfolioSummary();
+      if (activeTab === 'screener') renderScreener();
+      showAppAlert(`✓ $${ticker} restored`, 'good', 3000);
+    });
   }
   window.removeFromPortfolio = removeFromPortfolio;
+
+  function showUndoToast(msg, onUndo) {
+    const container = document.getElementById('app-alerts');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = 'app-alert';
+    el.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:.75rem;cursor:default;pointer-events:auto';
+    const span = document.createElement('span');
+    span.textContent = msg;
+    span.style.cssText = 'flex:1;font-size:11px';
+    const btn = document.createElement('button');
+    btn.textContent = 'UNDO';
+    btn.style.cssText = 'padding:3px 10px;border-radius:6px;background:rgba(0,204,255,.18);border:1px solid rgba(0,204,255,.4);color:var(--b);font-size:10px;font-weight:800;cursor:pointer;font-family:var(--font);flex-shrink:0;touch-action:manipulation';
+    let done = false;
+    const tid = setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 5500);
+    btn.onclick = () => { if (done) return; done = true; clearTimeout(tid); if (el.parentNode) el.parentNode.removeChild(el); onUndo(); };
+    el.appendChild(span); el.appendChild(btn);
+    container.appendChild(el);
+  }
 
   function updateSignalsPortfolioAlert() {
     const p = getPortfolio();
@@ -3186,6 +3212,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           ${s.rsi != null ? `<span class="rsi-badge ${s.rsi > 70 ? 'overbought' : s.rsi < 30 ? 'oversold' : 'neutral'}" style="font-size:7.5px;padding:1px 4px" title="${s.rsi > 70 ? 'RSI ' + Math.round(s.rsi) + ' = OVERBOUGHT: Stock may be due for a pullback' : s.rsi < 30 ? 'RSI ' + Math.round(s.rsi) + ' = OVERSOLD: Stock may be due for a bounce up' : 'RSI ' + Math.round(s.rsi) + ' = Neutral momentum'}">RSI ${Math.round(s.rsi)}</span>` : ''}
           ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none" title="${s.vol_ratio.toFixed(1)}x normal volume — unusual trading activity. Big money (hedge funds/institutions) may be moving this stock.">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
         </div>
+        ${sig === 'buy' && (sigDet.catalyst || sigDet.rok_take) ? `<div style="font-size:9px;color:var(--wh3);line-height:1.4;margin-top:.35rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${(sigDet.catalyst || sigDet.rok_take || '').substring(0,90)}</div>` : ''}
         ${portBtn}
       </div>`;
     }).join('');
