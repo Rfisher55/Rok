@@ -296,8 +296,13 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             "ichimoku_above", "orb_breakout", "above_poc",
             "rvol_surge", "mfi_oversold", "mfi_bull_div", "supertrend_bull",
             "force_index_div", "force_index_rising", "ha_bull", "donchian_up",
+            # New signals (session additions)
+            "three_white_soldiers", "morning_star", "bullish_engulfing", "hammer",
+            "psar_bull", "price_accel_pos", "unusual_calls", "options_bull",
+            "donchian_up", "ha_bull", "rvol_surge",
+            "lr_below_channel",  # mean reversion buy at LR channel support
         ]
-        e["entry_signals"] = [k for k in _SIGNAL_KEYS if signals.get(k)]
+        e["entry_signals"] = list(dict.fromkeys(k for k in _SIGNAL_KEYS if signals.get(k)))
 
     tlog.setdefault("trades", []).insert(0, e)
     tlog["trades"] = tlog["trades"][:500]
@@ -312,18 +317,42 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             stats["losses"] = stats.get("losses", 0) + 1
 
     # Update signal performance stats when SELL closes a position
-    if action in ("SELL", "SELL_HALF") and pnl is not None:
-        # Find matching BUY for this ticker in recent trades
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        # Find matching BUY/SHORT for this ticker in recent trades
         for t in tlog.get("trades", []):
-            if t.get("action") == "BUY" and t.get("ticker") == sym and t.get("entry_signals"):
+            if t.get("action") in ("BUY", "SHORT") and t.get("ticker") == sym and t.get("entry_signals"):
                 perf = tlog.setdefault("signal_performance", {})
                 for sig in t["entry_signals"]:
-                    sp = perf.setdefault(sig, {"wins": 0, "total": 0, "total_pnl": 0.0})
-                    sp["total"] += 1
-                    sp["total_pnl"] = round(sp.get("total_pnl", 0) + pnl, 2)
+                    sp = perf.setdefault(sig, {"wins": 0, "losses": 0, "total": 0,
+                                               "total_pnl": 0.0, "best": 0.0, "worst": 0.0})
+                    sp["total"] = sp.get("total", 0) + 1
+                    sp["total_pnl"] = round(sp.get("total_pnl", 0.0) + pnl, 2)
                     if pnl > 0:
-                        sp["wins"] += 1
+                        sp["wins"] = sp.get("wins", 0) + 1
+                        sp["best"]  = max(sp.get("best", 0.0), pnl)
+                    else:
+                        sp["losses"] = sp.get("losses", 0) + 1
+                        sp["worst"] = min(sp.get("worst", 0.0), pnl)
+                    # Derived stats
+                    t_cnt = sp["total"]
+                    sp["win_rate"]  = round(sp["wins"] / t_cnt * 100, 1)  # stored as 0-100 for dashboard
+                    sp["avg_pnl"]   = round(sp["total_pnl"] / t_cnt, 2)
+                    sp["payoff_ratio"] = round(
+                        sp.get("best", 0) / max(abs(sp.get("worst", -0.01)), 0.01), 2
+                    ) if sp.get("worst", 0) < 0 else sp.get("best", 0)
                 break
+
+        # Rebuild signal_win_rates summary for the score() adaptive loop
+        perf_all = tlog.get("signal_performance", {})
+        tlog["signal_win_rates"] = {
+            sig: {
+                "win_rate": v.get("win_rate", 50.0),  # 0-100 scale for dashboard
+                "total":    v.get("total", 0),
+                "avg_pnl":  v.get("avg_pnl", 0),
+            }
+            for sig, v in perf_all.items()
+            if v.get("total", 0) >= 3  # only trust with ≥3 samples
+        }
 
 
 # ── Technical indicators ──────────────────────────────────────────────────────
@@ -4592,22 +4621,36 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Double Top: M-pattern bearish reversal at resistance (-8) — reduces buy conviction
     if d.get("double_top", False): s -= 8
 
-    # Adaptive scoring: boost/penalize signals based on historical win rates
+    # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
+    # Combines win_rate + avg_pnl for expected-value-based adjustment
     if _SIGNAL_WIN_RATES:
-        _adaptive_adj = 0
-        for sig_key in ["cup_handle", "vcp", "at_demand_zone", "mom_accel",
-                        "obv_rising", "kc_breakout", "higher_lows", "double_bottom",
-                        "poc_breakout", "ema_stacked_bull", "trend_reversal", "bull_flag"]:
+        _adaptive_adj = 0.0
+        _all_sig_keys = [
+            "cup_handle", "vcp", "at_demand_zone", "mom_accel", "obv_rising",
+            "kc_breakout", "higher_lows", "double_bottom", "poc_breakout",
+            "ema_stacked_bull", "trend_reversal", "bull_flag", "mtf_aligned",
+            "fib_support", "macd_bull_div", "rvol_surge", "mfi_bull_div",
+            "supertrend_bull", "ha_bull", "donchian_up", "three_white_soldiers",
+            "morning_star", "bullish_engulfing", "psar_bull", "price_accel_pos",
+            "unusual_calls", "lr_below_channel",
+        ]
+        for sig_key in _all_sig_keys:
             if d.get(sig_key) and sig_key in _SIGNAL_WIN_RATES:
-                wr = _SIGNAL_WIN_RATES[sig_key].get("win_rate", 50)
-                n  = _SIGNAL_WIN_RATES[sig_key].get("total", 0)
-                if n >= 5:  # only adapt with enough data
-                    # Scale: +60% wr→+3, 70%→+4, 80%→+5; -30% wr→-3, -20%→-2
-                    adj = (wr - 50) / 10  # -5 to +5 range
-                    adj = max(-5, min(5, adj))
-                    _adaptive_adj += adj
-        s += max(-8, min(8, round(_adaptive_adj)))  # cap total adaptive boost at ±8
+                sdata = _SIGNAL_WIN_RATES[sig_key]
+                wr  = sdata.get("win_rate", 0.5)
+                n   = sdata.get("total", 0)
+                avg = sdata.get("avg_pnl", 0.0)
+                if n >= 3:  # trust with ≥3 samples
+                    # wr is 0-100; normalize to 0-1 then center: (wr/100 - 0.5) * 10 → -5 to +5
+                    wr_norm = wr / 100.0 if wr > 1.0 else wr  # handle both formats safely
+                    wr_adj = (wr_norm - 0.5) * 10
+                    # Avg PnL contribution: expected value per trade / 2
+                    ev_adj = avg / 2.0
+                    # Combined, weighted by sample size (more data = more trust)
+                    weight = min(1.0, n / 20.0)  # full weight at 20 samples
+                    _adaptive_adj += (wr_adj * 0.6 + ev_adj * 0.4) * weight
+        s += max(-10, min(10, round(_adaptive_adj)))  # cap total adaptive boost at ±10
 
     # Market regime adjustment
     s += regime_adj
