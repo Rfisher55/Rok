@@ -592,6 +592,18 @@ def sector_rotation() -> dict:
         cold = sorted(adj.items(), key=lambda x:  x[1])[:2]
         logger.info(f"Sector rotation hot:  {' | '.join(f'{s}:{v:+d}' for s,v in hot)}")
         logger.info(f"Sector rotation cold: {' | '.join(f'{s}:{v:+d}' for s,v in cold)}")
+
+        # Sector momentum acceleration: 1d >> 5d average day = money flooding in NOW
+        accel_sectors = []
+        for sec, d_info in detail.items():
+            avg_daily_5d = d_info["5d"] / 5 if d_info["5d"] else 0
+            accel = d_info["1d"] - avg_daily_5d
+            if accel > 1.5:   # today outpacing the recent average by >1.5% per day
+                accel_sectors.append(sec)
+                adj[sec] = min(12, adj.get(sec, 0) + 2)  # extra boost for accelerating sectors
+        if accel_sectors:
+            logger.info(f"Sector acceleration (money flowing in NOW): {', '.join(accel_sectors)}")
+
         return adj
     except Exception as e:
         logger.debug(f"Sector rotation error: {e}")
@@ -2979,6 +2991,8 @@ def run():
                     reason = f"stale position ({age_days:.0f}d, {pnl_pct:+.1f}%)"
             elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= 0.5:
                 reason = f"breakeven lock ({pnl_pct:+.1f}%)"
+            elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= -1.5 and age_days >= 1:
+                reason = f"winner-turned-loser exit ({pnl_pct:+.1f}%, was up 5%+ earlier)"
             else:
                 # Signal emergency exit: check live technical signal on held stock
                 live_sig = live.get(sym, {})
@@ -3619,9 +3633,17 @@ def run():
             _last_decision = f"VIX {_vix_now:.1f} is extreme — all buys suspended until market calms."
         elif _top_scan:
             _top_str = ", ".join(f"${s['ticker']}({s['score']})" for s in _top_scan[:3])
-            _last_decision = f"Scanned {len(candidates)} stocks. Top picks: {_top_str}. Regime: {_regime_desc}. No buys met final threshold."
+            _eff_thresh = tlog.get("effective_min_score", MIN_BUY_SCORE)
+            _hot_sec = sorted(sector_adjs.items(), key=lambda x: -x[1])[:2] if sector_adjs else []
+            _hot_str = " | ".join(f"{s}:+{v}" for s,v in _hot_sec if v > 0)
+            _mq_str  = f"MktQuality={tlog.get('market_quality',50)}/100"
+            _last_decision = (f"Scanned {len(candidates)} stocks. Top: {_top_str}. "
+                              f"Regime: {_regime_desc}, threshold={_eff_thresh}. "
+                              f"{_mq_str}. Hot sectors: {_hot_str or 'none'}.")
         else:
-            _last_decision = f"Scanned {len(candidates)} stocks. No candidates passed scoring. Regime: {_regime_desc}, VIX {_vix_now:.1f}."
+            _last_decision = (f"Scanned {len(candidates)} stocks. No candidates passed scoring. "
+                              f"Regime: {_regime_desc}, VIX {_vix_now:.1f}, "
+                              f"MktQuality={tlog.get('market_quality',50)}/100.")
         tlog["last_decision"] = _last_decision
     except Exception:
         pass
