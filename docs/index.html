@@ -1266,6 +1266,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-social-buzz" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-congressional-live" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-insider-live" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-breakout-alerts" style="display:none;margin-bottom:.85rem"></div>
 
     
     
@@ -2059,6 +2060,15 @@ body.beginner-mode #beginner-banner { display:block }
         <div id="intel-hidden-gems" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to scan for hidden gems…</div>
       </div>
 
+      <!-- LIVE: Conviction Score Leaderboard (JS-populated) -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr">
+          <h2 class="s-ttl" style="color:var(--au)">🏆 CONVICTION LEADERBOARD</h2>
+          <span class="s-sub">Multi-factor ranking of highest-conviction ROK picks <span style="color:var(--g);font-size:7px">● LIVE</span></span>
+        </div>
+        <div id="intel-conviction" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to compute conviction scores…</div>
+      </div>
+
       <!-- LIVE: Universe Stats Overview (JS-populated) -->
       <div class="intel-section" style="grid-column:1/-1">
         <div class="s-hdr">
@@ -2100,6 +2110,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-rebalance" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-correlation" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-smart-sell" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-compound" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -2856,9 +2867,9 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); }
-    if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderUniverseStats(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); }
+    if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -3820,10 +3831,10 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); setTimeout(fetchPortfolioDividends, 1500); }
-    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderUniverseStats(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); }
   }
   window.showTab = showTab;
 
@@ -5170,6 +5181,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioBeta();
     renderPortfolioCorrelation();
     renderSmartSellGuide();
+    renderCompoundGrowth();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -10190,6 +10202,179 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderSmartSellGuide = renderSmartSellGuide;
+
+  // ── TECHNICAL BREAKOUT ALERTS ─────────────────────────
+  const SETUP_META = {
+    'MACD_BULLISH_CROSS': { label: 'MACD Bullish Cross', icon: '📈', desc: 'The MACD momentum line crossed above the signal line — a classic buy trigger used by professional traders.' },
+    'MACD_BEARISH_CROSS': { label: 'MACD Bearish Cross', icon: '📉', desc: 'MACD crossed below the signal line. Bearish momentum warning.' },
+    'GOLDEN_CROSS': { label: '50/200 Golden Cross', icon: '✨', desc: 'The 50-day average crossed above the 200-day average — historically one of the strongest long-term buy signals.' },
+    'DEATH_CROSS': { label: '50/200 Death Cross', icon: '💀', desc: 'The 50-day average crossed below the 200-day — a long-term bearish warning signal.' },
+    'VOLUME_SURGE': { label: 'Volume Surge', icon: '🔥', desc: 'Trading volume is 2x+ the normal average — big institutional money is moving into this stock.' },
+    'BREAKOUT_52W': { label: '52-Week High Breakout', icon: '🚀', desc: 'Price just broke above its 52-week high — removing overhead resistance and signaling strong momentum.' },
+    'RSI_OVERSOLD': { label: 'RSI Oversold Bounce', icon: '⬆️', desc: 'RSI dropped below 30 (extreme selling) and is now bouncing — a classic reversal setup.' },
+    'BULL_FLAG': { label: 'Bull Flag Pattern', icon: '🚩', desc: 'A consolidation after a sharp rally. Classic continuation pattern — often breaks upward.' },
+  };
+  function renderBreakoutAlerts() {
+    const el = document.getElementById('sig-breakout-alerts');
+    if (!el) return;
+    const breakouts = ROK.technical_breakouts || [];
+    if (!breakouts.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const rows = breakouts.slice(0, 6).map(b => {
+      const meta = SETUP_META[b.setup_type] || { label: b.setup_type || 'Technical Setup', icon: '📊', desc: b.description || '' };
+      const lp = liveprices[b.ticker];
+      const chgPct = lp ? lp.change_pct : null;
+      const price = lp ? lp.price : null;
+      const chgColor = chgPct == null ? 'var(--wh3)' : chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      const chgStr = chgPct != null ? `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%` : '';
+      const priceStr = price ? `$${price.toFixed(2)}` : '';
+      const timeStr = b.timeframe ? `<span style="font-size:8px;color:var(--b);background:rgba(0,204,255,.1);border-radius:4px;padding:1px 5px;margin-left:.3rem">${b.timeframe}</span>` : '';
+      return `<div style="background:var(--blk4);border:1px solid rgba(0,255,136,.12);border-radius:10px;padding:.6rem .85rem;margin-bottom:.4rem;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="switchToScreener('${b.ticker}')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+          <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+            <span style="font-family:var(--disp);font-size:14px;font-weight:900;color:var(--g)">${meta.icon} $${b.ticker}</span>
+            <span style="font-size:9px;font-weight:700;color:var(--wh2)">${meta.label}</span>
+            ${timeStr}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;font-weight:700;color:var(--wh)">${priceStr}</div>
+            <div style="font-size:10px;font-weight:700;color:${chgColor}">${chgStr}</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;color:var(--wh3);line-height:1.4">${meta.desc}${b.description && b.description !== meta.desc ? ` <span style="color:var(--wh4)">· ${b.description}</span>` : ''}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,255,136,.18);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.3rem">📈 TECHNICAL BREAKOUT ALERTS</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.7rem;line-height:1.45">These stocks just triggered technical buy signals from ROK's pattern recognition. Technical breakouts often precede strong price moves.</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.3rem">Technical patterns are probability-based, not guarantees. Always confirm with the overall ROK signal before trading. Tap any stock to view full details.</div>
+    </div>`;
+  }
+  window.renderBreakoutAlerts = renderBreakoutAlerts;
+
+  // ── COMPOUND GROWTH PROJECTOR ─────────────────────────
+  function renderCompoundGrowth() {
+    const el = document.getElementById('port-compound');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    // Calculate current portfolio value
+    let totalValue = 0;
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const lp = liveprices[ticker];
+      const price = lp ? lp.price : entry.price;
+      const shares = entry.shares || 1;
+      totalValue += price * shares;
+    });
+    if (totalValue < 10) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    // Growth scenarios
+    const rates = [
+      { label: 'Conservative (7%/yr)', pct: 0.07, desc: 'S&P 500 historical average', color: 'var(--b)' },
+      { label: 'Moderate (12%/yr)', pct: 0.12, desc: 'Above-average stock picking', color: 'var(--g)' },
+      { label: 'ROK Target (18%/yr)', pct: 0.18, desc: 'Active trading + ROK signals', color: 'var(--au)' },
+    ];
+    const years = [1, 3, 5, 10];
+    const fmt = v => v >= 1000000 ? `$${(v/1000000).toFixed(2)}M` : `$${Math.round(v).toLocaleString()}`;
+    const colHeaders = years.map(y => `<div style="font-size:9px;font-weight:700;color:var(--wh3);text-align:right">${y}yr</div>`).join('');
+    const rows = rates.map(r => {
+      const cells = years.map(y => {
+        const val = totalValue * Math.pow(1 + r.pct, y);
+        const gain = val - totalValue;
+        return `<div style="text-align:right">
+          <div style="font-size:10px;font-weight:800;color:${r.color}">${fmt(val)}</div>
+          <div style="font-size:7.5px;color:var(--wh4)">+${fmt(gain)}</div>
+        </div>`;
+      }).join('');
+      return `<div style="display:grid;grid-template-columns:1fr repeat(${years.length},auto);gap:.3rem .5rem;align-items:center;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div>
+          <div style="font-size:9.5px;font-weight:700;color:var(--wh)">${r.label}</div>
+          <div style="font-size:8px;color:var(--wh4)">${r.desc}</div>
+        </div>
+        ${cells}
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,255,136,.12);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.3rem">📈 COMPOUND GROWTH PROJECTOR</div>
+      <div style="display:flex;align-items:baseline;gap:.4rem;margin-bottom:.55rem">
+        <span style="font-size:18px;font-weight:900;color:var(--wh)">${fmt(totalValue)}</span>
+        <span style="font-size:10px;color:var(--wh3)">current portfolio value — projected at various growth rates</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr repeat(${years.length},auto);gap:.3rem .5rem;margin-bottom:.3rem">
+        <div></div>${colHeaders}
+      </div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.6rem">💡 <strong style="color:var(--g)">Rule of 72:</strong> Divide 72 by your annual return rate to find how many years until your money doubles. At 12%/yr, your money doubles every 6 years. Projections assume reinvested gains and no additional contributions. Not a guarantee of returns.</div>
+    </div>`;
+  }
+  window.renderCompoundGrowth = renderCompoundGrowth;
+
+  // ── CONVICTION LEADERBOARD ────────────────────────────
+  function renderConvictionLeaderboard() {
+    const el = document.getElementById('intel-conviction');
+    if (!el) return;
+    const buySigs = ROK.buy_signals || [];
+    const universe = ROK.stock_universe || [];
+    const insiders = new Set((ROK.insider_buys || []).map(i => i.ticker));
+    const congress = new Set((ROK.congressional_buys || ROK.congressional_plays || []).map(c => c.ticker));
+    const breakoutSet = new Set((ROK.technical_breakouts || []).map(b => b.ticker));
+    const buzzMap = {};
+    (ROK.ticker_mentions || []).forEach(([t, c]) => { buzzMap[t] = c; });
+    (ROK.stocktwits_trending || []).forEach(s => { buzzMap[s.ticker] = (buzzMap[s.ticker] || 0) + (s.watchlist_count || 0) / 1000; });
+    const candidates = buySigs.length ? buySigs : universe.filter(s => s.rok_signal === 'buy');
+    if (!candidates.length) { el.innerHTML = '<div style="font-size:10px;color:var(--wh4)">Conviction scores load when ROK buy signals are available.</div>'; return; }
+    const scored = candidates.map(s => {
+      let score = 0;
+      const strength = s.signal_strength || 0;
+      score += strength * 3; // up to 3 pts
+      if (insiders.has(s.ticker)) score += 2;
+      if (congress.has(s.ticker)) score += 2;
+      if (breakoutSet.has(s.ticker)) score += 1.5;
+      if (buzzMap[s.ticker]) score += Math.min(1.5, buzzMap[s.ticker] / 10);
+      const lp = liveprices[s.ticker];
+      if (lp && lp.change_pct != null && lp.change_pct > 0) score += Math.min(1, lp.change_pct * 0.2);
+      const su = universe.find(u => u.ticker === s.ticker);
+      if (su && su.rsi != null && su.rsi < 55) score += 0.5;
+      return { ...s, convScore: score };
+    });
+    scored.sort((a, b) => b.convScore - a.convScore);
+    const top = scored.slice(0, 8);
+    const maxScore = Math.max(...top.map(s => s.convScore), 1);
+    const medals = ['🥇', '🥈', '🥉'];
+    el.innerHTML = top.map((s, i) => {
+      const lp = liveprices[s.ticker];
+      const chgPct = lp ? lp.change_pct : null;
+      const price = lp ? lp.price : (s.price || null);
+      const chgColor = chgPct == null ? 'var(--wh3)' : chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      const chgStr = chgPct != null ? `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%` : '';
+      const barW = Math.round(s.convScore / maxScore * 100);
+      const badges = [];
+      if (insiders.has(s.ticker)) badges.push(`<span style="font-size:7.5px;background:rgba(255,136,0,.15);color:var(--or);border-radius:3px;padding:1px 4px">👔CEO</span>`);
+      if (congress.has(s.ticker)) badges.push(`<span style="font-size:7.5px;background:rgba(153,85,255,.15);color:var(--p);border-radius:3px;padding:1px 4px">🏛️SEN</span>`);
+      if (breakoutSet.has(s.ticker)) badges.push(`<span style="font-size:7.5px;background:rgba(0,255,136,.1);color:var(--g);border-radius:3px;padding:1px 4px">📈BRK</span>`);
+      if (buzzMap[s.ticker] > 5) badges.push(`<span style="font-size:7.5px;background:rgba(255,69,0,.1);color:#ff4500;border-radius:3px;padding:1px 4px">🔴BUZZ</span>`);
+      return `<div style="margin-bottom:.5rem;cursor:pointer" onclick="switchToScreener('${s.ticker}')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.2rem">
+          <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+            <span style="font-size:12px">${medals[i] || '  '}</span>
+            <span style="font-size:11px;font-weight:800;color:var(--wh)">$${s.ticker}</span>
+            ${badges.join('')}
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:10px;color:var(--au);font-weight:700">${s.convScore.toFixed(1)} pts</span>
+            <span style="font-size:9px;color:${chgColor};margin-left:.4rem">${chgStr}</span>
+          </div>
+        </div>
+        <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.06)">
+          <div style="height:100%;width:${barW}%;border-radius:3px;background:linear-gradient(90deg,var(--g),var(--au));transition:width .4s"></div>
+        </div>
+      </div>`;
+    }).join('') + `<div style="font-size:8px;color:var(--wh4);margin-top:.5rem">Score = signal strength + insider/congressional buy confirmations + technical breakout + social buzz + momentum. Tap any stock to view full details in screener.</div>`;
+  }
+  window.renderConvictionLeaderboard = renderConvictionLeaderboard;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
