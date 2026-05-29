@@ -1263,6 +1263,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-changes-panel" style="display:none;margin-bottom:.75rem"></div>
     <!-- Full Trade Plans for Top ROK Picks (JS-populated) -->
     <div id="sig-trade-plans" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-social-buzz" style="display:none;margin-bottom:.85rem"></div>
 
     
     
@@ -2085,6 +2086,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-attribution" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-rebalance" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-earnings-cal" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-dividend-tracker" style="display:none;margin-bottom:.75rem"></div>
@@ -2839,9 +2842,9 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); }
     if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -3803,9 +3806,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); }
   }
   window.showTab = showTab;
@@ -5149,6 +5152,8 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioWinLoss();
     renderPortfolioAttribution();
     renderPortfolioRebalance();
+    renderPortfolioTaxTips();
+    renderPortfolioBeta();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -9592,6 +9597,219 @@ body.beginner-mode #beginner-banner { display:block }
     el.innerHTML = rows + `<div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem">Hidden gems are undervalued stocks flying under the radar. They require patience — these may take weeks or months to play out.</div>`;
   }
   window.renderHiddenGems = renderHiddenGems;
+
+  // ── TAX OPTIMIZATION TIPS ────────────────────────────
+  function renderPortfolioTaxTips() {
+    const el = document.getElementById('port-tax-tips');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    const now = Date.now();
+    const ONE_YEAR = 365 * 24 * 3600 * 1000;
+    const longTerm = [], shortTerm = [];
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      if (!entry.date) return;
+      const held = now - new Date(entry.date).getTime();
+      const daysHeld = Math.floor(held / 86400000);
+      const daysToLT = Math.max(0, 365 - daysHeld);
+      const lp = liveprices[ticker];
+      const currentPrice = lp ? lp.price : null;
+      const gainPct = currentPrice && entry.price ? (currentPrice - entry.price) / entry.price * 100 : null;
+      const gainDollar = currentPrice && entry.price && entry.shares ? (currentPrice - entry.price) * entry.shares : null;
+      if (held >= ONE_YEAR) {
+        longTerm.push({ ticker, daysHeld, gainPct, gainDollar });
+      } else {
+        shortTerm.push({ ticker, daysHeld, daysToLT, gainPct, gainDollar });
+      }
+    });
+    if (!longTerm.length && !shortTerm.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    // Sort short-term by days to long-term (closest first)
+    shortTerm.sort((a, b) => a.daysToLT - b.daysToLT);
+    let ltRows = longTerm.map(h => {
+      const gStr = h.gainPct != null ? `<span style="color:${h.gainPct >= 0 ? 'var(--g)' : 'var(--r)'};">${h.gainPct >= 0 ? '+' : ''}${h.gainPct.toFixed(1)}%</span>` : '';
+      const saveNote = h.gainDollar != null && h.gainDollar > 0 ? `<span style="font-size:8px;color:var(--g)">~${Math.round(h.gainDollar * 0.10).toLocaleString()} tax saved vs short-term</span>` : '';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div>
+          <span style="font-size:11px;font-weight:800;color:var(--g)">✓ $${h.ticker}</span>
+          <span style="font-size:8.5px;color:var(--wh3);margin-left:.4rem">${h.daysHeld}d held</span>
+          <span style="font-size:8px;font-weight:700;background:rgba(0,255,136,.12);color:var(--g);border-radius:4px;padding:1px 5px;margin-left:.3rem">LONG-TERM</span>
+        </div>
+        <div style="text-align:right">${gStr}<br>${saveNote}</div>
+      </div>`;
+    }).join('');
+    let stRows = shortTerm.map(h => {
+      const gStr = h.gainPct != null ? `<span style="color:${h.gainPct >= 0 ? 'var(--g)' : 'var(--r)'};">${h.gainPct >= 0 ? '+' : ''}${h.gainPct.toFixed(1)}%</span>` : '';
+      const urgency = h.daysToLT <= 30 ? 'var(--g)' : h.daysToLT <= 90 ? 'var(--au)' : 'var(--wh3)';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div>
+          <span style="font-size:11px;font-weight:700;color:var(--wh)">$${h.ticker}</span>
+          <span style="font-size:8.5px;color:var(--wh3);margin-left:.4rem">${h.daysHeld}d held</span>
+          <span style="font-size:8px;font-weight:700;background:rgba(255,136,0,.1);color:var(--au);border-radius:4px;padding:1px 5px;margin-left:.3rem">SHORT-TERM</span>
+        </div>
+        <div style="text-align:right">${gStr}<br><span style="font-size:8px;color:${urgency}">${h.daysToLT}d to long-term</span></div>
+      </div>`;
+    }).join('');
+    const ltCount = longTerm.length, stCount = shortTerm.length;
+    const closestST = shortTerm.find(h => h.daysToLT <= 30 && h.gainPct > 0);
+    const tip = closestST
+      ? `💡 <strong style="color:var(--g)">$${closestST.ticker}</strong> reaches long-term in <strong>${closestST.daysToLT} days</strong> — consider waiting before selling to cut your tax rate nearly in half.`
+      : ltCount > 0
+        ? `💡 You have <strong style="color:var(--g)">${ltCount} long-term holding${ltCount>1?'s':''}</strong> — selling these is taxed at 0-20% vs up to 37% for short-term. Big savings!`
+        : `💡 None of your holdings are long-term yet. Long-term = held 1+ year = taxed at 0-20% instead of up to 37%.`;
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,255,136,.18);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.3rem">💸 TAX OPTIMIZATION</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.7rem">${tip}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .6rem;margin-bottom:.5rem">
+        <div style="font-size:8px;font-weight:700;color:var(--g);letter-spacing:.08em">LONG-TERM ✓ (1yr+)<br><span style="color:var(--wh3);font-weight:400">Taxed at 0–20%</span></div>
+        <div style="font-size:8px;font-weight:700;color:var(--au);letter-spacing:.08em">SHORT-TERM ⏳ (&lt;1yr)<br><span style="color:var(--wh3);font-weight:400">Taxed up to 37%</span></div>
+      </div>
+      ${ltRows || '<div style="font-size:10px;color:var(--wh4);padding:.3rem 0">None yet — keep holding!</div>'}
+      ${stRows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.5rem">Not tax advice. Consult a tax professional. Long-term capital gains rates: 0% (income &lt;$47K), 15% (up to $518K), 20% (above).</div>
+    </div>`;
+  }
+  window.renderPortfolioTaxTips = renderPortfolioTaxTips;
+
+  // ── PORTFOLIO BETA ESTIMATOR ──────────────────────────
+  function renderPortfolioBeta() {
+    const el = document.getElementById('port-beta');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (tickers.length < 2) { el.style.display = 'none'; return; }
+    const spyLp = liveprices['SPY'];
+    if (!spyLp || !spyLp.change_pct) { el.style.display = 'none'; return; }
+    const spyChg = spyLp.change_pct;
+    if (Math.abs(spyChg) < 0.1) { el.style.display = 'none'; return; } // too small to calculate meaningful beta
+    const holdings = [];
+    let totalValue = 0;
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const lp = liveprices[ticker];
+      if (!lp || lp.change_pct == null) return;
+      const price = lp.price || entry.price || 0;
+      const shares = entry.shares || 1;
+      const value = price * shares;
+      const beta = lp.change_pct / spyChg;
+      holdings.push({ ticker, beta, value, chgPct: lp.change_pct });
+      totalValue += value;
+    });
+    if (!holdings.length || totalValue === 0) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    // Weighted portfolio beta
+    let portBeta = 0;
+    holdings.forEach(h => { portBeta += h.beta * (h.value / totalValue); });
+    portBeta = Math.round(portBeta * 100) / 100;
+    const betaColor = portBeta >= 1.5 ? 'var(--r)' : portBeta >= 1.0 ? 'var(--au)' : 'var(--b)';
+    const betaLabel = portBeta >= 1.75 ? 'Very Aggressive' : portBeta >= 1.3 ? 'Aggressive' : portBeta >= 0.85 ? 'Moderate' : portBeta >= 0.5 ? 'Conservative' : 'Very Defensive';
+    const betaDesc = portBeta >= 1.5
+      ? `Your portfolio moves ${portBeta.toFixed(1)}× more than the market. High potential gains — but also ${portBeta.toFixed(1)}× more risk on down days.`
+      : portBeta >= 1.0
+        ? `Your portfolio roughly tracks the market. When SPY is up 1%, you expect ~${portBeta.toFixed(1)}% gain.`
+        : `Your portfolio is less volatile than the market. Lower risk, but you may lag on big up days.`;
+    holdings.sort((a, b) => Math.abs(b.beta) - Math.abs(a.beta));
+    const rows = holdings.slice(0, 6).map(h => {
+      const bColor = h.beta >= 1.5 ? 'var(--r)' : h.beta >= 1.0 ? 'var(--au)' : h.beta < 0 ? 'var(--p)' : 'var(--b)';
+      const chgColor = h.chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:11px;font-weight:700;color:var(--wh)">$${h.ticker}</span>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <span style="font-size:10px;color:${chgColor}">${h.chgPct >= 0 ? '+' : ''}${h.chgPct.toFixed(2)}%</span>
+          <span style="font-size:10px;font-weight:800;color:${bColor};min-width:36px;text-align:right">β ${h.beta >= 0 ? '' : ''}${h.beta.toFixed(2)}</span>
+        </div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,204,255,.15);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--b);text-transform:uppercase;margin-bottom:.5rem">📐 PORTFOLIO BETA vs SPY</div>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem">
+        <div style="text-align:center;background:rgba(0,204,255,.08);border-radius:10px;padding:.5rem .85rem;border:1px solid rgba(0,204,255,.2)">
+          <div style="font-size:24px;font-weight:900;color:${betaColor};line-height:1">${portBeta >= 0 ? '' : ''}${portBeta.toFixed(2)}</div>
+          <div style="font-size:8px;color:var(--wh3);margin-top:2px">Portfolio β</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:800;color:var(--wh);margin-bottom:.2rem">${betaLabel}</div>
+          <div style="font-size:10px;color:var(--wh3);line-height:1.45">${betaDesc}</div>
+          <div style="font-size:8.5px;color:var(--wh4);margin-top:.3rem">SPY today: <span style="color:${spyChg >= 0 ? 'var(--g)' : 'var(--r)'}">${spyChg >= 0 ? '+' : ''}${spyChg.toFixed(2)}%</span></div>
+        </div>
+      </div>
+      <div style="font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--wh4);margin-bottom:.3rem">HOLDINGS BETA TODAY</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.5rem">Beta = how much your stock moves relative to the market. β 1.0 = moves with market, β 2.0 = moves 2× the market. Calculated from today's price movements.</div>
+    </div>`;
+  }
+  window.renderPortfolioBeta = renderPortfolioBeta;
+
+  // ── SOCIAL BUZZ RADAR ────────────────────────────────
+  function renderSocialBuzzRadar() {
+    const el = document.getElementById('sig-social-buzz');
+    if (!el) return;
+    const stTrending = ROK.stocktwits_trending || [];
+    const tickerMentions = ROK.ticker_mentions || [];
+    const buySigs = (ROK.buy_signals || []).map(s => s.ticker);
+    if (!stTrending.length && !tickerMentions.length) { el.style.display = 'none'; return; }
+    // Build buzz map from both sources
+    const buzzMap = {};
+    stTrending.forEach(s => {
+      if (!buzzMap[s.ticker]) buzzMap[s.ticker] = { ticker: s.ticker, stCount: 0, redditCount: 0 };
+      buzzMap[s.ticker].stCount = s.watchlist_count || 0;
+    });
+    tickerMentions.forEach(([ticker, count]) => {
+      if (!buzzMap[ticker]) buzzMap[ticker] = { ticker, stCount: 0, redditCount: 0 };
+      buzzMap[ticker].redditCount = count || 0;
+    });
+    // Score: prioritize ROK signals appearing in buzz
+    const entries = Object.values(buzzMap).map(b => {
+      const isROKBuy = buySigs.includes(b.ticker);
+      const lp = liveprices[b.ticker];
+      const chgPct = lp ? lp.change_pct : null;
+      const totalBuzz = b.stCount + (b.redditCount * 10);
+      return { ...b, isROKBuy, chgPct, totalBuzz };
+    });
+    entries.sort((a, b) => {
+      // ROK buys first, then by buzz
+      if (a.isROKBuy !== b.isROKBuy) return a.isROKBuy ? -1 : 1;
+      return b.totalBuzz - a.totalBuzz;
+    });
+    const top = entries.slice(0, 8);
+    if (!top.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const maxBuzz = Math.max(...top.map(e => e.totalBuzz), 1);
+    const rows = top.map(e => {
+      const chgColor = e.chgPct == null ? 'var(--wh3)' : e.chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      const chgStr = e.chgPct != null ? `${e.chgPct >= 0 ? '+' : ''}${e.chgPct.toFixed(1)}%` : '';
+      const barW = Math.round(e.totalBuzz / maxBuzz * 100);
+      const rokBadge = e.isROKBuy ? `<span style="font-size:7.5px;font-weight:800;background:rgba(0,255,136,.18);color:var(--g);border-radius:3px;padding:1px 5px;margin-left:.3rem;white-space:nowrap">ROK BUY</span>` : '';
+      const stIcon = e.stCount > 0 ? `<span style="font-size:8px;color:var(--wh4)">📱${e.stCount.toLocaleString()}</span>` : '';
+      const rdIcon = e.redditCount > 0 ? `<span style="font-size:8px;color:var(--or)">🔴${e.redditCount}</span>` : '';
+      return `<div style="margin-bottom:.45rem;cursor:pointer" onclick="switchToScreener('${e.ticker}')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.2rem">
+          <div style="display:flex;align-items:center;gap:.25rem;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:800;color:var(--wh)">$${e.ticker}</span>
+            ${rokBadge}
+            <div style="display:flex;gap:.3rem">${stIcon}${rdIcon}</div>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:${chgColor}">${chgStr}</span>
+        </div>
+        <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden">
+          <div style="height:100%;width:${barW}%;border-radius:2px;background:${e.isROKBuy ? 'var(--g)' : 'rgba(255,255,255,.2)'};transition:width .4s"></div>
+        </div>
+      </div>`;
+    }).join('');
+    const rokInBuzz = top.filter(e => e.isROKBuy).map(e => `$${e.ticker}`);
+    const note = rokInBuzz.length
+      ? `🔥 <strong style="color:var(--g)">${rokInBuzz.slice(0,3).join(', ')}</strong> ${rokInBuzz.length > 1 ? 'are' : 'is'} trending AND have ROK buy signals — retail momentum aligns.`
+      : `Social trending data from StockTwits + Reddit. Cross-reference with ROK signals for higher-conviction trades.`;
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,136,0,.18);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--or);text-transform:uppercase;margin-bottom:.3rem">📱 SOCIAL BUZZ RADAR</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.7rem;line-height:1.45">${note}</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.3rem">📱 = StockTwits watchlist count · 🔴 = Reddit mention count · Tap any stock to view in screener</div>
+    </div>`;
+  }
+  window.renderSocialBuzzRadar = renderSocialBuzzRadar;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
