@@ -891,9 +891,33 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <div class="tab-pane active" id="tab-signals">
 
     {# Quick market snapshot row #}
+    {% set sent = data.market_sentiment|upper %}
+    {% set fgs = data.fear_greed.score|default(50) if data.fear_greed else 50 %}
+    {% set buy_n = data.buy_signals|length %}
+    {% set sell_n = data.sell_signals|length %}
+    {# Compute ROK Market Score 0-100: sentiment + fear/greed + buy ratio #}
+    {% set sent_pts = 35 if sent == 'BULLISH' else 10 if sent == 'BEARISH' else 20 %}
+    {% set fg_pts = 25 if fgs < 30 else 5 if fgs > 75 else 15 %}
+    {% set ratio_pts = [buy_n / (buy_n + sell_n + 1) * 25, 25]|min|round(0)|int if (buy_n + sell_n) > 0 else 12 %}
+    {% set data_pts = [data.source_stats.news|default(0) / 10, 15]|min|round(0)|int %}
+    {% set mkt_score = sent_pts + fg_pts + ratio_pts + data_pts %}
+    {% set mkt_score_color = 'var(--g)' if mkt_score >= 60 else 'var(--r)' if mkt_score < 35 else 'var(--au)' %}
+    {% set mkt_score_label = 'GREAT TIME TO BUY' if mkt_score >= 60 else 'USE CAUTION' if mkt_score < 35 else 'DECENT CONDITIONS' %}
+
     <div style="display:flex;gap:.5rem;align-items:stretch;flex-wrap:wrap;margin-bottom:.75rem">
-      {% set sent = data.market_sentiment|upper %}
-      <div style="flex:0 0 auto;background:{% if sent == 'BULLISH' %}linear-gradient(135deg,rgba(0,255,136,.12),rgba(0,255,136,.06)){% elif sent == 'BEARISH' %}linear-gradient(135deg,rgba(255,34,85,.12),rgba(255,34,85,.06)){% else %}linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,215,0,.04)){% endif %};border:1px solid {% if sent == 'BULLISH' %}rgba(0,255,136,.25){% elif sent == 'BEARISH' %}rgba(255,34,85,.25){% else %}rgba(255,215,0,.2){% endif %};border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
+      {# ROK Market Score — big visual #}
+      <div style="flex:0 0 auto;background:linear-gradient(135deg,rgba(0,0,0,.4),rgba(0,0,0,.2));border:2px solid {{ mkt_score_color }};border-radius:14px;padding:.75rem 1.1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 0 20px {{ mkt_score_color }}22">
+        <div style="text-align:center">
+          <div style="font-family:var(--disp);font-size:2.2rem;font-weight:900;color:{{ mkt_score_color }};line-height:1;text-shadow:0 0 16px {{ mkt_score_color }}88">{{ mkt_score }}</div>
+          <div style="font-size:7px;font-weight:700;letter-spacing:.15em;color:var(--wh4);text-transform:uppercase">/ 100</div>
+        </div>
+        <div>
+          <div style="font-size:7.5px;font-weight:700;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase">ROK MARKET SCORE</div>
+          <div style="font-size:11px;font-weight:800;color:{{ mkt_score_color }}">{{ mkt_score_label }}</div>
+        </div>
+      </div>
+
+      <div style="flex:0 0 auto;background:{% if sent == 'BULLISH' %}rgba(0,255,136,.08){% elif sent == 'BEARISH' %}rgba(255,34,85,.08){% else %}rgba(255,215,0,.06){% endif %};border:1px solid {% if sent == 'BULLISH' %}rgba(0,255,136,.2){% elif sent == 'BEARISH' %}rgba(255,34,85,.2){% else %}rgba(255,215,0,.16){% endif %};border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
         <span style="font-size:1.3rem">{% if sent == 'BULLISH' %}🟢{% elif sent == 'BEARISH' %}🔴{% else %}🟡{% endif %}</span>
         <div>
           <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Market</div>
@@ -904,11 +928,10 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <span style="font-size:1.3rem">⚡</span>
         <div>
           <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Buy Signals</div>
-          <div style="font-size:14px;font-weight:900;color:var(--g)">{{ data.buy_signals|length }}</div>
+          <div style="font-size:14px;font-weight:900;color:var(--g)">{{ buy_n }}</div>
         </div>
       </div>
-      {% if data.fear_greed and data.fear_greed.score is defined %}
-      {% set fgs = data.fear_greed.score %}
+      {% if fgs %}
       <div style="flex:0 0 auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
         <span style="font-size:1.3rem">{% if fgs < 30 %}😨{% elif fgs > 70 %}🤑{% else %}😐{% endif %}</span>
         <div>
