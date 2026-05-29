@@ -910,6 +910,21 @@ def _extract(daily, hourly):
 
         _, vwap_pos = _vwap(h)
 
+    # Daily trend alignment (weekly proxy using 15-day daily data)
+    daily_trend = 0.0
+    daily_rsi   = 50.0
+    try:
+        dc = list(daily["Close"])
+        if len(dc) >= 15:
+            daily_rsi = _rsi(dc, period=min(14, len(dc)-1))
+        if len(dc) >= 5:
+            e5  = _ema(dc, 5)
+            e10 = _ema(dc, min(10, len(dc)))
+            if e10 and e10 > 0:
+                daily_trend = (e5 - e10) / e10 * 100 if e5 else 0.0
+    except Exception:
+        pass
+
     return {
         "price":        round(price, 2),
         "change_pct":   round(chg_pct, 2),
@@ -919,6 +934,8 @@ def _extract(daily, hourly):
         "near_52w_high": round(near_52w_high, 4),
         "intraday":     round(intraday, 2),
         "rsi":          round(rsi_val, 1),
+        "daily_rsi":    round(daily_rsi, 1),
+        "daily_trend":  round(daily_trend, 3),
         "ema_cross":    round(ema_cross, 3),
         "macd":         round(macd_val, 3),
         "bb_pos":       round(bb_pos, 1),
@@ -1055,10 +1072,24 @@ def score(tk, d, sentiment=0, regime_adj=0):
     intra = d.get("intraday",     0) or 0
     rsi   = d.get("rsi",         50) or 50
     ema_c = d.get("ema_cross",    0) or 0
-    macd  = d.get("macd",         0) or 0
-    bb    = d.get("bb_pos",      50) or 50
-    vwap  = d.get("vwap_pos",     0) or 0
-    n52w  = d.get("near_52w_high", 1.0) or 1.0
+    macd       = d.get("macd",         0) or 0
+    bb         = d.get("bb_pos",      50) or 50
+    vwap       = d.get("vwap_pos",     0) or 0
+    n52w       = d.get("near_52w_high", 1.0) or 1.0
+    daily_rsi  = d.get("daily_rsi",   50) or 50
+    daily_tr   = d.get("daily_trend",  0) or 0
+
+    # Multi-timeframe trend filter: daily EMA5/10 alignment (+8/-10)
+    if   daily_tr > 0.5:  s +=  8
+    elif daily_tr > 0.1:  s +=  4
+    elif daily_tr < -0.5: s -= 10
+    elif daily_tr < -0.1: s -=  5
+
+    # Daily RSI confirmation (+8/-8)
+    if   50 < daily_rsi < 70: s += 8
+    elif daily_rsi >= 70:     s += 2
+    elif daily_rsi < 30:      s -= 8
+    elif daily_rsi < 40:      s -= 3
 
     # Daily momentum (+25/-22)
     if   chg >  4:  s += 25
