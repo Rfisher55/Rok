@@ -2116,6 +2116,44 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Bull flag: flagpole (strong surge) followed by tight consolidation → breakout
+    # One of the highest-probability momentum continuation patterns
+    bull_flag = False
+    try:
+        if len(daily) >= 10 and "High" in daily.columns and "Low" in daily.columns:
+            dc_f = list(daily["Close"])
+            dh_f = list(daily["High"])
+            dl_f = list(daily["Low"])
+            dv_f = list(daily["Volume"]) if "Volume" in daily.columns else []
+            if len(dc_f) >= 10:
+                # Flagpole: look for 5%+ move in 1-3 days (the initial surge)
+                flagpole_start = None
+                for lookback in range(3, 8):
+                    if len(dc_f) > lookback:
+                        pole_ret = (dc_f[-lookback] - dc_f[-lookback-1]) / dc_f[-lookback-1] * 100
+                        if pole_ret >= 5.0:   # strong flagpole
+                            flagpole_start = lookback
+                            break
+
+                if flagpole_start:
+                    # Flag: consolidation after pole — tight range, ideally declining volume
+                    flag_highs  = dh_f[-flagpole_start+1:]
+                    flag_lows   = dl_f[-flagpole_start+1:]
+                    flag_high   = max(flag_highs) if flag_highs else price
+                    flag_low    = min(flag_lows) if flag_lows else price
+                    flag_range  = (flag_high - flag_low) / flag_high if flag_high > 0 else 1
+                    flag_retr   = (dc_f[-flagpole_start] - price) / dc_f[-flagpole_start] * 100  # retracement from pole top
+                    # Good flag: tight (<8% range), limited pullback (<50% of pole), near the top
+                    if flag_range < 0.08 and -flag_retr < 50 and price > flag_low * 0.97:
+                        # Volume check: volume should be declining during flag (sellers exhausted)
+                        if dv_f and len(dv_f) >= flagpole_start:
+                            pole_vol = dv_f[-flagpole_start-1]
+                            flag_avg_vol = sum(dv_f[-flagpole_start+1:]) / max(1, flagpole_start - 1)
+                            if flag_avg_vol < pole_vol * 0.7:  # flag volume < 70% of pole volume
+                                bull_flag = True
+    except Exception:
+        pass
+
     # Trend reversal detection: stock transitioning from downtrend to uptrend
     # Highest expected-value moment — catching new uptrends early
     trend_reversal = False
@@ -2353,6 +2391,7 @@ def _extract(daily, hourly):
         "mtf_conflict":      mtf_conflict,
         "price_vs_ema200":   round(price_vs_ema200, 2),
         "trend_reversal":    trend_reversal,
+        "bull_flag":         bull_flag,
         "atr":             round(atr_val, 3) if atr_val else None,
         "stoch_k":            round(stoch_k, 1),
         "stoch_d":            round(stoch_d, 1),
@@ -2818,6 +2857,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Trend reversal: price just crossed above 20-EMA with RSI recovery + volume expansion (+13)
     # Catches new uptrends at their earliest stage — highest expected value entry point
     if d.get("trend_reversal", False): s += 13
+
+    # Bull flag: flagpole (5%+ surge) + tight consolidation (declining volume) = continuation (+12)
+    # Institutions let weak hands shake out, then breakout resumes the original trend
+    if d.get("bull_flag", False): s += 12
 
     # NR7 / inside bar: volatility contraction before expansion (+8/+6)
     # These patterns precede large directional moves — buy the squeeze
@@ -3786,6 +3829,7 @@ def run():
                 "macd_bull_div":  live.get(tk, {}).get("macd_bull_div", False),
                 "mtf_aligned":    live.get(tk, {}).get("mtf_aligned", False),
                 "trend_reversal": live.get(tk, {}).get("trend_reversal", False),
+                "bull_flag":      live.get(tk, {}).get("bull_flag", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
