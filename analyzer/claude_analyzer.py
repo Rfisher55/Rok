@@ -290,7 +290,8 @@ def build_prompt(
 
     stock_str = "\n".join(
         f"  {s['ticker']}: ${s['price']} ({s.get('change_pct', 0):+.1f}%) | "
-        f"Vol:{s.get('volume', 0):,} | PE:{s.get('pe_ratio', 'n/a')} | "
+        f"Vol:{s.get('vol_ratio', 1.0):.1f}x avg | PE:{s.get('pe_ratio', 'n/a')} | "
+        f"RSI:{s.get('rsi', 'n/a')} | "
         f"Target:${s.get('analyst_target', 'n/a')}(+{s.get('upside_to_target', 'n/a')}%) | "
         f"Short:{s.get('short_interest', 'n/a')} | Rec:{s.get('recommendation', 'n/a')} | "
         f"Social:{s.get('sentiment', {}).get('mean', 0):+.2f}({s.get('sentiment', {}).get('mention_count', 0)}x)"

@@ -1052,7 +1052,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               {% if s.price_target and s.current_price and s.current_price > 0 %}
               {% set gain_pct = ((s.price_target / s.current_price - 1) * 100)|round(1) %}
               {% set gain_1k = ((s.price_target / s.current_price - 1) * 1000)|round(0)|int %}
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+${{ gain_1k }} (+{{ gain_pct }}%)</strong> in {{ s.time_horizon or '3-6 months' }}</div>
+              {# Estimate annualized return based on time horizon #}
+              {% set th = s.time_horizon or '3 months' %}
+              {% set weeks = 8 %}
+              {% if '1-2 week' in th %}{% set weeks = 1.5 %}{% elif '2-4 week' in th %}{% set weeks = 3 %}{% elif '1-3 month' in th %}{% set weeks = 8 %}{% elif '3-6 month' in th %}{% set weeks = 18 %}{% elif '6-12 month' in th %}{% set weeks = 36 %}{% endif %}
+              {% set annualized = ((gain_pct / 100 + 1) ** (52 / weeks) - 1) * 100 %}
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+${{ gain_1k }} (+{{ gain_pct }}%)</strong> in {{ th }}</div>
+              {% if annualized > 20 %}<div style="font-size:10px;color:rgba(0,255,136,.7);margin-top:3px">That's roughly <strong>{{ annualized|round(0)|int }}% annualized</strong> — the S&amp;P 500 average is ~10%/year</div>{% endif %}
               {% else %}
               <div class="wim-txt">ROK sees this stock moving higher in {{ s.time_horizon or '3-6 months' }}</div>
               {% endif %}
