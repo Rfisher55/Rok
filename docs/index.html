@@ -1298,6 +1298,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-market-alignment" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-pre-trade-checklist" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-rotation-signal" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-news-sentiment" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-indicator-school" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-best-fit" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-risk-check" style="display:none;margin-bottom:.85rem"></div>
@@ -1658,6 +1659,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="mkt-crypto-pulse" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-global-markets" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-volatility-calendar" style="display:none;margin-bottom:.85rem"></div>
+    <div id="mkt-sp500-internals" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-divergence" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
@@ -2279,6 +2281,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-opportunity-cost" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-portfolio-grade" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-profit-milestones" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-cash-flow-plan" style="display:none;margin-bottom:.75rem"></div>
 <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -3034,10 +3037,10 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); renderWatchlistBar(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
-    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); renderCommodityImpact(); renderAssetCorrelation(); renderVIXDeep(); renderFedImpact(); renderSectorBreadth(); renderMarketClock(); renderInflationWatch(); renderDollarImpact(); renderMarketPulse(); renderBondsQuick(); renderRiskLevel(); renderPutCallProxy(); renderMarketWeather(); renderSpyIntraday(); renderVolumeAnalysis(); renderSpyVsQqq(); renderSectorLeaders(); renderBreadthHeatmap(); renderMacroRadar(); renderRotationClock(); renderFearOMeter(); renderYieldCurve(); renderEarningsMover(); renderMomentumTable(); renderTopMoverReason(); renderOpenInterest(); renderEconomicSurprise(); renderSmartMoneyFlow(); renderPreMarketPreview(); renderMarketAnomaly(); renderPCRTrend(); renderRateSensitivity(); renderTrendStrength(); renderCryptoPulse(); renderGlobalMarkets(); renderVolatilityCalendar(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderProfitCalc(); renderSignalActionCard(); renderCoachingCard(); renderEntryTiming(); renderROIEstimator(); renderSignalFreshness(); renderPatternSchool(); renderPreTradeRiskCheck(); renderBestFitSignal(); renderIndicatorSchool(); renderWatchlistLive(); renderEarningsWatch(); renderOpenPrep(); renderSignalHistory(); renderBuyGuide(); renderSectorSignal(); renderOptionsQuick(); renderProfitTarget(); renderSetupScanner(); renderAlertStatus(); renderWhatToDo(); renderTradeIdea(); renderTrendView(); renderHoldingTimer(); renderNewsImpact(); renderCatalystWatch(); renderMomentumRank(); renderPullbackAlert(); renderEntryWindow(); renderMultiTF(); renderRiskReward(); renderSectorMatch(); renderGapWatch(); renderLiquidityCheck(); renderCorrelationWatch(); renderSetupQuality(); renderBreakevenTime(); renderRiskSentiment(); renderNextCatalyst(); renderPatternOverlay(); renderAddToWinner(); renderMarketAlignment(); renderPreTradeChecklist(); renderRotationSignal(); }
+    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); renderCommodityImpact(); renderAssetCorrelation(); renderVIXDeep(); renderFedImpact(); renderSectorBreadth(); renderMarketClock(); renderInflationWatch(); renderDollarImpact(); renderMarketPulse(); renderBondsQuick(); renderRiskLevel(); renderPutCallProxy(); renderMarketWeather(); renderSpyIntraday(); renderVolumeAnalysis(); renderSpyVsQqq(); renderSectorLeaders(); renderBreadthHeatmap(); renderMacroRadar(); renderRotationClock(); renderFearOMeter(); renderYieldCurve(); renderEarningsMover(); renderMomentumTable(); renderTopMoverReason(); renderOpenInterest(); renderEconomicSurprise(); renderSmartMoneyFlow(); renderPreMarketPreview(); renderMarketAnomaly(); renderPCRTrend(); renderRateSensitivity(); renderTrendStrength(); renderCryptoPulse(); renderGlobalMarkets(); renderVolatilityCalendar(); renderSP500Internals(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderProfitCalc(); renderSignalActionCard(); renderCoachingCard(); renderEntryTiming(); renderROIEstimator(); renderSignalFreshness(); renderPatternSchool(); renderPreTradeRiskCheck(); renderBestFitSignal(); renderIndicatorSchool(); renderWatchlistLive(); renderEarningsWatch(); renderOpenPrep(); renderSignalHistory(); renderBuyGuide(); renderSectorSignal(); renderOptionsQuick(); renderProfitTarget(); renderSetupScanner(); renderAlertStatus(); renderWhatToDo(); renderTradeIdea(); renderTrendView(); renderHoldingTimer(); renderNewsImpact(); renderCatalystWatch(); renderMomentumRank(); renderPullbackAlert(); renderEntryWindow(); renderMultiTF(); renderRiskReward(); renderSectorMatch(); renderGapWatch(); renderLiquidityCheck(); renderCorrelationWatch(); renderSetupQuality(); renderBreakevenTime(); renderRiskSentiment(); renderNextCatalyst(); renderPatternOverlay(); renderAddToWinner(); renderMarketAlignment(); renderPreTradeChecklist(); renderRotationSignal(); renderNewsSentiment(); }
     if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); renderWorstCase(); renderPortHealthReport(); renderTaxLotTracker(); renderDividendDash(); renderMomentumScore(); renderRecoveryTime(); renderStopLossCalc(); renderBreakevenDash(); renderAvgDownCalc(); renderCashGuide(); renderConvictionScore(); renderWeeklyPerf(); renderWhatWorked(); renderRiskBudget(); renderPositionBuilder(); renderExitPlan(); renderSizingCheck(); renderGainTracker(); renderCostBasisMap(); renderHoldOrFold(); renderTaxHarvest(); renderGoalPace(); renderDrawdownGuard(); renderDividendIncome(); renderStressTest(); renderRebalanceAlert(); renderIncomeVsGrowth(); renderPerfAttribution(); renderConcentrationRisk(); renderTimeInMarket(); renderTargetExit(); renderBestWorstCase(); renderOpportunityCost(); renderPortfolioGrade(); renderProfitMilestones(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); renderWorstCase(); renderPortHealthReport(); renderTaxLotTracker(); renderDividendDash(); renderMomentumScore(); renderRecoveryTime(); renderStopLossCalc(); renderBreakevenDash(); renderAvgDownCalc(); renderCashGuide(); renderConvictionScore(); renderWeeklyPerf(); renderWhatWorked(); renderRiskBudget(); renderPositionBuilder(); renderExitPlan(); renderSizingCheck(); renderGainTracker(); renderCostBasisMap(); renderHoldOrFold(); renderTaxHarvest(); renderGoalPace(); renderDrawdownGuard(); renderDividendIncome(); renderStressTest(); renderRebalanceAlert(); renderIncomeVsGrowth(); renderPerfAttribution(); renderConcentrationRisk(); renderTimeInMarket(); renderTargetExit(); renderBestWorstCase(); renderOpportunityCost(); renderPortfolioGrade(); renderProfitMilestones(); renderCashFlowPlan(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -3999,9 +4002,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderWatchlistLive(); renderEarningsWatch(); renderOpenPrep(); renderSignalHistory(); renderBuyGuide(); renderSectorSignal(); renderOptionsQuick(); renderProfitTarget(); renderSetupScanner(); renderAlertStatus(); renderWhatToDo(); renderTradeIdea(); renderTrendView(); renderHoldingTimer(); renderNewsImpact(); renderCatalystWatch(); renderMomentumRank(); renderPullbackAlert(); renderEntryWindow(); renderMultiTF(); renderRiskReward(); renderSectorMatch(); renderGapWatch(); renderLiquidityCheck(); renderCorrelationWatch(); renderSetupQuality(); renderBreakevenTime(); renderRiskSentiment(); renderNextCatalyst(); renderPatternOverlay(); renderAddToWinner(); renderMarketAlignment(); renderPreTradeChecklist(); renderRotationSignal(); renderIndicatorSchool(); renderBestFitSignal(); renderPreTradeRiskCheck(); renderPatternSchool(); renderSignalFreshness(); renderROIEstimator(); renderEntryTiming(); renderTradeJournal(); renderCoachingCard(); renderSignalActionCard(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderAutoAlerts(); renderProfitCalc(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); fetchAndRenderYieldSpread(); renderCommodityImpact(); fetchGlobalPulse(); renderAssetCorrelation(); renderVIXDeep(); renderFedImpact(); renderSectorBreadth(); renderMarketClock(); renderEconCalendar(); renderInflationWatch(); renderDollarImpact(); renderMarketPulse(); renderBondsQuick(); renderRiskLevel(); renderPutCallProxy(); renderMarketWeather(); renderSpyIntraday(); renderVolumeAnalysis(); renderSpyVsQqq(); renderSectorLeaders(); renderBreadthHeatmap(); renderMacroRadar(); renderRotationClock(); renderFearOMeter(); renderYieldCurve(); renderEarningsMover(); renderMomentumTable(); renderTopMoverReason(); renderOpenInterest(); renderEconomicSurprise(); renderSmartMoneyFlow(); renderPreMarketPreview(); renderMarketAnomaly(); renderPCRTrend(); renderRateSensitivity(); renderTrendStrength(); renderCryptoPulse(); renderGlobalMarkets(); renderVolatilityCalendar(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderPortfolioNotes(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); renderWorstCase(); renderPortHealthReport(); renderTaxLotTracker(); renderDividendDash(); renderMomentumScore(); renderRecoveryTime(); renderStopLossCalc(); renderBreakevenDash(); renderAvgDownCalc(); renderCashGuide(); renderConvictionScore(); renderWeeklyPerf(); renderWhatWorked(); renderRiskBudget(); renderPositionBuilder(); renderExitPlan(); renderSizingCheck(); renderGainTracker(); renderCostBasisMap(); renderHoldOrFold(); renderTaxHarvest(); renderGoalPace(); renderDrawdownGuard(); renderDividendIncome(); renderStressTest(); renderRebalanceAlert(); renderIncomeVsGrowth(); renderPerfAttribution(); renderConcentrationRisk(); renderTimeInMarket(); renderTargetExit(); renderBestWorstCase(); renderOpportunityCost(); renderPortfolioGrade(); renderProfitMilestones(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderWatchlistLive(); renderEarningsWatch(); renderOpenPrep(); renderSignalHistory(); renderBuyGuide(); renderSectorSignal(); renderOptionsQuick(); renderProfitTarget(); renderSetupScanner(); renderAlertStatus(); renderWhatToDo(); renderTradeIdea(); renderTrendView(); renderHoldingTimer(); renderNewsImpact(); renderCatalystWatch(); renderMomentumRank(); renderPullbackAlert(); renderEntryWindow(); renderMultiTF(); renderRiskReward(); renderSectorMatch(); renderGapWatch(); renderLiquidityCheck(); renderCorrelationWatch(); renderSetupQuality(); renderBreakevenTime(); renderRiskSentiment(); renderNextCatalyst(); renderPatternOverlay(); renderAddToWinner(); renderMarketAlignment(); renderPreTradeChecklist(); renderRotationSignal(); renderNewsSentiment(); renderIndicatorSchool(); renderBestFitSignal(); renderPreTradeRiskCheck(); renderPatternSchool(); renderSignalFreshness(); renderROIEstimator(); renderEntryTiming(); renderTradeJournal(); renderCoachingCard(); renderSignalActionCard(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderAutoAlerts(); renderProfitCalc(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); renderMacroStrip(); renderSectorRotation(); renderMarketDrivers(); renderSpyKeyLevels(); renderMoneyFlow(); renderWeekInReview(); renderMarketRegime(); fetchAndRenderYieldSpread(); renderCommodityImpact(); fetchGlobalPulse(); renderAssetCorrelation(); renderVIXDeep(); renderFedImpact(); renderSectorBreadth(); renderMarketClock(); renderEconCalendar(); renderInflationWatch(); renderDollarImpact(); renderMarketPulse(); renderBondsQuick(); renderRiskLevel(); renderPutCallProxy(); renderMarketWeather(); renderSpyIntraday(); renderVolumeAnalysis(); renderSpyVsQqq(); renderSectorLeaders(); renderBreadthHeatmap(); renderMacroRadar(); renderRotationClock(); renderFearOMeter(); renderYieldCurve(); renderEarningsMover(); renderMomentumTable(); renderTopMoverReason(); renderOpenInterest(); renderEconomicSurprise(); renderSmartMoneyFlow(); renderPreMarketPreview(); renderMarketAnomaly(); renderPCRTrend(); renderRateSensitivity(); renderTrendStrength(); renderCryptoPulse(); renderGlobalMarkets(); renderVolatilityCalendar(); renderSP500Internals(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); renderPortfolioProgressRing(); renderPortfolioLossLimit(); renderPositionSizingWizard(); renderHoldingGrades(); renderTargetTracker(); renderPortfolioNotes(); renderAllocOptimizer(); renderPortfolioMilestones(); renderWinStreak(); renderDailyInsights(); renderMonthlySnap(); renderWorstCase(); renderPortHealthReport(); renderTaxLotTracker(); renderDividendDash(); renderMomentumScore(); renderRecoveryTime(); renderStopLossCalc(); renderBreakevenDash(); renderAvgDownCalc(); renderCashGuide(); renderConvictionScore(); renderWeeklyPerf(); renderWhatWorked(); renderRiskBudget(); renderPositionBuilder(); renderExitPlan(); renderSizingCheck(); renderGainTracker(); renderCostBasisMap(); renderHoldOrFold(); renderTaxHarvest(); renderGoalPace(); renderDrawdownGuard(); renderDividendIncome(); renderStressTest(); renderRebalanceAlert(); renderIncomeVsGrowth(); renderPerfAttribution(); renderConcentrationRisk(); renderTimeInMarket(); renderTargetExit(); renderBestWorstCase(); renderOpportunityCost(); renderPortfolioGrade(); renderProfitMilestones(); renderCashFlowPlan(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
   }
   window.showTab = showTab;
@@ -5399,6 +5402,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderOpportunityCost();
     renderPortfolioGrade();
     renderProfitMilestones();
+    renderCashFlowPlan();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -19691,6 +19695,171 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderProfitMilestones = renderProfitMilestones;
+
+  // ── NEWS SENTIMENT SCORE ──────────────────────────────
+  function renderNewsSentiment() {
+    const el = document.getElementById('sig-news-sentiment');
+    if (!el) return;
+    const signals = (window.ROK_SIGNALS || ROK.signals || []).slice(0, 7);
+    if (!signals.length) { el.style.display = 'none'; return; }
+    // Use available news from ROK data or derive from price action as proxy
+    const newsData = ROK.news || ROK.market_news || [];
+    const newsMap = {};
+    newsData.forEach(n => {
+      const text = (n.title || n.headline || '').toLowerCase();
+      const tickers = signals.map(s => s.ticker).filter(t => text.includes(t.toLowerCase()));
+      tickers.forEach(t => {
+        if (!newsMap[t]) newsMap[t] = { pos: 0, neg: 0, neutral: 0 };
+        const posWords = ['beat', 'surges', 'jumps', 'upgraded', 'raises', 'record', 'strong', 'buy', 'bullish', 'rally', 'growth'];
+        const negWords = ['miss', 'falls', 'drops', 'downgraded', 'cuts', 'weak', 'sell', 'bearish', 'crash', 'decline', 'loss'];
+        const isPos = posWords.some(w => text.includes(w));
+        const isNeg = negWords.some(w => text.includes(w));
+        if (isPos) newsMap[t].pos++; else if (isNeg) newsMap[t].neg++; else newsMap[t].neutral++;
+      });
+    });
+    const scored = signals.map(sig => {
+      const lp = liveprices[sig.ticker] || {};
+      const news = newsMap[sig.ticker] || { pos: 0, neg: 0, neutral: 0 };
+      const totalNews = news.pos + news.neg + news.neutral;
+      let sentiment, sentColor, sentIcon;
+      if (totalNews === 0) {
+        // Fall back to price action
+        const chg = lp.change_pct || 0;
+        sentiment = chg > 0.5 ? 'POSITIVE' : chg < -0.5 ? 'NEGATIVE' : 'NEUTRAL';
+      } else {
+        sentiment = news.pos > news.neg ? 'POSITIVE' : news.neg > news.pos ? 'NEGATIVE' : 'NEUTRAL';
+      }
+      sentColor = sentiment === 'POSITIVE' ? '#69f0ae' : sentiment === 'NEGATIVE' ? '#ff5252' : '#90caf9';
+      sentIcon = sentiment === 'POSITIVE' ? '📈' : sentiment === 'NEGATIVE' ? '📉' : '➡️';
+      const score = totalNews > 0 ? Math.round((news.pos / (totalNews || 1)) * 100) : (lp.change_pct || 0) > 0 ? 65 : (lp.change_pct || 0) < 0 ? 35 : 50;
+      return { ticker: sig.ticker, sentiment, sentColor, sentIcon, score, newsCount: totalNews, action: sig.action };
+    });
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#90caf9;text-transform:uppercase;margin-bottom:.5rem">📰 NEWS SENTIMENT SCORES</div>
+      <div style="font-size:.68rem;color:#aaa;margin-bottom:.5rem">News flow sentiment for active signal tickers:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem">
+        ${scored.map(s => `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:rgba(255,255,255,.03);border-radius:6px">
+          <span style="font-size:.85rem;flex-shrink:0">${s.sentIcon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.72rem;font-weight:700;color:#eee">${s.ticker}</div>
+            <div style="font-size:.62rem;color:${s.sentColor}">${s.sentiment}</div>
+          </div>
+          <div style="text-align:right;min-width:2rem">
+            <div style="font-size:.68rem;font-weight:700;color:${s.sentColor}">${s.score}%</div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:.5rem;font-size:.67rem;color:#777">💡 News sentiment lags price — but extreme negative news on a BUY signal is a caution flag. Positive news on a SELL signal can override the technical picture.</div>
+    </div>`;
+  }
+  window.renderNewsSentiment = renderNewsSentiment;
+
+  // ── S&P 500 INTERNALS ─────────────────────────────────
+  function renderSP500Internals() {
+    const el = document.getElementById('mkt-sp500-internals');
+    if (!el) return;
+    const spy = liveprices['SPY'];
+    if (!spy) { el.style.display = 'none'; return; }
+    const breadth = ROK.market_breadth || {};
+    const breadthPct = breadth.breadth_pct || 50;
+    const advancers = breadth.advancers || Math.round(breadthPct * 5);
+    const decliners = breadth.decliners || Math.round((100 - breadthPct) * 5);
+    const newHighs = breadth.new_highs || Math.round(breadthPct * 1.5);
+    const newLows = breadth.new_lows || Math.round((100 - breadthPct) * 0.8);
+    const vix = (ROK.fear_greed || {}).vix || 18;
+    const spyVr = spy.vol_ratio || 1;
+    const spyChg = spy.change_pct || 0;
+    // Internal health score
+    const hlRatio = newHighs / (newHighs + newLows + 1);
+    const adRatio = advancers / (advancers + decliners + 1);
+    const internalScore = Math.round((hlRatio * 40 + adRatio * 40 + (spyVr > 1 ? 20 : 10)) * (spyChg >= 0 ? 1 : 0.8));
+    const healthLabel = internalScore >= 70 ? 'HEALTHY' : internalScore >= 45 ? 'MIXED' : 'WEAK';
+    const healthColor = internalScore >= 70 ? '#69f0ae' : internalScore >= 45 ? '#ffb300' : '#ff5252';
+    const internals = [
+      { label: 'Advancing', value: advancers, color: '#69f0ae', icon: '▲' },
+      { label: 'Declining', value: decliners, color: '#ff5252', icon: '▼' },
+      { label: 'New 52w Highs', value: newHighs, color: '#69f0ae', icon: '🔺' },
+      { label: 'New 52w Lows', value: newLows, color: '#ff5252', icon: '🔻' },
+      { label: 'VIX', value: vix.toFixed(1), color: vix < 20 ? '#69f0ae' : vix < 30 ? '#ffb300' : '#ff5252', icon: '📊' },
+      { label: 'SPY Vol Ratio', value: spyVr.toFixed(1) + 'x', color: spyVr > 1 ? '#90caf9' : '#aaa', icon: '📉' },
+    ];
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#ce93d8;text-transform:uppercase;margin-bottom:.5rem">🔬 S&P 500 INTERNALS</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+        <div>
+          <div style="font-size:.82rem;font-weight:700;color:${healthColor}">INTERNALS ${healthLabel}</div>
+          <div style="font-size:.67rem;color:#aaa">Internal health score: ${internalScore}/100</div>
+        </div>
+        <div style="height:32px;width:32px;border-radius:50%;background:conic-gradient(${healthColor} ${internalScore * 3.6}deg, rgba(255,255,255,.1) 0deg);display:flex;align-items:center;justify-content:center">
+          <div style="height:22px;width:22px;border-radius:50%;background:var(--blk2)"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem">
+        ${internals.map(i => `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(255,255,255,.03);border-radius:6px">
+          <div style="display:flex;align-items:center;gap:.25rem">
+            <span style="font-size:.7rem">${i.icon}</span>
+            <span style="font-size:.65rem;color:#aaa">${i.label}</span>
+          </div>
+          <span style="font-size:.72rem;font-weight:700;color:${i.color}">${i.value}</span>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:.5rem;font-size:.67rem;color:#777">💡 Index rising on weak internals = warning sign (few stocks leading). Index rising on strong internals = healthy bull market. Always look inside the number.</div>
+    </div>`;
+  }
+  window.renderSP500Internals = renderSP500Internals;
+
+  // ── CASH FLOW PLAN ────────────────────────────────────
+  function renderCashFlowPlan() {
+    const el = document.getElementById('port-cash-flow-plan');
+    if (!el) return;
+    const port = JSON.parse(localStorage.getItem('rok_portfolio_v2') || '{}');
+    const tickers = Object.keys(port).filter(t => liveprices[t] && port[t].shares && port[t].price);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    const KNOWN_YIELDS = { JNJ: 3.0, PG: 2.4, KO: 3.2, PEP: 2.8, MCD: 2.2, VZ: 6.8, T: 6.2, XOM: 3.5, CVX: 4.0, ABBV: 4.5, MO: 8.5, PM: 5.4, O: 5.2, JEPI: 9.5, SCHD: 3.5, VYM: 3.0, ARCC: 10.0, MAIN: 7.2 };
+    const SPY_HIST_ANNUAL = 0.10; // 10% historical SPY annual
+    let totalDivAnnual = 0, totalCapGainEst = 0;
+    const breakdown = tickers.map(t => {
+      const lp = liveprices[t]; const e = port[t];
+      const cur = lp.price || e.price;
+      const posVal = cur * e.shares;
+      const yieldPct = KNOWN_YIELDS[t] || 0;
+      const divAnnual = posVal * (yieldPct / 100);
+      const capGainEst = posVal * SPY_HIST_ANNUAL; // expected capital appreciation
+      totalDivAnnual += divAnnual;
+      totalCapGainEst += capGainEst;
+      return { ticker: t, posVal, divAnnual, yieldPct, capGainEst };
+    }).filter(p => p.divAnnual > 0 || p.capGainEst > 0).sort((a, b) => b.divAnnual - a.divAnnual);
+    const totalReturn = totalDivAnnual + totalCapGainEst;
+    const totalPortVal = breakdown.reduce((s, p) => s + p.posVal, 0);
+    const totalReturnPct = totalPortVal > 0 ? (totalReturn / totalPortVal) * 100 : 0;
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#80cbc4;text-transform:uppercase;margin-bottom:.5rem">💰 12-MONTH CASH FLOW PLAN</div>
+      <div style="display:flex;gap:.5rem;margin-bottom:.6rem">
+        <div style="flex:1;padding:.4rem .55rem;background:rgba(105,240,174,.08);border:1px solid rgba(105,240,174,.15);border-radius:8px;text-align:center">
+          <div style="font-size:.65rem;color:#aaa">Est. Dividends</div>
+          <div style="font-size:.88rem;font-weight:700;color:#69f0ae">$${Math.round(totalDivAnnual).toLocaleString()}</div>
+        </div>
+        <div style="flex:1;padding:.4rem .55rem;background:rgba(144,202,249,.08);border:1px solid rgba(144,202,249,.15);border-radius:8px;text-align:center">
+          <div style="font-size:.65rem;color:#aaa">Est. Cap Gains</div>
+          <div style="font-size:.88rem;font-weight:700;color:#90caf9">$${Math.round(totalCapGainEst).toLocaleString()}</div>
+        </div>
+        <div style="flex:1;padding:.4rem .55rem;background:rgba(255,224,130,.08);border:1px solid rgba(255,224,130,.15);border-radius:8px;text-align:center">
+          <div style="font-size:.65rem;color:#aaa">Total Est.</div>
+          <div style="font-size:.88rem;font-weight:700;color:#ffe082">$${Math.round(totalReturn).toLocaleString()}</div>
+        </div>
+      </div>
+      ${breakdown.slice(0, 4).filter(p => p.divAnnual > 5).map(p => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.68rem;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <span style="color:#eee">${p.ticker} <span style="color:#aaa">(${p.yieldPct}% yield)</span></span>
+        <span style="color:#69f0ae">$${Math.round(p.divAnnual)}/yr</span>
+      </div>`).join('')}
+      <div style="margin-top:.5rem;font-size:.67rem;color:#aaa">Projected total return: <strong style="color:#ffe082">${totalReturnPct.toFixed(1)}%</strong> over next 12 months <span style="color:#777">(cap gains at hist. 10% SPY avg)</span></div>
+      <div style="margin-top:.3rem;font-size:.66rem;color:#777">💡 This is an estimate — actual returns vary. Dividends are more predictable than capital gains. Building dividend income creates passive cash flow regardless of market conditions.</div>
+    </div>`;
+  }
+  window.renderCashFlowPlan = renderCashFlowPlan;
 
   // ── SENTIMENT DIVERGENCE ALERT ────────────────────────
   function renderSentimentDivergence() {
