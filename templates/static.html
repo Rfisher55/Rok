@@ -942,12 +942,34 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="stat-box" title="Reddit posts analyzed"><div class="stat-num" data-final="{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}">{% if ss.reddit >= 1000 %}{{ '%.1f'|format(ss.reddit/1000) }}k{% else %}{{ ss.reddit }}{% endif %}</div><div class="stat-lbl">📱 Reddit</div></div>
       <div class="stat-box" title="News articles scanned"><div class="stat-num" data-final="{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}">{% if ss.news >= 1000 %}{{ '%.1f'|format(ss.news/1000) }}k{% else %}{{ ss.news }}{% endif %}</div><div class="stat-lbl">📰 News</div></div>
       <div class="stat-box" title="Stocks scanned with live data"><div class="stat-num" data-final="{{ ss.stocks }}">{{ ss.stocks }}</div><div class="stat-lbl">📊 Stocks</div></div>
-      <div class="stat-box" title="SEC insider trade filings"><div class="stat-num" data-final="{{ ss.sec }}">{{ ss.sec }}</div><div class="stat-lbl">👔 Insider</div></div>
+      <div class="stat-box" title="CEO/executive insider purchases (Form 4)"><div class="stat-num" data-final="{{ ss.insider_buys|default(ss.sec) }}">{{ ss.insider_buys|default(ss.sec) }}</div><div class="stat-lbl">👔 CEO Buys</div></div>
       <div class="stat-box" title="Companies reporting earnings soon"><div class="stat-num" data-final="{{ ss.earnings_upcoming }}">{{ ss.earnings_upcoming }}</div><div class="stat-lbl">📅 Earnings</div></div>
       <div class="stat-box" title="Unusual options activity detected"><div class="stat-num" data-final="{{ ss.unusual_options }}">{{ ss.unusual_options }}</div><div class="stat-lbl">🐋 Options</div></div>
       <div class="stat-box" title="Congressional STOCK Act disclosures"><div class="stat-num" data-final="{{ ss.congress_trades|default(0) }}">{{ ss.congress_trades|default(0) }}</div><div class="stat-lbl">🏛️ Congress</div></div>
       <div class="stat-box" title="Technical chart breakout patterns"><div class="stat-num" data-final="{{ ss.technical|default(0) }}">{{ ss.technical|default(0) }}</div><div class="stat-lbl">⚡ Patterns</div></div>
     </div>
+
+    <!-- HOW THIS WORKS — beginner explainer (collapsed) -->
+    <details style="margin-bottom:.75rem;background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:10px;overflow:hidden">
+      <summary style="padding:.65rem 1rem;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--b);list-style:none;display:flex;align-items:center;gap:.5rem;-webkit-tap-highlight-color:transparent">
+        <span>ℹ️</span>
+        <span>HOW DID ROK FIND THESE? (TAP TO SEE)</span>
+      </summary>
+      <div style="padding:.5rem 1rem .85rem;font-size:11px;color:var(--wh2);line-height:1.7">
+        ROK just analyzed <strong>{{ data.source_stats.reddit|default(0) + data.source_stats.news|default(0) }} posts &amp; articles</strong>, scanned <strong>{{ data.source_stats.stocks|default(0) }} stocks</strong>, and checked for:
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.35rem;margin-top:.55rem">
+          <div style="display:flex;align-items:center;gap:.4rem"><span>🏛️</span><span>Congressional stock buys</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>👔</span><span>CEO/executive purchases</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>🐋</span><span>Hedge fund options bets</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>📱</span><span>Reddit + social buzz</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>📰</span><span>Breaking news</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>📅</span><span>Upcoming earnings</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>📈</span><span>Technical chart patterns</span></div>
+          <div style="display:flex;align-items:center;gap:.4rem"><span>🤖</span><span>Claude AI analysis</span></div>
+        </div>
+        <div style="margin-top:.65rem;font-size:10px;color:var(--wh3)">Updated every 15 minutes automatically. <em>Not financial advice — do your own research before investing.</em></div>
+      </div>
+    </details>
 
     <!-- 3-column signal layout -->
     <div class="sig-layout">

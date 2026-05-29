@@ -409,6 +409,7 @@ def run():
             "unusual_options": len(unusual_opts),
             "congress_trades": len(congress_buys),
             "technical": len(ta_data),
+            "insider_buys": len(insider_buys),
         },
         "recent_runs": recent_runs,
         "history_summary": history_summary,
