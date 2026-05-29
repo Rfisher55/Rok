@@ -1940,6 +1940,19 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="onboard-step"><span class="onboard-step-num">1️⃣</span><span>Tap <strong style="color:var(--au)">⚡ SIGNALS</strong> to see today's picks</span></div>
       <div class="onboard-step"><span class="onboard-step-num">2️⃣</span><span>Tap <strong style="color:var(--g)">💰 BOUGHT IT</strong> on any stock you buy</span></div>
       <div class="onboard-step"><span class="onboard-step-num">3️⃣</span><span>Check <strong style="color:var(--b)">💼 MY STOCKS</strong> daily — ROK tells you when to sell</span></div>
+      <button class="onboard-next" onclick="nextSlide()">NEXT →</button>
+    </div>
+    <!-- Slide 4 -->
+    <div class="onboard-slide" id="onboard-slide-4">
+      <span class="onboard-emoji">🛡️</span>
+      <div class="onboard-title">STAY SAFE</div>
+      <div class="onboard-body">
+        <strong>The #1 rule: never lose more than you're OK losing.</strong><br><br>
+        🎯 <strong>Only invest what you can afford to lose</strong> — not rent money, not emergency funds<br><br>
+        📊 <strong>5–10% per stock</strong> — if you have $1,000, put $50–$100 max in any one pick<br><br>
+        ⛔ <strong>Stop-loss = your safety net</strong> — ROK sets one for every signal. It limits losses automatically<br><br>
+        🔔 <strong>Set price alerts</strong> so ROK wakes you up when a stock needs action
+      </div>
       <button class="onboard-next" onclick="dismissOnboarding()" style="background:linear-gradient(135deg,rgba(255,215,0,.22),rgba(0,255,136,.14));border-color:rgba(255,215,0,.4);color:var(--au)">LET'S GO! →</button>
     </div>
     <!-- Dots -->
@@ -1947,6 +1960,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="onboard-dot active" id="odot-1"></div>
       <div class="onboard-dot" id="odot-2"></div>
       <div class="onboard-dot" id="odot-3"></div>
+      <div class="onboard-dot" id="odot-4"></div>
     </div>
   </div>
 </div>
@@ -1995,8 +2009,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div id="buy-dialog-calc" style="min-height:28px;margin-bottom:.5rem;font-size:11px;color:var(--wh3)"></div>
     <div id="buy-dialog-proj" class="proj-return" style="display:none"></div>
     <div id="buy-dialog-stoploss" style="display:none;margin-bottom:.55rem;padding:.4rem .7rem;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.2);border-radius:8px;font-size:10.5px;color:var(--wh2);line-height:1.55"></div>
-    <div style="margin-bottom:.6rem;padding:.38rem .7rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.12);border-radius:8px;font-size:10px;color:var(--wh3)">
-      💡 <strong style="color:var(--au)">Position sizing:</strong> Beginners should put no more than <strong>5–10%</strong> of your investing money into any single stock to manage risk.
+    <div style="margin-bottom:.6rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem">MY TOTAL ACCOUNT SIZE (OPTIONAL — for % calculation)</div>
+      <div style="position:relative">
+        <span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--wh3);font-size:14px">$</span>
+        <input id="buy-account-size" type="number" step="100" min="100"
+          style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:.5rem .6rem .5rem 1.5rem;font-size:14px;color:var(--wh2);outline:none;font-family:var(--font);box-sizing:border-box"
+          placeholder="e.g. 10000 (your total investing account)"
+          oninput="updateBuyCalc()"/>
+      </div>
+      <div id="buy-pct-hint" style="font-size:10px;color:var(--wh3);margin-top:.25rem;min-height:16px"></div>
     </div>
     <div style="display:flex;gap:.6rem">
       <button onclick="cancelBoughtIt()" style="flex:1;padding:.75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
@@ -2330,14 +2352,15 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.dismissOnboarding = dismissOnboarding;
 
+  const TOTAL_SLIDES = 4;
   function nextSlide() {
-    if (currentSlide < 3) { currentSlide++; updateSlide(); }
+    if (currentSlide < TOTAL_SLIDES) { currentSlide++; updateSlide(); }
     else dismissOnboarding();
   }
   window.nextSlide = nextSlide;
 
   function updateSlide() {
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= TOTAL_SLIDES; i++) {
       const sl = document.getElementById('onboard-slide-' + i);
       const dot = document.getElementById('odot-' + i);
       if (sl) sl.classList.toggle('active', i === currentSlide);
@@ -2618,8 +2641,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   function isInPortfolio(ticker) { return !!getPortfolio()[ticker]; }
 
   // ── CUSTOM ADD-TO-PORTFOLIO DIALOG ───────────────────────
+  const ACCT_KEY = 'rok_account_size_v1';
   let _boughtItResolve = null;
-
   let _boughtItTicker = '';
   let _boughtItTarget = 0;
 
@@ -2638,13 +2661,31 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       slEl.style.display = 'block';
       slEl.innerHTML = `💡 <strong style="color:var(--au)">Suggested stop-loss: $${suggestedStop}</strong> (8% below your entry) — if price drops here, consider selling to limit your loss.`;
     }
+    // Persist account size
+    const acctEl = document.getElementById('buy-account-size');
+    const pctHint = document.getElementById('buy-pct-hint');
+    if (acctEl && acctEl.value) localStorage.setItem(ACCT_KEY, acctEl.value);
     if (!price || !shares) {
       calcEl.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>';
       if (projEl) projEl.style.display = 'none';
+      if (pctHint) pctHint.textContent = '';
       return;
     }
     const invested = (price * shares).toFixed(2);
     calcEl.innerHTML = `<span style="color:var(--wh2)">You're investing <strong style="color:var(--au)">$${invested}</strong> (${shares} share${shares!==1?'s':''} × $${price.toFixed(2)})</span>`;
+    // Account size % hint
+    if (pctHint) {
+      const acctSize = parseFloat(acctEl?.value) || 0;
+      if (acctSize > 0) {
+        const pct = (parseFloat(invested) / acctSize * 100).toFixed(1);
+        const pctNum = parseFloat(pct);
+        const pctColor = pctNum <= 10 ? 'var(--g)' : pctNum <= 20 ? 'var(--au)' : 'var(--r)';
+        const pctMsg = pctNum <= 5 ? '✅ Safe position size' : pctNum <= 10 ? '✅ OK position size (5-10% is ideal)' : pctNum <= 20 ? '⚠️ A bit large — consider splitting into smaller buys' : '🚨 Very concentrated — risky if this stock drops';
+        pctHint.innerHTML = `<span style="color:${pctColor}"><strong>${pct}%</strong> of your account · ${pctMsg}</span>`;
+      } else {
+        pctHint.innerHTML = '<span style="color:var(--wh4)">Enter your account size above to see what % this is</span>';
+      }
+    }
     // Projected return card
     const tgt = _boughtItTarget;
     if (projEl && tgt > 0 && price > 0) {
@@ -2686,6 +2727,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (calc) calc.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>';
       const projEl = document.getElementById('buy-dialog-proj');
       if (projEl) projEl.style.display = 'none';
+      const acctSzEl = document.getElementById('buy-account-size');
+      if (acctSzEl) { const saved = localStorage.getItem(ACCT_KEY); if (saved) acctSzEl.value = saved; }
       if (sub) {
         const parts = [];
         if (price > 0) parts.push(`Current price: $${price.toFixed(2)}`);
@@ -3834,6 +3877,10 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     saveAlerts(alerts);
     document.getElementById('alert-dialog-overlay').classList.remove('open');
     showAppAlert(`🔔 Alert set: ${_alertTicker} ${dir === 'above' ? '↑ above' : '↓ below'} $${price.toFixed(2)}`, 'info', 5000);
+    // Request notification permission so alert fires even when app is in background
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
     renderAlertStrip();
     renderScreener();
   }
