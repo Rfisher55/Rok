@@ -2833,6 +2833,28 @@ def run():
                 continue
             pnl_pct = (current - cost) / cost * 100
 
+            # ── Position rebalancing: trim oversized positions ──────────────
+            # If a position has grown to >1.5× MAX_POSITION_PCT of portfolio (due to appreciation),
+            # sell 25% to bring it back into range. This protects against concentration risk.
+            _mkt_val_check = current * qty
+            _pos_pct_check = _mkt_val_check / portfolio_val * 100 if portfolio_val > 0 else 0
+            if (_pos_pct_check > MAX_POSITION_PCT * 100 * 1.5
+                    and pnl_pct > 10  # only trim winners, not losers
+                    and qty >= 4       # enough shares to trim
+                    and not peaks.get(sym, {}).get("half_out", False)):
+                _trim_qty = round(qty * 0.25, 4)
+                logger.info(f"TRIM {sym} — oversized ({_pos_pct_check:.1f}% of portfolio > {MAX_POSITION_PCT*150:.0f}%), selling 25%")
+                try:
+                    alpaca_post("/v2/orders", {
+                        "symbol": sym, "qty": str(_trim_qty),
+                        "side": "sell", "type": "market", "time_in_force": "day",
+                    })
+                    log_trade(tlog, "SELL_HALF", sym, current, _trim_qty,
+                              pnl=pnl_pct, reason=f"rebalance trim ({_pos_pct_check:.1f}%>{MAX_POSITION_PCT*150:.0f}% of portfolio)")
+                    made_trades = True
+                except Exception as e:
+                    logger.warning(f"Rebalance trim failed {sym}: {e}")
+
             # Trailing peak
             prev_peak  = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else peaks.get(sym, current)
             peak       = max(prev_peak, current)
@@ -3391,6 +3413,11 @@ def run():
                     d        = live[tk]
                     price    = d["price"]
                     if price <= 0:
+                        continue
+                    # ADX filter for shorts: only short into confirmed downtrends
+                    _adx_short = d.get("adx", 0) or 0
+                    if _adx_short > 0 and _adx_short < 18:
+                        logger.debug(f"SKIP SHORT {tk} — ADX={_adx_short:.0f} too low (choppy market, false breakdowns)")
                         continue
                     atr      = d.get("atr")
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
