@@ -445,6 +445,10 @@ body.beginner-mode #beginner-banner { display:block }
 .sector-etf-bar{height:3px;border-radius:2px;margin-top:.3rem;background:rgba(255,255,255,.07)}
 .sector-etf-fill{height:100%;border-radius:2px;transition:width .5s ease}
 
+/* ── PORTFOLIO RISK SCORE ───────────────────────────────── */
+.risk-gauge{width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#00ff88,#ffdd00,#ff8800,#ff2255);position:relative;overflow:visible;margin:.5rem 0}
+.risk-gauge-pin{position:absolute;top:-4px;width:16px;height:16px;background:var(--wh);border-radius:50%;border:2px solid var(--blk);transform:translateX(-50%);box-shadow:0 0 8px rgba(255,255,255,.4);transition:left .5s ease}
+
 /* ── STOCK COMPARISON TOOL ──────────────────────────────── */
 .compare-btn{background:none;border:none;cursor:pointer;font-size:10px;color:var(--wh4);padding:2px 4px;border-radius:4px;transition:all .12s;touch-action:manipulation;line-height:1;font-family:var(--font)}
 .compare-btn:hover{color:var(--b);background:rgba(0,204,255,.08)}
@@ -2233,6 +2237,8 @@ body.beginner-mode #beginner-banner { display:block }
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <!-- Portfolio Risk Score (JS-populated) -->
+    <div id="port-risk-score" style="display:none;margin-bottom:.65rem"></div>
     <!-- Portfolio Autopilot (JS-populated) -->
     <div id="port-autopilot" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-spy-benchmark" style="display:none;margin-bottom:.65rem"></div>
@@ -2967,7 +2973,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); }
     updateGlobalRiskAlert();
     updateFearGreedFromVIX();
     renderLivePortStrip();
@@ -3509,11 +3515,35 @@ body.beginner-mode #beginner-banner { display:block }
         </div>`
       ).join('');
 
+      // Calculate expected move using ATM straddle
+      const curPriceOpts = liveprices[ticker]?.price;
+      let expectedMoveHtml = '';
+      if (curPriceOpts && calls.length && puts.length) {
+        const nearCall = calls.sort((a,b) => Math.abs(a.strike - curPriceOpts) - Math.abs(b.strike - curPriceOpts))[0];
+        const nearPut = puts.sort((a,b) => Math.abs(a.strike - curPriceOpts) - Math.abs(b.strike - curPriceOpts))[0];
+        if (nearCall?.lastPrice > 0 && nearPut?.lastPrice > 0) {
+          const straddlePrice = nearCall.lastPrice + nearPut.lastPrice;
+          const movePct = (straddlePrice / curPriceOpts * 100).toFixed(1);
+          const upTarget = (curPriceOpts + straddlePrice).toFixed(2);
+          const downTarget = (curPriceOpts - straddlePrice).toFixed(2);
+          // Also check if there's an earnings date
+          const stockData = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+          const earningsNote = stockData?.earnings_date ? ` (next earnings: ${stockData.earnings_date})` : '';
+          expectedMoveHtml = `<div style="background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);border-radius:7px;padding:.4rem .6rem;margin-bottom:.45rem">
+            <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--au);margin-bottom:.2rem">📊 OPTIONS-IMPLIED EXPECTED MOVE${earningsNote}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--wh)">±$${straddlePrice.toFixed(2)} <span style="color:var(--au)">(±${movePct}%)</span></div>
+            <div style="font-size:9px;color:var(--wh3);margin-top:.15rem">Range: <span style="color:var(--g)">$${upTarget}</span> to <span style="color:var(--r)">$${downTarget}</span></div>
+            <div style="font-size:8.5px;color:var(--wh4);margin-top:.2rem;line-height:1.4">Options market bets the stock will move ±${movePct}% by expiry. Consider sizing down if you don't want that much risk.</div>
+          </div>`;
+        }
+      }
+
       sec.style.display = 'block';
       el.innerHTML = `<div style="font-size:8px;font-weight:700;letter-spacing:.14em;color:rgba(0,255,136,.5);text-transform:uppercase;margin-bottom:.35rem">📈 OPTIONS ACTIVITY ${expStr ? '· Exp ' + expStr : ''}</div>
+        ${expectedMoveHtml}
         ${pcRatio ? `<div style="font-size:10px;color:var(--wh2);margin-bottom:.4rem">${bias}${pcRatio ? ` · Put/Call ratio: ${pcRatio}` : ''}</div>` : ''}
         ${callsHtml}
-        <div style="font-size:9px;color:var(--wh4);margin-top:.3rem">High call volume = options traders betting this goes up</div>`;
+        <div style="font-size:9px;color:var(--wh4);margin-top:.3rem">High call volume = options traders betting this goes up. Expected move calculated from at-the-money straddle price.</div>`;
     } catch { /* silent */ }
   }
 
@@ -3862,7 +3892,7 @@ body.beginner-mode #beginner-banner { display:block }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); }
   }
   window.showTab = showTab;
@@ -5205,6 +5235,8 @@ body.beginner-mode #beginner-banner { display:block }
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
+    renderPortfolioRiskScore();
+    renderPortfolioAutopilot();
     fetchPortfolioEarnings();
     renderDiversificationCheck();
     const grid = document.getElementById('portfolio-grid');
@@ -8254,6 +8286,93 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderPortfolioAutopilot = renderPortfolioAutopilot;
+
+  // ── PORTFOLIO LIVE RISK SCORE ────────────────────────────
+  function renderPortfolioRiskScore() {
+    const el = document.getElementById('port-risk-score');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+
+    let riskScore = 0; // 0 = low risk, 100 = extreme risk
+    const factors = [];
+
+    // VIX contribution (0-30 points)
+    const vixVal = liveprices['^VIX']?.price;
+    if (vixVal != null) {
+      const vixRisk = Math.min(30, Math.max(0, (vixVal - 10) * 2));
+      riskScore += vixRisk;
+      if (vixVal > 30) factors.push({ label: `Market fear is HIGH (VIX ${vixVal.toFixed(0)})`, color: 'var(--r)', icon: '🔥' });
+      else if (vixVal > 20) factors.push({ label: `Market is volatile (VIX ${vixVal.toFixed(0)})`, color: 'var(--au)', icon: '⚡' });
+      else factors.push({ label: `Market calm (VIX ${vixVal.toFixed(0)})`, color: 'var(--g)', icon: '✅' });
+    }
+
+    // Diversification (0-25 points): fewer positions = more risk
+    const numPositions = tickers.length;
+    if (numPositions === 1) { riskScore += 25; factors.push({ label: '1 position — zero diversification', color: 'var(--r)', icon: '⚠️' }); }
+    else if (numPositions <= 2) { riskScore += 15; factors.push({ label: `Only ${numPositions} positions — low diversification`, color: 'var(--au)', icon: '⚠️' }); }
+    else if (numPositions <= 4) { riskScore += 8; factors.push({ label: `${numPositions} positions — moderate diversification`, color: 'var(--au)', icon: '📊' }); }
+    else { factors.push({ label: `${numPositions} positions — good diversification`, color: 'var(--g)', icon: '✅' }); }
+
+    // Sell signals in portfolio (0-20 points)
+    const sellsOwned = tickers.filter(t => (ROK.stock_universe||[]).find(s => s.ticker === t)?.rok_signal === 'sell');
+    if (sellsOwned.length > 0) {
+      riskScore += Math.min(20, sellsOwned.length * 10);
+      factors.push({ label: `Holding ${sellsOwned.length} ROK SELL signal${sellsOwned.length !== 1 ? 's' : ''}: ${sellsOwned.join(', ')}`, color: 'var(--r)', icon: '🚨' });
+    }
+
+    // Concentration (0-15 points)
+    let totalVal = 0;
+    const posVals = {};
+    tickers.forEach(t => {
+      const lp = liveprices[t];
+      const entry = port[t];
+      if (!lp?.price) return;
+      const val = lp.price * (entry?.shares || 1);
+      posVals[t] = val;
+      totalVal += val;
+    });
+    if (totalVal > 0) {
+      const maxConc = Math.max(...Object.values(posVals)) / totalVal;
+      if (maxConc > 0.5) { riskScore += 15; factors.push({ label: `One position is ${(maxConc*100).toFixed(0)}% of portfolio — concentrated`, color: 'var(--r)', icon: '⚖️' }); }
+      else if (maxConc > 0.35) { riskScore += 8; factors.push({ label: `One position is ${(maxConc*100).toFixed(0)}% of portfolio`, color: 'var(--au)', icon: '⚖️' }); }
+    }
+
+    // Stop losses missing (0-10 points)
+    const alerts = getAlerts();
+    const missingStops = tickers.filter(t => !alerts.some(a => a.ticker === t && a.direction === 'below' && !a.triggered));
+    if (missingStops.length > 0) { riskScore += Math.min(10, missingStops.length * 4); factors.push({ label: `${missingStops.length} position${missingStops.length !== 1 ? 's' : ''} without stop-loss protection`, color: 'var(--au)', icon: '🔔' }); }
+
+    riskScore = Math.min(100, Math.max(0, riskScore));
+    const level = riskScore >= 70 ? 'HIGH RISK' : riskScore >= 40 ? 'MODERATE RISK' : 'LOW RISK';
+    const levelColor = riskScore >= 70 ? 'var(--r)' : riskScore >= 40 ? 'var(--au)' : 'var(--g)';
+    const advice = riskScore >= 70
+      ? 'Your portfolio has several risk factors. Consider reducing position sizes, adding stop-losses, or diversifying.'
+      : riskScore >= 40
+      ? 'Moderate risk — a few things to watch. Adding stop-losses and diversifying would lower your risk.'
+      : 'Your portfolio risk looks manageable. Keep using stop-losses and stay diversified.';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.75rem 1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.45rem">
+        <span style="font-size:8.5px;font-weight:800;letter-spacing:.12em;color:var(--wh3)">🌡️ LIVE PORTFOLIO RISK</span>
+        <span style="font-size:1rem;font-weight:900;color:${levelColor}">${riskScore}<span style="font-size:8px;font-weight:400;color:var(--wh4)">/100</span></span>
+      </div>
+      <div class="risk-gauge"><div class="risk-gauge-pin" style="left:${riskScore}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;color:var(--wh4);margin-bottom:.5rem">
+        <span style="color:var(--g)">LOW</span><span>MODERATE</span><span style="color:var(--r)">HIGH</span>
+      </div>
+      <div style="font-size:10.5px;font-weight:800;color:${levelColor};margin-bottom:.35rem">${level}</div>
+      <div style="font-size:9.5px;color:var(--wh3);margin-bottom:.5rem;line-height:1.5">${advice}</div>
+      <div style="display:flex;flex-direction:column;gap:.2rem">
+        ${factors.map(f => `<div style="display:flex;align-items:center;gap:.35rem;font-size:9.5px">
+          <span>${f.icon}</span><span style="color:${f.color}">${f.label}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  window.renderPortfolioRiskScore = renderPortfolioRiskScore;
 
   // ── RELATIVE STRENGTH SCANNER ────────────────────────────
   function renderRelativeStrength() {
