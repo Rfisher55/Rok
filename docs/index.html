@@ -1248,6 +1248,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- "Should I invest today?" smart verdict (JS-populated) -->
     <div id="invest-today-verdict" style="display:none;margin-bottom:.85rem"></div>
 
+    <!-- Live commodities + crypto (JS-populated) -->
+    <div id="mkt-commodities" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Live market news feed (JS-populated) -->
     <div id="mkt-news-feed" style="display:none;margin-bottom:.85rem"></div>
 
@@ -1689,6 +1692,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </details>
     <div id="portfolio-summary"></div>
     <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
+    <div id="port-active-alerts" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-diversify"></div>
@@ -2245,6 +2249,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     renderMorningBriefing();
     updateMarketLiveBrief();
     if (activeTab === 'market') { renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); }
+    if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2866,7 +2871,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -3585,6 +3590,40 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.renderPortfolioHealthCheck = renderPortfolioHealthCheck;
 
+  // ── ACTIVE ALERTS PANEL ─────────────────────────────────
+  function renderActiveAlertsPanel() {
+    const el = document.getElementById('port-active-alerts');
+    if (!el) return;
+    const alerts = getAlerts().filter(a => !a.triggered);
+    if (!alerts.length) { el.style.display = 'none'; return; }
+    const rows = alerts.map(a => {
+      const lp = liveprices[a.ticker];
+      const cur = lp ? lp.price : null;
+      const alertPrice = a.target || a.price || 0;
+      const dist = cur && alertPrice ? ((alertPrice - cur) / cur * 100) : null;
+      const distStr = dist != null ? (Math.abs(dist) < 0.5 ? '⚡ CLOSE!' : `${Math.abs(dist).toFixed(1)}% away`) : '';
+      const distColor = dist != null && Math.abs(dist) < 2 ? 'var(--r)' : 'var(--wh4)';
+      return `<div style="display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem;border-radius:8px;background:${a.direction==='above'?'rgba(0,255,136,.05)':'rgba(255,34,85,.05)'}">
+        <span style="font-size:.85rem">${a.direction === 'above' ? '🔔' : '⛔'}</span>
+        <span style="font-family:var(--disp);font-size:1rem;color:var(--wh);min-width:44px">${a.ticker}</span>
+        <span style="font-size:10px;color:var(--wh3)">${a.direction === 'above' ? '▲ above' : '▼ below'}</span>
+        <span style="font-size:11px;font-weight:700;color:${a.direction==='above'?'var(--g)':'var(--r)'}">$${alertPrice.toFixed(2)}</span>
+        ${cur ? `<span style="font-size:9px;color:var(--wh3)">· $${cur.toFixed(2)} now</span>` : ''}
+        ${distStr ? `<span style="font-size:9px;font-weight:700;color:${distColor};margin-left:auto">${distStr}</span>` : '<span style="margin-left:auto"></span>'}
+        <button onclick="removeAlert('${a.ticker}','${a.direction}');renderActiveAlertsPanel()" style="background:none;border:none;color:var(--wh4);font-size:.9rem;cursor:pointer;padding:.15rem .3rem;touch-action:manipulation" title="Remove alert">✕</button>
+      </div>`;
+    }).join('');
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.7rem .9rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.45rem">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.14em;color:var(--wh3);text-transform:uppercase">🔔 ACTIVE ALERTS (${alerts.length})</div>
+        <button onclick="showTab('screener');showAlertDialog()" style="font-size:9px;color:var(--b);background:none;border:none;cursor:pointer;font-family:var(--font);touch-action:manipulation">+ Add Alert</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.25rem">${rows}</div>
+    </div>`;
+  }
+  window.renderActiveAlertsPanel = renderActiveAlertsPanel;
+
   // ── PORTFOLIO SECTOR ALLOCATION ──────────────────────────
   function renderPortfolioSectorAlloc() {
     const el = document.getElementById('port-sector-alloc');
@@ -3748,6 +3787,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
   function renderPortfolio() {
     renderPortfolioSummary();
+    renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
     renderDiversificationCheck();
@@ -4830,6 +4870,58 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     } catch { /* silent */ }
   }
   window.fetchMarketNewsFeed = fetchMarketNewsFeed;
+
+  // ── LIVE COMMODITIES & CRYPTO ────────────────────────────
+  async function fetchLiveCommodities() {
+    const el = document.getElementById('mkt-commodities');
+    if (!el) return;
+    const ASSETS = [
+      { sym: 'GC=F', label: 'Gold', icon: '🥇', unit: '$', decimals: 0 },
+      { sym: 'CL=F', label: 'Oil (WTI)', icon: '🛢️', unit: '$', decimals: 2 },
+      { sym: 'BTC-USD', label: 'Bitcoin', icon: '₿', unit: '$', decimals: 0 },
+      { sym: 'ETH-USD', label: 'Ethereum', icon: '💎', unit: '$', decimals: 2 },
+      { sym: 'DX-Y.NYB', label: 'US Dollar', icon: '💵', unit: '', decimals: 2 },
+      { sym: '^TNX', label: '10Y Treasury', icon: '📄', unit: '', decimals: 2 },
+    ];
+    try {
+      const symbols = ASSETS.map(a => a.sym).join(',');
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}&fields=regularMarketPrice,regularMarketChangePercent,regularMarketChange`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const quotes = j?.quoteResponse?.result || [];
+      if (!quotes.length) return;
+
+      const cards = ASSETS.map(asset => {
+        const q = quotes.find(x => x.symbol === asset.sym);
+        if (!q) return '';
+        const price = q.regularMarketPrice;
+        const chg = q.regularMarketChangePercent;
+        if (price == null) return '';
+        const pFmt = asset.sym === '^TNX'
+          ? price.toFixed(2) + '%'
+          : asset.unit + (price >= 1000 ? price.toLocaleString('en-US', {maximumFractionDigits: asset.decimals}) : price.toFixed(asset.decimals));
+        const chgStr = chg != null ? (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%' : '';
+        const chgColor = chg >= 0 ? 'var(--g)' : 'var(--r)';
+        return `<div style="background:var(--blk4);border:var(--bdr);border-radius:10px;padding:.6rem .7rem;min-width:0">
+          <div style="font-size:9px;color:var(--wh4);margin-bottom:2px">${asset.icon} ${asset.label}</div>
+          <div style="font-size:1rem;font-weight:800;color:var(--wh);letter-spacing:.02em">${pFmt}</div>
+          ${chgStr ? `<div style="font-size:10px;font-weight:700;color:${chgColor}">${chgStr}</div>` : ''}
+        </div>`;
+      }).filter(Boolean).join('');
+
+      if (!cards) return;
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.55rem">🌍 COMMODITIES & CRYPTO <span style="color:var(--g);font-size:7px">● LIVE</span></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem">${cards}</div>
+        <div style="font-size:9px;color:var(--wh4);margin-top:.4rem">Gold ↑ & Dollar ↓ = risk-off (investors scared). BTC ↑ often follows Nasdaq.</div>
+      </div>`;
+    } catch { /* silent */ }
+  }
+  window.fetchLiveCommodities = fetchLiveCommodities;
 
   // ── UPCOMING EVENTS CALENDAR ─────────────────────────
   function renderUpcomingEvents() {
