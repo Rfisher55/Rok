@@ -84,6 +84,12 @@ def get_stock_data(ticker: str) -> dict:
         except Exception:
             pass
 
+        # True 52-week high/low from yfinance info; fallback to 30d range
+        w52_high = info.get("fiftyTwoWeekHigh")
+        w52_low = info.get("fiftyTwoWeekLow")
+        month_high = round(float(hist["High"].max()), 2)
+        month_low = round(float(hist["Low"].min()), 2)
+
         return {
             "ticker": ticker.upper(),
             "price": round(price, 2),
@@ -94,8 +100,10 @@ def get_stock_data(ticker: str) -> dict:
             "vol_ratio": vol_ratio,
             "rsi": rsi,
             "market_cap": info.get("marketCap"),
-            "week_high": round(float(hist["High"].max()), 2),
-            "week_low": round(float(hist["Low"].min()), 2),
+            "week_high": round(w52_high, 2) if w52_high else month_high,
+            "week_low": round(w52_low, 2) if w52_low else month_low,
+            "month_high": month_high,
+            "month_low": month_low,
             "pe_ratio": info.get("trailingPE") or info.get("forwardPE"),
             "forward_pe": info.get("forwardPE"),
             "peg_ratio": info.get("pegRatio"),

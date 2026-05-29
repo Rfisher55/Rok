@@ -1191,8 +1191,24 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
             {% if s.rok_take %}<div class="rok-take" style="font-size:12px">{{ s.rok_take }}</div>{% endif %}
             <div class="what-it-means" style="background:rgba(255,34,85,.06);border-color:rgba(255,34,85,.2)">
               <div class="wim-lbl" style="color:var(--r)">⚠ WHY THIS IS DANGEROUS</div>
-              <div class="wim-txt">ROK's analysis suggests staying away from this stock. If you own it, consider selling to protect your money.</div>
+              <div class="wim-txt">{% if s.reasons %}{{ s.reasons[0] }}{% else %}ROK's analysis suggests staying away from this stock.{% endif %}</div>
             </div>
+            <details style="margin:.45rem 0;background:rgba(255,34,85,.04);border:1px solid rgba(255,34,85,.15);border-radius:8px;overflow:hidden" onclick="event.stopPropagation()">
+              <summary style="padding:.4rem .65rem;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--r);list-style:none;display:flex;align-items:center;gap:.4rem;-webkit-tap-highlight-color:transparent">
+                <span>📋</span><span>WHAT SHOULD I DO IF I OWN THIS?</span>
+              </summary>
+              <div style="padding:.3rem .65rem .6rem;font-size:11px;color:var(--wh2);line-height:1.75">
+                {% if s.urgency == 'IMMEDIATE' %}
+                <div style="font-size:11px;font-weight:700;color:var(--r);margin-bottom:.4rem">🚨 ROK says SELL IMMEDIATELY — don't wait</div>
+                {% endif %}
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">1.</span><span>Open your brokerage app and search for <strong style="color:var(--r)">${{ s.ticker }}</strong></span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">2.</span><span>Tap <strong>Sell</strong> → choose <strong>Market Order</strong> to sell at the current price</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">3.</span><span>Selling now is better than waiting — the longer you hold, the more you may lose</span></div>
+                {% if not s.urgency or s.urgency != 'IMMEDIATE' %}
+                <div style="margin-top:.4rem;font-size:10px;color:var(--wh3);background:rgba(255,215,0,.05);border-radius:5px;padding:.3rem .5rem">💡 If you don't own this stock, simply avoid it for now. ROK will update when the situation changes.</div>
+                {% endif %}
+              </div>
+            </details>
             <button class="bought-btn sell-action" id="btn-{{ s.ticker }}" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})">📊 I OWN THIS — TRACK IN MY STOCKS</button>
           </div>
           {% endfor %}

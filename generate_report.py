@@ -272,10 +272,10 @@ def run():
                 # Check congressional buys
                 if any(c.get("ticker") == t for c in congress_buys[:20]):
                     dsigs.append("congressional")
-                # Check SEC filings for insider trades
+                # Check SEC filings or insider buys for insider trades
                 if any(
                     isinstance(f, dict) and f.get("ticker") == t
-                    for f in (sec_filings or [])
+                    for f in (sec_filings or []) + (insider_buys or [])
                 ):
                     dsigs.append("insider")
                 # Check unusual options
