@@ -6090,6 +6090,30 @@ body.beginner-mode #beginner-banner { display:block }
         </div>
         ${strengthHtml}
         ${(() => {
+          // Entry zone indicator for buy signals
+          if (sig !== 'buy' || price == null || !s.price || s.price <= 0) return '';
+          const pctFromSig = (price - s.price) / s.price * 100;
+          const rsi = s.rsi;
+          let zone, zColor, zIcon;
+          if (rsi != null && rsi > 78) {
+            zone = 'Overbought — wait for RSI to cool';
+            zColor = 'rgba(255,136,0,.9)'; zIcon = '🔥';
+          } else if (pctFromSig < -5) {
+            zone = `${Math.abs(pctFromSig).toFixed(1)}% below signal — ideal entry`;
+            zColor = 'var(--g)'; zIcon = '💎';
+          } else if (pctFromSig <= 5) {
+            zone = 'Entry zone — good timing';
+            zColor = 'rgba(0,255,136,.8)'; zIcon = '✅';
+          } else if (pctFromSig <= 15) {
+            zone = `${pctFromSig.toFixed(1)}% above signal — stretched`;
+            zColor = 'var(--au)'; zIcon = '⚠️';
+          } else {
+            zone = `${pctFromSig.toFixed(1)}% above signal — consider waiting`;
+            zColor = 'rgba(255,100,100,.8)'; zIcon = '🚫';
+          }
+          return `<div style="display:flex;align-items:center;gap:.3rem;margin-top:.3rem;font-size:8px;font-weight:700;color:${zColor}">${zIcon} ${zone}</div>`;
+        })()}
+        ${(() => {
           const wl = s.week_low, wh = s.week_high;
           if (wl == null || wh == null || price == null || wh <= wl) return '';
           const range = wh - wl;
@@ -7747,7 +7771,8 @@ body.beginner-mode #beginner-banner { display:block }
       if (shares < 1) return null;
       const cost = shares * price;
       const leftover = budget - cost;
-      return { ticker: s.ticker, price, shares, cost, leftover, signal: s.rok_signal, live: !!lp, company: s.company_name || '' };
+      const strength = s.signal_strength || s.strength || 5;
+      return { ticker: s.ticker, price, shares, cost, leftover, signal: s.rok_signal, live: !!lp, company: s.company_name || '', strength };
     }).filter(Boolean);
 
     rows.sort((a, b) => b.shares - a.shares);
@@ -7758,7 +7783,36 @@ body.beginner-mode #beginner-banner { display:block }
     }
 
     const fmt = n => n.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
-    resultsEl.innerHTML = rows.slice(0, 20).map(r => {
+
+    // Smart Allocation: distribute budget weighted by conviction (for buy signals)
+    let smartAllocHtml = '';
+    if (filter === 'buy' && rows.length >= 2) {
+      const top = rows.slice(0, Math.min(5, rows.length));
+      const totalStrength = top.reduce((s, r) => s + r.strength, 0) || top.length;
+      let remaining = budget;
+      const allocs = top.map(r => {
+        const allocPct = r.strength / totalStrength;
+        const allocBudget = Math.floor(budget * allocPct);
+        const allocShares = Math.floor(allocBudget / r.price);
+        const allocCost = allocShares * r.price;
+        remaining -= allocCost;
+        return { ticker: r.ticker, price: r.price, shares: allocShares, cost: allocCost, pct: Math.round(allocPct * 100) };
+      }).filter(a => a.shares > 0);
+      if (allocs.length >= 2) {
+        smartAllocHtml = `<div style="background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);border-radius:8px;padding:.5rem .65rem;margin-bottom:.5rem">
+          <div style="font-size:8.5px;font-weight:800;letter-spacing:.1em;color:var(--au);margin-bottom:.35rem">⚡ ROK SMART ALLOCATION — weighted by signal strength</div>
+          ${allocs.map(a => `<div style="display:flex;align-items:center;gap:.4rem;font-size:9.5px;padding:.15rem 0">
+            <span style="font-weight:700;color:var(--g);min-width:42px">${a.ticker}</span>
+            <div style="flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden"><div style="width:${a.pct}%;height:100%;background:var(--g);border-radius:2px"></div></div>
+            <span style="color:var(--wh3);min-width:26px;text-align:right">${a.pct}%</span>
+            <span style="color:var(--wh4);min-width:80px;text-align:right">${a.shares} shares · ${fmt(a.cost)}</span>
+          </div>`).join('')}
+          ${remaining > 0 ? `<div style="font-size:8.5px;color:var(--wh4);margin-top:.3rem">Remaining: ${fmt(remaining)}</div>` : ''}
+        </div>`;
+      }
+    }
+
+    resultsEl.innerHTML = smartAllocHtml + rows.slice(0, 20).map(r => {
       const sigColor = r.signal === 'buy' ? 'var(--g)' : r.signal === 'sell' ? 'var(--r)' : 'var(--au)';
       const livePill = r.live ? `<span style="font-size:7px;padding:1px 4px;background:rgba(0,255,136,.1);border-radius:3px;color:var(--g);font-weight:700">LIVE</span>` : '';
       const shortName = r.company.length > 18 ? r.company.substring(0, 18) + '…' : r.company;
