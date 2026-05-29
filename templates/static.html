@@ -811,6 +811,17 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 /* ── CONFETTI ────────────────────────────────────────────── */
 #confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}
 
+/* ── SEARCH DROPDOWN ─────────────────────────────────────── */
+.srch-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .75rem;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);-webkit-tap-highlight-color:transparent}
+.srch-item:last-child{border-bottom:none}
+.srch-item:hover,.srch-item:active{background:rgba(0,204,255,.08)}
+.srch-item-ticker{font-family:var(--disp);font-size:1rem;letter-spacing:.07em;color:var(--wh);min-width:44px}
+.srch-item-name{font-size:10px;color:var(--wh3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srch-item-sig{font-size:8px;padding:1px 5px;border-radius:6px;font-weight:700;flex-shrink:0}
+.srch-item-sig.buy{background:rgba(0,255,136,.1);color:var(--g);border:1px solid rgba(0,255,136,.2)}
+.srch-item-sig.sell{background:rgba(255,34,85,.1);color:var(--r);border:1px solid rgba(255,34,85,.2)}
+.srch-item-sig.watch{background:rgba(255,215,0,.08);color:var(--au);border:1px solid rgba(255,215,0,.2)}
+
 /* ── GLOSSARY TOOLTIP SHEET ──────────────────────────────── */
 #glossary-overlay{z-index:4000}
 .glossary-term{border-bottom:1px dashed rgba(0,204,255,.4);cursor:pointer;color:inherit}
@@ -930,8 +941,10 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </button>
     <button class="tab-btn" data-tab="intel">🕵️ INSIDER INTEL</button>
     <button class="tab-btn" data-tab="portfolio">MY STOCKS<span class="badge" id="portfolio-badge"></span><span id="portfolio-alert-dot" style="display:none;position:absolute;top:8px;right:6px;width:8px;height:8px;background:var(--r);border-radius:50%;box-shadow:0 0 6px rgba(255,34,85,.8)"></span></button>
-    <div class="tab-search">
-      <input id="stock-search" class="search-box" type="text" placeholder="Search ticker or company…" autocomplete="off" spellcheck="false"/>
+    <div class="tab-search" style="position:relative">
+      <input id="stock-search" class="search-box" type="text" placeholder="Search ticker or company…" autocomplete="off" spellcheck="false" list="stock-suggestions"/>
+      <datalist id="stock-suggestions"></datalist>
+      <div id="search-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--blk3);border:1px solid rgba(0,204,255,.25);border-radius:10px;z-index:500;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
     </div>
   </div>
 </nav>
@@ -940,8 +953,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 <div class="content">
 
   <!-- Mobile sticky search (hidden on desktop via CSS) -->
-  <div class="mob-srch">
+  <div class="mob-srch" style="position:relative">
     <input id="mob-srch-input" class="search-box" type="search" placeholder="Search any stock (e.g. AAPL, Tesla…)" autocomplete="off" spellcheck="false"/>
+    <div id="mob-search-dropdown" style="display:none;position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--blk3);border:1px solid rgba(0,204,255,.25);border-radius:10px;z-index:500;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.6)"></div>
   </div>
 
   <!-- ── SIGNALS TAB ─────────────────────────────────────── -->
@@ -4036,15 +4050,57 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.switchToScreener = switchToScreener;
 
+  // ── SEARCH AUTOCOMPLETE ───────────────────────────────────
+  function buildSearchSuggestions() {
+    // Populate HTML5 datalist for desktop
+    const dl = document.getElementById('stock-suggestions');
+    if (dl) {
+      const stocks = ROK.stock_universe || [];
+      dl.innerHTML = stocks.slice(0, 100).map(s =>
+        `<option value="${s.ticker}">${s.ticker} — ${(s.company_name || '').substring(0,30)}</option>`
+      ).join('');
+    }
+  }
+  buildSearchSuggestions();
+
+  function showSearchDropdown(inputEl, dropdownId, query) {
+    const dd = document.getElementById(dropdownId);
+    if (!dd) return;
+    if (!query || query.length < 1) { dd.style.display = 'none'; return; }
+    const q = query.toLowerCase();
+    const stocks = ROK.stock_universe || [];
+    const matches = stocks.filter(s =>
+      s.ticker.toLowerCase().startsWith(q) ||
+      (s.company_name || '').toLowerCase().startsWith(q) ||
+      (s.company_name || '').toLowerCase().includes(' ' + q)
+    ).slice(0, 6);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    dd.innerHTML = matches.map(s => {
+      const sig = s.rok_signal || 'neutral';
+      const sigBadge = sig !== 'neutral' ? `<span class="srch-item-sig ${sig}">${sig.toUpperCase()}</span>` : '';
+      return `<div class="srch-item" onclick="switchToScreener('${s.ticker}');document.getElementById('${dropdownId}').style.display='none'">
+        <span class="srch-item-ticker">${s.ticker}</span>
+        <span class="srch-item-name">${(s.company_name || '').substring(0, 28)}</span>
+        ${sigBadge}
+      </div>`;
+    }).join('');
+  }
+
   const searchEl = document.getElementById('stock-search');
   if (searchEl) {
     let deb;
     searchEl.addEventListener('input', e => {
       clearTimeout(deb);
-      deb = setTimeout(() => applySearch(e.target.value.trim()), 150);
+      const q = e.target.value.trim();
+      showSearchDropdown(searchEl, 'search-dropdown', q);
+      deb = setTimeout(() => applySearch(q), 150);
     });
     searchEl.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { searchEl.value = ''; applySearch(''); }
+      if (e.key === 'Escape') { searchEl.value = ''; applySearch(''); document.getElementById('search-dropdown').style.display = 'none'; }
+    });
+    searchEl.addEventListener('blur', () => {
+      setTimeout(() => { const d = document.getElementById('search-dropdown'); if (d) d.style.display = 'none'; }, 200);
     });
   }
 
@@ -4101,11 +4157,15 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const v = e.target.value.trim();
       const main = document.getElementById('stock-search');
       if (main) main.value = v;
+      showSearchDropdown(mobSrchEl, 'mob-search-dropdown', v);
       clearTimeout(deb4);
       deb4 = setTimeout(() => applySearch(v), 150);
     });
     mobSrchEl.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { mobSrchEl.value = ''; applySearch(''); }
+      if (e.key === 'Escape') { mobSrchEl.value = ''; applySearch(''); document.getElementById('mob-search-dropdown').style.display = 'none'; }
+    });
+    mobSrchEl.addEventListener('blur', () => {
+      setTimeout(() => { const d = document.getElementById('mob-search-dropdown'); if (d) d.style.display = 'none'; }, 200);
     });
   }
 
