@@ -1034,7 +1034,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
                 {% if s.sector %}<div style="font-size:8px;color:var(--wh3);margin-top:2px;letter-spacing:.05em">{{ s.sector.split('/')[0].strip() }}</div>{% endif %}
               </div>
               <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
-                <div class="rok-score">
+                <div class="rok-score" title="ROK Confidence Score: {{ score }}/100. 80+ = very strong signal. 60+ = good signal. Below 60 = proceed with caution." style="cursor:help">
                   <svg viewBox="0 0 36 36">
                     <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
                     <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
@@ -1703,6 +1703,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   </div><!-- /tab-portfolio -->
 
 </div><!-- /content -->
+
+<!-- BEGINNER TIP BAR -->
+<div style="background:rgba(0,204,255,.05);border-top:1px solid rgba(0,204,255,.1);padding:.55rem 1rem;text-align:center">
+  <span id="tip-rotator" style="font-size:11px;color:var(--wh3);line-height:1.5;transition:opacity .3s ease;display:block">Loading tip…</span>
+</div>
 
 <footer class="ftr">
   <span class="ftr-brand">ROK</span>
@@ -2973,6 +2978,39 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     }
   }
 
+  // ── BEGINNER TIPS ─────────────────────────────────────────
+  const TIPS = [
+    '💡 Never invest more than you can afford to lose. Always use stop-losses.',
+    '💡 Diversify: spread your money across 5-10 stocks, not one.',
+    '💡 Buy signals are suggestions, not guarantees. Do your own research too.',
+    '💡 Stop losses protect you. Set one on every trade you make.',
+    '💡 Congressional buy signals come 45 days late — but they still matter.',
+    '💡 CEO buying their own stock = very bullish. They risk personal money when they believe.',
+    '💡 Fear & Greed below 25 = historically good time to buy. Above 75 = be careful.',
+    '💡 RSI below 30 = stock might be oversold and due for a bounce.',
+    '💡 Volume spikes mean big money is moving. Pay attention when vol is 2x+ average.',
+    '💡 Your stop loss should be 5-15% below your buy price. Tighter = safer.',
+    '💡 Earnings reports can move a stock 10-20% in one day. Reduce size beforehand.',
+    '💡 When the whole market drops, good stocks usually recover. Bad stocks often don\'t.',
+    '💡 Patience pays. Most ROK signals play out over weeks, not days.',
+    '💡 Tax tip: holding a stock over 1 year = lower capital gains tax in most countries.',
+  ];
+  function initTipRotator() {
+    const container = document.getElementById('tip-rotator');
+    if (!container) return;
+    let idx = Math.floor(Math.random() * TIPS.length);
+    const show = () => {
+      container.style.opacity = '0';
+      setTimeout(() => {
+        container.textContent = TIPS[idx % TIPS.length];
+        container.style.opacity = '1';
+        idx++;
+      }, 300);
+    };
+    show();
+    setInterval(show, 12000);
+  }
+
   // ── INIT ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     initSignalSparks();
@@ -2983,6 +3021,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     initPortfolioHowTo();
     updateMarketStatus();
     setInterval(updateMarketStatus, 60000);
+    initTipRotator();
 
     // Count-up for each stat-num
     document.querySelectorAll('.stat-num').forEach(el => {
