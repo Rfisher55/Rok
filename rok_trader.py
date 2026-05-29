@@ -4414,6 +4414,29 @@ def run():
                     elif live_sig.get("ema_stacked_bear", False) and pnl_pct <= -2 and age_days >= 0.5:
                         # EMA stack bearish while in a loss — cut early before it gets worse
                         reason = f"EMA stack bearish on losing position ({pnl_pct:+.1f}%)"
+                    else:
+                        # Proactive overbought exit: multiple overbought signals converging
+                        d_rsi = live_sig.get("daily_rsi", 50) or 50
+                        bb_pos_live = live_sig.get("bb_pos", 50) or 50
+                        kc_break_live = live_sig.get("kc_breakout", False)
+                        ob_signals = sum([
+                            d_rsi > 80,
+                            stoch_k > 85,
+                            bb_pos_live > 92,
+                            kc_break_live and d_rsi > 75,
+                            w_r_val > -10,
+                        ])
+                        if ob_signals >= 3 and pnl_pct > 3 and not half_out:
+                            reason = (
+                                f"extreme overbought ({ob_signals}/5 signals) — "
+                                f"RSI={d_rsi:.0f}, stoch={stoch_k:.0f}, BB={bb_pos_live:.0f}% "
+                                f"({pnl_pct:+.1f}%)"
+                            )
+                        elif ob_signals >= 4 and pnl_pct > 1.5:
+                            reason = (
+                                f"overbought convergence ({ob_signals}/5) — "
+                                f"proactive exit ({pnl_pct:+.1f}%)"
+                            )
 
             # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
             if not reason and _close_cleanup and pnl_pct < -3:
