@@ -335,6 +335,39 @@ def _bollinger(closes, period=20, num_std=2):
         return 50.0
     return round((closes[-1] - lower) / (upper - lower) * 100, 1)
 
+def _obv_trend(closes, volumes, lookback: int = 20) -> dict:
+    """
+    On-Balance Volume (OBV): cumulative volume with direction.
+    Rising OBV while price is flat/rising = accumulation (smart money buying).
+    Returns {obv_rising: bool, obv_slope_pct: float}
+    obv_slope_pct = % change in OBV over lookback period
+    """
+    n = len(closes)
+    if n < 5 or not volumes or len(volumes) < 5:
+        return {"obv_rising": False, "obv_slope_pct": 0.0}
+    try:
+        obv = 0.0
+        obv_series = []
+        for i in range(1, min(n, lookback + 5)):
+            if closes[-(i)] > closes[-(i+1)]:
+                obv += volumes[-(i)]
+            elif closes[-(i)] < closes[-(i+1)]:
+                obv -= volumes[-(i)]
+            obv_series.append(obv)
+        obv_series.reverse()
+        if len(obv_series) < 2:
+            return {"obv_rising": False, "obv_slope_pct": 0.0}
+        early_obv = obv_series[0]
+        recent_obv = obv_series[-1]
+        slope_pct = 0.0
+        if abs(early_obv) > 0:
+            slope_pct = (recent_obv - early_obv) / abs(early_obv) * 100
+        obv_rising = recent_obv > early_obv * 1.02  # OBV up ≥2% = accumulation
+        return {"obv_rising": obv_rising, "obv_slope_pct": round(slope_pct, 1)}
+    except Exception:
+        return {"obv_rising": False, "obv_slope_pct": 0.0}
+
+
 def _keltner_channel(highs, lows, closes, ema_period=20, atr_period=14, mult=2.0):
     """
     Keltner Channel: EMA ± mult*ATR.
@@ -1681,6 +1714,8 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append("EMA5>EMA10>EMA20>EMA50 — full bull alignment (all timeframes agree)")
             if signals.get("ema_stacked_bear"):
                 extras.append("EMA stack fully bearish (all EMAs declining)")
+            if signals.get("obv_rising"):
+                extras.append("OBV rising (On-Balance Volume up ≥2% — institutional accumulation signal)")
             if signals.get("kc_breakout"):
                 extras.append("Keltner Channel breakout — price above EMA+2×ATR (strong momentum)")
             if signals.get("kc_oversold"):
@@ -2638,6 +2673,17 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # On-Balance Volume (OBV): rising OBV = accumulation (smart money buying quietly)
+    obv_rising = False
+    obv_slope_pct = 0.0
+    try:
+        if "Volume" in daily.columns and len(daily) >= 5:
+            _obv = _obv_trend(list(daily["Close"]), list(daily["Volume"]), lookback=20)
+            obv_rising = _obv.get("obv_rising", False)
+            obv_slope_pct = _obv.get("obv_slope_pct", 0.0)
+    except Exception:
+        pass
+
     # Keltner Channel: price vs EMA±ATR envelope
     kc_pos      = 50.0   # position 0-100+ (>100 = above upper band)
     kc_breakout = False  # price above upper Keltner = strong momentum breakout
@@ -3046,6 +3092,8 @@ def _extract(daily, hourly):
         "kc_pos":              round(kc_pos, 1),
         "kc_breakout":         kc_breakout,
         "kc_oversold":         kc_oversold,
+        "obv_rising":          obv_rising,
+        "obv_slope_pct":       round(obv_slope_pct, 1),
         "cup_handle":          cup_handle.get("breakout_ready", False),
         "cup_handle_pivot":    cup_handle.get("pivot_price", 0.0),
         "cup_depth_pct":       cup_handle.get("cup_depth_pct", 0.0),
@@ -3574,6 +3622,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Momentum acceleration: ROC5 rising faster than prior ROC5 (+10)
     # Catches stocks early in a new breakout — before everyone piles in
     if d.get("mom_accel", False): s += 10
+
+    # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+7)
+    if d.get("obv_rising", False): s += 7
 
     # Keltner Channel breakout: price above upper band = strong institutional momentum (+9)
     # Oversold: price below lower band = mean-reversion setup (+5 for oversold bounces)
@@ -4582,6 +4633,7 @@ def run():
                 if live.get(tk, {}).get("poc_breakout"):    extras.append("POC-BRK")
                 elif live.get(tk, {}).get("above_poc"):    extras.append("abv-POC")
                 if live.get(tk, {}).get("ema_stacked_bull"): extras.append("EMA-stack")
+                if live.get(tk, {}).get("obv_rising"):        extras.append("OBV↑")
                 if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
                 elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
@@ -4647,6 +4699,7 @@ def run():
                 "ema_stacked_bear": live.get(tk, {}).get("ema_stacked_bear", False),
                 "kc_breakout":      live.get(tk, {}).get("kc_breakout", False),
                 "kc_oversold":      live.get(tk, {}).get("kc_oversold", False),
+                "obv_rising":       live.get(tk, {}).get("obv_rising", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
