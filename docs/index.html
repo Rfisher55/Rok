@@ -1885,6 +1885,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-news" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-ath-banner" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-daily-digest" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-rok-score" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
@@ -1965,6 +1966,12 @@ body.beginner-mode #beginner-banner { display:block }
   </div><!-- /tab-portfolio -->
 
 </div><!-- /content -->
+
+<!-- GLOBAL VIX RISK-OFF ALERT (JS-populated, shown when VIX > 28) -->
+<div id="global-risk-alert" style="display:none;background:rgba(255,34,85,.1);border-top:2px solid rgba(255,34,85,.4);padding:.5rem 1rem;text-align:center;position:relative">
+  <span id="global-risk-text" style="font-size:11px;font-weight:700;color:rgba(255,100,100,.95)"></span>
+  <button onclick="document.getElementById('global-risk-alert').style.display='none'" style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,100,100,.6);font-size:1rem;cursor:pointer;touch-action:manipulation">×</button>
+</div>
 
 <!-- LIVE PORTFOLIO STRIP -->
 <div id="live-port-strip" style="display:none;background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.06);padding:.35rem 1rem;overflow:hidden">
@@ -2514,8 +2521,9 @@ body.beginner-mode #beginner-banner { display:block }
     renderMorningBriefing();
     updateMarketLiveBrief();
     if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
-    if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
+    if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); }
     if (activeTab === 'signals') updateLiveMacroStrip();
+    updateGlobalRiskAlert();
     renderLivePortStrip();
     updateTickerTape();
     if (btn) { btn.classList.remove('spinning'); }
@@ -4599,7 +4607,9 @@ body.beginner-mode #beginner-banner { display:block }
       }
       const sharesTagHtml = numShares ? `<div style="font-size:8.5px;color:var(--wh3);">${numShares} share${numShares!==1?'s':''}</div>` : '';
       const ph = stock ? (stock.price_history || []) : [];
-      const sparkHtml = ph.length > 3 ? `<div style="height:30px;margin:.35rem 0 .2rem;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.15)"><canvas id="psp-${ticker}" height="30"></canvas></div>` : '';
+      const sparkHtml = `<div style="height:32px;margin:.35rem 0 .2rem;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.15)"><canvas id="port-intraday-${ticker}" height="32"></canvas></div>`;
+      // Also keep historical spark fallback
+      const histSparkId = `psp-${ticker}`;
 
       return `<div class="port-card" onclick="openModal('${ticker}')">
         <div class="port-top">
@@ -4689,10 +4699,12 @@ body.beginner-mode #beginner-banner { display:block }
         drawSpark(`psp-${ticker}`, ph, isUp ? '#00ff88' : '#ff2255');
       }
     });
-    // After rendering portfolio, call ATH tracker, news, and daily digest
+    // After rendering portfolio, call ATH tracker, news, digest, intraday charts, and ROK score
     checkPortfolioATH();
     fetchPortfolioNews();
     renderPortfolioDailyDigest();
+    renderROKScore();
+    setTimeout(fetchPortfolioIntraday, 100); // slight delay so DOM is ready
   }
 
   // ── PORTFOLIO ALL-TIME HIGH TRACKER ─────────────────────────
@@ -4915,6 +4927,138 @@ body.beginner-mode #beginner-banner { display:block }
     el.innerHTML = html;
   }
   window.renderPortfolioDailyDigest = renderPortfolioDailyDigest;
+
+  // ── ROK INVESTOR SCORE (gamification) ──────────────────────
+  function renderROKScore() {
+    const el = document.getElementById('port-rok-score');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    let score = 0;
+    const achievements = [];
+    const suggestions = [];
+
+    // Portfolio diversity
+    if (tickers.length >= 5) { score += 20; achievements.push('🌈 Diversified (5+ stocks)'); }
+    else if (tickers.length >= 3) { score += 10; achievements.push('📦 3+ stock portfolio'); }
+    else { suggestions.push('Add more stocks across different sectors to earn +20 pts'); }
+
+    // Stop-losses set
+    const alerts = getAlerts();
+    const withAlerts = tickers.filter(t => alerts.some(a => a.ticker === t && !a.triggered));
+    if (withAlerts.length === tickers.length && tickers.length > 0) { score += 20; achievements.push('🛡️ All positions protected with alerts'); }
+    else if (withAlerts.length > 0) { score += 10; achievements.push(`🔔 ${withAlerts.length} alert${withAlerts.length!==1?'s':''} set`); suggestions.push(`Set price alerts for all stocks to earn +${10 * (tickers.length - withAlerts.length)} pts`); }
+    else { suggestions.push('Set stop-loss alerts on all stocks to earn +20 pts'); }
+
+    // Visit streak
+    const streakData = JSON.parse(localStorage.getItem('rok_streak_v1') || '{"streak":0}');
+    const streak = streakData.streak || 0;
+    if (streak >= 30) { score += 20; achievements.push(`🔥 ${streak}-day daily streak`); }
+    else if (streak >= 7) { score += 15; achievements.push(`🔥 ${streak}-day streak`); }
+    else if (streak >= 3) { score += 8; achievements.push(`🔥 ${streak}-day streak`); }
+    else if (streak >= 1) { score += 3; }
+
+    // Profitable picks
+    let profitable = 0;
+    tickers.forEach(t => {
+      const e = p[t]; const lp = liveprices[t];
+      const st = (ROK.stock_universe||[]).find(s => s.ticker === t);
+      const cur = lp ? lp.price : (st ? st.price : null);
+      if (cur && e.price && cur > e.price) profitable++;
+    });
+    if (profitable === tickers.length && tickers.length >= 3) { score += 20; achievements.push('💰 All picks in profit!'); }
+    else if (profitable >= tickers.length * 0.7 && tickers.length >= 2) { score += 10; achievements.push(`💚 ${profitable}/${tickers.length} picks profitable`); }
+
+    // Signal history tracked
+    const hist = JSON.parse(localStorage.getItem('rok_signal_history_v2') || '[]');
+    if (hist.length >= 20) { score += 10; achievements.push('📚 20+ signals tracked'); }
+    else if (hist.length >= 10) { score += 5; }
+
+    // Goal set
+    if (localStorage.getItem('rok_port_goal_v1')) { score += 10; achievements.push('🎯 Investment goal set'); }
+    else { suggestions.push('Set an investment goal in the goal tracker to earn +10 pts'); }
+
+    score = Math.min(100, score);
+    const grade = score >= 90 ? ['S', '#ffd700'] : score >= 75 ? ['A', 'var(--g)'] : score >= 60 ? ['B', 'rgba(0,255,136,.7)'] : score >= 45 ? ['C', 'var(--au)'] : ['D', 'var(--r)'];
+    const title = score >= 90 ? 'ROK Master Investor' : score >= 75 ? 'ROK Pro Trader' : score >= 60 ? 'ROK Active Investor' : score >= 45 ? 'ROK Apprentice' : 'ROK Beginner';
+
+    el.style.display = 'block';
+    el.innerHTML = `<details style="background:linear-gradient(135deg,rgba(255,215,0,.06),rgba(0,0,0,.2));border:1px solid rgba(255,215,0,.18);border-radius:12px;overflow:hidden">
+      <summary style="cursor:pointer;display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;list-style:none;-webkit-tap-highlight-color:transparent">
+        <div style="background:rgba(0,0,0,.4);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid ${grade[1]}">
+          <span style="font-family:var(--disp);font-size:1.6rem;color:${grade[1]}">${grade[0]}</span>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--au);text-transform:uppercase">🏆 MY ROK INVESTOR SCORE</div>
+          <div style="font-size:12px;font-weight:800;color:var(--wh)">${score}/100 — ${title}</div>
+          <div style="height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:.3rem;overflow:hidden"><div style="height:100%;width:${score}%;background:${grade[1]};border-radius:2px;transition:width 1s ease"></div></div>
+        </div>
+        <span style="font-size:9px;color:var(--wh4)">▼</span>
+      </summary>
+      <div style="padding:.5rem 1rem .75rem;border-top:1px solid rgba(255,255,255,.06)">
+        ${achievements.length ? `<div style="margin-bottom:.5rem"><div style="font-size:8px;font-weight:700;color:var(--g);letter-spacing:.08em;margin-bottom:.3rem">✅ ACHIEVEMENTS</div><div style="display:flex;flex-wrap:wrap;gap:.3rem">${achievements.map(a=>`<span style="font-size:9.5px;padding:2px 8px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.18);border-radius:8px;color:var(--wh2)">${a}</span>`).join('')}</div></div>` : ''}
+        ${suggestions.length ? `<div><div style="font-size:8px;font-weight:700;color:var(--au);letter-spacing:.08em;margin-bottom:.3rem">⭐ LEVEL UP</div><div style="display:flex;flex-direction:column;gap:.25rem">${suggestions.slice(0,3).map(s=>`<div style="font-size:9.5px;color:var(--wh3);padding:.25rem .5rem;background:rgba(255,215,0,.04);border-radius:6px">→ ${s}</div>`).join('')}</div></div>` : ''}
+      </div>
+    </details>`;
+  }
+  window.renderROKScore = renderROKScore;
+
+  // ── LIVE INTRADAY SPARKS FOR PORTFOLIO CARDS ───────────────
+  let _intradayCache = {};
+  async function fetchPortfolioIntraday() {
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) return;
+    const { state } = getMarketState();
+    const range = (state === 'open' || state === 'post') ? '1d' : '5d';
+    for (const ticker of tickers.slice(0, 6)) { // limit to 6 to avoid rate limits
+      const cacheAge = _intradayCache[ticker]?.ts || 0;
+      if (Date.now() - cacheAge < 5 * 60 * 1000) {
+        // Use cached data to re-render spark
+        const cached = _intradayCache[ticker];
+        if (cached?.values?.length) renderPortCardSpark(ticker, cached.values, cached.isUp);
+        continue;
+      }
+      try {
+        const r = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=5m&range=${range}`,
+          { signal: AbortSignal.timeout(6000) }
+        );
+        if (!r.ok) continue;
+        const j = await r.json();
+        const result = j?.chart?.result?.[0];
+        const closes = result?.indicators?.quote?.[0]?.close || [];
+        const valid = closes.filter(p => p != null);
+        if (valid.length < 5) continue;
+        const lp = liveprices[ticker];
+        const entry = p[ticker];
+        const isUp = lp ? lp.price >= (entry?.price || 0) : valid[valid.length - 1] >= valid[0];
+        _intradayCache[ticker] = { ts: Date.now(), values: valid, isUp };
+        renderPortCardSpark(ticker, valid, isUp);
+      } catch { /* silent */ }
+    }
+  }
+
+  function renderPortCardSpark(ticker, values, isUp) {
+    const canvasId = `port-intraday-${ticker}`;
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const color = isUp ? '#00ff88' : '#ff2255';
+    const ex = Chart.getChart(canvasId);
+    if (ex) ex.destroy();
+    drawSpark(canvasId, values, color);
+    // Label the canvas container
+    const parent = canvas.parentElement;
+    if (parent && !parent.querySelector('.intraday-label')) {
+      const lbl = document.createElement('div');
+      lbl.className = 'intraday-label';
+      lbl.style.cssText = 'font-size:7.5px;color:rgba(0,255,136,.5);text-align:right;margin-top:2px';
+      lbl.textContent = `● LIVE (5m · ${values.length} bars)`;
+      parent.appendChild(lbl);
+    }
+  }
+  window.fetchPortfolioIntraday = fetchPortfolioIntraday;
 
   // Manual add any ticker to portfolio
   async function addManualTicker() {
@@ -5533,17 +5677,66 @@ body.beginner-mode #beginner-banner { display:block }
     const container = document.getElementById('tip-rotator');
     if (!container) return;
     let idx = Math.floor(Math.random() * TIPS.length);
+    const getLiveTip = () => {
+      const vix = liveprices['^VIX'];
+      const spy = liveprices['SPY'];
+      const liveTips = [];
+      if (vix && vix.price > 28) liveTips.push(`⚠️ VIX is at ${vix.price.toFixed(0)} — high fear. This is NOT the time to be aggressive. Hold tight and wait for VIX to drop below 20 before buying.`);
+      if (spy && spy.change_pct < -1.5) liveTips.push(`📉 S&P 500 is down ${Math.abs(spy.change_pct).toFixed(1)}% today. On big red days, good stocks go on sale. Don't panic — check your stop-losses and be patient.`);
+      if (spy && spy.change_pct > 1.5) liveTips.push(`🚀 S&P 500 is up ${spy.change_pct.toFixed(1)}% today. Strong green days validate buy signals. Momentum is your friend — let winners run.`);
+      const port = getPortfolio();
+      const portTickers = Object.keys(port);
+      if (portTickers.length > 0) {
+        const down = portTickers.filter(t => { const lp = liveprices[t]; return lp && lp.change_pct < -3; });
+        if (down.length) liveTips.push(`📉 ${down.join(', ')} down 3%+ today. Don't panic-sell unless they hit your stop-loss — check ROK's signal first.`);
+      }
+      return liveTips.length ? liveTips[Math.floor(Math.random() * liveTips.length)] : null;
+    };
     const show = () => {
       container.style.opacity = '0';
       setTimeout(() => {
-        container.textContent = TIPS[idx % TIPS.length];
+        const liveTip = getLiveTip();
+        container.textContent = liveTip || TIPS[idx % TIPS.length];
         container.style.opacity = '1';
-        idx++;
+        if (!liveTip) idx++;
       }, 300);
     };
     show();
     setInterval(show, 12000);
   }
+
+  // ── GLOBAL VIX RISK-OFF ALERT ──────────────────────────
+  let _lastVixAlertLevel = 0;
+  function updateGlobalRiskAlert() {
+    const el = document.getElementById('global-risk-alert');
+    const txt = document.getElementById('global-risk-text');
+    if (!el || !txt) return;
+    const vix = liveprices['^VIX'];
+    const spy = liveprices['SPY'];
+    if (!vix) { el.style.display = 'none'; return; }
+    const vixVal = vix.price;
+    const spyChg = spy ? spy.change_pct : null;
+    // Show warning when VIX > 25 or SPY down > 2%
+    const showAlert = vixVal > 25 || (spyChg != null && spyChg < -2);
+    if (!showAlert) { el.style.display = 'none'; _lastVixAlertLevel = 0; return; }
+    // Rate-limit to avoid showing duplicate toasts
+    const newLevel = vixVal > 35 ? 3 : vixVal > 28 ? 2 : 1;
+    if (newLevel > _lastVixAlertLevel) {
+      const tone = newLevel === 3 ? '🚨 MARKET MELTDOWN' : newLevel === 2 ? '⚠️ HIGH VOLATILITY' : '⚠️ CAUTION';
+      showAppAlert(`${tone}: VIX ${vixVal.toFixed(0)}${spyChg ? ' · SPY ' + (spyChg>=0?'+':'') + spyChg.toFixed(2) + '%' : ''} — protect your positions!`, 'warn', 8000);
+      _lastVixAlertLevel = newLevel;
+    }
+    const vixColor = vixVal > 35 ? 'rgba(255,50,50,.95)' : vixVal > 28 ? 'rgba(255,100,100,.9)' : 'rgba(255,165,0,.9)';
+    const msg = vixVal > 35
+      ? `🚨 VIX ${vixVal.toFixed(0)} — EXTREME FEAR. Markets in panic mode. Do NOT open new positions. Check all stop-losses NOW.`
+      : vixVal > 28
+      ? `⚠️ VIX ${vixVal.toFixed(0)} — High fear detected. Expect big swings (±3-5% intraday). Use small positions & keep stop-losses tight.`
+      : `⚠️ VIX ${vixVal.toFixed(0)} — Elevated volatility${spyChg != null && spyChg < -2 ? ` · S&P 500 down ${Math.abs(spyChg).toFixed(1)}% today` : ''}. Be cautious with new buys.`;
+    txt.style.color = vixColor;
+    txt.textContent = msg;
+    el.style.display = 'block';
+  }
+  window.updateGlobalRiskAlert = updateGlobalRiskAlert;
 
   // ── LIVE MARKET MOOD ────────────────────────────────────
   function updateLiveMarketMood() {
