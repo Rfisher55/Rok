@@ -599,6 +599,113 @@ def _ttm_squeeze(closes, highs, lows, period=20):
         return False, False
 
 
+def _cup_and_handle(highs, lows, closes, volumes=None) -> dict:
+    """
+    Cup & Handle breakout pattern (O'Neil CAN SLIM).
+    Cup: 10-40% rounded U-base; handle: 3-15% pullback; pivot: right lip.
+    breakout_ready=True when price is within 3% of pivot with contracted volume.
+    """
+    n = len(closes)
+    if n < 45:
+        return {"detected": False, "breakout_ready": False, "pivot_price": 0.0}
+    try:
+        w  = min(n, 65)
+        c  = closes[-w:]
+        h  = highs[-w:]
+        l  = lows[-w:]
+        v  = volumes[-w:] if volumes and len(volumes) >= w else None
+        nw = len(c)
+
+        # 3-segment: left shoulder (25%), base (50%), right shoulder (25%)
+        s1 = max(1, int(nw * 0.25))
+        s2 = max(s1 + 1, int(nw * 0.75))
+
+        left_high  = max(h[:s1])
+        base_low   = min(l[s1:s2])
+        right_high = max(h[s2:])
+
+        cup_depth  = (left_high - base_low) / left_high * 100
+        symmetry   = abs(right_high - left_high) / left_high * 100
+
+        # Cup valid: 10-40% depth, symmetric within 6%, right side near left high
+        cup_valid = (
+            10 <= cup_depth <= 40
+            and symmetry < 6.0
+            and right_high >= left_high * 0.94
+        )
+        if not cup_valid:
+            return {"detected": False, "breakout_ready": False, "pivot_price": 0.0}
+
+        # Handle: most recent 8-15 days, 3-15% internal range
+        hw = min(15, max(5, nw // 5))
+        hc = c[-hw:]
+        h_high, h_low = max(hc), min(hc)
+        handle_depth  = (h_high - h_low) / h_high * 100 if h_high > 0 else 0
+        handle_valid  = 3 <= handle_depth <= 15
+
+        # Breakout ready: current price within 3% below pivot, not >3% above
+        pivot     = right_high
+        price_now = c[-1]
+        near_pivot = price_now >= pivot * 0.97 and price_now <= pivot * 1.03
+
+        # Volume should contract during handle (< 75% of cup average)
+        vol_ok = True
+        if v and len(v) >= hw + 5:
+            base_vol   = sum(v[:s2]) / max(1, s2)
+            handle_vol = sum(v[-hw:]) / max(1, hw)
+            vol_ok     = handle_vol < base_vol * 0.75 if base_vol > 0 else True
+
+        return {
+            "detected":       cup_valid,
+            "breakout_ready": cup_valid and handle_valid and near_pivot and vol_ok,
+            "pivot_price":    round(pivot, 2),
+            "cup_depth_pct":  round(cup_depth, 1),
+            "handle_pct":     round(handle_depth, 1) if handle_valid else 0.0,
+        }
+    except Exception:
+        return {"detected": False, "breakout_ready": False, "pivot_price": 0.0}
+
+
+def _supply_demand_zones(highs, lows, closes, volumes, lookback: int = 30) -> dict:
+    """
+    Identify institutional supply / demand zones from high-volume price clusters.
+    Demand zone: heavy-volume up bars (institutions accumulating).
+    Supply zone: heavy-volume down bars (institutions distributing).
+    Returns at_demand / at_supply when current price is within 2.5% of a zone.
+    """
+    if len(closes) < 10 or not volumes or len(volumes) < 10:
+        return {"at_demand": False, "at_supply": False}
+    try:
+        n  = min(lookback, len(closes))
+        c  = closes[-n:]
+        h  = highs[-n:]
+        l  = lows[-n:]
+        v  = volumes[-n:]
+
+        avg_vol = sum(v) / len(v)
+        if avg_vol <= 0:
+            return {"at_demand": False, "at_supply": False}
+
+        demand_lvls, supply_lvls = [], []
+        for i in range(1, len(c)):
+            if v[i] > avg_vol * 1.8:          # significant-volume bar
+                mid = (h[i] + l[i]) / 2
+                if c[i] > c[i - 1]:           # rising bar = demand
+                    demand_lvls.append(mid)
+                elif c[i] < c[i - 1]:         # falling bar = supply
+                    supply_lvls.append(mid)
+
+        cur = closes[-1]
+        tol = 0.025   # within 2.5% of the zone
+
+        return {
+            "at_demand": any(abs(cur - p) / p < tol for p in demand_lvls),
+            "at_supply": any(abs(cur - p) / p < tol for p in supply_lvls),
+        }
+    except Exception:
+        return {"at_demand": False, "at_supply": False}
+
+
 # ── Market regime detection ───────────────────────────────────────────────────
 def market_regime():
     """
@@ -2401,6 +2508,41 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Cup & Handle breakout pattern (O'Neil CAN SLIM)
+    cup_handle = {"detected": False, "breakout_ready": False, "pivot_price": 0.0}
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and "Volume" in daily.columns and len(daily) >= 45:
+            cup_handle = _cup_and_handle(
+                list(daily["High"]), list(daily["Low"]), list(daily["Close"]),
+                volumes=list(daily["Volume"])
+            )
+    except Exception:
+        pass
+
+    # Supply / Demand zone detection
+    sd_zones = {"at_demand": False, "at_supply": False}
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and "Volume" in daily.columns and len(daily) >= 10:
+            sd_zones = _supply_demand_zones(
+                list(daily["High"]), list(daily["Low"]), list(daily["Close"]),
+                list(daily["Volume"]), lookback=30
+            )
+    except Exception:
+        pass
+
+    # Momentum acceleration: ROC5 rising faster than prior ROC5 = early-stage breakout
+    mom_accel = False
+    try:
+        dc_ma = list(daily["Close"])
+        if len(dc_ma) >= 12:
+            roc5_now  = _roc(dc_ma, 5)
+            roc5_prev = _roc(dc_ma[:-5], 5)   # ROC5 as of 5 days ago
+            # Accelerating upward by ≥2% and currently positive = trend gathering steam
+            if roc5_now > roc5_prev + 2.0 and roc5_now > 1.5:
+                mom_accel = True
+    except Exception:
+        pass
+
     return {
         "price":           round(price, 2),
         "change_pct":      round(chg_pct, 2),
@@ -2456,6 +2598,12 @@ def _extract(daily, hourly):
         "macd_bull_div":       macd_div.get("bullish_div", False),
         "macd_bear_div":       macd_div.get("bearish_div", False),
         "chandelier_stop":     chandelier_stop,
+        "cup_handle":          cup_handle.get("breakout_ready", False),
+        "cup_handle_pivot":    cup_handle.get("pivot_price", 0.0),
+        "cup_depth_pct":       cup_handle.get("cup_depth_pct", 0.0),
+        "at_demand_zone":      sd_zones.get("at_demand", False),
+        "at_supply_zone":      sd_zones.get("at_supply", False),
+        "mom_accel":           mom_accel,
     }
 
 
@@ -2640,6 +2788,9 @@ def momentum_grade(d, final_score=0):
     if d.get("at_breakout", False):            criteria += 1  # technical breakout
     if d.get("vwap_reclaim", False):           criteria += 1  # VWAP reclaim
     if d.get("trend_reversal", False):         criteria += 1  # 20-EMA crossover with volume
+    if d.get("cup_handle", False):             criteria += 2  # cup & handle (double weight — elite pattern)
+    if d.get("at_demand_zone", False):         criteria += 1  # at institutional demand zone
+    if d.get("mom_accel", False):              criteria += 1  # momentum accelerating
 
     # Score contribution
     if   final_score >= 80: criteria += 2
@@ -2934,6 +3085,18 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif ichi_signals == 0 and d.get("ichimoku_above") is not None:
         # Explicitly computed and all signals bearish
         s -= 5
+
+    # Cup & Handle breakout: highest-probability institutional continuation pattern (+15)
+    # O'Neil's #1 pattern — found in virtually every winning stock before a big move
+    if d.get("cup_handle", False): s += 15
+
+    # Supply/Demand zone: price at institutional accumulation zone (+8) or distribution (-7)
+    if d.get("at_demand_zone", False): s += 8
+    if d.get("at_supply_zone", False): s -= 7
+
+    # Momentum acceleration: ROC5 rising faster than prior ROC5 (+10)
+    # Catches stocks early in a new breakout — before everyone piles in
+    if d.get("mom_accel", False): s += 10
 
     # Market regime adjustment
     s += regime_adj
@@ -3454,11 +3617,15 @@ def run():
                     continue
 
             # ── Dynamic trailing stop: tightens as profit grows ──────────────
-            # At +15%: trail tightens to 2%
-            # At +10%: trail tightens to 3%
-            # At +5%: use 5% trail
+            # At +25%: trail = 1.5% (lock in almost everything)
+            # At +20%: trail = 1.8%
+            # At +15%: trail = 2.0%
+            # At +10%: trail = 3.0%
+            # At +5%:  use default 5% trail
             # Below +5%: ATR-adaptive baseline (2.5× ATR, min 4%, max 9%)
-            if   pnl_pct >= 15:  dyn_trail = 2.0
+            if   pnl_pct >= 25:  dyn_trail = 1.5
+            elif pnl_pct >= 20:  dyn_trail = 1.8
+            elif pnl_pct >= 15:  dyn_trail = 2.0
             elif pnl_pct >= 10:  dyn_trail = 3.0
             elif pnl_pct >=  5:  dyn_trail = TRAILING_STOP_PCT * 100
             else:
@@ -3863,6 +4030,10 @@ def run():
                 "mtf_aligned":    live.get(tk, {}).get("mtf_aligned", False),
                 "trend_reversal": live.get(tk, {}).get("trend_reversal", False),
                 "bull_flag":      live.get(tk, {}).get("bull_flag", False),
+                "cup_handle":     live.get(tk, {}).get("cup_handle", False),
+                "cup_pivot":      live.get(tk, {}).get("cup_handle_pivot", 0.0),
+                "at_demand_zone": live.get(tk, {}).get("at_demand_zone", False),
+                "mom_accel":      live.get(tk, {}).get("mom_accel", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]

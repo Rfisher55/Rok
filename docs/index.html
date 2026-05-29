@@ -54623,6 +54623,9 @@ window.renderSectorRotation = renderSectorRotation;
             s.mtf_aligned      ? '<span style="background:rgba(0,200,255,.15);color:#80deea;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">MTF✓</span>' : '',
             s.trend_reversal   ? '<span style="background:rgba(255,100,255,.18);color:#f48fb1;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">REV↑</span>' : '',
             s.bull_flag        ? '<span style="background:rgba(255,165,0,.2);color:#ffab40;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">🏁FLAG</span>' : '',
+            s.cup_handle       ? `<span style="background:rgba(0,230,118,.22);color:#00e676;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px">☕C&H${s.cup_pivot?` $${s.cup_pivot}`:''}</span>` : '',
+            s.at_demand_zone   ? '<span style="background:rgba(0,188,212,.18);color:#4dd0e1;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">DMZ</span>' : '',
+            s.mom_accel        ? '<span style="background:rgba(255,235,59,.2);color:#fff176;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">ACCEL↑</span>' : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
