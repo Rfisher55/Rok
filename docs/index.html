@@ -718,6 +718,26 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .sort-btn{background:var(--blk4);border:var(--bdr2);border-radius:4px;padding:.22rem .5rem;font-size:9px;font-weight:600;letter-spacing:.06em;color:var(--wh3);cursor:pointer;transition:all .12s;text-transform:uppercase;white-space:nowrap;touch-action:manipulation}
 .sort-btn:hover{color:var(--wh2)}
 .sort-btn.active{background:var(--aus);border-color:rgba(255,215,0,.25);color:var(--au)}
+
+/* ── TICKER TAPE ─────────────────────────────────────────── */
+.ticker-tape{
+  background:rgba(2,4,8,.98);border-bottom:1px solid rgba(0,204,255,.08);
+  overflow:hidden;flex-shrink:0;height:26px;display:flex;align-items:center;
+  white-space:nowrap;position:relative
+}
+.ticker-tape::before,.ticker-tape::after{
+  content:'';position:absolute;top:0;bottom:0;width:40px;z-index:2;pointer-events:none
+}
+.ticker-tape::before{left:0;background:linear-gradient(90deg,rgba(2,4,8,.98),transparent)}
+.ticker-tape::after{right:0;background:linear-gradient(-90deg,rgba(2,4,8,.98),transparent)}
+.ticker-scroll{display:inline-flex;gap:0;animation:tickerRoll 40s linear infinite}
+.ticker-scroll:hover{animation-play-state:paused}
+@keyframes tickerRoll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick-item{display:inline-flex;align-items:center;gap:.3rem;padding:0 1.1rem;font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--wh3);border-right:1px solid rgba(255,255,255,.04);cursor:pointer;transition:color .1s}
+.tick-item:hover{color:var(--wh)}
+.tick-buy{color:var(--g)}.tick-sell{color:var(--r)}.tick-watch{color:var(--au)}
+.tick-chg{font-size:8.5px;font-weight:600;opacity:.8}
+.tick-lbl{font-size:7px;letter-spacing:.12em;opacity:.5;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -777,6 +797,193 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </div>
   </div>
 </header>
+
+<!-- TICKER TAPE -->
+
+
+<div class="ticker-tape">
+  <div class="ticker-scroll">
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('PLTR')">
+      <span class="tick-lbl">BUY</span>
+      <span>$PLTR</span>
+      <span>$143.34</span>
+      <span class="tick-chg up">+28.2%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('MDB')">
+      <span class="tick-lbl">BUY</span>
+      <span>$MDB</span>
+      <span>$325.68</span>
+      <span class="tick-chg up">+11.2%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('ORCL')">
+      <span class="tick-lbl">BUY</span>
+      <span>$ORCL</span>
+      <span>$203.70</span>
+      <span class="tick-chg up">+19.8%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('AVGO')">
+      <span class="tick-lbl">BUY</span>
+      <span>$AVGO</span>
+      
+      
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('SMCI')">
+      <span class="tick-lbl">BUY</span>
+      <span>$SMCI</span>
+      <span>$41.30</span>
+      <span class="tick-chg down">-10.1%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-sell" onclick="openModal('INTC')">
+      <span class="tick-lbl">SELL</span>
+      <span>$INTC</span>
+      <span>$120.89</span>
+      
+    </div>
+    
+    
+    <div class="tick-item tick-sell" onclick="openModal('PLUG')">
+      <span class="tick-lbl">SELL</span>
+      <span>$PLUG</span>
+      <span>$4.12</span>
+      
+    </div>
+    
+    
+    <div class="tick-item tick-sell" onclick="openModal('NOK')">
+      <span class="tick-lbl">SELL</span>
+      <span>$NOK</span>
+      <span>$15.28</span>
+      
+    </div>
+    
+    
+    <div class="tick-item tick-watch" onclick="openModal('CRWD')">
+      <span class="tick-lbl">WATCH</span>
+      <span>$CRWD</span>
+      
+      
+    </div>
+    
+    
+    <div class="tick-item tick-watch" onclick="openModal('NVDA')">
+      <span class="tick-lbl">WATCH</span>
+      <span>$NVDA</span>
+      
+      
+    </div>
+    
+    
+    <div class="tick-item tick-watch" onclick="openModal('PANW')">
+      <span class="tick-lbl">WATCH</span>
+      <span>$PANW</span>
+      
+      
+    </div>
+    
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('PLTR')">
+      <span class="tick-lbl">BUY</span>
+      <span>$PLTR</span>
+      <span>$143.34</span>
+      <span class="tick-chg up">+28.2%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('MDB')">
+      <span class="tick-lbl">BUY</span>
+      <span>$MDB</span>
+      <span>$325.68</span>
+      <span class="tick-chg up">+11.2%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('ORCL')">
+      <span class="tick-lbl">BUY</span>
+      <span>$ORCL</span>
+      <span>$203.70</span>
+      <span class="tick-chg up">+19.8%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('AVGO')">
+      <span class="tick-lbl">BUY</span>
+      <span>$AVGO</span>
+      
+      
+    </div>
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('SMCI')">
+      <span class="tick-lbl">BUY</span>
+      <span>$SMCI</span>
+      <span>$41.30</span>
+      <span class="tick-chg down">-10.1%↑</span>
+    </div>
+    
+    
+    <div class="tick-item tick-sell" onclick="openModal('INTC')">
+      <span class="tick-lbl">SELL</span>
+      <span>$INTC</span>
+      <span>$120.89</span>
+      
+    </div>
+    
+    
+    <div class="tick-item tick-sell" onclick="openModal('PLUG')">
+      <span class="tick-lbl">SELL</span>
+      <span>$PLUG</span>
+      <span>$4.12</span>
+      
+    </div>
+    
+    
+    <div class="tick-item tick-sell" onclick="openModal('NOK')">
+      <span class="tick-lbl">SELL</span>
+      <span>$NOK</span>
+      <span>$15.28</span>
+      
+    </div>
+    
+    
+    <div class="tick-item tick-watch" onclick="openModal('CRWD')">
+      <span class="tick-lbl">WATCH</span>
+      <span>$CRWD</span>
+      
+      
+    </div>
+    
+    
+    <div class="tick-item tick-watch" onclick="openModal('NVDA')">
+      <span class="tick-lbl">WATCH</span>
+      <span>$NVDA</span>
+      
+      
+    </div>
+    
+    
+    <div class="tick-item tick-watch" onclick="openModal('PANW')">
+      <span class="tick-lbl">WATCH</span>
+      <span>$PANW</span>
+      
+      
+    </div>
+    
+  </div>
+</div>
+
 
 <!-- ROK MESSAGE -->
 
@@ -1621,40 +1828,88 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <!-- ── MARKET TAB ──────────────────────────────────────── -->
   <div class="tab-pane" id="tab-market">
     <div class="sum-card">
-      <div class="clbl">ROK INTELLIGENCE BRIEFING</div>
+      <div class="clbl">📡 TODAY'S MARKET BRIEFING</div>
       <p class="sum-txt">Markets are pushing higher with NASDAQ up 0.8% and S&amp;P 500 up 0.6%, buoyed by a US-Iran deal headline driving the Dow to highs and crushing VIX to 15.74 (-3.4%). AI infrastructure names are the clear leaders: PLTR +8.2%, MDB +10.6%, ORCL +6.7%, and SMCI +8.1% all surging on a single session — confirming institutional rotation into data/AI infrastructure ahead of major earnings (AVGO, CRWD, PANW all reporting this week). The Fear &amp; Greed index sits at 60.2 (Greed) but is ticking down, signaling the rally has legs but momentum is softening. Breadth is tepid at 45% advancing sectors — this is a stock-picker&#39;s market, not a broad tide.</p>
     </div>
+    <!-- Market indices quick ref -->
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.45rem;margin-bottom:1rem">
+      
+      
+      <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">S&amp;P 500</div>
+        <div style="font-size:14px;font-weight:800;color:var(--wh)">$754.6</div>
+        <div style="font-size:11px;font-weight:700;color:var(--g)">+0.55%</div>
+      </div>
+      
+      
+      <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">NASDAQ</div>
+        <div style="font-size:14px;font-weight:800;color:var(--wh)">$735.6</div>
+        <div style="font-size:11px;font-weight:700;color:var(--g)">+0.84%</div>
+      </div>
+      
+      
+      <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">DOW</div>
+        <div style="font-size:14px;font-weight:800;color:var(--wh)">$507.05</div>
+        <div style="font-size:11px;font-weight:700;color:var(--g)">+0.03%</div>
+      </div>
+      
+      
+      <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.2);border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">Russell 2000</div>
+        <div style="font-size:14px;font-weight:800;color:var(--wh)">$292.03</div>
+        <div style="font-size:11px;font-weight:700;color:var(--g)">+0.57%</div>
+      </div>
+      
+      
+      <div style="background:var(--blk3);border:1px solid rgba(255,34,85,.2);border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">VIX</div>
+        <div style="font-size:14px;font-weight:800;color:var(--wh)">15.74</div>
+        <div style="font-size:11px;font-weight:700;color:var(--r)">-3.38%</div>
+      </div>
+      
+    </div>
+    
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
       <div class="mkt-card">
-        <div class="clbl">CNN FEAR / GREED</div>
+        <div class="clbl">😨 ARE PEOPLE SCARED OR GREEDY?</div>
         
         <div class="gauge-track"><div class="gauge-pin" style="left:calc(60.2% - 7px)"></div></div>
-        <div class="gauge-mkrs"><span>FEAR</span><span>NEUTRAL</span><span>GREED</span></div>
+        <div class="gauge-mkrs"><span>😨 FEAR</span><span>NEUTRAL</span><span>🤑 GREED</span></div>
         <div class="gauge-score">60.2/100 — greed</div>
-      </div>
-      <div class="mkt-card">
-        <div class="clbl">SOCIAL SENTIMENT</div>
-        
-        <div class="sbars">
-          <div class="sbar-row"><span class="sbar-lbl bull-l">BULL</span><div class="sbar-track"><div class="sbar bull-b" style="width:35%"></div></div><span class="sbar-pct">35%</span></div>
-          <div class="sbar-row"><span class="sbar-lbl bear-l">BEAR</span><div class="sbar-track"><div class="sbar bear-b" style="width:12%"></div></div><span class="sbar-pct">12%</span></div>
-          <div class="sbar-row"><span class="sbar-lbl neut-l">NEUT</span><div class="sbar-track"><div class="sbar neut-b" style="width:54%"></div></div><span class="sbar-pct">54%</span></div>
+        <div style="font-size:10px;color:var(--wh3);margin-top:.5rem;line-height:1.5">
+          🟡 Markets are calm — normal conditions
         </div>
       </div>
       <div class="mkt-card">
-        <div class="clbl">PUT / CALL RATIO</div>
+        <div class="clbl">📱 WHAT PEOPLE ARE SAYING ONLINE</div>
+        
+        <div class="sbars">
+          <div class="sbar-row"><span class="sbar-lbl bull-l">🟢</span><div class="sbar-track"><div class="sbar bull-b" style="width:35%"></div></div><span class="sbar-pct">35%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl bear-l">🔴</span><div class="sbar-track"><div class="sbar bear-b" style="width:12%"></div></div><span class="sbar-pct">12%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl neut-l">⬜</span><div class="sbar-track"><div class="sbar neut-b" style="width:54%"></div></div><span class="sbar-pct">54%</span></div>
+        </div>
+        <div style="font-size:9.5px;color:var(--wh3);margin-top:.45rem">Reddit · News · StockTwits · 239 posts analyzed</div>
+      </div>
+      <div class="mkt-card">
+        <div class="clbl">🐋 ARE BIG FUNDS BULLISH OR BEARISH?</div>
         
         <div class="metric-val">None</div>
-        <div class="metric-sub">Equity PCR: None</div>
-        <span class="pcr-sig UNKNOWN">UNKNOWN</span>
+        <div class="metric-sub" style="margin-bottom:.35rem">Put/Call ratio</div>
+        <span class="pcr-sig UNKNOWN">⬜ UNKNOWN</span>
+        <div style="font-size:10px;color:var(--wh3);margin-top:.45rem;line-height:1.5">
+          Below 0.8 = hedge funds buying calls (bullish). Above 1.2 = buying puts (bearish).
+        </div>
         
         
         <div style="margin-top:.75rem">
-          <div class="clbl" style="margin-bottom:.3rem">MARKET BREADTH</div>
+          <div class="clbl" style="margin-bottom:.3rem">📊 HOW MANY STOCKS ARE RISING?</div>
           <div class="breadth-bar"><div class="breadth-fill" style="width:45.0%"></div></div>
-          <div class="metric-sub">45.0% advancing</div>
+          <div class="metric-sub">45.0% of stocks are going up today</div>
         </div>
         
       </div>
@@ -1663,7 +1918,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Sector heat map -->
     
     
-    <div class="s-hdr"><h2 class="s-ttl">SECTOR HEAT MAP</h2><span class="s-sub">Today's performance</span></div>
+    <div class="s-hdr"><h2 class="s-ttl">🗺️ WHICH INDUSTRIES ARE WINNING TODAY?</h2><span class="s-sub">Green = going up · Red = going down</span></div>
     <div class="sheat-grid" style="margin-bottom:1.1rem">
       
       
@@ -1749,7 +2004,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Sector rotation -->
     
     
-    <div class="s-hdr"><h2 class="s-ttl">SECTOR ROTATION</h2></div>
+    <div class="s-hdr"><h2 class="s-ttl">💸 WHERE IS MONEY FLOWING?</h2></div>
     <div class="sr-row">
       <div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">HOTTEST</div><div class="sr-txt">AI Infrastructure/Technology — PLTR +8.2% (41M vol), MDB +10.6% (1.9M vol), ORCL +6.7% (24.5M vol), SMCI +8.1% (37.5M vol) all on the same session; Whale Rock hedge fund deployed $910M into AI names; TSMC raising prices; AVGO earnings ahead</div></div></div>
       <div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST</div><div class="sr-txt">Energy — Dollar falling and crude oil retreating per Yahoo Finance; TotalEnergies extending French fuel price caps through June signals demand concern; energy producers explicitly cited as weighing on stocks in multiple headlines today</div></div></div>
@@ -1759,7 +2014,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     <!-- Trending tape -->
     
-    <div class="s-hdr"><h2 class="s-ttl">TRENDING NOW</h2><span class="s-sub">Reddit · News · StockTwits</span></div>
+    <div class="s-hdr"><h2 class="s-ttl">🔥 WHAT EVERYONE IS TALKING ABOUT</h2><span class="s-sub">Tap any stock to see it in the screener</span></div>
     <div class="tape-row">
       
       <div class="tape-card">
@@ -2057,8 +2312,25 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </details>
     <div id="portfolio-summary"></div>
     <div id="portfolio-grid"></div>
+
+    <!-- Manual add section -->
+    <div style="margin-top:1rem;background:var(--blk3);border:1px solid rgba(0,204,255,.15);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--b);text-transform:uppercase;margin-bottom:.55rem">+ ADD ANY STOCK MANUALLY</div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input id="manual-ticker" type="text" placeholder="Ticker (e.g. AAPL)" maxlength="6"
+          style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.5rem .85rem;font-size:16px;color:var(--wh);outline:none;text-transform:uppercase;font-family:var(--font)"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')addManualTicker()"/>
+        <input id="manual-price" type="number" placeholder="Price $" step="0.01" min="0"
+          style="width:110px;background:rgba(255,255,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.5rem .75rem;font-size:16px;color:var(--wh);outline:none;font-family:var(--font)"
+          onkeydown="if(event.key==='Enter')addManualTicker()"/>
+        <button onclick="addManualTicker()" style="background:rgba(0,204,255,.12);border:1px solid rgba(0,204,255,.25);border-radius:8px;padding:.5rem 1rem;font-size:12px;font-weight:700;color:var(--b);cursor:pointer;white-space:nowrap;touch-action:manipulation">ADD</button>
+      </div>
+      <div style="font-size:10px;color:var(--wh3);margin-top:.4rem">Track stocks you already own — ROK will tell you when to sell or buy more</div>
+    </div>
+
     <button class="port-share-btn" id="port-share-btn" onclick="sharePortfolio()" style="display:none">📤 SHARE MY PICKS</button>
-    <button class="port-add-btn" onclick="showTab('screener')">+ ADD MORE STOCKS FROM SCREENER</button>
+    <button class="port-add-btn" onclick="showTab('screener')">🔍 FIND MORE STOCKS IN SCREENER</button>
   </div><!-- /tab-portfolio -->
 
 </div><!-- /content -->
@@ -2767,6 +3039,35 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     ).join('')}</div>` : '';
     grid.innerHTML = alertsHtml + `<div class="port-grid">${cards}</div>`;
   }
+
+  // Manual add any ticker to portfolio
+  async function addManualTicker() {
+    const tickerEl = document.getElementById('manual-ticker');
+    const priceEl = document.getElementById('manual-price');
+    if (!tickerEl) return;
+    const ticker = tickerEl.value.trim().toUpperCase();
+    if (!ticker || ticker.length < 1 || ticker.length > 6 || !/^[A-Z]+$/.test(ticker)) {
+      tickerEl.style.borderColor = 'rgba(255,34,85,.5)';
+      setTimeout(() => { tickerEl.style.borderColor = ''; }, 1500);
+      return;
+    }
+    let price = parseFloat(priceEl?.value) || 0;
+    // If no price given, try to fetch from Yahoo
+    if (!price) {
+      try {
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${ticker}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        const json = await res.json();
+        const q = json?.quoteResponse?.result?.[0];
+        if (q?.regularMarketPrice) price = q.regularMarketPrice;
+      } catch { /* ignore */ }
+    }
+    boughtIt(ticker, price);
+    tickerEl.value = '';
+    if (priceEl) priceEl.value = '';
+    tickerEl.focus();
+  }
+  window.addManualTicker = addManualTicker;
 
   // Update bought buttons on page load based on saved portfolio
   function syncBoughtButtons() {

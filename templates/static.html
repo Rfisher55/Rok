@@ -718,6 +718,26 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .sort-btn{background:var(--blk4);border:var(--bdr2);border-radius:4px;padding:.22rem .5rem;font-size:9px;font-weight:600;letter-spacing:.06em;color:var(--wh3);cursor:pointer;transition:all .12s;text-transform:uppercase;white-space:nowrap;touch-action:manipulation}
 .sort-btn:hover{color:var(--wh2)}
 .sort-btn.active{background:var(--aus);border-color:rgba(255,215,0,.25);color:var(--au)}
+
+/* ── TICKER TAPE ─────────────────────────────────────────── */
+.ticker-tape{
+  background:rgba(2,4,8,.98);border-bottom:1px solid rgba(0,204,255,.08);
+  overflow:hidden;flex-shrink:0;height:26px;display:flex;align-items:center;
+  white-space:nowrap;position:relative
+}
+.ticker-tape::before,.ticker-tape::after{
+  content:'';position:absolute;top:0;bottom:0;width:40px;z-index:2;pointer-events:none
+}
+.ticker-tape::before{left:0;background:linear-gradient(90deg,rgba(2,4,8,.98),transparent)}
+.ticker-tape::after{right:0;background:linear-gradient(-90deg,rgba(2,4,8,.98),transparent)}
+.ticker-scroll{display:inline-flex;gap:0;animation:tickerRoll 40s linear infinite}
+.ticker-scroll:hover{animation-play-state:paused}
+@keyframes tickerRoll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick-item{display:inline-flex;align-items:center;gap:.3rem;padding:0 1.1rem;font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--wh3);border-right:1px solid rgba(255,255,255,.04);cursor:pointer;transition:color .1s}
+.tick-item:hover{color:var(--wh)}
+.tick-buy{color:var(--g)}.tick-sell{color:var(--r)}.tick-watch{color:var(--au)}
+.tick-chg{font-size:8.5px;font-weight:600;opacity:.8}
+.tick-lbl{font-size:7px;letter-spacing:.12em;opacity:.5;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -749,6 +769,33 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </div>
   </div>
 </header>
+
+<!-- TICKER TAPE -->
+{% set tape_items = data.buy_signals[:5] + data.sell_signals[:3] + data.watch_list[:3] %}
+{% if tape_items %}
+<div class="ticker-tape">
+  <div class="ticker-scroll">
+    {% for s in tape_items %}{% set sig = 'buy' if s in data.buy_signals else 'sell' if s in data.sell_signals else 'watch' %}
+    {% set chg_pct = ((s.price_target / s.current_price - 1) * 100)|round(1) if (s.price_target and s.current_price and s.current_price > 0) else none %}
+    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')">
+      <span class="tick-lbl">{{ sig|upper }}</span>
+      <span>${{ s.ticker }}</span>
+      {% if s.current_price %}<span>${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
+      {% if chg_pct is not none %}<span class="tick-chg {{ 'up' if chg_pct >= 0 else 'down' }}">{{ '+' if chg_pct >= 0 else '' }}{{ chg_pct }}%↑</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% for s in tape_items %}{% set sig = 'buy' if s in data.buy_signals else 'sell' if s in data.sell_signals else 'watch' %}
+    {% set chg_pct = ((s.price_target / s.current_price - 1) * 100)|round(1) if (s.price_target and s.current_price and s.current_price > 0) else none %}
+    <div class="tick-item tick-{{ sig }}" onclick="openModal('{{ s.ticker }}')">
+      <span class="tick-lbl">{{ sig|upper }}</span>
+      <span>${{ s.ticker }}</span>
+      {% if s.current_price %}<span>${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
+      {% if chg_pct is not none %}<span class="tick-chg {{ 'up' if chg_pct >= 0 else 'down' }}">{{ '+' if chg_pct >= 0 else '' }}{{ chg_pct }}%↑</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <!-- ROK MESSAGE -->
 {% if data.rok_message %}
@@ -989,40 +1036,60 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <!-- ── MARKET TAB ──────────────────────────────────────── -->
   <div class="tab-pane" id="tab-market">
     <div class="sum-card">
-      <div class="clbl">ROK INTELLIGENCE BRIEFING</div>
+      <div class="clbl">📡 TODAY'S MARKET BRIEFING</div>
       <p class="sum-txt">{{ data.week_summary }}</p>
     </div>
+    <!-- Market indices quick ref -->
+    {% if data.market_indices %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.45rem;margin-bottom:1rem">
+      {% for name, d in data.market_indices.items() %}
+      {% set chg = d.change_pct|default(0) %}
+      <div style="background:var(--blk3);border:1px solid {{ 'rgba(0,255,136,.2)' if chg >= 0 else 'rgba(255,34,85,.2)' }};border-radius:10px;padding:.65rem .75rem;text-align:center">
+        <div style="font-size:8.5px;color:var(--wh3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem">{{ name }}</div>
+        <div style="font-size:14px;font-weight:800;color:var(--wh)">{% if name != 'VIX' %}${% endif %}{{ d.price }}</div>
+        <div style="font-size:11px;font-weight:700;color:{{ 'var(--g)' if chg >= 0 else 'var(--r)' }}">{{ '+' if chg >= 0 else '' }}{{ '%.2f'|format(chg) }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
       <div class="mkt-card">
-        <div class="clbl">CNN FEAR / GREED</div>
+        <div class="clbl">😨 ARE PEOPLE SCARED OR GREEDY?</div>
         {% set fg = data.fear_greed %}{% set fgs = fg.score|default(50) %}{% set pct = [[fgs,2]|max,98]|min %}
         <div class="gauge-track"><div class="gauge-pin" style="left:calc({{ pct }}% - 7px)"></div></div>
-        <div class="gauge-mkrs"><span>FEAR</span><span>NEUTRAL</span><span>GREED</span></div>
+        <div class="gauge-mkrs"><span>😨 FEAR</span><span>NEUTRAL</span><span>🤑 GREED</span></div>
         <div class="gauge-score">{{ fgs }}/100 — {{ fg.rating|default('Neutral') }}</div>
-      </div>
-      <div class="mkt-card">
-        <div class="clbl">SOCIAL SENTIMENT</div>
-        {% set agg = data.aggregate_sentiment %}
-        <div class="sbars">
-          <div class="sbar-row"><span class="sbar-lbl bull-l">BULL</span><div class="sbar-track"><div class="sbar bull-b" style="width:{{ agg.bullish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bullish_pct|default(0) }}%</span></div>
-          <div class="sbar-row"><span class="sbar-lbl bear-l">BEAR</span><div class="sbar-track"><div class="sbar bear-b" style="width:{{ agg.bearish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bearish_pct|default(0) }}%</span></div>
-          <div class="sbar-row"><span class="sbar-lbl neut-l">NEUT</span><div class="sbar-track"><div class="sbar neut-b" style="width:{{ agg.neutral_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.neutral_pct|default(0) }}%</span></div>
+        <div style="font-size:10px;color:var(--wh3);margin-top:.5rem;line-height:1.5">
+          {% if fgs < 30 %}🟢 Everyone is scared = often a great time to buy stocks at a discount{% elif fgs > 70 %}🔴 Everyone is greedy = stocks are expensive, be more careful{% else %}🟡 Markets are calm — normal conditions{% endif %}
         </div>
       </div>
       <div class="mkt-card">
-        <div class="clbl">PUT / CALL RATIO</div>
+        <div class="clbl">📱 WHAT PEOPLE ARE SAYING ONLINE</div>
+        {% set agg = data.aggregate_sentiment %}
+        <div class="sbars">
+          <div class="sbar-row"><span class="sbar-lbl bull-l">🟢</span><div class="sbar-track"><div class="sbar bull-b" style="width:{{ agg.bullish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bullish_pct|default(0) }}%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl bear-l">🔴</span><div class="sbar-track"><div class="sbar bear-b" style="width:{{ agg.bearish_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.bearish_pct|default(0) }}%</span></div>
+          <div class="sbar-row"><span class="sbar-lbl neut-l">⬜</span><div class="sbar-track"><div class="sbar neut-b" style="width:{{ agg.neutral_pct|default(0) }}%"></div></div><span class="sbar-pct">{{ agg.neutral_pct|default(0) }}%</span></div>
+        </div>
+        <div style="font-size:9.5px;color:var(--wh3);margin-top:.45rem">Reddit · News · StockTwits · {{ agg.total_posts|default(0) }} posts analyzed</div>
+      </div>
+      <div class="mkt-card">
+        <div class="clbl">🐋 ARE BIG FUNDS BULLISH OR BEARISH?</div>
         {% set pcr = data.put_call_ratio|default({}) %}
         <div class="metric-val">{{ pcr.total|default('—') }}</div>
-        <div class="metric-sub">Equity PCR: {{ pcr.equity|default('—') }}</div>
-        {% if pcr.signal %}<span class="pcr-sig {{ pcr.signal }}">{{ pcr.signal }}</span>{% endif %}
+        <div class="metric-sub" style="margin-bottom:.35rem">Put/Call ratio{% if pcr.equity %} · Equity: {{ pcr.equity }}{% endif %}</div>
+        {% if pcr.signal %}<span class="pcr-sig {{ pcr.signal }}">{% if pcr.signal == 'GREED' %}🐋 Funds betting UP{% elif pcr.signal == 'FEAR' %}🐻 Funds betting DOWN{% else %}⬜ {{ pcr.signal }}{% endif %}</span>{% endif %}
+        <div style="font-size:10px;color:var(--wh3);margin-top:.45rem;line-height:1.5">
+          Below 0.8 = hedge funds buying calls (bullish). Above 1.2 = buying puts (bearish).
+        </div>
         {% set breadth = data.market_breadth|default({}) %}
         {% if breadth.breadth_pct is defined %}
         <div style="margin-top:.75rem">
-          <div class="clbl" style="margin-bottom:.3rem">MARKET BREADTH</div>
+          <div class="clbl" style="margin-bottom:.3rem">📊 HOW MANY STOCKS ARE RISING?</div>
           <div class="breadth-bar"><div class="breadth-fill" style="width:{{ breadth.breadth_pct }}%"></div></div>
-          <div class="metric-sub">{{ breadth.breadth_pct }}% advancing{% if breadth.advance_decline_ratio %} · A/D {{ breadth.advance_decline_ratio }}{% endif %}</div>
+          <div class="metric-sub">{{ breadth.breadth_pct }}% of stocks are going up today{% if breadth.advance_decline_ratio %} ({{ breadth.advance_decline_ratio }} gainers per loser){% endif %}</div>
         </div>
         {% endif %}
       </div>
@@ -1031,7 +1098,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Sector heat map -->
     {% set sp = data.market_breadth.sector_performance|default({}) %}
     {% if sp %}
-    <div class="s-hdr"><h2 class="s-ttl">SECTOR HEAT MAP</h2><span class="s-sub">Today's performance</span></div>
+    <div class="s-hdr"><h2 class="s-ttl">🗺️ WHICH INDUSTRIES ARE WINNING TODAY?</h2><span class="s-sub">Green = going up · Red = going down</span></div>
     <div class="sheat-grid" style="margin-bottom:1.1rem">
       {% for name, chg in sp.items()|sort(attribute='1')|reverse %}
       {% set cls = 'up' if chg >= 0 else 'down' %}
@@ -1047,7 +1114,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Sector rotation -->
     {% set heat = data.sector_heat|default({}) %}
     {% if heat.hottest or heat.coldest %}
-    <div class="s-hdr"><h2 class="s-ttl">SECTOR ROTATION</h2></div>
+    <div class="s-hdr"><h2 class="s-ttl">💸 WHERE IS MONEY FLOWING?</h2></div>
     <div class="sr-row">
       {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">HOTTEST</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
       {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
@@ -1057,7 +1124,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     <!-- Trending tape -->
     {% if data.ticker_mentions or data.stocktwits_trending %}
-    <div class="s-hdr"><h2 class="s-ttl">TRENDING NOW</h2><span class="s-sub">Reddit · News · StockTwits</span></div>
+    <div class="s-hdr"><h2 class="s-ttl">🔥 WHAT EVERYONE IS TALKING ABOUT</h2><span class="s-sub">Tap any stock to see it in the screener</span></div>
     <div class="tape-row">
       {% if data.ticker_mentions %}
       <div class="tape-card">
@@ -1265,8 +1332,25 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </details>
     <div id="portfolio-summary"></div>
     <div id="portfolio-grid"></div>
+
+    <!-- Manual add section -->
+    <div style="margin-top:1rem;background:var(--blk3);border:1px solid rgba(0,204,255,.15);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--b);text-transform:uppercase;margin-bottom:.55rem">+ ADD ANY STOCK MANUALLY</div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input id="manual-ticker" type="text" placeholder="Ticker (e.g. AAPL)" maxlength="6"
+          style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.5rem .85rem;font-size:16px;color:var(--wh);outline:none;text-transform:uppercase;font-family:var(--font)"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')addManualTicker()"/>
+        <input id="manual-price" type="number" placeholder="Price $" step="0.01" min="0"
+          style="width:110px;background:rgba(255,255,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.5rem .75rem;font-size:16px;color:var(--wh);outline:none;font-family:var(--font)"
+          onkeydown="if(event.key==='Enter')addManualTicker()"/>
+        <button onclick="addManualTicker()" style="background:rgba(0,204,255,.12);border:1px solid rgba(0,204,255,.25);border-radius:8px;padding:.5rem 1rem;font-size:12px;font-weight:700;color:var(--b);cursor:pointer;white-space:nowrap;touch-action:manipulation">ADD</button>
+      </div>
+      <div style="font-size:10px;color:var(--wh3);margin-top:.4rem">Track stocks you already own — ROK will tell you when to sell or buy more</div>
+    </div>
+
     <button class="port-share-btn" id="port-share-btn" onclick="sharePortfolio()" style="display:none">📤 SHARE MY PICKS</button>
-    <button class="port-add-btn" onclick="showTab('screener')">+ ADD MORE STOCKS FROM SCREENER</button>
+    <button class="port-add-btn" onclick="showTab('screener')">🔍 FIND MORE STOCKS IN SCREENER</button>
   </div><!-- /tab-portfolio -->
 
 </div><!-- /content -->
@@ -1975,6 +2059,35 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     ).join('')}</div>` : '';
     grid.innerHTML = alertsHtml + `<div class="port-grid">${cards}</div>`;
   }
+
+  // Manual add any ticker to portfolio
+  async function addManualTicker() {
+    const tickerEl = document.getElementById('manual-ticker');
+    const priceEl = document.getElementById('manual-price');
+    if (!tickerEl) return;
+    const ticker = tickerEl.value.trim().toUpperCase();
+    if (!ticker || ticker.length < 1 || ticker.length > 6 || !/^[A-Z]+$/.test(ticker)) {
+      tickerEl.style.borderColor = 'rgba(255,34,85,.5)';
+      setTimeout(() => { tickerEl.style.borderColor = ''; }, 1500);
+      return;
+    }
+    let price = parseFloat(priceEl?.value) || 0;
+    // If no price given, try to fetch from Yahoo
+    if (!price) {
+      try {
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${ticker}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        const json = await res.json();
+        const q = json?.quoteResponse?.result?.[0];
+        if (q?.regularMarketPrice) price = q.regularMarketPrice;
+      } catch { /* ignore */ }
+    }
+    boughtIt(ticker, price);
+    tickerEl.value = '';
+    if (priceEl) priceEl.value = '';
+    tickerEl.focus();
+  }
+  window.addManualTicker = addManualTicker;
 
   // Update bought buttons on page load based on saved portfolio
   function syncBoughtButtons() {
