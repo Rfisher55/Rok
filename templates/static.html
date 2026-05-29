@@ -1135,6 +1135,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-insider-live" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-breakout-alerts" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-invest-checklist" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-squeeze-live" style="display:none;margin-bottom:.85rem"></div>
 
     {# Quick market snapshot row #}
     {% set sent = data.market_sentiment|upper %}
@@ -1654,6 +1655,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="mkt-buy-timing" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-health-score" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-crash-alert" style="display:none;margin-bottom:.85rem"></div>
+    <div id="mkt-plain-english" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
@@ -2332,6 +2334,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-correlation" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-smart-sell" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-compound" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-dca" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -3087,10 +3090,10 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); renderWatchlistBar(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
-    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); }
+    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); }
     if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -4052,9 +4055,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); }
   }
   window.showTab = showTab;
@@ -5403,6 +5406,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioCorrelation();
     renderSmartSellGuide();
     renderCompoundGrowth();
+    renderDCAHelper();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -10660,6 +10664,105 @@ body.beginner-mode #beginner-banner { display:block }
   }
   window.renderCrashAlert = renderCrashAlert;
 
+  // ── MARKET IN PLAIN ENGLISH ───────────────────────────
+  function renderMarketPlainEnglish() {
+    const el = document.getElementById('mkt-plain-english');
+    if (!el) return;
+    const spyLp = liveprices['SPY'];
+    const vixLp = liveprices['VIX'] || liveprices['^VIX'];
+    const spyChg = spyLp ? spyLp.change_pct : null;
+    const vixVal = vixLp ? vixLp.price : (ROK.market_pulse || {}).vix || null;
+    const fg = ROK.fear_greed || {};
+    const fgScore = fg.value || fg.score || 50;
+    const fgLabel = fg.label || fg.rating || (fgScore >= 60 ? 'Greed' : fgScore <= 40 ? 'Fear' : 'Neutral');
+    const breadthPct = (ROK.market_breadth || {}).breadth_pct || 50;
+    const sent = ROK.market_sentiment || 'NEUTRAL';
+    // Build sentences
+    const sentences = [];
+    // Sentence 1: Overall market direction
+    if (spyChg != null) {
+      if (spyChg >= 1.5) sentences.push(`📈 <strong style="color:var(--g)">Stocks are rallying today</strong> — the S&P 500 (SPY) is up <strong>${spyChg.toFixed(2)}%</strong>, a strong positive day. Most people's retirement accounts and index funds are gaining.`);
+      else if (spyChg >= 0.3) sentences.push(`📈 <strong style="color:var(--g)">Stocks are slightly up today</strong> — the S&P 500 is up <strong>${spyChg.toFixed(2)}%</strong>. A calm, positive day.`);
+      else if (spyChg >= -0.3) sentences.push(`➡️ <strong style="color:var(--au)">Stocks are flat today</strong> — the S&P 500 is barely moving (<strong>${spyChg >= 0 ? '+' : ''}${spyChg.toFixed(2)}%</strong>). A quiet, directionless day.`);
+      else if (spyChg >= -1.5) sentences.push(`📉 <strong style="color:var(--r)">Stocks are down slightly today</strong> — the S&P 500 is off <strong>${Math.abs(spyChg).toFixed(2)}%</strong>. Minor pullback, nothing alarming.`);
+      else sentences.push(`📉 <strong style="color:var(--r)">Stocks are falling today</strong> — the S&P 500 is down <strong>${Math.abs(spyChg).toFixed(2)}%</strong>. A weak day. Hold your positions and don't panic.`);
+    }
+    // Sentence 2: Fear/VIX
+    if (vixVal != null) {
+      if (vixVal >= 30) sentences.push(`😨 <strong style="color:var(--r)">Fear is very high</strong> (VIX ${vixVal.toFixed(0)}) — Wall Street is panicking. High fear = high potential opportunity for calm, long-term investors. Don't make emotional decisions.`);
+      else if (vixVal >= 20) sentences.push(`😟 <strong style="color:var(--au)">Markets are nervous</strong> (VIX ${vixVal.toFixed(0)}) — more uncertainty than usual. Stick to your plan. Don't add big new positions in a jittery market.`);
+      else if (vixVal >= 15) sentences.push(`😐 <strong style="color:var(--wh2)">Fear is normal</strong> (VIX ${vixVal.toFixed(0)}) — markets are functioning normally with typical volatility. Good conditions for trading.`);
+      else sentences.push(`😊 <strong style="color:var(--g)">Fear is very low</strong> (VIX ${vixVal.toFixed(0)}) — investors are calm and confident. Low VIX = stable, predictable market. Good conditions to be invested.`);
+    } else if (fgScore != null) {
+      if (fgScore >= 70) sentences.push(`😄 <strong style="color:var(--g)">Investors are feeling greedy</strong> (Fear/Greed: ${fgScore}/100 ${fgLabel}) — very positive sentiment. Note: Extreme greed can mean markets are due for a pullback.`);
+      else if (fgScore >= 55) sentences.push(`😊 <strong style="color:var(--g)">Investors feel good</strong> (Fear/Greed: ${fgScore}/100 ${fgLabel}) — moderate optimism in the market.`);
+      else if (fgScore >= 40) sentences.push(`😐 <strong style="color:var(--au)">Sentiment is neutral</strong> (Fear/Greed: ${fgScore}/100) — mixed feelings about the market direction.`);
+      else sentences.push(`😨 <strong style="color:var(--r)">Investors are fearful</strong> (Fear/Greed: ${fgScore}/100 ${fgLabel}) — negative sentiment. Historically, buying when others are fearful has been profitable long-term.`);
+    }
+    // Sentence 3: Breadth and action
+    if (breadthPct >= 65) sentences.push(`🌊 <strong style="color:var(--g)">${breadthPct}% of stocks are rising</strong> today — very broad rally, not just a few big stocks pulling up the index. Healthy market action.`);
+    else if (breadthPct >= 50) sentences.push(`📊 <strong style="color:var(--wh2)">${breadthPct}% of stocks are rising</strong> today — more gainers than losers, but not by a huge margin. Moderately positive breadth.`);
+    else sentences.push(`📊 <strong style="color:var(--r)">Only ${breadthPct}% of stocks are rising</strong> today — more losers than winners. Defensive day — focus on quality.`);
+    // Sentence 4: Action recommendation
+    const spySafe = spyChg == null || spyChg >= -1.5;
+    const vixSafe = vixVal == null || vixVal < 25;
+    if (spySafe && vixSafe && sent === 'BULLISH') {
+      sentences.push(`💡 <strong style="color:var(--g)">What to do:</strong> Good conditions today. Review ROK buy signals and consider entering positions with proper position sizing and stop-losses.`);
+    } else if (!spySafe || !vixSafe) {
+      sentences.push(`💡 <strong style="color:var(--au)">What to do:</strong> Cautious day. Check your existing stop-losses. If you want to buy, use smaller position sizes. Patience often pays off in uncertain markets.`);
+    } else {
+      sentences.push(`💡 <strong style="color:var(--wh2)">What to do:</strong> Neutral conditions. Hold existing positions, review signals carefully, and don't force trades just because you feel like you should do something.`);
+    }
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(0,204,255,.04),rgba(0,0,0,.2));border:1px solid rgba(0,204,255,.15);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--b);text-transform:uppercase;margin-bottom:.45rem">🗞️ TODAY'S MARKET IN PLAIN ENGLISH</div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        ${sentences.map(s => `<div style="font-size:11px;color:var(--wh3);line-height:1.55">${s}</div>`).join('')}
+      </div>
+      <div style="font-size:8px;color:var(--wh4);margin-top:.55rem">Written in plain English from live market data. Updates on every price refresh.</div>
+    </div>`;
+  }
+  window.renderMarketPlainEnglish = renderMarketPlainEnglish;
+
+  // ── SHORT SQUEEZE LIVE ────────────────────────────────
+  function renderSqueezeLive() {
+    const el = document.getElementById('sig-squeeze-live');
+    if (!el) return;
+    const alerts = ROK.short_squeeze_alerts || [];
+    if (!alerts.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const rows = alerts.slice(0, 5).map(s => {
+      const lp = liveprices[s.ticker];
+      const chgPct = lp ? lp.change_pct : null;
+      const price = lp ? lp.price : null;
+      const chgColor = chgPct == null ? 'var(--wh3)' : chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      const velStr = s.social_velocity === 'high' ? '🔥 HIGH BUZZ' : s.social_velocity === 'medium' ? '📊 MED BUZZ' : '';
+      const velColor = s.social_velocity === 'high' ? 'var(--or)' : 'var(--wh3)';
+      const shortStr = s.short_float || '';
+      return `<div style="background:var(--blk4);border:1px solid rgba(255,136,0,.15);border-radius:9px;padding:.55rem .8rem;margin-bottom:.35rem;display:flex;align-items:center;gap:.7rem;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="switchToScreener('${s.ticker}')">
+        <div style="min-width:48px">
+          <div style="font-size:13px;font-weight:900;color:var(--or)">$${s.ticker}</div>
+          ${shortStr ? `<div style="font-size:7.5px;color:var(--wh4)">${shortStr}</div>` : ''}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9px;color:var(--wh2);line-height:1.35">${s.setup || s.company || ''}</div>
+          ${velStr ? `<div style="font-size:8px;font-weight:700;color:${velColor}">${velStr}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${price ? `<div style="font-size:11px;font-weight:700;color:var(--wh)">$${price.toFixed(2)}</div>` : ''}
+          ${chgPct != null ? `<div style="font-size:10px;font-weight:700;color:${chgColor}">${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,136,0,.2);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--or);text-transform:uppercase;margin-bottom:.3rem">💥 SHORT SQUEEZE SETUPS — LIVE</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.65rem;line-height:1.45">These stocks have high short interest (many people are betting they'll fall). If the price rises, short sellers are forced to buy to cover their losses — creating a "squeeze" that rockets the price. High risk, high reward.</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.35rem">Short float = % of shares sold short. Stocks with high short interest + rising price = explosive squeeze potential. Very speculative — small positions only. Tap to view in screener.</div>
+    </div>`;
+  }
+  window.renderSqueezeLive = renderSqueezeLive;
+
   // ── WATCHLIST PERFORMANCE BAR ─────────────────────────
   function renderWatchlistBar() {
     const el = document.getElementById('sc-watchlist-bar');
@@ -10728,6 +10831,81 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderInvestChecklist = renderInvestChecklist;
+
+  // ── DOLLAR COST AVERAGING HELPER ─────────────────────
+  function renderDCAHelper() {
+    const el = document.getElementById('port-dca');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    const candidates = [];
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const lp = liveprices[ticker];
+      const currentPrice = lp ? lp.price : null;
+      if (!currentPrice || !entry.price || !entry.shares) return;
+      const pct = (currentPrice - entry.price) / entry.price * 100;
+      if (pct >= -3) return; // Only show for positions down more than 3%
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const sig = stock ? (stock.rok_signal || 'neutral') : 'neutral';
+      // Only DCA if ROK signal is still buy (don't average down into a sell)
+      if (sig === 'sell') return;
+      const currentValue = currentPrice * entry.shares;
+      const entryValue = entry.price * entry.shares;
+      // To bring average to 5% above current (a reasonable target)
+      const targetAvg = currentPrice * 1.05;
+      if (targetAvg >= entry.price) return; // already below target
+      // Shares to buy: (entry.price * entry.shares - targetAvg * (entry.shares + x)) = 0, solving for x
+      // newAvg = (entry.price * entry.shares + currentPrice * x) / (entry.shares + x) = targetAvg
+      // ... solve: x = entry.shares * (entry.price - targetAvg) / (targetAvg - currentPrice)
+      const sharesToBuy = Math.ceil(entry.shares * (entry.price - targetAvg) / (targetAvg - currentPrice));
+      if (sharesToBuy <= 0) return;
+      const newAvg = (entry.price * entry.shares + currentPrice * sharesToBuy) / (entry.shares + sharesToBuy);
+      const costToBuy = sharesToBuy * currentPrice;
+      candidates.push({ ticker, pct, currentPrice, entryPrice: entry.price, shares: entry.shares, newAvg, sharesToBuy, costToBuy, sig });
+    });
+    if (!candidates.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    candidates.sort((a, b) => a.pct - b.pct); // Worst positions first
+    const rows = candidates.slice(0, 4).map(c => {
+      const pctStr = `${c.pct.toFixed(1)}%`;
+      const newAvgGain = (c.currentPrice - c.newAvg) / c.newAvg * 100;
+      const costFmt = c.costToBuy >= 1000 ? `$${(c.costToBuy/1000).toFixed(1)}K` : `$${Math.round(c.costToBuy)}`;
+      const sigBadge = c.sig === 'buy' ? `<span style="font-size:7.5px;background:rgba(0,255,136,.1);color:var(--g);border-radius:3px;padding:1px 5px">ROK STILL BUY</span>` : '';
+      return `<div style="background:var(--blk4);border:1px solid rgba(255,136,0,.12);border-radius:9px;padding:.6rem .8rem;margin-bottom:.4rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+          <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:800;color:var(--wh)">$${c.ticker}</span>
+            <span style="font-size:10px;color:var(--r);font-weight:700">${pctStr} from entry</span>
+            ${sigBadge}
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;text-align:center;margin-bottom:.35rem">
+          <div style="background:rgba(255,255,255,.04);border-radius:6px;padding:.3rem">
+            <div style="font-size:9px;color:var(--wh4)">Entry avg</div>
+            <div style="font-size:11px;font-weight:700;color:var(--r)">$${c.entryPrice.toFixed(2)}</div>
+          </div>
+          <div style="background:rgba(0,204,255,.06);border-radius:6px;padding:.3rem">
+            <div style="font-size:9px;color:var(--wh4)">Buy ${c.sharesToBuy} more</div>
+            <div style="font-size:11px;font-weight:700;color:var(--b)">${costFmt}</div>
+          </div>
+          <div style="background:rgba(0,255,136,.06);border-radius:6px;padding:.3rem">
+            <div style="font-size:9px;color:var(--wh4)">New avg</div>
+            <div style="font-size:11px;font-weight:700;color:var(--g)">$${c.newAvg.toFixed(2)}</div>
+          </div>
+        </div>
+        <div style="font-size:9px;color:var(--wh4)">Buying ${c.sharesToBuy} shares at $${c.currentPrice.toFixed(2)} lowers your break-even by ${Math.abs(newAvgGain).toFixed(1)}%</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,136,0,.15);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--or);text-transform:uppercase;margin-bottom:.3rem">📉 DOLLAR COST AVERAGING HELPER</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.65rem;line-height:1.45">You have positions that are underwater (below your buy price). DCA = buying more shares at the current lower price to reduce your average cost. Only DCA on stocks ROK still rates as BUY.</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.4rem">⚠️ DCA Rule: Never average down on a stock with a SELL signal. Only add to positions where the thesis is still valid. Make sure you can afford the additional investment.</div>
+    </div>`;
+  }
+  window.renderDCAHelper = renderDCAHelper;
   function toggleChecklist(id) {
     const CKKEY = 'rok_checklist_v1';
     const checked = JSON.parse(sessionStorage.getItem(CKKEY) || '[]');
