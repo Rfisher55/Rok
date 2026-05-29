@@ -1117,6 +1117,8 @@ body.beginner-mode #beginner-banner { display:block }
     </div>
     <!-- Live macro mini-strip: VIX, TNX, DXY — updated by JS -->
     <div id="live-macro-strip" style="display:none;margin-bottom:.6rem"></div>
+    <!-- Live auto-generated market commentary (JS-populated) -->
+    <div id="live-commentary" style="display:none;margin-bottom:.65rem"></div>
     <!-- Next refresh countdown -->
     <div id="next-refresh-row" style="display:none;margin-bottom:.4rem;text-align:right;font-size:9px;color:var(--wh4)"></div>
     <!-- Today's Best Trade Setup (JS-populated) -->
@@ -2970,7 +2972,7 @@ body.beginner-mode #beginner-banner { display:block }
     updateMarketLiveBrief();
     if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); updateFearGreedFromVIX(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); renderPortfolioSpyBenchmark(); }
-    if (activeTab === 'signals') { updateLiveMacroStrip(); renderTodaysBestSetup(); }
+    if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); }
@@ -3934,7 +3936,7 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); }
     if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); }
@@ -6267,6 +6269,9 @@ body.beginner-mode #beginner-banner { display:block }
       </div>` : '';
       const earnHtml = s.earnings_date ? `<span class="sc-sector" style="color:rgba(255,215,0,.6);border-color:rgba(255,215,0,.16)">↑${s.earnings_date}</span>` : '';
       const inPort = isInPortfolio(s.ticker);
+      const stopPrice = sigDet.stop_loss || null;
+      const stopBtn = (sig === 'buy' && stopPrice != null && !getAlerts().some(a => a.ticker === s.ticker && a.direction === 'below' && !a.triggered))
+        ? `<button style="margin-top:.25rem;width:100%;padding:.3rem;border-radius:6px;border:1px solid rgba(255,34,85,.2);background:rgba(255,34,85,.05);color:rgba(255,120,120,.9);font-size:8.5px;font-weight:700;cursor:pointer;touch-action:manipulation" onclick="event.stopPropagation();setQuickAlert('${s.ticker}','below',${stopPrice})" title="Set stop-loss alert at ROK's recommended price">🔔 Set Stop @ $${stopPrice.toFixed(2)}</button>` : '';
       const portBtn = `<button style="margin-top:.4rem;width:100%;padding:.38rem;border-radius:7px;border:1px solid ${inPort?'rgba(0,255,136,.35)':'rgba(255,255,255,.1)'};background:${inPort?'rgba(0,255,136,.1)':'rgba(255,255,255,.04)'};color:${inPort?'var(--g)':'var(--wh3)'};font-size:9.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;touch-action:manipulation" onclick="event.stopPropagation();boughtIt('${s.ticker}',${price||0})">${inPort?'✓ IN MY STOCKS':'+ ADD TO MY STOCKS'}</button>`;
       const mc = s.market_cap;
       const capLabel = mc >= 200e9 ? ['MEGA CAP','rgba(255,215,0,.7)'] : mc >= 10e9 ? ['LARGE CAP','rgba(0,255,136,.6)'] : mc >= 2e9 ? ['MID CAP','rgba(0,204,255,.6)'] : mc >= 300e6 ? ['SMALL CAP','rgba(255,136,0,.6)'] : mc > 0 ? ['MICRO CAP','rgba(255,34,85,.5)'] : null;
@@ -6341,6 +6346,7 @@ body.beginner-mode #beginner-banner { display:block }
           return '';
         })()}
         ${portBtn}
+        ${stopBtn}
       </div>`;
     }).join('');
 
@@ -7092,6 +7098,95 @@ body.beginner-mode #beginner-banner { display:block }
     }
   }
   window.updateLiveMacroStrip = updateLiveMacroStrip;
+
+  // ── LIVE AUTO-GENERATED MARKET COMMENTARY ────────────────
+  function updateLiveCommentary() {
+    const el = document.getElementById('live-commentary');
+    if (!el) return;
+    const spy = liveprices['SPY'];
+    const qqq = liveprices['QQQ'];
+    const vix = liveprices['^VIX'];
+    if (!spy) { el.style.display = 'none'; return; }
+
+    const spyChg = spy.change_pct;
+    const qqqChg = qqq?.change_pct;
+    const vixVal = vix?.price;
+    const buys = ROK.buy_signals || [];
+    const sells = ROK.sell_signals || [];
+    const universe = ROK.stock_universe || [];
+
+    // Find biggest mover among live prices
+    let biggestMover = null, biggestAbs = 0;
+    const buyTickers = new Set(buys.map(s => s.ticker));
+    Object.entries(liveprices).forEach(([t, lp]) => {
+      if (!buyTickers.has(t) || !lp.change_pct) return;
+      if (Math.abs(lp.change_pct) > biggestAbs) {
+        biggestAbs = Math.abs(lp.change_pct);
+        biggestMover = { ticker: t, chg: lp.change_pct, price: lp.price, vol: lp.vol_ratio };
+      }
+    });
+
+    // Market breadth from live prices
+    let advancing = 0, declining = 0;
+    universe.forEach(s => {
+      const lp = liveprices[s.ticker];
+      const chg = lp?.change_pct;
+      if (chg == null) return;
+      if (chg >= 0.2) advancing++;
+      else if (chg <= -0.2) declining++;
+    });
+
+    // Build commentary sentences
+    const parts = [];
+
+    // Opening: market direction
+    const dir = spyChg >= 1 ? 'rallying strongly' : spyChg >= 0.3 ? 'edging higher' : spyChg >= -0.3 ? 'trading flat' : spyChg >= -1 ? 'pulling back modestly' : 'selling off';
+    const spyStr = `Markets are ${dir} — S&P 500 ${spyChg >= 0 ? 'up' : 'down'} ${Math.abs(spyChg).toFixed(2)}%`;
+    const qqqStr = qqqChg != null ? `, Nasdaq ${qqqChg >= 0 ? '+' : ''}${qqqChg.toFixed(2)}%` : '';
+    parts.push(spyStr + qqqStr + '.');
+
+    // VIX reading
+    if (vixVal != null) {
+      if (vixVal > 30) parts.push(`VIX at ${vixVal.toFixed(0)} = extreme fear — expect wild swings today.`);
+      else if (vixVal > 22) parts.push(`VIX at ${vixVal.toFixed(0)} — above-average volatility.`);
+      else if (vixVal < 14) parts.push(`VIX at ${vixVal.toFixed(0)} — very calm markets.`);
+    }
+
+    // Breadth
+    if (advancing + declining > 5) {
+      const ratio = advancing / (advancing + declining);
+      if (ratio > 0.7) parts.push(`${advancing} of ROK's stocks are advancing today — broad participation.`);
+      else if (ratio < 0.3) parts.push(`${declining} of ROK's stocks are declining — selling is broad.`);
+    }
+
+    // Biggest mover
+    if (biggestMover && biggestAbs >= 1.5) {
+      const volNote = biggestMover.vol && biggestMover.vol >= 2 ? ` on ${biggestMover.vol.toFixed(1)}× volume` : '';
+      parts.push(`<strong>${biggestMover.ticker}</strong> is today's standout ROK buy signal, ${biggestMover.chg >= 0 ? 'up' : 'down'} ${Math.abs(biggestMover.chg).toFixed(1)}%${volNote}.`);
+    }
+
+    // Signal count context
+    if (buys.length > 0) {
+      const ctx = buys.length >= 10 ? 'many' : buys.length >= 5 ? 'several' : 'a few';
+      parts.push(`ROK sees ${buys.length} buy signal${buys.length !== 1 ? 's' : ''} today — ${ctx} opportunities to consider.`);
+    }
+
+    // Action
+    const action = spyChg >= 0.5 && (vixVal == null || vixVal < 25) ? 'Good conditions for buy signals.'
+      : spyChg <= -1 || (vixVal != null && vixVal > 28) ? 'Use smaller position sizes in this environment.'
+      : '';
+    if (action) parts.push(action);
+
+    const { state } = getMarketState();
+    const marketNote = state === 'pre' ? '<span style="color:var(--au)">Pre-market session.</span>' : state === 'post' ? '<span style="color:var(--b)">After-hours.</span>' : state === 'closed' ? '<span style="color:var(--wh4)">Market closed.</span>' : '';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:rgba(0,204,255,.03);border:1px solid rgba(0,204,255,.1);border-radius:8px;padding:.55rem .85rem;font-size:10.5px;color:var(--wh2);line-height:1.6">
+      <span style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--b);text-transform:uppercase;margin-right:.5rem">📡 LIVE</span>
+      ${parts.join(' ')} ${marketNote}
+    </div>`;
+  }
+  window.updateLiveCommentary = updateLiveCommentary;
 
   // ── TODAY'S BEST TRADE SETUP ─────────────────────────────
   function renderTodaysBestSetup() {
@@ -8301,6 +8396,20 @@ body.beginner-mode #beginner-banner { display:block }
       const pctStr = pct != null ? `<span style="font-size:9px;font-weight:700;color:${pct >= 0 ? 'var(--g)' : 'var(--r)'}">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span>` : '';
       const priceStr = price != null ? `$${price.toFixed(2)}` : '—';
 
+      // Trailing stop suggestion: when stock is up 12%+ and no stop alert exists
+      let trailingStopHtml = '';
+      if (pct != null && pct >= 12 && price != null) {
+        const hasStopAlert = getAlerts().some(a => a.ticker === ticker && a.direction === 'below' && !a.triggered);
+        if (!hasStopAlert) {
+          const trailStop = parseFloat((price * 0.92).toFixed(2)); // 8% trailing stop
+          const lockIn = pct - 8;
+          trailingStopHtml = `<div style="background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);border-radius:6px;padding:.3rem .45rem;margin-top:.3rem;font-size:9px;color:var(--au);display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <span>💡 Move stop to $${trailStop} to lock in ~${lockIn.toFixed(0)}% gain</span>
+            <button onclick="setQuickAlert('${ticker}','below',${trailStop})" style="background:none;border:1px solid rgba(255,215,0,.3);border-radius:5px;color:var(--au);font-size:8px;padding:1px 7px;cursor:pointer;font-family:var(--font);touch-action:manipulation;font-weight:700">Set Trailing Stop →</button>
+          </div>`;
+        }
+      }
+
       return `<div style="background:${actionBg};border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.55rem .75rem;display:flex;align-items:flex-start;gap:.6rem">
         <div style="flex-shrink:0;min-width:0;width:55px">
           <div style="font-family:var(--disp);font-size:1rem;letter-spacing:.06em;color:var(--wh);cursor:pointer" onclick="openModal('${ticker}')">${ticker}</div>
@@ -8309,6 +8418,7 @@ body.beginner-mode #beginner-banner { display:block }
         <div style="flex:1;min-width:0">
           <div style="font-size:10px;font-weight:800;color:${actionColor};margin-bottom:.2rem">${action}</div>
           <div style="font-size:9px;color:var(--wh3);line-height:1.4">${explanation}</div>
+          ${trailingStopHtml}
         </div>
         ${action.includes('ADD') ? `<button onclick="openAlertDialog('${ticker}',${price||0},event)" style="flex-shrink:0;background:none;border:1px solid rgba(0,255,136,.2);border-radius:6px;color:var(--g);font-size:8.5px;padding:.25rem .45rem;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔔 Alert</button>` : ''}
         ${action.includes('EXIT') || action.includes('PROFITS') || action.includes('TARGET') ? `<button onclick="openModal('${ticker}')" style="flex-shrink:0;background:none;border:1px solid rgba(255,34,85,.2);border-radius:6px;color:var(--r);font-size:8.5px;padding:.25rem .45rem;cursor:pointer;font-family:var(--font);touch-action:manipulation">View →</button>` : ''}
