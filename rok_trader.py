@@ -1107,7 +1107,6 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     # ── Sell / manage open crypto positions ──────────────────────────────
     for sym, pos in list(held_crypto.items()):
         try:
-            yf_sym   = CRYPTO_UNIVERSE.get(sym, "")
             cost     = float(pos.get("avg_entry_price", 0))
             qty      = abs(float(pos.get("qty", 0)))
             sig      = crypto_data.get(sym, {})
@@ -1116,18 +1115,52 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 continue
             pnl_pct = (current - cost) / cost * 100
 
-            prev_peak = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else current
-            peak      = max(prev_peak, current)
-            peaks[sym] = {"peak": peak, "time": peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else now_utc.isoformat(), "half_out": False}
+            prev_peak  = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else current
+            _half_out  = peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False
+            peak       = max(prev_peak, current)
+            peaks[sym] = {
+                "peak":     peak,
+                "time":     peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else now_utc.isoformat(),
+                "half_out": _half_out,
+            }
             trail_drop = (current - peak) / peak * 100
+
+            # Dynamic trailing stop: tightens as profit grows (crypto is more volatile)
+            if   pnl_pct >= 20:  c_trail = 5.0
+            elif pnl_pct >= 12:  c_trail = 8.0
+            elif pnl_pct >=  5:  c_trail = 10.0
+            else:                c_trail = 12.0   # give room early on
+
+            # Partial profit at +15% (sell half) before full exit
+            if pnl_pct >= 15 and not _half_out and qty > 0.001:
+                half_qty = round(qty / 2, 8)
+                logger.info(f"SELL_HALF {sym} — crypto partial at {pnl_pct:+.1f}%")
+                try:
+                    alpaca_post("/v2/orders", {
+                        "symbol": sym, "qty": str(half_qty),
+                        "side": "sell", "type": "market", "time_in_force": "gtc",
+                    })
+                    log_trade(tlog, "SELL_HALF", sym, current, half_qty,
+                              pnl=pnl_pct, reason=f"crypto partial profit ({pnl_pct:+.1f}%)")
+                    peaks[sym]["half_out"] = True
+                    made_trades_ref.append(True)
+                except Exception as e:
+                    logger.warning(f"Crypto partial sell failed {sym}: {e}")
+                continue
 
             reason = None
             if pnl_pct <= -(CRYPTO_STOP_PCT * 100):
                 reason = f"crypto stop loss ({pnl_pct:+.1f}%)"
             elif pnl_pct >= (CRYPTO_TARGET_PCT * 100):
-                reason = f"crypto profit target ({pnl_pct:+.1f}%)"
-            elif trail_drop <= -8 and pnl_pct > 0:
-                reason = f"crypto trailing stop ({trail_drop:.1f}% from peak)"
+                # Check if momentum is still strong for extension to 35%
+                c_macd = sig.get("macd_slope", 0) or 0
+                c_roc5 = sig.get("roc5", 0) or 0
+                if c_macd > 0 and c_roc5 > 3 and pnl_pct < 35:
+                    logger.info(f"HOLD {sym} — crypto extending to 35% (macd={c_macd:.3f}, roc5={c_roc5:.1f}%)")
+                else:
+                    reason = f"crypto profit target ({pnl_pct:+.1f}%)"
+            elif trail_drop <= -c_trail and pnl_pct > 0:
+                reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
 
             if reason:
                 logger.info(f"SELL {sym} — {reason}")
@@ -1139,7 +1172,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 made_trades_ref.append(True)
                 peaks.pop(sym, None)
             else:
-                logger.info(f"HOLD {sym} — {pnl_pct:+.1f}% | peak ${peak:,.0f} | trail {trail_drop:.1f}%")
+                logger.info(f"HOLD {sym} — {pnl_pct:+.1f}% | peak ${peak:,.0f} | trail {trail_drop:.1f}% | thr {c_trail:.0f}%")
         except Exception as e:
             logger.warning(f"Crypto sell error {sym}: {e}")
 
@@ -2071,6 +2104,28 @@ def run():
         if gap_ups:
             logger.info(f"Gap-up candidates: {', '.join(sorted(gap_ups))}")
 
+    # Mean reversion setups — deeply oversold stocks bouncing from support
+    # High RSI divergence + Stoch RSI < 15 + EMA50 support = strong bounce setup
+    mean_rev_cands = set()
+    if _time_ok(255):
+        for tk, sig in live.items():
+            if tk in held:
+                continue
+            price_t  = sig.get("price", 0) or 0
+            stoch_k_t = sig.get("stoch_k", 50) or 50
+            rsi_t    = sig.get("daily_rsi", 50) or 50
+            ema50_t  = sig.get("price_vs_ema50", 0) or 0
+            rsi_bull_t = sig.get("rsi_bull_divergence", False)
+            vol_dry_t  = sig.get("vol_dry_up", False)
+            roc5_t   = sig.get("roc5", 0) or 0
+            # Classic mean reversion: deeply oversold, bouncing on divergence, near EMA50 support
+            if (stoch_k_t < 15 and rsi_t < 35 and ema50_t > -8
+                    and (rsi_bull_t or vol_dry_t) and price_t >= 5
+                    and roc5_t > -15):   # not in a full collapse
+                mean_rev_cands.add(tk)
+        if mean_rev_cands:
+            logger.info(f"Mean-reversion bounce setups: {', '.join(sorted(mean_rev_cands))}")
+
     # Short squeeze detection — high short float + rising + volume surge → explosive upside
     squeeze_cands = get_squeeze_candidates(set(candidates)) if _time_ok(250) else set()
 
@@ -2379,7 +2434,7 @@ def run():
                 except Exception:
                     pass
 
-        # Technical pass — include sector rotation + gap + squeeze + earnings bonuses
+        # Technical pass — include sector rotation + gap + squeeze + earnings + mean-rev bonuses
         tech_scores = {
             tk: score(tk, live[tk],
                       regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
@@ -2387,7 +2442,8 @@ def run():
                                 + (12 if tk in squeeze_cands else 0)
                                 + (8  if tk in recent_sells else 0)
                                 + (14 if tk in bullish_options else 0)
-                                + (18 if tk in earnings_beats else 0))  # earnings beat continuation
+                                + (18 if tk in earnings_beats else 0)
+                                + (10 if tk in mean_rev_cands else 0))  # mean reversion bounce
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -2439,9 +2495,10 @@ def run():
             options_adj   = 14 if tk in bullish_options else 0
             reentry_adj   = 8  if tk in recent_sells else 0
             earnings_adj  = 18 if tk in earnings_beats else 0
+            mean_rev_adj  = 10 if tk in mean_rev_cands else 0
             final_sc      = score(tk, live[tk], sentiment=sent,
                                   regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
-                                            + options_adj + reentry_adj + earnings_adj)
+                                            + options_adj + reentry_adj + earnings_adj + mean_rev_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
@@ -2450,6 +2507,7 @@ def run():
                 if options_adj:   extras.append("call-flow")
                 if reentry_adj:   extras.append("re-entry")
                 if earnings_adj:  extras.append("earnings-beat")
+                if mean_rev_adj:  extras.append("mean-rev")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
 
         final_scores.sort(key=lambda x: -x[1])
