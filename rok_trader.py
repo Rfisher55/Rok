@@ -764,6 +764,83 @@ def get_squeeze_candidates(fractionable_set: set) -> set:
     return candidates
 
 
+# ── Unusual options flow detector ────────────────────────────────────────────
+def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
+    """
+    Detect unusual options activity via yfinance options chain.
+    Returns {symbol: {'call_vol_ratio': float, 'put_call': float, 'bullish': bool}}
+
+    Bullish flow: call volume >> put volume + high OI on near-term calls
+    """
+    result = {}
+    checked = 0
+    for sym in tickers[:max_check]:
+        if checked >= max_check:
+            break
+        try:
+            tk   = yf.Ticker(sym)
+            exps = tk.options
+            if not exps:
+                continue
+            # Use nearest expiry with enough time (7-30 days out)
+            from datetime import date as _date
+            today   = _date.today()
+            target  = None
+            for exp in exps[:6]:
+                try:
+                    exp_date = _date.fromisoformat(exp)
+                    days_out = (exp_date - today).days
+                    if 5 <= days_out <= 35:
+                        target = exp
+                        break
+                except Exception:
+                    pass
+            if not target:
+                continue
+
+            chain = tk.option_chain(target)
+            calls = chain.calls
+            puts  = chain.puts
+            if calls.empty or puts.empty:
+                continue
+
+            call_vol = int(calls["volume"].fillna(0).sum())
+            put_vol  = int(puts["volume"].fillna(0).sum())
+            call_oi  = int(calls["openInterest"].fillna(0).sum())
+            put_oi   = int(puts["openInterest"].fillna(0).sum())
+
+            if call_vol + put_vol < 100:  # too little activity
+                continue
+
+            put_call = put_vol / max(1, call_vol)
+            # Avg 30-day call OI as baseline
+            # Bullish signals: put/call ratio < 0.5 (calls dominate) + call vol > 3x put vol
+            bullish = (put_call < 0.5 and call_vol > put_vol * 2)
+            bearish = (put_call > 2.0 and put_vol > call_vol * 2)
+
+            if bullish or bearish:
+                result[sym] = {
+                    "call_vol":       call_vol,
+                    "put_vol":        put_vol,
+                    "call_oi":        call_oi,
+                    "put_oi":         put_oi,
+                    "put_call":       round(put_call, 2),
+                    "bullish":        bullish,
+                    "bearish":        bearish,
+                }
+            checked += 1
+        except Exception:
+            pass
+
+    bullish_syms = [s for s, d in result.items() if d["bullish"]]
+    bearish_syms = [s for s, d in result.items() if d["bearish"]]
+    if bullish_syms:
+        logger.info(f"Unusual call flow (bullish): {', '.join(bullish_syms)}")
+    if bearish_syms:
+        logger.info(f"Unusual put flow (bearish): {', '.join(bearish_syms)}")
+    return result
+
+
 # ── Crypto trading ────────────────────────────────────────────────────────────
 def fetch_crypto_data() -> dict:
     """
@@ -1782,6 +1859,15 @@ def run():
     # Short squeeze detection — high short float + rising + volume surge → explosive upside
     squeeze_cands = get_squeeze_candidates(set(candidates)) if _time_ok(250) else set()
 
+    # Unusual options flow — detect institutional call buying (bullish signal)
+    options_flow: dict = {}
+    if _time_ok(240):
+        # Check top movers + any stocks with already high scores
+        flow_check = list(gap_ups | squeeze_cands)[:15]
+        flow_check += [s for s in candidates if s in BASE_UNIVERSE][:15]
+        options_flow = get_options_flow_candidates(list(set(flow_check)), max_check=20)
+    bullish_options = {s for s, d in options_flow.items() if d.get("bullish")}
+
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
     now_utc     = datetime.now(timezone.utc)
@@ -2022,7 +2108,8 @@ def run():
                       regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
                                 + (10 if tk in gap_ups else 0)
                                 + (12 if tk in squeeze_cands else 0)
-                                + (8  if tk in recent_sells else 0))
+                                + (8  if tk in recent_sells else 0)
+                                + (14 if tk in bullish_options else 0))  # unusual call flow
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -2049,14 +2136,21 @@ def run():
                 sent, catalyst = ai_sentiment(tk, use_sonnet=use_sonnet, signals=live.get(tk))
             else:
                 sent, catalyst = 0, ""
-            sec_adj     = sector_adjs.get(sec, 0)
-            gap_adj     = 10 if tk in gap_ups else 0
-            squeeze_adj = 12 if tk in squeeze_cands else 0
+            sec_adj      = sector_adjs.get(sec, 0)
+            gap_adj      = 10 if tk in gap_ups else 0
+            squeeze_adj  = 12 if tk in squeeze_cands else 0
+            options_adj  = 14 if tk in bullish_options else 0
+            reentry_adj  = 8  if tk in recent_sells else 0
             final_sc    = score(tk, live[tk], sentiment=sent,
-                                regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj)
+                                regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj + options_adj + reentry_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
-                logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}'")
+                extras = []
+                if gap_adj:     extras.append("gap")
+                if squeeze_adj: extras.append("squeeze")
+                if options_adj: extras.append("call-flow")
+                if reentry_adj: extras.append("re-entry")
+                logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
 
         final_scores.sort(key=lambda x: -x[1])
 
