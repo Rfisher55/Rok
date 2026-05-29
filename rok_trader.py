@@ -1359,6 +1359,19 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             if macd_bdiv:      extras.append("MACD bullish divergence (hidden strength)")
             if ichi_cnt >= 3:  extras.append(f"Ichimoku {ichi_cnt}/4 signals bullish")
             if consec >= 3:    extras.append(f"{consec} consecutive green days")
+            if signals.get("cup_handle"):
+                piv = signals.get("cup_handle_pivot", 0)
+                extras.append(f"Cup & Handle breakout (O'Neil pivot ${piv:.2f})" if piv else "Cup & Handle breakout")
+            if signals.get("at_demand_zone"):
+                extras.append("at institutional demand zone (high-vol accumulation)")
+            if signals.get("mom_accel"):
+                extras.append("momentum accelerating (ROC rising faster than prior week)")
+            if signals.get("trend_reversal"):
+                extras.append("20-EMA trend reversal with volume + RSI recovery")
+            if signals.get("bull_flag"):
+                extras.append("bull flag pattern (tight consolidation after flagpole)")
+            if signals.get("mtf_aligned"):
+                extras.append("multi-timeframe confirmed (daily + hourly aligned)")
             tech_context = (
                 f"\nTechnical: RSI={rsi:.0f}, DailyRSI={daily_rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
                 f"BB%={bb_pos:.0f}, W%R={w_r:.0f}, ADX={adx_v:.0f}, "
@@ -3360,6 +3373,21 @@ def run():
     if vix > VIX_EXTREME_THRESH:
         logger.warning(f"VIX={vix:.0f} EXTREME — halting new buys, protecting capital.")
 
+    # VIX spike guard: if VIX jumped >25% from its 5-day average, the market is panicking
+    # Skip new buys this cycle even if VIX hasn't hit the extreme threshold yet
+    _vix_spike = False
+    try:
+        _vix_hist = yf.download("^VIX", period="10d", interval="1d",
+                                auto_adjust=True, progress=False)
+        if not _vix_hist.empty and len(_vix_hist) >= 5:
+            _vix_vals  = list(_vix_hist["Close"].dropna())
+            _vix_avg5  = sum(_vix_vals[-6:-1]) / 5 if len(_vix_vals) >= 6 else _vix_vals[-1]
+            _vix_spike = vix > _vix_avg5 * 1.25 and vix > 20
+            if _vix_spike:
+                logger.warning(f"VIX spike guard: VIX={vix:.1f} vs 5d-avg={_vix_avg5:.1f} (+{(vix/_vix_avg5-1)*100:.0f}%) — buying cautiously")
+    except Exception:
+        pass
+
     # Portfolio drawdown guard — compute current drawdown from historical peak
     _prior_tlog  = _load(TRADES_FILE, {})
     _perf_hist   = _prior_tlog.get("perf_history", [])
@@ -3847,6 +3875,11 @@ def run():
         _eff_min_score += 6
         logger.info(f"Scan breadth guard: only {_scan_adv_pct}% advancing — raising threshold to {_eff_min_score}")
 
+    # VIX spike guard: if VIX is spiking rapidly, add extra +8 to threshold
+    if _vix_spike:
+        _eff_min_score += 8
+        logger.info(f"VIX spike guard active — raising threshold to {_eff_min_score}")
+
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
         # Sector counts for diversification
         sector_counts = {}
@@ -3971,7 +4004,11 @@ def run():
                                              + vol_surge_adj + options_adj + reentry_adj
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
                                              + breakout_adj)
-            if final_sc >= _eff_min_score:
+            # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
+            _grade_now = momentum_grade(live.get(tk, {}), final_sc)
+            _grade_thresh = _eff_min_score - 5 if _grade_now == "A+" else _eff_min_score
+
+            if final_sc >= _grade_thresh:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
                 if gap_adj:        extras.append("gap")
@@ -3984,7 +4021,10 @@ def run():
                 if pre_earn_adj:   extras.append("pre-earnings")
                 if mean_rev_adj:   extras.append("mean-rev")
                 if breakout_adj:   extras.append("52W-breakout")
-                logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
+                if live.get(tk, {}).get("cup_handle"): extras.append("C&H")
+                if live.get(tk, {}).get("mom_accel"):  extras.append("accel")
+                if _grade_now == "A+":              extras.append("GRADE:A+")
+                logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} grade={_grade_now} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
                 _rejected_log.append({"ticker": tk, "score": final_sc,
                                        "reason": f"AI sent={sent:+.0f} → final {final_sc} < {_eff_min_score}"})
@@ -4128,6 +4168,17 @@ def run():
                         reason += " [VOL SURGE]"
                     if tk in squeeze_cands:
                         reason += " [SQUEEZE]"
+                    # Cup & Handle: log pivot target (cup depth added to pivot = technical target)
+                    _d_buy = live.get(tk, {})
+                    if _d_buy.get("cup_handle"):
+                        _pivot = _d_buy.get("cup_handle_pivot", 0)
+                        _cup_d = _d_buy.get("cup_depth_pct", 0)
+                        _ch_target = round(_pivot * (1 + _cup_d / 100), 2) if _pivot and _cup_d else 0
+                        reason += f" [C&H pivot=${_pivot} target=${_ch_target}]"
+                    if _d_buy.get("at_demand_zone"):
+                        reason += " [DEMAND ZONE]"
+                    if _d_buy.get("mom_accel"):
+                        reason += " [ACCEL]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
