@@ -1288,6 +1288,39 @@ def has_earnings_soon(sym, days=3):
 
 
 _PRE_EARN_CACHE: dict = {}
+_EARN_GUARD_CACHE: dict = {}
+
+def earnings_too_close(sym, guard_days: int = 2) -> bool:
+    """
+    Returns True if earnings are within guard_days days — too close to buy safely.
+    Avoids gap-down risk from earnings surprises. Cached per run.
+    """
+    if sym in _EARN_GUARD_CACHE:
+        return _EARN_GUARD_CACHE[sym]
+    result = False
+    try:
+        cal = yf.Ticker(sym).calendar
+        if cal is not None and not cal.empty:
+            now = datetime.now(timezone.utc).date()
+            for col in cal.columns:
+                if "earnings" in str(col).lower():
+                    for val in cal[col]:
+                        try:
+                            ed = pd.Timestamp(val).date()
+                            days_out = (ed - now).days
+                            if 0 <= days_out <= guard_days:
+                                result = True
+                                break
+                        except Exception:
+                            pass
+                if result:
+                    break
+    except Exception:
+        pass
+    _EARN_GUARD_CACHE[sym] = result
+    return result
+
+
 def has_pre_earnings_setup(sym, min_days=4, max_days=20):
     """
     Returns True if this stock has earnings 4-20 days out AND shows momentum.
@@ -1587,6 +1620,10 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             elif signals.get("above_poc"):
                 poc = signals.get("poc_price", 0)
                 extras.append(f"Price above Volume POC ${poc:.2f}" if poc else "Above Volume POC")
+            if signals.get("ema_stacked_bull"):
+                extras.append("EMA5>EMA10>EMA20>EMA50 — full bull alignment (all timeframes agree)")
+            if signals.get("ema_stacked_bear"):
+                extras.append("EMA stack fully bearish (all EMAs declining)")
             if signals.get("trend_reversal"):
                 extras.append("20-EMA trend reversal with volume + RSI recovery")
             if signals.get("bull_flag"):
@@ -2453,6 +2490,9 @@ def _extract(daily, hourly):
     roc20          = 0.0
     price_vs_ema50  = 0.0
     price_vs_ema200 = 0.0
+    ema_stacked_bull = False   # EMA5 > EMA10 > EMA20 > EMA50 = "weekly aligned"
+    ema_stacked_bear = False   # EMA5 < EMA10 < EMA20 < EMA50 = "weekly bear"
+    e5 = e10 = e20 = e50 = 0.0
     try:
         dc = list(daily["Close"])
         if len(dc) >= 15:
@@ -2465,12 +2505,20 @@ def _extract(daily, hourly):
             roc5 = _roc(dc, 5)
         if len(dc) >= 20:
             roc20 = _roc(dc, 20)
+            e20 = _ema(dc, 20)
         if len(dc) >= 30:
             stoch_k, stoch_d = _stoch_rsi(dc, rsi_period=14, stoch_period=14)
         if len(dc) >= 50:
             e50 = _ema(dc, 50)
             if e50 and e50 > 0:
                 price_vs_ema50 = (dc[-1] - e50) / e50 * 100
+            # EMA stack: price > EMA5 > EMA10 > EMA20 > EMA50 = full bull alignment
+            try:
+                if all(x and x > 0 for x in [e5, e10, e20, e50]):
+                    ema_stacked_bull = dc[-1] > e5 > e10 > e20 > e50
+                    ema_stacked_bear = dc[-1] < e5 < e10 < e20 < e50
+            except Exception:
+                pass
         # 200-day EMA: above = institutional uptrend, below = bear territory
         if len(dc) >= 200:
             e200 = _ema(dc, 200)
@@ -2865,6 +2913,8 @@ def _extract(daily, hourly):
         "roc5":               round(roc5, 2),
         "roc20":              round(roc20, 2),
         "price_vs_ema50":     round(price_vs_ema50, 2),
+        "ema_stacked_bull":   ema_stacked_bull,
+        "ema_stacked_bear":   ema_stacked_bear,
         "williams_r":         round(williams_r, 1),
         "macd_slope":         round(macd_slope_val, 4),
         "ttm_squeeze_fired":  ttm_squeeze_fired,
@@ -3092,6 +3142,7 @@ def momentum_grade(d, final_score=0):
     if d.get("at_demand_zone", False):         criteria += 1  # at institutional demand zone
     if d.get("mom_accel", False):              criteria += 1  # momentum accelerating
     if d.get("double_bottom", False):         criteria += 1  # W-pattern bullish reversal
+    if d.get("ema_stacked_bull", False):      criteria += 2  # EMA stack aligned (high quality trend)
 
     # Score contribution
     if   final_score >= 80: criteria += 2
@@ -3279,6 +3330,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif roc20 >  5:  s +=  3
     elif roc20 < -10: s -=  6
     elif roc20 <  -5: s -=  3
+
+    # EMA stack: price > EMA5 > EMA10 > EMA20 > EMA50 = full bullish alignment (+8)
+    # Mirror of institutional "trend qualification" — all timeframes agree
+    if d.get("ema_stacked_bull", False): s += 8
+    if d.get("ema_stacked_bear", False): s -= 8
 
     # Price vs 50-day EMA — trend confirmation (+8/-10)
     if   ema50_pos >  3:  s +=  8
@@ -3503,6 +3559,10 @@ def bearish_score(tk, d):
     if not d.get("above_poc", True) and not d.get("at_poc", False): s += 8
     # POC breakout above = don't short into strength
     if d.get("poc_breakout", False): s -= 10
+
+    # EMA stack: fully stacked bear = reliable short setup (+8), bull = don't short (-8)
+    if d.get("ema_stacked_bear", False): s += 8
+    if d.get("ema_stacked_bull", False): s -= 8
 
     return max(0, min(100, int(s)))
 
@@ -4387,8 +4447,9 @@ def run():
                 if live.get(tk, {}).get("mom_accel"):     extras.append("accel")
                 if live.get(tk, {}).get("double_bottom"):  extras.append("2-BTM")
                 if live.get(tk, {}).get("double_top"):     extras.append("2-TOP")
-                if live.get(tk, {}).get("poc_breakout"):   extras.append("POC-BRK")
+                if live.get(tk, {}).get("poc_breakout"):    extras.append("POC-BRK")
                 elif live.get(tk, {}).get("above_poc"):    extras.append("abv-POC")
+                if live.get(tk, {}).get("ema_stacked_bull"): extras.append("EMA-stack")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} grade={_grade_now} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
@@ -4447,6 +4508,8 @@ def run():
                 "at_poc":         live.get(tk, {}).get("at_poc", False),
                 "above_poc":      live.get(tk, {}).get("above_poc", False),
                 "poc_breakout":   live.get(tk, {}).get("poc_breakout", False),
+                "ema_stacked_bull": live.get(tk, {}).get("ema_stacked_bull", False),
+                "ema_stacked_bear": live.get(tk, {}).get("ema_stacked_bear", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
@@ -4460,6 +4523,10 @@ def run():
         else:
             for tk, sc, sent, sec, catalyst in final_scores[:open_long_slots]:
                 try:
+                    # Earnings proximity guard: don't buy within 2 days of earnings report
+                    if earnings_too_close(tk, guard_days=2):
+                        logger.info(f"SKIP {tk} — earnings within 2 days (gap-risk guard)")
+                        continue
                     d        = live[tk]
                     price    = d["price"]
                     atr      = d.get("atr")
