@@ -2220,6 +2220,25 @@ def bearish_score(tk, d):
     if   m_slope < 0:   s +=  8  # MACD falling = bearish
     elif m_slope > 0:   s -=  6
 
+    # Bearish versions of new signals
+    rsi_div = d.get("rsi_divergence", False)
+    daily_rsi = d.get("daily_rsi", 50) or 50
+    vwap_z_v = d.get("vwap_z", 0) or 0
+    consec = d.get("consec_green", 0) or 0
+
+    # RSI bearish divergence on the short: price up but RSI falling = confirmation
+    if rsi_div: s += 12
+    # VWAP exhaustion zone: price far above VWAP = short entry
+    if vwap_z_v > 2.5: s += 10
+    elif vwap_z_v > 1.5: s += 5
+    # Many consecutive green candles = overbought, likely to mean-revert
+    if   consec >= 5: s += 8   # extended run = eventual reversal
+    elif consec >= 7: s += 12  # very extended = higher short conviction
+    # Daily RSI overbought = bearish
+    if daily_rsi > 75: s += 8
+    elif daily_rsi > 65: s += 4
+    elif daily_rsi < 35: s -= 8  # oversold daily = don't short here
+
     return max(0, min(100, int(s)))
 
 
@@ -3060,6 +3079,20 @@ def run():
 
     try:
         curr = alpaca_get("/v2/positions")
+        def _pos_signals(sym):
+            """Build compact signal state for a held position."""
+            sig = live.get(sym, {})
+            if not sig:
+                return {}
+            return {
+                "rsi":        round(sig.get("daily_rsi", 50), 1),
+                "vwap_pos":   round(sig.get("vwap_pos", 0), 2),
+                "roc5":       round(sig.get("roc5", 0), 2),
+                "macd_slope": round(sig.get("macd_slope", 0), 4),
+                "vol_ratio":  round(sig.get("vol_ratio", 1), 2),
+                "vwap_reclaim": sig.get("vwap_reclaim", False),
+            }
+
         tlog["positions"] = [
             {
                 "ticker":     p.get("symbol"),
@@ -3073,6 +3106,7 @@ def run():
                 "stop_price": round(float(p.get("avg_entry_price", 0)) * (1 - STOP_LOSS_PCT), 2),
                 "target_price": round(float(p.get("avg_entry_price", 0)) * (1 + PROFIT_TARGET_PCT), 2),
                 "peak_price": peaks.get(p.get("symbol", ""), {}).get("peak", 0) if isinstance(peaks.get(p.get("symbol", "")), dict) else 0,
+                "live_signals": _pos_signals(p.get("symbol", "")),
             }
             for p in curr
         ]
