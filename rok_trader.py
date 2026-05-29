@@ -1841,6 +1841,32 @@ def _extract(daily, hourly):
         pass
     near_52w_high = (price / high_52w) if high_52w > 0 else 1.0
 
+    # Fibonacci retracement level detection — institutional support zones
+    fib_support    = False   # price near 38.2% / 50% / 61.8% retracement and holding
+    fib_resistance = False   # price near 61.8% / 78.6% when in downtrend
+    try:
+        if len(daily) >= 20 and "High" in daily.columns and "Low" in daily.columns:
+            _fib_high = float(daily["High"].iloc[-20:].max())
+            _fib_low  = float(daily["Low"].iloc[-20:].min())
+            _range    = _fib_high - _fib_low
+            if _range > 0:
+                fib_382 = _fib_high - 0.382 * _range
+                fib_500 = _fib_high - 0.500 * _range
+                fib_618 = _fib_high - 0.618 * _range
+                fib_786 = _fib_high - 0.786 * _range
+                # Within 1% of Fibonacci level = at the zone
+                for fib_lvl in [fib_382, fib_500, fib_618]:
+                    if abs(price - fib_lvl) / fib_lvl < 0.012:
+                        # Bouncing off support: price was below this level recently
+                        dc_fib = list(daily["Close"].iloc[-5:])
+                        if dc_fib and min(dc_fib[:-1]) < fib_lvl and price >= fib_lvl * 0.998:
+                            fib_support = True
+                        break
+                if abs(price - fib_786) / fib_786 < 0.012:
+                    fib_resistance = True  # near 78.6% = often strong resistance
+    except Exception:
+        pass
+
     # ATR from daily
     atr_val = None
     if len(daily) >= 15 and "High" in daily and "Low" in daily:
@@ -2153,6 +2179,8 @@ def _extract(daily, hourly):
         "ichimoku_bull_cloud": ichimoku.get("cloud_bullish", False),
         "ichimoku_tk_bull":    ichimoku.get("tk_ks_bullish", False),
         "ichimoku_chikou":     ichimoku.get("chikou_bullish", False),
+        "fib_support":         fib_support,
+        "fib_resistance":      fib_resistance,
     }
 
 
@@ -2493,6 +2521,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Near support: buying at proven demand zone (+6)
     if d.get("near_support", False): s += 6
 
+    # Fibonacci retracement support: bouncing off 38.2/50/61.8% level = institutional buy zone (+9)
+    if d.get("fib_support", False):    s += 9
+    if d.get("fib_resistance", False): s -= 5
+
     # NR7 / inside bar: volatility contraction before expansion (+8/+6)
     # These patterns precede large directional moves — buy the squeeze
     if d.get("nr7_signal", False): s += 8
@@ -2789,6 +2821,16 @@ def run():
 
     # Fetch live data (two-phase: quick pre-screen all, full analysis on top 80)
     live = fetch_batch(candidates, held_symbols=set(held.keys()))
+
+    # Internal scan breadth: how many of our scanned stocks are trending up?
+    # This is a proprietary advance/decline ratio for our universe
+    _scan_up   = sum(1 for sig in live.values() if (sig.get("change_pct", 0) or 0) > 0.3)
+    _scan_down = sum(1 for sig in live.values() if (sig.get("change_pct", 0) or 0) < -0.3)
+    _scan_total = max(1, _scan_up + _scan_down)
+    _scan_adv_pct = round(_scan_up / _scan_total * 100, 1)
+    logger.info(f"Internal scan breadth: {_scan_up}/{_scan_total} ({_scan_adv_pct}%) advancing")
+    # If very few stocks are advancing in our universe, be more cautious with new buys
+    _scan_breadth_poor = _scan_adv_pct < 30 and _scan_total > 20
 
     # Sector rotation (computed before AI context so it can be included in prompt)
     sector_adjs  = sector_rotation()   # {sector: -8..+8}
@@ -3216,6 +3258,11 @@ def run():
     else:
         _eff_min_score = MIN_BUY_SCORE
 
+    # Internal scan breadth guard: if <30% of our universe is advancing, add +6 to threshold
+    if _scan_breadth_poor:
+        _eff_min_score += 6
+        logger.info(f"Scan breadth guard: only {_scan_adv_pct}% advancing — raising threshold to {_eff_min_score}")
+
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
         # Sector counts for diversification
         sector_counts = {}
@@ -3394,6 +3441,7 @@ def run():
                                        live.get(tk,{}).get("ichimoku_bull_cloud", False),
                                        live.get(tk,{}).get("ichimoku_tk_bull", False),
                                        live.get(tk,{}).get("ichimoku_chikou", False)]),
+                "fib_support":    live.get(tk, {}).get("fib_support", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -3678,12 +3726,26 @@ def run():
         _mq += 10 if regime.get("above_200", True) else -10
         _mq += 8  if regime.get("spy_trend", 0) > 1 else (-6 if regime.get("spy_trend", 0) < -1 else 0)
         _mq += 8  if breadth.get("adv_pct", 50) > 65 else (-8 if breadth.get("adv_pct", 50) < 35 else 0)
+        # Internal scan breadth contribution (our proprietary A/D ratio)
+        try:
+            if _scan_adv_pct > 65:  _mq += 6
+            elif _scan_adv_pct < 30: _mq -= 8
+        except NameError:
+            pass
         _hot_sectors = sum(1 for v in sector_adjs.values() if v >= 4)
         _cold_sectors = sum(1 for v in sector_adjs.values() if v <= -4)
         _mq += (_hot_sectors - _cold_sectors) * 2
         tlog["market_quality"] = max(0, min(100, round(_mq)))
     except Exception:
         tlog["market_quality"] = 50
+
+    # Internal scan breadth metrics
+    try:
+        tlog["scan_breadth_pct"] = _scan_adv_pct
+        tlog["scan_breadth_poor"] = _scan_breadth_poor
+    except NameError:
+        tlog["scan_breadth_pct"] = None
+        tlog["scan_breadth_poor"] = False
 
     # Plain-English summary of this cycle's decision for the dashboard
     try:
