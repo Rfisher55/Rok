@@ -1423,6 +1423,23 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Volume dry-up on pullback — bullish accumulation signal
+    # When stock dips on lower-than-average volume: sellers exhausted, big money holding
+    vol_dry_up = False
+    try:
+        if "Volume" in daily.columns and "Close" in daily.columns and len(daily) >= 5:
+            vols   = list(daily["Volume"])
+            closes2 = list(daily["Close"])
+            avg_v  = sum(vols[-10:]) / max(1, len(vols[-10:]))
+            # Last 2 days: price down OR flat, volume below 70% of average
+            if (len(closes2) >= 3 and len(vols) >= 3
+                    and closes2[-1] <= closes2[-2]   # price not rising today
+                    and vols[-1] < avg_v * 0.70      # today volume < 70% avg
+                    and vols[-2] < avg_v * 0.80):    # yesterday also low volume
+                vol_dry_up = True
+    except Exception:
+        pass
+
     # Average volume (14-day) for minimum liquidity filter
     avg_vol_14 = 0
     try:
@@ -1470,9 +1487,10 @@ def _extract(daily, hourly):
         "macd_slope":         round(macd_slope_val, 4),
         "ttm_squeeze_fired":  ttm_squeeze_fired,
         "vwap_z":             round(vwap_z, 2),
-        "rsi_divergence":     rsi_divergence,
+        "rsi_divergence":      rsi_divergence,
         "rsi_bull_divergence": rsi_bull_divergence,
         "consec_green":        consec_green,
+        "vol_dry_up":          vol_dry_up,
     }
 
 
@@ -1792,6 +1810,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if   consec >= 4: s += 12
     elif consec >= 3: s +=  8
     elif consec >= 2: s +=  4
+
+    # Volume dry-up on pullback: selling exhaustion signal (+9)
+    # Classic Wyckoff "test" pattern — big money not selling on the dip
+    if d.get("vol_dry_up", False): s += 9
 
     # Market regime adjustment
     s += regime_adj
@@ -2159,6 +2181,30 @@ def run():
                 except Exception as e:
                     logger.warning(f"Partial sell failed {sym}: {e}")
                 continue
+
+            # ── Profit lock at +8%: if momentum reverses with solid gain, sell 75% ──
+            # This locks in most of the profit while keeping a runner going
+            if (pnl_pct >= 8 and not half_out and qty >= 4):
+                live_sig_lock = live.get(sym, {})
+                macd_s = live_sig_lock.get("macd_slope", 0) or 0
+                stoch_k_lock = live_sig_lock.get("stoch_k", 50) or 50
+                rsi_lock = live_sig_lock.get("rsi", 50) or 50
+                # MACD turning negative while overbought = momentum reversal
+                if macd_s < -0.03 and stoch_k_lock > 75 and rsi_lock > 65:
+                    lock_qty = round(qty * 0.75, 4)
+                    logger.info(f"PROFIT_LOCK {sym} — selling 75% at {pnl_pct:+.1f}% (MACD slope={macd_s:.3f}, stoch={stoch_k_lock:.0f})")
+                    try:
+                        alpaca_post("/v2/orders", {
+                            "symbol": sym, "qty": str(lock_qty),
+                            "side": "sell", "type": "market", "time_in_force": "day",
+                        })
+                        log_trade(tlog, "SELL_HALF", sym, current, lock_qty,
+                                  pnl=pnl_pct, reason=f"profit lock 75% — momentum reversal ({pnl_pct:+.1f}%)")
+                        peaks[sym]["half_out"] = True
+                        made_trades = True
+                    except Exception as e:
+                        logger.warning(f"Profit lock failed {sym}: {e}")
+                    continue
 
             # ── Dynamic trailing stop: tightens as profit grows ──────────────
             # At +15%: trail tightens to 2%
