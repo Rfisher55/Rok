@@ -54289,6 +54289,10 @@ window.renderSectorRotation = renderSectorRotation;
       const macroDay= data.macro_day;
       const regCol  = regime.regime==='bull'?'#00ff88':regime.regime==='bear'?'#ef5350':'#ffd54f';
       const pnlCol  = totalPnl >= 0 ? '#00ff88' : '#ef5350';
+      const breadth = data.market_breadth || {};
+      const bAdvPct = breadth.adv_pct;
+      const bNote   = breadth.note || '';
+      const drawdownPct = data.drawdown_pct || 0;
 
       let statusLine, statusBg, statusBorder;
       if (hasErr) {
@@ -54321,10 +54325,13 @@ window.renderSectorRotation = renderSectorRotation;
             <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">P&L</div><div style="font-size:14px;font-weight:900;color:${pnlCol}">${totalPnl>=0?'+':''}${totalPnl.toFixed(1)}%</div></div>
             ${scanSize ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:14px;font-weight:900;color:#aaa">${scanSize}</div></div>` : ''}
             ${regime.regime ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Regime</div><div style="font-size:14px;font-weight:900;color:${regCol}">${regime.regime.toUpperCase()}</div></div>` : ''}
+            ${drawdownPct > 1 ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Drawdown</div><div style="font-size:14px;font-weight:900;color:#ef5350">-${drawdownPct.toFixed(1)}%</div></div>` : ''}
+            ${bAdvPct !== undefined ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Breadth</div><div style="font-size:14px;font-weight:900;color:${bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#ffd54f'}">${bAdvPct}%</div></div>` : ''}
           </div>
         </div>
         <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600">
           ${macroDay ? '<span style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);border-radius:4px;padding:1px 6px;margin-right:.4rem;font-size:8px;color:#ffd54f;font-weight:800">⚠️ FOMC/MACRO DAY</span>' : ''}
+          ${bNote && bAdvPct !== undefined ? `<span style="color:${bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#666'};margin-right:.5rem">${bNote}</span>` : ''}
           ${statusLine}
         </div>
       </div>`;
@@ -54335,16 +54342,15 @@ window.renderSectorRotation = renderSectorRotation;
     if (intelEl) {
       const trades = (data.trades || []).slice(0, 30);
       const positions = (data.positions || []);
-      if (trades.length === 0 && positions.length === 0) {
-        intelEl.innerHTML = `<div style="color:var(--wh4);font-size:11px;padding:.5rem 0">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
-        return;
-      }
       // Show bot error/status banner
       if (data.error) {
         intelEl.innerHTML = `<div style="background:rgba(255,34,85,.1);border:1px solid rgba(255,34,85,.3);border-radius:8px;padding:.6rem .85rem;margin-bottom:.6rem;font-size:10px;color:var(--r)">${data.error}</div>`;
         return;
       }
       let html = '';
+      if (trades.length === 0 && positions.length === 0) {
+        html += `<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;margin-bottom:.5rem">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
+      }
       if (positions.length) {
         html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Open Positions (${positions.length})</div>`;
         html += `<div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem">`;

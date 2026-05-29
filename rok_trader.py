@@ -63,10 +63,12 @@ MAX_CRYPTO_POS   = 3        # max concurrent crypto positions
 CRYPTO_MAX_PCT   = 0.07     # max 7% portfolio per crypto position
 # Alpaca crypto symbols → yfinance equivalents
 CRYPTO_UNIVERSE  = {
-    "BTC/USD": "BTC-USD",
-    "ETH/USD": "ETH-USD",
-    "SOL/USD": "SOL-USD",
+    "BTC/USD":  "BTC-USD",
+    "ETH/USD":  "ETH-USD",
+    "SOL/USD":  "SOL-USD",
     "AVAX/USD": "AVAX-USD",
+    "DOGE/USD": "DOGE-USD",
+    "XRP/USD":  "XRP-USD",
 }
 CRYPTO_STOP_PCT  = 0.10     # crypto is volatile: 10% stop
 CRYPTO_TARGET_PCT= 0.25     # 25% profit target for crypto
@@ -681,6 +683,39 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
 
 
 # ── Holistic market AI call ───────────────────────────────────────────────────
+_BREADTH_CACHE: dict = {}
+
+def get_market_breadth() -> dict:
+    """
+    Estimate market breadth using a proxy basket of ETFs (advance/decline proxy).
+    Returns {adv_pct: float, note: str}.
+    """
+    global _BREADTH_CACHE
+    if _BREADTH_CACHE:
+        return _BREADTH_CACHE
+    try:
+        # Use sector ETFs as breadth proxy: count how many are up today
+        probe_syms = ["XLK","XLF","XLV","XLE","XLY","XLI","XLP","XLC","XLU","XLRE","XLB","XME","IWM","MDY"]
+        raw = yf.download(" ".join(probe_syms), period="2d", interval="1d",
+                          group_by="ticker", auto_adjust=True, progress=False)
+        adv = 0; total = 0
+        for sym in probe_syms:
+            try:
+                closes = list(raw["Close"][sym].dropna()) if sym in raw["Close"] else []
+                if len(closes) >= 2:
+                    total += 1
+                    if closes[-1] > closes[-2]: adv += 1
+            except Exception:
+                pass
+        adv_pct = round(adv / max(1, total) * 100, 1)
+        note = "broad advance" if adv_pct > 70 else "broad decline" if adv_pct < 30 else "mixed"
+        _BREADTH_CACHE = {"adv_pct": adv_pct, "note": note, "adv": adv, "total": total}
+        logger.info(f"Market breadth: {adv}/{total} sectors up ({adv_pct}%) — {note}")
+        return _BREADTH_CACHE
+    except Exception:
+        return {"adv_pct": 50.0, "note": "unknown", "adv": 0, "total": 0}
+
+
 def ai_market_context(regime, top_movers, sector_adjs: dict = None):
     """
     Ask Claude for a macro market read that adjusts our overall confidence.
@@ -697,9 +732,11 @@ def ai_market_context(regime, top_movers, sector_adjs: dict = None):
             cold = sorted(sector_adjs.items(), key=lambda x:  x[1])[:2]
             sec_str = (f"\n- Hot sectors: {', '.join(f'{s}({v:+d})' for s,v in hot)}"
                        f"\n- Cold sectors: {', '.join(f'{s}({v:+d})' for s,v in cold)}")
+        breadth = get_market_breadth()
         prompt = (
             f"Automated US equity trader context for today:\n"
             f"- Regime: {regime['regime']} (VIX={regime['vix']:.0f}, SPY 5d={regime['spy_trend']:+.1f}%)\n"
+            f"- Market breadth: {breadth['adv_pct']}% sectors advancing ({breadth['note']})\n"
             f"- FOMC/macro event {'TODAY' if on_macro else 'not imminent'}\n"
             f"- Top movers: {movers_str}{sec_str}\n\n"
             f"Should the bot be aggressive (+3 to +5) or cautious (-3 to -5) today? "
@@ -855,6 +892,39 @@ def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
 
 
 # ── Crypto trading ────────────────────────────────────────────────────────────
+_BTC_DOMINANCE_CACHE: dict = {}
+
+def get_btc_dominance() -> float:
+    """
+    Estimate BTC dominance by comparing BTC market cap proxy vs total crypto.
+    Uses BTC price * circulating supply heuristic. Returns 0-100 (%).
+    """
+    global _BTC_DOMINANCE_CACHE
+    if _BTC_DOMINANCE_CACHE:
+        return _BTC_DOMINANCE_CACHE.get("dom", 55.0)
+    try:
+        btc  = yf.download("BTC-USD",  period="1d", interval="1d", progress=False)
+        eth  = yf.download("ETH-USD",  period="1d", interval="1d", progress=False)
+        sol  = yf.download("SOL-USD",  period="1d", interval="1d", progress=False)
+        btc_p = float(btc["Close"].iloc[-1]) if not btc.empty else 0
+        eth_p = float(eth["Close"].iloc[-1]) if not eth.empty else 0
+        sol_p = float(sol["Close"].iloc[-1]) if not sol.empty else 0
+        # Rough market cap weights using circulating supply approximations
+        BTC_SUPPLY = 19_700_000
+        ETH_SUPPLY = 120_000_000
+        SOL_SUPPLY = 460_000_000
+        btc_mc  = btc_p * BTC_SUPPLY
+        eth_mc  = eth_p * ETH_SUPPLY
+        sol_mc  = sol_p * SOL_SUPPLY
+        total   = btc_mc + eth_mc + sol_mc
+        dom     = (btc_mc / total * 100) if total > 0 else 55.0
+        _BTC_DOMINANCE_CACHE["dom"] = round(dom, 1)
+        logger.info(f"BTC dominance estimate: {dom:.1f}%")
+        return _BTC_DOMINANCE_CACHE["dom"]
+    except Exception:
+        return 55.0
+
+
 def fetch_crypto_data() -> dict:
     """
     Fetch price + indicators for all CRYPTO_UNIVERSE coins via yfinance.
@@ -1054,11 +1124,20 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     if open_slots <= 0:
         return buying_power
 
+    # BTC dominance: high dom (>60%) = risk-off in crypto, prefer BTC; low dom (<50%) = altcoin season
+    btc_dom = get_btc_dominance()
+    logger.info(f"BTC dominance: {btc_dom:.1f}% — {'risk-off: prefer BTC' if btc_dom > 60 else 'altcoin season' if btc_dom < 50 else 'neutral'}")
+
     scored = []
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
             continue
         sc = crypto_score(sig)
+        # BTC dominance adjustments: boost BTC when dom > 60, boost alts when dom < 50
+        is_btc = "BTC" in alpaca_sym
+        if btc_dom > 60 and not is_btc:   sc = max(0, sc - 8)   # penalize alts in risk-off
+        elif btc_dom < 50 and not is_btc: sc = min(100, sc + 5) # bonus for alts in alt season
+        elif btc_dom > 60 and is_btc:     sc = min(100, sc + 5) # boost BTC in risk-off
         if sc >= 22:
             scored.append((alpaca_sym, sc, sig))
     scored.sort(key=lambda x: -x[1])
@@ -1898,6 +1977,9 @@ def run():
     # Sector rotation (computed before AI context so it can be included in prompt)
     sector_adjs  = sector_rotation()   # {sector: -8..+8}
 
+    # Market breadth (computed before AI context for richer prompt)
+    breadth = get_market_breadth()
+
     # AI market context adjustment (use top movers from screeners)
     top_movers_for_ai = [s for s in candidates if s not in BASE_UNIVERSE][:12]
     regime_adj   = ai_market_context(regime, top_movers_for_ai, sector_adjs=sector_adjs)
@@ -2370,6 +2452,7 @@ def run():
     tlog["drawdown_pct"]    = round(drawdown_pct, 2)
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
+    tlog["market_breadth"]  = breadth
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
