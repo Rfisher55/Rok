@@ -77,6 +77,7 @@ CRYPTO_TARGET_PCT= 0.25     # 25% profit target for crypto
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
 _SPY_PERF_CACHE: dict  = {}   # cached SPY returns for relative strength calc
+_SIGNAL_WIN_RATES: dict = {}  # {signal_name: {win_rate: float, total: int}} loaded from tlog each cycle
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -3733,6 +3734,23 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Double Top: M-pattern bearish reversal at resistance (-8) — reduces buy conviction
     if d.get("double_top", False): s -= 8
 
+    # Adaptive scoring: boost/penalize signals based on historical win rates
+    # Uses accumulated signal_performance data to learn which signals actually work
+    if _SIGNAL_WIN_RATES:
+        _adaptive_adj = 0
+        for sig_key in ["cup_handle", "vcp", "at_demand_zone", "mom_accel",
+                        "obv_rising", "kc_breakout", "higher_lows", "double_bottom",
+                        "poc_breakout", "ema_stacked_bull", "trend_reversal", "bull_flag"]:
+            if d.get(sig_key) and sig_key in _SIGNAL_WIN_RATES:
+                wr = _SIGNAL_WIN_RATES[sig_key].get("win_rate", 50)
+                n  = _SIGNAL_WIN_RATES[sig_key].get("total", 0)
+                if n >= 5:  # only adapt with enough data
+                    # Scale: +60% wr→+3, 70%→+4, 80%→+5; -30% wr→-3, -20%→-2
+                    adj = (wr - 50) / 10  # -5 to +5 range
+                    adj = max(-5, min(5, adj))
+                    _adaptive_adj += adj
+        s += max(-8, min(8, round(_adaptive_adj)))  # cap total adaptive boost at ±8
+
     # Market regime adjustment
     s += regime_adj
 
@@ -4144,6 +4162,10 @@ def run():
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
     now_utc     = datetime.now(timezone.utc)
+
+    # Load accumulated signal win rates for adaptive scoring
+    global _SIGNAL_WIN_RATES
+    _SIGNAL_WIN_RATES = tlog.get("signal_win_rates", {})
 
     # ── MANAGE EXISTING SHORTS ─────────────────────────────────────────────
     for sym, pos in list(shorts.items()):
