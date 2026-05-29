@@ -54444,6 +54444,20 @@ window.renderSectorRotation = renderSectorRotation;
           const closeStr = minsClose != null && minsClose < 120 ? `${minsClose}m to close` : '';
           return `<div style="background:rgba(0,0,0,.2);border:1px solid ${tColor}33;border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Timing</div><div style="font-size:11px;font-weight:900;color:${tColor}">${tLabel}</div><div style="font-size:7.5px;color:var(--wh4)">${tNote}${closeStr ? ' · '+closeStr : ''}</div></div>`;
         })()}
+        ${(() => {
+          // Day type tile: trend vs range vs choppy
+          const dt = data.day_type;
+          const eff = data.day_efficiency;
+          const rr = data.day_range_ratio;
+          const hint = data.strategy_hint;
+          const bias = data.day_opening_bias;
+          if (!dt || dt === 'unknown') return '';
+          const dtLabel = {'trend_up':'TREND ↑','trend_down':'TREND ↓','range':'RANGE','choppy':'CHOPPY','neutral':'NEUTRAL'}[dt] || dt.toUpperCase();
+          const dtColor = dt.startsWith('trend') ? '#00e5ff' : dt === 'range' ? '#ffd54f' : dt === 'choppy' ? '#ef5350' : '#888';
+          const hintLabel = hint === 'breakout' ? '↗ Breakout Day' : hint === 'mean_reversion' ? '↔ Mean-Rev Day' : '— Neutral';
+          const effPct = eff != null ? Math.round(eff * 100) : null;
+          return `<div style="background:rgba(0,0,0,.2);border:1px solid ${dtColor}33;border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Day Type</div><div style="font-size:11px;font-weight:900;color:${dtColor}">${dtLabel}</div><div style="font-size:7px;color:var(--wh4)">${hintLabel}${effPct != null ? ' · eff '+effPct+'%' : ''}${rr != null ? ' · ×'+rr.toFixed(2) : ''}</div></div>`;
+        })()}
       </div>`;
     }
 

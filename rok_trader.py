@@ -1888,6 +1888,119 @@ def market_regime():
                 "score": 0, "above_200": True}
 
 
+_DAY_TYPE_CACHE: list = []   # [result_dict, timestamp]
+
+def intraday_day_type(max_age_sec: int = 300) -> dict:
+    """
+    Classify today's intraday character using SPY 5-min data.
+    Returns:
+      day_type:   'trend_up' | 'trend_down' | 'range' | 'choppy' | 'unknown'
+      efficiency: 0.0-1.0 (net move / total path; high = trending)
+      range_ratio:current range / 14d ATR ratio (>1.3 = expanded range)
+      opening_bias: 'up' | 'down' | 'flat' (first 30min direction)
+      day_score:  +2 (strong trend) to -1 (choppy/range)
+      strategy_hint: 'breakout' | 'mean_reversion' | 'neutral'
+    """
+    import time as _time
+    now_ts = _time.time()
+    if len(_DAY_TYPE_CACHE) == 2 and now_ts - _DAY_TYPE_CACHE[1] < max_age_sec:
+        return _DAY_TYPE_CACHE[0]
+    _default = {"day_type": "unknown", "efficiency": 0.5, "range_ratio": 1.0,
+                 "opening_bias": "flat", "day_score": 0, "strategy_hint": "neutral"}
+    try:
+        # Fetch 5-min SPY (today + 3d for ATR baseline)
+        spy5 = yf.download("SPY", period="3d", interval="5m",
+                            auto_adjust=True, progress=False)
+        if spy5.empty or len(spy5) < 12:
+            return _default
+        closes5 = list(spy5["Close"].dropna())
+        highs5  = list(spy5["High"].dropna())
+        lows5   = list(spy5["Low"].dropna())
+        opens5  = list(spy5["Open"].dropna())
+        # Find today's session (last market day's bars)
+        today_idx = []
+        if hasattr(spy5.index, 'date'):
+            last_date = spy5.index[-1].date()
+            today_idx = [i for i, d in enumerate(spy5.index) if d.date() == last_date]
+        if len(today_idx) < 6:
+            return _default
+        # Today's bars
+        t_closes = [closes5[i] for i in today_idx]
+        t_highs  = [highs5[i]  for i in today_idx]
+        t_lows   = [lows5[i]   for i in today_idx]
+        t_opens  = [opens5[i]  for i in today_idx]
+        t_open   = t_opens[0] if t_opens else t_closes[0]
+        t_last   = t_closes[-1]
+        t_high   = max(t_highs)
+        t_low    = min(t_lows)
+        # Daily range
+        day_range = t_high - t_low
+        # Efficiency Ratio (Elder/Kaufman): net directional move / total path length
+        net_move  = abs(t_last - t_open)
+        path_sum  = sum(abs(t_closes[i] - t_closes[i-1]) for i in range(1, len(t_closes)))
+        efficiency = round(net_move / max(path_sum, 0.0001), 3)
+        # ATR baseline from prior 2 days of 5-min data (not today)
+        prior_idx = [i for i in range(len(closes5)) if i not in today_idx]
+        if len(prior_idx) >= 12:
+            prior_h = [highs5[i]  for i in prior_idx[-48:]]
+            prior_l = [lows5[i]   for i in prior_idx[-48:]]
+            prior_c = [closes5[i] for i in prior_idx[-48:]]
+            bars_per_day = max(len(today_idx), 12)
+            # Aggregate into daily-equivalent bars for ATR estimate
+            chunk = bars_per_day
+            agg_ranges = []
+            for st in range(0, len(prior_h) - chunk, chunk):
+                agg_ranges.append(max(prior_h[st:st+chunk]) - min(prior_l[st:st+chunk]))
+            avg_atr = sum(agg_ranges) / max(1, len(agg_ranges)) if agg_ranges else day_range
+        else:
+            avg_atr = day_range
+        range_ratio = round(day_range / max(avg_atr, 0.01), 2)
+        # Opening bias: first 30min (6 × 5-min bars)
+        ob_bars = min(6, len(t_closes))
+        open_close_ratio = (t_closes[ob_bars-1] - t_open) / max(abs(t_open) * 0.001, 0.01)
+        opening_bias = "up" if open_close_ratio > 0.15 else ("down" if open_close_ratio < -0.15 else "flat")
+        # Net direction of day
+        net_direction = "up" if t_last > t_open * 1.001 else ("down" if t_last < t_open * 0.999 else "flat")
+        # Classification logic
+        if efficiency >= 0.55 and range_ratio >= 1.15:
+            day_type = f"trend_{net_direction}" if net_direction != "flat" else "trend_up"
+            day_score = 2
+            strategy_hint = "breakout"
+        elif efficiency >= 0.45 and range_ratio >= 1.05:
+            day_type = f"trend_{net_direction}" if net_direction != "flat" else "trend_up"
+            day_score = 1
+            strategy_hint = "breakout"
+        elif efficiency <= 0.25 or range_ratio <= 0.75:
+            day_type = "choppy"
+            day_score = -1
+            strategy_hint = "neutral"   # avoid trading choppy days
+        elif efficiency <= 0.38 and range_ratio <= 1.1:
+            day_type = "range"
+            day_score = 0
+            strategy_hint = "mean_reversion"
+        else:
+            day_type = "neutral"
+            day_score = 0
+            strategy_hint = "neutral"
+        result = {
+            "day_type":      day_type,
+            "efficiency":    efficiency,
+            "range_ratio":   range_ratio,
+            "opening_bias":  opening_bias,
+            "day_score":     day_score,
+            "strategy_hint": strategy_hint,
+            "net_move_pct":  round(net_move / max(t_open, 1) * 100, 2),
+        }
+        _DAY_TYPE_CACHE.clear()
+        _DAY_TYPE_CACHE.extend([result, now_ts])
+        logger.info(f"Day type: {day_type} | eff={efficiency:.2f} | range×{range_ratio:.2f} | "
+                    f"open-bias={opening_bias} | strategy={strategy_hint}")
+        return result
+    except Exception as e:
+        logger.debug(f"Day type detection failed: {e}")
+        return _default
+
+
 # ── Sector rotation engine ────────────────────────────────────────────────────
 SECTOR_ETFS = {
     "tech":          "XLK",
@@ -5356,6 +5469,11 @@ def run():
     regime    = market_regime()
     vix       = regime["vix"]
     macro_day = near_macro_event(days_before=1)
+
+    # Intraday day type: classify trend vs range vs choppy (5-min SPY data)
+    # Skips when market is closed (off-hours runs for crypto) — uses cached result
+    day_type_info = intraday_day_type()
+    _day_type     = day_type_info.get("day_type", "unknown")
     if vix > VIX_EXTREME_THRESH:
         logger.warning(f"VIX={vix:.0f} EXTREME — halting new buys, protecting capital.")
 
@@ -6036,6 +6154,14 @@ def run():
             logger.info("Morning momentum window (10am-11:30am) — lowering min score by 2")
         elif 90 <= _minutes_since_open <= 150:  # 11:30am-1pm: lunch lull
             _intraday_adj = +4  # raise threshold: avoid choppy low-volume trades
+    # Day type adjustment: trending days lower threshold for breakouts; choppy days raise it
+    _day_score_adj = day_type_info.get("day_score", 0)
+    if _day_score_adj > 0 and market_open and _day_type in ("trend_up", "trend_down"):
+        _eff_min_score -= _day_score_adj  # trend day: breakouts more reliable
+        logger.info(f"Trend day ({_day_type}, eff={day_type_info.get('efficiency',0):.2f}) — lowering min score by {_day_score_adj}")
+    elif _day_score_adj < 0 and market_open:
+        _eff_min_score -= _day_score_adj  # choppy day: raise threshold (subtracting negative)
+        logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj)
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
@@ -6764,6 +6890,11 @@ def run():
         elif 90  <= _minutes_since_open <= 180:  _timing_q = 1  # lunch lull
         else:                                    _timing_q = 2  # normal
     tlog["timing_quality"]  = _timing_q
+    tlog["day_type"]        = _day_type
+    tlog["day_efficiency"]  = day_type_info.get("efficiency", 0.5)
+    tlog["day_range_ratio"] = day_type_info.get("range_ratio", 1.0)
+    tlog["day_opening_bias"]= day_type_info.get("opening_bias", "flat")
+    tlog["strategy_hint"]   = day_type_info.get("strategy_hint", "neutral")
     tlog["drawdown_pct"]    = round(drawdown_pct, 2)
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
