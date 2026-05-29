@@ -54714,6 +54714,16 @@ window.renderSectorRotation = renderSectorRotation;
                 </div>
                 <span style="font-size:6.5px;color:#00ff88;min-width:30px;text-align:right">✓ \$${target.toFixed(2)}</span>
               </div>
+              ${p.live_signals ? (() => {
+                const ls = p.live_signals;
+                const parts = [];
+                if (ls.vwap_reclaim) parts.push('<span style="font-size:6px;font-weight:800;color:#00ffc8;background:rgba(0,255,200,.15);padding:1px 4px;border-radius:3px">VWAP↑</span>');
+                if (ls.vwap_pos != null) parts.push(`<span style="font-size:6px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#666'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP ${Math.abs(ls.vwap_pos).toFixed(1)}%</span>`);
+                if (ls.rsi != null) parts.push(`<span style="font-size:6px;color:${ls.rsi>65?'#ef5350':ls.rsi<40?'#00ff88':'#666'}">RSI ${Math.round(ls.rsi)}</span>`);
+                if (ls.roc5 != null) parts.push(`<span style="font-size:6px;color:${ls.roc5>2?'#00ff88':ls.roc5<-2?'#ef5350':'#666'}">${ls.roc5>=0?'+':''}${ls.roc5.toFixed(1)}%5d</span>`);
+                if (ls.vol_ratio && ls.vol_ratio > 1.5) parts.push(`<span style="font-size:6px;color:#ffd54f">${ls.vol_ratio.toFixed(1)}x vol</span>`);
+                return parts.length ? `<div style="display:flex;gap:.35rem;margin-top:.25rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
+              })() : ''}
             </div>
           </div>`;
         });
