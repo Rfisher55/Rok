@@ -2116,6 +2116,32 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Trend reversal detection: stock transitioning from downtrend to uptrend
+    # Highest expected-value moment — catching new uptrends early
+    trend_reversal = False
+    try:
+        if len(daily) >= 25 and "Close" in daily.columns:
+            dc_r = list(daily["Close"])
+            e20_now  = _ema(dc_r, 20)
+            e20_prev = _ema(dc_r[:-1], 20)
+            if e20_now and e20_prev and e20_now > 0:
+                # Price was below 20-EMA last bar but is now above it (MA crossover)
+                price_above_now  = dc_r[-1] > e20_now
+                price_below_prev = dc_r[-2] < e20_prev if e20_prev else False
+                # RSI recovering: was below 40, now above 45
+                rsi_now_r  = _rsi(dc_r, 14)
+                rsi_prev_r = _rsi(dc_r[:-1], 14) if len(dc_r) > 14 else rsi_now_r
+                rsi_recovery = rsi_prev_r < 42 and rsi_now_r > 45
+                # Volume expansion on recovery day
+                vol_expand = vol_ratio > 1.3 if vol_ratio else False
+                # Confirm not still in deep downtrend (price within 15% of 20-day high)
+                high_20d = max(dc_r[-20:]) if len(dc_r) >= 20 else dc_r[-1]
+                near_high = dc_r[-1] > high_20d * 0.85
+                if price_above_now and price_below_prev and rsi_recovery and vol_expand and near_high:
+                    trend_reversal = True
+    except Exception:
+        pass
+
     # Inside bar / NR7 narrow range volatility contraction
     # NR7: today's range is the narrowest in 7 days = coiling before a breakout
     # Inside bar: today's high < yesterday's high AND today's low > yesterday's low = consolidation
@@ -2326,6 +2352,7 @@ def _extract(daily, hourly):
         "mtf_aligned":       mtf_aligned,
         "mtf_conflict":      mtf_conflict,
         "price_vs_ema200":   round(price_vs_ema200, 2),
+        "trend_reversal":    trend_reversal,
         "atr":             round(atr_val, 3) if atr_val else None,
         "stoch_k":            round(stoch_k, 1),
         "stoch_d":            round(stoch_d, 1),
@@ -2540,6 +2567,7 @@ def momentum_grade(d, final_score=0):
     if d.get("macd_bull_div", False):          criteria += 1  # MACD divergence
     if d.get("at_breakout", False):            criteria += 1  # technical breakout
     if d.get("vwap_reclaim", False):           criteria += 1  # VWAP reclaim
+    if d.get("trend_reversal", False):         criteria += 1  # 20-EMA crossover with volume
 
     # Score contribution
     if   final_score >= 80: criteria += 2
@@ -2786,6 +2814,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # MACD divergence: price and momentum disagree — leading reversal signal (+11/-8)
     if d.get("macd_bull_div", False): s += 11   # price lower, MACD higher = hidden bullish strength
     if d.get("macd_bear_div", False): s -= 8    # price higher, MACD lower = momentum weakening
+
+    # Trend reversal: price just crossed above 20-EMA with RSI recovery + volume expansion (+13)
+    # Catches new uptrends at their earliest stage — highest expected value entry point
+    if d.get("trend_reversal", False): s += 13
 
     # NR7 / inside bar: volatility contraction before expansion (+8/+6)
     # These patterns precede large directional moves — buy the squeeze
@@ -3753,6 +3785,7 @@ def run():
                 "fib_support":    live.get(tk, {}).get("fib_support", False),
                 "macd_bull_div":  live.get(tk, {}).get("macd_bull_div", False),
                 "mtf_aligned":    live.get(tk, {}).get("mtf_aligned", False),
+                "trend_reversal": live.get(tk, {}).get("trend_reversal", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
