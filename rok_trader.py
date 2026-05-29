@@ -1794,6 +1794,9 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append("VCP: Volatility Contraction Pattern — 3 tightening contractions, volume drying up (Minervini spring-loaded base)")
             if signals.get("obv_rising"):
                 extras.append("OBV rising (On-Balance Volume up ≥2% — institutional accumulation signal)")
+            if signals.get("rvol_surge"):
+                rvol_val = signals.get("rvol", 1)
+                extras.append(f"RVOL surge {rvol_val:.1f}× avg volume — institutional buying confirmed")
             if signals.get("kc_breakout"):
                 extras.append("Keltner Channel breakout — price above EMA+2×ATR (strong momentum)")
             if signals.get("kc_oversold"):
@@ -2961,6 +2964,20 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Relative Volume (RVOL): today's volume vs 20-day average
+    # RVOL > 2x = institutional participation confirmed; > 3x = strong institutional surge
+    rvol = 1.0
+    rvol_surge = False   # RVOL > 2.5 with positive price action
+    try:
+        if "Volume" in daily.columns and len(daily) >= 10:
+            avg_vol_20 = float(daily["Volume"].tail(21).iloc[:-1].mean())  # exclude today
+            today_vol = float(daily["Volume"].iloc[-1])
+            if avg_vol_20 > 0:
+                rvol = round(today_vol / avg_vol_20, 2)
+                rvol_surge = rvol >= 2.5 and chg_pct > 0
+    except Exception:
+        pass
+
     # Opening Range Breakout (ORB): price clears the first-hour high on good volume
     # One of the most reliable institutional intraday signals — algos and funds chase ORBs
     orb_breakout = False
@@ -3159,6 +3176,8 @@ def _extract(daily, hourly):
         "rsi_bull_divergence": rsi_bull_divergence,
         "consec_green":        consec_green,
         "vol_dry_up":          vol_dry_up,
+        "rvol":                rvol,
+        "rvol_surge":          rvol_surge,
         "at_breakout":         at_breakout,
         "near_support":        near_support,
         "nr7_signal":          nr7_signal,
@@ -3716,6 +3735,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Volatility Contraction Pattern (VCP): Minervini's spring-loaded base setup (+12)
     # 3 contracting price segments + volume dry-up = stock ready to explode higher
     if d.get("vcp", False): s += 12
+
+    # Relative Volume surge (RVOL): today's volume ≥2.5× 20-day avg + positive price action
+    # = institutional participation confirmed — big money is chasing this move (+8)
+    if d.get("rvol_surge", False): s += 8
+    elif (d.get("rvol", 1) or 1) >= 1.8: s += 4  # moderate relative volume boost
 
     # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+7)
     if d.get("obv_rising", False): s += 7
@@ -4773,6 +4797,7 @@ def run():
                 if live.get(tk, {}).get("ema_stacked_bull"): extras.append("EMA-stack")
                 if live.get(tk, {}).get("vcp"):               extras.append("VCP")
                 if live.get(tk, {}).get("obv_rising"):        extras.append("OBV↑")
+                if live.get(tk, {}).get("rvol_surge"):       extras.append(f"RVOL{live.get(tk,{}).get('rvol',1):.1f}x")
                 if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
                 elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
@@ -4839,6 +4864,8 @@ def run():
                 "kc_breakout":      live.get(tk, {}).get("kc_breakout", False),
                 "kc_oversold":      live.get(tk, {}).get("kc_oversold", False),
                 "obv_rising":       live.get(tk, {}).get("obv_rising", False),
+                "rvol":             live.get(tk, {}).get("rvol", 1.0),
+                "rvol_surge":       live.get(tk, {}).get("rvol_surge", False),
                 "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
