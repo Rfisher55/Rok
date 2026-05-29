@@ -1252,10 +1252,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           </div>
           {% endfor %}
           {% if not data.buy_signals %}
-          <div style="padding:.85rem .75rem;text-align:center">
-            <div style="font-size:1.8rem;margin-bottom:.4rem">🔍</div>
-            <div style="font-size:13px;font-weight:700;color:var(--wh2);margin-bottom:.3rem">No strong buy signals right now</div>
-            <div style="font-size:11px;color:var(--wh3);line-height:1.55">ROK's AI didn't find enough conviction to recommend any buys this run. This is actually protective — it means the market isn't presenting obvious opportunities.<br><br>💡 <strong style="color:var(--au)">What to do:</strong> Check the 👀 WATCH LIST for stocks that are close. Check back in 15 minutes.</div>
+          <div style="padding:1rem .85rem">
+            <div style="font-size:2rem;margin-bottom:.5rem">🔍</div>
+            <div style="font-size:13px;font-weight:800;color:var(--wh);margin-bottom:.5rem">No strong buy signals right now</div>
+            <div style="font-size:11px;color:var(--wh2);line-height:1.6;margin-bottom:.75rem">ROK's AI scanned the market and didn't find enough conviction to recommend anything. <strong style="color:var(--au)">This is actually a good thing</strong> — it means the AI is being selective and protecting you from weak setups.</div>
+            <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem">
+              <div style="font-size:10.5px;color:var(--wh2);padding:.45rem .65rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.1);border-radius:8px;line-height:1.5">💡 <strong style="color:var(--au)">What you CAN do right now:</strong></div>
+              <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span>👀</span><span>Check the <strong style="color:var(--wh)">WATCH LIST</strong> tab below — those stocks are close to a buy signal</span></div>
+              <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span>🔍</span><span>Use the <strong style="color:var(--wh)">SCREENER</strong> tab to browse all analyzed stocks and find ones near their lows</span></div>
+              <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span>⏰</span><span>ROK refreshes every 15 minutes — the next signal might be minutes away</span></div>
+              <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span>📊</span><span>No signals = perfect time to research and add to your watchlist using the ★ button</span></div>
+            </div>
+            <button onclick="showTab('screener')" style="width:100%;padding:.6rem;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔍 Browse All Stocks in Screener →</button>
           </div>
           {% endif %}
         </div>
@@ -1397,6 +1405,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     <!-- Live market briefing (JS-populated) -->
     <div id="mkt-live-brief" style="display:none;margin-bottom:.85rem;padding:.75rem 1rem;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(0,255,136,.03));border:1px solid rgba(0,204,255,.18);border-radius:12px"></div>
+
+    <!-- Upcoming events calendar (JS-populated) -->
+    <div id="mkt-events" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
@@ -2801,7 +2812,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -3165,7 +3176,34 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (stock && stock.rok_signal === 'sell') alerts++;
       if (det.stop_loss && curPrice && curPrice < det.stop_loss) alerts++;
     });
-    if (badge) badge.textContent = alerts > 0 ? '🔴' + alerts : tickers.length > 0 ? tickers.length : '';
+    // Show P&L % in badge if no alerts
+    if (badge) {
+      if (alerts > 0) {
+        badge.textContent = '🔴' + alerts;
+        badge.style.background = '';
+      } else if (tickers.length > 0) {
+        // Compute quick avg P&L for badge
+        let pSum = 0, pCnt = 0;
+        tickers.forEach(t => {
+          const e = p[t], lp = liveprices[t], st = (ROK.stock_universe || []).find(s => s.ticker === t);
+          const cur = lp ? lp.price : (st ? st.price : null);
+          if (cur && e.price) { pSum += (cur - e.price) / e.price * 100; pCnt++; }
+        });
+        if (pCnt > 0) {
+          const avgPct = pSum / pCnt;
+          badge.textContent = (avgPct >= 0 ? '+' : '') + avgPct.toFixed(1) + '%';
+          badge.style.background = avgPct >= 0 ? 'rgba(0,255,136,.15)' : 'rgba(255,34,85,.15)';
+          badge.style.color = avgPct >= 0 ? 'var(--g)' : 'var(--r)';
+          badge.style.border = avgPct >= 0 ? '1px solid rgba(0,255,136,.3)' : '1px solid rgba(255,34,85,.3)';
+        } else {
+          badge.textContent = tickers.length;
+          badge.style.background = '';
+        }
+      } else {
+        badge.textContent = '';
+        badge.style.background = '';
+      }
+    }
     if (alertDot) alertDot.style.display = alerts > 0 ? 'block' : 'none';
     // Show/hide share/export buttons
     const sb = document.getElementById('port-share-btn');
@@ -4334,6 +4372,104 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.2rem">${headline}</div>
       <div style="font-size:11px;color:var(--wh2);line-height:1.55">${detail}${vixNote}</div>`;
   }
+
+  // ── UPCOMING EVENTS CALENDAR ─────────────────────────
+  function renderUpcomingEvents() {
+    const el = document.getElementById('mkt-events');
+    if (!el) return;
+
+    const now = new Date();
+    const events = [];
+    const days7 = 7 * 24 * 3600 * 1000;
+
+    // Earnings plays from data
+    (ROK.earnings_plays || []).forEach(ep => {
+      if (!ep.earnings_date) return;
+      const d = new Date(ep.earnings_date);
+      const diff = d - now;
+      if (diff >= -86400000 && diff <= days7) {
+        const daysUntil = Math.max(0, Math.round(diff / 86400000));
+        events.push({
+          date: d, daysUntil,
+          type: 'earnings',
+          icon: '📅',
+          label: `$${ep.ticker} Earnings`,
+          sub: ep.play || (ep.direction === 'BULLISH' ? 'Beat expected' : ep.direction === 'BEARISH' ? 'Miss risk' : ''),
+          color: ep.direction === 'BULLISH' ? 'var(--g)' : ep.direction === 'BEARISH' ? 'var(--r)' : 'var(--au)',
+          onclick: `switchToScreener('${ep.ticker}')`,
+        });
+      }
+    });
+
+    // Earnings from buy/sell signals and watch list
+    ['buy_signals', 'sell_signals', 'watch_list'].forEach(key => {
+      (ROK[key] || []).forEach(s => {
+        if (!s.earnings_date) return;
+        const d = new Date(s.earnings_date);
+        const diff = d - now;
+        if (diff >= -86400000 && diff <= days7) {
+          const daysUntil = Math.max(0, Math.round(diff / 86400000));
+          // Avoid duplicates
+          if (!events.find(e => e.label.includes(s.ticker))) {
+            events.push({
+              date: d, daysUntil,
+              type: 'earnings',
+              icon: '📅',
+              label: `$${s.ticker} Earnings`,
+              sub: 'In ROK watch list',
+              color: 'var(--au)',
+              onclick: `switchToScreener('${s.ticker}')`,
+            });
+          }
+        }
+      });
+    });
+
+    // Earnings from portfolio holdings
+    const port = getPortfolio();
+    (ROK.stock_universe || []).forEach(s => {
+      if (!s.earnings_date || !port[s.ticker]) return;
+      const d = new Date(s.earnings_date);
+      const diff = d - now;
+      if (diff >= -86400000 && diff <= days7) {
+        const daysUntil = Math.max(0, Math.round(diff / 86400000));
+        if (!events.find(e => e.label.includes(s.ticker))) {
+          events.push({
+            date: d, daysUntil,
+            type: 'earnings',
+            icon: '📅',
+            label: `$${s.ticker} Earnings`,
+            sub: 'You own this stock',
+            color: 'var(--b)',
+            onclick: `openModal('${s.ticker}')`,
+          });
+        }
+      }
+    });
+
+    if (!events.length) { el.style.display = 'none'; return; }
+
+    events.sort((a, b) => a.date - b.date);
+    const dayLabel = (d, days) => {
+      if (days === 0) return '<strong style="color:var(--r)">TODAY</strong>';
+      if (days === 1) return '<strong style="color:var(--au)">TOMORROW</strong>';
+      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    };
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem">📆 UPCOMING THIS WEEK</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem">
+        ${events.map(ev => `<div onclick="${ev.onclick}" style="display:flex;align-items:center;gap:.65rem;background:var(--blk3);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:.45rem .75rem;cursor:pointer">
+          <span style="font-size:1rem;flex-shrink:0">${ev.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:${ev.color}">${ev.label}</div>
+            ${ev.sub ? `<div style="font-size:9.5px;color:var(--wh4)">${ev.sub}</div>` : ''}
+          </div>
+          <div style="font-size:9px;color:var(--wh3);text-align:right;flex-shrink:0">${dayLabel(ev.date, ev.daysUntil)}</div>
+        </div>`).join('')}
+      </div>`;
+  }
+  window.renderUpcomingEvents = renderUpcomingEvents;
 
   // ── SECTOR HEATMAP ────────────────────────────────────
   function renderSectorHeatmap() {
