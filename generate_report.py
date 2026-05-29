@@ -217,6 +217,7 @@ def run():
         stock["signal_strength"] = sig.get("strength", 0)
 
     # ── Enrich signals with price sparklines ──────────────────────
+    stock_data_lookup = {s["ticker"]: s for s in stock_data if s}
     price_lookup = {s["ticker"]: s["price"] for s in stock_data}
     all_signals = (
         analysis.get("buy_signals", [])
@@ -230,6 +231,58 @@ def run():
                 yahoo_finance.get_price_history, ticker, 30,
                 default=list, label=f"Hist:{ticker}",
             )
+
+    # ── Enrich signals with Yahoo Finance data ────────────────────
+    for sig in all_signals:
+        t = sig.get("ticker", "")
+        if not t:
+            continue
+        sd = stock_data_lookup.get(t)
+        if sd:
+            # Fill missing price fields
+            if not sig.get("current_price") and sd.get("price"):
+                sig["current_price"] = sd["price"]
+            if not sig.get("company") and sd.get("company_name"):
+                sig["company"] = sd["company_name"]
+            # Use analyst consensus target if AI didn't set one
+            if not sig.get("price_target") and sd.get("analyst_target"):
+                sig["price_target"] = sd["analyst_target"]
+            # Auto-calculate stop loss at 8% below entry if not set
+            if not sig.get("stop_loss") and sig.get("current_price"):
+                sig["stop_loss"] = round(sig["current_price"] * 0.92, 2)
+            if not sig.get("sector"):
+                sig["sector"] = sd.get("sector", "")
+            # Build data_signals from available sources
+            if not sig.get("data_signals"):
+                dsigs = []
+                # Check congressional buys
+                if any(c.get("ticker") == t for c in congress_buys[:20]):
+                    dsigs.append("congressional")
+                # Check SEC filings for insider trades
+                if any(
+                    isinstance(f, dict) and f.get("ticker") == t
+                    for f in (sec_filings or [])
+                ):
+                    dsigs.append("insider")
+                # Check unusual options
+                if any(
+                    isinstance(o, dict) and o.get("ticker") == t
+                    for o in (unusual_opts or [])
+                ):
+                    dsigs.append("options")
+                # Reddit presence
+                reddit_tickers = [tp[0] for tp in (top_tickers or [])]
+                if t in reddit_tickers[:20]:
+                    dsigs.append("reddit")
+                sig["data_signals"] = dsigs
+        # Apply defaults for missing fields
+        if not sig.get("signal_strength"):
+            sig["signal_strength"] = 6
+        if not sig.get("risk_level"):
+            sig["risk_level"] = "Medium"
+        if not sig.get("time_horizon"):
+            sig["time_horizon"] = "1-3 months"
+    logger.info("Signal enrichment complete")
 
     # ── History tracking ──────────────────────────────────────────
     history["runs"].append({

@@ -452,6 +452,53 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .wim-lbl{font-size:7.5px;font-weight:800;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.25rem}
 .stop-explainer{font-size:10.5px;color:var(--wh3);margin-top:.3rem;padding:.3rem .5rem;background:rgba(255,34,85,.05);border-radius:5px}
 
+/* ── ROK SCORE RING ────────────────────────────────────── */
+.rok-score{position:relative;width:52px;height:52px;flex-shrink:0}
+.rok-score svg{width:100%;height:100%;display:block}
+.rok-score-track{fill:none;stroke:rgba(255,255,255,.07);stroke-width:3.5}
+.rok-score-fill{fill:none;stroke-width:3.5;stroke-linecap:round;transform-origin:50% 50%;transform:rotate(-90deg);animation:scoreIn .7s ease both}
+@keyframes scoreIn{from{stroke-dasharray:0 100}to{}}
+.rok-score-num{font-size:10px;font-weight:900;fill:var(--wh);text-anchor:middle;dominant-baseline:middle;letter-spacing:-.02em}
+.rok-score-lbl{font-size:5px;fill:rgba(255,255,255,.4);text-anchor:middle;dominant-baseline:middle;letter-spacing:.06em;text-transform:uppercase}
+.card.buy .rok-score-fill{stroke:var(--g)}
+.card.sell .rok-score-fill{stroke:var(--r)}
+.card.watch .rok-score-fill{stroke:var(--au)}
+
+/* ── UPSIDE BADGE ──────────────────────────────────────── */
+.upside-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:800;
+  background:rgba(0,255,136,.12);color:var(--g);border:1px solid rgba(0,255,136,.25);
+  letter-spacing:.04em;white-space:nowrap
+}
+.upside-badge.negative{background:rgba(255,34,85,.12);color:var(--r);border-color:rgba(255,34,85,.25)}
+
+/* ── BRIEFING CARD (top of signals) ────────────────────── */
+.briefing-card{
+  background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(255,215,0,.04));
+  border:1px solid rgba(0,204,255,.15);border-radius:12px;
+  padding:.85rem 1.1rem;margin-bottom:.9rem;position:relative;overflow:hidden
+}
+.briefing-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--b),transparent)
+}
+.briefing-hdr{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.briefing-icon{font-size:1rem}
+.briefing-label{font-size:7.5px;font-weight:800;letter-spacing:.2em;color:var(--b);text-transform:uppercase}
+.briefing-txt{font-size:13px;color:var(--wh2);line-height:1.6;font-style:italic}
+
+/* ── DATA SIGNAL PLAIN LABELS ──────────────────────────── */
+.dsig-plain{font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:12px;display:inline-flex;align-items:center;gap:3px}
+.dsig-plain.congressional{color:var(--p);background:rgba(153,85,255,.1);border:1px solid rgba(153,85,255,.2)}
+.dsig-plain.insider{color:var(--or);background:rgba(255,136,0,.1);border:1px solid rgba(255,136,0,.2)}
+.dsig-plain.options{color:var(--b);background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.18)}
+.dsig-plain.reddit{color:#FF6314;background:rgba(255,99,20,.08);border:1px solid rgba(255,99,20,.2)}
+.dsig-plain.news{color:var(--wh2);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.dsig-plain.technical{color:var(--b);background:rgba(0,204,255,.06);border:1px solid rgba(0,204,255,.14)}
+.dsig-plain.earnings{color:var(--au);background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.18)}
+.dsig-plain.short_squeeze{color:var(--or);background:rgba(255,136,0,.1);border:1px solid rgba(255,136,0,.2)}
+
 /* ── TOP PICK BANNER (Phase 8) ──────────────────────────── */
 .top-pick-banner{
   background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(255,215,0,.08));
@@ -771,6 +818,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <div class="tab-pane active" id="tab-signals">
 
     
+    <div class="briefing-card">
+      <div class="briefing-hdr"><span class="briefing-icon">🧠</span><span class="briefing-label">ROK'S TAKE TODAY</span></div>
+      <div class="briefing-txt">Markets are pushing higher with NASDAQ up 0.8% and S&amp;P 500 up 0.6%, buoyed by a US-Iran deal headline driving the Dow to highs and crushing VIX to 15.74 (-3.4%). AI infrastructure names are the clear leaders: PLTR +8.2%, MDB +10.6%, ORCL +6.7%, and SMCI +8.1% all surging on a single session — confirming institutional rotation into data/AI infrastructure ahead of major earnings (AVGO, CRWD, PANW all reporting this week). The Fear &amp; Greed index sits at 60.2 (Greed) but is ticking down, signaling the rally has legs but momentum is softening. Breadth is tepid at 45% advancing sectors — this is a stock-picker&#39;s market, not a broad tide.</div>
+    </div>
+    
+
+    
     
     
     <div class="top-pick-banner">
@@ -805,136 +859,287 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <div class="cgrid">
           
           <div class="card buy" onclick="openModal('PLTR')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$PLTR</div><div class="c-co">Palantir Technologies Inc.</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$PLTR</div>
+                <div class="c-co">Palantir Technologies Inc.</div>
                 
-                <span class="str-b">STRONG BUY</span>
-                <span class="risk-b Medium">Medium</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="90.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">90</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">STRONG BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig news">news</span><span class="dsig technical">technical</span><span class="dsig earnings">earnings</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+              <span class="dsig-plain earnings">
+                📅 Earnings Play
+              </span>
+              
+            </div>
+            
             
             <div class="prow">
               <span class="p-cur" data-ticker="PLTR" data-price="143.34">$143.34</span>
+              
+              
               <span class="p-tgt"><span class="p-arr">→</span>$183.73</span>
+              <span class="upside-badge">+28% upside</span>
+              
               <span class="p-stop">↓$128.00</span>
               <span class="t-hz">2-4 weeks</span>
             </div>
             
             <div class="spark"><canvas id="spark-b1" height="40"></canvas></div>
-            <div class="catalyst">AI government/enterprise spending supercycle + analyst target of $183.73 implies 28.2% upside; momentum exploding +8.2% on massive 41.4M share volume</div>
-            <ul class="reasons"><li>Single-day +8.2% move on 41.4M volume — institutional buying, not noise</li><li>Analyst consensus price target $183.73, representing 28.2% upside from current $143.34</li></ul>
-            <div class="rok-take">PLTR is running on pure institutional AI money — the 41M share volume on an 8% day is not retail, that&#39;s funds loading. $183 target is reasonable if government AI contracts keep landing.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>AI government/enterprise spending supercycle + analyst target of $183.73 implies 28.2% upside; momentum exploding +8.2% on massive 41.4M share volume</div>
+            <ul class="reasons"><li>Single-day +8.2% move on 41.4M volume — institutional buying, not noise</li><li>Analyst consensus price target $183.73, representing 28.2% upside from current $143.34</li><li>AI sector is the dominant theme today with ORCL +6.7%, MDB +10.6%, SMCI +8.1% all confirming sector rotation into AI infrastructure</li></ul>
+            <div class="rok-take" style="font-size:12px">PLTR is running on pure institutional AI money — the 41M share volume on an 8% day is not retail, that&#39;s funds loading. $183 target is reasonable if government AI contracts keep landing.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
               
               
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and analysts are right:<br>You could make <strong class="up">+$282 (+28.2%)</strong> in 2-4 weeks</div>
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$282 (+28.2%)</strong> in 2-4 weeks</div>
               
               
-              <div class="stop-explainer"><span style="color:var(--r)">⚠ If it drops to $128.00</span> — that's ROK's signal to sell and cut losses</div>
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $128.00 (-11%)</span> — sell here to protect yourself if it goes wrong</div>
               
             </div>
             <button class="bought-btn buy-action" id="btn-PLTR" onclick="event.stopPropagation();boughtIt('PLTR',143.34)">💰 BOUGHT IT — ADD TO MY STOCKS</button>
           </div>
           
           <div class="card buy" onclick="openModal('MDB')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$MDB</div><div class="c-co">MongoDB Inc.</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$MDB</div>
+                <div class="c-co">MongoDB Inc.</div>
                 
-                <span class="str-b">STRONG BUY</span>
-                <span class="risk-b Medium">Medium</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="80.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">80</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">STRONG BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig news">news</span><span class="dsig technical">technical</span><span class="dsig earnings">earnings</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+              <span class="dsig-plain earnings">
+                📅 Earnings Play
+              </span>
+              
+            </div>
+            
             
             <div class="prow">
               <span class="p-cur" data-ticker="MDB" data-price="325.68">$325.68</span>
+              
+              
               <span class="p-tgt"><span class="p-arr">→</span>$362.24</span>
+              <span class="upside-badge">+11% upside</span>
+              
               <span class="p-stop">↓$295.00</span>
               <span class="t-hz">2-4 weeks</span>
             </div>
             
             <div class="spark"><canvas id="spark-b2" height="40"></canvas></div>
-            <div class="catalyst">Massive single-session +10.6% gap on 1.9M volume — likely post-earnings beat or AI database tailwind from ORCL/enterprise data infrastructure wave</div>
-            <ul class="reasons"><li>+10.6% single-day move with 1.9M volume — strongly directional breakout</li><li>Analyst target $362.24 still implies 11.2% additional upside even after today&#39;s surge</li></ul>
-            <div class="rok-take">MDB just broke out hard — 10% gaps don&#39;t happen randomly, something fundamental shifted. The sector tailwind from ORCL and enterprise AI spending is real, and $362 is still on the table.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>Massive single-session +10.6% gap on 1.9M volume — likely post-earnings beat or AI database tailwind from ORCL/enterprise data infrastructure wave</div>
+            <ul class="reasons"><li>+10.6% single-day move with 1.9M volume — strongly directional breakout</li><li>Analyst target $362.24 still implies 11.2% additional upside even after today&#39;s surge</li><li>AI infrastructure theme confirmed across sector — ORCL +6.7%, PLTR +8.2% on same day suggests coordinated institutional rotation into data/AI plays</li></ul>
+            <div class="rok-take" style="font-size:12px">MDB just broke out hard — 10% gaps don&#39;t happen randomly, something fundamental shifted. The sector tailwind from ORCL and enterprise AI spending is real, and $362 is still on the table.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
               
               
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and analysts are right:<br>You could make <strong class="up">+$112 (+11.2%)</strong> in 2-4 weeks</div>
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$112 (+11.2%)</strong> in 2-4 weeks</div>
               
               
-              <div class="stop-explainer"><span style="color:var(--r)">⚠ If it drops to $295.00</span> — that's ROK's signal to sell and cut losses</div>
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $295.00 (-9%)</span> — sell here to protect yourself if it goes wrong</div>
               
             </div>
             <button class="bought-btn buy-action" id="btn-MDB" onclick="event.stopPropagation();boughtIt('MDB',325.68)">💰 BOUGHT IT — ADD TO MY STOCKS</button>
           </div>
           
           <div class="card buy" onclick="openModal('ORCL')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$ORCL</div><div class="c-co">Oracle Corporation</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$ORCL</div>
+                <div class="c-co">Oracle Corporation</div>
                 
-                <span class="str-b">STRONG BUY</span>
-                <span class="risk-b Medium">Medium</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="80.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">80</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">STRONG BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig news">news</span><span class="dsig technical">technical</span><span class="dsig earnings">earnings</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+              <span class="dsig-plain earnings">
+                📅 Earnings Play
+              </span>
+              
+            </div>
+            
             
             <div class="prow">
               <span class="p-cur" data-ticker="ORCL" data-price="203.7">$203.70</span>
+              
+              
               <span class="p-tgt"><span class="p-arr">→</span>$244.03</span>
+              <span class="upside-badge">+20% upside</span>
+              
               <span class="p-stop">↓$188.00</span>
               <span class="t-hz">1-3 months</span>
             </div>
             
             <div class="spark"><canvas id="spark-b3" height="40"></canvas></div>
-            <div class="catalyst">AI cloud infrastructure demand — +6.7% today on 24.5M volume, analyst target $244.03 (+19.8%), strong buy consensus driven by AI data center contracts</div>
-            <ul class="reasons"><li>+6.7% on 24.5M volume — one of the highest-conviction moves in today&#39;s session</li><li>Analyst target $244.03 implies 19.8% upside from $203.70; consensus is buy</li></ul>
-            <div class="rok-take">Oracle is becoming the AI cloud dark horse — the institutional money is rotating here alongside PLTR and MDB. $244 is the target and today&#39;s volume confirmed the thesis.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>AI cloud infrastructure demand — +6.7% today on 24.5M volume, analyst target $244.03 (+19.8%), strong buy consensus driven by AI data center contracts</div>
+            <ul class="reasons"><li>+6.7% on 24.5M volume — one of the highest-conviction moves in today&#39;s session</li><li>Analyst target $244.03 implies 19.8% upside from $203.70; consensus is buy</li><li>Hedge Fund Whale Rock reported $910M move into &#39;little-known AI stocks&#39; per Yahoo Finance — ORCL fits the infrastructure profile</li></ul>
+            <div class="rok-take" style="font-size:12px">Oracle is becoming the AI cloud dark horse — the institutional money is rotating here alongside PLTR and MDB. $244 is the target and today&#39;s volume confirmed the thesis.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
               
               
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and analysts are right:<br>You could make <strong class="up">+$198 (+19.8%)</strong> in 1-3 months</div>
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$198 (+19.8%)</strong> in 1-3 months</div>
               
               
-              <div class="stop-explainer"><span style="color:var(--r)">⚠ If it drops to $188.00</span> — that's ROK's signal to sell and cut losses</div>
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $188.00 (-8%)</span> — sell here to protect yourself if it goes wrong</div>
               
             </div>
             <button class="bought-btn buy-action" id="btn-ORCL" onclick="event.stopPropagation();boughtIt('ORCL',203.7)">💰 BOUGHT IT — ADD TO MY STOCKS</button>
           </div>
           
           <div class="card buy" onclick="openModal('AVGO')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$AVGO</div><div class="c-co">Broadcom Inc.</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$AVGO</div>
+                <div class="c-co">Broadcom Inc.</div>
                 
-                <span class="str-b">STRONG BUY</span>
-                <span class="risk-b Medium">Medium</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="80.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">80</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">STRONG BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig earnings">earnings</span><span class="dsig news">news</span><span class="dsig technical">technical</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain earnings">
+                📅 Earnings Play
+              </span>
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+            </div>
+            
             
             <div class="spark"><canvas id="spark-b4" height="40"></canvas></div>
-            <div class="catalyst">Q2 2026 earnings announcement after market close this week — EPS estimate $2.40; AI custom silicon and networking chips positioned to beat given NVDA and TSMC strength</div>
-            <ul class="reasons"><li>Earnings this week AMC with EPS estimate $2.40 — semiconductor peers like NVDA trading at $214 (+0.8%) on strong AI demand narrative</li><li>Yahoo Finance explicitly flagged &#39;How Traders Can Play Broadcom Stock&#39;s Bull Run With Less Upfront Money&#39; — elevated Street attention pre-earnings</li></ul>
-            <div class="rok-take">Broadcom earnings are the most important event of the week. AI chip demand is peak and every infrastructure name is running — AVGO beats and you capture the gap. The options play is cleaner than the stock here.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>Q2 2026 earnings announcement after market close this week — EPS estimate $2.40; AI custom silicon and networking chips positioned to beat given NVDA and TSMC strength</div>
+            <ul class="reasons"><li>Earnings this week AMC with EPS estimate $2.40 — semiconductor peers like NVDA trading at $214 (+0.8%) on strong AI demand narrative</li><li>Yahoo Finance explicitly flagged &#39;How Traders Can Play Broadcom Stock&#39;s Bull Run With Less Upfront Money&#39; — elevated Street attention pre-earnings</li><li>TSMC price increases amid AI demand directly benefits Broadcom&#39;s custom ASIC business for hyperscalers</li></ul>
+            <div class="rok-take" style="font-size:12px">Broadcom earnings are the most important event of the week. AI chip demand is peak and every infrastructure name is running — AVGO beats and you capture the gap. The options play is cleaner than the stock here.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
-              <div class="wim-txt">Analysts see this stock moving higher in 1-2 weeks</div>
+              <div class="wim-txt">ROK sees this stock moving higher in 1-2 weeks</div>
               
               
             </div>
@@ -942,111 +1147,228 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           </div>
           
           <div class="card buy" onclick="openModal('SMCI')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$SMCI</div><div class="c-co">Super Micro Computer Inc.</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$SMCI</div>
+                <div class="c-co">Super Micro Computer Inc.</div>
                 
-                <span class="str-b">MODERATE BUY</span>
-                <span class="risk-b High">High</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="70.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">70</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">MODERATE BUY</span>
+                  <span class="risk-b High">High Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig news">news</span><span class="dsig technical">technical</span><span class="dsig short_squeeze">short_squeeze</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+              <span class="dsig-plain short_squeeze">
+                💥 Squeeze Setup
+              </span>
+              
+            </div>
+            
             
             <div class="prow">
               <span class="p-cur" data-ticker="SMCI" data-price="41.3">$41.30</span>
+              
+              
               <span class="p-tgt"><span class="p-arr">→</span>$37.12</span>
+              
+              
               <span class="p-stop">↓$36.00</span>
               <span class="t-hz">1-2 weeks</span>
             </div>
             
             <div class="spark"><canvas id="spark-b5" height="40"></canvas></div>
-            <div class="catalyst">Collaboration with Taiwanese authorities to thwart illegal export attempt per Yahoo Finance headline — removes major regulatory overhang, stock +8.1% on 37.5M volume</div>
-            <ul class="reasons"><li>Specific news catalyst: Taiwanese authorities collaboration thwarted illegal export attempt — directly removes existential regulatory risk that had weighed on shares</li><li>+8.1% on 37.5M volume with 18.05% short float — shorts are getting squeezed on positive news</li></ul>
-            <div class="rok-take">The export issue was the Sword of Damocles over SMCI — if that&#39;s genuinely resolved, the 18% short float will cover aggressively. This is a squeeze in progress, ride it but keep the stop tight at $36.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>Collaboration with Taiwanese authorities to thwart illegal export attempt per Yahoo Finance headline — removes major regulatory overhang, stock +8.1% on 37.5M volume</div>
+            <ul class="reasons"><li>Specific news catalyst: Taiwanese authorities collaboration thwarted illegal export attempt — directly removes existential regulatory risk that had weighed on shares</li><li>+8.1% on 37.5M volume with 18.05% short float — shorts are getting squeezed on positive news</li><li>Stock trading at $41.30 vs analyst target $37.12 means the Street is behind — real price discovery is happening above consensus</li></ul>
+            <div class="rok-take" style="font-size:12px">The export issue was the Sword of Damocles over SMCI — if that&#39;s genuinely resolved, the 18% short float will cover aggressively. This is a squeeze in progress, ride it but keep the stop tight at $36.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
               
               
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and analysts are right:<br>You could make <strong class="up">+$-101 (+-10.1%)</strong> in 1-2 weeks</div>
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$-101 (+-10.1%)</strong> in 1-2 weeks</div>
               
               
-              <div class="stop-explainer"><span style="color:var(--r)">⚠ If it drops to $36.00</span> — that's ROK's signal to sell and cut losses</div>
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $36.00 (-13%)</span> — sell here to protect yourself if it goes wrong</div>
               
             </div>
             <button class="bought-btn buy-action" id="btn-SMCI" onclick="event.stopPropagation();boughtIt('SMCI',41.3)">💰 BOUGHT IT — ADD TO MY STOCKS</button>
           </div>
           
           <div class="card buy" onclick="openModal('DELL')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$DELL</div><div class="c-co">Dell Technologies Inc.</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$DELL</div>
+                <div class="c-co">Dell Technologies Inc.</div>
                 
-                <span class="str-b">MODERATE BUY</span>
-                <span class="risk-b Medium">Medium</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="70.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">70</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">MODERATE BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig earnings">earnings</span><span class="dsig news">news</span><span class="dsig technical">technical</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain earnings">
+                📅 Earnings Play
+              </span>
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+            </div>
+            
             
             <div class="prow">
               <span class="p-cur" data-ticker="DELL" data-price="317.05">$317.05</span>
+              
+              
               <span class="p-tgt"><span class="p-arr">→</span>$220.26</span>
+              
+              
               <span class="p-stop">↓$298.00</span>
               <span class="t-hz">1-2 weeks</span>
             </div>
             
             <div class="spark"><canvas id="spark-b6" height="40"></canvas></div>
-            <div class="catalyst">Post-earnings surge — Yahoo Finance headline &#39;Dow Jones Futures: Stock Market Hits Highs On U.S.-Iran Deal; Dell Surges On Earnings&#39; confirms beat; +3.8% on 6.86M volume</div>
-            <ul class="reasons"><li>Confirmed earnings beat per Yahoo Finance headline — &#39;Dell Surges On Earnings&#39; is explicit catalyst</li><li>+3.8% on 6.86M volume with buy consensus from analysts — clean post-earnings momentum setup</li></ul>
-            <div class="rok-take">Dell beat earnings and the stock is moving on real numbers, not hype. Ignore the stale $220 analyst target — that was set before the AI server business went hyperbolic. Momentum play only, 1-2 weeks.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>Post-earnings surge — Yahoo Finance headline &#39;Dow Jones Futures: Stock Market Hits Highs On U.S.-Iran Deal; Dell Surges On Earnings&#39; confirms beat; +3.8% on 6.86M volume</div>
+            <ul class="reasons"><li>Confirmed earnings beat per Yahoo Finance headline — &#39;Dell Surges On Earnings&#39; is explicit catalyst</li><li>+3.8% on 6.86M volume with buy consensus from analysts — clean post-earnings momentum setup</li><li>AI server infrastructure theme (same as SMCI, ORCL, PLTR) — Dell&#39;s AI server business is growing explosively with hyperscaler demand</li></ul>
+            <div class="rok-take" style="font-size:12px">Dell beat earnings and the stock is moving on real numbers, not hype. Ignore the stale $220 analyst target — that was set before the AI server business went hyperbolic. Momentum play only, 1-2 weeks.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
               
               
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and analysts are right:<br>You could make <strong class="up">+$-305 (+-30.5%)</strong> in 1-2 weeks</div>
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$-305 (+-30.5%)</strong> in 1-2 weeks</div>
               
               
-              <div class="stop-explainer"><span style="color:var(--r)">⚠ If it drops to $298.00</span> — that's ROK's signal to sell and cut losses</div>
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $298.00 (-6%)</span> — sell here to protect yourself if it goes wrong</div>
               
             </div>
             <button class="bought-btn buy-action" id="btn-DELL" onclick="event.stopPropagation();boughtIt('DELL',317.05)">💰 BOUGHT IT — ADD TO MY STOCKS</button>
           </div>
           
           <div class="card buy" onclick="openModal('CZR')" style="cursor:pointer">
+            
+            
+            
+            
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$CZR</div><div class="c-co">Caesars Entertainment Inc.</div></div>
-              <div class="c-right">
+              <div class="c-left">
+                <div class="c-ticker">$CZR</div>
+                <div class="c-co">Caesars Entertainment Inc.</div>
                 
-                <span class="str-b">MODERATE BUY</span>
-                <span class="risk-b Medium">Medium</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="60.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">60</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">MODERATE BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
               </div>
             </div>
-            <div class="dsigs"><span class="dsig news">news</span><span class="dsig short_squeeze">short_squeeze</span><span class="dsig technical">technical</span></div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain news">
+                📰 News Catalyst
+              </span>
+              
+              <span class="dsig-plain short_squeeze">
+                💥 Squeeze Setup
+              </span>
+              
+              <span class="dsig-plain technical">
+                📈 Momentum
+              </span>
+              
+            </div>
+            
             
             <div class="prow">
               <span class="p-cur" data-ticker="CZR" data-price="29.08">$29.08</span>
+              
+              
               <span class="p-tgt"><span class="p-arr">→</span>$33.33</span>
+              <span class="upside-badge">+15% upside</span>
+              
               <span class="p-stop">↓$26.50</span>
               <span class="t-hz">2-4 weeks</span>
             </div>
             
             <div class="spark"><canvas id="spark-b7" height="40"></canvas></div>
-            <div class="catalyst">Fertitta Entertainment agrees to acquire Caesars for cash per Yahoo Finance — M&amp;A premium catalyst with 14.6% upside to analyst target</div>
-            <ul class="reasons"><li>Confirmed acquisition headline: &#39;Fertitta Entertainment Agrees to Acquire Company for Cash&#39; — M&amp;A catalyst is the hardest signal in the market</li><li>Analyst target $33.33 implies 14.6% upside from $29.08 — deal premium likely sets floor</li></ul>
-            <div class="rok-take">M&amp;A deal announced and shorts are holding 14.6% of float — this is a two-for-one: deal premium plus forced short covering. Arb desks will pile in as deal terms clarify.</div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>Fertitta Entertainment agrees to acquire Caesars for cash per Yahoo Finance — M&amp;A premium catalyst with 14.6% upside to analyst target</div>
+            <ul class="reasons"><li>Confirmed acquisition headline: &#39;Fertitta Entertainment Agrees to Acquire Company for Cash&#39; — M&amp;A catalyst is the hardest signal in the market</li><li>Analyst target $33.33 implies 14.6% upside from $29.08 — deal premium likely sets floor</li><li>14.61% short float means shorts are trapped in an M&amp;A situation — forced covering will accelerate price appreciation</li></ul>
+            <div class="rok-take" style="font-size:12px">M&amp;A deal announced and shorts are holding 14.6% of float — this is a two-for-one: deal premium plus forced short covering. Arb desks will pile in as deal terms clarify.</div>
             <!-- WHAT THIS MEANS BOX -->
             <div class="what-it-means">
-              <div class="wim-lbl">WHAT THIS MEANS FOR YOU</div>
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
               
               
               
-              <div class="wim-txt">If you invest <strong>$1,000</strong> and analysts are right:<br>You could make <strong class="up">+$146 (+14.6%)</strong> in 2-4 weeks</div>
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$146 (+14.6%)</strong> in 2-4 weeks</div>
               
               
-              <div class="stop-explainer"><span style="color:var(--r)">⚠ If it drops to $26.50</span> — that's ROK's signal to sell and cut losses</div>
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $26.50 (-9%)</span> — sell here to protect yourself if it goes wrong</div>
               
             </div>
             <button class="bought-btn buy-action" id="btn-CZR" onclick="event.stopPropagation();boughtIt('CZR',29.08)">💰 BOUGHT IT — ADD TO MY STOCKS</button>
@@ -1063,43 +1385,109 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         </div>
         <div class="cgrid">
           
+          
+          
+          
           <div class="card sell" onclick="openModal('INTC')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$INTC</div><div class="c-co">Intel Corporation</div></div>
-              <div class="c-right"><span class="str-b">8/10</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$INTC</div>
+                <div class="c-co">Intel Corporation</div>
+                
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="80.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">80</text>
+                    <text class="rok-score-lbl" x="18" y="23">DANGER</text>
+                  </svg>
+                </div>
+                <div class="c-right"><span class="str-b">AVOID</span></div>
+              </div>
             </div>
-            <span class="urg THIS-WEEK">THIS WEEK</span>
-            <div class="prow"><span class="p-cur">$120.89</span></div>
+            <span class="urg THIS-WEEK">🚨 THIS WEEK</span>
+            <div class="prow"><span class="p-cur" data-ticker="INTC" data-price="120.89">$120.89</span></div>
             <div class="spark"><canvas id="spark-s1" height="40"></canvas></div>
-            <ul class="reasons"><li>Analyst price target is $87.76 — a staggering -27.4% downside from current $120.89; hold consensus means no institutional support at this level</li><li>PE of 78.5x for a company losing ground in AI chips to NVDA and AMD is indefensible — earnings multiple compression is inevitable</li></ul>
-            <div class="rok-take">Intel is trading 37% above its analyst target at a 78x PE while losing the AI chip war. June 2 catalyst is as likely to be a disappointment as a positive surprise. Reduce before that event.</div>
-            <button class="bought-btn sell-action" id="btn-INTC" onclick="event.stopPropagation();boughtIt('INTC',120.89)">📊 I OWN THIS — TRACK IT</button>
+            <ul class="reasons"><li>Analyst price target is $87.76 — a staggering -27.4% downside from current $120.89; hold consensus means no institutional support at this level</li><li>PE of 78.5x for a company losing ground in AI chips to NVDA and AMD is indefensible — earnings multiple compression is inevitable</li><li>143.7M shares traded (-0.7%) — massive volume on a down day suggests institutional distribution, not accumulation</li></ul>
+            <div class="rok-take" style="font-size:12px">Intel is trading 37% above its analyst target at a 78x PE while losing the AI chip war. June 2 catalyst is as likely to be a disappointment as a positive surprise. Reduce before that event.</div>
+            <div class="what-it-means" style="background:rgba(255,34,85,.06);border-color:rgba(255,34,85,.2)">
+              <div class="wim-lbl" style="color:var(--r)">⚠ WHY THIS IS DANGEROUS</div>
+              <div class="wim-txt">ROK's analysis suggests staying away from this stock. If you own it, consider selling to protect your money.</div>
+            </div>
+            <button class="bought-btn sell-action" id="btn-INTC" onclick="event.stopPropagation();boughtIt('INTC',120.89)">📊 I OWN THIS — TRACK IN MY STOCKS</button>
           </div>
+          
+          
+          
           
           <div class="card sell" onclick="openModal('PLUG')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$PLUG</div><div class="c-co">Plug Power Inc.</div></div>
-              <div class="c-right"><span class="str-b">7/10</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$PLUG</div>
+                <div class="c-co">Plug Power Inc.</div>
+                
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="70.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">70</text>
+                    <text class="rok-score-lbl" x="18" y="23">DANGER</text>
+                  </svg>
+                </div>
+                <div class="c-right"><span class="str-b">AVOID</span></div>
+              </div>
             </div>
-            <span class="urg REDUCE-POSITION">REDUCE POSITION</span>
-            <div class="prow"><span class="p-cur">$4.12</span></div>
+            <span class="urg REDUCE-POSITION">🚨 REDUCE POSITION</span>
+            <div class="prow"><span class="p-cur" data-ticker="PLUG" data-price="4.12">$4.12</span></div>
             <div class="spark"><canvas id="spark-s2" height="40"></canvas></div>
-            <ul class="reasons"><li>27.52% short float with hold consensus and analyst target of $3.62 — Street expects -12.2% from here, shorts are right</li><li>Negative PE (-25x) with no clear path to profitability — burns cash while hydrogen economy thesis has repeatedly failed to materialize</li></ul>
-            <div class="rok-take">PLUG is a zombie stock with 27.5% short float and a negative $3.62 analyst target. Every dead-cat bounce is a gift to short sellers. The hydrogen thesis is perpetually &#39;coming soon.&#39;</div>
-            <button class="bought-btn sell-action" id="btn-PLUG" onclick="event.stopPropagation();boughtIt('PLUG',4.12)">📊 I OWN THIS — TRACK IT</button>
+            <ul class="reasons"><li>27.52% short float with hold consensus and analyst target of $3.62 — Street expects -12.2% from here, shorts are right</li><li>Negative PE (-25x) with no clear path to profitability — burns cash while hydrogen economy thesis has repeatedly failed to materialize</li><li>87.4M shares traded on essentially flat movement (-0.5%) — extreme volume with no price appreciation signals distribution by remaining bulls</li></ul>
+            <div class="rok-take" style="font-size:12px">PLUG is a zombie stock with 27.5% short float and a negative $3.62 analyst target. Every dead-cat bounce is a gift to short sellers. The hydrogen thesis is perpetually &#39;coming soon.&#39;</div>
+            <div class="what-it-means" style="background:rgba(255,34,85,.06);border-color:rgba(255,34,85,.2)">
+              <div class="wim-lbl" style="color:var(--r)">⚠ WHY THIS IS DANGEROUS</div>
+              <div class="wim-txt">ROK's analysis suggests staying away from this stock. If you own it, consider selling to protect your money.</div>
+            </div>
+            <button class="bought-btn sell-action" id="btn-PLUG" onclick="event.stopPropagation();boughtIt('PLUG',4.12)">📊 I OWN THIS — TRACK IN MY STOCKS</button>
           </div>
+          
+          
+          
           
           <div class="card sell" onclick="openModal('NOK')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$NOK</div><div class="c-co">Nokia Corporation</div></div>
-              <div class="c-right"><span class="str-b">6/10</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$NOK</div>
+                <div class="c-co">Nokia Corporation</div>
+                
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="60.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">60</text>
+                    <text class="rok-score-lbl" x="18" y="23">DANGER</text>
+                  </svg>
+                </div>
+                <div class="c-right"><span class="str-b">AVOID</span></div>
+              </div>
             </div>
-            <span class="urg THIS-WEEK">THIS WEEK</span>
-            <div class="prow"><span class="p-cur">$15.28</span></div>
+            <span class="urg THIS-WEEK">🚨 THIS WEEK</span>
+            <div class="prow"><span class="p-cur" data-ticker="NOK" data-price="15.28">$15.28</span></div>
             <div class="spark"><canvas id="spark-s3" height="40"></canvas></div>
-            <ul class="reasons"><li>Analyst target $12.90 implies -15.6% downside from current $15.28 — Street has a sell implicit in that gap despite a &#39;buy&#39; label</li><li>PE of 95.5x for a mature telecom equipment company is absurd — Nokia is not a growth stock and does not deserve this multiple</li></ul>
-            <div class="rok-take">Nokia at 95x PE is a tourist trap. 115M shares changed hands today on a -2.5% move — someone is getting out. With a $12.90 analyst target, the smart money already knows where this is going.</div>
-            <button class="bought-btn sell-action" id="btn-NOK" onclick="event.stopPropagation();boughtIt('NOK',15.28)">📊 I OWN THIS — TRACK IT</button>
+            <ul class="reasons"><li>Analyst target $12.90 implies -15.6% downside from current $15.28 — Street has a sell implicit in that gap despite a &#39;buy&#39; label</li><li>PE of 95.5x for a mature telecom equipment company is absurd — Nokia is not a growth stock and does not deserve this multiple</li><li>115.7M shares traded on -2.5% — another high volume distribution day, similar pattern to INTC</li></ul>
+            <div class="rok-take" style="font-size:12px">Nokia at 95x PE is a tourist trap. 115M shares changed hands today on a -2.5% move — someone is getting out. With a $12.90 analyst target, the smart money already knows where this is going.</div>
+            <div class="what-it-means" style="background:rgba(255,34,85,.06);border-color:rgba(255,34,85,.2)">
+              <div class="wim-lbl" style="color:var(--r)">⚠ WHY THIS IS DANGEROUS</div>
+              <div class="wim-txt">ROK's analysis suggests staying away from this stock. If you own it, consider selling to protect your money.</div>
+            </div>
+            <button class="bought-btn sell-action" id="btn-NOK" onclick="event.stopPropagation();boughtIt('NOK',15.28)">📊 I OWN THIS — TRACK IN MY STOCKS</button>
           </div>
           
           
@@ -1115,61 +1503,111 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           
           <div class="card watch" onclick="openModal('CRWD')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$CRWD</div><div class="c-co">CrowdStrike Holdings Inc.</div></div>
-              <div class="c-right"><span class="str-b">WATCH</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$CRWD</div>
+                <div class="c-co">CrowdStrike Holdings Inc.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                
+                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+22.0%?</span>
+                
+                <span class="str-b">WATCH</span>
+              </div>
             </div>
-            <div class="rok-take" style="margin-bottom:7px">Q1 2027 earnings this week AMC with EPS estimate $1.07 — cybersecurity sector had mixed signals today (Yahoo Finance flagged &#39;weakness in cybersecurity stocks&#39;) but CRWD is the category leader</div>
-            <div class="w-trigger"><div class="w-tlbl">TRIGGER</div><div class="w-ttxt">Earnings beat with raised guidance — specifically EPS above $1.07 and FY revenue guidance raise converts this to a buy</div></div>
-            <div class="w-risk" style="margin-top:4px">⚠ Sector-wide cybersecurity weakness noted today; any miss will crater the stock given valuation</div>
-            <div class="w-pot">⬆ +22.0%</div>
+            <div class="rok-take" style="margin-bottom:7px;font-size:12px">Q1 2027 earnings this week AMC with EPS estimate $1.07 — cybersecurity sector had mixed signals today (Yahoo Finance flagged &#39;weakness in cybersecurity stocks&#39;) but CRWD is the category leader</div>
+            <div class="w-trigger">
+              <div class="w-tlbl">⚡ WHAT NEEDS TO HAPPEN</div>
+              <div class="w-ttxt">Earnings beat with raised guidance — specifically EPS above $1.07 and FY revenue guidance raise converts this to a buy</div>
+            </div>
+            <div class="w-risk" style="margin-top:5px;font-size:10.5px">⚠ Downside: Sector-wide cybersecurity weakness noted today; any miss will crater the stock given valuation</div>
             <button class="bought-btn watch-action" id="btn-CRWD" onclick="event.stopPropagation();boughtIt('CRWD',0)">👀 TRACK THIS STOCK</button>
           </div>
           
           <div class="card watch" onclick="openModal('NVDA')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$NVDA</div><div class="c-co">NVIDIA Corporation</div></div>
-              <div class="c-right"><span class="str-b">WATCH</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$NVDA</div>
+                <div class="c-co">NVIDIA Corporation</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                
+                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+38.0%?</span>
+                
+                <span class="str-b">WATCH</span>
+              </div>
             </div>
-            <div class="rok-take" style="margin-bottom:7px">Yahoo Finance simultaneously ran &#39;$80B Reason to Buy Nvidia&#39; and &#39;3 Reasons Nvidia Just Became More Boring&#39; — divergent narratives at $214.25 with $295.69 analyst target (+38%)</div>
-            <div class="w-trigger"><div class="w-tlbl">TRIGGER</div><div class="w-ttxt">AVGO earnings beat this week that confirms AI chip demand acceleration — would re-ignite NVDA momentum toward $295 target</div></div>
-            <div class="w-risk" style="margin-top:4px">⚠ Narrative becoming &#39;boring&#39; per Yahoo Finance; &#39;more boring&#39; stocks underperform in momentum markets even with strong fundamentals</div>
-            <div class="w-pot">⬆ +38.0%</div>
+            <div class="rok-take" style="margin-bottom:7px;font-size:12px">Yahoo Finance simultaneously ran &#39;$80B Reason to Buy Nvidia&#39; and &#39;3 Reasons Nvidia Just Became More Boring&#39; — divergent narratives at $214.25 with $295.69 analyst target (+38%)</div>
+            <div class="w-trigger">
+              <div class="w-tlbl">⚡ WHAT NEEDS TO HAPPEN</div>
+              <div class="w-ttxt">AVGO earnings beat this week that confirms AI chip demand acceleration — would re-ignite NVDA momentum toward $295 target</div>
+            </div>
+            <div class="w-risk" style="margin-top:5px;font-size:10.5px">⚠ Downside: Narrative becoming &#39;boring&#39; per Yahoo Finance; &#39;more boring&#39; stocks underperform in momentum markets even with strong fundamentals</div>
             <button class="bought-btn watch-action" id="btn-NVDA" onclick="event.stopPropagation();boughtIt('NVDA',0)">👀 TRACK THIS STOCK</button>
           </div>
           
           <div class="card watch" onclick="openModal('PANW')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$PANW</div><div class="c-co">Palo Alto Networks Inc.</div></div>
-              <div class="c-right"><span class="str-b">WATCH</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$PANW</div>
+                <div class="c-co">Palo Alto Networks Inc.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                
+                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+18.0%?</span>
+                
+                <span class="str-b">WATCH</span>
+              </div>
             </div>
-            <div class="rok-take" style="margin-bottom:7px">Q3 2026 earnings this week AMC with EPS estimate $0.80 — cybersecurity weakness flagged today, but PANW is the defensive AI-security play that institutional buyers love</div>
-            <div class="w-trigger"><div class="w-tlbl">TRIGGER</div><div class="w-ttxt">Earnings beat + platformization metrics improvement — if billings growth reaccelerates above expectations, buy the gap</div></div>
-            <div class="w-risk" style="margin-top:4px">⚠ Sector pressure today and elevated valuation; any guidance cut is devastating</div>
-            <div class="w-pot">⬆ +18.0%</div>
+            <div class="rok-take" style="margin-bottom:7px;font-size:12px">Q3 2026 earnings this week AMC with EPS estimate $0.80 — cybersecurity weakness flagged today, but PANW is the defensive AI-security play that institutional buyers love</div>
+            <div class="w-trigger">
+              <div class="w-tlbl">⚡ WHAT NEEDS TO HAPPEN</div>
+              <div class="w-ttxt">Earnings beat + platformization metrics improvement — if billings growth reaccelerates above expectations, buy the gap</div>
+            </div>
+            <div class="w-risk" style="margin-top:5px;font-size:10.5px">⚠ Downside: Sector pressure today and elevated valuation; any guidance cut is devastating</div>
             <button class="bought-btn watch-action" id="btn-PANW" onclick="event.stopPropagation();boughtIt('PANW',0)">👀 TRACK THIS STOCK</button>
           </div>
           
           <div class="card watch" onclick="openModal('TSMC')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$TSMC</div><div class="c-co">Taiwan Semiconductor Manufacturing Company</div></div>
-              <div class="c-right"><span class="str-b">WATCH</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$TSMC</div>
+                <div class="c-co">Taiwan Semiconductor Manufacturing Company</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                
+                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+25.0%?</span>
+                
+                <span class="str-b">WATCH</span>
+              </div>
             </div>
-            <div class="rok-take" style="margin-bottom:7px">IBD Stock of the Day, flirting with buy point, and will raise prices amid AI demand per Yahoo Finance — price hikes are margin expansion, not demand destruction at this stage</div>
-            <div class="w-trigger"><div class="w-tlbl">TRIGGER</div><div class="w-ttxt">Clean break above the IBD-flagged buy point on volume above 20M ADR shares — institutional accumulation signal</div></div>
-            <div class="w-risk" style="margin-top:4px">⚠ Geopolitical Taiwan risk and dollar weakness reducing ADR attractiveness for US investors</div>
-            <div class="w-pot">⬆ +25.0%</div>
+            <div class="rok-take" style="margin-bottom:7px;font-size:12px">IBD Stock of the Day, flirting with buy point, and will raise prices amid AI demand per Yahoo Finance — price hikes are margin expansion, not demand destruction at this stage</div>
+            <div class="w-trigger">
+              <div class="w-tlbl">⚡ WHAT NEEDS TO HAPPEN</div>
+              <div class="w-ttxt">Clean break above the IBD-flagged buy point on volume above 20M ADR shares — institutional accumulation signal</div>
+            </div>
+            <div class="w-risk" style="margin-top:5px;font-size:10.5px">⚠ Downside: Geopolitical Taiwan risk and dollar weakness reducing ADR attractiveness for US investors</div>
             <button class="bought-btn watch-action" id="btn-TSMC" onclick="event.stopPropagation();boughtIt('TSMC',0)">👀 TRACK THIS STOCK</button>
           </div>
           
           <div class="card watch" onclick="openModal('RCAT')" style="cursor:pointer">
             <div class="c-row1">
-              <div class="c-left"><div class="c-ticker">$RCAT</div><div class="c-co">Red Cat Holdings Inc.</div></div>
-              <div class="c-right"><span class="str-b">WATCH</span></div>
+              <div class="c-left">
+                <div class="c-ticker">$RCAT</div>
+                <div class="c-co">Red Cat Holdings Inc.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0">
+                
+                <span class="upside-badge" style="background:rgba(255,215,0,.1);color:var(--au);border-color:rgba(255,215,0,.25)">+53.7%?</span>
+                
+                <span class="str-b">WATCH</span>
+              </div>
             </div>
-            <div class="rok-take" style="margin-bottom:7px">+32.6% today on 13.3M volume with analyst target $21.75 (+53.7%) — drone/defense tech is moving hard and this appears to be a momentum ignition event</div>
-            <div class="w-trigger"><div class="w-tlbl">TRIGGER</div><div class="w-ttxt">Volume confirmation above 10M shares on a second consecutive up day — momentum continuation would target $18-20 range</div></div>
-            <div class="w-risk" style="margin-top:4px">⚠ 21% short float, negative earnings, no options flow confirmation — could be a one-day squeeze with no follow-through</div>
-            <div class="w-pot">⬆ +53.7%</div>
+            <div class="rok-take" style="margin-bottom:7px;font-size:12px">+32.6% today on 13.3M volume with analyst target $21.75 (+53.7%) — drone/defense tech is moving hard and this appears to be a momentum ignition event</div>
+            <div class="w-trigger">
+              <div class="w-tlbl">⚡ WHAT NEEDS TO HAPPEN</div>
+              <div class="w-ttxt">Volume confirmation above 10M shares on a second consecutive up day — momentum continuation would target $18-20 range</div>
+            </div>
+            <div class="w-risk" style="margin-top:5px;font-size:10.5px">⚠ Downside: 21% short float, negative earnings, no options flow confirmation — could be a one-day squeeze with no follow-through</div>
             <button class="bought-btn watch-action" id="btn-RCAT" onclick="event.stopPropagation();boughtIt('RCAT',0)">👀 TRACK THIS STOCK</button>
           </div>
           
@@ -2011,13 +2449,32 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         ${earningsRow}
       </div>
       ${reasons.length ? `<div style="padding:0 1.1rem .75rem">
-        <div style="font-size:8px;font-weight:700;letter-spacing:.18em;color:rgba(255,215,0,.5);margin-bottom:.45rem;text-transform:uppercase">AI ANALYSIS</div>
+        <div style="font-size:8px;font-weight:700;letter-spacing:.18em;color:rgba(255,215,0,.5);margin-bottom:.45rem;text-transform:uppercase">🧠 WHY ROK LIKES THIS</div>
         <ul class="reasons">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>
       </div>` : ''}
       ${rokTake ? `<div style="padding:0 1.1rem .75rem"><div class="rok-take">${rokTake}</div></div>` : ''}
+      ${sig === 'buy' && priceTarget && curPrice ? `
+      <div style="padding:.75rem 1.1rem;border-top:var(--bdr2)">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.65rem">💰 PROFIT CALCULATOR</div>
+        <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.5rem">
+          <label style="font-size:12px;color:var(--wh2);white-space:nowrap">I want to invest</label>
+          <div style="position:relative;flex:1">
+            <span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--wh3);font-size:14px">$</span>
+            <input type="number" id="calc-invest" value="1000" min="1" max="1000000"
+              style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.5rem .5rem .5rem 1.5rem;font-size:16px;color:var(--wh);outline:none;font-family:var(--font)"
+              oninput="updateCalc(${curPrice},${priceTarget})"/>
+          </div>
+        </div>
+        <div id="calc-result" style="background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.7rem .85rem;font-size:13px;line-height:1.7;color:var(--wh2)">
+          Loading…
+        </div>
+      </div>` : ''}
       <div style="padding:.75rem 1.1rem 1.1rem;border-top:var(--bdr2);display:flex;gap:.6rem">
         <a href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.65rem;background:var(--blk4);border:var(--bdr2);border-radius:6px;font-size:11px;font-weight:600;color:var(--wh2);text-decoration:none">Yahoo Finance ↗</a>
         <a href="https://finance.yahoo.com/quote/${s.ticker}/news/" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.65rem;background:var(--blk4);border:var(--bdr2);border-radius:6px;font-size:11px;font-weight:600;color:var(--wh2);text-decoration:none">Latest News ↗</a>
+        <button onclick="boughtIt('${s.ticker}', ${curPrice || 0}); doCloseModal();" style="flex:1;padding:.65rem;background:${sig==='buy'?'rgba(0,255,136,.12)':'rgba(255,215,0,.08)'};border:1px solid ${sig==='buy'?'rgba(0,255,136,.3)':'rgba(255,215,0,.2)'};border-radius:6px;font-size:11px;font-weight:700;color:${sig==='buy'?'var(--g)':'var(--au)'};cursor:pointer;touch-action:manipulation">
+          ${sig==='buy'?'💰 BOUGHT IT':'📊 TRACK IT'}
+        </button>
       </div>`;
 
     document.getElementById('modal-overlay').classList.add('open');
@@ -2028,7 +2485,35 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const c = sig === 'sell' ? '#ff2255' : (isUp ? '#00ff88' : '#ff2255');
       setTimeout(() => drawSpark('modal-spark', s.price_history, c), 30);
     }
+    // Initialize profit calculator
+    const priceTarget2 = det.price_target || s.analyst_target;
+    const curPrice2 = liveprices[ticker]?.price || s.price;
+    if (sig === 'buy' && priceTarget2 && curPrice2) {
+      setTimeout(() => updateCalc(curPrice2, priceTarget2), 60);
+    }
   }
+  function updateCalc(price, target) {
+    const el = document.getElementById('calc-invest');
+    const res = document.getElementById('calc-result');
+    if (!el || !res || !price || !target) return;
+    const amt = parseFloat(el.value) || 0;
+    if (amt <= 0) { res.innerHTML = 'Enter an amount to invest'; return; }
+    const shares = Math.floor(amt / price);
+    const cost = shares * price;
+    const gain = shares * (target - price);
+    const gainPct = ((target - price) / price * 100).toFixed(1);
+    const leftover = amt - cost;
+    res.innerHTML = `
+      <strong style="color:var(--wh)">You can buy <span style="color:var(--g)">${shares} share${shares !== 1 ? 's' : ''}</span></strong> at $${price.toFixed(2)} each<br>
+      Cost: $${cost.toFixed(2)}${leftover > 0 ? ` · $${leftover.toFixed(2)} left over` : ''}<br>
+      <strong>If analysts are right ($${target.toFixed(2)} target):</strong><br>
+      📈 You'd make <strong style="color:var(--g)">+$${gain.toFixed(0)} (+${gainPct}%)</strong>
+    `;
+  }
+  window.updateCalc = updateCalc;
+  // Initialize calculator when modal opens
+  const _origOpenModal = openModal;
+
   window.openModal = openModal;
   window.doCloseModal = doCloseModal;
 
@@ -2142,13 +2627,33 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const curPrice = lp ? lp.price : (stock ? stock.price : null);
       if (curPrice && entry.price) { totalPct += (curPrice - entry.price) / entry.price * 100; count++; }
     });
+    // Calculate dollar amounts assuming each position = $1000 at entry
+    let totalInvested = 0, totalNow = 0;
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const lp = liveprices[ticker];
+      const curPrice = lp ? lp.price : (stock ? stock.price : null);
+      if (curPrice && entry.price && entry.price > 0) {
+        const shares = 1000 / entry.price;
+        totalInvested += shares * entry.price;
+        totalNow += shares * curPrice;
+      }
+    });
+    const totalDollarGain = totalNow - totalInvested;
     const avgPct = count ? totalPct / count : 0;
     const cc = avgPct >= 0 ? 'var(--g)' : 'var(--r)';
-    sumEl.innerHTML = `<div class="port-summary">
-      <div class="port-sum-box"><div class="port-sum-val" style="color:var(--au)">${tickers.length}</div><div class="port-sum-lbl">Stocks Tracked</div></div>
+    const moneyColor = totalDollarGain >= 0 ? 'var(--g)' : 'var(--r)';
+    const dollarFmt = totalDollarGain >= 0
+      ? `+$${totalDollarGain.toFixed(0)}`
+      : `-$${Math.abs(totalDollarGain).toFixed(0)}`;
+    sumEl.innerHTML = `<div class="port-summary" style="grid-template-columns:repeat(4,1fr)">
+      <div class="port-sum-box"><div class="port-sum-val" style="color:var(--au)">${tickers.length}</div><div class="port-sum-lbl">Tracking</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${cc}">${avgPct>=0?'+':''}${avgPct.toFixed(1)}%</div><div class="port-sum-lbl">Avg Return</div></div>
+      <div class="port-sum-box"><div class="port-sum-val" style="color:${moneyColor};font-size:1.1rem">${totalInvested > 0 ? dollarFmt : '—'}</div><div class="port-sum-lbl">Total P&amp;L*</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${alerts?'var(--r)':'var(--g)'}">${alerts}</div><div class="port-sum-lbl">Alerts</div></div>
-    </div>`;
+    </div>
+    ${totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position at entry price</div>` : ''}`;
   }
 
   // Phase 6: Share portfolio
