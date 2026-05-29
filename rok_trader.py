@@ -2730,6 +2730,15 @@ def run():
                 except Exception:
                     pass
 
+        # Signal persistence: stocks that were in the top scan last run get a bonus
+        # They've been consistently strong — higher conviction than a one-run flash
+        prev_top = {entry.get("ticker"): entry.get("score", 0)
+                    for entry in tlog.get("last_scan_top", [])
+                    if entry.get("ticker")}
+        _persistent_cands = {tk for tk, sc in prev_top.items() if sc >= MIN_BUY_SCORE}
+        if _persistent_cands:
+            logger.info(f"Persistent signal candidates (seen last run): {', '.join(sorted(_persistent_cands))}")
+
         # Technical pass — include sector rotation + gap + squeeze + earnings + mean-rev bonuses
         tech_scores = {
             tk: score(tk, live[tk],
@@ -2738,6 +2747,7 @@ def run():
                                 + (12 if tk in squeeze_cands else 0)
                                 + (11 if tk in vol_surge_cands else 0)
                                 + (8  if tk in recent_sells else 0)
+                                + (9  if tk in _persistent_cands else 0)  # seen last run too
                                 + (14 if tk in bullish_options else 0)
                                 + (18 if tk in earnings_beats else 0)
                                 + (10 if tk in mean_rev_cands else 0))  # mean reversion bounce
@@ -2791,28 +2801,30 @@ def run():
                 sent, catalyst = ai_sentiment(tk, use_sonnet=use_sonnet, signals=live.get(tk))
             else:
                 sent, catalyst = 0, ""
-            sec_adj       = sector_adjs.get(sec, 0)
-            gap_adj       = 10 if tk in gap_ups else 0
-            squeeze_adj   = 12 if tk in squeeze_cands else 0
-            vol_surge_adj = 11 if tk in vol_surge_cands else 0
-            options_adj   = 14 if tk in bullish_options else 0
-            reentry_adj   = 8  if tk in recent_sells else 0
-            earnings_adj  = 18 if tk in earnings_beats else 0
-            mean_rev_adj  = 10 if tk in mean_rev_cands else 0
-            final_sc      = score(tk, live[tk], sentiment=sent,
-                                  regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
-                                            + vol_surge_adj + options_adj + reentry_adj
-                                            + earnings_adj + mean_rev_adj)
+            sec_adj        = sector_adjs.get(sec, 0)
+            gap_adj        = 10 if tk in gap_ups else 0
+            squeeze_adj    = 12 if tk in squeeze_cands else 0
+            vol_surge_adj  = 11 if tk in vol_surge_cands else 0
+            options_adj    = 14 if tk in bullish_options else 0
+            reentry_adj    = 8  if tk in recent_sells else 0
+            persist_adj    = 9  if tk in _persistent_cands else 0
+            earnings_adj   = 18 if tk in earnings_beats else 0
+            mean_rev_adj   = 10 if tk in mean_rev_cands else 0
+            final_sc       = score(tk, live[tk], sentiment=sent,
+                                   regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
+                                             + vol_surge_adj + options_adj + reentry_adj
+                                             + persist_adj + earnings_adj + mean_rev_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
-                if gap_adj:       extras.append("gap")
-                if squeeze_adj:   extras.append("squeeze")
-                if vol_surge_adj: extras.append("vol-surge")
-                if options_adj:   extras.append("call-flow")
-                if reentry_adj:   extras.append("re-entry")
-                if earnings_adj:  extras.append("earnings-beat")
-                if mean_rev_adj:  extras.append("mean-rev")
+                if gap_adj:        extras.append("gap")
+                if squeeze_adj:    extras.append("squeeze")
+                if vol_surge_adj:  extras.append("vol-surge")
+                if options_adj:    extras.append("call-flow")
+                if reentry_adj:    extras.append("re-entry")
+                if persist_adj:    extras.append("persistent")
+                if earnings_adj:   extras.append("earnings-beat")
+                if mean_rev_adj:   extras.append("mean-rev")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
                 _rejected_log.append({"ticker": tk, "score": final_sc,
