@@ -1550,6 +1550,55 @@ def market_regime():
         elif vix > 22:                score -= 1
         elif vix < 16:                score += 1   # complacent = bull
 
+        # Sector rotation: XLK (tech) vs XLU (utilities) — risk-on vs defensive
+        # When tech > utilities: growth mode. When utilities > tech: defensive/fear.
+        try:
+            sec_raw = yf.download("XLK XLU XLF XLV", period="15d", interval="1d",
+                                   progress=False, auto_adjust=True)
+            def _sec_closes(sym):
+                try:
+                    return list(sec_raw["Close"][sym].dropna())
+                except Exception:
+                    return []
+            xlk_c = _sec_closes("XLK")
+            xlu_c = _sec_closes("XLU")
+            xlf_c = _sec_closes("XLF")
+            xlv_c = _sec_closes("XLV")
+            if len(xlk_c) >= 5 and len(xlu_c) >= 5:
+                xlk_5d = (xlk_c[-1] - xlk_c[-5]) / xlk_c[-5] * 100
+                xlu_5d = (xlu_c[-1] - xlu_c[-5]) / xlu_c[-5] * 100
+                rot_score = xlk_5d - xlu_5d
+                if   rot_score > 3:   score += 2   # tech crushing utilities = strong risk-on
+                elif rot_score > 1:   score += 1
+                elif rot_score < -3:  score -= 2   # utilities crushing tech = defensive rotation
+                elif rot_score < -1:  score -= 1
+            # Financials XLF: banks leading = economy expanding = bull
+            if len(xlf_c) >= 5 and len(spy_closes) >= 5:
+                xlf_5d = (xlf_c[-1] - xlf_c[-5]) / xlf_c[-5] * 100
+                spy_5d_now = (spy_closes[-1] - spy_closes[-5]) / spy_closes[-5] * 100
+                if xlf_5d > spy_5d_now + 1.5: score += 1   # financials leading = economic strength
+                elif xlf_5d < spy_5d_now - 1.5: score -= 1
+        except Exception:
+            pass
+
+        # SPY RSI: overbought market = headwind; oversold = opportunity
+        try:
+            if len(spy_closes) >= 14:
+                spy_rsi = _rsi(spy_closes, 14)
+                if spy_rsi < 35:  score += 1   # oversold market = contrarian buy setup
+                elif spy_rsi > 75: score -= 1  # overbought market = reduced edge for longs
+        except Exception:
+            pass
+
+        # SPY options put/call ratio: fear gauge
+        try:
+            spy_opts = _options_flow("SPY", max_age_sec=3600)
+            spy_pcr = spy_opts.get("pcr", 1.0)
+            if   spy_pcr < 0.7:  score += 1   # low put activity = complacency / bull
+            elif spy_pcr > 1.4:  score -= 1   # high put buying = fear / protection buying
+        except Exception:
+            pass
+
         if score >= 2:    regime = "bull"
         elif score <= -2: regime = "bear"
         else:             regime = "neutral"
