@@ -1,12 +1,12 @@
 """
 ROK — Static report generator for GitHub Pages.
-Runs via GitHub Actions every 6 hours. Outputs docs/index.html.
+Runs via GitHub Actions every 15 minutes. Outputs docs/index.html.
 """
 import json
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import jinja2
@@ -68,11 +68,11 @@ def run():
     all_posts = reddit_posts + news_articles + twitter_posts
 
     # ── Market data ───────────────────────────────────────────────
-    fear_greed   = _safe(market_data.get_fear_greed_index, default=dict, label="FearGreed")
-    earnings_cal = _safe(market_data.get_earnings_calendar, 7, default=list, label="Earnings")
-    unusual_opts = _safe(market_data.get_unusual_options_activity, default=list, label="Options")
-    most_active  = _safe(market_data.get_most_active_stocks, default=list, label="MostActive")
-    short_squeeze= _safe(market_data.get_short_squeeze_candidates, default=list, label="ShortSqueeze")
+    fear_greed    = _safe(market_data.get_fear_greed_index, default=dict, label="FearGreed")
+    earnings_cal  = _safe(market_data.get_earnings_calendar, 7, default=list, label="Earnings")
+    unusual_opts  = _safe(market_data.get_unusual_options_activity, default=list, label="Options")
+    most_active   = _safe(market_data.get_most_active_stocks, default=list, label="MostActive")
+    short_squeeze = _safe(market_data.get_short_squeeze_candidates, default=list, label="ShortSqueeze")
     market_indices= _safe(market_data.get_market_indices, default=dict, label="Indices")
     trending_yahoo= _safe(market_data.get_trending_on_yahoo, default=list, label="YahooTrending")
     put_call_ratio= _safe(market_data.get_put_call_ratio, default=dict, label="PutCall")
@@ -106,11 +106,11 @@ def run():
         extra.add(c["ticker"])
 
     seen = {t for t, _ in top_tickers}
-    seed = yahoo_finance.get_trending_tickers()
+    seed = _safe(yahoo_finance.get_trending_tickers, default=list, label="YahooTickers")
     ticker_list = list(dict.fromkeys(
         [t for t, _ in top_tickers]
         + [t for t in extra if t not in seen]
-        + [t for t in seed if t not in seen and t not in extra]
+        + [t for t in (seed or []) if t not in seen and t not in extra]
     ))[:60]
 
     # ── Per-ticker sentiment ──────────────────────────────────────
@@ -140,32 +140,60 @@ def run():
         default=list, label="SEC",
     )
 
+    # ── Load history (for last_analysis fallback) ─────────────────
+    history_path = Path(__file__).parent / "docs" / "history.json"
+    history = {"runs": []}
+    if history_path.exists():
+        try:
+            history = json.loads(history_path.read_text())
+        except Exception:
+            pass
+
     # ── AI Analysis ───────────────────────────────────────────────
     logger.info("Calling Claude AI...")
-    analysis = claude_analyzer.run_analysis(
-        api_key=Config.ANTHROPIC_API_KEY,
-        model=Config.CLAUDE_MODEL,
-        ticker_mentions=top_tickers,
-        reddit_posts=reddit_posts,
-        news_articles=news_articles,
-        stock_data=stock_data,
-        sec_filings=sec_filings,
-        fear_greed=fear_greed,
-        earnings_calendar=earnings_cal,
-        unusual_options=unusual_opts,
-        short_squeeze_candidates=short_squeeze,
-        market_indices=market_indices,
-        aggregate_sentiment=agg_sentiment,
-        stocktwits_trending=stocktwits_data,
-        technical_data=ta_data,
-        congressional_buys=congress_buys,
-        market_breadth=market_breadth,
-        put_call_ratio=put_call_ratio,
-    )
+    analysis = None
 
+    # Only call Claude if API key is present
+    if Config.ANTHROPIC_API_KEY:
+        analysis = _safe(
+            claude_analyzer.run_analysis,
+            Config.ANTHROPIC_API_KEY,
+            Config.CLAUDE_MODEL,
+            top_tickers,
+            reddit_posts,
+            news_articles,
+            stock_data,
+            sec_filings,
+            fear_greed,
+            earnings_cal,
+            unusual_opts,
+            short_squeeze,
+            market_indices,
+            agg_sentiment,
+            stocktwits_data,
+            ta_data,
+            congress_buys,
+            market_breadth,
+            put_call_ratio,
+            default=None,
+            label="ClaudeAI",
+        )
+    else:
+        logger.warning("ANTHROPIC_API_KEY not set — skipping AI analysis, using cached data")
+
+    # ── Fallback: reuse last successful analysis from history ─────
     if not analysis:
-        logger.error("Analysis returned None — aborting")
-        sys.exit(1)
+        cached = history.get("last_analysis")
+        if cached:
+            logger.info("Using cached last_analysis from history.json")
+            analysis = cached
+        else:
+            logger.error("No analysis and no cached analysis available — aborting")
+            sys.exit(1)
+    else:
+        # Save successful analysis for future fallback
+        history["last_analysis"] = analysis
+        logger.info("Saved analysis to history.last_analysis for fallback")
 
     logger.info(
         f"Analysis: {analysis.get('market_sentiment')} | "
@@ -204,14 +232,6 @@ def run():
             )
 
     # ── History tracking ──────────────────────────────────────────
-    history_path = Path(__file__).parent / "docs" / "history.json"
-    history = {"runs": []}
-    if history_path.exists():
-        try:
-            history = json.loads(history_path.read_text())
-        except Exception:
-            pass
-
     history["runs"].append({
         "date": datetime.utcnow().strftime("%Y-%m-%d"),
         "timestamp": datetime.utcnow().isoformat(),
@@ -226,8 +246,8 @@ def run():
             for s in analysis.get("sell_signals", [])
         ],
     })
-    # Keep last 52 runs (1 year of weekly data)
-    history["runs"] = history["runs"][-52:]
+    # Keep last 96 runs (24 hours of 15-min data × 4)
+    history["runs"] = history["runs"][-96:]
 
     # ── Track record: compare last run's picks to current prices ──
     track_record = []
@@ -255,7 +275,15 @@ def run():
         track_record.sort(key=lambda x: abs(x["pct_change"]), reverse=True)
         logger.info(f"Track record: {len(track_record)} picks evaluated")
 
+    # ── Compute history bullish summary ──────────────────────────
+    recent_runs = history["runs"][-8:]
+    bullish_count = sum(1 for r in recent_runs if (r.get("sentiment") or "").upper() == "BULLISH")
+    history_summary = f"ROK was bullish {bullish_count} out of the last {len(recent_runs)} runs"
+
     # ── Build page data ───────────────────────────────────────────
+    buy_count = len(analysis.get("buy_signals", []))
+    sell_count = len(analysis.get("sell_signals", []))
+
     page_data = {
         "analysis_date": datetime.utcnow().strftime("%B %d, %Y %I:%M %p UTC"),
         "market_regime": analysis.get("market_regime", "UNCERTAIN"),
@@ -300,10 +328,13 @@ def run():
             "congress_trades": len(congress_buys),
             "technical": len(ta_data),
         },
-        "recent_runs": history["runs"][-8:],
+        "recent_runs": recent_runs,
+        "history_summary": history_summary,
         "track_record": track_record,
-        "generated_timestamp": datetime.utcnow().isoformat() + "Z",
+        "generated_timestamp": datetime.now(timezone.utc).isoformat(),
         "stock_universe": stock_data,
+        "buy_count": buy_count,
+        "sell_count": sell_count,
     }
 
     # ── Render HTML ───────────────────────────────────────────────
@@ -321,8 +352,23 @@ def run():
     (docs_dir / "index.html").write_text(html, encoding="utf-8")
     history_path.write_text(json.dumps(history, indent=2), encoding="utf-8")
 
-    logger.info(f"Report written → docs/index.html")
+    # ── Write prices.json for JS fallback ─────────────────────────
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    prices_dict = {}
+    for s in stock_data:
+        t = s.get("ticker")
+        if t:
+            prices_dict[t] = {
+                "price": s.get("price"),
+                "change_pct": s.get("change_pct"),
+                "updated": now_iso,
+            }
+    (docs_dir / "prices.json").write_text(json.dumps(prices_dict), encoding="utf-8")
+
+    logger.info(f"Report written → docs/index.html ({len(html)} chars)")
+    logger.info(f"Prices written → docs/prices.json ({len(prices_dict)} tickers)")
     logger.info(f"History updated → docs/history.json ({len(history['runs'])} runs)")
+    logger.info(f"Summary: {buy_count} buys | {sell_count} sells")
     logger.info("ROK PIPELINE COMPLETE")
 
 
