@@ -5440,33 +5440,84 @@ def run():
                     and not peaks.get(sym, {}).get("half_out", False)   # don't pyramid after partial sell
                 )
 
-                if is_pullback_dca or is_winner_pyramid:
-                    # Skip if stock is in a clear downtrend (EMA50 falling + negative ROC)
+                # Scenario C: VWAP -2σ intraday oversold bounce
+                vwap_b2d_val = live_sig.get("vwap_b2d", 0) or 0
+                is_vwap_oversold = (
+                    vwap_b2d_val > 0 and current <= vwap_b2d_val * 1.005
+                    and pnl_pct >= -8.0 and pnl_pct <= 3.0
+                    and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
+                )
+
+                # Scenario D: Pivot S1/S2 bounce with at least 2 confirming signals
+                pivot_s1_val = live_sig.get("pivot_s1", 0) or 0
+                pivot_s2_val = live_sig.get("pivot_s2", 0) or 0
+                at_pivot_support = (
+                    ((pivot_s1_val > 0 and abs(current - pivot_s1_val) / current < 0.015) or
+                     (pivot_s2_val > 0 and abs(current - pivot_s2_val) / current < 0.015))
+                    and pnl_pct >= -6.0 and pnl_pct <= 2.0
+                    and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
+                )
+
+                if is_pullback_dca or is_winner_pyramid or is_vwap_oversold or at_pivot_support:
                     ema50_pos = live_sig.get("price_vs_ema50", 0) or 0
                     roc5_val  = live_sig.get("roc5", 0) or 0
-                    if ema50_pos < -3 and roc5_val < -5:
+
+                    # Hard gates: don't DCA into a broken trend
+                    if ema50_pos < -4 and roc5_val < -5:
                         logger.debug(f"DCA SKIP {sym} — downtrend (EMA50={ema50_pos:.1f}%, ROC5={roc5_val:.1f}%)")
                         continue
-                    # Skip if full EMA stack is bearish — all timeframes declining
                     if live_sig.get("ema_stacked_bear", False):
-                        logger.debug(f"DCA SKIP {sym} — EMA stack bearish (all EMAs declining)")
+                        logger.debug(f"DCA SKIP {sym} — EMA stack bearish")
                         continue
-                    # DCA only at equal or better price for pullback scenario
+                    # Supertrend and PSAR filters: if both bearish, skip DCA
+                    st_bull_dca  = live_sig.get("supertrend_bull", True)
+                    psar_bull_dca = live_sig.get("psar_bull", True)
+                    if not st_bull_dca and not psar_bull_dca:
+                        logger.debug(f"DCA SKIP {sym} — both Supertrend and PSAR bearish")
+                        continue
+                    # Three Black Crows pattern: strong institutional selling
+                    if live_sig.get("three_black_crows", False):
+                        logger.debug(f"DCA SKIP {sym} — three black crows pattern")
+                        continue
                     if is_pullback_dca and current >= cost * 1.01:
-                        logger.debug(f"DCA SKIP {sym} — pullback DCA but price above cost (current={current:.2f}, cost={cost:.2f})")
+                        logger.debug(f"DCA SKIP {sym} — price above cost")
                         continue
+
                     dca_sc = score(sym, live_sig, regime_adj=regime_adj)
-                    min_score = 25 if is_winner_pyramid else 28
+                    # Score requirements: pivot/VWAP oversold need less score (mean reversion)
+                    if is_vwap_oversold or at_pivot_support:
+                        min_score = 22   # oversold at key level = lower bar
+                    elif is_winner_pyramid:
+                        min_score = 25
+                    else:
+                        min_score = 28
+
                     if dca_sc >= min_score:
-                        # Pyramid adds are smaller (25% of current size vs 50%)
-                        size_pct = 0.25 if is_winner_pyramid else 0.5
+                        # Boost from MFI oversold: strong accumulation signal
+                        mfi_dca = live_sig.get("mfi", 50) or 50
+                        mfi_boost = 1.2 if mfi_dca < 25 else 1.0
+
+                        # Position size: pyramid=25%, VWAP/pivot bounce=35%, pullback=50%
+                        if is_winner_pyramid:
+                            size_pct = 0.25
+                            dca_type = "pyramid (VWAP reclaim)"
+                        elif is_vwap_oversold:
+                            size_pct = 0.35 * mfi_boost
+                            dca_type = f"VWAP-2σ bounce (MFI={mfi_dca:.0f})"
+                        elif at_pivot_support:
+                            size_pct = 0.35 * mfi_boost
+                            near_lvl = "S2" if (pivot_s2_val > 0 and abs(current - pivot_s2_val) / current < 0.015) else "S1"
+                            dca_type = f"pivot-{near_lvl} bounce"
+                        else:
+                            size_pct = 0.50 * mfi_boost
+                            dca_type = "pullback"
+
                         dca_notional = min(
                             mkt_val * size_pct,
                             portfolio_val * MAX_POSITION_PCT - mkt_val,
                             buying_power * 0.12,
                         )
                         if dca_notional >= 50:
-                            dca_type = "pyramid (VWAP reclaim)" if is_winner_pyramid else "pullback"
                             logger.info(f"DCA {sym} [{dca_type}] — adding ${dca_notional:.0f} (pnl={pnl_pct:+.1f}%, score={dca_sc})")
                             r = alpaca_post("/v2/orders", {
                                 "symbol": sym, "notional": str(round(dca_notional, 2)),
