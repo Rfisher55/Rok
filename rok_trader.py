@@ -1411,6 +1411,26 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Consecutive green candle count — institutional accumulation pattern
+    consec_green = 0
+    try:
+        closes = list(daily["Close"])
+        for i in range(len(closes) - 1, 0, -1):
+            if closes[i] > closes[i - 1]:
+                consec_green += 1
+            else:
+                break
+    except Exception:
+        pass
+
+    # Average volume (14-day) for minimum liquidity filter
+    avg_vol_14 = 0
+    try:
+        if "Volume" in daily.columns and len(daily) >= 5:
+            avg_vol_14 = int(daily["Volume"].tail(14).mean())
+    except Exception:
+        pass
+
     # Relative strength vs SPY (1-day and 5-day)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
@@ -1427,6 +1447,7 @@ def _extract(daily, hourly):
         "price":           round(price, 2),
         "change_pct":      round(chg_pct, 2),
         "vol_ratio":       round(vol_ratio, 2),
+        "avg_vol_14":      avg_vol_14,
         "week_high":       round(week_high, 2),
         "week_low":        round(week_low, 2),
         "near_52w_high":   round(near_52w_high, 4),
@@ -1451,6 +1472,7 @@ def _extract(daily, hourly):
         "vwap_z":             round(vwap_z, 2),
         "rsi_divergence":     rsi_divergence,
         "rsi_bull_divergence": rsi_bull_divergence,
+        "consec_green":        consec_green,
     }
 
 
@@ -1763,6 +1785,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Bullish RSI divergence: hidden demand — price down but RSI rising (+10)
     rsi_bull = d.get("rsi_bull_divergence", False)
     if rsi_bull: s += 10
+
+    # Consecutive green candles: institutional accumulation signature (+12/-8)
+    # 3+ green days in a row = sustained buying pressure, not just a one-day pop
+    consec = d.get("consec_green", 0) or 0
+    if   consec >= 4: s += 12
+    elif consec >= 3: s +=  8
+    elif consec >= 2: s +=  4
 
     # Market regime adjustment
     s += regime_adj
@@ -2324,6 +2353,17 @@ def run():
             if has_earnings_soon(tk):
                 logger.info(f"SKIP {tk} — earnings within 3 days")
                 continue
+            # Minimum price filter: skip penny stocks (wide spreads, unreliable fills)
+            _d_pre = live.get(tk, {})
+            _price_pre = _d_pre.get("price", 0) or 0
+            if _price_pre < 2.0:
+                logger.debug(f"SKIP {tk} — price ${_price_pre:.2f} < $2 minimum")
+                continue
+            # Minimum average volume filter: 100k shares/day to ensure liquidity
+            _avg_vol_pre = _d_pre.get("avg_vol_14", 0) or 0
+            if 0 < _avg_vol_pre < 100_000:
+                logger.debug(f"SKIP {tk} — avg volume {_avg_vol_pre:,} < 100k minimum")
+                continue
             # Use Sonnet for top 3 candidates (better reasoning), Haiku for rest
             rank = len(final_scores)
             use_sonnet = (rank < 3) and _time_ok(200)
@@ -2354,7 +2394,19 @@ def run():
 
         # Write diagnostics so dashboard can show why no trades happened
         tlog["last_scan_top"] = [
-            {"ticker": tk, "score": sc, "sent": round(sent, 1), "sector": sec, "catalyst": cat}
+            {
+                "ticker":     tk,
+                "score":      sc,
+                "sent":       round(sent, 1),
+                "sector":     sec,
+                "catalyst":   cat,
+                "price":      round(live.get(tk, {}).get("price", 0), 2),
+                "vol_ratio":  round(live.get(tk, {}).get("vol_ratio", 1), 2),
+                "rsi":        round(live.get(tk, {}).get("daily_rsi", 50), 1),
+                "chg_pct":    round(live.get(tk, {}).get("change_pct", 0), 2),
+                "rs5":        round(live.get(tk, {}).get("rs5", 0), 2),
+                "stop_price": round(live.get(tk, {}).get("price", 0) * (1 - STOP_LOSS_PCT), 2),
+            }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
         tlog["last_scan_rejected"] = [
@@ -2480,11 +2532,22 @@ def run():
                 "pnl_pct":    float(p.get("unrealized_plpc", 0)) * 100,
                 "pnl_usd":    float(p.get("unrealized_pl",  0)),
                 "market_val": float(p.get("market_value",   0)),
+                "stop_price": round(float(p.get("avg_entry_price", 0)) * (1 - STOP_LOSS_PCT), 2),
+                "target_price": round(float(p.get("avg_entry_price", 0)) * (1 + PROFIT_TARGET_PCT), 2),
+                "peak_price": peaks.get(p.get("symbol", ""), {}).get("peak", 0) if isinstance(peaks.get(p.get("symbol", "")), dict) else 0,
             }
             for p in curr
         ]
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
+
+    # Compute profit factor from trade history
+    _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+    _gross_wins  = sum(t["pnl_pct"] for t in _closed if t["pnl_pct"] > 0) or 0
+    _gross_losses= abs(sum(t["pnl_pct"] for t in _closed if t["pnl_pct"] < 0)) or 1
+    _profit_factor = round(_gross_wins / _gross_losses, 2) if _closed else None
+    _avg_win  = round(_gross_wins  / max(1, sum(1 for t in _closed if t["pnl_pct"] > 0)), 2) if _closed else None
+    _avg_loss = round(_gross_losses/ max(1, sum(1 for t in _closed if t["pnl_pct"] < 0)), 2) if _closed else None
 
     tlog["last_updated"]    = now_utc.isoformat()
     tlog["portfolio_value"] = portfolio_val
@@ -2498,6 +2561,9 @@ def run():
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
     tlog["market_breadth"]  = breadth
+    tlog["profit_factor"]   = _profit_factor
+    tlog["avg_win_pct"]     = _avg_win
+    tlog["avg_loss_pct"]    = _avg_loss
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
