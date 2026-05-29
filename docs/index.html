@@ -968,6 +968,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
     </div>
 
+    <!-- Live market today — populated by JS after prices refresh -->
+    <div id="live-market-mood" style="display:none;margin-bottom:.65rem"></div>
+
     
 
     <!-- Stats strip -->
@@ -1518,6 +1521,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
     <!-- Manual add section -->
@@ -1904,6 +1908,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (activeTab === 'portfolio') renderPortfolio();
     if (activeTab === 'signals') updateSignalsPortfolioAlert();
     checkPriceAlerts();
+    updateLiveMarketMood();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2543,6 +2548,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
   function renderPortfolio() {
     renderPortfolioSummary();
+    renderDiversificationCheck();
     const grid = document.getElementById('portfolio-grid');
     if (!grid) return;
     const p = getPortfolio();
@@ -3010,6 +3016,98 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     };
     show();
     setInterval(show, 12000);
+  }
+
+  // ── LIVE MARKET MOOD ────────────────────────────────────
+  function updateLiveMarketMood() {
+    const el = document.getElementById('live-market-mood');
+    if (!el) return;
+    const spy = liveprices['SPY'];
+    const qqq = liveprices['QQQ'];
+    const vix = liveprices['^VIX'];
+    if (!spy && !qqq) { el.style.display = 'none'; return; }
+    const spyChg = spy ? spy.change_pct : null;
+    const qqqChg = qqq ? qqq.change_pct : null;
+    const vixVal = vix ? vix.price : null;
+    const avgChg = ((spyChg || 0) + (qqqChg || 0)) / ((spy ? 1 : 0) + (qqq ? 1 : 0) || 1);
+    let mood, moodColor, moodEmoji, advice;
+    if (vixVal && vixVal > 30) {
+      mood = 'HIGH FEAR'; moodColor = 'var(--r)'; moodEmoji = '😨';
+      advice = 'VIX above 30 means high fear. Markets are volatile — hold tight, avoid opening new positions.';
+    } else if (avgChg > 1.5) {
+      mood = 'STRONG RALLY'; moodColor = 'var(--g)'; moodEmoji = '🚀';
+      advice = 'Market ripping higher today. Momentum is strong — buy signals are more reliable right now.';
+    } else if (avgChg > 0.3) {
+      mood = 'RISK-ON'; moodColor = 'var(--g)'; moodEmoji = '🟢';
+      advice = 'Market moving up today. Good conditions for buy signals. Keep your stop-losses in place.';
+    } else if (avgChg < -1.5) {
+      mood = 'SELL-OFF'; moodColor = 'var(--r)'; moodEmoji = '📉';
+      advice = 'Market under heavy selling today. Check your stop-losses in 💼 MY STOCKS before doing anything new.';
+    } else if (avgChg < -0.3) {
+      mood = 'RISK-OFF'; moodColor = 'var(--r)'; moodEmoji = '🔴';
+      advice = 'Market dipping today. Be cautious with new buys. Check that your stop-losses are still valid.';
+    } else {
+      mood = 'FLAT'; moodColor = 'var(--au)'; moodEmoji = '🟡';
+      advice = 'Market is flat today. No strong directional move — wait for a clearer signal before buying.';
+    }
+    const parts = [];
+    if (spy && spyChg != null) parts.push(`SPY <span style="color:${spyChg>=0?'var(--g)':'var(--r)'}">${spyChg>=0?'+':''}${spyChg.toFixed(2)}%</span>`);
+    if (qqq && qqqChg != null) parts.push(`QQQ <span style="color:${qqqChg>=0?'var(--g)':'var(--r)'}">${qqqChg>=0?'+':''}${qqqChg.toFixed(2)}%</span>`);
+    if (vix && vixVal != null) parts.push(`VIX <span style="color:${vixVal>25?'var(--r)':vixVal>18?'var(--au)':'var(--g)'}">${vixVal.toFixed(1)}</span>`);
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:rgba(0,0,0,.3);border:1px solid ${moodColor}55;border-radius:10px;padding:.45rem .85rem;display:flex;align-items:center;gap:.65rem;flex-wrap:wrap">
+      <span style="font-size:1.15rem;flex-shrink:0">${moodEmoji}</span>
+      <span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:${moodColor};text-transform:uppercase;flex-shrink:0">TODAY: ${mood}</span>
+      <span style="font-size:10px;font-weight:600;color:var(--wh3);flex-shrink:0">${parts.join(' · ')}</span>
+      <span style="font-size:10.5px;color:var(--wh2);flex:1;min-width:160px">${advice}</span>
+    </div>`;
+  }
+
+  // ── PORTFOLIO DIVERSIFICATION ────────────────────────────
+  function renderDiversificationCheck() {
+    const el = document.getElementById('port-diversify');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (tickers.length < 2) { el.innerHTML = ''; return; }
+    const sectorMap = {};
+    let unknown = 0;
+    tickers.forEach(ticker => {
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const raw = stock && stock.sector ? stock.sector : null;
+      const sector = raw ? raw.split('/')[0].trim() : null;
+      if (sector) sectorMap[sector] = (sectorMap[sector] || 0) + 1;
+      else unknown++;
+    });
+    const total = tickers.length;
+    const sectors = Object.entries(sectorMap).sort((a, b) => b[1] - a[1]);
+    const warnings = [];
+    if (total < 3) warnings.push('Only ' + total + ' stocks — aim for 5–10 for safer diversification');
+    if (sectors.length === 1 && total > 1) warnings.push('All ' + total + ' stocks are in ' + sectors[0][0] + ' — consider adding other sectors');
+    else if (sectors.length > 0 && sectors[0][1] / total > 0.55) warnings.push(Math.round(sectors[0][1]/total*100) + '% of your portfolio is in ' + sectors[0][0] + ' — one sector downturn hurts badly');
+    const scoreColor = warnings.length ? 'var(--au)' : 'var(--g)';
+    const scoreLabel = warnings.length === 0 ? '✓ Well diversified' : warnings.length === 1 ? '⚠ Somewhat concentrated' : '⚠ Concentrated';
+    const barColors = ['var(--b)','var(--g)','var(--au)','var(--p)','var(--or)','var(--r)'];
+    const barsHtml = sectors.map(([sec, cnt], i) => {
+      const pct = Math.round(cnt / total * 100);
+      return `<div style="margin-bottom:5px">
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--wh3);margin-bottom:2px"><span>${sec}</span><span style="color:${barColors[i%barColors.length]}">${cnt} stock${cnt!==1?'s':''} · ${pct}%</span></div>
+        <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${barColors[i%barColors.length]};border-radius:2px;transition:width .5s"></div></div>
+      </div>`;
+    }).join('');
+    const warnHtml = warnings.map(w => `<div style="font-size:10px;color:var(--au);margin-bottom:4px">⚠ ${w}</div>`).join('');
+    el.innerHTML = `<details style="background:rgba(0,204,255,.03);border:1px solid rgba(0,204,255,.1);border-radius:10px;overflow:hidden;margin-bottom:.7rem">
+      <summary style="padding:.5rem .85rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;-webkit-tap-highlight-color:transparent;list-style:none;user-select:none">
+        <span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--b);text-transform:uppercase">📊 DIVERSIFICATION CHECK</span>
+        <span style="font-size:9.5px;font-weight:700;color:${scoreColor}">${scoreLabel}</span>
+      </summary>
+      <div style="padding:.4rem .85rem .75rem">
+        ${warnHtml}
+        ${barsHtml}
+        ${unknown > 0 ? `<div style="font-size:9px;color:var(--wh4);margin-top:2px">${unknown} holding${unknown!==1?'s':''} without sector data</div>` : ''}
+        <div style="font-size:9.5px;color:var(--wh3);margin-top:.5rem;padding:.35rem .55rem;background:rgba(255,255,255,.03);border-radius:6px">💡 Ideal: 5–10 stocks across 3+ sectors. Never put more than 30% in one sector — a single bad earnings report won't wreck your whole portfolio.</div>
+      </div>
+    </details>`;
   }
 
   // ── PRICE ALERTS ─────────────────────────────────────────
