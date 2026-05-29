@@ -244,7 +244,7 @@ def build_prompt(
     market_indices=None, aggregate_sentiment=None,
     stocktwits_trending=None, technical_data=None,
     congressional_buys=None, market_breadth=None, put_call_ratio=None,
-    insider_buys=None, **kwargs,
+    insider_buys=None, current_positions=None, scan_top=None, **kwargs,
 ) -> str:
     today = datetime.utcnow().strftime("%B %d, %Y")
     fg = fear_greed or {}
@@ -340,7 +340,42 @@ def build_prompt(
         for b in (insider_buys or [])[:15]
     ) or "  No recent insider purchases"
 
-    return ANALYSIS_PROMPT.format(
+    # Current positions context
+    positions_str = ""
+    if current_positions:
+        pos_lines = []
+        for p in current_positions[:10]:
+            tk   = p.get("ticker", "")
+            pnl  = p.get("pnl_pct", 0) or 0
+            cost = p.get("cost", 0) or 0
+            cur  = p.get("price", 0) or 0
+            val  = p.get("market_val", 0) or 0
+            ls   = p.get("live_signals", {}) or {}
+            rsi  = ls.get("rsi", "")
+            edaystr = f" EARNINGS IN {p.get('earnings_days')}d ⚠" if p.get("earnings_days") is not None and p.get("earnings_days") <= 10 else ""
+            pos_lines.append(
+                f"  ${tk}: {pnl:+.1f}% | cost ${cost:.2f} → ${cur:.2f} | val ${val:,.0f}"
+                f" | RSI={rsi}{edaystr}"
+            )
+        positions_str = "\n".join(pos_lines)
+    else:
+        positions_str = "  No open positions"
+
+    # Last scan top candidates context
+    scan_str = ""
+    if scan_top:
+        scan_lines = []
+        for s in scan_top[:6]:
+            tk = s.get("ticker", "")
+            sc = s.get("score", 0)
+            gr = s.get("grade", "")
+            cat = s.get("catalyst", "")[:50]
+            scan_lines.append(f"  ${tk} score={sc} grade={gr} | {cat}")
+        scan_str = "\n".join(scan_lines)
+    else:
+        scan_str = "  No recent scan data"
+
+    base = ANALYSIS_PROMPT.format(
         today=today,
         fg_score=fg.get("score", 50),
         fg_rating=fg.get("rating", "Neutral"),
@@ -363,6 +398,19 @@ def build_prompt(
         sec_filings=sec_str,
         insider_buys=insider_str,
     )
+    # Append live trading context so AI can give position-specific guidance
+    return base + f"""
+
+━━━ LIVE TRADING CONTEXT (PRIORITY — ROK BOT IS ACTIVELY HOLDING THESE) ━━━
+
+OPEN POSITIONS (match your analysis to these):
+{positions_str}
+
+LAST SCAN TOP CANDIDATES (most recent bot scan results):
+{scan_str}
+
+CRITICAL: In your buy_signals and sell_signals, specifically include any of the OPEN POSITIONS that are showing concerning signals (earnings risk, overbought, deteriorating momentum) as sell signals. Also provide position-specific commentary in the rok_message field — tell the user what's happening with their specific holdings and what to watch for.
+"""
 
 
 def run_analysis(
@@ -375,7 +423,7 @@ def run_analysis(
     aggregate_sentiment=None,
     stocktwits_trending=None, technical_data=None,
     congressional_buys=None, market_breadth=None, put_call_ratio=None,
-    insider_buys=None,
+    insider_buys=None, current_positions=None, scan_top=None,
 ) -> dict:
     if not api_key:
         logger.warning("No API key — demo mode")
@@ -391,6 +439,7 @@ def run_analysis(
         stocktwits_trending=stocktwits_trending, technical_data=technical_data,
         congressional_buys=congressional_buys, market_breadth=market_breadth,
         put_call_ratio=put_call_ratio, insider_buys=insider_buys,
+        current_positions=current_positions, scan_top=scan_top,
     )
 
     try:

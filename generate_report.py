@@ -196,6 +196,29 @@ def _run():
         except Exception:
             pass
 
+    # ── Load live trading data (positions + scan top) ─────────────
+    trades_path = docs_dir / "trades.json"
+    current_positions = []
+    last_scan_top = []
+    try:
+        if trades_path.exists():
+            td = json.loads(trades_path.read_text())
+            current_positions = td.get("positions", [])
+            last_scan_top     = td.get("last_scan_top", [])
+            logger.info(f"Loaded {len(current_positions)} positions and {len(last_scan_top)} scan candidates from trades.json")
+    except Exception as _te:
+        logger.warning(f"Could not load trades.json: {_te}")
+
+    # Include held ticker symbols in the analysis universe
+    held_tickers = [p.get("ticker", "") for p in current_positions if p.get("ticker")]
+    if held_tickers:
+        held_set = set(held_tickers)
+        # Prepend held tickers so AI analysis covers them specifically
+        for ht in reversed(held_tickers):
+            if ht not in {t for t, _ in top_tickers}:
+                top_tickers = [(ht, 10)] + top_tickers  # high weight for held positions
+        logger.info(f"Added held positions to analysis: {', '.join(held_tickers)}")
+
     # ── AI Analysis ───────────────────────────────────────────────
     logger.info("Calling Claude AI...")
     analysis = None
@@ -222,6 +245,8 @@ def _run():
                 market_breadth=market_breadth,
                 put_call_ratio=put_call_ratio,
                 insider_buys=insider_buys,
+                current_positions=current_positions,  # new: what the bot holds now
+                scan_top=last_scan_top,                # new: what was scanned last cycle
             ),
             default=None,
             label="ClaudeAI",
@@ -412,6 +437,8 @@ def _run():
         },
         "buy_count": buy_count,
         "sell_count": len(analysis.get("sell_signals", [])),
+        "current_positions": current_positions[:10],  # pass-through for dashboard cross-reference
+        "position_analysis": analysis.get("position_analysis", []),  # AI commentary on held positions
     }
 
     # Sanitize all datetime objects before JSON serialization
