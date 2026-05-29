@@ -1463,6 +1463,28 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Inside bar / NR7 narrow range volatility contraction
+    # NR7: today's range is the narrowest in 7 days = coiling before a breakout
+    # Inside bar: today's high < yesterday's high AND today's low > yesterday's low = consolidation
+    nr7_signal  = False
+    inside_bar  = False
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 7:
+            highs_d = list(daily["High"])
+            lows_d  = list(daily["Low"])
+            ranges  = [highs_d[i] - lows_d[i] for i in range(len(highs_d))]
+            today_range = ranges[-1]
+            # NR7: today's range is the smallest in the last 7 days
+            if len(ranges) >= 7 and today_range == min(ranges[-7:]) and today_range < (ranges[-8] if len(ranges) >= 8 else float('inf')):
+                nr7_signal = True
+            # Inside bar: today's entire range is within yesterday's range
+            if (len(highs_d) >= 2 and len(lows_d) >= 2
+                    and highs_d[-1] < highs_d[-2]
+                    and lows_d[-1]  > lows_d[-2]):
+                inside_bar = True
+    except Exception:
+        pass
+
     # Pivot-based support/resistance levels
     # If price is breaking above the most recent pivot high = resistance breakout (+bonus)
     # If price is below the most recent pivot low = in downtrend (score penalty applied via change_pct)
@@ -1590,6 +1612,8 @@ def _extract(daily, hourly):
         "vol_dry_up":          vol_dry_up,
         "at_breakout":         at_breakout,
         "near_support":        near_support,
+        "nr7_signal":          nr7_signal,
+        "inside_bar":          inside_bar,
     }
 
 
@@ -1920,6 +1944,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
 
     # Near support: buying at proven demand zone (+6)
     if d.get("near_support", False): s += 6
+
+    # NR7 / inside bar: volatility contraction before expansion (+8/+6)
+    # These patterns precede large directional moves — buy the squeeze
+    if d.get("nr7_signal", False): s += 8
+    if d.get("inside_bar", False): s += 6
 
     # Market regime adjustment
     s += regime_adj
@@ -2610,10 +2639,12 @@ def run():
                 "chg_pct":     round(live.get(tk, {}).get("change_pct", 0), 2),
                 "rs5":         round(live.get(tk, {}).get("rs5", 0), 2),
                 "stop_price":  round(live.get(tk, {}).get("price", 0) * (1 - STOP_LOSS_PCT), 2),
-                "at_breakout": live.get(tk, {}).get("at_breakout", False),
-                "vol_dry_up":  live.get(tk, {}).get("vol_dry_up", False),
-                "consec_green":live.get(tk, {}).get("consec_green", 0),
-                "ttm_squeeze": live.get(tk, {}).get("ttm_squeeze_fired", False),
+                "at_breakout":  live.get(tk, {}).get("at_breakout", False),
+                "vol_dry_up":   live.get(tk, {}).get("vol_dry_up", False),
+                "consec_green": live.get(tk, {}).get("consec_green", 0),
+                "ttm_squeeze":  live.get(tk, {}).get("ttm_squeeze_fired", False),
+                "nr7":          live.get(tk, {}).get("nr7_signal", False),
+                "inside_bar":   live.get(tk, {}).get("inside_bar", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]

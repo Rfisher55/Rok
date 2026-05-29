@@ -54335,6 +54335,8 @@ window.renderSectorRotation = renderSectorRotation;
             const signalTags = [];
             if (s.at_breakout) signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.2);color:#00ff88;padding:1px 3px;border-radius:3px">BREAKOUT</span>');
             if (s.ttm_squeeze) signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(130,177,255,.2);color:#82b1ff;padding:1px 3px;border-radius:3px">SQUEEZE</span>');
+            if (s.nr7)         signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,152,0,.18);color:#ff9800;padding:1px 3px;border-radius:3px">NR7</span>');
+            if (s.inside_bar)  signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,152,0,.12);color:#ffa726;padding:1px 3px;border-radius:3px">INSIDE</span>');
             if (s.vol_dry_up)  signalTags.push('<span style="font-size:5.5px;font-weight:900;background:rgba(255,215,0,.15);color:#ffd54f;padding:1px 3px;border-radius:3px">VOL DRY</span>');
             if (s.consec_green >= 3) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.12);color:#4caf50;padding:1px 3px;border-radius:3px">${s.consec_green}🟢</span>`);
             html += `<div style="background:${bgGrad};border:${border};border-radius:9px;padding:.55rem .65rem;display:flex;flex-direction:column;gap:.2rem;position:relative">
