@@ -518,10 +518,20 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 /* ── MARKET STATUS PILL (Phase 7) ───────────────────────── */
 .mkt-status-pill{display:flex;align-items:center;gap:4px;font-size:8px;font-weight:700;letter-spacing:.07em;padding:2px 8px;border-radius:8px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
 .mkt-status-pill.open{color:var(--g);border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.06)}
+.mkt-status-pill.pre{color:var(--au);border:1px solid rgba(255,215,0,.25);background:rgba(255,215,0,.06)}
+.mkt-status-pill.post{color:var(--or);border:1px solid rgba(255,136,0,.25);background:rgba(255,136,0,.06)}
 .mkt-status-pill.closed{color:var(--wh3);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03)}
 .mkt-status-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .mkt-status-pill.open .mkt-status-dot{background:var(--g);animation:livePulse 1.8s ease infinite}
+.mkt-status-pill.pre .mkt-status-dot{background:var(--au);animation:livePulse 2.4s ease infinite}
+.mkt-status-pill.post .mkt-status-dot{background:var(--or);animation:livePulse 2.4s ease infinite}
 .mkt-status-pill.closed .mkt-status-dot{background:var(--wh4)}
+.tasks-card{background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(0,255,136,.03));border:1px solid rgba(0,204,255,.18);border-radius:12px;padding:.75rem 1rem;margin-bottom:.75rem}
+.task-item{display:flex;align-items:flex-start;gap:.5rem;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:var(--wh2);line-height:1.5}
+.task-item:last-child{border-bottom:none}
+.task-item .ti{font-size:1rem;flex-shrink:0;line-height:1.3}
+.task-item strong{color:var(--wh)}
+.proj-return{margin-top:.55rem;padding:.45rem .65rem;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.15);border-radius:8px;font-size:11px;color:var(--wh2)}
 
 /* ── REFRESH BTN (Phase 2) ───────────────────────────────── */
 .refresh-btn{background:none;border:1px solid rgba(0,204,255,.2);color:var(--wh3);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:all .2s;flex-shrink:0;touch-action:manipulation}
@@ -980,6 +990,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         {% endif %}
       </div>
     </div>
+
+    <!-- Today's personalized action tasks — populated by JS -->
+    <div id="todays-tasks" style="display:none"></div>
 
     <!-- Live market today — populated by JS after prices refresh -->
     <div id="live-market-mood" style="display:none;margin-bottom:.65rem"></div>
@@ -1980,6 +1993,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
     </div>
     <div id="buy-dialog-calc" style="min-height:28px;margin-bottom:.5rem;font-size:11px;color:var(--wh3)"></div>
+    <div id="buy-dialog-proj" class="proj-return" style="display:none"></div>
     <div id="buy-dialog-stoploss" style="display:none;margin-bottom:.55rem;padding:.4rem .7rem;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.2);border-radius:8px;font-size:10.5px;color:var(--wh2);line-height:1.55"></div>
     <div style="margin-bottom:.6rem;padding:.38rem .7rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.12);border-radius:8px;font-size:10px;color:var(--wh3)">
       💡 <strong style="color:var(--au)">Position sizing:</strong> Beginners should put no more than <strong>5–10%</strong> of your investing money into any single stock to manage risk.
@@ -2244,50 +2258,57 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     checkPriceAlerts();
     updateLiveMarketMood();
     updateTopMovers();
+    renderTodaysTasks();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
   window.refreshLivePrices = refreshLivePrices;
 
   // ── PHASE 7: MARKET STATUS ────────────────────────────────
+  function getMarketState() {
+    const etStr = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    const et = new Date(etStr);
+    const day = et.getDay();
+    const h = et.getHours(), m = et.getMinutes();
+    const totalMin = h * 60 + m;
+    const preMin = 4 * 60, openMin = 9 * 60 + 30, closeMin = 16 * 60, postMin = 20 * 60;
+    const isWeekday = day >= 1 && day <= 5;
+    if (!isWeekday) return { state: 'closed', totalMin, day };
+    if (totalMin >= openMin && totalMin < closeMin) return { state: 'open', totalMin, openMin, closeMin };
+    if (totalMin >= preMin && totalMin < openMin) return { state: 'pre', totalMin, openMin };
+    if (totalMin >= closeMin && totalMin < postMin) return { state: 'post', totalMin, closeMin, postMin };
+    return { state: 'closed', totalMin, day, openMin };
+  }
+  window.getMarketState = getMarketState;
+
   function updateMarketStatus() {
     const pill = document.getElementById('mkt-status-pill');
     const txt = document.getElementById('mkt-status-txt');
     if (!pill || !txt) return;
+    const { state, totalMin, openMin, closeMin, postMin, day } = getMarketState();
 
-    const now = new Date();
-    // Convert to Eastern Time
-    const etStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-    const et = new Date(etStr);
-    const day = et.getDay(); // 0=Sun, 6=Sat
-    const h = et.getHours(), m = et.getMinutes();
-    const totalMin = h * 60 + m;
-    const openMin = 9 * 60 + 30;
-    const closeMin = 16 * 60;
-    const isWeekday = day >= 1 && day <= 5;
-    const isOpen = isWeekday && totalMin >= openMin && totalMin < closeMin;
-
-    if (isOpen) {
+    if (state === 'open') {
       pill.className = 'mkt-status-pill open';
-      const minsLeft = closeMin - totalMin;
-      txt.textContent = minsLeft > 60 ? `OPEN · ${Math.floor(minsLeft/60)}h ${minsLeft%60}m left` : `OPEN · ${minsLeft}m left`;
+      const ml = closeMin - totalMin;
+      txt.textContent = ml > 60 ? `OPEN · ${Math.floor(ml/60)}h ${ml%60}m left` : `OPEN · ${ml}m left`;
+    } else if (state === 'pre') {
+      pill.className = 'mkt-status-pill pre';
+      const ml = openMin - totalMin;
+      txt.textContent = `PRE-MARKET · Opens in ${ml < 60 ? ml+'m' : Math.floor(ml/60)+'h '+ml%60+'m'}`;
+    } else if (state === 'post') {
+      pill.className = 'mkt-status-pill post';
+      const ml = postMin - totalMin;
+      txt.textContent = `AFTER-HOURS · ${ml < 60 ? ml+'m' : Math.floor(ml/60)+'h '+ml%60+'m'} left`;
     } else {
       pill.className = 'mkt-status-pill closed';
-      // Find mins until next open
       let minsToOpen;
-      if (isWeekday && totalMin < openMin) {
-        minsToOpen = openMin - totalMin;
+      if (totalMin < (4 * 60)) {
+        minsToOpen = 4 * 60 - totalMin;
+        txt.textContent = `CLOSED · Pre-market in ${minsToOpen < 60 ? minsToOpen+'m' : Math.floor(minsToOpen/60)+'h '+minsToOpen%60+'m'}`;
       } else {
-        // Next weekday morning
-        let daysUntil = (day === 5 || day === 6) ? (day === 5 ? 3 : 2) : (day === 0 ? 1 : 1);
-        minsToOpen = daysUntil * 24 * 60 - totalMin + openMin;
-      }
-      if (minsToOpen < 60) {
-        txt.textContent = `CLOSED · Opens in ${minsToOpen}m`;
-      } else if (minsToOpen < 24 * 60) {
-        txt.textContent = `CLOSED · Opens in ${Math.floor(minsToOpen/60)}h ${minsToOpen%60}m`;
-      } else {
-        txt.textContent = `CLOSED · Weekend`;
+        const daysUntil = day === 5 ? 3 : day === 6 ? 2 : 1;
+        minsToOpen = daysUntil * 24 * 60 - totalMin + 4 * 60;
+        txt.textContent = daysUntil >= 2 ? `CLOSED · Opens ${day === 5 ? 'Monday' : 'Monday'}` : `CLOSED · Opens in ${Math.floor(minsToOpen/60)}h`;
       }
     }
   }
@@ -2606,27 +2627,43 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const priceEl = document.getElementById('buy-dialog-price');
     const sharesEl = document.getElementById('buy-dialog-shares');
     const calcEl = document.getElementById('buy-dialog-calc');
+    const projEl = document.getElementById('buy-dialog-proj');
     if (!calcEl) return;
     const price = parseFloat(priceEl?.value) || 0;
     const shares = parseInt(sharesEl?.value) || 0;
-    // Update suggested stop-loss based on entry price
     const slEl = document.getElementById('buy-dialog-stoploss');
     const det = sigDetails[_boughtItTicker] || {};
     if (price > 0 && slEl && !det.stop_loss) {
       const suggestedStop = (price * 0.92).toFixed(2);
       slEl.style.display = 'block';
-      slEl.innerHTML = `💡 <strong style="color:var(--au)">Suggested stop-loss: $${suggestedStop}</strong> (8% below your entry) — if the price drops here, consider selling to limit your loss.`;
+      slEl.innerHTML = `💡 <strong style="color:var(--au)">Suggested stop-loss: $${suggestedStop}</strong> (8% below your entry) — if price drops here, consider selling to limit your loss.`;
     }
-    if (!price || !shares) { calcEl.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>'; return; }
-    const invested = price * shares;
+    if (!price || !shares) {
+      calcEl.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>';
+      if (projEl) projEl.style.display = 'none';
+      return;
+    }
+    const invested = (price * shares).toFixed(2);
+    calcEl.innerHTML = `<span style="color:var(--wh2)">You're investing <strong style="color:var(--au)">$${invested}</strong> (${shares} share${shares!==1?'s':''} × $${price.toFixed(2)})</span>`;
+    // Projected return card
     const tgt = _boughtItTarget;
-    let html = `<span style="color:var(--wh2)">You invested <strong style="color:var(--au)">$${invested.toFixed(2)}</strong> (${shares} share${shares!==1?'s':''} × $${price.toFixed(2)})</span>`;
-    if (tgt > 0 && price > 0) {
-      const gain = shares * (tgt - price);
+    if (projEl && tgt > 0 && price > 0) {
+      const gain = (shares * (tgt - price)).toFixed(0);
       const gainPct = ((tgt - price) / price * 100).toFixed(1);
-      html += ` · <span style="color:var(--g)">Target gain: +$${gain.toFixed(0)} (+${gainPct}%)</span>`;
+      const sl = det.stop_loss ? Number(det.stop_loss) : price * 0.92;
+      const loss = (shares * (sl - price)).toFixed(0);
+      const lossPct = ((sl - price) / price * 100).toFixed(1);
+      const rr = Math.abs(gain / loss).toFixed(1);
+      projEl.style.display = 'block';
+      projEl.innerHTML = `<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--wh3);margin-bottom:.3rem">IF ROK'S TARGET IS HIT</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap">
+          <span>💰 Your $${invested} → <strong style="color:var(--g)">$${(parseFloat(invested)+parseFloat(gain)).toFixed(0)}</strong> <span style="color:var(--g)">(+$${gain}, +${gainPct}%)</span></span>
+          <span>🛡️ Stop-loss risk: <strong style="color:var(--r)">-$${Math.abs(loss)}</strong> (${lossPct}%)</span>
+          <span style="color:var(--au)">⚖️ Reward/Risk: ${rr}×</span>
+        </div>`;
+    } else if (projEl) {
+      projEl.style.display = 'none';
     }
-    calcEl.innerHTML = html;
   };
 
   function showBoughtItDialog(ticker, suggestedPrice) {
@@ -2647,6 +2684,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (inp) { inp.value = price > 0 ? price.toFixed(2) : ''; }
       if (sharesInp) sharesInp.value = '';
       if (calc) calc.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>';
+      const projEl = document.getElementById('buy-dialog-proj');
+      if (projEl) projEl.style.display = 'none';
       if (sub) {
         const parts = [];
         if (price > 0) parts.push(`Current price: $${price.toFixed(2)}`);
@@ -3563,6 +3602,96 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </div>`;
   }
 
+  // ── TODAY'S PERSONALIZED TASKS ──────────────────────────
+  function renderTodaysTasks() {
+    const el = document.getElementById('todays-tasks');
+    if (!el) return;
+    const port = getPortfolio();
+    const portTickers = Object.keys(port);
+    const { state } = getMarketState();
+    const tasks = [];
+
+    // Market status context
+    if (state === 'pre') {
+      tasks.push({ icon: '🌅', text: '<strong>Pre-market is open</strong> (4am–9:30am ET) — prices shown are estimates. Wait for 9:30am for more reliable fills.' });
+    } else if (state === 'post') {
+      tasks.push({ icon: '🌙', text: '<strong>After-hours trading</strong> (4pm–8pm ET) — wider spreads, less liquidity. Usually better to trade during regular hours.' });
+    } else if (state === 'closed') {
+      tasks.push({ icon: '💤', text: '<strong>Market is closed.</strong> Use this time to research, plan your moves, and set price alerts. Opens at 9:30am ET.' });
+    }
+
+    // Portfolio alerts
+    if (portTickers.length > 0) {
+      portTickers.forEach(ticker => {
+        const entry = port[ticker];
+        const lp = liveprices[ticker];
+        const det = sigDetails[ticker] || {};
+        const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+        if (lp && lp.price > 0 && entry.price > 0) {
+          const pct = (lp.price - entry.price) / entry.price * 100;
+          // Stop-loss hit
+          const sl = det.stop_loss || entry.price * 0.92;
+          if (lp.price <= sl) {
+            tasks.push({ icon: '🚨', urgent: true, text: `<strong style="color:var(--r)">${ticker} hit stop-loss!</strong> Price $${lp.price.toFixed(2)} ≤ stop $${Number(sl).toFixed(2)}. Consider selling to protect your money.` });
+          }
+          // Profit target
+          if (det.price_target && lp.price >= det.price_target * 0.97) {
+            tasks.push({ icon: '🎯', text: `<strong style="color:var(--g)">${ticker} near price target</strong> ($${lp.price.toFixed(2)} vs target $${Number(det.price_target).toFixed(2)}) — consider taking profits.` });
+          }
+          // Big drop today
+          if (lp.change_pct <= -4) {
+            tasks.push({ icon: '⚠️', text: `<strong style="color:var(--r)">${ticker} down ${Math.abs(lp.change_pct).toFixed(1)}% today</strong> — check for news. If no clear reason, consider whether to hold or cut losses.` });
+          }
+        }
+        // Earnings warning
+        if (stock && stock.earnings_date) {
+          const daysUntil = Math.round((new Date(stock.earnings_date) - new Date()) / 86400000);
+          if (daysUntil >= 0 && daysUntil <= 5) {
+            tasks.push({ icon: '📅', text: `<strong>${ticker} earnings in ${daysUntil === 0 ? 'TODAY' : daysUntil + ' day' + (daysUntil !== 1 ? 's' : '')}</strong> — stocks often move ±10-15% on earnings day. Consider reducing position size before then if you're unsure.` });
+          }
+        }
+      });
+    }
+
+    // Earnings plays from data
+    (ROK.earnings_plays || []).forEach(ep => {
+      if (!port[ep.ticker]) {
+        const daysUntil = Math.round((new Date(ep.earnings_date) - new Date()) / 86400000);
+        if (daysUntil >= 0 && daysUntil <= 3) {
+          tasks.push({ icon: '📅', text: `<strong>${ep.ticker} earnings in ${daysUntil === 0 ? 'TODAY' : daysUntil + ' day' + (daysUntil !== 1 ? 's' : '')}</strong> — ${ep.play || 'big move expected'}. Tap to view in screener.` });
+        }
+      }
+    });
+
+    // Buy signals available
+    const buys = ROK.buy_signals || [];
+    if (buys.length > 0 && state === 'open') {
+      const notOwned = buys.filter(b => !port[b.ticker]);
+      if (notOwned.length > 0) {
+        tasks.push({ icon: '⚡', text: `<strong style="color:var(--g)">${notOwned.length} buy signal${notOwned.length !== 1 ? 's' : ''} active</strong> — scroll down to see ROK's recommended stocks. Market is open now.` });
+      }
+    }
+
+    // No portfolio yet
+    if (portTickers.length === 0) {
+      tasks.push({ icon: '💼', text: '<strong>You haven\'t tracked any stocks yet.</strong> Tap ⚡ on any signal card to add it to My Stocks and track your gains/losses in real time.' });
+    }
+
+    if (tasks.length === 0) {
+      el.style.display = 'none';
+      return;
+    }
+
+    // Sort urgent first
+    tasks.sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
+
+    el.style.display = 'block';
+    el.className = 'tasks-card';
+    el.innerHTML = `<div style="font-size:8.5px;font-weight:800;letter-spacing:.18em;color:var(--b);text-transform:uppercase;margin-bottom:.4rem">📋 YOUR ACTION LIST · ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+      ${tasks.map(t => `<div class="task-item"><span class="ti">${t.icon}</span><span>${t.text}</span></div>`).join('')}`;
+  }
+  window.renderTodaysTasks = renderTodaysTasks;
+
   // ── TOP MOVERS STRIP ────────────────────────────────────
   function updateTopMovers() {
     const el = document.getElementById('sc-movers');
@@ -3766,6 +3895,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     initPortfolioHowTo();
     updateMarketStatus();
     setInterval(updateMarketStatus, 60000);
+    renderTodaysTasks();
     initTipRotator();
 
     // Count-up for each stat-num
