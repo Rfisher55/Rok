@@ -719,6 +719,54 @@ def _candlestick_patterns(opens, highs, lows, closes, lookback=3):
     return result
 
 
+def _parabolic_sar(highs, lows, af_start=0.02, af_max=0.20):
+    """Parabolic SAR trailing stop — accelerates as price trends, tightens on reversals.
+    Returns (sar_value, is_bullish) for the latest bar.
+    - is_bullish=True: SAR below price (uptrend, use as trailing stop floor)
+    - is_bullish=False: SAR above price (downtrend signal)
+    Standard Wilder parameters: af_start=0.02, af_max=0.20.
+    """
+    try:
+        n = len(highs)
+        if n < 5:
+            return 0.0, True
+        sar = lows[0]
+        ep  = highs[0]    # extreme point
+        af  = af_start
+        bull = True
+        for i in range(1, n):
+            prev_sar = sar
+            if bull:
+                sar = prev_sar + af * (ep - prev_sar)
+                # SAR cannot be above prior 2 lows
+                sar = min(sar, lows[i-1], lows[max(0, i-2)])
+                if lows[i] < sar:
+                    bull = False
+                    sar  = ep           # SAR flips to EP (highest high)
+                    ep   = lows[i]
+                    af   = af_start
+                else:
+                    if highs[i] > ep:
+                        ep = highs[i]
+                        af = min(af + af_start, af_max)
+            else:
+                sar = prev_sar + af * (ep - prev_sar)
+                # SAR cannot be below prior 2 highs
+                sar = max(sar, highs[i-1], highs[max(0, i-2)])
+                if highs[i] > sar:
+                    bull = True
+                    sar  = ep           # SAR flips to EP (lowest low)
+                    ep   = highs[i]
+                    af   = af_start
+                else:
+                    if lows[i] < ep:
+                        ep = lows[i]
+                        af = min(af + af_start, af_max)
+        return round(float(sar), 4), bull
+    except Exception:
+        return 0.0, True
+
+
 def _pivot_points(high, low, close):
     """Standard pivot points for support/resistance levels.
     Returns dict: pivot, r1, r2, s1, s2 (price levels).
@@ -3212,6 +3260,17 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Parabolic SAR: accelerating trailing stop — tightens as trend matures
+    psar_val  = 0.0
+    psar_bull = True
+    try:
+        if all(col in daily.columns for col in ["High", "Low"]) and len(daily) >= 10:
+            psar_val, psar_bull = _parabolic_sar(
+                list(daily["High"]), list(daily["Low"])
+            )
+    except Exception:
+        pass
+
     # Bull flag: flagpole (strong surge) followed by tight consolidation → breakout
     # One of the highest-probability momentum continuation patterns
     bull_flag = False
@@ -3637,6 +3696,8 @@ def _extract(daily, hourly):
         "pivot_r2":            pivot_levels.get("r2", 0),
         "pivot_s1":            pivot_levels.get("s1", 0),
         "pivot_s2":            pivot_levels.get("s2", 0),
+        "psar":                psar_val,
+        "psar_bull":           psar_bull,
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "macd_bull_div":       macd_div.get("bullish_div", False),
@@ -4262,6 +4323,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("three_black_crows", False):     s -= 7
     if d.get("bearish_engulfing", False):     s -= 5
     if d.get("shooting_star", False):         s -= 4
+
+    # Parabolic SAR: trend-following trailing stop alignment
+    if d.get("psar_bull", True):   s += 5   # SAR below price = uptrend intact
+    else:                           s -= 4   # SAR above price = downtrend signal
 
     # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
     if d.get("higher_lows", False): s += 6
@@ -4894,10 +4959,16 @@ def run():
             _st_bull  = _atr_sig.get("supertrend_bull", True)
             _use_supertrend = (not _st_bull and _st_stop > 0 and pnl_pct > 2
                                and age_days >= 2 and price < _st_stop * 1.01)
+            # Parabolic SAR exit: SAR flipped from bull to bear = trend reversal confirmed
+            _psar_val  = _atr_sig.get("psar", 0) or 0
+            _psar_bull = _atr_sig.get("psar_bull", True)
+            _use_psar  = (not _psar_bull and _psar_val > 0 and pnl_pct > 3 and age_days >= 2)
             # Pre-earnings sell: exit ANY position within 2 days of earnings to avoid binary risk
             # We rode the pre-earnings drift — now protect profits before the volatile event
             if has_earnings_soon(sym, days=2):
                 reason = f"pre-earnings exit (earnings in <2d, {pnl_pct:+.1f}%)"
+            elif _use_psar and not _use_chandelier and not _use_supertrend:
+                reason = f"parabolic SAR reversal (SAR ${_psar_val:.2f} flipped bearish, {pnl_pct:+.1f}%)"
             elif _use_supertrend and not _use_chandelier:
                 reason = f"supertrend reversal (price ${price:.2f} < stop ${_st_stop:.2f}, {pnl_pct:+.1f}%)"
             elif _use_chandelier:
@@ -5425,6 +5496,23 @@ def run():
                 "force_index_rising": live.get(tk, {}).get("force_index_rising", False),
                 "true_beta":          live.get(tk, {}).get("true_beta", 1.0),
                 "true_alpha":         live.get(tk, {}).get("true_alpha", 0.0),
+                "psar":               live.get(tk, {}).get("psar", 0.0),
+                "psar_bull":          live.get(tk, {}).get("psar_bull", True),
+                "ha_bull":            live.get(tk, {}).get("ha_bull", False),
+                "ha_consec_bull":     live.get(tk, {}).get("ha_consec_bull", 0),
+                "donchian_up":        live.get(tk, {}).get("donchian_up", False),
+                "donchian_pct":       live.get(tk, {}).get("donchian_pct", 50.0),
+                "three_white_soldiers": live.get(tk, {}).get("three_white_soldiers", False),
+                "morning_star":       live.get(tk, {}).get("morning_star", False),
+                "bullish_engulfing":  live.get(tk, {}).get("bullish_engulfing", False),
+                "hammer":             live.get(tk, {}).get("hammer", False),
+                "three_black_crows":  live.get(tk, {}).get("three_black_crows", False),
+                "bearish_engulfing":  live.get(tk, {}).get("bearish_engulfing", False),
+                "shooting_star":      live.get(tk, {}).get("shooting_star", False),
+                "pivot_r1":           live.get(tk, {}).get("pivot_r1", 0.0),
+                "pivot_r2":           live.get(tk, {}).get("pivot_r2", 0.0),
+                "pivot_s1":           live.get(tk, {}).get("pivot_s1", 0.0),
+                "pivot_s2":           live.get(tk, {}).get("pivot_s2", 0.0),
                 "earnings_days":      get_earnings_days(tk),
                 "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
@@ -5554,6 +5642,9 @@ def run():
                     if _d_buy.get("morning_star"):          reason += " [M-STAR]"
                     if _d_buy.get("bullish_engulfing"):     reason += " [BULL-ENG]"
                     if _d_buy.get("hammer"):                reason += " [HAMMER]"
+                    if _d_buy.get("psar_bull"):
+                        _psar_entry = _d_buy.get("psar", 0) or 0
+                        if _psar_entry > 0: reason += f" [SAR▲${_psar_entry:.2f}]"
                     # Pivot point proximity (buying near S1/S2 = strong institutional support)
                     _piv_s1 = _d_buy.get("pivot_s1", 0) or 0
                     _piv_s2 = _d_buy.get("pivot_s2", 0) or 0
@@ -5680,6 +5771,8 @@ def run():
                 "pivot_r2":        round(sig.get("pivot_r2", 0), 2),
                 "pivot_s1":        round(sig.get("pivot_s1", 0), 2),
                 "pivot_s2":        round(sig.get("pivot_s2", 0), 2),
+                "psar":            round(sig.get("psar", 0), 3),
+                "psar_bull":       sig.get("psar_bull", True),
                 "ha_bull":         sig.get("ha_bull", False),
                 "ha_consec_bull":  sig.get("ha_consec_bull", 0),
                 "hammer":          sig.get("hammer", False),
