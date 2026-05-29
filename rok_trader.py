@@ -508,8 +508,21 @@ def get_premarket_gaps(fractionable_set: set) -> list:
                 current      = float(closes[-1])
                 gap_pct      = (current - prev_close) / prev_close * 100
                 if abs(gap_pct) >= 3.0:
-                    direction = "up" if gap_pct > 0 else "down"
-                    gaps.append((sym, round(gap_pct, 2), direction))
+                    # Volume confirmation: today's volume should be elevated
+                    try:
+                        if len(check_syms) == 1:
+                            vols = list(raw["Volume"].dropna())
+                        else:
+                            vols = list(raw["Volume"][sym].dropna()) if sym in raw["Volume"] else []
+                        vol_ok = True
+                        if len(vols) >= 4:
+                            avg_prev = sum(vols[:-1]) / max(1, len(vols)-1)
+                            vol_ok = vols[-1] >= avg_prev * 0.8  # at least 80% of prior avg
+                    except Exception:
+                        vol_ok = True
+                    if vol_ok:
+                        direction = "up" if gap_pct > 0 else "down"
+                        gaps.append((sym, round(gap_pct, 2), direction))
             except Exception:
                 pass
     except Exception as e:
@@ -1278,8 +1291,9 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
-    # RSI divergence: price making higher high but RSI making lower high = bearish
-    rsi_divergence = False
+    # RSI divergence signals
+    rsi_divergence       = False   # bearish: price up, RSI down
+    rsi_bull_divergence  = False   # bullish: price down, RSI up (hidden strength)
     try:
         dc = list(daily["Close"])
         if len(dc) >= 10:
@@ -1288,6 +1302,9 @@ def _extract(daily, hourly):
             # Bearish divergence: price up 3+ bars but RSI down
             if dc[-1] > dc[-4] and rsi_now < rsi_prev - 3:
                 rsi_divergence = True
+            # Bullish divergence: price down 3+ bars but RSI up (hidden demand)
+            elif dc[-1] < dc[-4] and rsi_now > rsi_prev + 3 and rsi_now < 45:
+                rsi_bull_divergence = True
     except Exception:
         pass
 
@@ -1330,6 +1347,7 @@ def _extract(daily, hourly):
         "ttm_squeeze_fired":  ttm_squeeze_fired,
         "vwap_z":             round(vwap_z, 2),
         "rsi_divergence":     rsi_divergence,
+        "rsi_bull_divergence": rsi_bull_divergence,
     }
 
 
@@ -1639,6 +1657,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # RSI divergence: bearish when price up but RSI declining (-12 penalty)
     if rsi_div:  s -= 12
 
+    # Bullish RSI divergence: hidden demand — price down but RSI rising (+10)
+    rsi_bull = d.get("rsi_bull_divergence", False)
+    if rsi_bull: s += 10
+
     # Market regime adjustment
     s += regime_adj
 
@@ -1700,8 +1722,12 @@ def bearish_score(tk, d):
 
 
 # ── Position sizing ───────────────────────────────────────────────────────────
-def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False):
-    """ATR-based risk sizing, scaled down when VIX is high or macro event day."""
+def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
+                  score_val=0, win_rate=0.5, drawdown_pct=0.0):
+    """
+    ATR-based risk sizing with Kelly criterion scaling for high-conviction trades.
+    Shrinks position when portfolio is in drawdown.
+    """
     vix_scale = 1.0
     if vix > VIX_EXTREME_THRESH:   vix_scale = 0.4
     elif vix > VIX_HIGH_THRESH:    vix_scale = 0.65
@@ -1711,12 +1737,25 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
     if macro_day:
         vix_scale *= 0.5
 
+    # Drawdown guard: shrink risk when portfolio is in significant drawdown
+    if drawdown_pct > 10:    vix_scale *= 0.4   # -10%+ drawdown: very conservative
+    elif drawdown_pct > 5:   vix_scale *= 0.65  # -5%+ drawdown: defensive
+    elif drawdown_pct > 2:   vix_scale *= 0.85  # -2%+ drawdown: slightly cautious
+
     if atr and atr > 0 and price > 0:
         stop_dist   = 2 * atr
         dollar_risk = portfolio_val * RISK_PER_TRADE_PCT * vix_scale
         notional    = (dollar_risk / stop_dist) * price
     else:
         notional = portfolio_val * MAX_POSITION_PCT * vix_scale
+
+    # Kelly criterion bonus for very high-conviction signals (score >= 75)
+    if score_val >= 85 and win_rate > 0.55:
+        kelly = win_rate - (1 - win_rate)   # simplified Kelly fraction
+        kelly_scale = min(1.5, max(1.0, 1 + kelly * 0.5))
+        notional = min(notional * kelly_scale, portfolio_val * MAX_POSITION_PCT * 1.5)
+    elif score_val >= 75 and win_rate > 0.52:
+        notional = min(notional * 1.25, portfolio_val * MAX_POSITION_PCT * 1.25)
 
     cap = min(portfolio_val * MAX_POSITION_PCT, buying_power * 0.95)
     return round(min(notional, cap), 2)
@@ -1824,6 +1863,21 @@ def run():
     if vix > VIX_EXTREME_THRESH:
         logger.warning(f"VIX={vix:.0f} EXTREME — halting new buys, protecting capital.")
 
+    # Portfolio drawdown guard — compute current drawdown from historical peak
+    _prior_tlog  = _load(TRADES_FILE, {})
+    _perf_hist   = _prior_tlog.get("perf_history", [])
+    _hist_values = [h["v"] for h in _perf_hist if isinstance(h.get("v"), (int, float)) and h["v"] > 0]
+    _peak_port   = max(_hist_values) if _hist_values else portfolio_val
+    drawdown_pct = max(0.0, (_peak_port - portfolio_val) / _peak_port * 100) if _peak_port > 0 else 0.0
+    if drawdown_pct > 2:
+        logger.info(f"Portfolio drawdown: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — risk reduced")
+
+    # Win rate from trade history for Kelly sizing
+    _trade_stats = _prior_tlog.get("stats", {})
+    _wins  = _trade_stats.get("wins",   0)
+    _losses= _trade_stats.get("losses", 0)
+    win_rate = _wins / max(1, _wins + _losses)
+
     # Positions + peaks
     positions = alpaca_get("/v2/positions")
     held      = {p["symbol"]: p for p in positions}
@@ -1929,11 +1983,12 @@ def run():
             # Entry time: peaks.json → order history → now (for positions first seen this run)
             order_entry  = order_entry_times.get(sym, "")
             entry_time   = (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or order_entry or now_utc.isoformat()
+            _ever_hit = (peaks.get(sym, {}).get("ever_hit_5pct", False) if isinstance(peaks.get(sym), dict) else False) or (pnl_pct >= 5)
             peaks[sym]   = {
                 "peak":           peak,
                 "time":           entry_time,
                 "half_out":       peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False,
-                "ever_hit_5pct":  peaks.get(sym, {}).get("ever_hit_5pct", False) if isinstance(peaks.get(sym), dict) else False,
+                "ever_hit_5pct":  _ever_hit,
             }
             trail_drop = (current - peak) / peak * 100
 
@@ -2083,7 +2138,15 @@ def run():
     # ── BUY: long positions ───────────────────────────────────────────────
     open_long_slots = MAX_POSITIONS - len(longs)
 
-    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard:
+    # Consecutive loss guard: if last 3 closed trades are all losses, skip new buys this cycle
+    _recent_trades = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+    _recent_trades.sort(key=lambda t: t.get("time", ""), reverse=True)
+    _last3_pnl = [t["pnl_pct"] for t in _recent_trades[:3]]
+    _consecutive_losses = len(_last3_pnl) >= 3 and all(p < 0 for p in _last3_pnl)
+    if _consecutive_losses:
+        logger.info(f"Consecutive loss guard: last 3 trades lost ({[round(p,1) for p in _last3_pnl]}) — skipping new buys this cycle")
+
+    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
         # Sector counts for diversification
         sector_counts = {}
         for sym in longs:
@@ -2117,14 +2180,22 @@ def run():
             key=lambda x: -x[1],
         )[:15]
 
-        logger.info(f"Tech long candidates: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:8])}")
+        logger.info(
+            f"Tech long candidates ({len(candidates_buy)}): "
+            f"{' | '.join(f'{t}:{s}' for t,s in candidates_buy[:8])}"
+        )
+        logger.info(
+            f"Buy state — slots:{open_long_slots} | drawdown:{drawdown_pct:.1f}% | "
+            f"wr:{win_rate:.0%} | cons_losses:{_consecutive_losses} | "
+            f"regime_adj:{regime_adj}"
+        )
 
         # Earnings filter + sector filter + AI sentiment pass
         final_scores = []
         for tk, tech_sc in candidates_buy:
             sec = SECTOR_MAP.get(tk, "other")
             if sector_counts.get(sec, 0) >= MAX_SECTOR_LONGS:
-                logger.debug(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{MAX_SECTOR_LONGS})")
+                logger.info(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{MAX_SECTOR_LONGS})")
                 continue
             if has_earnings_soon(tk):
                 logger.info(f"SKIP {tk} — earnings within 3 days")
@@ -2162,12 +2233,14 @@ def run():
                     d        = live[tk]
                     price    = d["price"]
                     atr      = d.get("atr")
-                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix, macro_day=macro_day)
-                    # Size up for strong catalysts or squeeze setups
+                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
+                                             macro_day=macro_day, score_val=sc,
+                                             win_rate=win_rate, drawdown_pct=drawdown_pct)
+                    # Size up further for strong catalysts or squeeze setups (on top of Kelly)
                     if catalyst and sent >= 5:
-                        notional = min(notional * 1.5, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
+                        notional = min(notional * 1.4, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
                     elif tk in squeeze_cands:
-                        notional = min(notional * 1.3, portfolio_val * MAX_POSITION_PCT, buying_power * 0.35)
+                        notional = min(notional * 1.2, portfolio_val * MAX_POSITION_PCT, buying_power * 0.35)
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
@@ -2219,7 +2292,9 @@ def run():
                     if price <= 0:
                         continue
                     atr      = d.get("atr")
-                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix, macro_day=macro_day)
+                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
+                                             macro_day=macro_day, score_val=sc,
+                                             win_rate=win_rate, drawdown_pct=drawdown_pct)
                     notional = round(notional * 0.6, 2)   # size shorts smaller
                     if notional < 1:
                         continue
@@ -2279,6 +2354,9 @@ def run():
     tlog["macro_day"]       = macro_day
     tlog["open_positions"]  = len(tlog.get("positions", []))
     tlog["scan_universe"]   = len(candidates)
+    tlog["drawdown_pct"]    = round(drawdown_pct, 2)
+    tlog["win_rate"]        = round(win_rate, 3)
+    tlog["portfolio_peak"]  = round(_peak_port, 2)
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {

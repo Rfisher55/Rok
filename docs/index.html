@@ -1035,6 +1035,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div class="hdr-r">
       <div class="live-pill" title="Time until next ROK update"><span class="live-dot"></span><span id="update-timer">live</span></div>
       <div id="data-age-pill" style="display:none;padding:.25rem .55rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;font-size:8.5px;font-weight:600;letter-spacing:.05em;color:var(--wh3)" title="How old the analysis data is"></div>
+      <div id="bot-status-pill" style="display:none;padding:.25rem .6rem;border-radius:20px;font-size:8px;font-weight:800;letter-spacing:.07em;cursor:pointer;border:1px solid rgba(0,255,136,.35);background:rgba(0,255,136,.08);color:var(--g);display:flex;align-items:center;gap:3px;white-space:nowrap" onclick="document.querySelector('[data-tab=intel]')?.click()" title="Click to see bot trade activity"><span id="bot-status-dot" style="width:5px;height:5px;border-radius:50%;background:var(--g);flex-shrink:0"></span><span id="bot-status-txt">BOT</span></div>
       <div id="mkt-status-pill" class="mkt-status-pill closed"><span class="mkt-status-dot"></span><span id="mkt-status-txt">CLOSED</span></div>
       <span class="regime" id="hdr-regime" style="display:none"></span>
       <span class="sent" id="hdr-sentiment"></span>
@@ -2343,6 +2344,8 @@ body.beginner-mode #beginner-banner { display:block }
       <!-- Live intel sections — populated by JS from trades.json -->
       <div class="intel-section" style="grid-column:1/-1" id="intel-rok-trades-section">
         <div class="s-hdr"><h2 class="s-ttl" style="color:var(--g)"> ROK AUTO-TRADER — LIVE ACTIVITY</h2><span class="s-sub">Real buys/sells executed automatically · refreshes every 30s</span></div>
+        <!-- Bot health card (JS-populated) -->
+        <div id="intel-bot-health" style="margin-bottom:.65rem"></div>
         <div id="intel-rok-trades" style="font-size:11px;color:var(--wh4);padding:.5rem 0">Loading trade activity…</div>
       </div>
 
@@ -52738,50 +52741,133 @@ async function renderPerfChart() {
     const history = (data.perf_history || []);
     const portVal = data.portfolio_value || 0;
     const stats   = data.stats || {};
+    const trades  = data.trades || [];
 
     if (!portVal && !history.length) { el.innerHTML = ''; return; }
 
-    // Build SVG sparkline from history
-    let sparkline = '';
-    if (history.length >= 2) {
-      const vals   = history.map(h => h.v);
-      const minV   = Math.min(...vals);
-      const maxV   = Math.max(...vals);
-      const range  = maxV - minV || 1;
-      const W = 300, H = 50;
-      const pts = vals.map((v, i) => {
-        const x = Math.round((i / (vals.length - 1)) * W);
-        const y = Math.round(H - ((v - minV) / range) * H);
-        return `${x},${y}`;
-      }).join(' ');
-      const isUp = vals[vals.length-1] >= vals[0];
-      const col  = isUp ? '#66bb6a' : '#ef5350';
-      sparkline = `<svg width="${W}" height="${H}" style="display:block;margin:.3rem 0">
-        <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" opacity="0.8"/>
-        <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="3" fill="${col}"/>
-      </svg>`;
-    }
-
     const startVal = history.length ? history[0].v : portVal;
     const totalRet = startVal > 0 ? ((portVal - startVal) / startVal * 100) : 0;
-    const retCol   = totalRet >= 0 ? '#66bb6a' : '#ef5350';
+    const retCol   = totalRet >= 0 ? '#00ff88' : '#ef5350';
     const wr       = (stats.wins||0) + (stats.losses||0) > 0
       ? Math.round((stats.wins||0) / ((stats.wins||0)+(stats.losses||0)) * 100) : null;
 
-    el.innerHTML = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:8px;padding:.75rem">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.3rem">
-        <span style="color:#82b1ff;font-size:.82rem;font-weight:700">Portfolio Performance</span>
-        <span style="color:${retCol};font-weight:700;font-size:.9rem">${totalRet>=0?'+':''}${totalRet.toFixed(2)}% all-time</span>
+    const openPos  = (data.positions || []).length;
+    const scanUni  = data.scan_universe || 0;
+    const macroDay = data.macro_day;
+    const regime   = data.regime || {};
+    const regimeCol = regime.regime === 'bull' ? '#00ff88' : regime.regime === 'bear' ? '#ef5350' : '#ffd54f';
+    const lastUpd  = data.last_updated ? new Date(data.last_updated) : null;
+    const minsAgo  = lastUpd ? Math.round((Date.now() - lastUpd) / 60000) : null;
+    const botStatusCol = (minsAgo === null) ? '#555' : minsAgo < 10 ? '#00ff88' : minsAgo < 30 ? '#ffd54f' : '#888';
+    const botStatusTxt = (minsAgo === null) ? 'Never run' : minsAgo < 10 ? `${minsAgo}m ago` : minsAgo < 60 ? `${minsAgo}m ago` : `${Math.floor(minsAgo/60)}h ago`;
+
+    el.innerHTML = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:12px;padding:.9rem;position:relative">
+      <!-- Header row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.65rem;flex-wrap:wrap;gap:.5rem">
+        <div>
+          <div style="font-size:9px;color:#4a6fa5;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.15rem">ROK AUTO-TRADER</div>
+          <div style="display:flex;align-items:baseline;gap:.5rem">
+            <span style="font-family:var(--disp);font-size:1.6rem;color:#82b1ff;font-weight:900">$${portVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+            <span style="font-size:.9rem;font-weight:800;color:${retCol}">${totalRet>=0?'+':''}${totalRet.toFixed(2)}%</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
+          <div style="display:flex;align-items:center;gap:4px;font-size:8px;font-weight:800;padding:2px 8px;border-radius:20px;border:1px solid ${botStatusCol}40;background:${botStatusCol}10;color:${botStatusCol}">
+            <span style="width:5px;height:5px;border-radius:50%;background:${botStatusCol};flex-shrink:0;${minsAgo!==null&&minsAgo<10?'animation:livePulse 1.8s ease infinite':''}"></span>
+            BOT ${botStatusTxt}
+          </div>
+          ${regime.regime ? `<div style="font-size:8px;color:${regimeCol};font-weight:700">${regime.regime.toUpperCase()} MARKET · VIX ${(regime.vix||0).toFixed(1)}${macroDay?' · ⚠️ FOMC':''}</div>` : ''}
+        </div>
       </div>
-      <div style="display:flex;gap:16px;margin-bottom:.3rem;flex-wrap:wrap">
-        <span style="color:#555;font-size:.72rem">Value <span style="color:#82b1ff;font-weight:700">$${portVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span></span>
-        <span style="color:#555;font-size:.72rem">Cash <span style="color:#64b5f6">$${(data.buying_power||0).toLocaleString('en-US',{maximumFractionDigits:0})}</span></span>
-        ${wr !== null ? `<span style="color:#555;font-size:.72rem">Win Rate <span style="color:#ffd54f;font-weight:700">${wr}%</span></span>` : ''}
-        <span style="color:#555;font-size:.72rem">${stats.wins||0}W/${stats.losses||0}L</span>
+
+      <!-- Stats row -->
+      <div style="display:flex;gap:1.2rem;margin-bottom:.65rem;flex-wrap:wrap">
+        <div><div style="font-size:7.5px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Cash</div><div style="font-size:12px;font-weight:800;color:#64b5f6">$${(data.buying_power||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div><div style="font-size:7.5px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Positions</div><div style="font-size:12px;font-weight:800;color:#ffd54f">${openPos}/12</div></div>
+        ${wr !== null ? `<div><div style="font-size:7.5px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Win Rate</div><div style="font-size:12px;font-weight:800;color:#ffd54f">${wr}%</div></div>` : ''}
+        <div><div style="font-size:7.5px;color:#3a5a8a;font-weight:700;text-transform:uppercase">W/L</div><div style="font-size:12px;font-weight:800;color:#ccc">${stats.wins||0}/${stats.losses||0}</div></div>
+        ${scanUni ? `<div><div style="font-size:7.5px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:12px;font-weight:800;color:#ccc">${scanUni}</div></div>` : ''}
       </div>
-      ${sparkline || '<div style="color:#2a3a5a;font-size:.7rem;padding:.3rem 0">Chart builds as bot runs during market hours</div>'}
+
+      <!-- Chart.js equity curve -->
+      ${history.length >= 3 ? `<div style="position:relative;height:110px;margin:0 -0.1rem"><canvas id="perf-equity-chart"></canvas></div>` : '<div style="color:#2a3a5a;font-size:.72rem;padding:.5rem 0;text-align:center">Equity curve builds as bot runs during market hours</div>'}
     </div>`;
-  } catch { el.innerHTML = ''; }
+
+    // Render Chart.js equity curve
+    if (history.length >= 3) {
+      const canvas = document.getElementById('perf-equity-chart');
+      if (!canvas) return;
+      const existingChart = Chart.getChart(canvas);
+      if (existingChart) existingChart.destroy();
+
+      const labels = history.map(h => {
+        const d = new Date(h.t);
+        return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      });
+      const vals   = history.map(h => h.v);
+      const isUp   = vals[vals.length-1] >= vals[0];
+      const lineCol = isUp ? '#00ff88' : '#ef5350';
+
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0,0,0,110);
+      grad.addColorStop(0, isUp ? 'rgba(0,255,136,.35)' : 'rgba(239,83,80,.3)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+      new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: vals,
+            borderColor: lineCol,
+            borderWidth: 1.5,
+            backgroundColor: grad,
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointHoverBackgroundColor: lineCol,
+            tension: 0.35,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 400 },
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              displayColors: false,
+              callbacks: {
+                title: items => items[0].label,
+                label: item => `$${Number(item.raw).toLocaleString('en-US',{maximumFractionDigits:0})}`
+              },
+              backgroundColor: 'rgba(6,13,26,.95)',
+              borderColor: 'rgba(130,177,255,.3)',
+              borderWidth: 1,
+              titleColor: '#82b1ff',
+              bodyColor: lineCol,
+              padding: 8,
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              display: true,
+              position: 'right',
+              grid: { color: 'rgba(255,255,255,.04)' },
+              ticks: {
+                color: '#3a5a8a',
+                font: { size: 8 },
+                maxTicksLimit: 4,
+                callback: v => '$'+Number(v).toLocaleString('en-US',{notation:'compact',maximumFractionDigits:0})
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch(e) { el.innerHTML = ''; }
 }
 window.renderPerfChart = renderPerfChart;
 
@@ -54102,6 +54188,44 @@ window.renderSectorRotation = renderSectorRotation;
     const ft = document.getElementById('ftr-time');
     if (ft && data.last_updated) ft.textContent = new Date(data.last_updated).toLocaleString();
 
+    // Update bot status header pill
+    const botPill = document.getElementById('bot-status-pill');
+    const botDot  = document.getElementById('bot-status-dot');
+    const botTxt  = document.getElementById('bot-status-txt');
+    if (botPill && data.last_updated) {
+      const mins = Math.round((Date.now() - new Date(data.last_updated)) / 60000);
+      const hasErr = !!data.error;
+      if (hasErr) {
+        botPill.style.borderColor = 'rgba(255,34,85,.4)';
+        botPill.style.background  = 'rgba(255,34,85,.08)';
+        botPill.style.color       = 'var(--r)';
+        botDot.style.background   = 'var(--r)';
+        botTxt.textContent        = 'BOT ERR';
+      } else if (mins < 10) {
+        botPill.style.borderColor = 'rgba(0,255,136,.35)';
+        botPill.style.background  = 'rgba(0,255,136,.08)';
+        botPill.style.color       = 'var(--g)';
+        botDot.style.background   = 'var(--g)';
+        botDot.style.animation    = 'livePulse 1.8s ease infinite';
+        botTxt.textContent        = `BOT ${mins}m ago`;
+      } else if (mins < 30) {
+        botPill.style.borderColor = 'rgba(255,215,0,.3)';
+        botPill.style.background  = 'rgba(255,215,0,.06)';
+        botPill.style.color       = 'var(--au)';
+        botDot.style.background   = 'var(--au)';
+        botDot.style.animation    = '';
+        botTxt.textContent        = `BOT ${mins}m ago`;
+      } else {
+        botPill.style.borderColor = 'rgba(255,255,255,.1)';
+        botPill.style.background  = 'rgba(255,255,255,.03)';
+        botPill.style.color       = 'var(--wh4)';
+        botDot.style.background   = 'var(--wh4)';
+        botDot.style.animation    = '';
+        botTxt.textContent        = `BOT ${mins < 60 ? mins+'m' : Math.floor(mins/60)+'h'} ago`;
+      }
+      botPill.style.display = 'flex';
+    }
+
     // Update header regime badge
     const regime = data.regime || {};
     const regEl = document.getElementById('hdr-regime');
@@ -54143,6 +54267,66 @@ window.renderSectorRotation = renderSectorRotation;
         </div>
         ${regime.regime ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:13px;font-weight:800;color:${regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)'};">${regime.regime.toUpperCase()}</div><div style="font-size:8px;color:var(--wh3)">VIX ${(regime.vix||0).toFixed(1)} ${macroDay}</div></div>` : ''}
         ${scanSize ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Scanner</div><div style="font-size:13px;font-weight:800;color:var(--wh)">${scanSize}</div><div style="font-size:8px;color:${statusColor}">${data.status||'—'}</div></div>` : ''}
+      </div>`;
+    }
+
+    // Populate Intel tab bot health card
+    const healthEl = document.getElementById('intel-bot-health');
+    if (healthEl) {
+      const pv      = data.portfolio_value || 0;
+      const bp      = data.buying_power || 0;
+      const lu      = data.last_updated ? new Date(data.last_updated) : null;
+      const minsAgo = lu ? Math.round((Date.now()-lu)/60000) : null;
+      const hasErr  = !!data.error;
+      const regime  = data.regime || {};
+      const openPos = (data.positions||[]).length;
+      const stats   = data.stats || {};
+      const wins    = stats.wins || 0;
+      const losses  = stats.losses || 0;
+      const wr      = (wins+losses) > 0 ? Math.round(wins/(wins+losses)*100) : null;
+      const totalPnl= stats.total_pnl || 0;
+      const scanSize= data.scan_universe || 0;
+      const macroDay= data.macro_day;
+      const regCol  = regime.regime==='bull'?'#00ff88':regime.regime==='bear'?'#ef5350':'#ffd54f';
+      const pnlCol  = totalPnl >= 0 ? '#00ff88' : '#ef5350';
+
+      let statusLine, statusBg, statusBorder;
+      if (hasErr) {
+        statusLine = `ERROR: ${data.error}`;
+        statusBg = 'rgba(255,34,85,.08)'; statusBorder = 'rgba(255,34,85,.3)';
+      } else if (minsAgo === null) {
+        statusLine = 'Never run — waiting for first GitHub Actions run';
+        statusBg = 'rgba(255,255,255,.03)'; statusBorder = 'rgba(255,255,255,.1)';
+      } else if (minsAgo < 10) {
+        statusLine = `Running at market speed — last cycle ${minsAgo}m ago`;
+        statusBg = 'rgba(0,255,136,.06)'; statusBorder = 'rgba(0,255,136,.25)';
+      } else if (minsAgo < 35) {
+        statusLine = `Last run ${minsAgo}m ago — checking every 5 min during market hours`;
+        statusBg = 'rgba(255,215,0,.05)'; statusBorder = 'rgba(255,215,0,.2)';
+      } else {
+        statusLine = `Last run ${minsAgo < 60 ? minsAgo+'m' : Math.floor(minsAgo/60)+'h'} ago — market may be closed`;
+        statusBg = 'rgba(255,255,255,.03)'; statusBorder = 'rgba(255,255,255,.08)';
+      }
+
+      healthEl.innerHTML = `<div style="background:${statusBg};border:1px solid ${statusBorder};border-radius:10px;padding:.75rem .9rem">
+        <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:.5rem">
+          <div style="flex:1;min-width:140px">
+            <div style="font-size:8px;color:#4a6fa5;letter-spacing:.1em;text-transform:uppercase;font-weight:800;margin-bottom:.2rem">Portfolio Value</div>
+            <div style="font-family:var(--disp);font-size:1.4rem;color:#82b1ff">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div style="font-size:8.5px;color:#555;margin-top:.1rem">Cash: <span style="color:#64b5f6">\$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</span></div>
+          </div>
+          <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+            <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Positions</div><div style="font-size:14px;font-weight:900;color:#ffd54f">${openPos}/12</div></div>
+            ${wr !== null ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Win Rate</div><div style="font-size:14px;font-weight:900;color:#ffd54f">${wr}%</div></div>` : ''}
+            <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">P&L</div><div style="font-size:14px;font-weight:900;color:${pnlCol}">${totalPnl>=0?'+':''}${totalPnl.toFixed(1)}%</div></div>
+            ${scanSize ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:14px;font-weight:900;color:#aaa">${scanSize}</div></div>` : ''}
+            ${regime.regime ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Regime</div><div style="font-size:14px;font-weight:900;color:${regCol}">${regime.regime.toUpperCase()}</div></div>` : ''}
+          </div>
+        </div>
+        <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600">
+          ${macroDay ? '<span style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);border-radius:4px;padding:1px 6px;margin-right:.4rem;font-size:8px;color:#ffd54f;font-weight:800">⚠️ FOMC/MACRO DAY</span>' : ''}
+          ${statusLine}
+        </div>
       </div>`;
     }
 
