@@ -706,6 +706,68 @@ def _supply_demand_zones(highs, lows, closes, volumes, lookback: int = 30) -> di
         return {"at_demand": False, "at_supply": False}
 
 
+def _volume_profile_poc(highs, lows, closes, volumes, lookback: int = 30, bins: int = 20) -> dict:
+    """
+    Volume Profile: find the Point of Control (POC) — price level with the most traded volume.
+    Uses a simplified VPSV (Volume Profile Session Volume) approach: distribute each bar's
+    volume across its high-low range into price bins, find the highest-volume bin.
+    Returns {poc_price, at_poc, above_poc, poc_breakout}.
+    """
+    if len(closes) < 10 or not volumes or len(volumes) < 10:
+        return {"poc_price": 0.0, "at_poc": False, "above_poc": False, "poc_breakout": False}
+    try:
+        n  = min(lookback, len(closes))
+        c  = closes[-n:]
+        h  = highs[-n:]
+        l  = lows[-n:]
+        v  = volumes[-n:]
+
+        lo_range = min(l)
+        hi_range = max(h)
+        if hi_range <= lo_range:
+            return {"poc_price": 0.0, "at_poc": False, "above_poc": False, "poc_breakout": False}
+
+        bucket_size = (hi_range - lo_range) / bins
+        vol_bins = [0.0] * bins
+
+        for i in range(len(c)):
+            bar_lo = l[i]
+            bar_hi = h[i]
+            bar_vol = v[i] or 0
+            bar_range = bar_hi - bar_lo
+            if bar_range <= 0 or bar_vol <= 0:
+                continue
+            for b in range(bins):
+                bin_lo = lo_range + b * bucket_size
+                bin_hi = bin_lo + bucket_size
+                overlap = max(0.0, min(bar_hi, bin_hi) - max(bar_lo, bin_lo))
+                if overlap > 0:
+                    vol_bins[b] += bar_vol * (overlap / bar_range)
+
+        poc_bin = vol_bins.index(max(vol_bins))
+        poc_price = round(lo_range + (poc_bin + 0.5) * bucket_size, 2)
+
+        cur = c[-1]
+        tol = 0.015   # within 1.5% = at POC
+        at_poc = abs(cur - poc_price) / poc_price < tol
+        above_poc = cur > poc_price * (1 + tol)
+
+        # POC breakout: price was below POC last bar, now above = volume support reclaimed
+        poc_breakout = False
+        if len(c) >= 2:
+            prev = c[-2]
+            poc_breakout = (prev < poc_price * 0.985) and (cur >= poc_price * 0.985)
+
+        return {
+            "poc_price":    poc_price,
+            "at_poc":       at_poc,
+            "above_poc":    above_poc,
+            "poc_breakout": poc_breakout,
+        }
+    except Exception:
+        return {"poc_price": 0.0, "at_poc": False, "above_poc": False, "poc_breakout": False}
+
+
 def _double_bottom(highs, lows, closes) -> dict:
     """
     Detect Double Bottom (W-pattern) — powerful bullish reversal pattern.
@@ -1519,6 +1581,12 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append(f"Double Bottom W-pattern confirmed (neckline ${nk:.2f})" if nk else "Double Bottom W-pattern confirmed")
             if signals.get("double_top"):
                 extras.append("Double Top M-pattern (bearish reversal — supply overhead)")
+            if signals.get("poc_breakout"):
+                poc = signals.get("poc_price", 0)
+                extras.append(f"Volume Profile POC breakout (reclaimed ${poc:.2f} — highest-volume node)" if poc else "Volume POC breakout")
+            elif signals.get("above_poc"):
+                poc = signals.get("poc_price", 0)
+                extras.append(f"Price above Volume POC ${poc:.2f}" if poc else "Above Volume POC")
             if signals.get("trend_reversal"):
                 extras.append("20-EMA trend reversal with volume + RSI recovery")
             if signals.get("bull_flag"):
@@ -2723,6 +2791,17 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Volume Profile: Point of Control (POC) — highest-volume price level over last 30 bars
+    vp_poc = {"poc_price": 0.0, "at_poc": False, "above_poc": False, "poc_breakout": False}
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and "Volume" in daily.columns and len(daily) >= 10:
+            vp_poc = _volume_profile_poc(
+                list(daily["High"]), list(daily["Low"]), list(daily["Close"]),
+                list(daily["Volume"]), lookback=30, bins=20
+            )
+    except Exception:
+        pass
+
     # Momentum acceleration: ROC5 rising faster than prior ROC5 = early-stage breakout
     mom_accel = False
     try:
@@ -2817,6 +2896,10 @@ def _extract(daily, hourly):
         "cup_depth_pct":       cup_handle.get("cup_depth_pct", 0.0),
         "at_demand_zone":      sd_zones.get("at_demand", False),
         "at_supply_zone":      sd_zones.get("at_supply", False),
+        "poc_price":           vp_poc.get("poc_price", 0.0),
+        "at_poc":              vp_poc.get("at_poc", False),
+        "above_poc":           vp_poc.get("above_poc", False),
+        "poc_breakout":        vp_poc.get("poc_breakout", False),
         "mom_accel":           mom_accel,
         "double_bottom":          double_bottom,
         "double_bottom_neckline": double_bottom_neckline,
@@ -3319,6 +3402,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("at_demand_zone", False): s += 8
     if d.get("at_supply_zone", False): s -= 7
 
+    # Volume Profile POC: price above POC = institutions are net-long (+6)
+    # POC breakout = reclaimed highest-volume node, highly bullish (+10)
+    if d.get("poc_breakout", False): s += 10
+    elif d.get("above_poc", False):  s +=  6
+    elif d.get("at_poc", False):     s +=  4
+
     # Momentum acceleration: ROC5 rising faster than prior ROC5 (+10)
     # Catches stocks early in a new breakout — before everyone piles in
     if d.get("mom_accel", False): s += 10
@@ -3409,6 +3498,11 @@ def bearish_score(tk, d):
     if d.get("double_top", False): s += 10
     # Double Bottom: W-pattern = bullish reversal, reduces short conviction
     if d.get("double_bottom", False): s -= 8
+
+    # POC: below POC = institutions net-short, bearish (+8 for shorts)
+    if not d.get("above_poc", True) and not d.get("at_poc", False): s += 8
+    # POC breakout above = don't short into strength
+    if d.get("poc_breakout", False): s -= 10
 
     return max(0, min(100, int(s)))
 
@@ -4291,8 +4385,10 @@ def run():
                 if breakout_adj:   extras.append("52W-breakout")
                 if live.get(tk, {}).get("cup_handle"):    extras.append("C&H")
                 if live.get(tk, {}).get("mom_accel"):     extras.append("accel")
-                if live.get(tk, {}).get("double_bottom"): extras.append("2-BTM")
-                if live.get(tk, {}).get("double_top"):    extras.append("2-TOP")
+                if live.get(tk, {}).get("double_bottom"):  extras.append("2-BTM")
+                if live.get(tk, {}).get("double_top"):     extras.append("2-TOP")
+                if live.get(tk, {}).get("poc_breakout"):   extras.append("POC-BRK")
+                elif live.get(tk, {}).get("above_poc"):    extras.append("abv-POC")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} grade={_grade_now} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
@@ -4347,6 +4443,10 @@ def run():
                 "double_bottom":  live.get(tk, {}).get("double_bottom", False),
                 "double_bottom_neckline": live.get(tk, {}).get("double_bottom_neckline", 0.0),
                 "double_top":     live.get(tk, {}).get("double_top", False),
+                "poc_price":      live.get(tk, {}).get("poc_price", 0.0),
+                "at_poc":         live.get(tk, {}).get("at_poc", False),
+                "above_poc":      live.get(tk, {}).get("above_poc", False),
+                "poc_breakout":   live.get(tk, {}).get("poc_breakout", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
@@ -4455,6 +4555,10 @@ def run():
                     if _d_buy.get("double_bottom"):
                         _db_nk = _d_buy.get("double_bottom_neckline", 0)
                         reason += f" [2-BTM neckline=${_db_nk}]" if _db_nk else " [2-BTM]"
+                    if _d_buy.get("poc_breakout"):
+                        reason += f" [POC-BRK ${_d_buy.get('poc_price', 0)}]"
+                    elif _d_buy.get("above_poc"):
+                        reason += f" [abv-POC ${_d_buy.get('poc_price', 0)}]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
