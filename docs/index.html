@@ -2685,7 +2685,36 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       ${hasTodayData && totalNow > 0 ? `<div class="port-sum-box"><div class="port-sum-val" style="color:${todayColor};font-size:1.1rem">${todayFmt}</div><div class="port-sum-lbl">Today 🟢</div></div>` : ''}
       <div class="port-sum-box"><div class="port-sum-val" style="color:${alerts?'var(--r)':'var(--g)'}">${alerts}</div><div class="port-sum-lbl">Alerts</div></div>
     </div>
-    ${!hasRealShares && totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position. Add shares when tracking for real P&amp;L</div>` : ''}`;
+    ${!hasRealShares && totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position. Add shares when tracking for real P&amp;L</div>` : ''}
+    ${(() => {
+      // Benchmark comparison vs SPY today
+      const spy = liveprices['SPY'];
+      if (!spy || !hasTodayData || totalNow <= 0) return '';
+      // Compute portfolio's weighted avg change today
+      let portTodayPct = 0, portWeight = 0;
+      tickers.forEach(t => {
+        const lp = liveprices[t];
+        const entry = p[t];
+        if (!lp || lp.change_pct == null || !entry || !entry.price) return;
+        const cur = lp.price;
+        const sh = entry.shares || (1000 / entry.price);
+        const val = sh * cur;
+        portTodayPct += val * lp.change_pct;
+        portWeight += val;
+      });
+      if (!portWeight) return '';
+      const portPct = portTodayPct / portWeight;
+      const spyPct = spy.change_pct;
+      const diff = portPct - spyPct;
+      const diffColor = diff >= 0 ? 'var(--g)' : 'var(--r)';
+      const diffSign = diff >= 0 ? '+' : '';
+      const outcome = Math.abs(diff) < 0.1 ? 'matching the market' : diff > 0 ? `beating S&P 500 by ${diffSign}${diff.toFixed(2)}%` : `trailing S&P 500 by ${Math.abs(diff).toFixed(2)}%`;
+      return `<div style="margin-top:.4rem;padding:.4rem .7rem;background:rgba(0,204,255,.05);border:1px solid rgba(0,204,255,.12);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:.5rem">
+        <span style="font-size:10px;color:var(--wh3)">📊 vs. S&P 500 today:</span>
+        <span style="font-size:10.5px;font-weight:700;color:${diffColor}">${outcome}</span>
+        <span style="font-size:9px;color:var(--wh4)">You: ${portPct>=0?'+':''}${portPct.toFixed(2)}% · SPY: ${spyPct>=0?'+':''}${spyPct.toFixed(2)}%</span>
+      </div>`;
+    })()}`;
 
     // Store portfolio value snapshot for chart
     if (totalNow > 0) {
