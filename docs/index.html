@@ -54431,6 +54431,28 @@ window.renderSectorRotation = renderSectorRotation;
         </div>
         <div id="next-run-line" style="font-size:8px;color:#3a5a8a"></div>
       </div>`;
+
+      // Sector rotation heatmap
+      const sectorRot = data.sector_rotation || {};
+      const secEntries = Object.entries(sectorRot).sort((a,b) => b[1]-a[1]);
+      if (secEntries.length > 0) {
+        const secHtml = secEntries.map(([sec,val]) => {
+          const col = val >= 5 ? '#00ff88' : val >= 2 ? '#4caf50' : val > 0 ? '#388e3c' :
+                      val <= -5 ? '#ef5350' : val <= -2 ? '#e57373' : val < 0 ? '#b71c1c' : '#555';
+          const bg  = val >= 3 ? 'rgba(0,255,136,.12)' : val <= -3 ? 'rgba(255,34,85,.1)' : 'rgba(255,255,255,.03)';
+          const barW = Math.min(Math.abs(val) / 8 * 100, 100);
+          const barCol = val >= 0 ? 'rgba(0,255,136,.25)' : 'rgba(255,34,85,.2)';
+          return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem .4rem;background:${bg};border-radius:5px">
+            <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600">${sec}</span>
+            <div style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px"><div style="width:${barW}%;height:100%;background:${barCol};border-radius:2px;${val<0?'margin-left:auto':''}"></div></div>
+            <span style="font-size:8px;font-weight:800;color:${col};min-width:22px;text-align:right">${val>=0?'+':''}${val}</span>
+          </div>`;
+        }).join('');
+        healthEl.innerHTML += `<div style="margin-top:.5rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector Rotation</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${secHtml}</div>
+        </div>`;
+      }
     }
 
     // Populate Intel tab ROK trades section
@@ -54514,17 +54536,22 @@ window.renderSectorRotation = renderSectorRotation;
       const pf = data.profit_factor;
       const avgW = data.avg_win_pct;
       const avgL = data.avg_loss_pct;
+      const sharpe = data.sharpe_ratio;
+      const maxDd = data.max_drawdown;
       const totTrades = (stats2.wins||0) + (stats2.losses||0);
       if (totTrades > 0) {
         const wr2 = Math.round((stats2.wins||0)/totTrades*100);
         const pfCol = pf >= 2 ? '#00ff88' : pf >= 1 ? '#ffd54f' : '#ef5350';
+        const sharpeCol = sharpe >= 1 ? '#00ff88' : sharpe >= 0.5 ? '#ffd54f' : sharpe != null ? '#ef5350' : '#aaa';
         html += `<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.65rem;padding:.5rem .65rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.07)">
-          <div style="text-align:center;min-width:42px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Trades</div><div style="font-size:13px;font-weight:900;color:#aaa">${totTrades}</div></div>
-          <div style="text-align:center;min-width:42px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Win%</div><div style="font-size:13px;font-weight:900;color:#ffd54f">${wr2}%</div></div>
-          ${pf != null ? `<div style="text-align:center;min-width:42px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">P.Factor</div><div style="font-size:13px;font-weight:900;color:${pfCol}">${pf}x</div></div>` : ''}
-          ${avgW != null ? `<div style="text-align:center;min-width:48px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Avg Win</div><div style="font-size:13px;font-weight:900;color:#00ff88">+${avgW}%</div></div>` : ''}
-          ${avgL != null ? `<div style="text-align:center;min-width:48px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Avg Loss</div><div style="font-size:13px;font-weight:900;color:#ef5350">-${avgL}%</div></div>` : ''}
-          <div style="text-align:center;min-width:42px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Peak</div><div style="font-size:11px;font-weight:800;color:#82b1ff">\$${(data.portfolio_peak||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+          <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Trades</div><div style="font-size:13px;font-weight:900;color:#aaa">${totTrades}</div></div>
+          <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Win%</div><div style="font-size:13px;font-weight:900;color:#ffd54f">${wr2}%</div></div>
+          ${pf != null ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">P.Factor</div><div style="font-size:13px;font-weight:900;color:${pfCol}">${pf}x</div></div>` : ''}
+          ${avgW != null ? `<div style="text-align:center;min-width:44px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Avg Win</div><div style="font-size:13px;font-weight:900;color:#00ff88">+${avgW}%</div></div>` : ''}
+          ${avgL != null ? `<div style="text-align:center;min-width:44px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Avg Loss</div><div style="font-size:13px;font-weight:900;color:#ef5350">-${avgL}%</div></div>` : ''}
+          ${sharpe != null ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Sharpe</div><div style="font-size:13px;font-weight:900;color:${sharpeCol}">${sharpe}</div></div>` : ''}
+          ${maxDd > 0 ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Max DD</div><div style="font-size:13px;font-weight:900;color:#ef5350">-${maxDd.toFixed(1)}%</div></div>` : ''}
+          <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Peak</div><div style="font-size:11px;font-weight:800;color:#82b1ff">\$${(data.portfolio_peak||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
         </div>`;
       }
 

@@ -757,13 +757,15 @@ def ai_market_context(regime, top_movers, sector_adjs: dict = None):
                        f"\n- Cold sectors: {', '.join(f'{s}({v:+d})' for s,v in cold)}")
         breadth = get_market_breadth()
         prompt = (
-            f"Automated US equity trader context for today:\n"
+            f"Automated US equity trader decision for today:\n"
             f"- Regime: {regime['regime']} (VIX={regime['vix']:.0f}, SPY 5d={regime['spy_trend']:+.1f}%)\n"
             f"- Market breadth: {breadth['adv_pct']}% sectors advancing ({breadth['note']})\n"
-            f"- FOMC/macro event {'TODAY' if on_macro else 'not imminent'}\n"
+            f"- FOMC/macro event {'TODAY — be defensive' if on_macro else 'not imminent'}\n"
             f"- Top movers: {movers_str}{sec_str}\n\n"
-            f"Should the bot be aggressive (+3 to +5) or cautious (-3 to -5) today? "
-            f"Return ONLY JSON: {{\"adj\":<-5 to 5>, \"note\":\"<10 words>\"}}"
+            f"Should the bot be aggressive (+3 to +5 = higher scores unlock more buys) "
+            f"or cautious (-3 to -5 = raise the bar, fewer buys) today?\n"
+            f"Consider: VIX level, breadth, macro risk, sector leadership.\n"
+            f"Return ONLY JSON: {{\"adj\":<-5 to 5>, \"note\":\"<8 words max>\"}}"
         )
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
@@ -2667,13 +2669,39 @@ def run():
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
 
-    # Compute profit factor from trade history
+    # Compute profit factor, Sharpe-like ratio, and max drawdown from trade history
     _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
     _gross_wins  = sum(t["pnl_pct"] for t in _closed if t["pnl_pct"] > 0) or 0
     _gross_losses= abs(sum(t["pnl_pct"] for t in _closed if t["pnl_pct"] < 0)) or 1
     _profit_factor = round(_gross_wins / _gross_losses, 2) if _closed else None
     _avg_win  = round(_gross_wins  / max(1, sum(1 for t in _closed if t["pnl_pct"] > 0)), 2) if _closed else None
     _avg_loss = round(_gross_losses/ max(1, sum(1 for t in _closed if t["pnl_pct"] < 0)), 2) if _closed else None
+
+    # Sharpe-like ratio: avg trade return / std dev (measures consistency)
+    _sharpe_ratio = None
+    try:
+        if len(_closed) >= 5:
+            import statistics
+            _pnls = [t["pnl_pct"] for t in _closed]
+            _avg_pnl = statistics.mean(_pnls)
+            _std_pnl = statistics.stdev(_pnls)
+            if _std_pnl > 0:
+                _sharpe_ratio = round(_avg_pnl / _std_pnl, 2)
+    except Exception:
+        pass
+
+    # Max drawdown from portfolio history
+    _max_dd = 0.0
+    try:
+        _hist_v = [h["v"] for h in tlog.get("perf_history", []) if isinstance(h.get("v"), (int, float)) and h["v"] > 0]
+        if len(_hist_v) >= 2:
+            _peak_running = _hist_v[0]
+            for v in _hist_v:
+                _peak_running = max(_peak_running, v)
+                _dd = (_peak_running - v) / _peak_running * 100
+                _max_dd = max(_max_dd, _dd)
+    except Exception:
+        pass
 
     tlog["last_updated"]    = now_utc.isoformat()
     tlog["portfolio_value"] = portfolio_val
@@ -2691,6 +2719,9 @@ def run():
     tlog["avg_win_pct"]     = _avg_win
     tlog["avg_loss_pct"]    = _avg_loss
     tlog["portfolio_heat"]  = round(_portfolio_heat, 2)
+    tlog["sector_rotation"] = sector_adjs   # {sector: adj_score} for dashboard heatmap
+    tlog["sharpe_ratio"]    = _sharpe_ratio
+    tlog["max_drawdown"]    = round(_max_dd, 2)
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
