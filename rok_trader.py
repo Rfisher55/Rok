@@ -784,6 +784,76 @@ def _candlestick_patterns(opens, highs, lows, closes, lookback=3):
     return result
 
 
+_OPTIONS_FLOW_CACHE: dict = {}
+
+def _options_flow(sym: str, max_age_sec: int = 3600) -> dict:
+    """Options flow proxy using yfinance options chain.
+    Computes put/call volume ratio and flags unusual options activity.
+    Returns dict: pcr (put/call ratio), unusual_calls, unusual_puts, bullish_flow, bearish_flow.
+    - pcr < 0.7: bullish sentiment (more calls than puts)
+    - pcr > 1.3: bearish sentiment (more puts than calls)
+    - unusual_calls: call volume > 3× average open interest (institutional positioning)
+    Cached for 1 hour (options chain rarely changes intraday during off-hours).
+    """
+    now = datetime.now(timezone.utc).timestamp()
+    cache = _OPTIONS_FLOW_CACHE.get(sym)
+    if cache and now - cache.get("ts", 0) < max_age_sec:
+        return cache
+    result = {"pcr": 1.0, "unusual_calls": False, "unusual_puts": False,
+              "bullish_flow": False, "bearish_flow": False, "ts": now}
+    try:
+        tk = yf.Ticker(sym)
+        exps = tk.options
+        if not exps:
+            _OPTIONS_FLOW_CACHE[sym] = result
+            return result
+        # Use near-term expiry (first 1-2 available) for fresh institutional signal
+        total_call_vol = 0
+        total_put_vol  = 0
+        total_call_oi  = 0
+        total_put_oi   = 0
+        max_call_vcr   = 0.0  # max single-strike volume/OI ratio for calls
+        max_put_vcr    = 0.0
+        for exp in exps[:2]:
+            chain = tk.option_chain(exp)
+            calls = chain.calls
+            puts  = chain.puts
+            if hasattr(calls, "volume") and hasattr(calls, "openInterest"):
+                cv = calls["volume"].fillna(0).sum()
+                coi = calls["openInterest"].fillna(0).sum()
+                total_call_vol += cv
+                total_call_oi  += coi
+                # Unusual call activity: any strike with vol/OI > 3
+                if coi > 0:
+                    vcr = (calls["volume"].fillna(0) / calls["openInterest"].replace(0, 1)).max()
+                    max_call_vcr = max(max_call_vcr, vcr)
+            if hasattr(puts, "volume") and hasattr(puts, "openInterest"):
+                pv = puts["volume"].fillna(0).sum()
+                poi = puts["openInterest"].fillna(0).sum()
+                total_put_vol += pv
+                total_put_oi  += poi
+                if poi > 0:
+                    vcr = (puts["volume"].fillna(0) / puts["openInterest"].replace(0, 1)).max()
+                    max_put_vcr = max(max_put_vcr, vcr)
+        pcr = total_put_vol / max(total_call_vol, 1)
+        unusual_calls = max_call_vcr > 3.0 and total_call_vol > 500
+        unusual_puts  = max_put_vcr  > 3.0 and total_put_vol  > 500
+        result = {
+            "pcr":           round(pcr, 3),
+            "unusual_calls": unusual_calls,
+            "unusual_puts":  unusual_puts,
+            "bullish_flow":  pcr < 0.7 or unusual_calls,
+            "bearish_flow":  pcr > 1.3 or unusual_puts,
+            "call_vol":      int(total_call_vol),
+            "put_vol":       int(total_put_vol),
+            "ts":            now,
+        }
+    except Exception:
+        pass
+    _OPTIONS_FLOW_CACHE[sym] = result
+    return result
+
+
 def _parabolic_sar(highs, lows, af_start=0.02, af_max=0.20):
     """Parabolic SAR trailing stop — accelerates as price trends, tightens on reversals.
     Returns (sar_value, is_bullish) for the latest bar.
@@ -3972,6 +4042,20 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                 try:
                     sig = _extract(daily.get(tk), hourly.get(tk))
                     if sig and sig["price"] > 0:
+                        # Options flow proxy: inject into sig (cached, non-blocking)
+                        try:
+                            opts = _options_flow(tk)
+                            sig["options_pcr"]      = opts.get("pcr", 1.0)
+                            sig["options_bull"]     = opts.get("bullish_flow", False)
+                            sig["options_bear"]     = opts.get("bearish_flow", False)
+                            sig["unusual_calls"]    = opts.get("unusual_calls", False)
+                            sig["unusual_puts"]     = opts.get("unusual_puts", False)
+                        except Exception:
+                            sig.setdefault("options_pcr", 1.0)
+                            sig.setdefault("options_bull", False)
+                            sig.setdefault("options_bear", False)
+                            sig.setdefault("unusual_calls", False)
+                            sig.setdefault("unusual_puts", False)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -4426,6 +4510,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Parabolic SAR: trend-following trailing stop alignment
     if d.get("psar_bull", True):   s += 5   # SAR below price = uptrend intact
     else:                           s -= 4   # SAR above price = downtrend signal
+
+    # Options flow proxy: unusual call buying = institutional bullish positioning (+7/-5)
+    if d.get("unusual_calls", False):    s += 7   # big money buying calls = strong directional bet
+    elif d.get("options_bull", False):   s += 4   # low PCR = call skew, bullish sentiment
+    if d.get("unusual_puts", False):     s -= 5   # unusual put buying = hedge or bearish bet
+    elif d.get("options_bear", False):   s -= 3   # high PCR = put skew, bearish sentiment
 
     # Price Acceleration: momentum building (2nd derivative positive) = institutional accumulation
     if d.get("price_accel_pos", False):   s += 6   # ROC accelerating ≥1%
@@ -5614,6 +5704,10 @@ def run():
                 "true_alpha":         live.get(tk, {}).get("true_alpha", 0.0),
                 "psar":               live.get(tk, {}).get("psar", 0.0),
                 "psar_bull":          live.get(tk, {}).get("psar_bull", True),
+                "options_pcr":        live.get(tk, {}).get("options_pcr", 1.0),
+                "options_bull":       live.get(tk, {}).get("options_bull", False),
+                "unusual_calls":      live.get(tk, {}).get("unusual_calls", False),
+                "unusual_puts":       live.get(tk, {}).get("unusual_puts", False),
                 "price_accel":        live.get(tk, {}).get("price_accel", 0.0),
                 "price_accel_pos":    live.get(tk, {}).get("price_accel_pos", False),
                 "price_accel_neg":    live.get(tk, {}).get("price_accel_neg", False),
@@ -5768,6 +5862,12 @@ def run():
                     if _d_buy.get("psar_bull"):
                         _psar_entry = _d_buy.get("psar", 0) or 0
                         if _psar_entry > 0: reason += f" [SAR▲${_psar_entry:.2f}]"
+                    if _d_buy.get("unusual_calls"):
+                        reason += f" [OPT-CALLS pcr={_d_buy.get('options_pcr',1):.2f}]"
+                    elif _d_buy.get("options_bull"):
+                        reason += f" [OPT-BULL pcr={_d_buy.get('options_pcr',1):.2f}]"
+                    if _d_buy.get("price_accel_pos"):
+                        reason += f" [ACCEL+{_d_buy.get('price_accel',0):.1f}%]"
                     # Pivot point proximity (buying near S1/S2 = strong institutional support)
                     _piv_s1 = _d_buy.get("pivot_s1", 0) or 0
                     _piv_s2 = _d_buy.get("pivot_s2", 0) or 0
@@ -5896,6 +5996,11 @@ def run():
                 "pivot_s2":        round(sig.get("pivot_s2", 0), 2),
                 "psar":            round(sig.get("psar", 0), 3),
                 "psar_bull":       sig.get("psar_bull", True),
+                "options_pcr":     round(sig.get("options_pcr", 1.0), 3),
+                "options_bull":    sig.get("options_bull", False),
+                "options_bear":    sig.get("options_bear", False),
+                "unusual_calls":   sig.get("unusual_calls", False),
+                "unusual_puts":    sig.get("unusual_puts", False),
                 "price_accel":     round(sig.get("price_accel", 0), 3),
                 "price_accel_pos": sig.get("price_accel_pos", False),
                 "lr_slope":        round(sig.get("lr_slope", 0), 1),
