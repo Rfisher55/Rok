@@ -217,6 +217,7 @@ def run():
         stock["signal_strength"] = sig.get("strength", 0)
 
     # ── Enrich signals with price sparklines ──────────────────────
+    stock_data_lookup = {s["ticker"]: s for s in stock_data if s}
     price_lookup = {s["ticker"]: s["price"] for s in stock_data}
     all_signals = (
         analysis.get("buy_signals", [])
@@ -230,6 +231,69 @@ def run():
                 yahoo_finance.get_price_history, ticker, 30,
                 default=list, label=f"Hist:{ticker}",
             )
+
+    # ── Enrich signals with Yahoo Finance data ────────────────────
+    for sig in all_signals:
+        t = sig.get("ticker", "")
+        if not t:
+            continue
+        sd = stock_data_lookup.get(t)
+        if sd:
+            # Fill missing price fields
+            if not sig.get("current_price") and sd.get("price"):
+                sig["current_price"] = sd["price"]
+            if not sig.get("company") and sd.get("company_name"):
+                sig["company"] = sd["company_name"]
+            # Use analyst consensus target if AI didn't set one
+            if not sig.get("price_target") and sd.get("analyst_target"):
+                sig["price_target"] = sd["analyst_target"]
+            # Auto-calculate stop loss at 8% below entry if not set
+            if not sig.get("stop_loss") and sig.get("current_price"):
+                sig["stop_loss"] = round(sig["current_price"] * 0.92, 2)
+            if not sig.get("sector"):
+                sig["sector"] = sd.get("sector", "")
+            # Volume spike and RSI — prefer TA data (60d window) over yahoo 30d
+            ta = ta_data.get(t, {}) if ta_data else {}
+            if not sig.get("vol_ratio"):
+                sig["vol_ratio"] = ta.get("volume_ratio") or sd.get("vol_ratio")
+            if not sig.get("rsi"):
+                sig["rsi"] = ta.get("rsi") or sd.get("rsi")
+            # 52-week position data
+            if ta:
+                sig["pct_from_52w_high"] = ta.get("pct_from_52w_high")
+                sig["week_52_high"] = ta.get("week_52_high")
+                sig["macd_signal"] = ta.get("macd_signal_label")
+            # Build data_signals from available sources
+            if not sig.get("data_signals"):
+                dsigs = []
+                # Check congressional buys
+                if any(c.get("ticker") == t for c in congress_buys[:20]):
+                    dsigs.append("congressional")
+                # Check SEC filings for insider trades
+                if any(
+                    isinstance(f, dict) and f.get("ticker") == t
+                    for f in (sec_filings or [])
+                ):
+                    dsigs.append("insider")
+                # Check unusual options
+                if any(
+                    isinstance(o, dict) and o.get("ticker") == t
+                    for o in (unusual_opts or [])
+                ):
+                    dsigs.append("options")
+                # Reddit presence
+                reddit_tickers = [tp[0] for tp in (top_tickers or [])]
+                if t in reddit_tickers[:20]:
+                    dsigs.append("reddit")
+                sig["data_signals"] = dsigs
+        # Apply defaults for missing fields
+        if not sig.get("signal_strength"):
+            sig["signal_strength"] = 6
+        if not sig.get("risk_level"):
+            sig["risk_level"] = "Medium"
+        if not sig.get("time_horizon"):
+            sig["time_horizon"] = "1-3 months"
+    logger.info("Signal enrichment complete")
 
     # ── History tracking ──────────────────────────────────────────
     history["runs"].append({
@@ -279,6 +343,21 @@ def run():
     recent_runs = history["runs"][-8:]
     bullish_count = sum(1 for r in recent_runs if (r.get("sentiment") or "").upper() == "BULLISH")
     history_summary = f"ROK was bullish {bullish_count} out of the last {len(recent_runs)} runs"
+
+    # ── Plain-language market mood ────────────────────────────────
+    sentiment = (analysis.get("market_sentiment") or "NEUTRAL").upper()
+    fg_score = (fear_greed or {}).get("score", 50)
+    buy_count_now = len(analysis.get("buy_signals", []))
+    if sentiment == "BULLISH" and buy_count_now >= 5:
+        market_mood = f"🟢 Markets are looking strong — ROK found {buy_count_now} stocks worth buying right now"
+    elif sentiment == "BULLISH":
+        market_mood = f"🟢 Markets are leaning bullish — ROK sees some opportunities"
+    elif sentiment == "BEARISH":
+        market_mood = "🔴 Markets are under pressure — ROK recommends being careful"
+    elif fg_score and fg_score < 30:
+        market_mood = "🟡 Fear is high but that often means buying opportunities are near"
+    else:
+        market_mood = "🟡 Markets are mixed — ROK is watching closely for clear signals"
 
     # ── Build page data ───────────────────────────────────────────
     buy_count = len(analysis.get("buy_signals", []))
@@ -330,6 +409,7 @@ def run():
         },
         "recent_runs": recent_runs,
         "history_summary": history_summary,
+        "market_mood": market_mood,
         "track_record": track_record,
         "generated_timestamp": datetime.now(timezone.utc).isoformat(),
         "stock_universe": stock_data,
