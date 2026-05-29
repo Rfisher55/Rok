@@ -557,6 +557,53 @@ def _williams_r(closes, highs, lows, period=10):
     return round(-100 * (hh - closes[-1]) / (hh - ll), 1)
 
 
+def _force_index(closes, volumes, period=13):
+    """Elder's Force Index: price-change × volume, smoothed with EMA.
+    Positive = buying force (bulls in control). Negative = selling force.
+    Divergence between FI and price = hidden institutional activity.
+    Returns (fi_value, fi_rising, fi_bull_div) where fi_bull_div = price down but FI rising.
+    """
+    if len(closes) < period + 2 or len(volumes) < period + 2:
+        return 0.0, False, False
+    try:
+        raw = [(closes[i] - closes[i-1]) * volumes[i] for i in range(1, len(closes))]
+        fi_ema = _ema(raw, period)
+        fi_prev = _ema(raw[:-3], period) if len(raw) > period + 3 else fi_ema
+        fi_rising  = fi_ema > fi_prev
+        price_down = closes[-1] < closes[-10] if len(closes) >= 10 else False
+        fi_bull_div = price_down and fi_rising and fi_ema > 0
+        return round(fi_ema, 0), fi_rising, fi_bull_div
+    except Exception:
+        return 0.0, False, False
+
+
+def _beta_regression(stock_closes, spy_closes, period=63):
+    """True beta via linear regression: covariance(r_stock, r_spy) / variance(r_spy).
+    period=63 = 3-month beta (institutional standard).
+    Returns (beta, alpha_annualized) — alpha > 0 means stock outperforms on risk-adjusted basis.
+    """
+    if len(stock_closes) < period + 2 or len(spy_closes) < period + 2:
+        return 1.0, 0.0
+    try:
+        import numpy as np
+        n = min(len(stock_closes), len(spy_closes), period + 1)
+        sc = np.array(stock_closes[-n:], dtype=float)
+        sp = np.array(spy_closes[-n:],  dtype=float)
+        r_stock = np.diff(sc) / sc[:-1]
+        r_spy   = np.diff(sp) / sp[:-1]
+        cov = np.cov(r_stock, r_spy)
+        if cov[1, 1] < 1e-10:
+            return 1.0, 0.0
+        beta = float(cov[0, 1] / cov[1, 1])
+        beta = round(max(0.1, min(3.5, beta)), 2)
+        # Jensen's alpha: avg_stock_return - beta * avg_spy_return, annualized
+        alpha = (r_stock.mean() - beta * r_spy.mean()) * 252
+        alpha = round(alpha * 100, 2)  # as percent
+        return beta, alpha
+    except Exception:
+        return 1.0, 0.0
+
+
 def _mfi(closes, highs, lows, volumes, period=14):
     """Money Flow Index: volume-weighted RSI (0-100).
     MFI < 20 = oversold (institutional accumulation). MFI > 80 = overbought.
@@ -1867,6 +1914,14 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append(f"MFI oversold ({signals.get('mfi',50):.0f}) — volume-weighted RSI at accumulation zone")
             if signals.get("supertrend_bull"):
                 extras.append(f"Supertrend bullish (stop ${signals.get('supertrend_stop',0):.2f}) — ATR-based trend confirmed; institutional algos are long")
+            if signals.get("force_index_div"):
+                extras.append(f"Force Index bull divergence — institutional volume flooding IN while price fell (smart money accumulation)")
+            elif signals.get("force_index_rising"):
+                extras.append(f"Force Index rising — sustained institutional buying force behind price move")
+            true_alpha_v = signals.get("true_alpha", 0) or 0
+            true_beta_v  = signals.get("true_beta",  1) or 1
+            if true_alpha_v > 8:
+                extras.append(f"Jensen's alpha {true_alpha_v:+.1f}% (beta={true_beta_v:.2f}) — outperforms SPY risk-adjusted; high-quality stock")
             if signals.get("kc_breakout"):
                 extras.append("Keltner Channel breakout — price above EMA+2×ATR (strong momentum)")
             if signals.get("kc_oversold"):
@@ -2621,7 +2676,7 @@ def get_full_universe(held_symbols: set) -> tuple[list, set]:
 def _fetch_spy_perf() -> dict:
     """
     Fetch SPY's 1-day and 5-day return once per run.
-    Stored in _SPY_PERF_CACHE so individual stocks can compute relative strength.
+    Stored in _SPY_PERF_CACHE so individual stocks can compute relative strength and beta.
     """
     global _SPY_PERF_CACHE
     if _SPY_PERF_CACHE:
@@ -2631,12 +2686,13 @@ def _fetch_spy_perf() -> dict:
                           auto_adjust=True, progress=False)
         closes = list(spy["Close"].dropna())
         if len(closes) >= 2:
-            _SPY_PERF_CACHE["d1"]  = (closes[-1] - closes[-2]) / closes[-2] * 100
-            _SPY_PERF_CACHE["d5"]  = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
-            _SPY_PERF_CACHE["d10"] = (closes[-1] - closes[-10]) / closes[-10] * 100 if len(closes) >= 10 else 0
-            _SPY_PERF_CACHE["d63"] = (closes[-1] - closes[-63]) / closes[-63] * 100 if len(closes) >= 63 else 0
+            _SPY_PERF_CACHE["d1"]     = (closes[-1] - closes[-2]) / closes[-2] * 100
+            _SPY_PERF_CACHE["d5"]     = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
+            _SPY_PERF_CACHE["d10"]    = (closes[-1] - closes[-10]) / closes[-10] * 100 if len(closes) >= 10 else 0
+            _SPY_PERF_CACHE["d63"]    = (closes[-1] - closes[-63]) / closes[-63] * 100 if len(closes) >= 63 else 0
+            _SPY_PERF_CACHE["closes"] = closes  # full close history for beta regression
     except Exception:
-        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0, "d63": 0.0}
+        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0, "d63": 0.0, "closes": []}
     return _SPY_PERF_CACHE
 
 
@@ -2903,6 +2959,32 @@ def _extract(daily, hourly):
                 period=10, multiplier=3.0
             )
             supertrend_bull = (supertrend_dir == 1)
+    except Exception:
+        pass
+
+    # Elder's Force Index: (price_change × volume) smoothed — detects institutional power
+    # Positive FI with price = strong hands buying. FI bull divergence = hidden accumulation.
+    fi_val     = 0.0
+    fi_rising  = False
+    fi_bull_div = False
+    try:
+        if "Volume" in daily.columns and len(daily) >= 18:
+            fi_val, fi_rising, fi_bull_div = _force_index(
+                list(daily["Close"]), list(daily["Volume"].fillna(0)), period=13
+            )
+    except Exception:
+        pass
+
+    # True Beta (linear regression vs SPY over 63 days): institutional standard
+    # Beta < 0.8 = defensive, Beta > 1.5 = high-volatility; Jensen's alpha > 0 = outperformer
+    true_beta  = 1.0
+    true_alpha = 0.0
+    try:
+        spy_cls = _fetch_spy_perf().get("closes", [])
+        if spy_cls and len(daily) >= 65:
+            true_beta, true_alpha = _beta_regression(
+                list(daily["Close"]), spy_cls, period=63
+            )
     except Exception:
         pass
 
@@ -3308,6 +3390,11 @@ def _extract(daily, hourly):
         "supertrend_bull":     supertrend_bull,
         "supertrend_stop":     supertrend_stop,
         "supertrend_dir":      supertrend_dir,
+        "force_index":         fi_val,
+        "force_index_rising":  fi_rising,
+        "force_index_div":     fi_bull_div,
+        "true_beta":           true_beta,
+        "true_alpha":          true_alpha,
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "macd_bull_div":       macd_div.get("bullish_div", False),
@@ -3875,6 +3962,18 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Price below Supertrend = bearish trend active (-5)
     if d.get("supertrend_bull", False):         s += 7
     elif d.get("supertrend_dir", 1) == -1:      s -= 5
+
+    # Elder's Force Index: institutional buying pressure detector
+    # FI bull divergence = price falling but institutional volume flowing IN: +8
+    # FI rising = sustained buying force behind move: +4
+    if d.get("force_index_div", False):         s += 8
+    elif d.get("force_index_rising", False):    s += 4
+
+    # Beta-quality scoring: high alpha stocks (outperforming on risk-adjusted basis)
+    # Jensen's alpha > 10% annualized = stock consistently beats market after beta adjustment
+    true_alpha_v = d.get("true_alpha", 0) or 0
+    if true_alpha_v > 15:   s += 6   # exceptional alpha generator
+    elif true_alpha_v > 8:  s += 3   # solid alpha
 
     # Keltner Channel breakout: price above upper band = strong institutional momentum (+9)
     # Oversold: price below lower band = mean-reversion setup (+5 for oversold bounces)
@@ -4943,6 +5042,8 @@ def run():
                 if live.get(tk, {}).get("mfi_bull_div"):      extras.append(f"MFI-div{live.get(tk,{}).get('mfi',50):.0f}")
                 elif live.get(tk, {}).get("mfi_oversold"):    extras.append(f"MFI-OS{live.get(tk,{}).get('mfi',50):.0f}")
                 if live.get(tk, {}).get("supertrend_bull"):   extras.append("ST-BULL")
+                if live.get(tk, {}).get("force_index_div"):   extras.append("FI-DIV")
+                elif live.get(tk, {}).get("force_index_rising"): extras.append("FI↑")
                 if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
                 elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
@@ -5014,8 +5115,12 @@ def run():
                 "mfi":              live.get(tk, {}).get("mfi", 50),
                 "mfi_oversold":     live.get(tk, {}).get("mfi_oversold", False),
                 "mfi_bull_div":     live.get(tk, {}).get("mfi_bull_div", False),
-                "supertrend_bull":  live.get(tk, {}).get("supertrend_bull", False),
-                "supertrend_stop":  live.get(tk, {}).get("supertrend_stop", 0.0),
+                "supertrend_bull":    live.get(tk, {}).get("supertrend_bull", False),
+                "supertrend_stop":    live.get(tk, {}).get("supertrend_stop", 0.0),
+                "force_index_div":    live.get(tk, {}).get("force_index_div", False),
+                "force_index_rising": live.get(tk, {}).get("force_index_rising", False),
+                "true_beta":          live.get(tk, {}).get("true_beta", 1.0),
+                "true_alpha":         live.get(tk, {}).get("true_alpha", 0.0),
                 "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
@@ -5232,6 +5337,17 @@ def run():
                 "macd_bull_div":   sig.get("macd_bull_div", False),
                 "mtf_aligned":     sig.get("mtf_aligned", False),
                 "price_vs_ema200": round(sig.get("price_vs_ema200", 0), 2),
+                "mfi":             round(sig.get("mfi", 50), 1),
+                "mfi_overbought":  sig.get("mfi_overbought", False),
+                "mfi_bull_div":    sig.get("mfi_bull_div", False),
+                "supertrend_bull": sig.get("supertrend_bull", True),
+                "supertrend_stop": round(sig.get("supertrend_stop", 0), 2),
+                "rvol":            round(sig.get("rvol", 1), 2),
+                "rvol_surge":      sig.get("rvol_surge", False),
+                "force_index_rising": sig.get("force_index_rising", False),
+                "force_index_div":    sig.get("force_index_div", False),
+                "true_beta":       round(sig.get("true_beta", 1), 2),
+                "true_alpha":      round(sig.get("true_alpha", 0), 1),
             }
 
         tlog["positions"] = [

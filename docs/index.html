@@ -54715,13 +54715,15 @@ window.renderSectorRotation = renderSectorRotation;
           const lsChan = ls.chandelier_stop > 0 && p.price > 0 ? `<span style="font-size:6px;color:${p.price < ls.chandelier_stop ? '#ef5350' : '#2a3a5a'}">⛛$${ls.chandelier_stop.toFixed(2)}</span>` : '';
           const lsMtf  = ls.mtf_aligned ? `<span style="font-size:6.5px;font-weight:800;color:#80deea">MTF✓</span>` : '';
           const lsE200 = ls.price_vs_ema200 != null ? `<span style="font-size:6px;color:${ls.price_vs_ema200>5?'#00ff88':ls.price_vs_ema200<-5?'#ef5350':'#888'}">200d:${ls.price_vs_ema200>=0?'+':''}${ls.price_vs_ema200.toFixed(1)}%</span>` : '';
+          const lsMfi  = ls.mfi != null ? `<span style="font-size:6.5px;color:${ls.mfi<25?'#69f0ae':ls.mfi>80?'#ef5350':'#555'}" title="Money Flow Index">MFI${Math.round(ls.mfi)}</span>` : '';
+          const lsST   = ls.supertrend_stop > 0 && p.price > 0 ? `<span style="font-size:6px;font-weight:800;color:${ls.supertrend_bull===false?'#ef5350':p.price<ls.supertrend_stop?'#ef5350':'#00e5ff'}" title="Supertrend stop">ST$${ls.supertrend_stop.toFixed(2)}</span>` : '';
           html += `<div style="background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden">
             <div style="position:absolute;top:0;left:0;height:100%;width:${barW}%;background:${barCol};pointer-events:none"></div>
             <div style="position:relative;display:flex;align-items:center;gap:.6rem">
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsMtf}${lsE200}</div>` : ''}
+                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsMfi}${lsMtf}${lsE200}</div>` : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
@@ -54859,6 +54861,8 @@ window.renderSectorRotation = renderSectorRotation;
             s.rvol_surge       ? `<span style="background:rgba(255,100,0,.25);color:#ffab40;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px">RVOL${s.rvol?s.rvol.toFixed(1):''}×</span>` : (s.rvol >= 1.8 ? `<span style="background:rgba(255,150,0,.15);color:#ffcc80;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">VOL${s.rvol?s.rvol.toFixed(1):''}×</span>` : ''),
             s.mfi_bull_div     ? `<span style="background:rgba(0,200,255,.2);color:#80deea;font-size:6.5px;font-weight:900;padding:1px 4px;border-radius:3px">MFI↑${s.mfi?s.mfi.toFixed(0):''}</span>` : (s.mfi_oversold ? `<span style="background:rgba(0,255,180,.18);color:#a7ffeb;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">MFI-OS${s.mfi?s.mfi.toFixed(0):''}</span>` : ''),
             s.supertrend_bull  ? '<span style="background:rgba(0,255,100,.18);color:#b9f6ca;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px">ST▲</span>' : '',
+            s.force_index_div  ? '<span style="background:rgba(120,80,255,.25);color:#ce93d8;font-size:6.5px;font-weight:900;padding:1px 4px;border-radius:3px">FI-DIV</span>' : (s.force_index_rising ? '<span style="background:rgba(100,60,200,.15);color:#b39ddb;font-size:6.5px;font-weight:700;padding:1px 4px;border-radius:3px">FI↑</span>' : ''),
+            (s.true_alpha > 8) ? `<span style="background:rgba(255,215,0,.18);color:#ffd600;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">α${s.true_alpha.toFixed(0)}%</span>` : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
