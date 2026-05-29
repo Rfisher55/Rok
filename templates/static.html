@@ -1089,6 +1089,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               {% endif %}
             </div>
             {% endif %}
+            {% if s.analyst_count and s.analyst_count > 0 %}
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:5px;padding:.3rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border:1px solid rgba(0,255,136,.1)">
+              <span style="font-size:10px">👥</span>
+              <span style="font-size:10.5px;color:var(--wh2)"><strong style="color:var(--g)">{{ s.analyst_count }} Wall St analyst{{ 's' if s.analyst_count != 1 }}</strong> cover this stock{% if s.recommendation %} — consensus: <strong style="color:var(--g);text-transform:uppercase">{{ s.recommendation.replace('-', ' ') }}</strong>{% endif %}</span>
+            </div>
+            {% endif %}
+            {% if s.earnings_date %}
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:5px;padding:.3rem .55rem;background:rgba(255,215,0,.05);border-radius:7px;border:1px solid rgba(255,215,0,.18)">
+              <span style="font-size:10px">📅</span>
+              <span style="font-size:10.5px;color:var(--au)"><strong>Earnings: {{ s.earnings_date }}</strong> — stocks often move ±10% on earnings day. Consider sizing down before then.</span>
+            </div>
+            {% endif %}
             {% if s.current_price or s.price_target %}
             <div class="prow">
               {% if s.current_price %}<span class="p-cur" data-ticker="{{ s.ticker }}" data-price="{{ s.current_price }}">${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
@@ -1199,7 +1211,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
                 {% if s.sector %}<div style="font-size:8px;color:var(--wh3);margin-top:2px">{{ s.sector.split('/')[0].strip() }}</div>{% endif %}
               </div>
               <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
-                <div class="rok-score">
+                <div class="rok-score" title="ROK Danger Score: {{ score }}/100. 80+ = strong sell signal, high conviction. 60+ = caution, consider reducing. Below 50 = mild warning." style="cursor:help">
                   <svg viewBox="0 0 36 36">
                     <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
                     <circle class="rok-score-fill" cx="18" cy="18" r="15.9"

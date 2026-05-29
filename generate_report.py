@@ -266,6 +266,14 @@ def run():
                 sig["pct_from_52w_high"] = ta.get("pct_from_52w_high")
                 sig["week_52_high"] = ta.get("week_52_high")
                 sig["macd_signal"] = ta.get("macd_signal_label")
+            # Analyst consensus data
+            if not sig.get("analyst_count") and sd.get("analyst_count"):
+                sig["analyst_count"] = sd["analyst_count"]
+            if not sig.get("recommendation") and sd.get("recommendation"):
+                sig["recommendation"] = sd["recommendation"]
+            # Earnings date warning
+            if not sig.get("earnings_date") and sd.get("earnings_date"):
+                sig["earnings_date"] = sd["earnings_date"]
             # Build data_signals from available sources
             if not sig.get("data_signals"):
                 dsigs = []

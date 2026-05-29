@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
-<title>ROK — BULLISH · May 29, 2026 01:54 AM UTC</title>
+<title>ROK — BULLISH · May 29, 2026 01:57 AM UTC</title>
 <meta name="description" content="ROK AI Stock Intelligence — live buy/sell signals, screener, sector heat map."/>
 <meta name="theme-color" content="#020408"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -848,12 +848,35 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 <!-- TICKER TAPE -->
 
 
+<div class="ticker-tape">
+  <div class="ticker-scroll">
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('NVDA')">
+      <span class="tick-lbl">BUY</span>
+      <span>$NVDA</span>
+      <span>$950.50</span>
+      <span class="tick-chg up">+15.7%↑</span>
+    </div>
+    
+    
+    
+    <div class="tick-item tick-buy" onclick="openModal('NVDA')">
+      <span class="tick-lbl">BUY</span>
+      <span>$NVDA</span>
+      <span>$950.50</span>
+      <span class="tick-chg up">+15.7%↑</span>
+    </div>
+    
+  </div>
+</div>
+
 
 <!-- ROK MOOD BAR -->
 
 <div class="rok-bar">
   <span class="rok-lbl">ROK</span>
-  <span class="rok-msg">Markets are leaning bullish · ROK is watching carefully.</span>
+  <span class="rok-msg">🟢 Markets are looking strong — ROK found 1 stock worth buying right now · AI megatrend driving exceptional buy signals.</span>
 </div>
 
 
@@ -862,12 +885,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <div class="tab-nav-in">
     <button class="tab-btn active" data-tab="signals">
       SIGNALS
-      <span class="badge">0</span>
+      <span class="badge">1</span>
     </button>
     <button class="tab-btn" data-tab="market">MARKET</button>
     <button class="tab-btn" data-tab="screener">
       SCREENER
-      <span class="badge">0</span>
+      <span class="badge">1</span>
     </button>
     <button class="tab-btn" data-tab="intel">🕵️ INSIDER INTEL</button>
     <button class="tab-btn" data-tab="portfolio">MY STOCKS<span class="badge" id="portfolio-badge"></span><span id="portfolio-alert-dot" style="display:none;position:absolute;top:8px;right:6px;width:8px;height:8px;background:var(--r);border-radius:50%;box-shadow:0 0 6px rgba(255,34,85,.8)"></span></button>
@@ -926,7 +949,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <span style="font-size:1.3rem">⚡</span>
         <div>
           <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Buy Signals</div>
-          <div style="font-size:14px;font-weight:900;color:var(--g)">0</div>
+          <div style="font-size:14px;font-weight:900;color:var(--g)">1</div>
         </div>
       </div>
       
@@ -941,7 +964,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       
       <div style="flex:1;min-width:160px;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(255,215,0,.04));border:1px solid rgba(0,204,255,.15);border-radius:10px;padding:.6rem .85rem;position:relative;overflow:hidden">
         <div style="font-size:7.5px;font-weight:800;letter-spacing:.18em;color:var(--b);text-transform:uppercase;margin-bottom:.25rem">🧠 ROK'S TAKE</div>
-        <div style="font-size:11.5px;color:var(--wh2);line-height:1.5;font-style:italic">Markets showing bullish signals across AI and tech sectors.</div>
+        <div style="font-size:11.5px;color:var(--wh2);line-height:1.5;font-style:italic">AI and tech continue to dominate. NVDA near all-time highs.</div>
       </div>
       
     </div>
@@ -950,15 +973,41 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div style="background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,0,0,.15));border:1px solid rgba(0,255,136,.2);border-radius:12px;padding:.8rem 1rem;margin-bottom:.75rem">
       <div style="font-size:8px;font-weight:800;letter-spacing:.18em;color:var(--g);text-transform:uppercase;margin-bottom:.3rem">🎯 WHAT SHOULD YOU DO RIGHT NOW?</div>
       <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.35rem">
-        🟢 Market is bullish but ROK needs more conviction before recommending buys
+        📈 Cautiously optimistic — 1 buy signal available
       </div>
       <div style="font-size:11.5px;color:var(--wh2);line-height:1.65">
         
-          The market looks healthy but ROK doesn't see clear entry points yet. <strong>Wait for stronger signals</strong> — check back in 15 minutes or watch the stocks in the 👀 WATCH LIST.
+          Scroll down to see ROK's 1 buy recommendation. If you're new, start with the top pick and invest only what you can afford to lose. <strong>Always set a stop loss.</strong>
         
       </div>
     </div>
 
+    
+    
+    
+    <div class="top-pick-banner">
+      <span class="tp-lbl">⭐ ROK'S TOP PICK TODAY</span>
+      <span class="tp-ticker">$NVDA</span>
+      <span class="tp-why">AI demand driving record GPU shipments — 16% upside to target</span>
+      <button onclick="openModal('NVDA')">SEE WHY →</button>
+    </div>
+    
+    
+    <details style="margin-bottom:.65rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.14);border-radius:10px;overflow:hidden">
+      <summary style="padding:.55rem .85rem;cursor:pointer;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--au);list-style:none;display:flex;align-items:center;justify-content:space-between;-webkit-tap-highlight-color:transparent">
+        <span>⚠️ RISKS TO KNOW ABOUT RIGHT NOW</span><span style="font-size:9px;color:var(--wh3)">tap to expand</span>
+      </summary>
+      <div style="padding:.3rem .85rem .7rem">
+        
+        <div style="display:flex;gap:.5rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04);border-bottom:none">
+          <span style="font-size:.9rem;flex-shrink:0">⚠️</span>
+          <div style="font-size:11px;color:var(--wh2);line-height:1.55">Fed could raise rates if inflation re-accelerates</div>
+        </div>
+        
+        <div style="margin-top:.5rem;font-size:10px;color:var(--wh3);padding:.35rem .5rem;background:rgba(255,215,0,.05);border-radius:6px">💡 <strong>What to do:</strong> These risks don't mean "don't invest" — they mean keep your stop-loss orders in place and don't bet more than you can afford to lose.</div>
+      </div>
+    </details>
+    
     
 
     <!-- Stats strip -->
@@ -1002,16 +1051,156 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <!-- BUY column -->
       <div>
         <div class="sig-col-hdr">
-          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-buy">🟢 BUY THESE</h2><span class="s-sub">0 stocks ROK likes right now</span></div>
+          <div class="s-hdr" style="margin-bottom:0"><h2 class="s-ttl ttl-buy">🟢 BUY THESE</h2><span class="s-sub">1 stock ROK likes right now</span></div>
         </div>
         <div class="cgrid">
           
-          
-          <div style="padding:.85rem .75rem;text-align:center">
-            <div style="font-size:1.8rem;margin-bottom:.4rem">🔍</div>
-            <div style="font-size:13px;font-weight:700;color:var(--wh2);margin-bottom:.3rem">No strong buy signals right now</div>
-            <div style="font-size:11px;color:var(--wh3);line-height:1.55">ROK's AI didn't find enough conviction to recommend any buys this run. This is actually protective — it means the market isn't presenting obvious opportunities.<br><br>💡 <strong style="color:var(--au)">What to do:</strong> Check the 👀 WATCH LIST for stocks that are close. Check back in 15 minutes.</div>
+          <div class="card buy" onclick="openModal('NVDA')" style="cursor:pointer">
+            
+            
+            
+            
+            <div class="c-row1">
+              <div class="c-left">
+                <div class="c-ticker">$NVDA</div>
+                <div class="c-co">NVIDIA Corporation</div>
+                <div style="font-size:8px;color:var(--wh3);margin-top:2px;letter-spacing:.05em">Technology</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0">
+                <div class="rok-score" title="ROK Confidence Score: 80/100. 80+ = very strong signal. 60+ = good signal. Below 60 = proceed with caution." style="cursor:help">
+                  <svg viewBox="0 0 36 36">
+                    <circle class="rok-score-track" cx="18" cy="18" r="15.9"/>
+                    <circle class="rok-score-fill" cx="18" cy="18" r="15.9"
+                      stroke-dasharray="80.0 100" stroke-dashoffset="0"/>
+                    <text class="rok-score-num" x="18" y="16">80</text>
+                    <text class="rok-score-lbl" x="18" y="23">SCORE</text>
+                  </svg>
+                </div>
+                <div class="c-right">
+                  <span class="str-b">STRONG BUY</span>
+                  <span class="risk-b Medium">Medium Risk</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="dsigs" style="flex-wrap:wrap;gap:4px;margin-bottom:6px">
+              
+              <span class="dsig-plain congressional">
+                🏛️ Senator Bought
+              </span>
+              
+              <span class="dsig-plain options">
+                🐋 Hedge Fund Bet
+              </span>
+              
+              <span class="dsig-plain reddit">
+                📱 Reddit Buzz
+              </span>
+              
+            </div>
+            
+            
+            <div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:3px">
+              <span class="vol-badge">🚀 2.4x VOL</span>
+              <span class="rsi-badge neutral">RSI 65</span>
+              
+              
+              <span style="font-size:8.5px;padding:2px 6px;border-radius:10px;background:rgba(0,255,136,.08);color:var(--g);border:1px solid rgba(0,255,136,.2)">-5% from 52W high</span>
+              
+            </div>
+            
+            
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:5px;padding:.3rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border:1px solid rgba(0,255,136,.1)">
+              <span style="font-size:10px">👥</span>
+              <span style="font-size:10.5px;color:var(--wh2)"><strong style="color:var(--g)">42 Wall St analysts</strong> cover this stock — consensus: <strong style="color:var(--g);text-transform:uppercase">strong buy</strong></span>
+            </div>
+            
+            
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:5px;padding:.3rem .55rem;background:rgba(255,215,0,.05);border-radius:7px;border:1px solid rgba(255,215,0,.18)">
+              <span style="font-size:10px">📅</span>
+              <span style="font-size:10.5px;color:var(--au)"><strong>Earnings: Jun 05</strong> — stocks often move ±10% on earnings day. Consider sizing down before then.</span>
+            </div>
+            
+            
+            <div class="prow">
+              <span class="p-cur" data-ticker="NVDA" data-price="950.5">$950.50</span>
+              
+              
+              <span class="p-tgt"><span class="p-arr">→</span>$1100.00</span>
+              <span class="upside-badge">+16% upside</span>
+              
+              <span class="p-stop">↓$874.46</span>
+              <span class="t-hz">3-6 months</span>
+            </div>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <div class="trade-ruler">
+              <div class="trade-ruler-bar">
+                <div class="trade-ruler-safe" style="width:33.71464041855102%"></div>
+                <div class="trade-ruler-upside" style="left:33.71464041855102%;right:0"></div>
+                <div class="trade-ruler-pin" data-ruler-ticker="NVDA" style="left:33.71464041855102%"></div>
+              </div>
+              <div class="trade-ruler-lbl-row">
+                <span class="trl-stop">⛔ $874</span>
+                <span class="trl-now" style="left:33.71464041855102%">NOW</span>
+                <span class="trl-tgt">🎯 $1100</span>
+              </div>
+            </div>
+            <div class="rr-row"><span class="rr-label">Risk/Reward:</span><span class="rr-risk">-$76</span><span class="rr-sep">→</span><span class="rr-reward">+$150</span><span class="rr-val">(1 : 2.0)</span></div>
+            
+            
+            <div class="spark"><canvas id="spark-b1" height="40"></canvas></div>
+            <div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>AI demand driving record GPU shipments</div>
+            <ul class="reasons"><li>Data center revenue +200% YoY</li><li>Congressional insiders buying</li><li>Unusual call options activity</li></ul>
+            <div class="rok-take" style="font-size:12px">This is the AI infrastructure play of the decade.</div>
+            <!-- WHAT THIS MEANS BOX -->
+            <div class="what-it-means">
+              <div class="wim-lbl">💰 WHAT THIS MEANS FOR YOU</div>
+              
+              
+              
+              
+              
+              
+              
+              
+              <div class="wim-txt">If you invest <strong>$1,000</strong> and ROK is right:<br>You could make <strong class="up">+$157 (+15.7%)</strong> in 3-6 months</div>
+              <div style="font-size:10px;color:rgba(0,255,136,.7);margin-top:3px">That's roughly <strong>52% annualized</strong> — the S&amp;P 500 average is ~10%/year</div>
+              
+              
+              
+              <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: $874.46 (-8%)</span> — sell here to protect yourself if it goes wrong</div>
+              
+            </div>
+            
+            <details style="margin-top:.45rem;background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:8px;overflow:hidden" onclick="event.stopPropagation()">
+              <summary style="padding:.45rem .65rem;cursor:pointer;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--b);list-style:none;display:flex;align-items:center;gap:.4rem;-webkit-tap-highlight-color:transparent">
+                <span>📋</span><span>STEP-BY-STEP: HOW TO BUY THIS</span>
+              </summary>
+              <div style="padding:.3rem .65rem .6rem;font-size:11px;color:var(--wh2);line-height:1.75">
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">1.</span><span>Open your brokerage app — <strong>Robinhood, Fidelity, Schwab, or Webull</strong> all work</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">2.</span><span>Search for <strong style="color:var(--au)">$NVDA</strong> (NVIDIA Corporation)</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--b);font-weight:800;min-width:16px">3.</span><span>Tap <strong>Buy</strong> → choose <strong>Market Order</strong> → enter how many shares or a dollar amount</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.25rem"><span style="color:var(--r);font-weight:800;min-width:16px">4.</span><span>Set a <strong style="color:var(--r)">price alert at $874.46</strong> — if it drops here, consider selling to limit your loss</span></div>
+                <div style="display:flex;gap:.5rem;align-items:flex-start"><span style="color:var(--g);font-weight:800;min-width:16px">5.</span><span>Check back when price reaches <strong style="color:var(--g)">$1100.00</strong> — that's ROK's target to take profits</span></div>
+                <div style="margin-top:.55rem;padding:.35rem .55rem;background:rgba(255,215,0,.06);border-radius:6px;border:1px solid rgba(255,215,0,.12);font-size:10px;color:var(--wh3)">💡 After buying, tap <strong style="color:var(--g)">💰 BOUGHT IT</strong> below so ROK can track it for you and tell you when to sell.</div>
+              </div>
+            </details>
+            <div style="display:flex;gap:.4rem;margin-top:.5rem">
+              <button class="bought-btn buy-action" id="btn-NVDA" style="flex:1" onclick="event.stopPropagation();boughtIt('NVDA',950.5)">💰 BOUGHT IT</button>
+              <button onclick="event.stopPropagation();shareSignal('NVDA','AI demand driving record GPU shipments',950.5,1100.0)" style="padding:.6rem .8rem;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Share this trade idea">📤</button>
+            </div>
           </div>
+          
           
         </div>
       </div>
@@ -1056,7 +1245,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <div class="tab-pane" id="tab-market">
     <div class="sum-card">
       <div class="clbl">📡 TODAY'S MARKET BRIEFING</div>
-      <p class="sum-txt">Markets showing bullish signals across AI and tech sectors.</p>
+      <p class="sum-txt">AI and tech continue to dominate. NVDA near all-time highs.</p>
     </div>
     <!-- Market indices quick ref -->
     
@@ -1117,13 +1306,19 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="mkt-card">
         <div class="clbl">🐋 ARE BIG FUNDS BULLISH OR BEARISH?</div>
         
-        <div class="metric-val">0.82</div>
+        <div class="metric-val">0.78</div>
         <div class="metric-sub" style="margin-bottom:.35rem">Put/Call ratio</div>
-        
+        <span class="pcr-sig GREED">🐋 Funds betting UP</span>
         <div style="font-size:10px;color:var(--wh3);margin-top:.45rem;line-height:1.5">
           Below 0.8 = hedge funds buying calls (bullish). Above 1.2 = buying puts (bearish).
         </div>
         
+        
+        <div style="margin-top:.75rem">
+          <div class="clbl" style="margin-bottom:.3rem">📊 HOW MANY STOCKS ARE RISING?</div>
+          <div class="breadth-bar"><div class="breadth-fill" style="width:65%"></div></div>
+          <div class="metric-sub">65% of stocks are going up today</div>
+        </div>
         
       </div>
     </div>
@@ -1131,13 +1326,76 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Sector heat map -->
     
     
+    <div class="s-hdr"><h2 class="s-ttl">🗺️ WHICH INDUSTRIES ARE WINNING TODAY?</h2><span class="s-sub">Green = going up · Red = going down</span></div>
+    <div class="sheat-grid" style="margin-bottom:1.1rem">
+      
+      
+      <div class="sheat-card">
+        <div class="sheat-name">Technology</div>
+        <div class="sheat-bar-track"><div class="sheat-fill up" style="width:36.0%"></div></div>
+        <div class="sheat-pct up">+1.20%</div>
+      </div>
+      
+      
+      <div class="sheat-card">
+        <div class="sheat-name">Energy</div>
+        <div class="sheat-bar-track"><div class="sheat-fill up" style="width:24.0%"></div></div>
+        <div class="sheat-pct up">+0.80%</div>
+      </div>
+      
+      
+      <div class="sheat-card">
+        <div class="sheat-name">Healthcare</div>
+        <div class="sheat-bar-track"><div class="sheat-fill down" style="width:9.0%"></div></div>
+        <div class="sheat-pct down">-0.30%</div>
+      </div>
+      
+    </div>
+    
 
     <!-- Sector rotation -->
     
     
+    <div class="s-hdr"><h2 class="s-ttl">💸 WHERE IS MONEY FLOWING?</h2></div>
+    <div class="sr-row">
+      <div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">HOTTEST</div><div class="sr-txt">Technology</div></div></div>
+      <div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST</div><div class="sr-txt">Utilities</div></div></div>
+    </div>
+    <div class="rot-txt">Money flowing from defensive sectors into growth</div>
+    
 
     <!-- Top Movers from stock universe -->
     
+    
+    
+    
+    <div class="s-hdr"><h2 class="s-ttl">🚀 BIGGEST MOVERS TODAY</h2><span class="s-sub">Stocks ROK is watching that moved the most</span></div>
+    <div class="tape-row" style="margin-bottom:1.1rem">
+      <div class="tape-card">
+        <div class="clbl" style="color:var(--g)">📈 BIGGEST GAINERS</div>
+        <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">
+          
+          
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(0,255,136,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(0,255,136,.1)" onclick="switchToScreener('NVDA')">
+            <div>
+              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--g);letter-spacing:.05em">$NVDA</span>
+              <span style="font-size:9px;color:var(--wh3);margin-left:.35rem">NVIDIA</span>
+            </div>
+            <span style="font-size:13px;font-weight:800;color:var(--g)">+2.3%</span>
+          </div>
+          
+          
+        </div>
+      </div>
+      <div class="tape-card">
+        <div class="clbl" style="color:var(--r)">📉 BIGGEST LOSERS</div>
+        <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem">
+          
+          
+          
+        </div>
+      </div>
+    </div>
     
 
     <!-- Trending tape -->
@@ -1156,11 +1414,97 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     <!-- ROK Run History -->
     
+    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl">📈 ROK'S RECENT TRACK RECORD</h2><span class="s-sub">Last 2 runs · each bar = one analysis</span></div>
+    <div style="background:var(--blk3);border:var(--bdr);border-radius:var(--r12);padding:.85rem 1rem;margin-bottom:1rem">
+      <div class="run-timeline">
+        
+        
+        
+        
+        
+        <div class="run-bar bullish" style="height:100.0%">
+          <div class="run-bar-tooltip">2026-05-29<br>BULLISH · 1 buy</div>
+        </div>
+        
+        
+        
+        
+        <div class="run-bar bullish" style="height:100.0%">
+          <div class="run-bar-tooltip">2026-05-28<br>BULLISH · 1 buy</div>
+        </div>
+        
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.45rem">
+        <span style="font-size:8.5px;color:var(--wh3)">2026-05-29</span>
+        <div style="display:flex;gap:.65rem;align-items:center">
+          <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--g)"><span style="width:8px;height:8px;background:rgba(0,255,136,.5);border-radius:2px;display:inline-block"></span>BULLISH</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--r)"><span style="width:8px;height:8px;background:rgba(255,34,85,.5);border-radius:2px;display:inline-block"></span>BEARISH</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--au)"><span style="width:8px;height:8px;background:rgba(255,215,0,.4);border-radius:2px;display:inline-block"></span>NEUTRAL</span>
+        </div>
+        <span style="font-size:8.5px;color:var(--wh3)">latest →</span>
+      </div>
+      <div style="margin-top:.65rem;font-size:12px;color:var(--wh2);padding:.5rem .65rem;background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.25);border-radius:0 6px 6px 0">
+        ROK was bullish 5 out of the last 8 runs
+      </div>
+    </div>
+    
 
     <!-- Latest News Feed -->
     
+    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl">📰 LATEST MARKET NEWS</h2><span class="s-sub">1 articles analyzed · click to read</span></div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.1rem">
+      
+      
+      
+      
+      <a href="https://reuters.com" target="_blank" rel="noopener noreferrer" style="display:block;background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.55rem .85rem;text-decoration:none;transition:border-color .15s" onmouseover="this.style.borderColor='rgba(0,204,255,.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)'">
+        <div style="display:flex;align-items:flex-start;gap:.55rem">
+          <span style="flex-shrink:0;font-size:.8rem;margin-top:2px">🟢</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--wh);line-height:1.45;margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">NVIDIA Reports Record Revenue Driven by AI Chip Demand</div>
+            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+              <span style="font-size:9px;color:var(--wh4);letter-spacing:.05em">Reuters</span>
+              
+              <div style="display:flex;gap:3px;flex-wrap:wrap">
+                
+                <span onclick="event.preventDefault();switchToScreener('NVDA')" style="font-size:8.5px;padding:1px 5px;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.15);border-radius:6px;color:var(--b);cursor:pointer;font-family:var(--disp)">$NVDA</span>
+                
+                <span onclick="event.preventDefault();switchToScreener('AMD')" style="font-size:8.5px;padding:1px 5px;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.15);border-radius:6px;color:var(--b);cursor:pointer;font-family:var(--disp)">$AMD</span>
+                
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+    
 
     <!-- Reddit Buzz -->
+    
+    <div class="s-hdr"><h2 class="s-ttl">📱 WHAT REDDIT IS SAYING</h2><span class="s-sub">Real retail investor sentiment · r/wallstreetbets + more</span></div>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem">
+      
+      
+      
+      
+      
+      <div style="background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.55rem .85rem">
+        <div style="display:flex;align-items:flex-start;gap:.5rem">
+          <span style="flex-shrink:0;font-size:.8rem;margin-top:1px">🟢</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;color:var(--wh);line-height:1.4;margin-bottom:.25rem">NVDA is going to print next week - here is why</div>
+            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+              <span style="font-size:9px;color:var(--wh4)">r/wallstreetbets</span>
+              <span style="font-size:9px;color:var(--au)">▲ 1842</span>
+              
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
     
 
   </div><!-- /tab-market -->
@@ -1168,7 +1512,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <!-- ── SCREENER TAB ────────────────────────────────────── -->
   <div class="tab-pane" id="tab-screener">
     <div style="background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.1);border-radius:10px;padding:.55rem .85rem;margin-bottom:.85rem;font-size:11px;color:var(--wh2);line-height:1.55">
-      🔍 <strong style="color:var(--b)">STOCK SCREENER</strong> — Browse all 0 stocks ROK analyzed today.
+      🔍 <strong style="color:var(--b)">STOCK SCREENER</strong> — Browse all 1 stocks ROK analyzed today.
       Filter by <span style="color:var(--g)">BUY</span> / <span style="color:var(--r)">SELL</span> signal, sort by momentum, or search by name. Tap any card to see full details.
     </div>
     <div class="sc-controls">
@@ -1200,18 +1544,92 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <!-- Section 1: SENATORS & CONGRESS BOUGHT THESE -->
       
       
+      <div class="intel-section">
+        <div class="s-hdr">
+          <h2 class="s-ttl ttl-cong">🏛️ SENATORS &amp; CONGRESS BOUGHT THESE</h2>
+        </div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(153,85,255,.05);border-radius:6px;border-left:2px solid rgba(153,85,255,.3)">
+          By law, senators &amp; congress members must disclose stock purchases within 45 days. When they buy, it often means good news is coming.
+        </div>
+        <div class="mini-grid">
+          
+          <div class="mini-card">
+            <div class="mini-ticker cong-ticker">$NVDA</div>
+            <div class="mini-sub">3 congress members bought</div>
+            <div class="mini-txt">Pelosi, Tuberville +1 more</div>
+          </div>
+          
+        </div>
+      </div>
+      
 
       <!-- Section 1b: SEC INSIDER PURCHASES (CEO/CFO bought their own stock) -->
+      
+      <div class="intel-section">
+        <div class="s-hdr">
+          <h2 class="s-ttl ttl-insider">👔 EXECUTIVES BUYING THEIR OWN STOCK</h2>
+        </div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(255,136,0,.05);border-radius:6px;border-left:2px solid rgba(255,136,0,.3)">
+          When a CEO or CFO spends their own money buying their company's stock, it's a strong bullish signal — they believe the price is going higher.
+        </div>
+        <div class="mini-grid">
+          
+          <div class="mini-card" onclick="openModal('NVDA')" style="cursor:pointer">
+            <div class="mini-ticker" style="color:var(--or)">$NVDA</div>
+            <div style="font-size:8.5px;color:var(--wh3);margin-bottom:2px">NVIDIA</div>
+            <div class="mini-sub" style="color:var(--or)">
+              
+                $4,752,500 purchase
+              
+            </div>
+            <div class="mini-txt">Jensen Huang · CEO</div>
+            <div style="font-size:8px;color:var(--wh4);margin-top:2px">2026-05-20</div>
+          </div>
+          
+        </div>
+      </div>
       
 
       <!-- Section 2: THINGS THAT COULD HURT STOCKS (Macro Risks) -->
       
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl ttl-risk">⚠️ THINGS THAT COULD HURT STOCKS</h2></div>
+        <div class="list">
+          
+          <div class="list-item risk"><span class="list-n">01</span>Fed could raise rates if inflation re-accelerates</div>
+          
+        </div>
+      </div>
+      
 
       <!-- Section 3: WHAT'S TRENDING IN THE MARKET (Notable Trends) -->
+      
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl">📈 WHAT'S TRENDING IN THE MARKET</h2></div>
+        <div class="list">
+          
+          <div class="list-item trend"><span class="list-n">01</span>AI spending accelerating</div>
+          
+          <div class="list-item trend"><span class="list-n">02</span>Tech outperforming</div>
+          
+        </div>
+      </div>
       
 
       <!-- Section 4: WHAT SMART MONEY IS DOING (Sector Rotation) -->
       
+      
+      <div class="intel-section">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--or)">💰 WHAT SMART MONEY IS DOING</h2></div>
+        <div class="rot-txt" style="margin-bottom:.75rem">Money flowing from defensive sectors into growth</div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.6rem;padding:.4rem .65rem;background:rgba(255,136,0,.05);border-radius:5px;border-left:2px solid rgba(255,136,0,.25)">
+          Big hedge funds &amp; institutions move billions between sectors — tracking these flows shows where money is flowing next.
+        </div>
+        <div class="sr-row">
+          <div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">MONEY FLOWING IN</div><div class="sr-txt">Technology</div></div></div>
+          <div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">MONEY FLOWING OUT</div><div class="sr-txt">Utilities</div></div></div>
+        </div>
+      </div>
       
 
       <!-- Section 5: STOCKS THAT COULD EXPLODE UP (Short Squeeze) -->
@@ -1224,6 +1642,30 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       
 
       <!-- ROK Track Record -->
+      
+      
+      
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr">
+          <h2 class="s-ttl" style="color:var(--au)">ROK TRACK RECORD</h2>
+          <span class="s-sub">Previous picks · live P&amp;L · 1/1 up &gt;2%</span>
+        </div>
+        
+        <div style="font-size:12px;color:var(--wh2);margin-bottom:.75rem;padding:.45rem .75rem;background:rgba(255,215,0,.05);border-radius:6px;border-left:2px solid rgba(255,215,0,.3)">
+          📊 ROK was bullish 5 out of the last 8 runs
+        </div>
+        
+        <div class="track-grid">
+          
+          
+          <div class="track-card win">
+            <div class="track-t">NVDA</div>
+            <div class="track-pct">+5.6%</div>
+            <div class="track-p">$900 → $950</div>
+          </div>
+          
+        </div>
+      </div>
       
 
       <!-- ROK GLOSSARY -->
@@ -1344,7 +1786,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div class="ftr-txt">Reddit · News · StockTwits · SEC EDGAR · Yahoo Finance · CNN Fear/Greed · CBOE Put/Call · Congressional STOCK Act · Technical momentum signals. Updated every 15 minutes via GitHub Actions.</div>
     <div class="disclaimer">Not financial advice. AI-generated signals for educational purposes only. Do your own due diligence.</div>
   </div>
-  <span class="ftr-time">May 29, 2026 01:54 AM UTC</span>
+  <span class="ftr-time">May 29, 2026 01:57 AM UTC</span>
 </footer>
 
 <!-- PRICE UPDATED FLASH -->
@@ -1451,7 +1893,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   </div>
 </div>
 
-<script id="page-data" type="application/json">{"analysis_date": "May 29, 2026 01:54 AM UTC", "generated_at": "2026-05-29 01:54 UTC", "market_regime": "BULL", "week_summary": "Markets showing bullish signals across AI and tech sectors.", "market_sentiment": "BULLISH", "sentiment_score": 7, "buy_signals": [], "sell_signals": [], "watch_list": [], "notable_trends": [], "macro_risks": [], "sector_heat": {}, "sector_rotation": "", "rok_message": "ROK is watching carefully.", "short_squeeze_alerts": [], "earnings_plays": [], "congressional_plays": [], "technical_breakouts": [], "ticker_mentions": [["NVDA", 25], ["AAPL", 18], ["TSLA", 15]], "stocktwits_trending": [], "fear_greed": {"value": 58, "label": "Greed", "change_7d": 3, "score": 58, "rating": "Greed"}, "market_indices": {"S&P 500": {"price": 5300, "change_pct": 0.5, "change": 26.5}, "NASDAQ": {"price": 18900, "change_pct": 0.8, "change": 151.2}, "VIX": {"price": 14.2, "change_pct": -2.1, "change": -0.3}}, "aggregate_sentiment": {"bullish_pct": 62, "bearish_pct": 22, "neutral_pct": 16, "label": "BULLISH", "score": 62}, "market_breadth": {}, "put_call_ratio": {"total": 0.82}, "congressional_buys": [], "source_stats": {"news": 45, "reddit": 30, "technical": 20, "congressional": 3, "options": 8, "stocks": 67, "sec": 5, "earnings_upcoming": 10, "unusual_options": 8, "congress_trades": 3, "insider_buys": 4}, "recent_runs": [], "history_summary": "ROK was bullish 5 out of the last 8 runs", "market_mood": "Markets are leaning bullish", "track_record": [], "generated_timestamp": "2026-05-29T01:54:48.214497", "stock_universe": [], "buy_count": 0, "sell_count": 0, "insider_buys": [], "run_history": [], "news_items": [], "reddit_posts": [], "trending_tickers": [{"ticker": "NVDA", "count": 25}], "portfolio": [], "sparklines": {}, "fear_greed_history": [], "market_pulse": {"vix": 14.2, "put_call_ratio": 0.82, "sp500_change": 0.5, "nasdaq_change": 0.8}}</script>
+<script id="page-data" type="application/json">{"analysis_date": "May 29, 2026 01:57 AM UTC", "generated_at": "2026-05-29 01:57 UTC", "market_regime": "BULL", "week_summary": "AI and tech continue to dominate. NVDA near all-time highs.", "market_sentiment": "BULLISH", "sentiment_score": 8, "buy_signals": [{"ticker": "NVDA", "company": "NVIDIA Corporation", "sector": "Technology", "signal_strength": 8, "current_price": 950.5, "price_target": 1100.0, "stop_loss": 874.46, "time_horizon": "3-6 months", "catalyst": "AI demand driving record GPU shipments", "reasons": ["Data center revenue +200% YoY", "Congressional insiders buying", "Unusual call options activity"], "rok_take": "This is the AI infrastructure play of the decade.", "risk_level": "Medium", "data_signals": ["congressional", "options", "reddit"], "vol_ratio": 2.4, "rsi": 65, "pct_from_52w_high": -5.2, "analyst_count": 42, "recommendation": "strong-buy", "earnings_date": "Jun 05", "price_history": [800, 820, 850, 870, 900, 920, 940, 950]}], "sell_signals": [], "watch_list": [], "notable_trends": ["AI spending accelerating", "Tech outperforming"], "macro_risks": ["Fed could raise rates if inflation re-accelerates"], "sector_heat": {"hottest": "Technology", "coldest": "Utilities"}, "sector_rotation": "Money flowing from defensive sectors into growth", "rok_message": "AI megatrend driving exceptional buy signals.", "short_squeeze_alerts": [], "earnings_plays": [], "congressional_plays": [], "technical_breakouts": [], "ticker_mentions": [["NVDA", 25], ["AAPL", 18], ["TSLA", 15]], "stocktwits_trending": [], "fear_greed": {"value": 58, "label": "Greed", "change_7d": 3, "score": 58, "rating": "Greed"}, "market_indices": {"S&P 500": {"price": 5300, "change_pct": 0.5, "change": 26.5}, "NASDAQ": {"price": 18900, "change_pct": 0.8, "change": 151.2}, "VIX": {"price": 14.2, "change_pct": -2.1, "change": -0.3}}, "aggregate_sentiment": {"bullish_pct": 62, "bearish_pct": 22, "neutral_pct": 16, "label": "BULLISH", "score": 62}, "market_breadth": {"breadth_pct": 65, "sector_performance": {"Technology": 1.2, "Healthcare": -0.3, "Energy": 0.8}}, "put_call_ratio": {"total": 0.78, "signal": "GREED"}, "congressional_buys": [{"ticker": "NVDA", "buy_count": 3, "members_preview": "Pelosi, Tuberville +1 more", "latest_date": "2026-05-28"}], "source_stats": {"news": 45, "reddit": 30, "technical": 20, "congressional": 3, "options": 8, "stocks": 67, "sec": 5, "earnings_upcoming": 10, "unusual_options": 8, "congress_trades": 3, "insider_buys": 4}, "recent_runs": [{"date": "2026-05-29", "timestamp": "2026-05-29T10:00:00", "sentiment": "BULLISH", "buy_signals": [{"ticker": "NVDA"}], "sell_signals": []}, {"date": "2026-05-28", "timestamp": "2026-05-28T10:00:00", "sentiment": "BULLISH", "buy_signals": [{"ticker": "NVDA"}], "sell_signals": []}], "history_summary": "ROK was bullish 5 out of the last 8 runs", "market_mood": "\ud83d\udfe2 Markets are looking strong \u2014 ROK found 1 stock worth buying right now", "track_record": [{"ticker": "NVDA", "entry_price": 900, "current_price": 950, "pct_change": 5.6, "target": 1100, "date": "2026-05-28"}], "generated_timestamp": "2026-05-29T01:57:29.230130", "stock_universe": [{"ticker": "NVDA", "company_name": "NVIDIA", "price": 950.5, "change_pct": 2.3, "rok_signal": "buy", "signal_strength": 8, "market_cap": 2300000000000.0, "pe_ratio": 60, "rsi": 65, "vol_ratio": 2.4, "upside_to_target": 15.7, "sector": "Technology", "price_history": [800, 820, 850, 870, 900, 920, 940, 950]}], "buy_count": 1, "sell_count": 0, "insider_buys": [{"ticker": "NVDA", "company": "NVIDIA", "insider_name": "Jensen Huang", "title": "CEO", "shares": 5000, "value_usd": 4752500, "date": "2026-05-20", "source": "openinsider"}], "run_history": [], "news_items": [{"title": "NVIDIA Reports Record Revenue Driven by AI Chip Demand", "source": "Reuters", "url": "https://reuters.com", "sentiment": 0.8, "tickers": ["NVDA", "AMD"]}], "reddit_posts": [{"title": "NVDA is going to print next week - here is why", "source": "reddit/wallstreetbets", "score": 1842, "sentiment_score": 0.7}], "trending_tickers": [{"ticker": "NVDA", "count": 25}], "portfolio": [], "sparklines": {}, "fear_greed_history": [], "market_pulse": {"vix": 14.2, "put_call_ratio": 0.78, "sp500_change": 0.5, "nasdaq_change": 0.8}}</script>
 <script>
 (function () {
   'use strict';
