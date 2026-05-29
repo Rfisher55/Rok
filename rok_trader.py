@@ -375,13 +375,15 @@ def _ttm_squeeze(closes, highs, lows, period=20):
 def market_regime():
     """
     Returns dict with:
-      regime: 'bull' | 'neutral' | 'bear'
-      vix:    current VIX level
+      regime:    'bull' | 'neutral' | 'bear'
+      vix:       current VIX level
       spy_trend: % above/below SPY 20-day EMA
-      score:  -2 (extreme bear) to +2 (strong bull)
+      above_200: True if SPY is above its 200-day EMA
+      score:     -3 (extreme bear) to +3 (strong bull)
     """
     try:
-        spy = yf.download("SPY ^VIX", period="30d", interval="1d",
+        # Fetch 250 days so we can compute the 200-day EMA
+        spy = yf.download("SPY ^VIX", period="250d", interval="1d",
                           auto_adjust=True, progress=False)
         spy_closes = list(spy["Close"]["SPY"].dropna())
         vix_closes = list(spy["Close"]["^VIX"].dropna())
@@ -390,37 +392,57 @@ def market_regime():
 
         score = 0
         spy_trend = 0.0
+        above_200 = True
 
         if len(spy_closes) >= 20:
             ema20 = _ema(spy_closes, 20)
             spy_current = spy_closes[-1]
             if ema20:
                 spy_trend = round((spy_current - ema20) / ema20 * 100, 2)
-                if spy_trend > 1.5:   score += 2
+                if spy_trend > 2.0:   score += 2
                 elif spy_trend > 0.5: score += 1
-                elif spy_trend < -1.5: score -= 2
+                elif spy_trend < -2.0: score -= 2
                 elif spy_trend < -0.5: score -= 1
 
-            # 5-day momentum
+            # 5-day and 10-day momentum
             if len(spy_closes) >= 5:
                 mom5 = (spy_closes[-1] - spy_closes[-5]) / spy_closes[-5] * 100
-                if mom5 > 1.5:   score += 1
-                elif mom5 < -1.5: score -= 1
+                if mom5 > 2.0:   score += 1
+                elif mom5 < -2.0: score -= 1
+            if len(spy_closes) >= 10:
+                mom10 = (spy_closes[-1] - spy_closes[-10]) / spy_closes[-10] * 100
+                if mom10 > 3.0:  score += 1
+                elif mom10 < -3.0: score -= 1
 
-        if vix > VIX_EXTREME_THRESH:  score -= 3
-        elif vix > VIX_HIGH_THRESH:   score -= 1
-        elif vix < 16:                score += 1
+            # 200-day EMA — the gold standard bull/bear dividing line
+            if len(spy_closes) >= 200:
+                ema200 = _ema(spy_closes, 200)
+                if ema200:
+                    above_200 = spy_current >= ema200
+                    pos200 = (spy_current - ema200) / ema200 * 100
+                    if pos200 > 5:    score += 1   # well above 200d = healthy bull
+                    elif pos200 < -5: score -= 1   # below 200d = bear territory
+
+        if vix > VIX_EXTREME_THRESH:  score -= 3   # extreme panic
+        elif vix > VIX_HIGH_THRESH:   score -= 2
+        elif vix > 22:                score -= 1
+        elif vix < 16:                score += 1   # complacent = bull
 
         if score >= 2:    regime = "bull"
         elif score <= -2: regime = "bear"
         else:             regime = "neutral"
 
-        logger.info(f"Market regime: {regime} | SPY trend: {spy_trend:+.1f}% | VIX: {vix:.1f} | score: {score}")
-        return {"regime": regime, "vix": vix, "spy_trend": spy_trend, "score": score}
+        logger.info(
+            f"Market regime: {regime} | SPY trend: {spy_trend:+.1f}% | "
+            f"VIX: {vix:.1f} | Above 200d: {above_200} | score: {score}"
+        )
+        return {"regime": regime, "vix": vix, "spy_trend": spy_trend,
+                "score": score, "above_200": above_200}
 
     except Exception as e:
         logger.warning(f"Regime check failed: {e}")
-        return {"regime": "neutral", "vix": 20.0, "spy_trend": 0.0, "score": 0}
+        return {"regime": "neutral", "vix": 20.0, "spy_trend": 0.0,
+                "score": 0, "above_200": True}
 
 
 # ── Sector rotation engine ────────────────────────────────────────────────────
