@@ -884,8 +884,17 @@ def ai_market_context(regime, top_movers, sector_adjs: dict = None):
 def get_market_movers():
     """Pull live market movers from multiple yfinance screeners."""
     movers = []
-    for name in ("day_gainers", "most_actives", "day_losers",
-                 "growth_technology_stocks", "undervalued_growth_stocks"):
+    # Priority screeners: high-volume movers first (most actionable for swing trades)
+    screeners = [
+        "day_gainers",               # stocks up the most today
+        "most_actives",              # highest dollar volume — institutional interest
+        "growth_technology_stocks",  # high-growth tech = momentum regime
+        "undervalued_growth_stocks", # value + growth combo — mean reversion candidates
+        "aggressive_small_caps",     # small caps with big moves — highest volatility
+        "small_cap_gainers",         # small cap momentum
+        "portfolio_anchors",         # dividend growers — defensive add when bear regime
+    ]
+    for name in screeners:
         try:
             res = yf.screen(name)
             for q in (res.get("quotes") or [])[:30]:
@@ -928,7 +937,37 @@ def get_squeeze_candidates(fractionable_set: set) -> set:
     return candidates
 
 
-# ── Unusual options flow detector ────────────────────────────────────────────
+# ── Volume surge detector ─────────────────────────────────────────────────────
+def get_volume_surge_candidates(fractionable_set: set) -> set:
+    """
+    Find stocks with 5x+ average daily volume that are also up on the day.
+    Unusual volume = someone big is buying. Combine with price strength for high conviction.
+    """
+    candidates = set()
+    try:
+        for screen in ("most_actives", "day_gainers"):
+            res = yf.screen(screen)
+            for q in (res.get("quotes") or [])[:40]:
+                sym = q.get("symbol", "")
+                if not sym or sym not in fractionable_set:
+                    continue
+                avg_vol = q.get("averageDailyVolume3Month") or q.get("averageDailyVolume10Day") or 0
+                cur_vol = q.get("regularMarketVolume") or 0
+                chg_pct = q.get("regularMarketChangePercent") or 0
+                price   = q.get("regularMarketPrice") or 0
+                if avg_vol > 0:
+                    vol_ratio = cur_vol / avg_vol
+                    # Volume surge: 4x+ average volume AND price up on the day AND liquid stock
+                    if vol_ratio >= 4.0 and chg_pct > 0.5 and price >= 3.0:
+                        candidates.add(sym)
+    except Exception as e:
+        logger.debug(f"Volume surge scanner error: {e}")
+    if candidates:
+        logger.info(f"Volume surge candidates: {', '.join(sorted(candidates))}")
+    return candidates
+
+
+# ── Unusual options flow detector ─────────────────────────────────────────────
 def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
     """
     Detect unusual options activity via yfinance options chain.
@@ -2339,11 +2378,16 @@ def run():
     # Short squeeze detection — high short float + rising + volume surge → explosive upside
     squeeze_cands = get_squeeze_candidates(set(candidates)) if _time_ok(250) else set()
 
+    # Volume surge candidates — 4x+ volume with price strength (institutional accumulation)
+    vol_surge_cands = get_volume_surge_candidates(set(candidates)) if _time_ok(248) else set()
+    if vol_surge_cands:
+        logger.info(f"Volume surge candidates: {', '.join(sorted(vol_surge_cands))}")
+
     # Unusual options flow — detect institutional call buying (bullish signal)
     options_flow: dict = {}
     if _time_ok(240):
         # Check top movers + any stocks with already high scores
-        flow_check = list(gap_ups | squeeze_cands)[:15]
+        flow_check = list(gap_ups | squeeze_cands | vol_surge_cands)[:15]
         flow_check += [s for s in candidates if s in BASE_UNIVERSE][:15]
         options_flow = get_options_flow_candidates(list(set(flow_check)), max_check=20)
     bullish_options = {s for s, d in options_flow.items() if d.get("bullish")}
@@ -2539,6 +2583,11 @@ def run():
                     elif rsi_div_live and pnl_pct > 4:
                         # Bearish RSI divergence while in profit = early exit to lock gains
                         reason = f"RSI bearish divergence ({pnl_pct:+.1f}%)"
+                    elif (live_sig.get("vwap_pos", 0) or 0) < -1.0 and pnl_pct > 1 and age_days > 0.5:
+                        # VWAP breakdown while in profit: institutional distribution signal
+                        # Price dropped >1% below VWAP after being profitable = exit
+                        vwap_p = live_sig.get("vwap_pos", 0) or 0
+                        reason = f"VWAP breakdown ({vwap_p:.1f}% below, {pnl_pct:+.1f}%)"
 
             # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
             if not reason and _close_cleanup and pnl_pct < -3:
@@ -2661,6 +2710,7 @@ def run():
                       regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
                                 + (10 if tk in gap_ups else 0)
                                 + (12 if tk in squeeze_cands else 0)
+                                + (11 if tk in vol_surge_cands else 0)
                                 + (8  if tk in recent_sells else 0)
                                 + (14 if tk in bullish_options else 0)
                                 + (18 if tk in earnings_beats else 0)
@@ -2787,7 +2837,7 @@ def run():
                     # Size up further for strong catalysts or squeeze setups (on top of Kelly)
                     if catalyst and sent >= 5:
                         notional = min(notional * 1.4, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
-                    elif tk in squeeze_cands:
+                    elif tk in squeeze_cands or tk in vol_surge_cands:
                         notional = min(notional * 1.2, portfolio_val * MAX_POSITION_PCT, buying_power * 0.35)
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
@@ -2808,6 +2858,10 @@ def run():
                     reason = f"score={sc} sent={sent:+.0f}"
                     if catalyst:
                         reason += f" [{catalyst}]"
+                    if tk in vol_surge_cands:
+                        reason += " [VOL SURGE]"
+                    if tk in squeeze_cands:
+                        reason += " [SQUEEZE]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
