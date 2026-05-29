@@ -1271,6 +1271,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-invest-checklist" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-squeeze-live" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-auto-alerts" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-profit-calc" style="margin-bottom:.85rem"></div>
 
     
     
@@ -1567,6 +1568,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="mkt-crash-alert" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-plain-english" style="display:none;margin-bottom:.85rem"></div>
     <div id="mkt-momentum-gauge" style="display:none;margin-bottom:.85rem"></div>
+    <div id="mkt-divergence" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
@@ -2122,6 +2124,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-compound" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-dca" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-pnl-breakdown" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-treemap" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -2877,10 +2880,10 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); renderWatchlistBar(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
-    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); }
+    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderProfitCalc(); }
     if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -3842,9 +3845,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderWatchlistBar(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderAutoAlerts(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); renderBreakoutAlerts(); renderSqueezeLive(); renderAutoAlerts(); renderProfitCalc(); renderInvestChecklist(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); renderCrashAlert(); renderMarketPlainEnglish(); renderMomentumGauge(); renderSentimentDivergence(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); renderCompoundGrowth(); renderDCAHelper(); renderPnLBreakdown(); renderPortfolioTreemap(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); }
   }
   window.showTab = showTab;
@@ -5195,6 +5198,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderCompoundGrowth();
     renderDCAHelper();
     renderPnLBreakdown();
+    renderPortfolioTreemap();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -10741,6 +10745,161 @@ body.beginner-mode #beginner-banner { display:block }
     renderAutoAlerts();
   }
   window.rokAutoSetAlerts = rokAutoSetAlerts;
+
+  // ── PORTFOLIO TREEMAP ─────────────────────────────────
+  function renderPortfolioTreemap() {
+    const el = document.getElementById('port-treemap');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (tickers.length < 2) { el.style.display = 'none'; return; }
+    const cells = [];
+    let totalValue = 0;
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const lp = liveprices[ticker];
+      const price = lp ? lp.price : entry.price;
+      const shares = entry.shares || 1;
+      const val = price * shares;
+      const pct = entry.price ? (price - entry.price) / entry.price * 100 : null;
+      totalValue += val;
+      cells.push({ ticker, val, pct, chgPct: lp ? lp.change_pct : null });
+    });
+    if (totalValue === 0) { el.style.display = 'none'; return; }
+    cells.sort((a, b) => b.val - a.val);
+    el.style.display = 'block';
+    const mapHtml = cells.map(c => {
+      const weight = c.val / totalValue * 100;
+      const pct = c.pct;
+      const bgColor = pct == null ? 'rgba(255,255,255,.06)' : pct >= 5 ? 'rgba(0,255,136,.25)' : pct >= 0 ? 'rgba(0,255,136,.1)' : pct >= -5 ? 'rgba(255,34,85,.12)' : 'rgba(255,34,85,.28)';
+      const textColor = pct == null ? 'var(--wh3)' : pct >= 0 ? 'var(--g)' : 'var(--r)';
+      const pctStr = pct != null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : '';
+      const todayStr = c.chgPct != null ? `${c.chgPct >= 0 ? '+' : ''}${c.chgPct.toFixed(1)}% today` : '';
+      const size = weight >= 30 ? 'large' : weight >= 15 ? 'medium' : 'small';
+      const fontSize = size === 'large' ? '14px' : size === 'medium' ? '12px' : '10px';
+      return `<div style="flex:${Math.round(weight * 10)};min-width:${weight < 8 ? '50px' : '70px'};background:${bgColor};border-radius:8px;padding:.4rem .5rem;cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:1px solid rgba(255,255,255,.08);-webkit-tap-highlight-color:transparent" onclick="switchToPortfolio('${c.ticker}')" title="${c.ticker}: ${weight.toFixed(1)}% of portfolio">
+        <div style="font-size:${fontSize};font-weight:900;color:var(--wh);line-height:1">$${c.ticker}</div>
+        <div style="font-size:8px;color:${textColor};font-weight:700;line-height:1.3">${pctStr}</div>
+        ${todayStr && size !== 'small' ? `<div style="font-size:7px;color:var(--wh4)">${todayStr}</div>` : ''}
+        <div style="font-size:7px;color:var(--wh4)">${weight.toFixed(0)}%</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.75rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem">🗺️ PORTFOLIO TREEMAP</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.35rem;min-height:60px">${mapHtml}</div>
+      <div style="font-size:8px;color:var(--wh4);margin-top:.4rem">Block size = portfolio weight · Color: 🟢 green = up from entry, 🔴 red = down · % shown = total return since entry</div>
+    </div>`;
+  }
+  window.renderPortfolioTreemap = renderPortfolioTreemap;
+  function switchToPortfolio(ticker) { showTab('portfolio'); }
+  window.switchToPortfolio = switchToPortfolio;
+
+  // ── SENTIMENT DIVERGENCE ALERT ────────────────────────
+  function renderSentimentDivergence() {
+    const el = document.getElementById('mkt-divergence');
+    if (!el) return;
+    const spyLp = liveprices['SPY'];
+    const spyChg = spyLp ? spyLp.change_pct : null;
+    const sent = ROK.market_sentiment || 'NEUTRAL';
+    const fgScore = (ROK.fear_greed || {}).value || 50;
+    const breadthPct = (ROK.market_breadth || {}).breadth_pct || 50;
+    if (spyChg == null) { el.style.display = 'none'; return; }
+    const divs = [];
+    // Divergence 1: ROK bullish but market down
+    if (sent === 'BULLISH' && spyChg <= -1) {
+      divs.push({ type: 'bullish-lag', icon: '⏳', text: `ROK analysis is <strong style="color:var(--g)">BULLISH</strong> but SPY is down <strong style="color:var(--r)">${Math.abs(spyChg).toFixed(2)}%</strong> today. This can be a lag — ROK's forward-looking signals may resolve positively if the dip is temporary. Watch for support levels to hold.` });
+    }
+    // Divergence 2: ROK bearish but market up
+    if (sent === 'BEARISH' && spyChg >= 1) {
+      divs.push({ type: 'bear-rally', icon: '⚠️', text: `ROK analysis is <strong style="color:var(--r)">BEARISH</strong> but SPY is up <strong style="color:var(--g)">${spyChg.toFixed(2)}%</strong> today. This may be a "dead cat bounce" — short-term rally in a downtrend. Avoid chasing this rally without strong signal confirmation.` });
+    }
+    // Divergence 3: High fear + bullish breadth
+    if (fgScore <= 30 && breadthPct >= 55) {
+      divs.push({ type: 'fear-buy', icon: '💡', text: `Fear/Greed is LOW (${fgScore}/100 — fear) but ${breadthPct}% of stocks are rising. <strong style="color:var(--g)">Classic buying opportunity signal</strong> — when fear is high but prices are rising, it often means the worst is over.` });
+    }
+    // Divergence 4: Greed + poor breadth
+    if (fgScore >= 70 && breadthPct <= 45) {
+      divs.push({ type: 'narrow-rally', icon: '🎯', text: `Fear/Greed shows GREED (${fgScore}/100) but only ${breadthPct}% of stocks are rising. <strong style="color:var(--au)">Narrow rally warning</strong> — when only a few big stocks are pushing the index up, it's less sustainable. Be selective.` });
+    }
+    if (!divs.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const rows = divs.map(d => `<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <span style="font-size:1.1rem;flex-shrink:0">${d.icon}</span>
+      <span style="font-size:10px;color:var(--wh3);line-height:1.55">${d.text}</span>
+    </div>`).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,215,0,.2);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">🔍 SIGNAL DIVERGENCE DETECTED</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.4rem">Divergences between ROK's analysis, market direction, fear/greed, and breadth can reveal trading opportunities. Updates live on price refresh.</div>
+    </div>`;
+  }
+  window.renderSentimentDivergence = renderSentimentDivergence;
+
+  // ── QUICK PROFIT CALCULATOR ───────────────────────────
+  function renderProfitCalc() {
+    const el = document.getElementById('sig-profit-calc');
+    if (!el) return;
+    const buySigs = ROK.buy_signals || [];
+    const ACCT = parseFloat(localStorage.getItem('rok_account_size_v1') || '0');
+    // Pick top signal with a price target
+    const sig = buySigs.find(s => {
+      const det = sigDetails[s.ticker] || s;
+      return det.price_target && (liveprices[s.ticker] || s.price);
+    });
+    const defaultAmount = ACCT > 0 ? Math.round(ACCT * 0.05 / 100) * 100 : 1000; // 5% of account or $1000
+    const calcId = 'profit-calc-' + Date.now();
+    const defaultTicker = sig ? sig.ticker : '';
+    const defaultPrice = sig ? ((liveprices[sig.ticker] || {}).price || sig.price || 0) : 0;
+    const defaultTarget = sig ? ((sigDetails[sig.ticker] || sig).price_target || 0) : 0;
+    const defaultStop = sig ? ((sigDetails[sig.ticker] || sig).stop_loss || (defaultPrice * 0.92)) : 0;
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(153,85,255,.18);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--p);text-transform:uppercase;margin-bottom:.35rem">🧮 QUICK PROFIT CALCULATOR</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.6rem">See exactly how much you'd make or lose on a trade.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem">
+        <div><div style="font-size:8px;color:var(--wh4);margin-bottom:.2rem">Amount to invest ($)</div>
+          <input id="pc-invest" type="number" value="${defaultAmount}" min="100" step="100" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--wh);font-size:11px;padding:.35rem .5rem;font-family:var(--font)" oninput="runProfitCalc()">
+        </div>
+        <div><div style="font-size:8px;color:var(--wh4);margin-bottom:.2rem">Entry price ($)</div>
+          <input id="pc-entry" type="number" value="${defaultPrice.toFixed(2)}" min="0.01" step="0.01" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--wh);font-size:11px;padding:.35rem .5rem;font-family:var(--font)" oninput="runProfitCalc()">
+        </div>
+        <div><div style="font-size:8px;color:var(--g);margin-bottom:.2rem">Target price ($)</div>
+          <input id="pc-target" type="number" value="${defaultTarget.toFixed(2)}" min="0.01" step="0.01" style="width:100%;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:6px;color:var(--g);font-size:11px;padding:.35rem .5rem;font-family:var(--font)" oninput="runProfitCalc()">
+        </div>
+        <div><div style="font-size:8px;color:var(--r);margin-bottom:.2rem">Stop-loss ($)</div>
+          <input id="pc-stop" type="number" value="${defaultStop.toFixed(2)}" min="0.01" step="0.01" style="width:100%;background:rgba(255,34,85,.05);border:1px solid rgba(255,34,85,.2);border-radius:6px;color:var(--r);font-size:11px;padding:.35rem .5rem;font-family:var(--font)" oninput="runProfitCalc()">
+        </div>
+      </div>
+      <div id="pc-result" style="background:rgba(0,0,0,.2);border-radius:8px;padding:.5rem .65rem;font-size:10.5px;color:var(--wh3);line-height:1.7">Enter values above to calculate.</div>
+      ${sig ? `<div style="font-size:8px;color:var(--wh4);margin-top:.4rem">Pre-filled with ROK's top signal: $${defaultTicker}. Change values to model any trade.</div>` : ''}
+    </div>`;
+    setTimeout(runProfitCalc, 100);
+  }
+  function runProfitCalc() {
+    const res = document.getElementById('pc-result');
+    if (!res) return;
+    const invest = parseFloat(document.getElementById('pc-invest')?.value) || 0;
+    const entry = parseFloat(document.getElementById('pc-entry')?.value) || 0;
+    const target = parseFloat(document.getElementById('pc-target')?.value) || 0;
+    const stop = parseFloat(document.getElementById('pc-stop')?.value) || 0;
+    if (!invest || !entry || entry <= 0) { res.textContent = 'Enter values above.'; return; }
+    const shares = Math.floor(invest / entry);
+    const actualCost = shares * entry;
+    if (shares === 0) { res.innerHTML = `<span style="color:var(--r)">$${invest} isn't enough to buy even 1 share at $${entry}.</span>`; return; }
+    const profitD = target > 0 ? (target - entry) * shares : null;
+    const lossD = stop > 0 ? (stop - entry) * shares : null;
+    const profitPct = target > 0 ? (target - entry) / entry * 100 : null;
+    const lossPct = stop > 0 ? (stop - entry) / entry * 100 : null;
+    const rr = profitD != null && lossD != null && lossD < 0 ? Math.abs(profitD / lossD).toFixed(1) : null;
+    res.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem">
+      <div><span style="color:var(--wh4);font-size:9px">Shares:</span> <strong>${shares}</strong></div>
+      <div><span style="color:var(--wh4);font-size:9px">Cost:</span> <strong>$${actualCost.toFixed(0)}</strong></div>
+      ${profitD != null ? `<div style="color:var(--g)">📈 If target hit: <strong>+$${profitD.toFixed(0)} (+${profitPct.toFixed(1)}%)</strong></div>` : ''}
+      ${lossD != null ? `<div style="color:var(--r)">📉 If stop hit: <strong>${lossD.toFixed(0)} (${lossPct.toFixed(1)}%)</strong></div>` : ''}
+      ${rr ? `<div style="grid-column:1/-1;color:${parseFloat(rr) >= 2 ? 'var(--g)' : parseFloat(rr) >= 1 ? 'var(--au)' : 'var(--r)'}">R:R Ratio: <strong>${rr}:1</strong> ${parseFloat(rr) >= 2 ? '✅ Excellent' : parseFloat(rr) >= 1 ? '⚠️ Acceptable' : '❌ Poor — target too close to entry'}</div>` : ''}
+    </div>`;
+  }
+  window.renderProfitCalc = renderProfitCalc;
+  window.runProfitCalc = runProfitCalc;
 
   // ── WATCHLIST PERFORMANCE BAR ─────────────────────────
   function renderWatchlistBar() {
