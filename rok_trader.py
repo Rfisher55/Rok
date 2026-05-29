@@ -35,7 +35,8 @@ logger = logging.getLogger(__name__)
 ALPACA_KEY    = os.environ.get("ALPACA_KEY_ID",     "")
 ALPACA_SECRET = os.environ.get("ALPACA_SECRET_KEY", "")
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-ALPACA_BASE   = "https://paper-api.alpaca.markets"
+ALPACA_BASE      = "https://paper-api.alpaca.markets"
+ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
 MAX_POSITIONS      = 12      # max open long positions
@@ -178,6 +179,57 @@ def alpaca_post(path, data):
     r = requests.post(f"{ALPACA_BASE}{path}", headers=_h(), json=data, timeout=15)
     r.raise_for_status()
     return r.json()
+
+
+def alpaca_snapshots(symbols: list) -> dict:
+    """Fetch real-time Alpaca snapshots for a list of symbols.
+    Returns dict of {symbol: {chg_pct, volume, prev_close, price, vol_ratio_est}}.
+    Uses Alpaca Data API — much faster than yfinance for pre-screening.
+    """
+    if not symbols:
+        return {}
+    result = {}
+    CHUNK = 500
+    for i in range(0, len(symbols), CHUNK):
+        chunk = symbols[i : i + CHUNK]
+        try:
+            sym_str = ",".join(chunk)
+            r = requests.get(
+                f"{ALPACA_DATA_BASE}/v2/stocks/snapshots",
+                headers=_h(),
+                params={"symbols": sym_str, "feed": "iex"},
+                timeout=15,
+            )
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            for sym, snap in data.items():
+                try:
+                    daily = snap.get("dailyBar", {}) or {}
+                    prev  = snap.get("prevDailyBar", {}) or {}
+                    trade = snap.get("latestTrade", {}) or {}
+                    price = float(trade.get("p", 0) or daily.get("c", 0) or 0)
+                    prev_c = float(prev.get("c", 0) or 0)
+                    vol    = float(daily.get("v", 0) or 0)
+                    prev_v = float(prev.get("v", 0) or 0)
+                    if price <= 0 or prev_c <= 0:
+                        continue
+                    chg_pct = (price - prev_c) / prev_c * 100
+                    # Estimate volume ratio: today's volume vs prev day (same time adjustment)
+                    # Not perfect, but good enough for Phase 0 filter
+                    vol_ratio_est = (vol / prev_v) if prev_v > 0 else 1.0
+                    result[sym] = {
+                        "price":         price,
+                        "prev_close":    prev_c,
+                        "chg_pct":       round(chg_pct, 3),
+                        "volume":        vol,
+                        "vol_ratio_est": round(vol_ratio_est, 2),
+                    }
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.debug(f"Alpaca snapshot chunk failed: {e}")
+    return result
 
 
 _ORDER_ENTRY_CACHE: dict = {}
@@ -1145,22 +1197,33 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             ttm         = signals.get("ttm_squeeze_fired", False)
             orb         = signals.get("orb_breakout", False)
             gap_hold    = signals.get("gap_and_hold", False)
+            adx_v       = signals.get("adx", 0)
+            ichi_cnt    = sum([signals.get("ichimoku_above", False),
+                               signals.get("ichimoku_bull_cloud", False),
+                               signals.get("ichimoku_tk_bull", False),
+                               signals.get("ichimoku_chikou", False)])
+            fib_sup     = signals.get("fib_support", False)
+            macd_bdiv   = signals.get("macd_bull_div", False)
+            daily_rsi   = signals.get("daily_rsi", 50)
+            bb_pos      = signals.get("bb_pos", 50)
             extras = []
-            if orb:       extras.append("ORB breakout (cleared first-hour high)")
-            if vwap_rcl:  extras.append("VWAP reclaim (intraday dip bought)")
-            if gap_hold:  extras.append("gap and hold (gapped up, holding gains)")
-            if at_brk:    extras.append("BREAKOUT above resistance")
-            if ttm:       extras.append("TTM squeeze breakout")
-            if near_s:    extras.append("at support level")
-            if vol_dry:   extras.append("volume dry-up (selling exhaustion)")
-            if nr7:       extras.append("NR7 coiling — volatility expansion imminent")
-            if consec >= 3: extras.append(f"{consec} consecutive green days")
-            adx_v = signals.get("adx", 0)
+            if orb:            extras.append("ORB breakout (cleared first-hour high)")
+            if vwap_rcl:       extras.append("VWAP reclaim (institutional buying on dip)")
+            if gap_hold:       extras.append("gap-and-hold (opened higher, holding gains)")
+            if at_brk:         extras.append("BREAKOUT above key resistance level")
+            if ttm:            extras.append("TTM Squeeze breakout (coil released)")
+            if near_s:         extras.append("at proven support level")
+            if vol_dry:        extras.append("volume dry-up (selling exhaustion)")
+            if nr7:            extras.append("NR7 coiling — volatility expansion imminent")
+            if fib_sup:        extras.append("Fibonacci 38/50/62% support bounce")
+            if macd_bdiv:      extras.append("MACD bullish divergence (hidden strength)")
+            if ichi_cnt >= 3:  extras.append(f"Ichimoku {ichi_cnt}/4 signals bullish")
+            if consec >= 3:    extras.append(f"{consec} consecutive green days")
             tech_context = (
-                f"\nTechnical: RSI={rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
+                f"\nTechnical: RSI={rsi:.0f}, DailyRSI={daily_rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
+                f"BB%={bb_pos:.0f}, W%R={w_r:.0f}, ADX={adx_v:.0f}, "
                 f"5d_ROC={roc5:+.1f}%, EMA50_pos={ema50:+.1f}%, "
-                f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, W%R={w_r:.0f}, "
-                f"RS5_vs_SPY={rs5:+.1f}%, ADX={adx_v:.0f}"
+                f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, RS5_vs_SPY={rs5:+.1f}%"
                 + (f"\nSetup flags: {', '.join(extras)}" if extras else "")
             )
 
@@ -1173,16 +1236,18 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             },
             json={
                 "model":      model,
-                "max_tokens": 140,
+                "max_tokens": 150,
                 "messages": [{
                     "role":    "user",
                     "content": (
-                        f"You are an expert quantitative stock trader analyzing {ticker} for a 1-5 day swing trade.\n"
+                        f"You are an elite quantitative swing trader analyzing {ticker} for a 2-5 day trade.\n"
                         f"Rate the short-term outlook from -10 (very bearish) to +10 (very bullish).\n"
-                        f"Focus on: catalysts (earnings/FDA/M&A), institutional interest, "
-                        f"sector momentum, and technical confirmation.\n"
+                        f"Consider: hard catalysts (earnings beats/FDA/M&A/upgrades), "
+                        f"institutional accumulation signals, sector momentum, "
+                        f"technical setup quality, and risk/reward.\n"
+                        f"Be aggressive on HIGH-CONVICTION setups (score 7-10) and decisive on bearish (score -7 to -10).\n"
                         f"Headlines:{tech_context}\n{text}\n\n"
-                        f"Return ONLY JSON: {{\"s\":<-10 to 10>,\"c\":\"<catalyst in 3 words>\"}}"
+                        f"Return ONLY JSON: {{\"s\":<-10 to 10>,\"c\":\"<catalyst 3 words>\"}}"
                     ),
                 }],
             },
@@ -1860,15 +1925,16 @@ def _fetch_spy_perf() -> dict:
     if _SPY_PERF_CACHE:
         return _SPY_PERF_CACHE
     try:
-        spy = yf.download("SPY", period="15d", interval="1d",
+        spy = yf.download("SPY", period="90d", interval="1d",
                           auto_adjust=True, progress=False)
         closes = list(spy["Close"].dropna())
         if len(closes) >= 2:
             _SPY_PERF_CACHE["d1"]  = (closes[-1] - closes[-2]) / closes[-2] * 100
             _SPY_PERF_CACHE["d5"]  = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
             _SPY_PERF_CACHE["d10"] = (closes[-1] - closes[-10]) / closes[-10] * 100 if len(closes) >= 10 else 0
+            _SPY_PERF_CACHE["d63"] = (closes[-1] - closes[-63]) / closes[-63] * 100 if len(closes) >= 63 else 0
     except Exception:
-        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0}
+        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0, "d63": 0.0}
     return _SPY_PERF_CACHE
 
 
@@ -2199,15 +2265,19 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
-    # Relative strength vs SPY (1-day and 5-day)
+    # Relative strength vs SPY (1-day, 5-day, 63-day quarterly)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
     rs5  = 0.0
+    rs63 = 0.0
     try:
         dc = list(daily["Close"])
         if len(dc) >= 5:
             ret5 = (dc[-1] - dc[-5]) / dc[-5] * 100
             rs5  = round(ret5 - spy.get("d5", 0), 2)
+        if len(dc) >= 63:
+            ret63 = (dc[-1] - dc[-63]) / dc[-63] * 100
+            rs63  = round(ret63 - spy.get("d63", 0), 2)
     except Exception:
         pass
 
@@ -2229,6 +2299,7 @@ def _extract(daily, hourly):
         "vwap_pos":        round(vwap_pos, 2),
         "rs1":             rs1,
         "rs5":             rs5,
+        "rs63":            rs63,
         "atr":             round(atr_val, 3) if atr_val else None,
         "stoch_k":            round(stoch_k, 1),
         "stoch_d":            round(stoch_d, 1),
@@ -2332,10 +2403,11 @@ def _quick_score(daily_5d):
     return s
 
 
-def fetch_batch(tickers, held_symbols=None, period_d="15d"):
+def fetch_batch(tickers, held_symbols=None, period_d="90d"):
     """
-    Two-phase scan:
-      Phase 1 — quick 1-day download for ALL tickers → rank by momentum × volume
+    Three-phase scan:
+      Phase 0 — Alpaca Snapshot API real-time filter: drop stocks with tiny move + low volume
+      Phase 1 — quick 5d yfinance download for shortlisted tickers → rank by momentum × volume
       Phase 2 — full 15d daily + 3d hourly for top candidates only
 
     Always includes `held_symbols` in Phase 2 regardless of quick score.
@@ -2348,6 +2420,29 @@ def fetch_batch(tickers, held_symbols=None, period_d="15d"):
     CHUNK    = 80     # larger chunks for speed
     FULL_CAP = 100   # max tickers for full technical analysis (increased from 80)
     MIN_AVG_VOL = 200_000   # minimum avg daily volume to avoid illiquid names
+
+    # ── Phase 0: Alpaca real-time snapshot pre-filter ─────────────────────
+    # Use Alpaca's live data to pre-filter the universe before slow yfinance calls.
+    # This trims low-volume/flat stocks without downloading historical data.
+    p0_snaps = {}
+    try:
+        p0_snaps = alpaca_snapshots(tickers)
+        if p0_snaps:
+            # Keep stocks with notable price action OR held positions
+            # Threshold: any move >0.3% OR vol_ratio > 1.2 OR held
+            p0_pass = [tk for tk in tickers if
+                       tk in held
+                       or tk not in p0_snaps   # unknown = keep for safety
+                       or abs(p0_snaps[tk]["chg_pct"]) > 0.3
+                       or p0_snaps[tk]["vol_ratio_est"] > 1.2
+                       or p0_snaps[tk]["volume"] > MIN_AVG_VOL * 0.3]
+            logger.info(
+                f"Phase 0 (Alpaca snapshot): {len(p0_snaps)} quotes, "
+                f"{len(p0_pass)}/{len(tickers)} pass activity filter"
+            )
+            tickers = p0_pass
+    except Exception as e:
+        logger.debug(f"Phase 0 snapshot skipped: {e}")
 
     # ── Phase 1: quick momentum pre-screen ─────────────────────────────
     quick_daily = {}
@@ -2421,6 +2516,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     daily_tr   = d.get("daily_trend",  0) or 0
     rs1        = d.get("rs1",          0) or 0   # relative strength vs SPY (1-day)
     rs5        = d.get("rs5",          0) or 0   # relative strength vs SPY (5-day)
+    rs63       = d.get("rs63",         0) or 0   # 63-day RS vs SPY (quarterly — O'Neil style)
 
     # Relative strength vs SPY (+14/-12)
     # Strong relative strength = institutional buying even when SPY flat
@@ -2434,6 +2530,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif rs1 > 1:   s += 4
     elif rs1 < -3:  s -= 8
     elif rs1 < -1:  s -= 4
+
+    # 63-day (quarterly) RS: O'Neil IBD-style — strongest stocks sustain leadership (+10/-6)
+    if   rs63 > 15:  s += 10   # top-tier quarterly leader
+    elif rs63 > 8:   s +=  6
+    elif rs63 > 3:   s +=  3
+    elif rs63 < -15: s -=  6   # persistent underperformer — avoid
+    elif rs63 < -8:  s -=  3
 
     # Multi-timeframe trend filter: daily EMA5/10 alignment (+8/-10)
     if   daily_tr > 0.5:  s +=  8
