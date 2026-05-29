@@ -57,6 +57,9 @@ VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
 TRADES_FILE = Path("docs/trades.json")
 PEAK_FILE   = Path("docs/peaks.json")
 
+# ── Runtime caches (live only — not persisted) ────────────────────────────────
+_EARNINGS_CACHE: dict = {}   # sym -> bool
+
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
     # Technology
@@ -288,24 +291,27 @@ def market_regime():
 
 # ── Earnings calendar check ───────────────────────────────────────────────────
 def has_earnings_soon(sym, days=3):
-    """Returns True if this stock has earnings within `days` days — skip it."""
+    """Returns True if this stock has earnings within `days` days — skip it. Cached."""
+    if sym in _EARNINGS_CACHE:
+        return _EARNINGS_CACHE[sym]
+    result = False
     try:
         cal = yf.Ticker(sym).calendar
-        if cal is None or cal.empty:
-            return False
-        now = datetime.now(timezone.utc).date()
-        for col in cal.columns:
-            if "earnings" in str(col).lower():
-                for val in cal[col]:
-                    try:
-                        ed = pd.Timestamp(val).date()
-                        if 0 <= (ed - now).days <= days:
-                            return True
-                    except Exception:
-                        pass
-        return False
+        if cal is not None and not cal.empty:
+            now = datetime.now(timezone.utc).date()
+            for col in cal.columns:
+                if "earnings" in str(col).lower():
+                    for val in cal[col]:
+                        try:
+                            ed = pd.Timestamp(val).date()
+                            if 0 <= (ed - now).days <= days:
+                                result = True
+                        except Exception:
+                            pass
     except Exception:
-        return False
+        pass
+    _EARNINGS_CACHE[sym] = result
+    return result
 
 
 # ── AI news sentiment ─────────────────────────────────────────────────────────
@@ -389,8 +395,10 @@ def ai_market_context(regime, top_movers):
 
 # ── Market screener ───────────────────────────────────────────────────────────
 def get_market_movers():
+    """Pull live market movers from multiple yfinance screeners."""
     movers = []
-    for name in ("day_gainers", "most_actives", "day_losers"):
+    for name in ("day_gainers", "most_actives", "day_losers",
+                 "growth_technology_stocks", "undervalued_growth_stocks"):
         try:
             res = yf.screen(name)
             for q in (res.get("quotes") or [])[:30]:
@@ -402,19 +410,73 @@ def get_market_movers():
     return list(set(movers))
 
 
-def get_tradeable(candidates):
+def get_full_universe(held_symbols: set) -> tuple[list, set]:
+    """
+    Build a full-market scan universe from ALL Alpaca fractionable US equities,
+    then intelligently filter to the top ~200 most promising candidates.
+
+    Selection priority:
+      1. All currently held positions (always included)
+      2. Live market movers from yfinance screeners
+      3. BASE_UNIVERSE anchor stocks (proven liquid names)
+      4. High-volume active symbols from Alpaca's full equity list
+         filtered by: price >= $5, avgVolume proxy via exchange rank
+
+    Returns (candidates_list, shortable_set)
+    """
+    shortable = set()
+
     try:
-        assets = alpaca_get("/v2/assets?status=active&asset_class=us_equity")
-        ok = {a["symbol"] for a in assets
-              if a.get("tradable") and a.get("fractionable")}
-        shortable = {a["symbol"] for a in assets
-                     if a.get("shortable") and a.get("easy_to_borrow")}
-        filtered = [s for s in candidates if s in ok]
-        logger.info(f"Fractionable filter: {len(candidates)} → {len(filtered)}")
-        return filtered, shortable
+        # Fetch ALL active fractionable US equities from Alpaca
+        all_assets = alpaca_get("/v2/assets?status=active&asset_class=us_equity")
     except Exception as e:
-        logger.warning(f"Asset filter failed: {e}")
-        return candidates, set()
+        logger.warning(f"Alpaca asset fetch failed: {e} — using BASE_UNIVERSE")
+        return list(set(BASE_UNIVERSE) | held_symbols), set()
+
+    fractionable = {
+        a["symbol"]: a for a in all_assets
+        if a.get("tradable") and a.get("fractionable")
+        and 1 < len(a.get("symbol", "")) <= 5
+        and a.get("symbol", "").isalpha()
+        and a.get("symbol", "").isupper()
+    }
+    for sym, a in fractionable.items():
+        if a.get("shortable") and a.get("easy_to_borrow"):
+            shortable.add(sym)
+
+    logger.info(f"Alpaca fractionable universe: {len(fractionable)} stocks")
+
+    # Layer 1: always include held positions
+    universe = set(held_symbols)
+
+    # Layer 2: live screener movers (highest priority — currently moving)
+    movers = get_market_movers()
+    universe.update(s for s in movers if s in fractionable)
+
+    # Layer 3: BASE_UNIVERSE anchor stocks
+    universe.update(s for s in BASE_UNIVERSE if s in fractionable)
+
+    # Layer 4: fill up to MAX_SCAN_TICKERS with "exchange-quality" stocks
+    # Use a simple proxy: prefer NYSE/NASDAQ-listed, symbol length <= 4
+    # (shorter symbols tend to be more established companies)
+    MAX_SCAN_TICKERS = 220
+    if len(universe) < MAX_SCAN_TICKERS:
+        # Prefer primary exchanges, shorter symbols
+        extras = sorted(
+            [s for s in fractionable if s not in universe],
+            key=lambda s: (len(s), s)   # shorter = more established
+        )
+        for sym in extras:
+            if len(universe) >= MAX_SCAN_TICKERS:
+                break
+            a = fractionable[sym]
+            # Basic quality filter: prefer NYSE/NASDAQ listed
+            if a.get("exchange") in ("NYSE", "NASDAQ", "CBOE", "ARCA"):
+                universe.add(sym)
+
+    candidates = list(universe)
+    logger.info(f"Full scan universe: {len(candidates)} tickers (movers: {len(movers)}, held: {len(held_symbols)})")
+    return candidates, shortable
 
 
 # ── Batch data fetch ──────────────────────────────────────────────────────────
@@ -501,41 +563,114 @@ def _extract(daily, hourly):
     }
 
 
-def fetch_batch(tickers, period_d="30d"):
-    """Download tickers in parallel chunks. period_d='30d' gives more data for 52W calc."""
+def _dl(tickers, period, interval):
+    """Single yfinance batch download, returns per-ticker DataFrames."""
+    result = {}
+    if not tickers:
+        return result
+    kw  = dict(group_by="ticker", auto_adjust=True, progress=False, threads=True)
+    raw = yf.download(" ".join(tickers), period=period, interval=interval, **kw)
+    if raw is None or raw.empty:
+        return result
+    for tk in tickers:
+        try:
+            if len(tickers) == 1:
+                result[tk] = raw
+            else:
+                lvl = raw.columns.get_level_values(0)
+                if tk in lvl:
+                    result[tk] = raw[tk]
+        except Exception:
+            pass
+    return result
+
+
+def _quick_score(daily_1d):
+    """Fast momentum score from 1-day daily data only (no hourly). Used in pre-screen."""
+    if daily_1d is None or len(daily_1d) < 2:
+        return 0
+    d   = daily_1d.dropna(subset=["Close"])
+    if len(d) < 2:
+        return 0
+    price = float(d["Close"].iloc[-1])
+    prev  = float(d["Close"].iloc[-2])
+    if price < 2 or prev <= 0:     # skip penny stocks
+        return 0
+    chg      = (price - prev) / prev * 100
+    vol      = float(d["Volume"].iloc[-1]) if "Volume" in d else 0
+    avg_vol  = float(d["Volume"].mean())   if "Volume" in d else vol
+    vol_ratio = vol / avg_vol if avg_vol > 0 else 1.0
+    # Rough momentum × volume score
+    s = 5
+    if chg   > 3:   s += 20
+    elif chg > 1:   s += 10
+    elif chg > 0:   s +=  4
+    elif chg < -3:  s -= 15
+    if vol_ratio > 2.5: s += 15
+    elif vol_ratio > 1.5: s += 8
+    elif vol_ratio < 0.5: s -= 5
+    return s
+
+
+def fetch_batch(tickers, held_symbols=None, period_d="15d"):
+    """
+    Two-phase scan:
+      Phase 1 — quick 1-day download for ALL tickers → rank by momentum × volume
+      Phase 2 — full 15d daily + 3d hourly for top candidates only
+
+    Always includes `held_symbols` in Phase 2 regardless of quick score.
+    """
     if not tickers:
         return {}
     tickers = list(set(tickers))
+    held    = set(held_symbols or [])
     result  = {}
-    CHUNK   = 50
+    CHUNK   = 80     # larger chunks for speed
+    FULL_CAP = 80    # max tickers for full technical analysis
 
+    # ── Phase 1: quick momentum pre-screen ─────────────────────────────
+    quick_daily = {}
     for i in range(0, len(tickers), CHUNK):
         chunk = tickers[i : i + CHUNK]
         try:
-            kw    = dict(group_by="ticker", auto_adjust=True, progress=False, threads=True)
-            raw_d = yf.download(" ".join(chunk), period=period_d, interval="1d", **kw)
-            raw_h = yf.download(" ".join(chunk), period="3d",     interval="1h", **kw)
+            quick_daily.update(_dl(chunk, "2d", "1d"))
+        except Exception as e:
+            logger.warning(f"Quick scan chunk error: {e}")
 
+    # Rank by quick score
+    quick_ranked = sorted(
+        [(tk, _quick_score(quick_daily.get(tk))) for tk in tickers],
+        key=lambda x: -x[1],
+    )
+    logger.info(
+        f"Phase 1 pre-screen: {len(quick_daily)}/{len(tickers)} tickers. "
+        f"Top 5: {' | '.join(f'{t}:{s}' for t,s in quick_ranked[:5])}"
+    )
+
+    # Phase 2 candidates: top FULL_CAP by quick score + all held positions
+    phase2 = [tk for tk, _ in quick_ranked[:FULL_CAP]]
+    for sym in held:
+        if sym not in phase2:
+            phase2.append(sym)
+
+    # ── Phase 2: full technical analysis ─────────────────────────────
+    CHUNK2 = 50
+    for i in range(0, len(phase2), CHUNK2):
+        chunk = phase2[i : i + CHUNK2]
+        try:
+            daily = _dl(chunk, period_d, "1d")
+            hourly = _dl(chunk, "3d", "1h")
             for tk in chunk:
                 try:
-                    if len(chunk) == 1:
-                        d, h = raw_d, raw_h
-                    else:
-                        lvl = raw_d.columns.get_level_values(0)
-                        if tk not in lvl:
-                            continue
-                        d    = raw_d[tk]
-                        hlvl = raw_h.columns.get_level_values(0)
-                        h    = raw_h[tk] if tk in hlvl else None
-                    sig = _extract(d, h)
+                    sig = _extract(daily.get(tk), hourly.get(tk))
                     if sig and sig["price"] > 0:
                         result[tk] = sig
                 except Exception:
                     pass
         except Exception as e:
-            logger.warning(f"Batch chunk error: {e}")
+            logger.warning(f"Full scan chunk error: {e}")
 
-    logger.info(f"Data: {len(result)}/{len(tickers)} tickers ready")
+    logger.info(f"Data ready: {len(result)}/{len(phase2)} tickers (from {len(tickers)} universe)")
     return result
 
 
@@ -695,6 +830,14 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0):
 
 # ── Main trading engine ───────────────────────────────────────────────────────
 def run():
+    run_start = datetime.now(timezone.utc)
+
+    def _elapsed():
+        return (datetime.now(timezone.utc) - run_start).total_seconds()
+
+    def _time_ok(budget_secs=380):
+        return _elapsed() < budget_secs
+
     if not ALPACA_KEY or not ALPACA_SECRET:
         logger.error("Alpaca keys missing — set ALPACA_KEY_ID + ALPACA_SECRET_KEY as GitHub Secrets.")
         sys.exit(1)
@@ -732,17 +875,16 @@ def run():
     logger.info(f"Longs ({len(longs)}): {', '.join(longs) or 'none'}")
     logger.info(f"Shorts ({len(shorts)}): {', '.join(shorts) or 'none'}")
 
-    # Build scan universe
-    movers    = get_market_movers()
-    all_cands = list(set(BASE_UNIVERSE + movers + list(held.keys())))
-    candidates, shortable = get_tradeable(all_cands)
+    # Build full-market scan universe (entire market, not just preset list)
+    candidates, shortable = get_full_universe(set(held.keys()))
     logger.info(f"Scanning {len(candidates)} tickers | {len(shortable)} shortable")
 
-    # Fetch live data
-    live = fetch_batch(candidates)
+    # Fetch live data (two-phase: quick pre-screen all, full analysis on top 80)
+    live = fetch_batch(candidates, held_symbols=set(held.keys()))
 
-    # AI market context adjustment
-    regime_adj = ai_market_context(regime, movers[:10])
+    # AI market context adjustment (use top movers from screeners)
+    top_movers_for_ai = [s for s in candidates if s not in BASE_UNIVERSE][:12]
+    regime_adj = ai_market_context(regime, top_movers_for_ai)
 
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
@@ -890,7 +1032,8 @@ def run():
             if has_earnings_soon(tk):
                 logger.info(f"SKIP {tk} — earnings within 3 days")
                 continue
-            sent = ai_sentiment(tk)
+            # Skip AI call if running low on time budget
+            sent = ai_sentiment(tk) if _time_ok(280) else 0
             final_sc = score(tk, live[tk], sentiment=sent, regime_adj=regime_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec))
@@ -952,23 +1095,28 @@ def run():
                         continue
                     d        = live[tk]
                     price    = d["price"]
+                    if price <= 0:
+                        continue
                     atr      = d.get("atr")
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix)
                     notional = round(notional * 0.6, 2)   # size shorts smaller
                     if notional < 1:
                         continue
-                    logger.info(f"SHORT {tk} — ${notional:.0f} @ ~${price:.2f} | bear score {sc}")
+                    # Short sells require qty (not notional)
+                    qty = max(1, int(notional / price))
+                    actual_notional = round(qty * price, 2)
+                    logger.info(f"SHORT {tk} — {qty} shares @ ~${price:.2f} (${actual_notional:.0f}) | bear score {sc}")
                     alpaca_post("/v2/orders", {
                         "symbol":        tk,
-                        "notional":      str(notional),
+                        "qty":           str(qty),
                         "side":          "sell",
                         "type":          "market",
                         "time_in_force": "day",
                     })
-                    log_trade(tlog, "SHORT", tk, price, notional, score=sc,
+                    log_trade(tlog, "SHORT", tk, price, actual_notional, score=sc,
                               reason=f"bear score={sc} regime={regime['regime']}")
                     made_trades  = True
-                    buying_power -= notional
+                    buying_power -= actual_notional
                 except Exception as e:
                     logger.warning(f"SHORT failed {tk}: {e}")
 
