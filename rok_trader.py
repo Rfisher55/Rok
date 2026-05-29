@@ -890,6 +890,109 @@ def _options_flow(sym: str, max_age_sec: int = 3600) -> dict:
     return result
 
 
+_GEX_CACHE: dict = {}
+
+def _gamma_exposure(sym: str, max_age_sec: int = 1800) -> dict:
+    """Gamma Exposure (GEX) proxy from yfinance options chain.
+
+    GEX = sum(gamma × OI × 100 × price²) for calls minus puts near ATM.
+    Positive GEX = dealers are long gamma = price tends to revert (mean-reverting).
+    Negative GEX = dealers are short gamma = amplified moves (trending/volatile).
+
+    Also identifies 'gamma walls': strikes with very high OI that act as magnets.
+    Returns: gex_sign (+1/-1), call_gex, put_gex, gamma_wall_up, gamma_wall_down, squeeze_potential.
+    """
+    import time as _time
+    now = _time.time()
+    if sym in _GEX_CACHE:
+        cached, ts = _GEX_CACHE[sym]
+        if now - ts < max_age_sec:
+            return cached
+    result = {
+        "gex_sign": 0, "call_gex": 0.0, "put_gex": 0.0,
+        "gamma_wall_up": 0.0, "gamma_wall_down": 0.0, "squeeze_potential": False,
+    }
+    try:
+        tk = yf.Ticker(sym)
+        fi = tk.fast_info
+        price = getattr(fi, "last_price", None) or getattr(fi, "regularMarketPrice", None)
+        if not price or float(price) <= 0:
+            _GEX_CACHE[sym] = (result, now)
+            return result
+        price = float(price)
+        exps = tk.options
+        if not exps:
+            _GEX_CACHE[sym] = (result, now)
+            return result
+        # Use nearest 2-3 expirations (most gamma exposure is near-term)
+        today = datetime.now(timezone.utc).date()
+        near_exps = []
+        for exp in exps[:5]:
+            try:
+                from datetime import date as _dt_date
+                exp_date = _dt_date.fromisoformat(exp)
+                days_out = (exp_date - today).days
+                if 1 <= days_out <= 45:
+                    near_exps.append(exp)
+                    if len(near_exps) >= 3:
+                        break
+            except Exception:
+                pass
+        if not near_exps:
+            _GEX_CACHE[sym] = (result, now)
+            return result
+        call_gex = 0.0
+        put_gex  = 0.0
+        call_oi_by_strike: dict = {}
+        put_oi_by_strike:  dict = {}
+        for exp in near_exps:
+            try:
+                chain = tk.option_chain(exp)
+                calls = chain.calls
+                puts  = chain.puts
+                # Near-the-money: within 15% of current price
+                ntm_calls = calls[(calls["strike"] >= price * 0.85) & (calls["strike"] <= price * 1.15)]
+                ntm_puts  = puts[ (puts["strike"]  >= price * 0.85) & (puts["strike"]  <= price * 1.15)]
+                for _, row in ntm_calls.iterrows():
+                    g  = float(row.get("gamma", 0) or 0)
+                    oi = float(row.get("openInterest", 0) or 0)
+                    k  = float(row["strike"])
+                    gex_contrib = g * oi * 100 * price * price
+                    call_gex += gex_contrib
+                    call_oi_by_strike[k] = call_oi_by_strike.get(k, 0) + oi
+                for _, row in ntm_puts.iterrows():
+                    g  = float(row.get("gamma", 0) or 0)
+                    oi = float(row.get("openInterest", 0) or 0)
+                    k  = float(row["strike"])
+                    gex_contrib = g * oi * 100 * price * price
+                    put_gex += gex_contrib
+                    put_oi_by_strike[k] = put_oi_by_strike.get(k, 0) + oi
+            except Exception:
+                pass
+        net_gex = call_gex - put_gex
+        gex_sign = 1 if net_gex > 0 else -1
+        # Gamma walls: strikes with highest combined OI above/below current price
+        above_strikes = {k: v for k, v in {**call_oi_by_strike, **put_oi_by_strike}.items() if k > price}
+        below_strikes = {k: v for k, v in {**call_oi_by_strike, **put_oi_by_strike}.items() if k < price}
+        gamma_wall_up   = max(above_strikes, key=above_strikes.get) if above_strikes else 0.0
+        gamma_wall_down = max(below_strikes, key=below_strikes.get) if below_strikes else 0.0
+        # Squeeze potential: large put wall below current price + negative GEX = gamma squeeze fuel
+        squeeze_potential = (put_gex > call_gex * 2 and gamma_wall_down > 0
+                             and abs(price - gamma_wall_down) / price < 0.05)
+        result = {
+            "gex_sign":        gex_sign,
+            "call_gex":        round(call_gex, 0),
+            "put_gex":         round(put_gex, 0),
+            "gamma_wall_up":   round(gamma_wall_up, 2),
+            "gamma_wall_down": round(gamma_wall_down, 2),
+            "squeeze_potential": squeeze_potential,
+        }
+    except Exception:
+        pass
+    _GEX_CACHE[sym] = (result, now)
+    return result
+
+
 _NEWS_VEL_CACHE: dict = {}
 
 def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
@@ -4283,6 +4386,18 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("pm_big_gap_up", False)
                             sig.setdefault("pm_big_gap_down", False)
                             sig.setdefault("pm_price", 0.0)
+                        # GEX: gamma exposure proxy (30 min cache) — only for top candidates
+                        try:
+                            gex = _gamma_exposure(tk)
+                            sig["gex_sign"]          = gex.get("gex_sign", 0)
+                            sig["gamma_wall_up"]     = gex.get("gamma_wall_up", 0.0)
+                            sig["gamma_wall_down"]   = gex.get("gamma_wall_down", 0.0)
+                            sig["squeeze_potential"] = gex.get("squeeze_potential", False)
+                        except Exception:
+                            sig.setdefault("gex_sign", 0)
+                            sig.setdefault("gamma_wall_up", 0.0)
+                            sig.setdefault("gamma_wall_down", 0.0)
+                            sig.setdefault("squeeze_potential", False)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -4787,6 +4902,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif d.get("pm_gap_up", False):      s += 4   # 1.5%+ gap up = positive momentum
     if d.get("pm_big_gap_down", False):  s -= 7   # 3%+ gap down = distribution
     elif d.get("pm_gap_down", False):    s -= 3   # 1.5%+ gap down = weakness
+
+    # Gamma Exposure (GEX): options market positioning
+    # Negative GEX = dealers short gamma = amplified moves = trending/breakout fuel
+    # Squeeze potential = large put wall below = short gamma + forced covering
+    if d.get("squeeze_potential", False):   s += 8   # gamma squeeze setup — explosive fuel
+    elif d.get("gex_sign", 0) == -1:        s += 3   # negative GEX = trending, momentum persists
+    # Note: positive GEX = mean-reverting = slight penalty for momentum breakout plays
+    elif d.get("gex_sign", 0) == 1:         s -= 1
 
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
@@ -6072,6 +6195,10 @@ def run():
                 "pm_price":       live.get(tk, {}).get("pm_price", 0.0),
                 "mtf_triple":     live.get(tk, {}).get("mtf_triple", False),
                 "mtf_score":      live.get(tk, {}).get("mtf_score", 0),
+                "gex_sign":       live.get(tk, {}).get("gex_sign", 0),
+                "gamma_wall_up":  live.get(tk, {}).get("gamma_wall_up", 0.0),
+                "gamma_wall_down":live.get(tk, {}).get("gamma_wall_down", 0.0),
+                "squeeze_potential": live.get(tk, {}).get("squeeze_potential", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -6367,6 +6494,10 @@ def run():
                 "pm_gap_down":     sig.get("pm_gap_down", False),
                 "pm_big_gap_up":   sig.get("pm_big_gap_up", False),
                 "pm_price":        sig.get("pm_price", 0.0),
+                "gex_sign":        sig.get("gex_sign", 0),
+                "gamma_wall_up":   sig.get("gamma_wall_up", 0.0),
+                "gamma_wall_down": sig.get("gamma_wall_down", 0.0),
+                "squeeze_potential": sig.get("squeeze_potential", False),
             }
 
         tlog["positions"] = [

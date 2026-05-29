@@ -54740,6 +54740,7 @@ window.renderSectorRotation = renderSectorRotation;
         if ((ls.accum_score||0) >= 6)               bullish.push('Accumulating');
         if (ls.vwap_reclaim)                        bullish.push('VWAP reclaim');
         if (ls.pm_big_gap_up)                       bullish.push('PM gap up');
+        if (ls.squeeze_potential)                   bullish.push('γ squeeze fuel');
         const bCount = bearish.length, gCount = bullish.length, cCount = caution.length;
         let action, col, conf, reasons;
         if (bCount >= 3 || (bCount >= 2 && pnl_pct > 5)) {
@@ -54802,6 +54803,8 @@ window.renderSectorRotation = renderSectorRotation;
           const lsNewsVel = ls.news_accelerating ? `<span style="font-size:6px;font-weight:800;color:#ffd600" title="News accelerating — ${ls.news_count_24h||0} articles in 24h">📰NEWS↑</span>` : '';
           const lsPmGap = ls.pm_big_gap_up ? `<span style="font-size:6px;font-weight:900;color:#00ff88" title="Pre-market gap up ${(ls.pm_gap_pct||0).toFixed(1)}%">PM+${(ls.pm_gap_pct||0).toFixed(1)}%🚀</span>` : (ls.pm_big_gap_down ? `<span style="font-size:6px;font-weight:900;color:#ff5252" title="Pre-market gap down ${(ls.pm_gap_pct||0).toFixed(1)}%">PM${(ls.pm_gap_pct||0).toFixed(1)}%⬇</span>` : ((ls.pm_gap_up||ls.pm_gap_down) ? `<span style="font-size:6px;color:${(ls.pm_gap_pct||0)>=0?'#69f0ae':'#ef9a9a'}" title="Pre-market ${(ls.pm_gap_pct||0).toFixed(1)}%">PM${(ls.pm_gap_pct||0)>=0?'+':''}${(ls.pm_gap_pct||0).toFixed(1)}%</span>` : ''));
           const lsMtfTriple = ls.mtf_triple ? `<span style="font-size:6px;font-weight:900;color:#00e676" title="Triple timeframe aligned: weekly+daily+hourly bullish">3TF✓</span>` : '';
+          const lsGex = ls.squeeze_potential ? `<span style="font-size:6px;font-weight:900;color:#e040fb" title="Gamma squeeze potential">γSQZ🎯</span>` : (ls.gex_sign === -1 ? `<span style="font-size:6px;color:#ce93d8" title="Negative GEX — trending conditions">γ−</span>` : '');
+          const lsGammaWall = ls.gamma_wall_up > 0 && p.price > 0 && ls.gamma_wall_up > p.price ? `<span style="font-size:6px;color:#82b1ff" title="Gamma wall at $${(ls.gamma_wall_up||0).toFixed(0)}">γ↑$${(ls.gamma_wall_up||0).toFixed(0)}</span>` : '';
           const lsVwapBand = (() => {
             if (!ls.vwap_b1u || !p.price) return '';
             const pr = p.price;
@@ -54855,7 +54858,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
-                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}</div>` : ''}
+                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}</div>` : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
@@ -55029,6 +55032,9 @@ window.renderSectorRotation = renderSectorRotation;
             // Pre-market gap
             s.pm_big_gap_up    ? `<span style="background:rgba(0,230,120,.35);color:#00ff88;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}% at $${(s.pm_price||0).toFixed(2)}">PM+${(s.pm_gap_pct||0).toFixed(1)}%🚀</span>` : (s.pm_gap_up ? `<span style="background:rgba(0,200,100,.22);color:#69f0ae;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}%">PM+${(s.pm_gap_pct||0).toFixed(1)}%</span>` : ''),
             s.pm_big_gap_down  ? `<span style="background:rgba(255,50,50,.3);color:#ff5252;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap down ${(s.pm_gap_pct||0).toFixed(1)}%">PM${(s.pm_gap_pct||0).toFixed(1)}%⬇</span>` : (s.pm_gap_down ? `<span style="background:rgba(200,50,50,.2);color:#ef9a9a;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Pre-market gap down">PM${(s.pm_gap_pct||0).toFixed(1)}%</span>` : ''),
+            // GEX badges
+            s.squeeze_potential ? `<span style="background:rgba(255,100,255,.3);color:#e040fb;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Gamma squeeze potential — large put wall below price with negative dealer gamma">γSQZ🎯</span>` : (s.gex_sign === -1 ? `<span style="background:rgba(180,80,255,.18);color:#ce93d8;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Negative GEX — dealers short gamma, amplified moves expected">γ−</span>` : ''),
+            (s.gamma_wall_up > 0 && s.price > 0 && s.gamma_wall_up > s.price) ? `<span style="background:rgba(100,180,255,.15);color:#82b1ff;font-size:6px;padding:1px 4px;border-radius:3px" title="Gamma wall resistance at $${(s.gamma_wall_up||0).toFixed(0)}">γ↑$${(s.gamma_wall_up||0).toFixed(0)}</span>` : '',
             (s.earnings_days != null && s.earnings_days <= 20) ? (() => { const d = s.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col}">📅${d}d</span>`; })() : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
