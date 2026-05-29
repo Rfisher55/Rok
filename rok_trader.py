@@ -931,6 +931,16 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
         # Fast keyword catalyst scan
         boost, catalyst = detect_catalyst(headlines) if headlines else (0, "")
 
+        # News velocity: more recent positive news = higher conviction
+        now_ts = datetime.now(timezone.utc).timestamp()
+        recent_24h = [n for n in news_items if (now_ts - n.get("providerPublishTime", 0)) < 86400]
+        older_48h  = [n for n in news_items if 86400 <= (now_ts - n.get("providerPublishTime", 0)) < 172800]
+        _, recent_boost = detect_catalyst([n.get("title","") for n in recent_24h]) if recent_24h else (0, "")
+        _, older_boost  = detect_catalyst([n.get("title","") for n in older_48h])  if older_48h  else (0, "")
+        # Velocity bonus: accelerating positive news = up to +2 extra
+        news_vel = (recent_boost - older_boost) * 0.1
+        boost   += max(-2, min(2, news_vel))
+
         text  = "\n".join(headlines[:8]) if headlines else "(no recent news)"
         model = "claude-sonnet-4-6" if use_sonnet else "claude-haiku-4-5-20251001"
 
@@ -964,11 +974,12 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             if vol_dry:   extras.append("volume dry-up (selling exhaustion)")
             if nr7:       extras.append("NR7 coiling — volatility expansion imminent")
             if consec >= 3: extras.append(f"{consec} consecutive green days")
+            adx_v = signals.get("adx", 0)
             tech_context = (
                 f"\nTechnical: RSI={rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
                 f"5d_ROC={roc5:+.1f}%, EMA50_pos={ema50:+.1f}%, "
                 f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, W%R={w_r:.0f}, "
-                f"RS5_vs_SPY={rs5:+.1f}%"
+                f"RS5_vs_SPY={rs5:+.1f}%, ADX={adx_v:.0f}"
                 + (f"\nSetup flags: {', '.join(extras)}" if extras else "")
             )
 
@@ -1939,6 +1950,22 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Intraday trend quality: higher intraday highs = price trending up vs fading
+    intraday_trend_quality = 0.0  # positive = trending up all day, negative = fading
+    try:
+        if hourly is not None and "High" in hourly.columns and "Low" in hourly.columns:
+            h_iq = hourly.dropna(subset=["Close"])
+            if len(h_iq) >= 4:
+                highs_iq = list(h_iq["High"])
+                lows_iq  = list(h_iq["Low"])
+                closes_iq = list(h_iq["Close"])
+                # Count higher highs vs lower highs in the last 4 bars
+                hh_count = sum(1 for i in range(1, min(4, len(highs_iq))) if highs_iq[-i] > highs_iq[-i-1])
+                lh_count = sum(1 for i in range(1, min(4, len(highs_iq))) if highs_iq[-i] < highs_iq[-i-1])
+                intraday_trend_quality = (hh_count - lh_count) / 3.0  # -1 to +1
+    except Exception:
+        pass
+
     # Relative strength vs SPY (1-day and 5-day)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
@@ -1990,6 +2017,7 @@ def _extract(daily, hourly):
         "orb_breakout":        orb_breakout,
         "gap_and_hold":        gap_and_hold,
         "adx":                 round(adx_val, 1),
+        "intraday_tq":         round(intraday_trend_quality, 2),
     }
 
 
@@ -2350,6 +2378,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if adx >= 35:  s += 8    # very strong trend — momentum strategies highly reliable
     elif adx >= 25: s += 4   # trending — signals more reliable
     elif adx < 15: s -= 5    # choppy market — signals less reliable
+
+    # Intraday trend quality: stock making higher highs all day = strong conviction (+8/-5)
+    itq = d.get("intraday_tq", 0) or 0
+    if   itq >= 0.66:  s += 8   # 2+ higher highs — clear uptrend all day
+    elif itq >= 0.33:  s += 4   # 1 higher high — mild uptrend
+    elif itq <= -0.66: s -= 5   # 2+ lower highs — fading/distribution pattern
 
     # Market regime adjustment
     s += regime_adj
@@ -2876,6 +2910,10 @@ def run():
                         # Price dropped >1% below VWAP after being profitable = exit
                         vwap_p = live_sig.get("vwap_pos", 0) or 0
                         reason = f"VWAP breakdown ({vwap_p:.1f}% below, {pnl_pct:+.1f}%)"
+                    elif (live_sig.get("adx", 0) or 0) < 15 and pnl_pct > 5 and (live_sig.get("daily_rsi", 50) or 50) > 70:
+                        # ADX collapsed + overbought RSI = trend is exhausted, lock gains
+                        adx_live = live_sig.get("adx", 0) or 0
+                        reason = f"trend exhaustion (ADX={adx_live:.0f}, RSI overbought, {pnl_pct:+.1f}%)"
 
             # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
             if not reason and _close_cleanup and pnl_pct < -3:
