@@ -1194,7 +1194,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <div class="tab-pane" id="tab-screener">
     <div style="background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.1);border-radius:10px;padding:.55rem .85rem;margin-bottom:.85rem;font-size:11px;color:var(--wh2);line-height:1.55">
       🔍 <strong style="color:var(--b)">STOCK SCREENER</strong> — Browse all 0 stocks ROK analyzed today.
-      Filter by <span style="color:var(--g)">BUY</span> / <span style="color:var(--r)">SELL</span> signal, sort by momentum, or search by name. Tap any card to see full details.
+      Filter by <span style="color:var(--g)">BUY</span> / <span style="color:var(--r)">SELL</span> signal, sort by momentum, or search by name. New to investing? Try <strong style="color:var(--au)">🛡️ SAFE PICKS</strong> — large-cap buy signals only.
     </div>
     <div class="sc-controls">
       <div class="sc-tabs">
@@ -1203,6 +1203,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <button class="sc-tab sell" data-filter="sell">🔴 SELL</button>
         <button class="sc-tab watch" data-filter="watch">👀 WATCH</button>
         <button class="sc-tab" data-filter="neutral">NEUTRAL</button>
+        <button class="sc-tab" data-filter="beginner" title="Large &amp; mega-cap stocks with buy signals — safer for beginners">🛡️ SAFE PICKS</button>
       </div>
       <div class="sc-sort">
         <span class="sort-lbl">SORT</span>
@@ -1625,7 +1626,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           onkeydown="if(event.key==='Enter')confirmBoughtIt()"/>
       </div>
     </div>
-    <div id="buy-dialog-calc" style="min-height:28px;margin-bottom:.65rem;font-size:11px;color:var(--wh3)"></div>
+    <div id="buy-dialog-calc" style="min-height:28px;margin-bottom:.5rem;font-size:11px;color:var(--wh3)"></div>
+    <div id="buy-dialog-stoploss" style="display:none;margin-bottom:.55rem;padding:.4rem .7rem;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.2);border-radius:8px;font-size:10.5px;color:var(--wh2);line-height:1.55"></div>
+    <div style="margin-bottom:.6rem;padding:.38rem .7rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.12);border-radius:8px;font-size:10px;color:var(--wh3)">
+      💡 <strong style="color:var(--au)">Position sizing:</strong> Beginners should put no more than <strong>5–10%</strong> of your investing money into any single stock to manage risk.
+    </div>
     <div style="display:flex;gap:.6rem">
       <button onclick="cancelBoughtIt()" style="flex:1;padding:.75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
       <button onclick="confirmBoughtIt()" style="flex:2;padding:.75rem;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.35);border-radius:10px;color:var(--g);font-size:14px;font-weight:800;cursor:pointer;touch-action:manipulation">✓ ADD TO MY STOCKS</button>
@@ -2236,8 +2241,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         const parts = [];
         if (price > 0) parts.push(`Current price: $${price.toFixed(2)}`);
         if (det.price_target) parts.push(`Target: $${Number(det.price_target).toFixed(2)}`);
-        if (det.stop_loss) parts.push(`Stop loss: $${Number(det.stop_loss).toFixed(2)}`);
         sub.textContent = parts.join(' · ') || 'Enter the price you paid per share';
+      }
+      const slEl = document.getElementById('buy-dialog-stoploss');
+      if (slEl) {
+        if (det.stop_loss) {
+          const sl = Number(det.stop_loss);
+          const lossPct = price > 0 ? Math.abs(((sl - price) / price) * 100).toFixed(0) : '';
+          slEl.style.display = 'block';
+          slEl.innerHTML = `⚠ <strong style="color:var(--r)">Stop-loss: $${sl.toFixed(2)}</strong>${lossPct ? ` (${lossPct}% below current price)` : ''} — if the price falls to this level, ROK will alert you to sell. This limits how much you can lose.`;
+        } else {
+          slEl.style.display = 'none';
+        }
       }
       if (overlay) overlay.classList.add('open');
       setTimeout(() => { if (inp) inp.focus(); }, 100);
@@ -2283,7 +2298,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const btn = document.getElementById('btn-' + ticker);
     if (btn) { btn.textContent = '✓ ADDED TO MY STOCKS!'; btn.classList.add('owned'); }
     const sharesTxt = useShares ? ` · ${useShares} share${useShares!==1?'s':''}` : '';
-    showAppAlert(`${ticker} added to My Stocks at $${Number(usePrice).toFixed(2)}${sharesTxt}`);
+    const det2 = sigDetails[ticker] || {};
+    const nextStep = det2.stop_loss
+      ? `⚠ Stop-loss: $${Number(det2.stop_loss).toFixed(2)} — ROK will alert you to sell if price falls here`
+      : `✓ Check 💼 MY STOCKS tab daily — ROK will tell you when to sell`;
+    showAppAlert(`✓ ${ticker} added at $${Number(usePrice).toFixed(2)}${sharesTxt} — ${nextStep}`, 'good', 6000);
     renderPortfolioSummary();
   }
   window.boughtIt = boughtIt;
@@ -2358,10 +2377,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       ? `+$${totalDollarGain.toFixed(hasRealShares ? 2 : 0)}`
       : `-$${Math.abs(totalDollarGain).toFixed(hasRealShares ? 2 : 0)}`;
     const pnlLabel = hasRealShares ? 'Real P&amp;L' : 'Est. P&amp;L*';
+    const fmtMoney = v => v >= 1000 ? '$' + (v/1000).toFixed(1) + 'k' : '$' + v.toFixed(0);
+    const nowValHtml = totalNow > 0 ? `<div style="font-size:9px;color:var(--wh3);margin-top:1px">${fmtMoney(totalInvested)} → ${fmtMoney(totalNow)}</div>` : '';
     sumEl.innerHTML = `<div class="port-summary" style="grid-template-columns:repeat(4,1fr)">
       <div class="port-sum-box"><div class="port-sum-val" style="color:var(--au)">${tickers.length}</div><div class="port-sum-lbl">Tracking</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${cc}">${avgPct>=0?'+':''}${avgPct.toFixed(1)}%</div><div class="port-sum-lbl">Avg Return</div></div>
-      <div class="port-sum-box"><div class="port-sum-val" style="color:${moneyColor};font-size:1.1rem">${totalInvested > 0 ? dollarFmt : '—'}</div><div class="port-sum-lbl">${pnlLabel}</div></div>
+      <div class="port-sum-box"><div class="port-sum-val" style="color:${moneyColor};font-size:1.1rem">${totalInvested > 0 ? dollarFmt : '—'}</div>${nowValHtml}<div class="port-sum-lbl">${pnlLabel}</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${alerts?'var(--r)':'var(--g)'}">${alerts}</div><div class="port-sum-lbl">Alerts</div></div>
     </div>
     ${!hasRealShares && totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position. Add shares when tracking for real P&amp;L</div>` : ''}`;
@@ -2621,7 +2642,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const q = scQuery.toLowerCase();
       list = list.filter(s => s.ticker.toLowerCase().includes(q) || (s.company_name || '').toLowerCase().includes(q));
     }
-    if (scFilter !== 'all') list = list.filter(s => s.rok_signal === scFilter);
+    if (scFilter === 'beginner') {
+      list = list.filter(s => s.rok_signal === 'buy' && s.market_cap && s.market_cap >= 10e9);
+    } else if (scFilter !== 'all') {
+      list = list.filter(s => s.rok_signal === scFilter);
+    }
     list = sortList([...list]);
 
     if (cnt) cnt.textContent = list.length + ' stocks';
@@ -2649,6 +2674,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const earnHtml = s.earnings_date ? `<span class="sc-sector" style="color:rgba(255,215,0,.6);border-color:rgba(255,215,0,.16)">↑${s.earnings_date}</span>` : '';
       const inPort = isInPortfolio(s.ticker);
       const portBtn = `<button style="margin-top:.4rem;width:100%;padding:.38rem;border-radius:7px;border:1px solid ${inPort?'rgba(0,255,136,.35)':'rgba(255,255,255,.1)'};background:${inPort?'rgba(0,255,136,.1)':'rgba(255,255,255,.04)'};color:${inPort?'var(--g)':'var(--wh3)'};font-size:9.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;touch-action:manipulation" onclick="event.stopPropagation();boughtIt('${s.ticker}',${price||0})">${inPort?'✓ IN MY STOCKS':'+ ADD TO MY STOCKS'}</button>`;
+      const mc = s.market_cap;
+      const capLabel = mc >= 200e9 ? ['MEGA CAP','rgba(255,215,0,.7)'] : mc >= 10e9 ? ['LARGE CAP','rgba(0,255,136,.6)'] : mc >= 2e9 ? ['MID CAP','rgba(0,204,255,.6)'] : mc >= 300e6 ? ['SMALL CAP','rgba(255,136,0,.6)'] : mc > 0 ? ['MICRO CAP','rgba(255,34,85,.5)'] : null;
+      const capHtml = capLabel ? `<span title="${capLabel[0]}: ${mc >= 200e9 ? 'Trillion-dollar company, very stable' : mc >= 10e9 ? 'Multi-billion dollar company, relatively safe' : mc >= 2e9 ? 'Medium-sized company, moderate risk' : 'Smaller company, higher risk/reward'}" style="font-size:7px;font-weight:700;letter-spacing:.05em;color:${capLabel[1]};opacity:.85">${capLabel[0]}</span>` : '';
       return `<div class="sc-card ${sig}" data-sc-ticker="${s.ticker}" onclick="openModal('${s.ticker}')">
         <div class="sc-top">
           <div><div class="sc-ticker">${s.ticker}</div><div class="sc-co">${(s.company_name || '').substring(0, 20)}</div></div>
@@ -2661,6 +2689,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         </div>
         ${ph.length > 3 ? `<div class="sc-spark"><canvas id="scs-${i}" height="32"></canvas></div>` : ''}
         <div class="sc-meta">
+          ${capHtml}
           ${s.sector ? `<span class="sc-sector">${s.sector.split('/')[0].trim()}</span>` : ''}
           ${s.pe_ratio != null && s.pe_ratio > 0 ? `<span class="sc-pe" title="P/E Ratio: ${s.pe_ratio.toFixed(1)}. Below 20 = potentially cheap. Above 30 = expensive relative to earnings.">PE ${s.pe_ratio.toFixed(1)}</span>` : ''}
           ${upHtml}
@@ -2815,19 +2844,25 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   // ── BEGINNER TIPS ─────────────────────────────────────────
   const TIPS = [
     '💡 Never invest more than you can afford to lose. Always use stop-losses.',
-    '💡 Diversify: spread your money across 5-10 stocks, not one.',
+    '💡 Position sizing: Put no more than 5–10% of your investing money into any single stock.',
+    '💡 Diversify: spread your money across 5-10 stocks in different sectors, not one.',
     '💡 Buy signals are suggestions, not guarantees. Do your own research too.',
-    '💡 Stop losses protect you. Set one on every trade you make.',
-    '💡 Congressional buy signals come 45 days late — but they still matter.',
+    '💡 Stop losses protect you. Set a price alert at your stop-loss level every time you buy.',
+    '💡 Congressional buy signals come 45 days late — but multiple members buying = very bullish.',
     '💡 CEO buying their own stock = very bullish. They risk personal money when they believe.',
     '💡 Fear & Greed below 25 = historically good time to buy. Above 75 = be careful.',
-    '💡 RSI below 30 = stock might be oversold and due for a bounce.',
-    '💡 Volume spikes mean big money is moving. Pay attention when vol is 2x+ average.',
-    '💡 Your stop loss should be 5-15% below your buy price. Tighter = safer.',
-    '💡 Earnings reports can move a stock 10-20% in one day. Reduce size beforehand.',
-    '💡 When the whole market drops, good stocks usually recover. Bad stocks often don\'t.',
-    '💡 Patience pays. Most ROK signals play out over weeks, not days.',
-    '💡 Tax tip: holding a stock over 1 year = lower capital gains tax in most countries.',
+    '💡 RSI below 30 = stock might be oversold and due for a bounce. RSI above 70 = overbought.',
+    '💡 Volume spikes mean big money is moving. Pay attention when vol is 2x+ normal.',
+    '💡 Your stop loss should be 5–15% below your buy price. Tighter stop = less risk.',
+    '💡 Earnings reports can move a stock 10–20% in one day. Size down before earnings if unsure.',
+    '💡 MEGA CAP stocks (Apple, Microsoft) are safer but slower. SMALL CAP = higher risk and reward.',
+    '💡 When the whole market drops, quality stocks usually recover. Avoid penny stocks during dips.',
+    '💡 Patience pays. Most ROK signals play out over weeks, not days. Don\'t panic-sell.',
+    '💡 Tax tip: holding a stock over 1 year = lower long-term capital gains tax rate.',
+    '💡 The best time to sell: when you\'ve hit your price target, or when ROK gives a sell signal.',
+    '💡 Don\'t average down on losing trades unless ROK still shows a buy signal.',
+    '💡 Large caps (market cap > $10B) are safer for beginners. Use the 🛡️ SAFE PICKS filter.',
+    '💡 When ROK says STRONG BUY, multiple data sources (congress, insiders, technicals) all align.',
   ];
   function initTipRotator() {
     const container = document.getElementById('tip-rotator');
@@ -2918,7 +2953,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     });
   }
 
-  function showAppAlert(msg, type) {
+  function showAppAlert(msg, type, duration) {
     const container = document.getElementById('app-alerts');
     if (!container) return;
     const el = document.createElement('div');
@@ -2931,7 +2966,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     el.textContent = msg;
     el.onclick = () => { showTab('portfolio'); if (el.parentNode) el.parentNode.removeChild(el); };
     container.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 6000);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, duration || 6000);
   }
 
   function requestNotifPermission() {

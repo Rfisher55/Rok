@@ -301,7 +301,19 @@ def run():
         if not sig.get("signal_strength"):
             sig["signal_strength"] = 6
         if not sig.get("risk_level"):
-            sig["risk_level"] = "Medium"
+            # Calculate risk level from beta and market cap
+            beta = sd.get("beta") if sd else None
+            mc = sd.get("market_cap") if sd else None
+            if beta and beta > 1.8:
+                sig["risk_level"] = "High"
+            elif beta and beta < 0.7:
+                sig["risk_level"] = "Low"
+            elif mc and mc >= 100_000_000_000:  # $100B+ = mega cap = lower risk
+                sig["risk_level"] = "Low"
+            elif mc and mc < 2_000_000_000:  # <$2B = small cap = higher risk
+                sig["risk_level"] = "High"
+            else:
+                sig["risk_level"] = "Medium"
         if not sig.get("time_horizon"):
             sig["time_horizon"] = "1-3 months"
     logger.info("Signal enrichment complete")
