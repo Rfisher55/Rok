@@ -54858,6 +54858,23 @@ window.renderSectorRotation = renderSectorRotation;
           const lsMtfTriple = ls.mtf_triple ? `<span style="font-size:6px;font-weight:900;color:#00e676" title="Triple timeframe aligned: weekly+daily+hourly bullish">3TF✓</span>` : '';
           const lsGex = ls.squeeze_potential ? `<span style="font-size:6px;font-weight:900;color:#e040fb" title="Gamma squeeze potential">γSQZ🎯</span>` : (ls.gex_sign === -1 ? `<span style="font-size:6px;color:#ce93d8" title="Negative GEX — trending conditions">γ−</span>` : '');
           const lsGammaWall = ls.gamma_wall_up > 0 && p.price > 0 && ls.gamma_wall_up > p.price ? `<span style="font-size:6px;color:#82b1ff" title="Gamma wall at $${(ls.gamma_wall_up||0).toFixed(0)}">γ↑$${(ls.gamma_wall_up||0).toFixed(0)}</span>` : '';
+          const lsAnalyst = (() => {
+            const bp = ls.analyst_buy_pct || 0;
+            const nr = ls.analyst_net_rev || 0;
+            const up = ls.analyst_upside_pct || 0;
+            const ugrd = ls.analyst_upgrade;
+            const rs = ls.analyst_rev_score || 0;
+            const pt = ls.analyst_price_tgt || 0;
+            if (!bp && !nr && !up && pt === 0) return '';
+            const bpPct = Math.round((bp || 0) * 100);
+            const upStr = up > 0 ? `+${up.toFixed(0)}%↑` : up < 0 ? `${up.toFixed(0)}%↓` : '';
+            const ptStr = pt > 0 ? `$${pt.toFixed(0)}` : '';
+            if (ugrd && nr >= 1) return `<span style="font-size:6px;font-weight:900;color:#b9f6ca;background:rgba(0,230,118,.1);border-radius:3px;padding:0 3px" title="Analyst upgrade in last 14 days · ${nr>0?'+':''}${nr} net revisions · ${bpPct}% buy-rated${ptStr?' · target '+ptStr:''}${upStr?' · '+upStr:''}">↑UPGRD${ptStr?' '+ptStr:''}</span>`;
+            if (bpPct >= 75) return `<span style="font-size:6px;color:#80cbc4" title="${bpPct}% analysts have Buy rating${ptStr?' · target '+ptStr:''}${upStr?' · '+upStr:''}">ANLY${bpPct}%${ptStr?' '+ptStr:''}</span>`;
+            if (nr <= -2) return `<span style="font-size:6px;color:#ef9a9a" title="${Math.abs(nr)} analyst downgrades recently">↓DNG${Math.abs(nr)}</span>`;
+            if (ptStr && up > 0) return `<span style="font-size:6px;color:#80b0e0" title="Analyst target ${ptStr} · ${upStr}">${ptStr} ${upStr}</span>`;
+            return '';
+          })();
           const lsShortInt = (() => {
             const sf = ls.short_float || 0;
             const sr = ls.short_ratio || 0;
@@ -54960,7 +54977,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
-                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}</div>` : ''}
+                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
                   const il = intelSig.type === 'buy' ? 'AI BUY' : intelSig.type === 'sell' ? 'AI SELL' : 'AI WATCH';

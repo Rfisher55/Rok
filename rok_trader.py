@@ -1021,6 +1021,109 @@ def _short_data(sym: str, max_age_sec: int = 7200) -> dict:
     return result
 
 
+_ANALYST_CACHE: dict = {}
+
+def _analyst_revisions(sym: str, max_age_sec: int = 14400) -> dict:
+    """
+    Fetch analyst estimate revisions and recommendation trends (4hr cache).
+    Returns:
+      upgrades_30d:    int — upgrades in last 30 days
+      downgrades_30d:  int — downgrades in last 30 days
+      net_revisions:   int — net (upgrades - downgrades), positive = bullish
+      buy_pct:         float 0-1 — fraction of analysts with buy/strong buy
+      analyst_upgrade: bool — net positive revisions in last 14 days
+      analyst_rev_score: int 0-3 scoring for use in score()
+      price_target:    float — median analyst price target (0 if unknown)
+      upside_pct:      float — % to price target
+    """
+    import time as _time
+    now = _time.time()
+    if sym in _ANALYST_CACHE:
+        cached, ts = _ANALYST_CACHE[sym]
+        if now - ts < max_age_sec:
+            return cached
+    result = {
+        "upgrades_30d": 0, "downgrades_30d": 0, "net_revisions": 0,
+        "buy_pct": 0.5, "analyst_upgrade": False, "analyst_rev_score": 0,
+        "price_target": 0.0, "upside_pct": 0.0,
+    }
+    try:
+        tk_obj = yf.Ticker(sym)
+        # Analyst recommendations (buy/sell/hold distribution)
+        try:
+            recs = tk_obj.recommendations
+            if recs is not None and not recs.empty:
+                # Get the most recent period
+                latest = recs.iloc[-1] if len(recs) > 0 else None
+                if latest is not None:
+                    strong_buy = int(latest.get("strongBuy", 0) or 0)
+                    buy        = int(latest.get("buy", 0) or 0)
+                    hold       = int(latest.get("hold", 0) or 0)
+                    sell       = int(latest.get("sell", 0) or 0)
+                    strong_sell= int(latest.get("strongSell", 0) or 0)
+                    total = strong_buy + buy + hold + sell + strong_sell
+                    if total > 0:
+                        result["buy_pct"] = round((strong_buy + buy) / total, 3)
+        except Exception:
+            pass
+        # Upgrades/downgrades in last 30 days
+        try:
+            upgrades = tk_obj.upgrades_downgrades
+            if upgrades is not None and not upgrades.empty:
+                import pandas as _pd
+                cutoff = _pd.Timestamp.now(tz="UTC") - _pd.Timedelta(days=30)
+                cutoff14= _pd.Timestamp.now(tz="UTC") - _pd.Timedelta(days=14)
+                recent = upgrades[upgrades.index >= cutoff] if hasattr(upgrades.index, 'tz') else upgrades.tail(20)
+                recent14= upgrades[upgrades.index >= cutoff14] if hasattr(upgrades.index, 'tz') else upgrades.tail(10)
+                _ups  = lambda df: int(df["Action"].str.upper().isin(["UPGRADE", "INIT", "REITERATED"]).sum()) if "Action" in df.columns else 0
+                _dns  = lambda df: int(df["Action"].str.upper().isin(["DOWNGRADE", "DOWNGRADED"]).sum()) if "Action" in df.columns else 0
+                result["upgrades_30d"]  = _ups(recent)
+                result["downgrades_30d"]= _dns(recent)
+                result["net_revisions"] = result["upgrades_30d"] - result["downgrades_30d"]
+                # Upgrade in last 14 days = fresh signal
+                result["analyst_upgrade"] = _ups(recent14) > _dns(recent14)
+        except Exception:
+            pass
+        # Analyst price target from info
+        try:
+            info = tk_obj.fast_info
+            pt = getattr(info, "target_price", None) or getattr(info, "analyst_target", None)
+            if pt:
+                result["price_target"] = round(float(pt), 2)
+                cur = getattr(info, "last_price", None) or getattr(info, "regularMarketPrice", None)
+                if cur and cur > 0:
+                    result["upside_pct"] = round((float(pt) - float(cur)) / float(cur) * 100, 1)
+        except Exception:
+            # Fallback to info dict
+            try:
+                info_d = tk_obj.info
+                pt = info_d.get("targetMeanPrice") or info_d.get("targetMedianPrice") or 0
+                cur = info_d.get("currentPrice") or info_d.get("regularMarketPrice") or 0
+                if pt:
+                    result["price_target"] = round(float(pt), 2)
+                    if cur and cur > 0:
+                        result["upside_pct"] = round((float(pt) - float(cur)) / float(cur) * 100, 1)
+            except Exception:
+                pass
+        # Composite analyst revision score
+        nr = result["net_revisions"]
+        bp = result["buy_pct"]
+        up_pct = result["upside_pct"]
+        s = 0
+        if nr >= 3:              s += 2  # strong upgrade wave
+        elif nr >= 1:            s += 1  # more ups than downs
+        elif nr <= -2:           s -= 1  # analyst downgrade wave
+        if bp >= 0.75:           s += 1  # majority buy-rated
+        if up_pct >= 15:         s += 1  # large upside to target
+        elif up_pct >= 8:        s += 0  # moderate upside
+        elif up_pct < -5:        s -= 1  # trading above target = risky
+        result["analyst_rev_score"] = max(-2, min(3, s))
+    except Exception:
+        pass
+    _ANALYST_CACHE[sym] = (result, now)
+    return result
+
+
 _NEWS_VEL_CACHE: dict = {}
 
 def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
@@ -4622,10 +4725,32 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                                 sig.setdefault("short_float", 0.0)
                                 sig.setdefault("short_ratio", 0.0)
                                 sig.setdefault("high_short", False)
+                            # Analyst revisions: held positions only (4hr cache, ~15s call)
+                            try:
+                                ar = _analyst_revisions(tk)
+                                sig["analyst_upgrade"]    = ar.get("analyst_upgrade", False)
+                                sig["analyst_rev_score"]  = ar.get("analyst_rev_score", 0)
+                                sig["analyst_buy_pct"]    = ar.get("buy_pct", 0.5)
+                                sig["analyst_net_rev"]    = ar.get("net_revisions", 0)
+                                sig["analyst_price_tgt"]  = ar.get("price_target", 0.0)
+                                sig["analyst_upside_pct"] = ar.get("upside_pct", 0.0)
+                            except Exception:
+                                sig.setdefault("analyst_upgrade", False)
+                                sig.setdefault("analyst_rev_score", 0)
+                                sig.setdefault("analyst_buy_pct", 0.5)
+                                sig.setdefault("analyst_net_rev", 0)
+                                sig.setdefault("analyst_price_tgt", 0.0)
+                                sig.setdefault("analyst_upside_pct", 0.0)
                         else:
                             sig.setdefault("short_float", 0.0)
                             sig.setdefault("short_ratio", 0.0)
                             sig.setdefault("high_short", False)
+                            sig.setdefault("analyst_upgrade", False)
+                            sig.setdefault("analyst_rev_score", 0)
+                            sig.setdefault("analyst_buy_pct", 0.5)
+                            sig.setdefault("analyst_net_rev", 0)
+                            sig.setdefault("analyst_price_tgt", 0.0)
+                            sig.setdefault("analyst_upside_pct", 0.0)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -5156,6 +5281,20 @@ def score(tk, d, sentiment=0, regime_adj=0):
         if _sf > 0.25:                            s -= 1   # penalty for "death by short"
     # Long days-to-cover + rising = short covering squeeze more prolonged
     if _sr >= 5 and _hs and d.get("mom_accel"):   s += 2
+
+    # Analyst Estimate Revisions: estimate upgrades = institutional re-rating signal
+    # Fresh upgrades in last 14d = analysts just revised outlook upward = strong alpha factor
+    _ar_score = d.get("analyst_rev_score", 0) or 0
+    if _ar_score >= 3:           s += 5  # wave of upgrades + high buy% + big upside
+    elif _ar_score >= 2:         s += 3  # solid revision trend
+    elif _ar_score >= 1:         s += 1  # mild positive revisions
+    elif _ar_score <= -1:        s -= 2  # downgrade wave
+    if d.get("analyst_upgrade", False):  s += 2   # fresh upgrade in last 14d
+    # Large upside to consensus target = still value to capture
+    _up_tgt = d.get("analyst_upside_pct", 0.0) or 0.0
+    if _up_tgt >= 20:            s += 2
+    elif _up_tgt >= 12:          s += 1
+    elif _up_tgt < -10:          s -= 2  # trading above consensus = priced for perfection
 
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
@@ -6783,9 +6922,15 @@ def run():
                 "gamma_wall_up":   sig.get("gamma_wall_up", 0.0),
                 "gamma_wall_down": sig.get("gamma_wall_down", 0.0),
                 "squeeze_potential": sig.get("squeeze_potential", False),
-                "short_float":     sig.get("short_float", 0.0),
-                "short_ratio":     sig.get("short_ratio", 0.0),
-                "high_short":      sig.get("high_short", False),
+                "short_float":        sig.get("short_float", 0.0),
+                "short_ratio":        sig.get("short_ratio", 0.0),
+                "high_short":         sig.get("high_short", False),
+                "analyst_upgrade":    sig.get("analyst_upgrade", False),
+                "analyst_rev_score":  sig.get("analyst_rev_score", 0),
+                "analyst_buy_pct":    sig.get("analyst_buy_pct", 0.5),
+                "analyst_net_rev":    sig.get("analyst_net_rev", 0),
+                "analyst_price_tgt":  sig.get("analyst_price_tgt", 0.0),
+                "analyst_upside_pct": sig.get("analyst_upside_pct", 0.0),
             }
 
         tlog["positions"] = [
