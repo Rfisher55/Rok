@@ -572,6 +572,37 @@ def get_market_movers():
     return list(set(movers))
 
 
+# ── Short squeeze + momentum surge detector ─────────────────────────────────
+def get_squeeze_candidates(fractionable_set: set) -> set:
+    """
+    Find stocks with high short interest that are also gaining momentum.
+    Short squeeze setups: price rising + high short float → explosive upside.
+    Returns set of ticker symbols with squeeze potential.
+    """
+    candidates = set()
+    try:
+        # yfinance screener for high short interest / active
+        for screen in ("most_actives", "day_gainers"):
+            res = yf.screen(screen)
+            for q in (res.get("quotes") or [])[:20]:
+                sym = q.get("symbol", "")
+                if not sym or sym not in fractionable_set:
+                    continue
+                short_float = q.get("shortPercentOfFloat", 0) or 0
+                chg_pct     = q.get("regularMarketChangePercent", 0) or 0
+                vol_ratio   = 1.0
+                if q.get("averageDailyVolume3Month") and q.get("regularMarketVolume"):
+                    vol_ratio = q.get("regularMarketVolume") / max(1, q.get("averageDailyVolume3Month"))
+                # Squeeze criteria: >15% short float + rising + volume surge
+                if short_float > 0.15 and chg_pct > 1.0 and vol_ratio > 1.5:
+                    candidates.add(sym)
+    except Exception as e:
+        logger.debug(f"Squeeze scanner error: {e}")
+    if candidates:
+        logger.info(f"Squeeze candidates: {', '.join(sorted(candidates))}")
+    return candidates
+
+
 # ── Crypto trading ────────────────────────────────────────────────────────────
 def fetch_crypto_data() -> dict:
     """
@@ -1290,16 +1321,38 @@ def run():
 
     # Market clock
     market_open = False
+    next_close_str = ""
     try:
         clock = alpaca_get("/v2/clock")
-        market_open = bool(clock.get("is_open"))
+        market_open    = bool(clock.get("is_open"))
+        next_close_str = clock.get("next_close", "")
         if market_open:
-            logger.info(f"Market OPEN — next close: {clock.get('next_close', '?')}")
+            logger.info(f"Market OPEN — next close: {next_close_str}")
         else:
             logger.info(f"Market closed. Next open: {clock.get('next_open', '?')}")
     except Exception as e:
         logger.error(f"Alpaca unreachable: {e}")
         sys.exit(1)
+
+    # Time-of-day flags (ET) — derived from next_close timestamp
+    _now_et   = datetime.now(timezone.utc).astimezone()
+    _et_hour  = _now_et.hour  # approximate; GitHub Actions uses UTC but clock gives wall time context
+    try:
+        from datetime import timezone as _tz
+        import zoneinfo as _zi
+        _et = _now_et.astimezone(_zi.ZoneInfo("America/New_York"))
+        _et_hour, _et_min = _et.hour, _et.minute
+    except Exception:
+        _et_hour, _et_min = _now_et.hour - 4, _now_et.minute  # rough UTC-4
+    _minutes_since_open = (_et_hour - 9) * 60 + (_et_min - 30) if market_open else 999
+    _minutes_to_close   = (16 * 60) - (_et_hour * 60 + _et_min) if market_open else 999
+    # Avoid new buys in first 10 min (wild open volatility) or last 20 min (end-of-day moves)
+    _open_guard  = market_open and _minutes_since_open < 10
+    _close_guard = market_open and _minutes_to_close < 20
+    if _open_guard:
+        logger.info(f"OPEN GUARD: {_minutes_since_open:.0f} min since open — skipping new buys")
+    if _close_guard:
+        logger.info(f"CLOSE GUARD: {_minutes_to_close:.0f} min to close — skipping new buys")
 
     # Account
     acct          = alpaca_get("/v2/account")
@@ -1363,6 +1416,9 @@ def run():
         if gap_ups:
             logger.info(f"Gap-up candidates: {', '.join(sorted(gap_ups))}")
 
+    # Short squeeze detection — high short float + rising + volume surge → explosive upside
+    squeeze_cands = get_squeeze_candidates(set(candidates)) if _time_ok(250) else set()
+
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
     now_utc     = datetime.now(timezone.utc)
@@ -1372,7 +1428,9 @@ def run():
         try:
             cost    = float(pos.get("avg_entry_price", 0))
             qty     = abs(float(pos.get("qty", 0)))    # qty is negative for shorts
-            current = live.get(sym, {}).get("price", cost)
+            current = (live.get(sym, {}).get("price")
+                       or float(pos.get("current_price") or cost)
+                       or cost)
             if cost <= 0 or qty <= 0:
                 continue
 
@@ -1407,7 +1465,10 @@ def run():
         try:
             cost    = float(pos.get("avg_entry_price", 0))
             qty     = float(pos.get("qty", 0))
-            current = live.get(sym, {}).get("price", cost)
+            # Use live scan price first, then Alpaca's own current_price as backup
+            current = (live.get(sym, {}).get("price")
+                       or float(pos.get("current_price") or cost)
+                       or cost)
             if cost <= 0 or qty <= 0:
                 continue
             pnl_pct = (current - cost) / cost * 100
@@ -1415,19 +1476,24 @@ def run():
             # Trailing peak
             prev_peak  = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else peaks.get(sym, current)
             peak       = max(prev_peak, current)
-            entry_time = peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None
-            peaks[sym] = {"peak": peak, "time": entry_time or now_utc.isoformat(),
-                          "half_out": peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False}
+            # Use peaks time, then Alpaca's own created_at, then now as last resort
+            alpaca_entry = pos.get("created_at") or ""
+            entry_time   = (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or alpaca_entry or now_utc.isoformat()
+            peaks[sym]   = {
+                "peak":           peak,
+                "time":           entry_time,
+                "half_out":       peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False,
+                "ever_hit_5pct":  peaks.get(sym, {}).get("ever_hit_5pct", False) if isinstance(peaks.get(sym), dict) else False,
+            }
             trail_drop = (current - peak) / peak * 100
 
             # Position age
             age_days = 0
-            if entry_time:
-                try:
-                    et      = datetime.fromisoformat(entry_time)
-                    age_days = (now_utc - et).days
-                except Exception:
-                    pass
+            try:
+                et       = datetime.fromisoformat(entry_time.replace("Z", "+00:00"))
+                age_days = (now_utc - et).total_seconds() / 86400
+            except Exception:
+                pass
 
             # ── Partial exit at +10% (sell half) ──
             half_out = peaks[sym].get("half_out", False)
@@ -1456,12 +1522,6 @@ def run():
             elif pnl_pct >=  5:  dyn_trail = TRAILING_STOP_PCT * 100   # 5%
             else:                dyn_trail = TRAILING_STOP_PCT * 100   # 5% default
 
-            # Breakeven lock: once +5%, never sell at a loss
-            if pnl_pct >= 5:
-                breakeven_stop = -(cost * 0.001 / cost * 100)  # ≈ 0% (tiny buffer)
-                if pnl_pct <= 0.1:
-                    reason = f"breakeven lock (was +5%, now {pnl_pct:+.1f}%)"
-
             # ── Full exit conditions ──
             reason = None
             if pnl_pct <= -(STOP_LOSS_PCT * 100):
@@ -1472,14 +1532,22 @@ def run():
                 reason = f"trailing stop ({trail_drop:.1f}% / thr={dyn_trail:.0f}% from peak ${peak:.2f})"
             elif age_days >= MAX_HOLD_DAYS and pnl_pct < 2:
                 reason = f"stale position ({age_days}d, {pnl_pct:+.1f}%)"
+            elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= 0.5:
+                # Breakeven lock: once +5% was hit, never let winner go negative
+                reason = f"breakeven lock ({pnl_pct:+.1f}%)"
             else:
-                # News emergency exit: check live signal on held stock
+                # Signal emergency exit: check live technical signal on held stock
                 live_sig = live.get(sym, {})
                 if live_sig:
                     live_sc = score(sym, live_sig, regime_adj=regime_adj)
-                    # Exit if held position now scores extremely bearish
                     if live_sc <= 8 and pnl_pct < 0:
                         reason = f"signal deteriorated (score={live_sc}, {pnl_pct:+.1f}%)"
+                    elif live_sc <= 14 and pnl_pct < -3:
+                        reason = f"weak signal + losing (score={live_sc}, {pnl_pct:+.1f}%)"
+
+            # Track ever-hit-5pct milestone for breakeven lock
+            if pnl_pct >= 5 and sym in peaks:
+                peaks[sym]["ever_hit_5pct"] = True
 
             if reason:
                 logger.info(f"SELL {sym} — {reason}")
@@ -1500,21 +1568,58 @@ def run():
         except Exception as e:
             logger.warning(f"Sell check error {sym}: {e}")
 
+    # ── DCA: add to strong held positions on pullbacks ───────────────────
+    if not _open_guard and not _close_guard and vix <= VIX_EXTREME_THRESH:
+        for sym, pos in list(longs.items()):
+            try:
+                cost    = float(pos.get("avg_entry_price", 0))
+                qty     = float(pos.get("qty", 0))
+                if cost <= 0 or qty <= 0:
+                    continue
+                current = live.get(sym, {}).get("price", cost)
+                pnl_pct = (current - cost) / cost * 100
+                # Add to position if: small loss (-5% to -1.5%), strong signal, and position not at max
+                mkt_val = current * qty
+                if -5.0 <= pnl_pct <= -1.5 and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.8:
+                    live_sig = live.get(sym, {})
+                    if not live_sig:
+                        continue
+                    dca_sc = score(sym, live_sig, regime_adj=regime_adj)
+                    if dca_sc >= 28:  # high conviction only
+                        dca_notional = min(
+                            mkt_val * 0.5,                        # add up to 50% of current size
+                            portfolio_val * MAX_POSITION_PCT - mkt_val,
+                            buying_power * 0.15,
+                        )
+                        if dca_notional >= 50:
+                            logger.info(f"DCA {sym} — adding ${dca_notional:.0f} (pnl={pnl_pct:+.1f}%, score={dca_sc})")
+                            r = alpaca_post("/v2/orders", {
+                                "symbol": sym, "notional": str(round(dca_notional, 2)),
+                                "side": "buy", "type": "market", "time_in_force": "day",
+                            })
+                            if r:
+                                buying_power -= dca_notional
+                                log_trade(tlog, "DCA", sym, current, dca_notional, score=dca_sc, reason=f"dca pullback {pnl_pct:+.1f}%")
+                                made_trades = True
+            except Exception as e:
+                logger.debug(f"DCA error {sym}: {e}")
+
     # ── BUY: long positions ───────────────────────────────────────────────
     open_long_slots = MAX_POSITIONS - len(longs)
 
-    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH:
+    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard:
         # Sector counts for diversification
         sector_counts = {}
         for sym in longs:
             sec = SECTOR_MAP.get(sym, "other")
             sector_counts[sec] = sector_counts.get(sec, 0) + 1
 
-        # Technical pass — include sector rotation bonus
+        # Technical pass — include sector rotation + gap + squeeze bonuses
         tech_scores = {
             tk: score(tk, live[tk],
                       regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
-                                + (10 if tk in gap_ups else 0))
+                                + (10 if tk in gap_ups else 0)
+                                + (12 if tk in squeeze_cands else 0))
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -1541,9 +1646,11 @@ def run():
                 sent, catalyst = ai_sentiment(tk, use_sonnet=use_sonnet)
             else:
                 sent, catalyst = 0, ""
-            sec_adj  = sector_adjs.get(sec, 0)
-            gap_adj  = 10 if tk in gap_ups else 0
-            final_sc = score(tk, live[tk], sentiment=sent, regime_adj=regime_adj + sec_adj + gap_adj)
+            sec_adj     = sector_adjs.get(sec, 0)
+            gap_adj     = 10 if tk in gap_ups else 0
+            squeeze_adj = 12 if tk in squeeze_cands else 0
+            final_sc    = score(tk, live[tk], sentiment=sent,
+                                regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}'")
@@ -1559,9 +1666,11 @@ def run():
                     price    = d["price"]
                     atr      = d.get("atr")
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix)
-                    # Size up for strong catalysts
+                    # Size up for strong catalysts or squeeze setups
                     if catalyst and sent >= 5:
                         notional = min(notional * 1.5, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
+                    elif tk in squeeze_cands:
+                        notional = min(notional * 1.3, portfolio_val * MAX_POSITION_PCT, buying_power * 0.35)
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
@@ -1590,7 +1699,7 @@ def run():
                     logger.warning(f"BUY failed {tk}: {e}")
 
     # ── SHORT: bearish positions in bear/neutral regime ───────────────────
-    if ENABLE_SHORTS and regime["regime"] in ("bear", "neutral"):
+    if ENABLE_SHORTS and regime["regime"] in ("bear", "neutral") and not _open_guard and not _close_guard:
         open_short_slots = MAX_SHORTS - len(shorts)
         if open_short_slots > 0:
             short_scores = {
