@@ -3984,7 +3984,8 @@ def run():
 
             # ── Partial exit at +10% (sell half) ──
             half_out = peaks[sym].get("half_out", False)
-            if pnl_pct >= (PARTIAL_PROFIT_PCT * 100) and not half_out and qty >= 2:
+            _half_value = current * (qty / 2)  # value of half position
+            if pnl_pct >= (PARTIAL_PROFIT_PCT * 100) and not half_out and _half_value >= 50:
                 half_qty = round(qty / 2, 4)
                 logger.info(f"SELL_HALF {sym} — partial at {pnl_pct:+.1f}%")
                 try:
@@ -4002,7 +4003,8 @@ def run():
 
             # ── Profit lock at +8%: if momentum reverses with solid gain, sell 75% ──
             # This locks in most of the profit while keeping a runner going
-            if (pnl_pct >= 8 and not half_out and qty >= 4):
+            _lock_value = current * (qty * 0.75)  # value of 75% position
+            if (pnl_pct >= 8 and not half_out and _lock_value >= 100):
                 live_sig_lock = live.get(sym, {})
                 macd_s = live_sig_lock.get("macd_slope", 0) or 0
                 stoch_k_lock = live_sig_lock.get("stoch_k", 50) or 50
@@ -4125,6 +4127,12 @@ def run():
                         # ADX collapsed + overbought RSI = trend is exhausted, lock gains
                         adx_live = live_sig.get("adx", 0) or 0
                         reason = f"trend exhaustion (ADX={adx_live:.0f}, RSI overbought, {pnl_pct:+.1f}%)"
+                    elif live_sig.get("ema_stacked_bear", False) and pnl_pct > 0 and age_days >= 1:
+                        # All EMAs flipped bearish (EMA5<EMA10<EMA20<EMA50) — exit profitable position
+                        reason = f"EMA stack turned bearish — exit profit ({pnl_pct:+.1f}%)"
+                    elif live_sig.get("ema_stacked_bear", False) and pnl_pct <= -2 and age_days >= 0.5:
+                        # EMA stack bearish while in a loss — cut early before it gets worse
+                        reason = f"EMA stack bearish on losing position ({pnl_pct:+.1f}%)"
 
             # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
             if not reason and _close_cleanup and pnl_pct < -3:
