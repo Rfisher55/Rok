@@ -139,6 +139,7 @@ def run():
         lambda: sec_scraper.get_recent_insider_trades(7) + sec_scraper.get_recent_8k_filings(7),
         default=list, label="SEC",
     )
+    insider_buys = _safe(sec_scraper.get_insider_buys, 14, default=list, label="InsiderBuys")
 
     # ── Load history (for last_analysis fallback) ─────────────────
     history_path = Path(__file__).parent / "docs" / "history.json"
@@ -415,6 +416,7 @@ def run():
         "stock_universe": stock_data,
         "buy_count": buy_count,
         "sell_count": sell_count,
+        "insider_buys": insider_buys[:12],
     }
 
     # ── Render HTML ───────────────────────────────────────────────

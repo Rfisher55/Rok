@@ -119,7 +119,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .s-ttl{font-family:var(--disp);font-size:1.3rem;letter-spacing:.1em}
 .s-sub{font-size:9.5px;color:var(--wh3);letter-spacing:.04em}
 .clbl{font-size:8.5px;font-weight:700;letter-spacing:.18em;color:rgba(255,215,0,.5);margin-bottom:.5rem;text-transform:uppercase}
-.ttl-buy{color:var(--g);text-shadow:0 0 16px rgba(0,255,136,.35)}.ttl-sell{color:var(--r);text-shadow:0 0 16px rgba(255,34,85,.35)}.ttl-watch{color:var(--au);text-shadow:0 0 16px rgba(255,215,0,.35)}.ttl-sq{color:var(--or)}.ttl-earn{color:var(--b)}.ttl-cong{color:var(--p)}.ttl-risk{color:var(--r)}
+.ttl-buy{color:var(--g);text-shadow:0 0 16px rgba(0,255,136,.35)}.ttl-sell{color:var(--r);text-shadow:0 0 16px rgba(255,34,85,.35)}.ttl-watch{color:var(--au);text-shadow:0 0 16px rgba(255,215,0,.35)}.ttl-sq{color:var(--or)}.ttl-earn{color:var(--b)}.ttl-cong{color:var(--p)}.ttl-risk{color:var(--r)}.ttl-insider{color:var(--or);text-shadow:0 0 16px rgba(255,136,0,.35)}
 
 /* ── SIGNALS TAB LAYOUT ─────────────────────────────────── */
 .sig-layout{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;align-items:start}
@@ -1391,6 +1391,37 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
       {% endif %}
 
+      <!-- Section 1b: SEC INSIDER PURCHASES (CEO/CFO bought their own stock) -->
+      {% if data.insider_buys %}
+      <div class="intel-section">
+        <div class="s-hdr">
+          <h2 class="s-ttl ttl-insider">👔 EXECUTIVES BUYING THEIR OWN STOCK</h2>
+        </div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(255,136,0,.05);border-radius:6px;border-left:2px solid rgba(255,136,0,.3)">
+          When a CEO or CFO spends their own money buying their company's stock, it's a strong bullish signal — they believe the price is going higher.
+        </div>
+        <div class="mini-grid">
+          {% for b in data.insider_buys[:8] %}
+          <div class="mini-card" onclick="openModal('{{ b.ticker }}')" style="cursor:pointer">
+            <div class="mini-ticker" style="color:var(--or)">${{ b.ticker }}</div>
+            {% if b.company %}<div style="font-size:8.5px;color:var(--wh3);margin-bottom:2px">{{ b.company }}</div>{% endif %}
+            <div class="mini-sub" style="color:var(--or)">
+              {% if b.value_usd and b.value_usd > 0 %}
+                ${{ '{:,}'.format(b.value_usd) }} purchase
+              {% elif b.shares and b.shares > 0 %}
+                {{ '{:,}'.format(b.shares) }} shares
+              {% else %}
+                Insider purchase
+              {% endif %}
+            </div>
+            <div class="mini-txt">{{ b.insider_name }}{% if b.title %} · {{ b.title }}{% endif %}</div>
+            {% if b.date %}<div style="font-size:8px;color:var(--wh4);margin-top:2px">{{ b.date }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Section 2: THINGS THAT COULD HURT STOCKS (Macro Risks) -->
       {% if data.macro_risks %}
       <div class="intel-section">
@@ -1642,6 +1673,32 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="onboard-dot" id="odot-2"></div>
       <div class="onboard-dot" id="odot-3"></div>
     </div>
+  </div>
+</div>
+
+<!-- BUY DIALOG -->
+<div id="buy-dialog-overlay" class="modal-overlay" style="align-items:flex-end">
+  <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.25);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem">
+      <span style="font-size:2rem">💰</span>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase">Adding to My Stocks</div>
+        <div id="buy-dialog-ticker" style="font-family:var(--disp);font-size:1.6rem;color:var(--g)"></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--wh3);margin-bottom:.5rem" id="buy-dialog-sub"></div>
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem">
+      <span style="font-size:1.2rem;color:var(--wh3)">$</span>
+      <input id="buy-dialog-price" type="number" step="0.01" min="0.01"
+        style="flex:1;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.3);border-radius:10px;padding:.75rem 1rem;font-size:1.2rem;font-weight:700;color:var(--g);outline:none;font-family:var(--font)"
+        placeholder="Price you paid per share"
+        onkeydown="if(event.key==='Enter')confirmBoughtIt()"/>
+    </div>
+    <div style="display:flex;gap:.6rem">
+      <button onclick="cancelBoughtIt()" style="flex:1;padding:.75rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button onclick="confirmBoughtIt()" style="flex:2;padding:.75rem;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.35);border-radius:10px;color:var(--g);font-size:14px;font-weight:800;cursor:pointer;touch-action:manipulation">✓ ADD TO MY STOCKS</button>
+    </div>
+    <div style="text-align:center;font-size:10px;color:var(--wh4);margin-top:.7rem">ROK will track your gain/loss and alert you when to sell</div>
   </div>
 </div>
 
@@ -2042,11 +2099,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
             <span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--wh3);font-size:14px">$</span>
             <input type="number" id="calc-invest" value="1000" min="1" max="1000000"
               style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.5rem .5rem .5rem 1.5rem;font-size:16px;color:var(--wh);outline:none;font-family:var(--font)"
-              oninput="updateCalc(${curPrice},${priceTarget})"/>
+              oninput="updateCalc(${curPrice},${priceTarget},${det.stop_loss||0})"/>
           </div>
         </div>
-        <div id="calc-result" style="background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.7rem .85rem;font-size:13px;line-height:1.7;color:var(--wh2)">
-          Loading…
+        <div id="calc-result" style="font-size:13px;line-height:1.6;color:var(--wh2)">
+          <span style="color:var(--wh3);font-size:11px">Enter an amount above to see your potential gain/loss</span>
         </div>
       </div>` : ''}
       <div id="modal-news-section" style="padding:0 1.1rem .65rem">
@@ -2071,8 +2128,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     // Initialize profit calculator
     const priceTarget2 = det.price_target || s.analyst_target;
     const curPrice2 = liveprices[ticker]?.price || s.price;
+    const stopLoss2 = det.stop_loss || 0;
     if (sig === 'buy' && priceTarget2 && curPrice2) {
-      setTimeout(() => updateCalc(curPrice2, priceTarget2), 60);
+      setTimeout(() => updateCalc(curPrice2, priceTarget2, stopLoss2), 60);
     }
     // Load live news headlines
     loadModalNews(ticker);
@@ -2111,22 +2169,38 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (h >= 1) return h + 'h ago';
     return m + 'm ago';
   }
-  function updateCalc(price, target) {
+  function updateCalc(price, target, stopLoss) {
     const el = document.getElementById('calc-invest');
     const res = document.getElementById('calc-result');
     if (!el || !res || !price || !target) return;
     const amt = parseFloat(el.value) || 0;
-    if (amt <= 0) { res.innerHTML = 'Enter an amount to invest'; return; }
+    if (amt <= 0) { res.innerHTML = '<span style="color:var(--wh3)">Enter an amount above to see your potential gain/loss</span>'; return; }
     const shares = Math.floor(amt / price);
+    if (shares < 1) { res.innerHTML = `<span style="color:var(--wh3)">Need at least $${price.toFixed(2)} to buy 1 share</span>`; return; }
     const cost = shares * price;
     const gain = shares * (target - price);
     const gainPct = ((target - price) / price * 100).toFixed(1);
     const leftover = amt - cost;
+    const rr = stopLoss ? ((target - price) / (price - stopLoss)).toFixed(1) : null;
+    const maxLoss = stopLoss ? shares * (stopLoss - price) : null; // negative number
+    const maxLossPct = stopLoss ? ((stopLoss - price) / price * 100).toFixed(1) : null;
     res.innerHTML = `
-      <strong style="color:var(--wh)">You can buy <span style="color:var(--g)">${shares} share${shares !== 1 ? 's' : ''}</span></strong> at $${price.toFixed(2)} each<br>
-      Cost: $${cost.toFixed(2)}${leftover > 0 ? ` · $${leftover.toFixed(2)} left over` : ''}<br>
-      <strong>If analysts are right ($${target.toFixed(2)} target):</strong><br>
-      📈 You'd make <strong style="color:var(--g)">+$${gain.toFixed(0)} (+${gainPct}%)</strong>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem">
+        <div style="background:rgba(0,255,136,.07);border-radius:7px;padding:.5rem .65rem;border:1px solid rgba(0,255,136,.18)">
+          <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:rgba(0,255,136,.6);text-transform:uppercase">BEST CASE 📈</div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--g)">+$${gain.toFixed(0)}</div>
+          <div style="font-size:9px;color:var(--wh3)">+${gainPct}% · target $${target.toFixed(2)}</div>
+        </div>
+        ${maxLoss !== null ? `<div style="background:rgba(255,34,85,.07);border-radius:7px;padding:.5rem .65rem;border:1px solid rgba(255,34,85,.18)">
+          <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:rgba(255,34,85,.6);text-transform:uppercase">MAX LOSS ⛔</div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--r)">-$${Math.abs(maxLoss).toFixed(0)}</div>
+          <div style="font-size:9px;color:var(--wh3)">${maxLossPct}% · stop $${stopLoss.toFixed(2)}</div>
+        </div>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--wh2)">
+        <strong style="color:var(--wh)">${shares} share${shares !== 1 ? 's' : ''}</strong> at $${price.toFixed(2)} = $${cost.toFixed(2)}${leftover > 0.5 ? ` <span style="color:var(--wh4)">($${leftover.toFixed(2)} left over)</span>` : ''}
+        ${rr ? `<span style="font-size:9px;background:rgba(0,204,255,.08);border-radius:5px;padding:2px 6px;margin-left:.4rem;color:var(--b)">R:R 1:${rr}</span>` : ''}
+      </div>
     `;
   }
   window.updateCalc = updateCalc;
@@ -2168,32 +2242,62 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   function savePortfolio(p) { localStorage.setItem(PORT_KEY, JSON.stringify(p)); }
   function isInPortfolio(ticker) { return !!getPortfolio()[ticker]; }
 
-  function boughtIt(ticker, price) {
+  // ── CUSTOM ADD-TO-PORTFOLIO DIALOG ───────────────────────
+  let _boughtItResolve = null;
+
+  function showBoughtItDialog(ticker, suggestedPrice) {
+    return new Promise(resolve => {
+      _boughtItResolve = resolve;
+      const det = sigDetails[ticker] || {};
+      const lp = liveprices[ticker];
+      const price = lp ? lp.price : suggestedPrice;
+      const overlay = document.getElementById('buy-dialog-overlay');
+      const t = document.getElementById('buy-dialog-ticker');
+      const inp = document.getElementById('buy-dialog-price');
+      const sub = document.getElementById('buy-dialog-sub');
+      if (t) t.textContent = '$' + ticker;
+      if (inp) { inp.value = price > 0 ? price.toFixed(2) : ''; inp.placeholder = 'e.g. ' + (price > 0 ? price.toFixed(2) : '100.00'); }
+      if (sub) sub.textContent = price > 0 ? `Live price: $${price.toFixed(2)} · Target: ${det.price_target ? '$'+Number(det.price_target).toFixed(2) : 'n/a'}` : 'Enter the price you paid per share';
+      if (overlay) overlay.classList.add('open');
+      setTimeout(() => { if (inp) inp.focus(); }, 100);
+    });
+  }
+  window.confirmBoughtIt = function() {
+    const inp = document.getElementById('buy-dialog-price');
+    const v = parseFloat(inp?.value);
+    document.getElementById('buy-dialog-overlay')?.classList.remove('open');
+    if (_boughtItResolve) { _boughtItResolve(isNaN(v) || v <= 0 ? null : v); _boughtItResolve = null; }
+  };
+  window.cancelBoughtIt = function() {
+    document.getElementById('buy-dialog-overlay')?.classList.remove('open');
+    if (_boughtItResolve) { _boughtItResolve(null); _boughtItResolve = null; }
+  };
+
+  async function boughtIt(ticker, price) {
     const p = getPortfolio();
     if (p[ticker]) {
-      if (confirm('Remove ' + ticker + ' from My Stocks?')) {
-        delete p[ticker];
-        savePortfolio(p);
-        updateBoughtBtn(ticker, false);
-        if (activeTab === 'portfolio') renderPortfolio();
-        if (activeTab === 'screener') renderScreener();
-      }
+      showAppAlert(`${ticker} removed from My Stocks`, 'warn');
+      delete p[ticker];
+      savePortfolio(p);
+      updateBoughtBtn(ticker, false);
+      if (activeTab === 'portfolio') renderPortfolio();
+      if (activeTab === 'screener') renderScreener();
       return;
     }
-    // Try live price first
     const lp = liveprices[ticker];
-    let usePrice = lp ? lp.price : (price > 0 ? price : 0);
+    const suggested = lp ? lp.price : (price > 0 ? price : 0);
+    let usePrice = suggested;
     if (!usePrice) {
-      usePrice = parseFloat(prompt('What price did you pay per share? (e.g. 890.32)', '') || '0');
+      usePrice = await showBoughtItDialog(ticker, 0);
+      if (!usePrice) return;
     }
-    if (!usePrice || isNaN(usePrice)) return;
     p[ticker] = { price: usePrice, date: new Date().toISOString() };
     savePortfolio(p);
     updateBoughtBtn(ticker, true);
     if (activeTab === 'screener') renderScreener();
-    // Flash feedback
     const btn = document.getElementById('btn-' + ticker);
     if (btn) { btn.textContent = '✓ ADDED TO MY STOCKS!'; btn.classList.add('owned'); }
+    showAppAlert(`${ticker} added to My Stocks at $${usePrice.toFixed(2)}`);
     renderPortfolioSummary();
   }
   window.boughtIt = boughtIt;
