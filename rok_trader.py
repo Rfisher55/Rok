@@ -1393,16 +1393,39 @@ def run():
                     logger.warning(f"Partial sell failed {sym}: {e}")
                 continue
 
+            # ── Dynamic trailing stop: tightens as profit grows ──────────────
+            # At breakeven (+5%): stop locks at 0% (can't lose)
+            # At +10%: trail tightens to 3%
+            # At +15%: trail tightens to 2%
+            if   pnl_pct >= 15:  dyn_trail = 2.0
+            elif pnl_pct >= 10:  dyn_trail = 3.0
+            elif pnl_pct >=  5:  dyn_trail = TRAILING_STOP_PCT * 100   # 5%
+            else:                dyn_trail = TRAILING_STOP_PCT * 100   # 5% default
+
+            # Breakeven lock: once +5%, never sell at a loss
+            if pnl_pct >= 5:
+                breakeven_stop = -(cost * 0.001 / cost * 100)  # ≈ 0% (tiny buffer)
+                if pnl_pct <= 0.1:
+                    reason = f"breakeven lock (was +5%, now {pnl_pct:+.1f}%)"
+
             # ── Full exit conditions ──
             reason = None
             if pnl_pct <= -(STOP_LOSS_PCT * 100):
                 reason = f"stop loss ({pnl_pct:+.1f}%)"
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
                 reason = f"profit target ({pnl_pct:+.1f}%)"
-            elif trail_drop <= -(TRAILING_STOP_PCT * 100) and pnl_pct > 0:
-                reason = f"trailing stop ({trail_drop:.1f}% from peak ${peak:.2f})"
+            elif trail_drop <= -dyn_trail and pnl_pct > 0:
+                reason = f"trailing stop ({trail_drop:.1f}% / thr={dyn_trail:.0f}% from peak ${peak:.2f})"
             elif age_days >= MAX_HOLD_DAYS and pnl_pct < 2:
                 reason = f"stale position ({age_days}d, {pnl_pct:+.1f}%)"
+            else:
+                # News emergency exit: check live signal on held stock
+                live_sig = live.get(sym, {})
+                if live_sig:
+                    live_sc = score(sym, live_sig, regime_adj=regime_adj)
+                    # Exit if held position now scores extremely bearish
+                    if live_sc <= 8 and pnl_pct < 0:
+                        reason = f"signal deteriorated (score={live_sc}, {pnl_pct:+.1f}%)"
 
             if reason:
                 logger.info(f"SELL {sym} — {reason}")
