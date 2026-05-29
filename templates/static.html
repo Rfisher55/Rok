@@ -3162,10 +3162,22 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (cnt) cnt.textContent = list.length + ' stock' + (list.length !== 1 ? 's' : '') + (scSector ? ` · ${scSector}` : '');
 
     if (!list.length) {
-      const link = scQuery
-        ? `<a href="https://finance.yahoo.com/quote/${scQuery.toUpperCase().replace(/[^A-Z0-9]/g, '')}" target="_blank" rel="noopener">Look up on Yahoo Finance</a>`
-        : '';
-      grid.innerHTML = `<div class="sc-empty">No stocks found${link ? ' — ' + link : ''}</div>`;
+      const cleanQ = scQuery.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (cleanQ && cleanQ.length >= 1 && cleanQ.length <= 6 && /^[A-Z]+$/.test(cleanQ)) {
+        const lp = liveprices[cleanQ];
+        const lpHtml = lp ? `<div style="font-size:1.4rem;font-weight:900;color:${lp.change_pct>=0?'var(--g)':'var(--r)'};margin:.3rem 0">$${lp.price.toFixed(2)} <span style="font-size:12px">${lp.change_pct>=0?'+':''}${lp.change_pct.toFixed(2)}% today</span></div>` : '';
+        grid.innerHTML = `<div class="sc-empty" style="text-align:left;padding:1.2rem;max-width:360px;grid-column:1/-1">
+          <div style="font-family:var(--disp);font-size:1.5rem;color:var(--wh);margin-bottom:.3rem">$${cleanQ}</div>
+          ${lpHtml}
+          <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem">ROK doesn't have a current signal for <strong>$${cleanQ}</strong> — it wasn't in today's top 60 analyzed stocks. This doesn't mean it's bad, just that ROK didn't analyze it today.</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button onclick="openAlertDialog('${cleanQ}',${lp?lp.price:0},event)" style="padding:.45rem .9rem;border-radius:8px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.25);color:var(--au);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔔 Set Price Alert</button>
+            <a href="https://finance.yahoo.com/quote/${cleanQ}" target="_blank" rel="noopener" style="padding:.45rem .9rem;border-radius:8px;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);color:var(--b);font-size:11px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center">📊 Yahoo Finance ↗</a>
+          </div>
+        </div>`;
+      } else {
+        grid.innerHTML = `<div class="sc-empty">No stocks match your search</div>`;
+      }
       return;
     }
 
@@ -3185,6 +3197,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const sigDet = sigDetails[s.ticker] || {};
       const isTopPick = sig === 'buy' && (sigDet.signal_strength >= 8 || s.signal_strength >= 8);
       const topPickBadge = isTopPick ? `<div style="font-size:7.5px;font-weight:800;letter-spacing:.06em;color:var(--au);text-transform:uppercase;margin-bottom:2px">⭐ ROK TOP PICK</div>` : '';
+      const strength = sigDet.signal_strength || s.signal_strength || 0;
+      const strengthCol = sig === 'buy' ? 'var(--g)' : sig === 'sell' ? 'var(--r)' : 'var(--au)';
+      const strengthHtml = (strength > 0 && sig !== 'neutral') ? `<div style="display:flex;align-items:center;gap:1.5px;margin-top:.3rem" title="ROK Signal Strength: ${strength}/10. Higher = stronger conviction.">
+        ${Array.from({length:10},(_,i)=>`<div style="flex:1;height:3px;border-radius:1px;background:${i<strength?strengthCol:'rgba(255,255,255,.07)'}"></div>`).join('')}
+        <span style="font-size:7px;color:var(--wh4);margin-left:3px;flex-shrink:0">${strength}/10</span>
+      </div>` : '';
       const earnHtml = s.earnings_date ? `<span class="sc-sector" style="color:rgba(255,215,0,.6);border-color:rgba(255,215,0,.16)">↑${s.earnings_date}</span>` : '';
       const inPort = isInPortfolio(s.ticker);
       const portBtn = `<button style="margin-top:.4rem;width:100%;padding:.38rem;border-radius:7px;border:1px solid ${inPort?'rgba(0,255,136,.35)':'rgba(255,255,255,.1)'};background:${inPort?'rgba(0,255,136,.1)':'rgba(255,255,255,.04)'};color:${inPort?'var(--g)':'var(--wh3)'};font-size:9.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;touch-action:manipulation" onclick="event.stopPropagation();boughtIt('${s.ticker}',${price||0})">${inPort?'✓ IN MY STOCKS':'+ ADD TO MY STOCKS'}</button>`;
@@ -3212,6 +3230,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           ${s.rsi != null ? `<span class="rsi-badge ${s.rsi > 70 ? 'overbought' : s.rsi < 30 ? 'oversold' : 'neutral'}" style="font-size:7.5px;padding:1px 4px" title="${s.rsi > 70 ? 'RSI ' + Math.round(s.rsi) + ' = OVERBOUGHT: Stock may be due for a pullback' : s.rsi < 30 ? 'RSI ' + Math.round(s.rsi) + ' = OVERSOLD: Stock may be due for a bounce up' : 'RSI ' + Math.round(s.rsi) + ' = Neutral momentum'}">RSI ${Math.round(s.rsi)}</span>` : ''}
           ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none" title="${s.vol_ratio.toFixed(1)}x normal volume — unusual trading activity. Big money (hedge funds/institutions) may be moving this stock.">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
         </div>
+        ${strengthHtml}
         ${sig === 'buy' && (sigDet.catalyst || sigDet.rok_take) ? `<div style="font-size:9px;color:var(--wh3);line-height:1.4;margin-top:.35rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.3rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${(sigDet.catalyst || sigDet.rok_take || '').substring(0,90)}</div>` : ''}
         ${portBtn}
       </div>`;
