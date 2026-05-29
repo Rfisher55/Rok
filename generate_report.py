@@ -19,6 +19,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _compute_sector_heat(stock_data, signal_lookup):
+    """Compute sector-level stats from stock data as sector_heat fallback."""
+    sector_map = {}
+    for s in stock_data:
+        raw = s.get("sector") or ""
+        sector = raw.split("/")[0].strip() if raw else None
+        if not sector:
+            continue
+        if sector not in sector_map:
+            sector_map[sector] = {"count": 0, "buys": 0, "sells": 0, "chg_sum": 0.0}
+        m = sector_map[sector]
+        m["count"] += 1
+        sig = signal_lookup.get(s.get("ticker", ""), {}).get("type", "neutral")
+        if sig == "buy":
+            m["buys"] += 1
+        elif sig == "sell":
+            m["sells"] += 1
+        m["chg_sum"] += s.get("change_pct") or 0.0
+    result = {}
+    for sector, v in sector_map.items():
+        if v["count"] > 0:
+            avg_chg = round(v["chg_sum"] / v["count"], 2)
+            result[sector] = {
+                "change_pct": avg_chg,
+                "buy_count": v["buys"],
+                "sell_count": v["sells"],
+                "stock_count": v["count"],
+                "signal": "bullish" if v["buys"] > v["sells"] else "bearish" if v["sells"] > v["buys"] else "neutral",
+            }
+    return result
+
+
 def _safe(fn, *args, default=None, label=""):
     try:
         result = fn(*args)
@@ -397,7 +429,7 @@ def run():
         "watch_list": analysis.get("watch_list", []),
         "notable_trends": analysis.get("notable_trends", []),
         "macro_risks": analysis.get("macro_risks", []),
-        "sector_heat": analysis.get("sector_heat", {}),
+        "sector_heat": analysis.get("sector_heat", {}) or _compute_sector_heat(stock_data, signal_lookup),
         "sector_rotation": analysis.get("sector_rotation", ""),
         "rok_message": analysis.get("rok_message", ""),
         "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []) or [

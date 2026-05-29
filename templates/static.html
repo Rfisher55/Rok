@@ -263,7 +263,51 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .sr-ico{font-size:1.1rem;line-height:1;margin-top:1px}
 .sr-type{font-size:7.5px;font-weight:700;letter-spacing:.18em;color:var(--wh3);margin-bottom:2px;text-transform:uppercase}
 .sr-txt{font-size:12px;color:var(--wh2);line-height:1.4}
+.sec-flow-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.55rem;margin-bottom:.75rem}
+.sec-flow-card{background:var(--blk3);border:var(--bdr);border-radius:10px;padding:.65rem .75rem}
+.sec-flow-card.g{border-color:rgba(0,255,136,.2)}.sec-flow-card.r{border-color:rgba(255,69,69,.2)}.sec-flow-card.n{border-color:rgba(255,255,255,.07)}
+.sec-flow-name{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--wh3);text-transform:uppercase;margin-bottom:3px}
+.sec-flow-chg{font-size:1.1rem;font-family:var(--disp);font-weight:800;letter-spacing:.04em}
+.sec-flow-chg.g{color:var(--g)}.sec-flow-chg.r{color:var(--r)}.sec-flow-chg.n{color:var(--wh2)}
+.sec-flow-meta{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.sec-flow-sig{font-size:9px;font-weight:600}.sec-flow-sig.bullish{color:var(--g)}.sec-flow-sig.bearish{color:var(--r)}.sec-flow-sig.neutral{color:var(--wh3)}
+.sec-flow-cnt{font-size:9px;color:var(--wh3)}.sec-flow-note{font-size:9.5px;color:var(--wh3);margin-top:4px;line-height:1.35}
 .rot-txt{font-size:11px;color:var(--wh2);font-style:italic;padding:.45rem .75rem;background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.3);border-radius:0 4px 4px 0;margin-bottom:.75rem}
+
+/* ── SECTOR ALLOCATION ─────────────────────────────────── */
+.sec-alloc-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;margin:.4rem 0}
+.sec-alloc-seg{height:100%;transition:width .4s ease}
+.sec-alloc-legend{display:flex;flex-wrap:wrap;gap:.35rem .6rem;margin-top:.35rem}
+.sec-alloc-dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex-shrink:0;margin-top:2px}
+.sec-alloc-lbl{font-size:9px;color:var(--wh3);display:flex;align-items:flex-start;gap:.3rem}
+
+/* ── MORNING BRIEFING ──────────────────────────────────── */
+#morning-briefing{margin-bottom:.65rem}
+.mbrf-card{background:linear-gradient(135deg,rgba(0,204,255,.05) 0%,rgba(0,255,136,.04) 100%);border:1px solid rgba(0,204,255,.12);border-radius:14px;padding:.85rem 1rem;display:flex;flex-direction:column;gap:.4rem}
+.mbrf-greeting{font-size:10px;font-weight:700;letter-spacing:.14em;color:rgba(0,204,255,.7);text-transform:uppercase}
+.mbrf-headline{font-size:13.5px;font-weight:700;color:var(--wh);line-height:1.35}
+.mbrf-sub{font-size:11px;color:var(--wh3);line-height:1.5}
+.mbrf-pills{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.2rem}
+.mbrf-pill{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.06em}
+.mbrf-pill.g{background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--g)}
+.mbrf-pill.r{background:rgba(255,34,85,.08);border:1px solid rgba(255,34,85,.2);color:var(--r)}
+.mbrf-pill.b{background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);color:var(--b)}
+.mbrf-pill.au{background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.2);color:var(--au)}
+
+/* ── MODAL FOR-YOU SECTION ─────────────────────────────── */
+.modal-foryou{background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:10px;padding:.65rem .9rem;margin:.5rem 1.1rem .75rem}
+.modal-foryou-hdr{font-size:8px;font-weight:700;letter-spacing:.16em;color:rgba(0,204,255,.5);text-transform:uppercase;margin-bottom:.45rem}
+.modal-foryou-row{display:flex;align-items:flex-start;gap:.5rem;font-size:11px;color:var(--wh2);line-height:1.45;margin-bottom:.3rem}
+.modal-foryou-row:last-child{margin-bottom:0}
+.modal-foryou-ico{font-size:.9rem;flex-shrink:0;margin-top:1px}
+
+/* ── RISK METER ────────────────────────────────────────── */
+.risk-meter{display:flex;align-items:center;gap:5px}
+.risk-meter-bars{display:flex;gap:2px}
+.risk-bar{width:6px;border-radius:2px;transition:opacity .15s}
+.risk-bar.active.l{background:var(--g)}.risk-bar.active.m{background:var(--au)}.risk-bar.active.h{background:var(--r)}
+.risk-bar.inactive{background:rgba(255,255,255,.1)}
+.risk-meter-lbl{font-size:9px;font-weight:700}
 
 /* ── TRENDING TAPE ──────────────────────────────────────── */
 .tape-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
@@ -1044,6 +1088,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
     </div>
 
+    <!-- Morning briefing — populated by JS -->
+    <div id="morning-briefing"></div>
+
     <!-- Today's personalized action tasks — populated by JS -->
     <div id="mkt-countdown"></div>
     <div id="todays-tasks" style="display:none"></div>
@@ -1127,7 +1174,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         </div>
         <div class="cgrid">
           {% for s in data.buy_signals %}
-          <div class="card buy" onclick="openModal('{{ s.ticker }}')" style="cursor:pointer">
+          <div class="card buy" onclick="openModal('{{ s.ticker }}')" data-sig-ticker="{{ s.ticker }}" style="cursor:pointer">
             {% set st = s.signal_strength|default(5) %}
             {% set score = st * 10 %}
             {% set circ = 100 %}
@@ -1150,7 +1197,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
                 </div>
                 <div class="c-right">
                   <span class="str-b">{% if st >= 8 %}STRONG BUY{% elif st >= 6 %}MODERATE BUY{% else %}BUY{% endif %}</span>
-                  {% if s.risk_level %}<span class="risk-b {{ s.risk_level }}">{{ s.risk_level }} Risk</span>{% endif %}
+                  <span class="risk-b risk-b-dynamic {{ s.risk_level|default('') }}">{% if s.risk_level %}{{ s.risk_level }} Risk{% endif %}</span>
                 </div>
               </div>
             </div>
@@ -1423,6 +1470,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Live market briefing (JS-populated) -->
     <div id="mkt-live-brief" style="display:none;margin-bottom:.85rem;padding:.75rem 1rem;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(0,255,136,.03));border:1px solid rgba(0,204,255,.18);border-radius:12px"></div>
 
+    <!-- "Should I invest today?" smart verdict (JS-populated) -->
+    <div id="invest-today-verdict" style="display:none;margin-bottom:.85rem"></div>
+
+    <!-- Live market news feed (JS-populated) -->
+    <div id="mkt-news-feed" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Upcoming events calendar (JS-populated) -->
     <div id="mkt-events" style="display:none;margin-bottom:.85rem"></div>
 
@@ -1487,13 +1540,34 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     <!-- Sector rotation -->
     {% set heat = data.sector_heat|default({}) %}
+    {% if heat %}
+    <div class="s-hdr"><h2 class="s-ttl">💸 WHERE IS MONEY FLOWING?</h2><span class="s-sub">Which sectors are hot or cold right now</span></div>
     {% if heat.hottest or heat.coldest %}
-    <div class="s-hdr"><h2 class="s-ttl">💸 WHERE IS MONEY FLOWING?</h2></div>
     <div class="sr-row">
-      {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">HOTTEST</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
-      {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
+      {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">HOTTEST SECTOR</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
+      {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">COLDEST SECTOR</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
     </div>
     {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
+    {% else %}
+    {% set sorted_sectors = heat.items()|list|sort(attribute='1.change_pct', reverse=True) %}
+    <div class="sec-flow-grid">
+      {% for name, info in sorted_sectors %}
+      {% set chg = info.change_pct|default(0)|float %}
+      {% set sig = info.signal|default('neutral') %}
+      {% set cls = 'g' if chg > 0.5 else ('r' if chg < -0.5 else 'n') %}
+      <div class="sec-flow-card {{ cls }}">
+        <div class="sec-flow-name">{{ name }}</div>
+        <div class="sec-flow-chg {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.1f'|format(chg) }}%</div>
+        <div class="sec-flow-meta">
+          <span class="sec-flow-sig {{ sig }}">{{ '🟢' if sig=='bullish' else ('🔴' if sig=='bearish' else '⚪') }} {{ sig|title }}</span>
+          {% if info.buy_count is defined %}<span class="sec-flow-cnt">{{ info.buy_count }}B {{ info.sell_count|default(0) }}S</span>{% endif %}
+        </div>
+        {% if info.note %}<div class="sec-flow-note">{{ info.note }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if data.sector_rotation %}<div class="rot-txt">{{ data.sector_rotation }}</div>{% endif %}
+    {% endif %}
     {% endif %}
 
     <!-- Top Movers from stock universe -->
@@ -1796,17 +1870,37 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
       <!-- Section 4: WHAT SMART MONEY IS DOING (Sector Rotation) -->
       {% set heat = data.sector_heat|default({}) %}
-      {% if heat.hottest or heat.coldest or data.sector_rotation %}
+      {% if heat or data.sector_rotation %}
       <div class="intel-section">
         <div class="s-hdr"><h2 class="s-ttl" style="color:var(--or)">💰 WHAT SMART MONEY IS DOING</h2></div>
         {% if data.sector_rotation %}<div class="rot-txt" style="margin-bottom:.75rem">{{ data.sector_rotation }}</div>{% endif %}
         <div style="font-size:11px;color:var(--wh3);margin-bottom:.6rem;padding:.4rem .65rem;background:rgba(255,136,0,.05);border-radius:5px;border-left:2px solid rgba(255,136,0,.25)">
-          Big hedge funds &amp; institutions move billions between sectors — tracking these flows shows where money is flowing next.
+          Big hedge funds &amp; institutions move billions between sectors — tracking these flows shows where money is heading next.
         </div>
+        {% if heat.hottest or heat.coldest %}
         <div class="sr-row">
           {% if heat.hottest %}<div class="sr-card hot"><div class="sr-ico">🔥</div><div><div class="sr-type">MONEY FLOWING IN</div><div class="sr-txt">{{ heat.hottest }}</div></div></div>{% endif %}
           {% if heat.coldest %}<div class="sr-card cold"><div class="sr-ico">❄️</div><div><div class="sr-type">MONEY FLOWING OUT</div><div class="sr-txt">{{ heat.coldest }}</div></div></div>{% endif %}
         </div>
+        {% elif heat %}
+        {% set sorted_sectors = heat.items()|list|sort(attribute='1.change_pct', reverse=True) %}
+        <div class="sec-flow-grid">
+          {% for name, info in sorted_sectors %}
+          {% set chg = info.change_pct|default(0)|float %}
+          {% set sig = info.signal|default('neutral') %}
+          {% set cls = 'g' if chg > 0.5 else ('r' if chg < -0.5 else 'n') %}
+          <div class="sec-flow-card {{ cls }}">
+            <div class="sec-flow-name">{{ name }}</div>
+            <div class="sec-flow-chg {{ cls }}">{{ '+' if chg >= 0 else '' }}{{ '%.1f'|format(chg) }}%</div>
+            <div class="sec-flow-meta">
+              <span class="sec-flow-sig {{ sig }}">{{ '🟢' if sig=='bullish' else ('🔴' if sig=='bearish' else '⚪') }} {{ sig|title }}</span>
+              {% if info.buy_count is defined %}<span class="sec-flow-cnt">{{ info.buy_count }}B {{ info.sell_count|default(0) }}S</span>{% endif %}
+            </div>
+            {% if info.note %}<div class="sec-flow-note">{{ info.note }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -1941,9 +2035,43 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </details>
     <div id="portfolio-summary"></div>
     <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
+    <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
+
+    <!-- DCA Calculator -->
+    <div id="dca-calc" style="display:none;margin-top:1rem;background:var(--blk3);border:1px solid rgba(153,85,255,.15);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--p);text-transform:uppercase;margin-bottom:.55rem">📐 INVESTMENT GOAL CALCULATOR</div>
+      <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.5">How much to invest each week to reach your goal?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.55rem">
+        <div>
+          <div style="font-size:9px;color:var(--wh4);margin-bottom:3px">CURRENT VALUE</div>
+          <div style="display:flex;align-items:center;gap:.3rem"><span style="color:var(--wh3)">$</span><input id="dca-current" type="number" placeholder="0" min="0" step="100" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:6px;padding:.4rem .55rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font)" oninput="calcDCA()"></div>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--wh4);margin-bottom:3px">GOAL AMOUNT</div>
+          <div style="display:flex;align-items:center;gap:.3rem"><span style="color:var(--wh3)">$</span><input id="dca-goal" type="number" placeholder="10000" min="0" step="100" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:6px;padding:.4rem .55rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font)" oninput="calcDCA()"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.55rem">
+        <div>
+          <div style="font-size:9px;color:var(--wh4);margin-bottom:3px">TIMEFRAME</div>
+          <select id="dca-months" onchange="calcDCA()" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:6px;padding:.4rem .55rem;font-size:12px;color:var(--wh);outline:none;font-family:var(--font)">
+            <option value="3">3 months</option>
+            <option value="6">6 months</option>
+            <option value="12" selected>1 year</option>
+            <option value="24">2 years</option>
+            <option value="60">5 years</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--wh4);margin-bottom:3px">EXPECTED RETURN %/YR</div>
+          <input id="dca-return" type="number" placeholder="8" min="0" max="50" value="8" step="1" style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:6px;padding:.4rem .55rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font)" oninput="calcDCA()">
+        </div>
+      </div>
+      <div id="dca-result" style="font-size:12px;color:var(--wh3);padding:.45rem .65rem;background:rgba(153,85,255,.05);border-radius:8px;line-height:1.6">Enter amounts above to see your investment plan</div>
+    </div>
 
     <!-- Manual add section -->
     <div style="margin-top:1rem;background:var(--blk3);border:1px solid rgba(0,204,255,.15);border-radius:12px;padding:.85rem 1rem">
@@ -2283,6 +2411,27 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (s.price_history && s.price_history.length > 4)
         drawSpark('spark-s' + (i + 1), s.price_history, '#ff2255');
     });
+    // Inject computed risk badges for cards missing them
+    injectRiskBadges();
+  }
+
+  function injectRiskBadges() {
+    const allSignals = [
+      ...(ROK.buy_signals||[]).map(s=>({...s, sig:'buy'})),
+      ...(ROK.sell_signals||[]).map(s=>({...s, sig:'sell'})),
+    ];
+    allSignals.forEach(sig => {
+      const ticker = sig.ticker;
+      if (!ticker) return;
+      const universe = (ROK.stock_universe||[]).find(x=>x.ticker===ticker) || sig;
+      const card = document.querySelector(`[data-sig-ticker="${ticker}"]`);
+      if (!card) return;
+      const badge = card.querySelector('.risk-b-dynamic');
+      if (!badge || badge.textContent.trim()) return; // already has text
+      const risk = computeRiskLevel(universe);
+      badge.textContent = risk.level + ' Risk';
+      badge.classList.add(risk.level);
+    });
   }
 
   // ── PHASE 2: LIVE PRICE REFRESH ───────────────────────────
@@ -2425,8 +2574,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     renderRecentlyViewed();
     renderTodaysTasks();
     renderROKTrackRecord();
+    renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { renderSectorHeatmap(); renderUpcomingEvents(); }
+    if (activeTab === 'market') { renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); }
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2686,6 +2836,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <ul class="reasons">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>
       </div>` : ''}
       ${rokTake ? `<div style="padding:0 1.1rem .75rem"><div class="rok-take">${rokTake}</div></div>` : ''}
+      ${buildModalForYou(s, sig, det, curPrice)}
       ${sig === 'buy' && priceTarget && curPrice ? `
       <div style="padding:.75rem 1.1rem;border-top:var(--bdr2)">
         <div style="font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.65rem">💰 PROFIT CALCULATOR</div>
@@ -2737,6 +2888,166 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     }
     // Load live news headlines
     loadModalNews(ticker);
+  }
+
+  // ── RISK LEVEL COMPUTATION ───────────────────────────────
+  function computeRiskLevel(s) {
+    let score = 0; // 0=low risk, 10=high risk
+    const reasons = [];
+    // Market cap: bigger = safer
+    if (!s.market_cap || s.market_cap < 500e6) { score += 4; reasons.push('Small company (higher chance of large swings)'); }
+    else if (s.market_cap < 2e9) { score += 3; reasons.push('Mid-sized company (moderate volatility)'); }
+    else if (s.market_cap < 10e9) { score += 2; }
+    else if (s.market_cap < 100e9) { score += 1; }
+    // RSI extremes add risk
+    if (s.rsi != null) {
+      if (s.rsi > 75) { score += 2; reasons.push(`RSI ${Math.round(s.rsi)} — stock may be overbought`); }
+      else if (s.rsi < 25) { score += 1; reasons.push(`RSI ${Math.round(s.rsi)} — very oversold, high volatility risk`); }
+    }
+    // Very high P/E
+    if (s.pe_ratio != null && s.pe_ratio > 50) { score += 2; reasons.push(`P/E ${s.pe_ratio.toFixed(0)} — priced for perfection, any miss = big drop`); }
+    else if (s.pe_ratio != null && s.pe_ratio <= 0) { score += 1; reasons.push('No earnings yet — speculative'); }
+    // High volume ratio = more volatility
+    if (s.vol_ratio != null && s.vol_ratio > 3) { score += 1; reasons.push(`${s.vol_ratio.toFixed(1)}x normal volume — big money moving, expect swings`); }
+    // 52W position: near high = crowded
+    if (s.pct_from_52w_high != null && s.pct_from_52w_high > -3) { score += 1; reasons.push('Near 52-week high — limited upside before resistance'); }
+    const level = score >= 6 ? 'High' : score >= 3 ? 'Medium' : 'Low';
+    const bars = Math.min(5, Math.round(score / 2) + 1);
+    return { level, score, bars, reasons };
+  }
+
+  // ── MODAL "FOR YOU" SECTION ──────────────────────────────
+  function buildModalForYou(s, sig, det, curPrice) {
+    const rows = [];
+    // 1. Risk level
+    const risk = computeRiskLevel(s);
+    const riskColor = risk.level === 'Low' ? 'var(--g)' : risk.level === 'Medium' ? 'var(--au)' : 'var(--r)';
+    const riskIco = risk.level === 'Low' ? '🟢' : risk.level === 'Medium' ? '🟡' : '🔴';
+    const barsHtml = Array.from({length: 5}, (_, i) => {
+      const cls = i < risk.bars ? (risk.level === 'Low' ? 'l' : risk.level === 'Medium' ? 'm' : 'h') : 'inactive';
+      const h = 6 + i * 3;
+      return `<div class="risk-bar ${cls === 'inactive' ? 'inactive' : 'active ' + cls}" style="height:${h}px"></div>`;
+    }).join('');
+    rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">${riskIco}</span><span><strong style="color:${riskColor}">${risk.level} Risk</strong>${risk.reasons.length ? ' — ' + risk.reasons[0] : ''}</span><span style="margin-left:auto;display:flex;align-items:flex-end;gap:2px">${barsHtml}</span></div>`);
+
+    // 2. Position sizing from account size
+    try {
+      const acctSize = parseFloat(localStorage.getItem('rok_account_size_v1') || '0');
+      if (acctSize > 0 && curPrice) {
+        const maxPct = risk.level === 'High' ? 0.02 : risk.level === 'Medium' ? 0.05 : 0.1;
+        const maxDollar = (acctSize * maxPct).toFixed(0);
+        const shares = Math.floor(acctSize * maxPct / curPrice);
+        rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">🧮</span><span>With your $${acctSize.toLocaleString()} account, consider investing up to <strong style="color:var(--wh)">$${maxDollar}</strong> (${Math.round(maxPct*100)}% rule) = ~<strong style="color:var(--wh)">${shares} share${shares!==1?'s':''}</strong></span></div>`);
+      }
+    } catch(e) {}
+
+    // 3. Portfolio context
+    try {
+      const port = getPortfolio();
+      const portKeys = Object.keys(port);
+      if (portKeys.includes(s.ticker)) {
+        const pos = port[s.ticker];
+        const gainPct = curPrice && pos.price ? ((curPrice - pos.price) / pos.price * 100).toFixed(1) : null;
+        const gainColor = gainPct >= 0 ? 'var(--g)' : 'var(--r)';
+        rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">💼</span><span>You <strong style="color:var(--wh)">already own</strong> ${pos.shares||1} share${(pos.shares||1)!==1?'s':''} at $${pos.price||'?'}${gainPct!==null ? ` — currently <strong style="color:${gainColor}">${gainPct >= 0 ? '+' : ''}${gainPct}%</strong>` : ''}</span></div>`);
+      } else if (portKeys.length > 0) {
+        // Check sector concentration
+        const mySectors = portKeys.map(t => (ROK.stock_universe||[]).find(x=>x.ticker===t)?.sector?.split('/')[0] || '').filter(Boolean);
+        const thisSector = (s.sector||'').split('/')[0];
+        const sectorCount = mySectors.filter(x=>x===thisSector).length;
+        if (sectorCount >= 2 && thisSector) {
+          rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">⚠️</span><span>You already have <strong style="color:var(--au)">${sectorCount} ${thisSector} stocks</strong> — adding more increases sector risk. Consider diversifying.</span></div>`);
+        }
+      }
+    } catch(e) {}
+
+    // 4. Plain-English action recommendation
+    if (sig === 'buy') {
+      const stop = det.stop_loss;
+      if (stop && curPrice) {
+        const downside = ((stop - curPrice) / curPrice * 100).toFixed(1);
+        rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">💡</span><span>If this trade goes wrong, ROK's stop-loss at <strong style="color:var(--r)">$${stop}</strong> limits your loss to ~<strong style="color:var(--r)">${downside}%</strong>. Set a sell alert if it drops that far.</span></div>`);
+      } else {
+        rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">💡</span><span>ROK says buy — but always set a mental stop-loss of 5-8% below your buy price before entering a position.</span></div>`);
+      }
+    } else if (sig === 'sell') {
+      rows.push(`<div class="modal-foryou-row"><span class="modal-foryou-ico">💡</span><span>ROK says sell or avoid this stock. If you own it, consider exiting before further losses.</span></div>`);
+    }
+
+    if (!rows.length) return '';
+    return `<div class="modal-foryou">
+      <div class="modal-foryou-hdr">👤 FOR YOU</div>
+      ${rows.join('')}
+    </div>`;
+  }
+
+  // ── MORNING BRIEFING ─────────────────────────────────────
+  function renderMorningBriefing() {
+    const el = document.getElementById('morning-briefing');
+    if (!el) return;
+    const now = new Date();
+    const h = now.getHours();
+    const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    const day = now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+    // Market status
+    const isWeekend = [0,6].includes(now.getDay());
+    const etOffset = now.getTimezoneOffset() + 300; // approx ET offset
+    const etH = h - Math.floor(etOffset / 60);
+    const isMarketOpen = !isWeekend && etH >= 9 && etH < 16;
+    const mktStatus = isMarketOpen ? '🟢 Market Open' : isWeekend ? '😴 Market Closed (Weekend)' : (etH < 9 ? '⏰ Pre-Market' : '🌙 After Hours');
+    const mktClass = isMarketOpen ? 'g' : 'r';
+    // Signal summary
+    const buys = (ROK.buy_signals||[]).length;
+    const sells = (ROK.sell_signals||[]).length;
+    const watches = (ROK.watch_signals||[]).length;
+    const sent = ROK.market_sentiment || 'NEUTRAL';
+    const sentEmoji = sent==='BULLISH'?'📈':sent==='BEARISH'?'📉':'➡️';
+    // Personalized portfolio status
+    let portLine = '';
+    try {
+      const port = getPortfolio();
+      const portTickers = Object.keys(port);
+      if (portTickers.length > 0) {
+        const prices = portTickers.map(t => liveprices[t]);
+        const totalGain = portTickers.reduce((sum, t) => {
+          const lp = liveprices[t]; const pos = port[t];
+          if (!lp || !pos?.price || !pos?.shares) return sum;
+          return sum + (lp.price - pos.price) * pos.shares;
+        }, 0);
+        if (totalGain !== 0) portLine = `Portfolio <strong style="color:${totalGain>=0?'var(--g)':'var(--r)'}">${totalGain>=0?'▲':'▼'}$${Math.abs(totalGain).toFixed(0)}</strong> today`;
+      }
+    } catch(e) {}
+    // Headline based on sentiment & signals
+    let headline = '';
+    if (sent === 'BULLISH' && buys >= 3) headline = `${sentEmoji} ${buys} buy signals — ROK sees opportunity today`;
+    else if (sent === 'BULLISH' && buys > 0) headline = `${sentEmoji} Cautiously bullish — ${buys} buy signal${buys!==1?'s':''}`;
+    else if (sent === 'BULLISH') headline = `${sentEmoji} Market looks healthy but ROK wants stronger setups`;
+    else if (sent === 'BEARISH') headline = `🛡️ Defensive day — focus on protecting your capital`;
+    else headline = `➡️ Mixed signals — small positions, patience required`;
+    // Tip of the day based on day of week
+    const tips = [
+      'Start of the week: review your portfolio stops 📋',
+      'Tuesdays often see trend continuation — watch open trades 📊',
+      'Mid-week check-in: are your stop-losses in place? ✅',
+      'Earnings season reminder: size positions smaller near reports 📅',
+      'End of week: log any trades taken so you can review Sunday 📓',
+      'Weekend: great time to study one new investing concept 📚',
+      'Sunday prep: review your watchlist for the week ahead 🗓️',
+    ];
+    const tip = tips[now.getDay()];
+    el.innerHTML = `<div class="mbrf-card">
+      <div class="mbrf-greeting">${greeting} · ${day}</div>
+      <div class="mbrf-headline">${headline}</div>
+      ${portLine ? `<div class="mbrf-sub">${portLine}</div>` : ''}
+      <div class="mbrf-pills">
+        <span class="mbrf-pill ${mktClass}">${mktStatus}</span>
+        ${buys > 0 ? `<span class="mbrf-pill g">${buys} BUY${buys!==1?'s':''}</span>` : ''}
+        ${sells > 0 ? `<span class="mbrf-pill r">${sells} SELL${sells!==1?'s':''}</span>` : ''}
+        ${watches > 0 ? `<span class="mbrf-pill au">${watches} WATCH</span>` : ''}
+        ${ROK.vix_value ? `<span class="mbrf-pill b">VIX ${ROK.vix_value}</span>` : ''}
+      </div>
+      <div class="mbrf-sub" style="font-size:10px;margin-top:.15rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.05)">💡 ${tip}</div>
+    </div>`;
   }
 
   async function loadModalNews(ticker) {
@@ -2830,8 +3141,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -3229,6 +3540,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (sb) sb.style.display = tickers.length ? 'flex' : 'none';
     const csvBtn = document.getElementById('port-csv-btn');
     if (csvBtn) csvBtn.style.display = tickers.length ? 'flex' : 'none';
+    const dcaCalc = document.getElementById('dca-calc');
+    if (dcaCalc) dcaCalc.style.display = tickers.length ? 'block' : 'none';
     const histBtn = document.getElementById('alert-hist-btn');
     if (histBtn) {
       const hasHist = (localStorage.getItem('rok_alert_history_v1') || '[]').length > 2;
@@ -3317,6 +3630,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <span style="font-size:9px;color:var(--wh4)">You: ${portPct>=0?'+':''}${portPct.toFixed(2)}% · SPY: ${spyPct>=0?'+':''}${spyPct.toFixed(2)}%</span>
       </div>`;
     })()}`;
+
+    // Pre-fill DCA calculator with current portfolio value
+    try {
+      const dcaCurrent = document.getElementById('dca-current');
+      if (dcaCurrent && totalNow > 0 && !dcaCurrent.value) dcaCurrent.value = Math.round(totalNow);
+    } catch(e) {}
 
     // Store portfolio value snapshot for chart
     if (totalNow > 0) {
@@ -3537,8 +3856,100 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.renderPortfolioHealthCheck = renderPortfolioHealthCheck;
 
+  // ── PORTFOLIO SECTOR ALLOCATION ──────────────────────────
+  function renderPortfolioSectorAlloc() {
+    const el = document.getElementById('port-sector-alloc');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (tickers.length < 2) { el.style.display = 'none'; return; }
+
+    const SECTOR_COLORS = [
+      '#00ff88','#00ccff','#ff8800','#ff2255','#9955ff',
+      '#ffdd00','#ff55cc','#55ddff','#88ff55','#ff9944',
+    ];
+    const sectorMap = {};
+    let totalValue = 0;
+    tickers.forEach(ticker => {
+      const stock = (ROK.stock_universe||[]).find(s=>s.ticker===ticker) || {};
+      const lp = liveprices[ticker];
+      const entry = p[ticker];
+      const price = lp ? lp.price : (stock.price || (entry?.price||0));
+      const shares = entry?.shares || 1;
+      const val = price * shares;
+      totalValue += val;
+      const sector = (stock.sector || 'Other').split('/')[0].trim();
+      sectorMap[sector] = (sectorMap[sector] || 0) + val;
+    });
+    if (totalValue <= 0) { el.style.display = 'none'; return; }
+
+    const sorted = Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+    const segs = sorted.map(([s, v], i) => ({
+      sector: s, val: v,
+      pct: (v / totalValue * 100).toFixed(1),
+      color: SECTOR_COLORS[i % SECTOR_COLORS.length]
+    }));
+
+    const barSegs = segs.map(s => `<div class="sec-alloc-seg" style="width:${s.pct}%;background:${s.color}" title="${s.sector}: ${s.pct}%"></div>`).join('');
+    const legend = segs.map(s => `<div class="sec-alloc-lbl"><span class="sec-alloc-dot" style="background:${s.color}"></span><span><strong style="color:var(--wh2)">${s.sector}</strong> ${s.pct}%</span></div>`).join('');
+    const diversityMsg = segs.length >= 4 ? '<span style="color:var(--g)">✅ Well diversified</span>' : segs.length >= 2 ? '<span style="color:var(--au)">⚠️ Consider more sectors</span>' : '<span style="color:var(--r)">🔴 Very concentrated — high risk</span>';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem .9rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.14em;color:var(--wh3);text-transform:uppercase">🥧 SECTOR ALLOCATION</div>
+        ${diversityMsg}
+      </div>
+      <div class="sec-alloc-bar">${barSegs}</div>
+      <div class="sec-alloc-legend">${legend}</div>
+    </div>`;
+  }
+  window.renderPortfolioSectorAlloc = renderPortfolioSectorAlloc;
+
+  // ── DCA CALCULATOR ───────────────────────────────────────
+  function calcDCA() {
+    const current = parseFloat(document.getElementById('dca-current')?.value) || 0;
+    const goal = parseFloat(document.getElementById('dca-goal')?.value) || 0;
+    const months = parseInt(document.getElementById('dca-months')?.value) || 12;
+    const annualReturn = parseFloat(document.getElementById('dca-return')?.value) || 8;
+    const res = document.getElementById('dca-result');
+    if (!res || !goal || goal <= current) {
+      if (res) res.innerHTML = goal && goal <= current ? '🎉 You\'ve already reached your goal!' : 'Enter amounts above to see your investment plan';
+      return;
+    }
+    const need = goal - current;
+    const r = annualReturn / 100 / 12;
+    const n = months;
+    let monthly;
+    if (r === 0) {
+      monthly = need / n;
+    } else {
+      // FV of existing investment: current * (1+r)^n
+      const fvCurrent = current * Math.pow(1 + r, n);
+      const needFromContribs = goal - fvCurrent;
+      if (needFromContribs <= 0) {
+        monthly = 0;
+      } else {
+        // PMT formula: PMT = FV * r / ((1+r)^n - 1)
+        monthly = needFromContribs * r / (Math.pow(1 + r, n) - 1);
+      }
+    }
+    const weekly = monthly / 4.33;
+    const total = monthly * months;
+    const gain = goal - current - Math.max(0, total);
+    if (monthly <= 0) {
+      res.innerHTML = `<strong style="color:var(--g)">🎉 Your current portfolio should grow to $${goal.toLocaleString()} automatically</strong> in ${months} months at ${annualReturn}% annual return — no extra contributions needed!`;
+    } else {
+      res.innerHTML = `Invest <strong style="color:var(--p)">$${monthly.toFixed(0)}/month</strong> (or <strong style="color:var(--p)">$${weekly.toFixed(0)}/week</strong>) for <strong style="color:var(--wh)">${months} months</strong>
+        <br><span style="font-size:10px;color:var(--wh4)">Total contributions: $${total.toFixed(0)} · Returns (est.): +$${gain.toFixed(0)} · Goal: $${goal.toLocaleString()}</span>
+        <br><span style="font-size:9.5px;color:var(--wh4)">Based on ${annualReturn}% avg annual return (S&P 500 historical avg is ~10%)</span>`;
+    }
+  }
+  window.calcDCA = calcDCA;
+
   function renderPortfolio() {
     renderPortfolioSummary();
+    renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
     renderDiversificationCheck();
     const grid = document.getElementById('portfolio-grid');
@@ -4329,6 +4740,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </details>`;
   }
   window.renderROKTrackRecord = renderROKTrackRecord;
+  window.renderMorningBriefing = renderMorningBriefing;
+  window.buildModalForYou = buildModalForYou;
+  window.computeRiskLevel = computeRiskLevel;
 
   function renderTodaysTasks() {
     const el = document.getElementById('todays-tasks');
@@ -4489,6 +4903,95 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.2rem">${headline}</div>
       <div style="font-size:11px;color:var(--wh2);line-height:1.55">${detail}${vixNote}</div>`;
   }
+
+  // ── "SHOULD I INVEST TODAY?" VERDICT ────────────────────
+  function renderInvestTodayVerdict() {
+    const el = document.getElementById('invest-today-verdict');
+    if (!el) return;
+    const spy = liveprices['SPY'];
+    const qqq = liveprices['QQQ'];
+    const vix = liveprices['^VIX'];
+    if (!spy && !qqq) return;
+    const spyChg = spy ? spy.change_pct : 0;
+    const vixVal = vix ? vix.price : null;
+    const buys = (ROK.buy_signals||[]).length;
+    const sent = ROK.market_sentiment || 'NEUTRAL';
+
+    // Score: -3 to +3
+    let score = 0;
+    const factors = [];
+    if (spyChg >= 1) { score++; factors.push({icon:'📈', txt:`S&P 500 up ${spyChg.toFixed(1)}% — bullish day`, pos:true}); }
+    else if (spyChg >= 0) { factors.push({icon:'⬜', txt:`S&P 500 up ${spyChg.toFixed(1)}% — mild gains`, pos:true}); }
+    else if (spyChg >= -1) { score--; factors.push({icon:'🟡', txt:`S&P 500 down ${Math.abs(spyChg).toFixed(1)}% — mild selling`, pos:false}); }
+    else { score -= 2; factors.push({icon:'🔴', txt:`S&P 500 down ${Math.abs(spyChg).toFixed(1)}% — market is selling off`, pos:false}); }
+    if (vixVal != null) {
+      if (vixVal < 15) { score++; factors.push({icon:'😊', txt:`VIX ${vixVal.toFixed(0)} — low volatility, calm markets`, pos:true}); }
+      else if (vixVal > 25) { score--; factors.push({icon:'😨', txt:`VIX ${vixVal.toFixed(0)} — high fear, expect wild price swings`, pos:false}); }
+      else { factors.push({icon:'🟡', txt:`VIX ${vixVal.toFixed(0)} — moderate volatility, normal`, pos:null}); }
+    }
+    if (sent === 'BULLISH') { score++; factors.push({icon:'🤖', txt:`ROK AI says market is BULLISH`, pos:true}); }
+    else if (sent === 'BEARISH') { score--; factors.push({icon:'🤖', txt:`ROK AI says market is BEARISH`, pos:false}); }
+    if (buys >= 3) { score++; factors.push({icon:'⚡', txt:`${buys} buy signals found — ROK sees opportunities`, pos:true}); }
+    else if (buys === 0) { score--; factors.push({icon:'🔍', txt:`0 buy signals — ROK not seeing great entries right now`, pos:false}); }
+
+    let verdict, verdictColor, verdictBg, action;
+    if (score >= 3) {
+      verdict = '✅ YES — Good day to invest'; verdictColor = 'var(--g)';
+      verdictBg = 'rgba(0,255,136,.08)'; action = 'Multiple positive signals align. Check the BUY signals tab and consider entering on stocks with stop-losses set.';
+    } else if (score >= 1) {
+      verdict = '🟡 MAYBE — Proceed carefully'; verdictColor = 'var(--au)';
+      verdictBg = 'rgba(255,215,0,.06)'; action = 'Conditions are mixed. If you invest, use smaller than normal position sizes and make sure you have stop-losses.';
+    } else if (score >= -1) {
+      verdict = '⏸️ WAIT — Not ideal conditions'; verdictColor = 'var(--au)';
+      verdictBg = 'rgba(255,215,0,.04)'; action = 'Market conditions aren\'t great right now. Consider waiting for a better entry point unless you\'re a long-term investor.';
+    } else {
+      verdict = '❌ NO — Avoid new positions today'; verdictColor = 'var(--r)';
+      verdictBg = 'rgba(255,34,85,.06)'; action = 'Market is under pressure. Focus on protecting your existing holdings and wait for conditions to improve before buying.';
+    }
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:${verdictBg};border:1px solid ${verdictColor === 'var(--g)' ? 'rgba(0,255,136,.2)' : verdictColor === 'var(--r)' ? 'rgba(255,34,85,.2)' : 'rgba(255,215,0,.15)'};border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.35rem">🤔 SHOULD I INVEST TODAY?</div>
+      <div style="font-size:1.05rem;font-weight:800;color:${verdictColor};margin-bottom:.45rem">${verdict}</div>
+      <div style="font-size:10.5px;color:var(--wh2);line-height:1.5;margin-bottom:.55rem">${action}</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem">
+        ${factors.map(f => `<div style="display:flex;align-items:flex-start;gap:.45rem;font-size:10px;color:${f.pos === true ? 'var(--wh2)' : f.pos === false ? 'rgba(255,255,255,.55)' : 'var(--wh3)'}"><span style="flex-shrink:0">${f.icon}</span><span>${f.txt}</span></div>`).join('')}
+      </div>
+    </div>`;
+  }
+  window.renderInvestTodayVerdict = renderInvestTodayVerdict;
+
+  // ── LIVE MARKET NEWS FEED ────────────────────────────────
+  async function fetchMarketNewsFeed() {
+    const el = document.getElementById('mkt-news-feed');
+    if (!el) return;
+    try {
+      const r = await fetch(
+        'https://query1.finance.yahoo.com/v1/finance/search?q=stock+market&lang=en-US&region=US&quotesCount=0&newsCount=8&enableFuzzyQuery=false&newsQuerySchema=v3',
+        { signal: AbortSignal.timeout(7000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const items = (j?.news || []).slice(0, 6);
+      if (!items.length) return;
+      const newsHtml = items.map(n => {
+        const ago = n.providerPublishTime ? timeAgo(n.providerPublishTime * 1000) : '';
+        return `<a href="${n.link}" target="_blank" rel="noopener" style="display:flex;align-items:flex-start;gap:.6rem;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.05);text-decoration:none;color:inherit;cursor:pointer">
+          ${n.thumbnail?.resolutions?.[0]?.url ? `<img src="${n.thumbnail.resolutions[0].url}" style="width:52px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0" loading="lazy">` : '<div style="width:52px;height:36px;background:var(--blk4);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.1rem">📰</div>'}
+          <div>
+            <div style="font-size:10.5px;color:var(--wh2);line-height:1.4;margin-bottom:2px">${n.title || ''}</div>
+            <div style="font-size:9px;color:var(--wh4)">${n.publisher || ''} · ${ago}</div>
+          </div>
+        </a>`;
+      }).join('');
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.55rem">📰 MARKET NEWS TODAY <span style="color:var(--g);font-size:7px">● LIVE</span></div>
+        ${newsHtml}
+      </div>`;
+    } catch { /* silent */ }
+  }
+  window.fetchMarketNewsFeed = fetchMarketNewsFeed;
 
   // ── UPCOMING EVENTS CALENDAR ─────────────────────────
   function renderUpcomingEvents() {
@@ -4910,6 +5413,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     setInterval(updateMarketStatus, 60000);
     renderTodaysTasks();
     renderROKTrackRecord();
+    renderMorningBriefing();
     updateMarketLiveBrief();
     fetchLiveFearGreed();
     initTipRotator();

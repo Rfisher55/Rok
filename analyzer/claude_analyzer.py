@@ -172,8 +172,9 @@ Respond ONLY with this exact JSON structure (no other text):
     "Plain English risk 3"
   ],
   "sector_heat": {{
-    "hottest": "Sector name — why, with specific tickers or numbers",
-    "coldest": "Sector name — why, with specific tickers or numbers"
+    "Technology": {{"change_pct": 1.2, "signal": "bullish", "note": "AI demand driving broad sector strength"}},
+    "Healthcare": {{"change_pct": -0.3, "signal": "neutral", "note": "Mixed earnings results"}},
+    "Energy": {{"change_pct": 0.8, "signal": "bullish", "note": "Oil prices rising on supply constraints"}}
   }},
   "sector_rotation": "1-2 sentences on where institutional money is flowing this week",
   "short_squeeze_alerts": [
@@ -197,7 +198,9 @@ Respond ONLY with this exact JSON structure (no other text):
     {{
       "ticker": "XXXX",
       "buy_count": <int>,
-      "members_preview": "Names",
+      "sell_count": <int or 0>,
+      "members_preview": "Names of members who bought",
+      "latest_date": "Most recent trade date e.g. '2 weeks ago'",
       "why_notable": "Why this congressional buy pattern matters for the stock"
     }}
   ],
