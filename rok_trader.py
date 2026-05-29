@@ -2392,23 +2392,39 @@ def get_full_universe(held_symbols: set) -> tuple[list, set]:
     # Layer 3: BASE_UNIVERSE anchor stocks
     universe.update(s for s in BASE_UNIVERSE if s in fractionable)
 
-    # Layer 4: fill up to MAX_SCAN_TICKERS with "exchange-quality" stocks
-    # Use a simple proxy: prefer NYSE/NASDAQ-listed, symbol length <= 4
-    # (shorter symbols tend to be more established companies)
+    # Layer 4: fill up to MAX_SCAN_TICKERS using Alpaca snapshot activity scoring
+    # Pre-filter to quality exchanges, then rank by volume*|change| to pick the most active names
     MAX_SCAN_TICKERS = 220
     if len(universe) < MAX_SCAN_TICKERS:
-        # Prefer primary exchanges, shorter symbols
-        extras = sorted(
-            [s for s in fractionable if s not in universe],
-            key=lambda s: (len(s), s)   # shorter = more established
-        )
+        quality_candidates = [
+            s for s in fractionable
+            if s not in universe
+            and fractionable[s].get("exchange") in ("NYSE", "NASDAQ", "CBOE", "ARCA")
+            and len(s) <= 5
+        ]
+        # Try to rank by live snapshot activity (volume × |chg|) for better quality
+        try:
+            _snap_pool = quality_candidates[:800]  # sample from quality pool
+            _snaps = alpaca_snapshots(_snap_pool) if _snap_pool else {}
+            # Score each: vol * |chg| * price_threshold (avoid penny stocks)
+            _ranked = []
+            for s in quality_candidates:
+                if s in _snaps:
+                    snap = _snaps[s]
+                    if snap.get("price", 0) < 5.0:
+                        continue  # skip penny stocks
+                    activity = snap.get("volume", 0) * abs(snap.get("chg_pct", 0))
+                    _ranked.append((s, activity))
+                else:
+                    _ranked.append((s, 0))  # include unknowns at zero priority
+            _ranked.sort(key=lambda x: -x[1])
+            extras = [s for s, _ in _ranked]
+        except Exception:
+            extras = sorted(quality_candidates, key=lambda s: (len(s), s))
         for sym in extras:
             if len(universe) >= MAX_SCAN_TICKERS:
                 break
-            a = fractionable[sym]
-            # Basic quality filter: prefer NYSE/NASDAQ listed
-            if a.get("exchange") in ("NYSE", "NASDAQ", "CBOE", "ARCA"):
-                universe.add(sym)
+            universe.add(sym)
 
     candidates = list(universe)
     logger.info(f"Full scan universe: {len(candidates)} tickers (movers: {len(movers)}, held: {len(held_symbols)})")
