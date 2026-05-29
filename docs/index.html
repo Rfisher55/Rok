@@ -312,6 +312,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .sc-upside{font-size:8px;padding:1px 4px;border-radius:3px;font-weight:600}
 .sc-upside.up{background:rgba(0,255,136,.07);color:var(--g)}.sc-upside.down{background:rgba(255,34,85,.07);color:var(--r)}
 .sc-rec{font-size:8px;padding:1px 4px;border-radius:3px;background:rgba(0,204,255,.07);color:var(--b);text-transform:capitalize}
+.alert-bell{background:none;border:none;cursor:pointer;font-size:10px;padding:1px 2px;opacity:.4;transition:opacity .15s,transform .15s;color:var(--au);line-height:1;touch-action:manipulation}
+.alert-bell:hover{opacity:.9;transform:scale(1.2)}.alert-bell.active{opacity:1;text-shadow:0 0 8px rgba(255,215,0,.6)}
 .sc-empty{text-align:center;padding:2.5rem;color:var(--wh3);font-size:13px;grid-column:1/-1}
 .sc-empty a{color:rgba(255,215,0,.6);text-decoration:underline}
 
@@ -1222,7 +1224,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <span class="sc-cnt" id="sc-cnt"></span>
     </div>
     <!-- Sector quick-filter chips (populated by JS) -->
-    <div id="sc-sector-chips" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.7rem"></div>
+    <div id="sc-sector-chips" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem"></div>
+    <!-- Active price alerts strip (populated by JS) -->
+    <div id="alert-strip" style="display:none"></div>
     <div id="sc-grid" class="sc-grid">
       <div class="sc-empty">Loading…</div>
     </div>
@@ -1653,6 +1657,46 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   </div>
 </div>
 
+<!-- PRICE ALERT DIALOG -->
+<div id="alert-dialog-overlay" class="modal-overlay" style="align-items:flex-end">
+  <div style="background:var(--blk3);border:1px solid rgba(255,215,0,.25);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.55rem">
+      <span style="font-size:1.8rem">🔔</span>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase">Set Price Alert</div>
+        <div id="alert-dialog-ticker" style="font-family:var(--disp);font-size:1.5rem;color:var(--au)"></div>
+      </div>
+      <div style="margin-left:auto;font-size:11px;color:var(--wh3)" id="alert-dialog-cur"></div>
+    </div>
+    <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.65rem">ROK will notify you the moment the price crosses your target — even on mobile. Checks every 3 minutes.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.6rem">
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem">ALERT PRICE ($)</div>
+        <div style="position:relative">
+          <span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--wh3);font-size:14px">$</span>
+          <input id="alert-dialog-price" type="number" step="0.01" min="0.01"
+            style="width:100%;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:.6rem .6rem .6rem 1.5rem;font-size:1.1rem;font-weight:700;color:var(--au);outline:none;font-family:var(--font);box-sizing:border-box"
+            placeholder="e.g. 200.00"
+            oninput="updateAlertCalc()"
+            onkeydown="if(event.key==='Enter')confirmAlert()"/>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem">ALERT WHEN</div>
+        <select id="alert-dialog-dir" style="width:100%;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.22);border-radius:10px;padding:.68rem .75rem;font-size:13px;font-weight:700;color:var(--au);outline:none;font-family:var(--font);cursor:pointer;appearance:none;-webkit-appearance:none" oninput="updateAlertCalc()">
+          <option value="above">↑ Rises above</option>
+          <option value="below">↓ Falls below</option>
+        </select>
+      </div>
+    </div>
+    <div id="alert-dialog-hint" style="min-height:20px;margin-bottom:.6rem;font-size:10.5px;color:var(--wh3)"></div>
+    <div style="display:flex;gap:.55rem">
+      <button onclick="cancelAlert()" style="flex:1;padding:.7rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--wh3);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button onclick="confirmAlert()" style="flex:2;padding:.7rem;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.35);border-radius:10px;color:var(--au);font-size:14px;font-weight:800;cursor:pointer;touch-action:manipulation">🔔 SET ALERT</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div id="modal-overlay" class="modal-overlay">
   <div class="modal" id="modal-body">
@@ -1810,6 +1854,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     (ROK.sell_signals || []).forEach(s => tickers.add(s.ticker));
     (ROK.watch_list || []).forEach(s => tickers.add(s.ticker));
     (ROK.stock_universe || []).slice(0, 20).forEach(s => tickers.add(s.ticker));
+    getAlerts().filter(a => !a.triggered).forEach(a => tickers.add(a.ticker));
+    Object.keys(getPortfolio()).forEach(t => tickers.add(t));
     const tickerList = [...tickers].filter(Boolean);
 
     // Fetch in batches of 10
@@ -1857,6 +1903,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     // Update portfolio P&L if visible
     if (activeTab === 'portfolio') renderPortfolio();
     if (activeTab === 'signals') updateSignalsPortfolioAlert();
+    checkPriceAlerts();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2192,8 +2239,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     activeTab = id;
-    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderScreener(); screenerBuilt = true; }
-    else if (id === 'screener') renderScreener();
+    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderScreener(); screenerBuilt = true; }
+    else if (id === 'screener') { renderAlertStrip(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); }
     if (id === 'portfolio') renderPortfolio();
   }
@@ -2750,6 +2797,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const up = s.upside_to_target;
       const upHtml = up != null ? `<span class="sc-upside ${up >= 0 ? 'up' : 'down'}">${up >= 0 ? '+' : ''}${up}%↑</span>` : '';
       const starCls = starred.has(s.ticker) ? 'star-btn starred' : 'star-btn';
+      const hasAlert = getAlerts().some(a => a.ticker === s.ticker && !a.triggered);
       const changedBadge = sigChanged(s.ticker) ? `<span class="sig-changed">CHANGED</span>` : '';
       const sigDet = sigDetails[s.ticker] || {};
       const isTopPick = sig === 'buy' && (sigDet.signal_strength >= 8 || s.signal_strength >= 8);
@@ -2765,7 +2813,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <div class="sc-top">
           <div><div class="sc-ticker">${s.ticker}</div><div class="sc-co">${(s.company_name || '').substring(0, 20)}</div></div>
           <div class="sc-r">
-            <div style="display:flex;align-items:center;gap:2px">${badge}<button class="${starCls}" onclick="toggleStar('${s.ticker}',event)">★</button></div>
+            <div style="display:flex;align-items:center;gap:2px">${badge}<button class="${hasAlert?'alert-bell active':'alert-bell'}" onclick="openAlertDialog('${s.ticker}',${price||0},event)" title="Set price alert">🔔</button><button class="${starCls}" onclick="toggleStar('${s.ticker}',event)">★</button></div>
             ${changedBadge}
             <div class="sc-price ${cc}">${price != null ? '$' + price.toFixed(2) : '—'}</div>
             <div class="sc-chg ${cc}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>
@@ -2964,10 +3012,124 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     setInterval(show, 12000);
   }
 
+  // ── PRICE ALERTS ─────────────────────────────────────────
+  const ALERTS_KEY = 'rok_price_alerts_v1';
+  let _alertTicker = '', _alertCurPrice = 0;
+
+  function getAlerts() {
+    try { return JSON.parse(localStorage.getItem(ALERTS_KEY) || '[]'); } catch(e) { return []; }
+  }
+  function saveAlerts(a) {
+    localStorage.setItem(ALERTS_KEY, JSON.stringify(a));
+  }
+
+  function openAlertDialog(ticker, currentPrice, event) {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    _alertTicker = ticker;
+    _alertCurPrice = currentPrice || (liveprices[ticker] ? liveprices[ticker].price : 0);
+    document.getElementById('alert-dialog-ticker').textContent = ticker;
+    document.getElementById('alert-dialog-cur').textContent = _alertCurPrice ? `Now: $${_alertCurPrice.toFixed(2)}` : '';
+    document.getElementById('alert-dialog-price').value = '';
+    document.getElementById('alert-dialog-hint').textContent = '';
+    const det = sigDetails[ticker] || {};
+    const dir = document.getElementById('alert-dialog-dir');
+    dir.value = det.rok_signal === 'sell' ? 'below' : 'above';
+    // Pre-fill with price target or stop-loss as a suggestion
+    const priceEl = document.getElementById('alert-dialog-price');
+    if (det.price_target && dir.value === 'above') { priceEl.value = Number(det.price_target).toFixed(2); }
+    else if (det.stop_loss && _alertCurPrice > 0) { priceEl.value = Number(det.stop_loss).toFixed(2); dir.value = 'below'; }
+    document.getElementById('alert-dialog-overlay').classList.add('open');
+    updateAlertCalc();
+    setTimeout(() => priceEl.focus(), 150);
+  }
+  window.openAlertDialog = openAlertDialog;
+
+  function updateAlertCalc() {
+    const price = parseFloat(document.getElementById('alert-dialog-price').value);
+    const dir = document.getElementById('alert-dialog-dir').value;
+    const hint = document.getElementById('alert-dialog-hint');
+    if (!price || price <= 0) { hint.textContent = ''; return; }
+    if (_alertCurPrice > 0) {
+      const diff = ((price - _alertCurPrice) / _alertCurPrice * 100).toFixed(1);
+      const isAbove = price > _alertCurPrice;
+      const matchDir = (dir === 'above') === isAbove;
+      const arrow = isAbove ? '↑' : '↓';
+      hint.innerHTML = `${arrow} ${Math.abs(diff)}% ${isAbove ? 'above' : 'below'} current price` +
+        (matchDir ? '' : ` — <span style="color:rgba(255,170,0,.8)">⚠ check direction</span>`);
+    }
+  }
+  window.updateAlertCalc = updateAlertCalc;
+
+  function cancelAlert() {
+    document.getElementById('alert-dialog-overlay').classList.remove('open');
+  }
+  window.cancelAlert = cancelAlert;
+
+  function confirmAlert() {
+    const price = parseFloat(document.getElementById('alert-dialog-price').value);
+    const dir = document.getElementById('alert-dialog-dir').value;
+    if (!price || price <= 0) {
+      document.getElementById('alert-dialog-hint').innerHTML = '<span style="color:var(--r)">Enter a valid price first.</span>';
+      return;
+    }
+    const alerts = getAlerts().filter(a => !(a.ticker === _alertTicker && a.direction === dir && !a.triggered));
+    alerts.push({ ticker: _alertTicker, target: price, direction: dir, created: Date.now(), triggered: false });
+    saveAlerts(alerts);
+    document.getElementById('alert-dialog-overlay').classList.remove('open');
+    showAppAlert(`🔔 Alert set: ${_alertTicker} ${dir === 'above' ? '↑ above' : '↓ below'} $${price.toFixed(2)}`, 'info', 5000);
+    renderAlertStrip();
+    renderScreener();
+  }
+  window.confirmAlert = confirmAlert;
+
+  function removeAlert(ticker, direction) {
+    saveAlerts(getAlerts().filter(a => !(a.ticker === ticker && a.direction === direction)));
+    renderAlertStrip();
+    renderScreener();
+  }
+  window.removeAlert = removeAlert;
+
+  function renderAlertStrip() {
+    const strip = document.getElementById('alert-strip');
+    if (!strip) return;
+    const active = getAlerts().filter(a => !a.triggered);
+    if (!active.length) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
+    strip.style.cssText = 'display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;margin-bottom:.55rem;padding:.4rem .65rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.13);border-radius:8px';
+    strip.innerHTML = `<span style="font-size:8px;font-weight:700;letter-spacing:.11em;color:var(--wh3);text-transform:uppercase;flex-shrink:0">🔔 MY ALERTS:</span>` +
+      active.map(a => `<button onclick="removeAlert('${a.ticker}','${a.direction}')" style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.22);color:var(--au);cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:var(--font)" title="Tap to remove alert">${a.ticker} ${a.direction==='above'?'↑':'↓'} $${Number(a.target).toFixed(2)} <span style="opacity:.45;font-size:8px">✕</span></button>`).join('');
+  }
+
+  function checkPriceAlerts() {
+    const alerts = getAlerts();
+    let changed = false;
+    alerts.forEach(a => {
+      if (a.triggered) return;
+      const lp = liveprices[a.ticker];
+      if (!lp || !lp.price) return;
+      const price = lp.price;
+      const hit = a.direction === 'above' ? price >= a.target : price <= a.target;
+      if (!hit) return;
+      a.triggered = true;
+      changed = true;
+      const msg = `🔔 PRICE ALERT: ${a.ticker} ${a.direction === 'above' ? '↑ reached' : '↓ fell to'} $${a.target.toFixed(2)} (now $${price.toFixed(2)})`;
+      showAppAlert(msg, 'info', 12000);
+      if (Notification.permission === 'granted') {
+        try { new Notification('ROK Price Alert 🔔', { body: msg, icon: './icon-192.png' }); } catch(e) {}
+      }
+    });
+    if (changed) { saveAlerts(alerts); renderAlertStrip(); renderScreener(); }
+  }
+
+  // Close alert dialog on overlay backdrop click
+  document.getElementById('alert-dialog-overlay').addEventListener('click', function(e) {
+    if (e.target === this) cancelAlert();
+  });
+
   // ── INIT ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     initSignalSparks();
     buildSectorChips();
+    renderAlertStrip();
     renderScreener();
     screenerBuilt = true;
     syncBoughtButtons();
