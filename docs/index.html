@@ -2265,7 +2265,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); }
+    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
     renderLivePortStrip();
     if (btn) { btn.classList.remove('spinning'); }
@@ -2585,6 +2585,44 @@ body.beginner-mode #beginner-banner { display:block }
     loadModalNews(ticker);
     // Load options snapshot for buy signals
     if (sig === 'buy') loadModalOptions(ticker);
+    // Fetch live intraday chart
+    loadModalIntradayChart(ticker);
+  }
+
+  async function loadModalIntradayChart(ticker) {
+    try {
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=5m&range=1d`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const result = j?.chart?.result?.[0];
+      if (!result) return;
+      const timestamps = result.timestamp || [];
+      const closes = result.indicators?.quote?.[0]?.close || [];
+      const validPrices = closes.filter(p => p != null);
+      if (validPrices.length < 5) return;
+      // Replace static spark with live intraday spark
+      const canvas = document.getElementById('modal-spark');
+      if (!canvas) return;
+      const firstPrice = validPrices[0];
+      const lastPrice = validPrices[validPrices.length - 1];
+      const isUp = lastPrice >= firstPrice;
+      const color = isUp ? '#00ff88' : '#ff2255';
+      const ex = Chart.getChart('modal-spark');
+      if (ex) ex.destroy();
+      drawSpark('modal-spark', validPrices, color);
+      // Update live indicator
+      const sparkParent = canvas.closest('div');
+      if (sparkParent && !sparkParent.querySelector('.intraday-lbl')) {
+        const lbl = document.createElement('div');
+        lbl.className = 'intraday-lbl';
+        lbl.style.cssText = 'font-size:8px;color:rgba(0,255,136,.6);text-align:right;padding:0 1.1rem;margin-top:-4px;margin-bottom:4px';
+        lbl.textContent = `● TODAY (5-min intraday · ${validPrices.length} bars)`;
+        sparkParent.parentNode.insertBefore(lbl, sparkParent.nextSibling);
+      }
+    } catch { /* silent */ }
   }
 
   // ── MODAL SIMILAR STOCKS ────────────────────────────────
@@ -2930,7 +2968,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -4458,10 +4496,15 @@ body.beginner-mode #beginner-banner { display:block }
     dd.innerHTML = matches.map(s => {
       const sig = s.rok_signal || 'neutral';
       const sigBadge = sig !== 'neutral' ? `<span class="srch-item-sig ${sig}">${sig.toUpperCase()}</span>` : '';
-      return `<div class="srch-item" onclick="switchToScreener('${s.ticker}');document.getElementById('${dropdownId}').style.display='none'">
+      const lp = liveprices[s.ticker];
+      const price = lp ? lp.price : s.price;
+      const chg = lp ? lp.change_pct : (s.change_pct || 0);
+      const priceHtml = price != null ? `<span style="margin-left:auto;font-size:10px;color:var(--wh2);font-weight:700">$${price.toFixed(2)} <span style="font-size:9px;color:${chg>=0?'var(--g)':'var(--r)'}">${chg>=0?'+':''}${chg.toFixed(1)}%</span></span>` : '';
+      return `<div class="srch-item" onclick="openModal('${s.ticker}');document.getElementById('${dropdownId}').style.display='none'">
         <span class="srch-item-ticker">${s.ticker}</span>
-        <span class="srch-item-name">${(s.company_name || '').substring(0, 28)}</span>
+        <span class="srch-item-name">${(s.company_name || '').substring(0, 22)}</span>
         ${sigBadge}
+        ${priceHtml}
       </div>`;
     }).join('');
   }
@@ -5126,6 +5169,35 @@ body.beginner-mode #beginner-banner { display:block }
   window.renderUpcomingEvents = renderUpcomingEvents;
 
   // ── SECTOR HEATMAP ────────────────────────────────────
+  const SECTOR_ETFS = {
+    'Technology': 'XLK', 'Healthcare': 'XLV', 'Energy': 'XLE', 'Financials': 'XLF',
+    'Consumer': 'XLY', 'Industrials': 'XLI', 'Materials': 'XLB', 'Utilities': 'XLU',
+    'Real Estate': 'XLRE', 'Communications': 'XLC', 'Consumer Staples': 'XLP',
+  };
+  let _sectorEtfData = {};
+  async function fetchSectorEtfs() {
+    try {
+      const syms = Object.values(SECTOR_ETFS).join(',');
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${syms}&fields=regularMarketChangePercent`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const quotes = j?.quoteResponse?.result || [];
+      quotes.forEach(q => {
+        // Map ETF symbol back to sector name
+        for (const [sector, etfSym] of Object.entries(SECTOR_ETFS)) {
+          if (q.symbol === etfSym && q.regularMarketChangePercent != null) {
+            _sectorEtfData[sector] = q.regularMarketChangePercent;
+          }
+        }
+      });
+      renderSectorHeatmap(); // re-render with ETF data
+    } catch { /* silent */ }
+  }
+  window.fetchSectorEtfs = fetchSectorEtfs;
+
   function renderSectorHeatmap() {
     const container = document.getElementById('sector-heatmap');
     const grid = document.getElementById('sector-heatmap-grid');
@@ -5155,7 +5227,10 @@ body.beginner-mode #beginner-banner { display:block }
 
     container.style.display = 'block';
     grid.innerHTML = sectors.map(([sec, v]) => {
-      const avgChg = v.chgSum / v.count;
+      // Use live ETF data if available, otherwise use computed average
+      const etfChg = _sectorEtfData[sec];
+      const avgChg = etfChg != null ? etfChg : v.chgSum / v.count;
+      const isLive = etfChg != null;
       const score = (v.buys - v.sells * 0.7) / v.count; // sentiment score
       let bg, borderColor, textColor;
       if (avgChg >= 1.5 || score >= 0.4) {
@@ -5173,7 +5248,7 @@ body.beginner-mode #beginner-banner { display:block }
       const buyBar = v.count > 0 ? Math.round(v.buys / v.count * 100) : 0;
       return `<div onclick="setSectorFilter('${sec.replace(/'/g,'').replace(/"/g,'')}');showTab('screener')" style="background:${bg};border:1px solid ${borderColor};border-radius:10px;padding:.5rem .65rem;cursor:pointer;transition:border-color .15s" title="Tap to filter screener by ${sec}">
         <div style="font-size:9.5px;font-weight:700;color:var(--wh);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.2rem">${sec}</div>
-        <div style="font-size:11px;font-weight:800;color:${textColor}">${chgStr}</div>
+        <div style="font-size:11px;font-weight:800;color:${textColor}">${chgStr}${isLive ? '<span style="font-size:7px;color:rgba(0,255,136,.5);margin-left:3px">● ETF</span>' : ''}</div>
         <div style="display:flex;gap:3px;font-size:8px;color:var(--wh4);margin-top:.2rem;flex-wrap:wrap">
           ${v.buys > 0 ? `<span style="color:var(--g)">▲${v.buys}</span>` : ''}
           ${v.sells > 0 ? `<span style="color:var(--r)">▼${v.sells}</span>` : ''}
