@@ -2,11 +2,17 @@ name: ROK Auto Trader
 
 on:
   schedule:
-    # Every 5 minutes, Mon-Fri, 9:30 AM - 4:05 PM Eastern (13:30 - 20:05 UTC)
+    # ── US Equity market hours: every 5 min, Mon-Fri, 9:30 AM - 4:05 PM ET ──
+    # 9:30-10 AM ET = 13:30-14:00 UTC
     - cron: '30,35,40,45,50,55 13 * * 1-5'
+    # 10 AM - 8 PM ET = 14:00-20:00 UTC (every 5 min)
     - cron: '*/5 14,15,16,17,18,19 * * 1-5'
+    # 4:00-4:05 PM ET = 20:00-20:05 UTC
     - cron: '0,5 20 * * 1-5'
-  workflow_dispatch:
+    # ── Crypto: runs every 15 min 24/7 including weekends ──────────────────
+    - cron: '*/15 * * * 0,6'          # Saturday + Sunday every 15 min
+    - cron: '*/15 0-12,21-23 * * 1-5' # Weekday off-hours (before 9 AM / after 4 PM ET)
+  workflow_dispatch:  # manual trigger anytime
 
 permissions:
   contents: write
@@ -14,7 +20,7 @@ permissions:
 jobs:
   trade:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 9
 
     steps:
       - name: Checkout main

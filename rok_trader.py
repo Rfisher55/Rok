@@ -57,6 +57,20 @@ VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
 TRADES_FILE = Path("docs/trades.json")
 PEAK_FILE   = Path("docs/peaks.json")
 
+# ── Crypto config ─────────────────────────────────────────────────────────────
+ENABLE_CRYPTO    = True
+MAX_CRYPTO_POS   = 3        # max concurrent crypto positions
+CRYPTO_MAX_PCT   = 0.07     # max 7% portfolio per crypto position
+# Alpaca crypto symbols → yfinance equivalents
+CRYPTO_UNIVERSE  = {
+    "BTC/USD": "BTC-USD",
+    "ETH/USD": "ETH-USD",
+    "SOL/USD": "SOL-USD",
+    "AVAX/USD": "AVAX-USD",
+}
+CRYPTO_STOP_PCT  = 0.10     # crypto is volatile: 10% stop
+CRYPTO_TARGET_PCT= 0.25     # 25% profit target for crypto
+
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict = {}   # sym -> bool
 
@@ -289,6 +303,60 @@ def market_regime():
         return {"regime": "neutral", "vix": 20.0, "spy_trend": 0.0, "score": 0}
 
 
+# ── Sector rotation engine ────────────────────────────────────────────────────
+SECTOR_ETFS = {
+    "tech":          "XLK",
+    "finance":       "XLF",
+    "health":        "XLV",
+    "energy":        "XLE",
+    "consumer":      "XLP",
+    "consumer_tech": "XLY",
+    "industrial":    "XLI",
+    "crypto":        "IBIT",
+}
+
+def sector_rotation() -> dict:
+    """
+    Rank sectors by 1-day and 5-day ETF performance.
+    Returns {sector: adj_score} where adj_score is -8 to +8.
+    Hot sectors get a bonus; cold sectors get a penalty.
+    """
+    etfs = list(SECTOR_ETFS.values())
+    try:
+        kw  = dict(group_by="ticker", auto_adjust=True, progress=False)
+        raw = yf.download(" ".join(etfs), period="10d", interval="1d", **kw)
+        adj = {}
+        for sec, etf in SECTOR_ETFS.items():
+            try:
+                if len(etfs) == 1:
+                    closes = list(raw["Close"].dropna())
+                else:
+                    closes = list(raw["Close"][etf].dropna())
+                if len(closes) < 2:
+                    adj[sec] = 0
+                    continue
+                chg1d = (closes[-1] - closes[-2]) / closes[-2] * 100
+                chg5d = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
+                score = 0
+                if   chg1d > 2:   score += 4
+                elif chg1d > 0.5: score += 2
+                elif chg1d < -2:  score -= 4
+                elif chg1d < -0.5: score -= 2
+                if   chg5d > 4:   score += 4
+                elif chg5d > 1:   score += 2
+                elif chg5d < -4:  score -= 4
+                elif chg5d < -1:  score -= 2
+                adj[sec] = max(-8, min(8, score))
+            except Exception:
+                adj[sec] = 0
+        hot = sorted(adj.items(), key=lambda x: -x[1])[:3]
+        logger.info(f"Sector rotation: {' | '.join(f'{s}:{v:+d}' for s,v in hot)}")
+        return adj
+    except Exception as e:
+        logger.debug(f"Sector rotation error: {e}")
+        return {}
+
+
 # ── Earnings calendar check ───────────────────────────────────────────────────
 def has_earnings_soon(sym, days=3):
     """Returns True if this stock has earnings within `days` days — skip it. Cached."""
@@ -314,15 +382,58 @@ def has_earnings_soon(sym, days=3):
     return result
 
 
+# ── Catalyst keyword detector (fast, no API) ─────────────────────────────────
+_BULL_CATALYSTS = [
+    "earnings beat", "beats estimates", "record revenue", "raised guidance",
+    "fda approval", "fda approved", "fda clears", "breakthrough",
+    "merger", "acquisition", "buyout", "takeover", "deal",
+    "partnership", "contract win", "awarded contract", "major contract",
+    "share buyback", "repurchase", "dividend increase", "special dividend",
+    "upgrade", "outperform", "buy rating", "price target raised",
+    "short squeeze", "massive volume",
+]
+_BEAR_CATALYSTS = [
+    "misses estimates", "earnings miss", "revenue miss", "guidance cut",
+    "lowers guidance", "fda rejects", "clinical failure", "recall",
+    "lawsuit", "sec investigation", "fraud", "accounting",
+    "downgrade", "underperform", "sell rating", "price target cut",
+    "bankruptcy", "layoffs", "restructuring", "ceo resigns",
+]
+
+def detect_catalyst(headlines: list) -> tuple[float, str]:
+    """
+    Fast keyword scan of headlines. Returns (boost, catalyst_label).
+    boost is -15 to +15 additive score points.
+    """
+    text = " ".join(headlines).lower()
+    bull_hits = [c for c in _BULL_CATALYSTS if c in text]
+    bear_hits = [c for c in _BEAR_CATALYSTS if c in text]
+    boost = min(15, len(bull_hits) * 6) - min(15, len(bear_hits) * 6)
+    label = (bull_hits[0] if bull_hits else (bear_hits[0] if bear_hits else ""))
+    return float(boost), label
+
+
 # ── AI news sentiment ─────────────────────────────────────────────────────────
-def ai_sentiment(ticker):
+def ai_sentiment(ticker, use_sonnet=False):
+    """
+    Score news sentiment -10 to +10 using Claude AI.
+    use_sonnet=True for high-conviction candidates (better reasoning).
+    Also returns catalyst label detected by keyword scan.
+    Returns (score, catalyst_label).
+    """
     if not ANTHROPIC_KEY:
-        return 0
+        return 0, ""
     try:
-        headlines = [n.get("title", "") for n in yf.Ticker(ticker).news[:8] if n.get("title")]
+        news_items = yf.Ticker(ticker).news[:10]
+        headlines  = [n.get("title", "") for n in news_items if n.get("title")]
         if not headlines:
-            return 0
-        text = "\n".join(headlines)
+            return 0, ""
+
+        # Fast keyword catalyst scan
+        boost, catalyst = detect_catalyst(headlines)
+
+        text  = "\n".join(headlines[:8])
+        model = "claude-sonnet-4-6" if use_sonnet else "claude-haiku-4-5-20251001"
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -331,25 +442,30 @@ def ai_sentiment(ticker):
                 "content-type":      "application/json",
             },
             json={
-                "model":      "claude-haiku-4-5-20251001",
-                "max_tokens": 80,
+                "model":      model,
+                "max_tokens": 100,
                 "messages": [{
                     "role":    "user",
                     "content": (
-                        f"Rate the short-term stock trading sentiment for {ticker} "
-                        f"based on these headlines from -10 (very bearish) to +10 (very bullish). "
-                        f"Consider: catalyst strength, market impact, earnings surprise, macro risk. "
-                        f"Return ONLY JSON: {{\"s\":<number>,\"c\":\"<1 word reason>\"}}\n\n{text}"
+                        f"You are an expert stock trader. Rate the SHORT-TERM (1-5 day) trading "
+                        f"momentum for {ticker} based on these recent headlines, from "
+                        f"-10 (very bearish) to +10 (very bullish). "
+                        f"Look for: earnings surprises, FDA/regulatory events, M&A, guidance changes, "
+                        f"upgrades/downgrades, unusual volume catalysts. "
+                        f"Return ONLY JSON: {{\"s\":<number>,\"c\":\"<catalyst in 3 words>\"}}\n\n{text}"
                     ),
                 }],
             },
-            timeout=10,
+            timeout=12,
         )
-        result = json.loads(r.json()["content"][0]["text"].strip())
-        return max(-10, min(10, float(result.get("s", 0))))
+        result   = json.loads(r.json()["content"][0]["text"].strip())
+        ai_score = max(-10, min(10, float(result.get("s", 0))))
+        cat_out  = result.get("c", catalyst) or catalyst
+        logger.debug(f"AI {ticker}: score={ai_score:+.1f} catalyst='{cat_out}' model={'sonnet' if use_sonnet else 'haiku'}")
+        return ai_score, cat_out
     except Exception as e:
         logger.debug(f"Sentiment error {ticker}: {e}")
-        return 0
+        return 0, ""
 
 
 # ── Holistic market AI call ───────────────────────────────────────────────────
@@ -408,6 +524,209 @@ def get_market_movers():
         except Exception:
             pass
     return list(set(movers))
+
+
+# ── Crypto trading ────────────────────────────────────────────────────────────
+def fetch_crypto_data() -> dict:
+    """
+    Fetch price + indicators for all CRYPTO_UNIVERSE coins via yfinance.
+    Returns {alpaca_symbol: signal_dict}.
+    """
+    result = {}
+    for alpaca_sym, yf_sym in CRYPTO_UNIVERSE.items():
+        try:
+            daily  = yf.download(yf_sym, period="15d", interval="1d",
+                                 auto_adjust=True, progress=False)
+            hourly = yf.download(yf_sym, period="3d",  interval="1h",
+                                 auto_adjust=True, progress=False)
+            sig = _extract(daily, hourly)
+            if sig and sig["price"] > 0:
+                result[alpaca_sym] = sig
+        except Exception as e:
+            logger.debug(f"Crypto data error {yf_sym}: {e}")
+    logger.info(f"Crypto data: {list(result.keys())}")
+    return result
+
+
+def crypto_score(sig: dict) -> int:
+    """
+    Score a crypto asset 0-100. More weight on momentum + volume since
+    crypto is purely sentiment/flow driven.
+    """
+    s      = 8
+    chg    = sig.get("change_pct",  0) or 0
+    intra  = sig.get("intraday",    0) or 0
+    vr     = sig.get("vol_ratio",   1) or 1
+    rsi    = sig.get("rsi",        50) or 50
+    ema_c  = sig.get("ema_cross",   0) or 0
+    macd   = sig.get("macd",        0) or 0
+    bb     = sig.get("bb_pos",     50) or 50
+    vwap   = sig.get("vwap_pos",    0) or 0
+
+    if   chg > 5:   s += 28
+    elif chg > 2:   s += 18
+    elif chg > 0.5: s +=  8
+    elif chg < -5:  s -= 22
+    elif chg < -2:  s -= 12
+    if   intra > 2:   s += 18
+    elif intra > 0.8: s += 10
+    elif intra < -2:  s -= 14
+    if   vr > 2.5:  s += 18
+    elif vr > 1.5:  s += 10
+    if   50 < rsi < 75: s += 12
+    elif rsi >= 75:     s +=  3
+    elif rsi < 25:      s -= 10
+    if   ema_c > 0.3:  s += 12
+    elif ema_c < -0.3: s -= 10
+    if   macd > 0.2:  s += 10
+    elif macd < -0.2: s -= 8
+    if   40 < bb < 80: s += 8
+    if   vwap > 0.3:  s += 8
+    elif vwap < -0.3: s -= 6
+
+    return max(0, min(100, int(s)))
+
+
+def ai_crypto_sentiment(coin: str = "Bitcoin") -> float:
+    """Ask Claude Haiku for crypto market sentiment (-10 to +10)."""
+    if not ANTHROPIC_KEY:
+        return 0
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key":         ANTHROPIC_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            },
+            json={
+                "model":      "claude-haiku-4-5-20251001",
+                "max_tokens": 60,
+                "messages": [{
+                    "role":    "user",
+                    "content": (
+                        f"Rate current short-term (24-48h) trading sentiment for {coin} "
+                        f"from -10 (very bearish) to +10 (very bullish) based on your training data. "
+                        f"Consider: momentum, market structure, macro risk, fear/greed cycle. "
+                        f"Return ONLY JSON: {{\"s\":<number>}}"
+                    ),
+                }],
+            },
+            timeout=8,
+        )
+        result = json.loads(r.json()["content"][0]["text"].strip())
+        return max(-10, min(10, float(result.get("s", 0))))
+    except Exception:
+        return 0
+
+
+def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
+                      buying_power: float, made_trades_ref: list) -> float:
+    """
+    Manage all crypto positions — buys and sells.
+    Operates 24/7 regardless of equity market hours.
+    Returns updated buying_power.
+    """
+    if not ENABLE_CRYPTO:
+        return buying_power
+
+    now_utc = datetime.now(timezone.utc)
+    crypto_data = fetch_crypto_data()
+    if not crypto_data:
+        return buying_power
+
+    # Get current crypto positions from Alpaca
+    try:
+        all_pos   = alpaca_get("/v2/positions")
+        held_crypto = {
+            p["symbol"]: p for p in all_pos
+            if "/" in p.get("symbol", "")
+        }
+    except Exception as e:
+        logger.warning(f"Crypto positions fetch failed: {e}")
+        return buying_power
+
+    # ── Sell / manage open crypto positions ──────────────────────────────
+    for sym, pos in list(held_crypto.items()):
+        try:
+            yf_sym   = CRYPTO_UNIVERSE.get(sym, "")
+            cost     = float(pos.get("avg_entry_price", 0))
+            qty      = abs(float(pos.get("qty", 0)))
+            sig      = crypto_data.get(sym, {})
+            current  = sig.get("price") or float(pos.get("current_price", cost))
+            if cost <= 0 or qty <= 0:
+                continue
+            pnl_pct = (current - cost) / cost * 100
+
+            prev_peak = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else current
+            peak      = max(prev_peak, current)
+            peaks[sym] = {"peak": peak, "time": peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else now_utc.isoformat(), "half_out": False}
+            trail_drop = (current - peak) / peak * 100
+
+            reason = None
+            if pnl_pct <= -(CRYPTO_STOP_PCT * 100):
+                reason = f"crypto stop loss ({pnl_pct:+.1f}%)"
+            elif pnl_pct >= (CRYPTO_TARGET_PCT * 100):
+                reason = f"crypto profit target ({pnl_pct:+.1f}%)"
+            elif trail_drop <= -8 and pnl_pct > 0:
+                reason = f"crypto trailing stop ({trail_drop:.1f}% from peak)"
+
+            if reason:
+                logger.info(f"SELL {sym} — {reason}")
+                alpaca_post("/v2/orders", {
+                    "symbol": sym, "qty": str(qty),
+                    "side": "sell", "type": "market", "time_in_force": "gtc",
+                })
+                log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
+                made_trades_ref.append(True)
+                peaks.pop(sym, None)
+            else:
+                logger.info(f"HOLD {sym} — {pnl_pct:+.1f}% | peak ${peak:,.0f} | trail {trail_drop:.1f}%")
+        except Exception as e:
+            logger.warning(f"Crypto sell error {sym}: {e}")
+
+    # ── Buy crypto ──────────────────────────────────────────────────────
+    open_slots = MAX_CRYPTO_POS - len(held_crypto)
+    if open_slots <= 0:
+        return buying_power
+
+    scored = []
+    for alpaca_sym, sig in crypto_data.items():
+        if alpaca_sym in held_crypto:
+            continue
+        sc = crypto_score(sig)
+        if sc >= 22:
+            scored.append((alpaca_sym, sc, sig))
+    scored.sort(key=lambda x: -x[1])
+
+    for alpaca_sym, sc, sig in scored[:open_slots]:
+        try:
+            coin_name = alpaca_sym.split("/")[0]
+            ai_score  = ai_crypto_sentiment(coin_name)
+            if sc + ai_score < 20:
+                logger.info(f"SKIP {alpaca_sym} — combined score too low (tech={sc} ai={ai_score:+.0f})")
+                continue
+            price    = sig["price"]
+            notional = round(min(portfolio_val * CRYPTO_MAX_PCT, buying_power * 0.3), 2)
+            if notional < 10:
+                continue
+            logger.info(f"BUY {alpaca_sym} — ${notional:.0f} @ ~${price:,.2f} | score {sc} | ai {ai_score:+.0f}")
+            alpaca_post("/v2/orders", {
+                "symbol":        alpaca_sym,
+                "notional":      str(notional),
+                "side":          "buy",
+                "type":          "market",
+                "time_in_force": "gtc",   # crypto uses GTC not DAY
+            })
+            log_trade(tlog, "BUY", alpaca_sym, price, notional, score=sc,
+                      reason=f"crypto score={sc} ai={ai_score:+.0f}")
+            peaks[alpaca_sym] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
+            made_trades_ref.append(True)
+            buying_power -= notional
+        except Exception as e:
+            logger.warning(f"Crypto buy failed {alpaca_sym}: {e}")
+
+    return buying_power
 
 
 def get_full_universe(held_symbols: set) -> tuple[list, set]:
@@ -884,7 +1203,8 @@ def run():
 
     # AI market context adjustment (use top movers from screeners)
     top_movers_for_ai = [s for s in candidates if s not in BASE_UNIVERSE][:12]
-    regime_adj = ai_market_context(regime, top_movers_for_ai)
+    regime_adj   = ai_market_context(regime, top_movers_for_ai)
+    sector_adjs  = sector_rotation()   # {sector: -8..+8}
 
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
@@ -1010,9 +1330,10 @@ def run():
             sec = SECTOR_MAP.get(sym, "other")
             sector_counts[sec] = sector_counts.get(sec, 0) + 1
 
-        # Technical pass
+        # Technical pass — include sector rotation bonus
         tech_scores = {
-            tk: score(tk, live[tk], regime_adj=regime_adj)
+            tk: score(tk, live[tk],
+                      regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0))
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -1032,31 +1353,41 @@ def run():
             if has_earnings_soon(tk):
                 logger.info(f"SKIP {tk} — earnings within 3 days")
                 continue
-            # Skip AI call if running low on time budget
-            sent = ai_sentiment(tk) if _time_ok(280) else 0
-            final_sc = score(tk, live[tk], sentiment=sent, regime_adj=regime_adj)
+            # Use Sonnet for top 3 candidates (better reasoning), Haiku for rest
+            rank = len(final_scores)
+            use_sonnet = (rank < 3) and _time_ok(200)
+            if _time_ok(280):
+                sent, catalyst = ai_sentiment(tk, use_sonnet=use_sonnet)
+            else:
+                sent, catalyst = 0, ""
+            sec_adj  = sector_adjs.get(sec, 0)
+            final_sc = score(tk, live[tk], sentiment=sent, regime_adj=regime_adj + sec_adj)
             if final_sc >= MIN_BUY_SCORE:
-                final_scores.append((tk, final_sc, sent, sec))
-                logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sector={sec}")
+                final_scores.append((tk, final_sc, sent, sec, catalyst))
+                logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}'")
 
         final_scores.sort(key=lambda x: -x[1])
 
         if not final_scores:
             logger.info(f"No longs passed threshold {MIN_BUY_SCORE}.")
         else:
-            for tk, sc, sent, sec in final_scores[:open_long_slots]:
+            for tk, sc, sent, sec, catalyst in final_scores[:open_long_slots]:
                 try:
                     d        = live[tk]
                     price    = d["price"]
                     atr      = d.get("atr")
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix)
+                    # Size up for strong catalysts
+                    if catalyst and sent >= 5:
+                        notional = min(notional * 1.5, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
                     stop_price = round(price * (1 - STOP_LOSS_PCT), 2)
                     logger.info(
                         f"BUY {tk} — ${notional:.0f} @ ~${price:.2f} "
-                        f"| stop ${stop_price} | score {sc} | sent {sent:+.0f} | VIX {vix:.0f}"
+                        f"| stop ${stop_price} | score {sc} | sent {sent:+.0f}"
+                        + (f" | catalyst: {catalyst}" if catalyst else "")
                     )
                     alpaca_post("/v2/orders", {
                         "symbol":        tk,
@@ -1065,8 +1396,10 @@ def run():
                         "type":          "market",
                         "time_in_force": "day",
                     })
-                    log_trade(tlog, "BUY", tk, price, notional, score=sc,
-                              reason=f"score={sc} sent={sent:+.0f}")
+                    reason = f"score={sc} sent={sent:+.0f}"
+                    if catalyst:
+                        reason += f" [{catalyst}]"
+                    log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
@@ -1119,6 +1452,15 @@ def run():
                     buying_power -= actual_notional
                 except Exception as e:
                     logger.warning(f"SHORT failed {tk}: {e}")
+
+    # ── Crypto trading (runs regardless of equity market hours) ──────────
+    if ENABLE_CRYPTO and _time_ok(380):
+        made_trades_ref = []
+        buying_power = run_crypto_trades(
+            tlog, peaks, portfolio_val, buying_power, made_trades_ref
+        )
+        if made_trades_ref:
+            made_trades = True
 
     # ── Save state + dashboard snapshot ──────────────────────────────────
     _save(PEAK_FILE, peaks)
