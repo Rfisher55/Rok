@@ -1131,6 +1131,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-trade-plans" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-social-buzz" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-congressional-live" style="display:none;margin-bottom:.85rem"></div>
+    <div id="sig-insider-live" style="display:none;margin-bottom:.85rem"></div>
 
     {# Quick market snapshot row #}
     {% set sent = data.market_sentiment|upper %}
@@ -2274,6 +2275,15 @@ body.beginner-mode #beginner-banner { display:block }
         <div id="intel-hidden-gems" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to scan for hidden gems…</div>
       </div>
 
+      <!-- LIVE: Universe Stats Overview (JS-populated) -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr">
+          <h2 class="s-ttl" style="color:var(--b)">📊 ROK UNIVERSE OVERVIEW</h2>
+          <span class="s-sub">Live stats across all stocks ROK tracks today <span style="color:var(--g);font-size:7px">● LIVE</span></span>
+        </div>
+        <div id="intel-universe-stats" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to load universe stats…</div>
+      </div>
+
     </div><!-- /intel-grid -->
   </div><!-- /tab-intel -->
 
@@ -2305,6 +2315,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-rebalance" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-correlation" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-smart-sell" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-tax-tips" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-beta" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
@@ -3061,9 +3072,9 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); }
-    if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); }
+    if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); renderUniverseStats(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -4025,10 +4036,10 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); renderSocialBuzzRadar(); renderCongressionalLive(); renderInsiderLive(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); renderMarketHealthScore(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); setTimeout(fetchPortfolioDividends, 1500); }
-    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); renderPortfolioTaxTips(); renderPortfolioBeta(); renderPortfolioCorrelation(); renderSmartSellGuide(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderUniverseStats(); }
   }
   window.showTab = showTab;
 
@@ -5374,6 +5385,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioTaxTips();
     renderPortfolioBeta();
     renderPortfolioCorrelation();
+    renderSmartSellGuide();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -10216,6 +10228,184 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderPortfolioCorrelation = renderPortfolioCorrelation;
+
+  // ── CEO/INSIDER BUY LIVE PANEL ────────────────────────
+  function renderInsiderLive() {
+    const el = document.getElementById('sig-insider-live');
+    if (!el) return;
+    const insiders = ROK.insider_buys || [];
+    if (!insiders.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    const rows = insiders.slice(0, 5).map(ins => {
+      const lp = liveprices[ins.ticker];
+      const chgPct = lp ? lp.change_pct : null;
+      const price = lp ? lp.price : null;
+      const chgColor = chgPct == null ? 'var(--wh3)' : chgPct >= 0 ? 'var(--g)' : 'var(--r)';
+      const chgStr = chgPct != null ? `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%` : '';
+      const priceStr = price ? `$${price.toFixed(2)}` : '';
+      const valFmt = ins.value_usd >= 1e6 ? `$${(ins.value_usd/1e6).toFixed(1)}M` : ins.value_usd >= 1e3 ? `$${Math.round(ins.value_usd/1e3)}K` : '';
+      const sharesFmt = ins.shares ? `${ins.shares.toLocaleString()} shares` : '';
+      const dateStr = ins.date ? ins.date : '';
+      const titleStr = ins.title ? ` · ${ins.title}` : '';
+      return `<div style="background:var(--blk4);border:1px solid rgba(255,136,0,.14);border-radius:10px;padding:.6rem .85rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="switchToScreener('${ins.ticker}')">
+        <div style="min-width:50px">
+          <div style="font-family:var(--disp);font-size:14px;font-weight:900;color:var(--or)">$${ins.ticker}</div>
+          <div style="font-size:8px;color:var(--wh4)">${dateStr}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9.5px;font-weight:700;color:var(--wh2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ins.insider_name || ''}${titleStr}</div>
+          <div style="font-size:9px;color:var(--or);font-weight:700">${valFmt}${valFmt && sharesFmt ? ' · ' : ''}${sharesFmt}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:11px;font-weight:700;color:var(--wh)">${priceStr}</div>
+          <div style="font-size:10px;font-weight:700;color:${chgColor}">${chgStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,136,0,.2);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--or);text-transform:uppercase;margin-bottom:.3rem">👔 CEO &amp; INSIDER BUYS — LIVE PRICES</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.7rem;line-height:1.45">When a CEO buys millions of their own company's stock, it signals strong confidence in the future. These are SEC-required disclosures — the ultimate "putting your money where your mouth is."</div>
+      ${rows}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.3rem">Source: SEC Form 4 filings · Tap any row to view in screener · Past purchases don't guarantee future gains</div>
+    </div>`;
+  }
+  window.renderInsiderLive = renderInsiderLive;
+
+  // ── UNIVERSE STATS OVERVIEW ───────────────────────────
+  function renderUniverseStats() {
+    const el = document.getElementById('intel-universe-stats');
+    if (!el) return;
+    const universe = ROK.stock_universe || [];
+    if (!universe.length) { el.innerHTML = '<div style="font-size:10px;color:var(--wh4)">Universe data loads with the next ROK analysis run.</div>'; return; }
+    let buys = 0, sells = 0, watches = 0, neutrals = 0;
+    let rsiTotal = 0, rsiCount = 0, peTotal = 0, peCount = 0;
+    let highestStrength = null, lowestRSI = null, highestVolRatio = null;
+    const sectorCounts = {};
+    universe.forEach(s => {
+      const sig = s.rok_signal || 'neutral';
+      if (sig === 'buy') buys++;
+      else if (sig === 'sell') sells++;
+      else if (sig === 'watch') watches++;
+      else neutrals++;
+      if (s.rsi != null) { rsiTotal += s.rsi; rsiCount++; }
+      if (s.pe_ratio != null && s.pe_ratio > 0 && s.pe_ratio < 200) { peTotal += s.pe_ratio; peCount++; }
+      if (s.sector) sectorCounts[s.sector] = (sectorCounts[s.sector] || 0) + (sig === 'buy' ? 1 : 0);
+      if (sig === 'buy' && s.signal_strength != null && (!highestStrength || s.signal_strength > highestStrength.signal_strength)) highestStrength = s;
+      if (s.rsi != null && s.rok_signal !== 'sell' && (!lowestRSI || s.rsi < lowestRSI.rsi)) lowestRSI = s;
+      const lp = liveprices[s.ticker];
+      if (lp && lp.vol_ratio != null && (!highestVolRatio || lp.vol_ratio > (liveprices[highestVolRatio.ticker]||{}).vol_ratio)) highestVolRatio = s;
+    });
+    const total = universe.length;
+    const avgRSI = rsiCount ? (rsiTotal / rsiCount).toFixed(1) : '—';
+    const avgPE = peCount ? (peTotal / peCount).toFixed(1) : '—';
+    const buyPct = Math.round(buys / total * 100);
+    const hotSectors = Object.entries(sectorCounts).sort((a,b) => b[1]-a[1]).slice(0, 3);
+    const rsiColor = rsiCount ? (rsiTotal/rsiCount < 40 ? 'var(--g)' : rsiTotal/rsiCount > 65 ? 'var(--r)' : 'var(--au)') : 'var(--wh3)';
+    const peColor = peCount ? (peTotal/peCount < 20 ? 'var(--g)' : peTotal/peCount > 35 ? 'var(--r)' : 'var(--au)') : 'var(--wh3)';
+    const featuredRows = [
+      highestStrength ? `<div style="font-size:9.5px;color:var(--wh3);padding:.25rem 0">💪 <strong style="color:var(--g)">Strongest Signal:</strong> $${highestStrength.ticker} (strength ${(highestStrength.signal_strength*100).toFixed(0)}%)</div>` : '',
+      lowestRSI ? `<div style="font-size:9.5px;color:var(--wh3);padding:.25rem 0">📉 <strong style="color:var(--b)">Most Oversold:</strong> $${lowestRSI.ticker} (RSI ${lowestRSI.rsi.toFixed(0)} — potential bounce)</div>` : '',
+      hotSectors.length ? `<div style="font-size:9.5px;color:var(--wh3);padding:.25rem 0">🔥 <strong style="color:var(--au)">Hot Sectors:</strong> ${hotSectors.map(([s,c]) => `${s} (${c} buys)`).join(', ')}</div>` : '',
+    ].filter(Boolean).join('');
+    el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:.6rem">
+      <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:9px;padding:.5rem .7rem;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:var(--g)">${buys}</div>
+        <div style="font-size:8.5px;color:var(--wh3)">BUY Signals</div>
+        <div style="font-size:8px;color:var(--g)">${buyPct}% of ${total}</div>
+      </div>
+      <div style="background:rgba(255,34,85,.05);border:1px solid rgba(255,34,85,.15);border-radius:9px;padding:.5rem .7rem;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:var(--r)">${sells}</div>
+        <div style="font-size:8.5px;color:var(--wh3)">SELL Signals</div>
+        <div style="font-size:8px;color:var(--r)">${Math.round(sells/total*100)}% of ${total}</div>
+      </div>
+      <div style="background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.12);border-radius:9px;padding:.5rem .7rem;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:${rsiColor}">${avgRSI}</div>
+        <div style="font-size:8.5px;color:var(--wh3)">Avg RSI</div>
+        <div style="font-size:8px;color:var(--wh4)">${rsiCount} stocks</div>
+      </div>
+      <div style="background:rgba(0,204,255,.04);border:1px solid rgba(0,204,255,.12);border-radius:9px;padding:.5rem .7rem;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:${peColor}">${avgPE}</div>
+        <div style="font-size:8.5px;color:var(--wh3)">Avg P/E</div>
+        <div style="font-size:8px;color:var(--wh4)">${peCount} stocks</div>
+      </div>
+    </div>
+    ${featuredRows}
+    <div style="font-size:8px;color:var(--wh4);margin-top:.4rem">Based on ROK's full universe of ${total} stocks analyzed today. RSI &lt;40 = broadly oversold market (often a buying opportunity). RSI &gt;65 = broadly overbought (be cautious adding more).</div>`;
+  }
+  window.renderUniverseStats = renderUniverseStats;
+
+  // ── SMART SELL GUIDE ──────────────────────────────────
+  function renderSmartSellGuide() {
+    const el = document.getElementById('port-smart-sell');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    const now = Date.now();
+    const ONE_YEAR = 365 * 24 * 3600 * 1000;
+    const rows = tickers.map(ticker => {
+      const entry = p[ticker];
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const det = sigDetails[ticker] || {};
+      const lp = liveprices[ticker];
+      const currentPrice = lp ? lp.price : (stock ? stock.price : entry.price);
+      const pct = currentPrice && entry.price ? (currentPrice - entry.price) / entry.price * 100 : null;
+      const sig = stock ? (stock.rok_signal || 'neutral') : 'neutral';
+      const priceTarget = det.price_target || (stock && stock.analyst_target);
+      const stopLoss = det.stop_loss;
+      const daysHeld = entry.date ? Math.floor((now - new Date(entry.date).getTime()) / 86400000) : null;
+      const isLongTerm = daysHeld != null && daysHeld >= 365;
+      // Determine recommended action
+      let action = 'HOLD', actionColor = 'var(--wh3)', actionBg = 'rgba(255,255,255,.04)', priority = 99;
+      let reason = '';
+      if (sig === 'sell') {
+        action = 'SELL NOW'; actionColor = 'var(--r)'; actionBg = 'rgba(255,34,85,.08)'; priority = 1;
+        reason = 'ROK flipped to SELL — signal has turned bearish.';
+      } else if (stopLoss && currentPrice && currentPrice < stopLoss) {
+        action = 'CUT LOSSES'; actionColor = 'var(--r)'; actionBg = 'rgba(255,34,85,.08)'; priority = 2;
+        reason = `Below stop-loss $${stopLoss.toFixed(2)}. Limiting losses now.`;
+      } else if (priceTarget && currentPrice && currentPrice >= priceTarget * 0.97) {
+        action = isLongTerm ? 'TAKE PROFITS ✓ LTCG' : 'TAKE PROFITS'; actionColor = 'var(--au)'; actionBg = 'rgba(255,215,0,.06)'; priority = 3;
+        reason = `Near $${priceTarget.toFixed(2)} target.${isLongTerm ? ' 1yr+ held — sell at long-term tax rate (0–20%)!' : ''}`;
+      } else if (pct != null && pct >= 50 && !isLongTerm && daysHeld != null && daysHeld >= 330) {
+        action = 'WAIT 35 DAYS'; actionColor = 'var(--g)'; actionBg = 'rgba(0,255,136,.05)'; priority = 4;
+        reason = `Up ${pct.toFixed(0)}% — wait ${365-daysHeld}d more for long-term tax rate and save ~15% on taxes.`;
+      } else if (pct != null && pct >= 30 && sig !== 'buy') {
+        action = 'CONSIDER SELLING'; actionColor = 'var(--au)'; actionBg = 'rgba(255,215,0,.06)'; priority = 5;
+        reason = `Up ${pct.toFixed(0)}% with no strong buy signal. You could lock in gains.`;
+      } else if (sig === 'buy') {
+        action = 'HOLD — STILL STRONG'; actionColor = 'var(--g)'; actionBg = 'rgba(0,255,136,.04)'; priority = 10;
+        reason = 'ROK still rates this a BUY. Stay in unless it hits your stop-loss.';
+      } else {
+        action = 'HOLD'; actionColor = 'var(--wh3)'; actionBg = 'rgba(255,255,255,.03)'; priority = 11;
+        reason = 'No strong signal to sell. Monitor for changes.';
+      }
+      const pctStr = pct != null ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%` : '';
+      const pctColor = pct == null ? 'var(--wh4)' : pct >= 0 ? 'var(--g)' : 'var(--r)';
+      return { priority, html: `<div style="background:${actionBg};border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:.55rem .75rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.6rem">
+        <div style="min-width:44px">
+          <div style="font-size:12px;font-weight:800;color:var(--wh)">$${ticker}</div>
+          <div style="font-size:8.5px;color:${pctColor};font-weight:700">${pctStr}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9px;font-weight:800;color:${actionColor};text-transform:uppercase;margin-bottom:.15rem">${action}</div>
+          <div style="font-size:9px;color:var(--wh3);line-height:1.4">${reason}</div>
+        </div>
+      </div>` };
+    });
+    rows.sort((a, b) => a.priority - b.priority);
+    const urgent = rows.filter(r => r.priority <= 3);
+    const urgentNote = urgent.length ? `<div style="font-size:10px;font-weight:700;color:var(--r);margin-bottom:.4rem">⚠ ${urgent.length} position${urgent.length>1?'s':''} need immediate attention</div>` : '';
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--wh2);text-transform:uppercase;margin-bottom:.3rem">🎯 SMART SELL GUIDE</div>
+      <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.55rem">For each holding: the optimal action right now, combining signal status, price targets, stop-losses, and tax timing.</div>
+      ${urgentNote}
+      ${rows.map(r => r.html).join('')}
+      <div style="font-size:8px;color:var(--wh4);margin-top:.4rem">Based on live prices, ROK signals, and tax holding period. Not financial advice — review with your own analysis before acting.</div>
+    </div>`;
+  }
+  window.renderSmartSellGuide = renderSmartSellGuide;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
