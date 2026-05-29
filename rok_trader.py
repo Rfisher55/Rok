@@ -2064,6 +2064,15 @@ def score(tk, d, sentiment=0, regime_adj=0):
     rsi_bull = d.get("rsi_bull_divergence", False)
     if rsi_bull: s += 10
 
+    # Multi-timeframe confirmation: both hourly AND daily RSI aligned (+12/-10)
+    # When both timeframes agree, signal reliability increases dramatically
+    if rsi > 50 and daily_rsi > 50 and ema_c > 0 and daily_tr > 0:
+        s += 12   # all four timeframe signals bullish = very high confidence
+    elif rsi > 50 and daily_rsi > 50:
+        s +=  6   # both RSIs bullish
+    elif rsi < 40 and daily_rsi < 40 and ema_c < 0 and daily_tr < 0:
+        s -= 10   # both timeframes bearish = strong avoid signal
+
     # Consecutive green candles: institutional accumulation signature (+12/-8)
     # 3+ green days in a row = sustained buying pressure, not just a one-day pop
     consec = d.get("consec_green", 0) or 0
@@ -2843,18 +2852,36 @@ def run():
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
                     stop_price = round(price * (1 - STOP_LOSS_PCT), 2)
+                    # Smart order type: limit orders for value/mean-rev setups,
+                    # market orders for strong momentum (we want in now, not at a limit)
+                    is_strong_momo = sc >= 70 or tk in gap_ups or tk in vol_surge_cands
+                    if is_strong_momo:
+                        # Market order — high conviction momentum, can't afford to miss the move
+                        order_payload = {
+                            "symbol": tk, "notional": str(notional),
+                            "side": "buy", "type": "market", "time_in_force": "day",
+                        }
+                        order_type_log = "MARKET"
+                    else:
+                        # Limit order at +0.4% above current: avoids buying on brief spikes,
+                        # still fills almost always under normal conditions
+                        limit_px = round(price * 1.004, 2)
+                        buy_qty  = round(notional / limit_px, 4)
+                        if buy_qty < 0.001:
+                            logger.info(f"SKIP {tk} — calculated qty too small")
+                            continue
+                        order_payload = {
+                            "symbol": tk, "qty": str(buy_qty),
+                            "side": "buy", "type": "limit",
+                            "limit_price": str(limit_px), "time_in_force": "day",
+                        }
+                        order_type_log = f"LIMIT@${limit_px}"
                     logger.info(
-                        f"BUY {tk} — ${notional:.0f} @ ~${price:.2f} "
+                        f"BUY {tk} [{order_type_log}] — ${notional:.0f} @ ~${price:.2f} "
                         f"| stop ${stop_price} | score {sc} | sent {sent:+.0f}"
                         + (f" | catalyst: {catalyst}" if catalyst else "")
                     )
-                    alpaca_post("/v2/orders", {
-                        "symbol":        tk,
-                        "notional":      str(notional),
-                        "side":          "buy",
-                        "type":          "market",
-                        "time_in_force": "day",
-                    })
+                    alpaca_post("/v2/orders", order_payload)
                     reason = f"score={sc} sent={sent:+.0f}"
                     if catalyst:
                         reason += f" [{catalyst}]"
