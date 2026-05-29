@@ -706,6 +706,106 @@ def _supply_demand_zones(highs, lows, closes, volumes, lookback: int = 30) -> di
         return {"at_demand": False, "at_supply": False}
 
 
+def _double_bottom(highs, lows, closes) -> dict:
+    """
+    Detect Double Bottom (W-pattern) — powerful bullish reversal pattern.
+    Two lows at approximately the same level, with a bounce between them.
+    Confirmed when price breaks above the intermediate high (neckline).
+    Returns {detected: bool, neckline: float, first_low: float, second_low: float}
+    """
+    n = len(closes)
+    if n < 30:
+        return {"detected": False, "neckline": 0.0}
+    try:
+        c = closes[-min(n, 60):]
+        l = lows[-min(n, 60):]
+        h = highs[-min(n, 60):]
+        nw = len(c)
+
+        # Find two local lows in the window
+        local_lows = []
+        for i in range(2, nw - 2):
+            if l[i] <= l[i-1] and l[i] <= l[i+1] and l[i] <= l[i-2]:
+                local_lows.append((i, l[i]))
+
+        if len(local_lows) < 2:
+            return {"detected": False, "neckline": 0.0}
+
+        # Take the two most recent local lows
+        low1_idx, low1_val = local_lows[-2]
+        low2_idx, low2_val = local_lows[-1]
+
+        # Must have at least 5 bars between lows and low2 must be recent (within last 8 bars)
+        if low2_idx - low1_idx < 5 or (nw - 1 - low2_idx) > 8:
+            return {"detected": False, "neckline": 0.0}
+
+        # Lows must be within 4% of each other (symmetry)
+        if abs(low1_val - low2_val) / max(low1_val, low2_val) > 0.04:
+            return {"detected": False, "neckline": 0.0}
+
+        # Find the intermediate high (neckline) between the two lows
+        neckline = max(h[low1_idx:low2_idx]) if low2_idx > low1_idx else 0
+        if neckline <= 0:
+            return {"detected": False, "neckline": 0.0}
+
+        # Pattern confirmed: current price should be above or near neckline
+        price_now = c[-1]
+        confirmed = price_now >= neckline * 0.98   # at or above neckline
+
+        return {
+            "detected":   confirmed,
+            "neckline":   round(neckline, 2),
+            "first_low":  round(low1_val, 2),
+            "second_low": round(low2_val, 2),
+        }
+    except Exception:
+        return {"detected": False, "neckline": 0.0}
+
+
+def _double_top(highs, lows, closes) -> dict:
+    """
+    Detect Double Top (M-pattern) — bearish reversal pattern for short setups.
+    Two peaks at similar levels, price breaking below the intermediate low (neckline).
+    Returns {detected: bool, neckline: float}
+    """
+    n = len(closes)
+    if n < 30:
+        return {"detected": False, "neckline": 0.0}
+    try:
+        c = closes[-min(n, 60):]
+        l = lows[-min(n, 60):]
+        h = highs[-min(n, 60):]
+        nw = len(c)
+
+        local_highs = []
+        for i in range(2, nw - 2):
+            if h[i] >= h[i-1] and h[i] >= h[i+1] and h[i] >= h[i-2]:
+                local_highs.append((i, h[i]))
+
+        if len(local_highs) < 2:
+            return {"detected": False, "neckline": 0.0}
+
+        high1_idx, high1_val = local_highs[-2]
+        high2_idx, high2_val = local_highs[-1]
+
+        if high2_idx - high1_idx < 5 or (nw - 1 - high2_idx) > 8:
+            return {"detected": False, "neckline": 0.0}
+
+        if abs(high1_val - high2_val) / max(high1_val, high2_val) > 0.04:
+            return {"detected": False, "neckline": 0.0}
+
+        neckline = min(l[high1_idx:high2_idx]) if high2_idx > high1_idx else 0
+        if neckline <= 0:
+            return {"detected": False, "neckline": 0.0}
+
+        price_now = c[-1]
+        confirmed = price_now <= neckline * 1.02  # at or below neckline
+
+        return {"detected": confirmed, "neckline": round(neckline, 2)}
+    except Exception:
+        return {"detected": False, "neckline": 0.0}
+
+
 # ── Market regime detection ───────────────────────────────────────────────────
 def market_regime():
     """
@@ -1414,6 +1514,11 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append("at institutional demand zone (high-vol accumulation)")
             if signals.get("mom_accel"):
                 extras.append("momentum accelerating (ROC rising faster than prior week)")
+            if signals.get("double_bottom"):
+                nk = signals.get("double_bottom_neckline", 0)
+                extras.append(f"Double Bottom W-pattern confirmed (neckline ${nk:.2f})" if nk else "Double Bottom W-pattern confirmed")
+            if signals.get("double_top"):
+                extras.append("Double Top M-pattern (bearish reversal — supply overhead)")
             if signals.get("trend_reversal"):
                 extras.append("20-EMA trend reversal with volume + RSI recovery")
             if signals.get("bull_flag"):
@@ -2628,6 +2733,26 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Double Bottom: W-pattern bullish reversal
+    double_bottom = False
+    double_bottom_neckline = 0.0
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 30:
+            _db = _double_bottom(list(daily["High"]), list(daily["Low"]), list(daily["Close"]))
+            double_bottom = _db.get("detected", False)
+            double_bottom_neckline = _db.get("neckline", 0.0)
+    except Exception:
+        pass
+
+    # Double Top: M-pattern bearish reversal
+    double_top = False
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 30:
+            _dt = _double_top(list(daily["High"]), list(daily["Low"]), list(daily["Close"]))
+            double_top = _dt.get("detected", False)
+    except Exception:
+        pass
+
     return {
         "price":           round(price, 2),
         "change_pct":      round(chg_pct, 2),
@@ -2689,6 +2814,9 @@ def _extract(daily, hourly):
         "at_demand_zone":      sd_zones.get("at_demand", False),
         "at_supply_zone":      sd_zones.get("at_supply", False),
         "mom_accel":           mom_accel,
+        "double_bottom":          double_bottom,
+        "double_bottom_neckline": double_bottom_neckline,
+        "double_top":             double_top,
     }
 
 
@@ -2876,6 +3004,7 @@ def momentum_grade(d, final_score=0):
     if d.get("cup_handle", False):             criteria += 2  # cup & handle (double weight — elite pattern)
     if d.get("at_demand_zone", False):         criteria += 1  # at institutional demand zone
     if d.get("mom_accel", False):              criteria += 1  # momentum accelerating
+    if d.get("double_bottom", False):         criteria += 1  # W-pattern bullish reversal
 
     # Score contribution
     if   final_score >= 80: criteria += 2
@@ -3183,6 +3312,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Catches stocks early in a new breakout — before everyone piles in
     if d.get("mom_accel", False): s += 10
 
+    # Double Bottom: W-pattern bullish reversal (+10) — confirmed break above neckline
+    if d.get("double_bottom", False): s += 10
+
+    # Double Top: M-pattern bearish reversal at resistance (-8) — reduces buy conviction
+    if d.get("double_top", False): s -= 8
+
     # Market regime adjustment
     s += regime_adj
 
@@ -3258,6 +3393,11 @@ def bearish_score(tk, d):
     if daily_rsi > 75: s += 8
     elif daily_rsi > 65: s += 4
     elif daily_rsi < 35: s -= 8  # oversold daily = don't short here
+
+    # Double Top: M-pattern confirmed = bearish reversal signal (+10 for shorts)
+    if d.get("double_top", False): s += 10
+    # Double Bottom: W-pattern = bullish reversal, reduces short conviction
+    if d.get("double_bottom", False): s -= 8
 
     return max(0, min(100, int(s)))
 
@@ -4138,8 +4278,10 @@ def run():
                 if pre_earn_adj:   extras.append("pre-earnings")
                 if mean_rev_adj:   extras.append("mean-rev")
                 if breakout_adj:   extras.append("52W-breakout")
-                if live.get(tk, {}).get("cup_handle"): extras.append("C&H")
-                if live.get(tk, {}).get("mom_accel"):  extras.append("accel")
+                if live.get(tk, {}).get("cup_handle"):    extras.append("C&H")
+                if live.get(tk, {}).get("mom_accel"):     extras.append("accel")
+                if live.get(tk, {}).get("double_bottom"): extras.append("2-BTM")
+                if live.get(tk, {}).get("double_top"):    extras.append("2-TOP")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} grade={_grade_now} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
@@ -4191,6 +4333,9 @@ def run():
                 "cup_pivot":      live.get(tk, {}).get("cup_handle_pivot", 0.0),
                 "at_demand_zone": live.get(tk, {}).get("at_demand_zone", False),
                 "mom_accel":      live.get(tk, {}).get("mom_accel", False),
+                "double_bottom":  live.get(tk, {}).get("double_bottom", False),
+                "double_bottom_neckline": live.get(tk, {}).get("double_bottom_neckline", 0.0),
+                "double_top":     live.get(tk, {}).get("double_top", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
@@ -4296,6 +4441,9 @@ def run():
                         reason += " [DEMAND ZONE]"
                     if _d_buy.get("mom_accel"):
                         reason += " [ACCEL]"
+                    if _d_buy.get("double_bottom"):
+                        _db_nk = _d_buy.get("double_bottom_neckline", 0)
+                        reason += f" [2-BTM neckline=${_db_nk}]" if _db_nk else " [2-BTM]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
