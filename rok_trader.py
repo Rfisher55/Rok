@@ -72,7 +72,8 @@ CRYPTO_STOP_PCT  = 0.10     # crypto is volatile: 10% stop
 CRYPTO_TARGET_PCT= 0.25     # 25% profit target for crypto
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
-_EARNINGS_CACHE: dict = {}   # sym -> bool
+_EARNINGS_CACHE: dict  = {}   # sym -> bool
+_SPY_PERF_CACHE: dict  = {}   # cached SPY returns for relative strength calc
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -844,6 +845,27 @@ def get_full_universe(held_symbols: set) -> tuple[list, set]:
 
 
 # ── Batch data fetch ──────────────────────────────────────────────────────────
+def _fetch_spy_perf() -> dict:
+    """
+    Fetch SPY's 1-day and 5-day return once per run.
+    Stored in _SPY_PERF_CACHE so individual stocks can compute relative strength.
+    """
+    global _SPY_PERF_CACHE
+    if _SPY_PERF_CACHE:
+        return _SPY_PERF_CACHE
+    try:
+        spy = yf.download("SPY", period="15d", interval="1d",
+                          auto_adjust=True, progress=False)
+        closes = list(spy["Close"].dropna())
+        if len(closes) >= 2:
+            _SPY_PERF_CACHE["d1"]  = (closes[-1] - closes[-2]) / closes[-2] * 100
+            _SPY_PERF_CACHE["d5"]  = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
+            _SPY_PERF_CACHE["d10"] = (closes[-1] - closes[-10]) / closes[-10] * 100 if len(closes) >= 10 else 0
+    except Exception:
+        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0}
+    return _SPY_PERF_CACHE
+
+
 def _extract(daily, hourly):
     if daily is None or len(daily) < 2:
         return None
@@ -925,6 +947,18 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Relative strength vs SPY (1-day and 5-day)
+    spy  = _fetch_spy_perf()
+    rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
+    rs5  = 0.0
+    try:
+        dc = list(daily["Close"])
+        if len(dc) >= 5:
+            ret5 = (dc[-1] - dc[-5]) / dc[-5] * 100
+            rs5  = round(ret5 - spy.get("d5", 0), 2)
+    except Exception:
+        pass
+
     return {
         "price":        round(price, 2),
         "change_pct":   round(chg_pct, 2),
@@ -940,6 +974,8 @@ def _extract(daily, hourly):
         "macd":         round(macd_val, 3),
         "bb_pos":       round(bb_pos, 1),
         "vwap_pos":     round(vwap_pos, 2),
+        "rs1":          rs1,    # relative strength vs SPY (1-day)
+        "rs5":          rs5,    # relative strength vs SPY (5-day)
         "atr":          round(atr_val, 3) if atr_val else None,
     }
 
@@ -1078,6 +1114,21 @@ def score(tk, d, sentiment=0, regime_adj=0):
     n52w       = d.get("near_52w_high", 1.0) or 1.0
     daily_rsi  = d.get("daily_rsi",   50) or 50
     daily_tr   = d.get("daily_trend",  0) or 0
+    rs1        = d.get("rs1",          0) or 0   # relative strength vs SPY (1-day)
+    rs5        = d.get("rs5",          0) or 0   # relative strength vs SPY (5-day)
+
+    # Relative strength vs SPY (+14/-12)
+    # Strong relative strength = institutional buying even when SPY flat
+    if   rs5 > 5:   s += 14
+    elif rs5 > 2:   s += 8
+    elif rs5 > 0.5: s += 4
+    elif rs5 < -5:  s -= 12
+    elif rs5 < -2:  s -= 7
+
+    if   rs1 > 3:   s += 8
+    elif rs1 > 1:   s += 4
+    elif rs1 < -3:  s -= 8
+    elif rs1 < -1:  s -= 4
 
     # Multi-timeframe trend filter: daily EMA5/10 alignment (+8/-10)
     if   daily_tr > 0.5:  s +=  8
@@ -1272,6 +1323,9 @@ def run():
             _save(TRADES_FILE, tlog)
             logger.info(f"Off-hours crypto-only run complete.")
         return
+
+    # Pre-cache SPY performance for relative strength calculations
+    _fetch_spy_perf()
 
     # Market regime
     regime = market_regime()
