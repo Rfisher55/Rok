@@ -617,6 +617,63 @@ def has_earnings_soon(sym, days=3):
     return result
 
 
+_PRE_EARN_CACHE: dict = {}
+def has_pre_earnings_setup(sym, min_days=4, max_days=20):
+    """
+    Returns True if this stock has earnings 4-20 days out AND shows momentum.
+    Pre-earnings drift: stocks tend to move up 5-15 days before earnings as
+    long funds position ahead of the catalyst. Cached per run.
+    """
+    key = f"{sym}_{min_days}_{max_days}"
+    if key in _PRE_EARN_CACHE:
+        return _PRE_EARN_CACHE[key]
+    result = False
+    try:
+        cal = yf.Ticker(sym).calendar
+        if cal is not None and not cal.empty:
+            now = datetime.now(timezone.utc).date()
+            for col in cal.columns:
+                if "earnings" in str(col).lower():
+                    for val in cal[col]:
+                        try:
+                            ed = pd.Timestamp(val).date()
+                            days_out = (ed - now).days
+                            if min_days <= days_out <= max_days:
+                                result = True
+                                break
+                        except Exception:
+                            pass
+                if result:
+                    break
+    except Exception:
+        pass
+    _PRE_EARN_CACHE[key] = result
+    return result
+
+
+def get_pre_earnings_candidates(candidates: list, live: dict) -> set:
+    """
+    Find stocks with earnings 4-20 days out that are showing pre-earnings momentum.
+    These are high-probability setups — sell BEFORE earnings day to avoid risk.
+    """
+    pre_earn = set()
+    try:
+        for sym in candidates[:40]:  # limit API calls
+            if has_pre_earnings_setup(sym):
+                # Require positive momentum: stock must be rising going into earnings
+                sig = live.get(sym, {})
+                chg = sig.get("change_pct", 0) or 0
+                roc5 = sig.get("roc5", 0) or 0
+                rsi = sig.get("daily_rsi", 50) or 50
+                if chg > 0 and roc5 > 1 and 40 < rsi < 75:
+                    pre_earn.add(sym)
+    except Exception as e:
+        logger.debug(f"Pre-earnings scan error: {e}")
+    if pre_earn:
+        logger.info(f"Pre-earnings momentum candidates: {', '.join(sorted(pre_earn))}")
+    return pre_earn
+
+
 # ── Catalyst keyword detector (fast, no API) ─────────────────────────────────
 _BULL_CATALYSTS = [
     # Earnings
@@ -2402,7 +2459,8 @@ def run():
     bullish_options = {s for s, d in options_flow.items() if d.get("bullish")}
 
     # Earnings beat plays — stocks that just beat estimates and are reacting positively
-    earnings_beats = get_earnings_beat_candidates(set(candidates)) if _time_ok(230) else set()
+    earnings_beats   = get_earnings_beat_candidates(set(candidates)) if _time_ok(230) else set()
+    pre_earn_cands   = get_pre_earnings_candidates(candidates[:50], live) if _time_ok(225) else set()
 
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
@@ -2544,7 +2602,11 @@ def run():
 
             # ── Full exit conditions ──
             reason = None
-            if pnl_pct <= -(STOP_LOSS_PCT * 100):
+            # Pre-earnings sell: exit ANY position within 2 days of earnings to avoid binary risk
+            # We rode the pre-earnings drift — now protect profits before the volatile event
+            if has_earnings_soon(sym, days=2):
+                reason = f"pre-earnings exit (earnings in <2d, {pnl_pct:+.1f}%)"
+            elif pnl_pct <= -(STOP_LOSS_PCT * 100):
                 reason = f"stop loss ({pnl_pct:+.1f}%)"
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
                 # Let strong momentum runners extend to 30% before selling
@@ -2747,10 +2809,11 @@ def run():
                                 + (12 if tk in squeeze_cands else 0)
                                 + (11 if tk in vol_surge_cands else 0)
                                 + (8  if tk in recent_sells else 0)
-                                + (9  if tk in _persistent_cands else 0)  # seen last run too
+                                + (9  if tk in _persistent_cands else 0)   # seen last run too
                                 + (14 if tk in bullish_options else 0)
                                 + (18 if tk in earnings_beats else 0)
-                                + (10 if tk in mean_rev_cands else 0))  # mean reversion bounce
+                                + (12 if tk in pre_earn_cands else 0)      # pre-earnings drift
+                                + (10 if tk in mean_rev_cands else 0))    # mean reversion bounce
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -2809,11 +2872,12 @@ def run():
             reentry_adj    = 8  if tk in recent_sells else 0
             persist_adj    = 9  if tk in _persistent_cands else 0
             earnings_adj   = 18 if tk in earnings_beats else 0
+            pre_earn_adj   = 12 if tk in pre_earn_cands else 0
             mean_rev_adj   = 10 if tk in mean_rev_cands else 0
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
-                                             + persist_adj + earnings_adj + mean_rev_adj)
+                                             + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
@@ -2824,6 +2888,7 @@ def run():
                 if reentry_adj:    extras.append("re-entry")
                 if persist_adj:    extras.append("persistent")
                 if earnings_adj:   extras.append("earnings-beat")
+                if pre_earn_adj:   extras.append("pre-earnings")
                 if mean_rev_adj:   extras.append("mean-rev")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
