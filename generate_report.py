@@ -252,6 +252,11 @@ def run():
                 sig["stop_loss"] = round(sig["current_price"] * 0.92, 2)
             if not sig.get("sector"):
                 sig["sector"] = sd.get("sector", "")
+            # Volume spike and RSI
+            if not sig.get("vol_ratio"):
+                sig["vol_ratio"] = sd.get("vol_ratio")
+            if not sig.get("rsi"):
+                sig["rsi"] = sd.get("rsi")
             # Build data_signals from available sources
             if not sig.get("data_signals"):
                 dsigs = []

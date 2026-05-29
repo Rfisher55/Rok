@@ -738,6 +738,60 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .tick-buy{color:var(--g)}.tick-sell{color:var(--r)}.tick-watch{color:var(--au)}
 .tick-chg{font-size:8.5px;font-weight:600;opacity:.8}
 .tick-lbl{font-size:7px;letter-spacing:.12em;opacity:.5;text-transform:uppercase}
+
+/* ── TRADE RULER ─────────────────────────────────────────── */
+.trade-ruler{margin:5px 0 3px;position:relative;padding-bottom:16px}
+.trade-ruler-bar{position:relative;height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:visible;margin-bottom:3px}
+.trade-ruler-safe{position:absolute;left:0;top:0;bottom:0;background:rgba(255,34,85,.35);border-radius:4px 0 0 4px}
+.trade-ruler-upside{position:absolute;top:0;bottom:0;background:rgba(0,255,136,.35);border-radius:0 4px 4px 0}
+.trade-ruler-pin{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid var(--blk3);box-shadow:0 0 10px rgba(255,255,255,.7);z-index:2;transition:left .3s}
+.trade-ruler-lbl-row{display:flex;justify-content:space-between;position:absolute;left:0;right:0;bottom:0;pointer-events:none}
+.trl-stop{font-size:8px;color:var(--r);font-weight:700}
+.trl-tgt{font-size:8px;color:var(--g);font-weight:700}
+.trl-now{position:absolute;transform:translateX(-50%);font-size:7.5px;color:var(--wh2);font-weight:700;white-space:nowrap;bottom:0}
+
+/* ── R:R RATIO ──────────────────────────────────────────── */
+.rr-row{display:flex;align-items:center;gap:6px;margin:4px 0;flex-wrap:wrap}
+.rr-label{font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--wh3);text-transform:uppercase}
+.rr-val{font-size:11px;font-weight:800;color:var(--au)}
+.rr-risk{font-size:9px;color:var(--r)}
+.rr-reward{font-size:9px;color:var(--g)}
+.rr-sep{font-size:9px;color:var(--wh4)}
+
+/* ── VOLUME SPIKE BADGE ──────────────────────────────────── */
+.vol-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:8.5px;font-weight:800;letter-spacing:.06em;background:rgba(255,136,0,.1);color:var(--or);border:1px solid rgba(255,136,0,.25);animation:volPulse 2s ease-in-out infinite;white-space:nowrap}
+@keyframes volPulse{0%,100%{opacity:1}50%{opacity:.65}}
+.rsi-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:8.5px;font-weight:700;letter-spacing:.04em;border:1px solid}
+.rsi-badge.overbought{color:var(--r);background:rgba(255,34,85,.08);border-color:rgba(255,34,85,.25)}
+.rsi-badge.oversold{color:var(--g);background:rgba(0,255,136,.08);border-color:rgba(0,255,136,.25)}
+.rsi-badge.neutral{color:var(--wh3);background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.08)}
+
+/* ── RUN HISTORY TIMELINE ────────────────────────────────── */
+.run-timeline{display:flex;gap:3px;align-items:flex-end;margin-top:.55rem;height:40px}
+.run-bar{flex:1;border-radius:3px 3px 0 0;min-height:6px;position:relative;cursor:pointer;transition:opacity .12s}
+.run-bar:hover{opacity:.85}
+.run-bar.bullish{background:linear-gradient(0deg,rgba(0,255,136,.5),rgba(0,255,136,.15))}
+.run-bar.bearish{background:linear-gradient(0deg,rgba(255,34,85,.5),rgba(255,34,85,.15))}
+.run-bar.neutral,.run-bar.mixed{background:linear-gradient(0deg,rgba(255,215,0,.4),rgba(255,215,0,.1))}
+.run-bar-tooltip{
+  position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:var(--blk4);border:var(--bdr2);border-radius:5px;
+  padding:3px 6px;font-size:8px;white-space:nowrap;color:var(--wh2);
+  opacity:0;pointer-events:none;transition:opacity .1s;z-index:10
+}
+.run-bar:hover .run-bar-tooltip{opacity:1}
+
+/* ── APP ALERTS (in-app notification bar) ─────────────────── */
+#app-alerts{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:3000;display:flex;flex-direction:column;gap:4px;padding-top:8px;width:calc(min(480px,100vw - 24px));pointer-events:none}
+.app-alert{
+  background:rgba(2,4,8,.97);border:1px solid rgba(0,255,136,.4);
+  border-radius:12px;padding:.7rem 1rem;font-size:13px;font-weight:700;
+  color:var(--g);box-shadow:0 0 20px rgba(0,255,136,.2);
+  display:flex;align-items:center;gap:.5rem;pointer-events:auto;
+  animation:alertSlide .3s ease both
+}
+.app-alert.warn{border-color:rgba(255,34,85,.5);color:var(--r);box-shadow:0 0 20px rgba(255,34,85,.2)}
+@keyframes alertSlide{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -913,6 +967,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               {% endfor %}
             </div>
             {% endif %}
+            {% if s.vol_ratio and s.vol_ratio > 1.8 %}<div style="margin-bottom:5px"><span class="vol-badge">🚀 {{ '%.1f'|format(s.vol_ratio) }}x AVG VOLUME</span>{% if s.rsi %}&nbsp;<span class="rsi-badge {{ 'overbought' if s.rsi > 70 else 'oversold' if s.rsi < 30 else 'neutral' }}">RSI {{ s.rsi|round(0)|int }}</span>{% endif %}</div>{% elif s.rsi %}<div style="margin-bottom:5px"><span class="rsi-badge {{ 'overbought' if s.rsi > 70 else 'oversold' if s.rsi < 30 else 'neutral' }}">RSI {{ s.rsi|round(0)|int }}</span></div>{% endif %}
             {% if s.current_price or s.price_target %}
             <div class="prow">
               {% if s.current_price %}<span class="p-cur" data-ticker="{{ s.ticker }}" data-price="{{ s.current_price }}">${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
@@ -924,6 +979,31 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               {% if s.stop_loss %}<span class="p-stop">↓${{ '%.2f'|format(s.stop_loss) }}</span>{% endif %}
               {% if s.time_horizon %}<span class="t-hz">{{ s.time_horizon }}</span>{% endif %}
             </div>
+            {% endif %}
+            {# Trade ruler: visual stop → now → target bar #}
+            {% if s.stop_loss and s.current_price and s.price_target and s.current_price > 0 %}
+            {% set rng = s.price_target - s.stop_loss %}
+            {% if rng > 0 %}
+            {% set raw_pct = ((s.current_price - s.stop_loss) / rng * 100) %}
+            {% set curr_pct = [raw_pct, 2]|max %}
+            {% set curr_pct = [curr_pct, 97]|min %}
+            {% set rr_risk = s.current_price - s.stop_loss %}
+            {% set rr_reward = s.price_target - s.current_price %}
+            {% set rr = (rr_reward / rr_risk)|round(1) if rr_risk > 0 else 0 %}
+            <div class="trade-ruler">
+              <div class="trade-ruler-bar">
+                <div class="trade-ruler-safe" style="width:{{ curr_pct }}%"></div>
+                <div class="trade-ruler-upside" style="left:{{ curr_pct }}%;right:0"></div>
+                <div class="trade-ruler-pin" data-ruler-ticker="{{ s.ticker }}" style="left:{{ curr_pct }}%"></div>
+              </div>
+              <div class="trade-ruler-lbl-row">
+                <span class="trl-stop">⛔ ${{ '%.0f'|format(s.stop_loss) }}</span>
+                <span class="trl-now" style="left:{{ curr_pct }}%">NOW</span>
+                <span class="trl-tgt">🎯 ${{ '%.0f'|format(s.price_target) }}</span>
+              </div>
+            </div>
+            {% if rr > 0 %}<div class="rr-row"><span class="rr-label">Risk/Reward:</span><span class="rr-risk">-${{ '%.0f'|format(rr_risk) }}</span><span class="rr-sep">→</span><span class="rr-reward">+${{ '%.0f'|format(rr_reward) }}</span><span class="rr-val">(1 : {{ rr }})</span></div>{% endif %}
+            {% endif %}
             {% endif %}
             {% if s.price_history and s.price_history|length > 5 %}<div class="spark"><canvas id="spark-b{{ loop.index }}" height="40"></canvas></div>{% endif %}
             {% if s.catalyst %}<div class="catalyst" style="font-size:11px"><strong style="color:var(--au);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase">🔥 WHY IT'S MOVING: </strong>{{ s.catalyst }}</div>{% endif %}
@@ -1182,6 +1262,37 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       {% endif %}
     </div>
     {% endif %}
+
+    <!-- ROK Run History -->
+    {% if data.recent_runs and data.recent_runs|length > 1 %}
+    <div class="s-hdr" style="margin-top:.6rem"><h2 class="s-ttl">📈 ROK'S RECENT TRACK RECORD</h2><span class="s-sub">Last {{ data.recent_runs|length }} runs · each bar = one analysis</span></div>
+    <div style="background:var(--blk3);border:var(--bdr);border-radius:var(--r12);padding:.85rem 1rem;margin-bottom:1rem">
+      <div class="run-timeline">
+        {% set max_buys = (data.recent_runs | map(attribute='buy_signals') | map('length') | list | max) or 1 %}
+        {% for run in data.recent_runs %}
+        {% set buys = run.buy_signals|default([])|length %}
+        {% set sent = (run.sentiment or 'NEUTRAL')|upper %}
+        {% set bar_h = [[buys / max_buys * 100, 10]|max, 100]|min %}
+        <div class="run-bar {{ sent|lower }}" style="height:{{ bar_h }}%">
+          <div class="run-bar-tooltip">{{ run.date|default('') }}<br>{{ sent }} · {{ buys }} buy{{ 's' if buys != 1 }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.45rem">
+        <span style="font-size:8.5px;color:var(--wh3)">{{ data.recent_runs[0].date|default('oldest') }}</span>
+        <div style="display:flex;gap:.65rem;align-items:center">
+          <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--g)"><span style="width:8px;height:8px;background:rgba(0,255,136,.5);border-radius:2px;display:inline-block"></span>BULLISH</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--r)"><span style="width:8px;height:8px;background:rgba(255,34,85,.5);border-radius:2px;display:inline-block"></span>BEARISH</span>
+          <span style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--au)"><span style="width:8px;height:8px;background:rgba(255,215,0,.4);border-radius:2px;display:inline-block"></span>NEUTRAL</span>
+        </div>
+        <span style="font-size:8.5px;color:var(--wh3)">latest →</span>
+      </div>
+      <div style="margin-top:.65rem;font-size:12px;color:var(--wh2);padding:.5rem .65rem;background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.25);border-radius:0 6px 6px 0">
+        {{ data.history_summary|default('ROK has been running analysis to find opportunities.') }}
+      </div>
+    </div>
+    {% endif %}
+
   </div><!-- /tab-market -->
 
   <!-- ── SCREENER TAB ────────────────────────────────────── -->
@@ -1559,6 +1670,17 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (priceEl) { priceEl.textContent = '$' + price.toFixed(2); priceEl.className = 'sc-price ' + (changePct >= 0 ? 'up' : 'down'); }
       if (chgEl) { chgEl.textContent = (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%'; chgEl.className = 'sc-chg ' + (changePct >= 0 ? 'up' : 'down'); }
     });
+    // Update trade ruler pin position with live price
+    const det = sigDetails[ticker];
+    if (det && det.stop_loss && det.price_target) {
+      const stop = det.stop_loss, tgt = det.price_target;
+      const rng = tgt - stop;
+      if (rng > 0) {
+        const raw = (price - stop) / rng * 100;
+        const pct = Math.min(97, Math.max(2, raw)).toFixed(1) + '%';
+        document.querySelectorAll(`[data-ruler-ticker="${ticker}"]`).forEach(pin => { pin.style.left = pct; });
+      }
+    }
   }
 
   async function fetchYahooPrices(tickers) {
@@ -1798,6 +1920,42 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <div class="modal-stat"><div class="modal-stat-lbl">VOLUME</div><div class="modal-stat-val">${fmtVol(s.volume)}</div></div>
         ${earningsRow}
       </div>
+      ${(() => {
+        // Trade ruler HTML for modal
+        const stop = det.stop_loss;
+        const tgt = priceTarget;
+        const cur = curPrice;
+        if (sig === 'buy' && stop && tgt && cur && tgt > stop) {
+          const rng = tgt - stop;
+          const raw = (cur - stop) / rng * 100;
+          const pct = Math.min(97, Math.max(2, raw)).toFixed(1);
+          const rrRisk = (cur - stop).toFixed(2);
+          const rrReward = (tgt - cur).toFixed(2);
+          const rr = (rrRisk > 0 ? (rrReward / rrRisk).toFixed(1) : '—');
+          return `<div style="padding:.5rem 1.1rem .75rem">
+            <div style="font-size:8px;font-weight:700;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase;margin-bottom:.45rem">📍 TRADE SETUP</div>
+            <div class="trade-ruler">
+              <div class="trade-ruler-bar">
+                <div class="trade-ruler-safe" style="width:${pct}%"></div>
+                <div class="trade-ruler-upside" style="left:${pct}%;right:0"></div>
+                <div class="trade-ruler-pin" style="left:${pct}%"></div>
+              </div>
+              <div class="trade-ruler-lbl-row">
+                <span class="trl-stop">⛔ $${Number(stop).toFixed(0)}</span>
+                <span class="trl-now" style="left:${pct}%">NOW</span>
+                <span class="trl-tgt">🎯 $${Number(tgt).toFixed(0)}</span>
+              </div>
+            </div>
+            <div class="rr-row" style="margin-top:.55rem">
+              <span class="rr-label">Risk:</span><span class="rr-risk">-$${rrRisk}</span>
+              <span class="rr-sep">→</span>
+              <span class="rr-label">Reward:</span><span class="rr-reward">+$${rrReward}</span>
+              <span class="rr-val">R:R = 1:${rr}</span>
+            </div>
+          </div>`;
+        }
+        return '';
+      })()}
       ${reasons.length ? `<div style="padding:0 1.1rem .75rem">
         <div style="font-size:8px;font-weight:700;letter-spacing:.18em;color:rgba(255,215,0,.5);margin-bottom:.45rem;text-transform:uppercase">🧠 WHY ROK LIKES THIS</div>
         <ul class="reasons">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>

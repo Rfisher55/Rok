@@ -66,11 +66,33 @@ def get_stock_data(ticker: str) -> dict:
         except Exception:
             pass
 
+        today_vol = int(hist["Volume"].iloc[-1]) if len(hist) > 0 else 0
+        avg_vol = int(hist["Volume"].mean()) if len(hist) > 0 else 1
+        vol_ratio = round(today_vol / avg_vol, 2) if avg_vol > 0 else 1.0
+
+        # RSI (14-period)
+        rsi = None
+        try:
+            closes = hist["Close"]
+            if len(closes) >= 15:
+                delta = closes.diff()
+                gain = delta.clip(lower=0).rolling(14).mean()
+                loss = (-delta.clip(upper=0)).rolling(14).mean()
+                rs = gain / loss.replace(0, 1e-9)
+                rsi_series = 100 - 100 / (1 + rs)
+                rsi = round(float(rsi_series.iloc[-1]), 1)
+        except Exception:
+            pass
+
         return {
             "ticker": ticker.upper(),
             "price": round(price, 2),
             "change_pct": round(chg, 2),
-            "volume": int(hist["Volume"].mean()),
+            "volume": avg_vol,
+            "today_volume": today_vol,
+            "avg_volume": avg_vol,
+            "vol_ratio": vol_ratio,
+            "rsi": rsi,
             "market_cap": info.get("marketCap"),
             "week_high": round(float(hist["High"].max()), 2),
             "week_low": round(float(hist["Low"].min()), 2),
