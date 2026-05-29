@@ -1576,6 +1576,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <button class="sc-tab watch" data-filter="watch">👀 WATCH</button>
         <button class="sc-tab" data-filter="neutral">NEUTRAL</button>
         <button class="sc-tab" data-filter="beginner" title="Large &amp; mega-cap stocks with buy signals — safer for beginners">🛡️ SAFE PICKS</button>
+        <button class="sc-tab" data-filter="starred" title="Your starred stocks — tap ★ on any card to add">⭐ WATCHLIST</button>
       </div>
       <div class="sc-sort">
         <span class="sort-lbl">SORT</span>
@@ -2058,11 +2059,14 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     return p && c && p !== c;
   }
 
-  // ── STARS (session-only) ──────────────────────────────────
-  const starred = new Set();
+  // ── STARS (persistent via localStorage) ───────────────────
+  const STAR_KEY = 'rok_starred_v1';
+  const starred = new Set(JSON.parse(localStorage.getItem(STAR_KEY) || '[]'));
+  function saveStarred() { localStorage.setItem(STAR_KEY, JSON.stringify([...starred])); }
   function toggleStar(ticker, ev) {
     ev.stopPropagation();
     starred.has(ticker) ? starred.delete(ticker) : starred.add(ticker);
+    saveStarred();
     renderScreener();
   }
   window.toggleStar = toggleStar;
@@ -3171,6 +3175,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     }
     if (scFilter === 'beginner') {
       list = list.filter(s => s.rok_signal === 'buy' && s.market_cap && s.market_cap >= 10e9);
+    } else if (scFilter === 'starred') {
+      list = list.filter(s => starred.has(s.ticker));
     } else if (scFilter !== 'all') {
       list = list.filter(s => s.rok_signal === scFilter);
     }
@@ -3179,6 +3185,14 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (cnt) cnt.textContent = list.length + ' stock' + (list.length !== 1 ? 's' : '') + (scSector ? ` · ${scSector}` : '');
 
     if (!list.length) {
+      if (scFilter === 'starred') {
+        grid.innerHTML = `<div class="sc-empty" style="grid-column:1/-1;text-align:center;padding:2rem">
+          <div style="font-size:2rem;margin-bottom:.5rem">★</div>
+          <div style="font-size:14px;font-weight:700;color:var(--wh);margin-bottom:.4rem">No starred stocks yet</div>
+          <div style="font-size:11.5px;color:var(--wh3);max-width:240px;margin:0 auto">Tap the <strong style="color:var(--au)">★</strong> icon on any stock card to add it to your watchlist. Stars are saved and persist across sessions.</div>
+        </div>`;
+        return;
+      }
       const cleanQ = scQuery.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (cleanQ && cleanQ.length >= 1 && cleanQ.length <= 6 && /^[A-Z]+$/.test(cleanQ)) {
         const lp = liveprices[cleanQ];
