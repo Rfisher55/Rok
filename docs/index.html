@@ -2619,10 +2619,39 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const p = getPortfolio();
     const tickers = Object.keys(p);
     if (!tickers.length) {
-      grid.innerHTML = `<div class="port-empty">
-        <div style="font-size:3rem;margin-bottom:.75rem">💼</div>
-        <div style="font-size:18px;font-weight:800;color:var(--wh);margin-bottom:.5rem">Your portfolio is empty</div>
-        <div style="font-size:14px;color:var(--wh3);line-height:1.65;max-width:280px;margin:0 auto">Tap <strong style="color:var(--g)">💰 BOUGHT IT</strong> on any stock in the SIGNALS tab to start tracking it here. ROK will tell you when to sell or buy more.</div>
+      grid.innerHTML = `<div style="padding:.5rem 0">
+        <div class="port-empty" style="margin-bottom:1rem">
+          <div style="font-size:3rem;margin-bottom:.75rem">💼</div>
+          <div style="font-size:18px;font-weight:800;color:var(--wh);margin-bottom:.5rem">Your portfolio is empty</div>
+          <div style="font-size:13.5px;color:var(--wh3);line-height:1.65;max-width:300px;margin:0 auto">Tap <strong style="color:var(--g)">💰 BOUGHT IT</strong> on any stock in the SIGNALS or SCREENER tab to start tracking it here. ROK will tell you when to sell or buy more.</div>
+          <button onclick="showTab('signals')" style="margin-top:.85rem;padding:.55rem 1.4rem;border-radius:10px;background:rgba(0,255,136,.14);border:1px solid rgba(0,255,136,.35);color:var(--g);font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font);touch-action:manipulation">⚡ SEE TODAY'S SIGNALS →</button>
+        </div>
+        <details style="background:rgba(0,204,255,.03);border:1px solid rgba(0,204,255,.12);border-radius:12px;overflow:hidden;margin-bottom:.6rem">
+          <summary style="padding:.7rem .95rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;list-style:none;-webkit-tap-highlight-color:transparent;user-select:none">
+            <span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--b);text-transform:uppercase">🚀 NEW TO INVESTING? START HERE</span>
+            <span style="font-size:9px;color:var(--wh3)">tap to expand</span>
+          </summary>
+          <div style="padding:.5rem .95rem .9rem">
+            <div style="font-size:11.5px;color:var(--wh2);line-height:1.7;margin-bottom:.75rem">
+              <strong style="color:var(--wh)">Step 1: Open a brokerage account (free, takes 5 minutes)</strong><br>
+              You need an account to actually buy stocks. Best options for beginners:
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem">
+              <span style="padding:4px 10px;border-radius:8px;background:rgba(255,136,0,.1);border:1px solid rgba(255,136,0,.2);font-size:10.5px;font-weight:700;color:rgba(255,136,0,.9)">Fidelity — best overall, no fees</span>
+              <span style="padding:4px 10px;border-radius:8px;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);font-size:10.5px;font-weight:700;color:var(--b)">Schwab — great research tools</span>
+              <span style="padding:4px 10px;border-radius:8px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);font-size:10.5px;font-weight:700;color:var(--g)">Robinhood — easiest app</span>
+              <span style="padding:4px 10px;border-radius:8px;background:rgba(153,85,255,.08);border:1px solid rgba(153,85,255,.2);font-size:10.5px;font-weight:700;color:var(--p)">Webull — good charts</span>
+            </div>
+            <div style="font-size:11.5px;color:var(--wh2);line-height:1.7;margin-bottom:.5rem">
+              <strong style="color:var(--wh)">Step 2: Fund your account</strong><br>
+              Start with money you can afford to lose — never invest rent or emergency savings.
+            </div>
+            <div style="font-size:11.5px;color:var(--wh2);line-height:1.7">
+              <strong style="color:var(--wh)">Step 3: Use ROK to pick your first stock</strong><br>
+              Go to SIGNALS → find a 🟢 BUY signal → tap it → read why ROK likes it → buy it on your broker app → come back and tap <strong style="color:var(--g)">💰 BOUGHT IT</strong> to track it here.
+            </div>
+          </div>
+        </details>
       </div>`;
       return;
     }
