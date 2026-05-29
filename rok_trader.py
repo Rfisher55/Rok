@@ -845,11 +845,28 @@ def crypto_score(sig: dict) -> int:
     return max(0, min(100, int(s)))
 
 
-def ai_crypto_sentiment(coin: str = "Bitcoin") -> float:
-    """Ask Claude Haiku for crypto market sentiment (-10 to +10)."""
+def ai_crypto_sentiment(coin: str = "Bitcoin", signals: dict = None) -> float:
+    """Ask Claude Haiku for crypto market sentiment (-10 to +10).
+    Passes live technical signals if available for more accurate assessment."""
     if not ANTHROPIC_KEY:
         return 0
     try:
+        # Fetch recent crypto headlines from yfinance
+        yf_sym = {"Bitcoin": "BTC-USD", "Ethereum": "ETH-USD",
+                  "Solana": "SOL-USD", "Avalanche": "AVAX-USD"}.get(coin, f"{coin}-USD")
+        news_items = yf.Ticker(yf_sym).news[:6]
+        headlines  = " | ".join([n.get("title", "") for n in news_items if n.get("title")][:5])
+
+        tech_ctx = ""
+        if signals:
+            roc5    = signals.get("roc5", 0)
+            stoch_k = signals.get("stoch_k", 50)
+            ema50   = signals.get("price_vs_ema50", 0)
+            chg     = signals.get("change_pct", 0)
+            vr      = signals.get("vol_ratio", 1)
+            tech_ctx = (f"\nTech: 5d_ROC={roc5:+.1f}%, StochRSI={stoch_k:.0f}, "
+                        f"EMA50_pos={ema50:+.1f}%, vol={vr:.1f}x, day={chg:+.1f}%")
+
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -863,9 +880,8 @@ def ai_crypto_sentiment(coin: str = "Bitcoin") -> float:
                 "messages": [{
                     "role":    "user",
                     "content": (
-                        f"Rate current short-term (24-48h) trading sentiment for {coin} "
-                        f"from -10 (very bearish) to +10 (very bullish) based on your training data. "
-                        f"Consider: momentum, market structure, macro risk, fear/greed cycle. "
+                        f"Rate 24-48h trading outlook for {coin} from -10 to +10.{tech_ctx}\n"
+                        f"News: {headlines or 'none'}\n"
                         f"Return ONLY JSON: {{\"s\":<number>}}"
                     ),
                 }],
@@ -960,7 +976,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     for alpaca_sym, sc, sig in scored[:open_slots]:
         try:
             coin_name = alpaca_sym.split("/")[0]
-            ai_score  = ai_crypto_sentiment(coin_name)
+            ai_score  = ai_crypto_sentiment(coin_name, signals=sig)
             if sc + ai_score < 20:
                 logger.info(f"SKIP {alpaca_sym} — combined score too low (tech={sc} ai={ai_score:+.0f})")
                 continue
@@ -1185,6 +1201,19 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # RSI divergence: price making higher high but RSI making lower high = bearish
+    rsi_divergence = False
+    try:
+        dc = list(daily["Close"])
+        if len(dc) >= 10:
+            rsi_now  = _rsi(dc, 14)
+            rsi_prev = _rsi(dc[:-3], 14)   # RSI 3 bars ago
+            # Bearish divergence: price up 3+ bars but RSI down
+            if dc[-1] > dc[-4] and rsi_now < rsi_prev - 3:
+                rsi_divergence = True
+    except Exception:
+        pass
+
     # Relative strength vs SPY (1-day and 5-day)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
@@ -1223,6 +1252,7 @@ def _extract(daily, hourly):
         "macd_slope":         round(macd_slope_val, 4),
         "ttm_squeeze_fired":  ttm_squeeze_fired,
         "vwap_z":             round(vwap_z, 2),
+        "rsi_divergence":     rsi_divergence,
     }
 
 
@@ -1489,8 +1519,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     ema50_pos = d.get("price_vs_ema50",     0) or 0
     w_r       = d.get("williams_r",       -50) or -50
     m_slope   = d.get("macd_slope",         0) or 0
-    ttm_fired = d.get("ttm_squeeze_fired", False)
-    vwap_z_v  = d.get("vwap_z",             0) or 0
+    ttm_fired    = d.get("ttm_squeeze_fired", False)
+    vwap_z_v     = d.get("vwap_z",             0) or 0
+    rsi_div      = d.get("rsi_divergence",  False)
 
     # Stochastic RSI: oversold bounce (+14) or overbought (-8)
     if   stoch_k < 20 and stoch_d < 20: s += 14
@@ -1523,12 +1554,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if ttm_fired:  s += 16
 
     # VWAP z-score: price vs VWAP standard deviation bands
-    # At -2σ band: price cheap vs intraday flow → bounce setup (+10)
-    # At +2.5σ: exhaustion zone → avoid entry (-8)
-    if   vwap_z_v < -2.0:  s += 10  # deep oversold vs VWAP
-    elif vwap_z_v < -1.0:  s +=  5  # below VWAP σ band
+    if   vwap_z_v < -2.0:  s += 10  # deep oversold vs VWAP = bounce setup
+    elif vwap_z_v < -1.0:  s +=  5
     elif vwap_z_v > 2.5:   s -=  8  # VWAP exhaustion zone
     elif vwap_z_v > 1.5:   s -=  3
+
+    # RSI divergence: bearish when price up but RSI declining (-12 penalty)
+    if rsi_div:  s -= 12
 
     # Market regime adjustment
     s += regime_adj
@@ -1884,6 +1916,7 @@ def run():
                     stoch_k  = live_sig.get("stoch_k",   50) or 50
                     w_r_val  = live_sig.get("williams_r", -50) or -50
                     vwap_z_live = live_sig.get("vwap_z", 0) or 0
+                    rsi_div_live = live_sig.get("rsi_divergence", False)
                     if live_sc <= 8 and pnl_pct < 0:
                         reason = f"signal deteriorated (score={live_sc}, {pnl_pct:+.1f}%)"
                     elif live_sc <= 14 and pnl_pct < -3:
@@ -1891,8 +1924,10 @@ def run():
                     elif m_slope < -0.03 and stoch_k > 78 and w_r_val > -22 and pnl_pct > 3:
                         reason = f"momentum exhaustion (stoch={stoch_k:.0f}, W%R={w_r_val:.0f}, {pnl_pct:+.1f}%)"
                     elif vwap_z_live > 2.5 and pnl_pct > 2:
-                        # Price at +2.5σ VWAP band = mean reversion target hit = take profits
                         reason = f"VWAP exhaustion band (z={vwap_z_live:.1f}, {pnl_pct:+.1f}%)"
+                    elif rsi_div_live and pnl_pct > 4:
+                        # Bearish RSI divergence while in profit = early exit to lock gains
+                        reason = f"RSI bearish divergence ({pnl_pct:+.1f}%)"
 
             # Track ever-hit-5pct milestone for breakeven lock
             if pnl_pct >= 5 and sym in peaks:
