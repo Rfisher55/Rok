@@ -54725,6 +54725,10 @@ window.renderSectorRotation = renderSectorRotation;
             return `<span style="font-size:6px;color:${col}" title="LR slope ${ls.lr_slope}%/yr, R²=${ls.lr_r2}">LR${ls.lr_slope>0?'+':''}${Math.round(ls.lr_slope)}%${pos}</span>`;
           })() : '';
           const lsAccel = ls.price_accel_pos ? `<span style="font-size:6px;color:#b9f6ca" title="Price accelerating">ACCEL</span>` : '';
+          const lsAccumScore = (ls.accum_score||0) >= 8 ? `<span style="font-size:6px;font-weight:900;color:#00e5ff" title="Smart accumulation score ${ls.accum_score}/10 — OBV+FI+MFI institutional fingerprint">ACC${ls.accum_score}🏦</span>` : ((ls.accum_score||0) >= 5 ? `<span style="font-size:6px;color:#80cbc4" title="Accumulation score ${ls.accum_score}/10">ACC${ls.accum_score}</span>` : '');
+          const lsNewsVel = ls.news_accelerating ? `<span style="font-size:6px;font-weight:800;color:#ffd600" title="News accelerating — ${ls.news_count_24h||0} articles in 24h">📰NEWS↑</span>` : '';
+          const lsPmGap = ls.pm_big_gap_up ? `<span style="font-size:6px;font-weight:900;color:#00ff88" title="Pre-market gap up ${(ls.pm_gap_pct||0).toFixed(1)}%">PM+${(ls.pm_gap_pct||0).toFixed(1)}%🚀</span>` : (ls.pm_big_gap_down ? `<span style="font-size:6px;font-weight:900;color:#ff5252" title="Pre-market gap down ${(ls.pm_gap_pct||0).toFixed(1)}%">PM${(ls.pm_gap_pct||0).toFixed(1)}%⬇</span>` : ((ls.pm_gap_up||ls.pm_gap_down) ? `<span style="font-size:6px;color:${(ls.pm_gap_pct||0)>=0?'#69f0ae':'#ef9a9a'}" title="Pre-market ${(ls.pm_gap_pct||0).toFixed(1)}%">PM${(ls.pm_gap_pct||0)>=0?'+':''}${(ls.pm_gap_pct||0).toFixed(1)}%</span>` : ''));
+          const lsMtfTriple = ls.mtf_triple ? `<span style="font-size:6px;font-weight:900;color:#00e676" title="Triple timeframe aligned: weekly+daily+hourly bullish">3TF✓</span>` : '';
           const lsVwapBand = (() => {
             if (!ls.vwap_b1u || !p.price) return '';
             const pr = p.price;
@@ -54778,6 +54782,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
+                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}</div>` : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
@@ -54943,6 +54948,13 @@ window.renderSectorRotation = renderSectorRotation;
             s.three_black_crows ? '<span style="background:rgba(255,50,50,.22);color:#ef9a9a;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Three Black Crows">3BC</span>' : '',
             s.bearish_engulfing ? '<span style="background:rgba(255,80,80,.2);color:#ef5350;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Bearish Engulfing">BENG</span>' : '',
             s.shooting_star    ? '<span style="background:rgba(200,50,50,.18);color:#e57373;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Shooting Star">⭐SHOOT</span>' : '',
+            // Smart Accumulation Score
+            (s.accum_score >= 8) ? `<span style="background:rgba(0,255,180,.28);color:#00e5ff;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Smart accumulation score ${s.accum_score}/10 — institutional fingerprint (OBV+FI+MFI all bullish)">ACC${s.accum_score}🏦</span>` : ((s.accum_score||0) >= 5 ? `<span style="background:rgba(0,200,150,.18);color:#80cbc4;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Accumulation score ${s.accum_score}/10">ACC${s.accum_score}</span>` : ''),
+            // News velocity
+            s.news_accelerating ? `<span style="background:rgba(255,200,0,.25);color:#ffd600;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="News accelerating — ${s.news_count_24h||0} articles in 24h vs ${s.news_count_48h||0} prior 24h">📰NEWS↑</span>` : ((s.news_velocity||0) > 1.5 ? `<span style="background:rgba(255,170,0,.18);color:#ffcc80;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Elevated news velocity">NEWS</span>` : ''),
+            // Pre-market gap
+            s.pm_big_gap_up    ? `<span style="background:rgba(0,230,120,.35);color:#00ff88;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}% at $${(s.pm_price||0).toFixed(2)}">PM+${(s.pm_gap_pct||0).toFixed(1)}%🚀</span>` : (s.pm_gap_up ? `<span style="background:rgba(0,200,100,.22);color:#69f0ae;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}%">PM+${(s.pm_gap_pct||0).toFixed(1)}%</span>` : ''),
+            s.pm_big_gap_down  ? `<span style="background:rgba(255,50,50,.3);color:#ff5252;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap down ${(s.pm_gap_pct||0).toFixed(1)}%">PM${(s.pm_gap_pct||0).toFixed(1)}%⬇</span>` : (s.pm_gap_down ? `<span style="background:rgba(200,50,50,.2);color:#ef9a9a;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Pre-market gap down">PM${(s.pm_gap_pct||0).toFixed(1)}%</span>` : ''),
             (s.earnings_days != null && s.earnings_days <= 20) ? (() => { const d = s.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col}">📅${d}d</span>`; })() : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';

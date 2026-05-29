@@ -890,6 +890,78 @@ def _options_flow(sym: str, max_age_sec: int = 3600) -> dict:
     return result
 
 
+_NEWS_VEL_CACHE: dict = {}
+
+def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
+    """News velocity: count of yfinance news items in 24h vs prior 24h window.
+    Accelerating news flow = catalyst building (often precedes big moves).
+    Returns: count_24h, count_48h, velocity (ratio), accelerating (bool).
+    """
+    import time as _time
+    now = _time.time()
+    if sym in _NEWS_VEL_CACHE:
+        cached, ts = _NEWS_VEL_CACHE[sym]
+        if now - ts < max_age_sec:
+            return cached
+    result = {"count_24h": 0, "count_48h": 0, "velocity": 0.0, "accelerating": False}
+    try:
+        news = yf.Ticker(sym).news[:15]
+        if news:
+            count_24h = sum(1 for n in news if (now - n.get("providerPublishTime", 0)) < 86400)
+            count_48h = sum(1 for n in news if 86400 <= (now - n.get("providerPublishTime", 0)) < 172800)
+            velocity  = (count_24h - count_48h) / max(1.0, count_48h)
+            accel     = count_24h > count_48h + 1 and count_24h >= 3
+            result = {
+                "count_24h":   count_24h,
+                "count_48h":   count_48h,
+                "velocity":    round(velocity, 2),
+                "accelerating": accel,
+            }
+    except Exception:
+        pass
+    _NEWS_VEL_CACHE[sym] = (result, now)
+    return result
+
+
+_PREMARKET_CACHE: dict = {}
+
+def _premarket_info(sym: str, max_age_sec: int = 300) -> dict:
+    """Fetch pre-market price and compute gap vs prior close using yfinance fast_info.
+    Returns: pre_price, gap_pct, gap_up (≥1.5%), gap_down (≤-1.5%),
+             big_gap_up (≥3%), big_gap_down (≤-3%).
+    """
+    import time as _time
+    now = _time.time()
+    if sym in _PREMARKET_CACHE:
+        cached, ts = _PREMARKET_CACHE[sym]
+        if now - ts < max_age_sec:
+            return cached
+    result = {"pre_price": 0.0, "gap_pct": 0.0, "gap_up": False, "gap_down": False,
+              "big_gap_up": False, "big_gap_down": False}
+    try:
+        fi = yf.Ticker(sym).fast_info
+        pre  = (getattr(fi, "pre_market_price", None) or
+                getattr(fi, "preMarketPrice", None))
+        prev = (getattr(fi, "previous_close", None) or
+                getattr(fi, "regularMarketPreviousClose", None) or
+                getattr(fi, "last_price", None))
+        if pre and prev and float(prev) > 0:
+            pre, prev = float(pre), float(prev)
+            gap = (pre - prev) / prev * 100
+            result = {
+                "pre_price":    round(pre, 2),
+                "gap_pct":      round(gap, 2),
+                "gap_up":       gap >=  1.5,
+                "gap_down":     gap <= -1.5,
+                "big_gap_up":   gap >=  3.0,
+                "big_gap_down": gap <= -3.0,
+            }
+    except Exception:
+        pass
+    _PREMARKET_CACHE[sym] = (result, now)
+    return result
+
+
 def _parabolic_sar(highs, lows, af_start=0.02, af_max=0.20):
     """Parabolic SAR trailing stop — accelerates as price trends, tightens on reversals.
     Returns (sar_value, is_bullish) for the latest bar.
@@ -3416,6 +3488,22 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Smart Accumulation Score (0-10): multi-factor composite of smart-money signals
+    # Combines OBV trend, Force Index, and MFI — when all three agree = strong conviction
+    accum_score = 0
+    try:
+        if obv_rising:      accum_score += 2
+        if fi_rising:       accum_score += 2
+        if fi_bull_div:     accum_score += 2
+        if mfi_oversold:    accum_score += 2
+        if mfi_bull_div:    accum_score += 2
+        # Double-confirm: OBV + MFI together = highest conviction (institutional fingerprint)
+        if obv_rising and mfi_val > 50:    accum_score += 1
+        if obv_rising and mfi_bull_div:    accum_score += 1
+        accum_score = min(10, accum_score)
+    except Exception:
+        pass
+
     # True Beta (linear regression vs SPY over 63 days): institutional standard
     # Beta < 0.8 = defensive, Beta > 1.5 = high-volatility; Jensen's alpha > 0 = outperformer
     true_beta  = 1.0
@@ -3949,6 +4037,7 @@ def _extract(daily, hourly):
         "force_index":         fi_val,
         "force_index_rising":  fi_rising,
         "force_index_div":     fi_bull_div,
+        "accum_score":         accum_score,
         "true_beta":           true_beta,
         "true_alpha":          true_alpha,
         "ha_bull":             ha_bull,
@@ -4168,6 +4257,32 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("options_bear", False)
                             sig.setdefault("unusual_calls", False)
                             sig.setdefault("unusual_puts", False)
+                        # News velocity: cached (30 min TTL) — count of news in 24h vs prior 24h
+                        try:
+                            nv = _news_velocity(tk)
+                            sig["news_count_24h"]   = nv.get("count_24h", 0)
+                            sig["news_velocity"]    = nv.get("velocity", 0.0)
+                            sig["news_accelerating"] = nv.get("accelerating", False)
+                        except Exception:
+                            sig.setdefault("news_count_24h", 0)
+                            sig.setdefault("news_velocity", 0.0)
+                            sig.setdefault("news_accelerating", False)
+                        # Pre-market gap: cached (5 min TTL) — pre-market price vs prior close
+                        try:
+                            pm = _premarket_info(tk)
+                            sig["pm_gap_pct"]    = pm.get("gap_pct", 0.0)
+                            sig["pm_gap_up"]     = pm.get("gap_up", False)
+                            sig["pm_gap_down"]   = pm.get("gap_down", False)
+                            sig["pm_big_gap_up"] = pm.get("big_gap_up", False)
+                            sig["pm_big_gap_down"] = pm.get("big_gap_down", False)
+                            sig["pm_price"]      = pm.get("pre_price", 0.0)
+                        except Exception:
+                            sig.setdefault("pm_gap_pct", 0.0)
+                            sig.setdefault("pm_gap_up", False)
+                            sig.setdefault("pm_gap_down", False)
+                            sig.setdefault("pm_big_gap_up", False)
+                            sig.setdefault("pm_big_gap_down", False)
+                            sig.setdefault("pm_price", 0.0)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -4655,6 +4770,23 @@ def score(tk, d, sentiment=0, regime_adj=0):
 
     # Double Top: M-pattern bearish reversal at resistance (-8) — reduces buy conviction
     if d.get("double_top", False): s -= 8
+
+    # Smart Accumulation Score: composite of OBV + Force Index + MFI smart-money signals
+    _accum = d.get("accum_score", 0) or 0
+    if _accum >= 8:   s += 7   # very strong accumulation — rare, high conviction
+    elif _accum >= 6: s += 4   # solid institutional buying pattern
+    elif _accum >= 4: s += 2   # moderate accumulation
+
+    # News Velocity: accelerating news flow = catalyst building = institutional awareness
+    if d.get("news_accelerating", False):   s += 5   # 3+ articles in 24h, accelerating
+    elif d.get("news_velocity", 0) > 1.5:  s += 2   # noteworthy news increase
+
+    # Pre-market gap: real-time institutional positioning before open
+    _pm_gap = d.get("pm_gap_pct", 0.0) or 0.0
+    if d.get("pm_big_gap_up", False):    s += 8   # 3%+ gap up = strong institutional catalyst
+    elif d.get("pm_gap_up", False):      s += 4   # 1.5%+ gap up = positive momentum
+    if d.get("pm_big_gap_down", False):  s -= 7   # 3%+ gap down = distribution
+    elif d.get("pm_gap_down", False):    s -= 3   # 1.5%+ gap down = weakness
 
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
@@ -5929,6 +6061,17 @@ def run():
                 "earnings_days":      get_earnings_days(tk),
                 "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
+                "accum_score":    live.get(tk, {}).get("accum_score", 0),
+                "news_accelerating": live.get(tk, {}).get("news_accelerating", False),
+                "news_velocity":  live.get(tk, {}).get("news_velocity", 0.0),
+                "news_count_24h": live.get(tk, {}).get("news_count_24h", 0),
+                "pm_gap_pct":     live.get(tk, {}).get("pm_gap_pct", 0.0),
+                "pm_gap_up":      live.get(tk, {}).get("pm_gap_up", False),
+                "pm_gap_down":    live.get(tk, {}).get("pm_gap_down", False),
+                "pm_big_gap_up":  live.get(tk, {}).get("pm_big_gap_up", False),
+                "pm_price":       live.get(tk, {}).get("pm_price", 0.0),
+                "mtf_triple":     live.get(tk, {}).get("mtf_triple", False),
+                "mtf_score":      live.get(tk, {}).get("mtf_score", 0),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -6215,6 +6358,15 @@ def run():
                 "bullish_engulfing": sig.get("bullish_engulfing", False),
                 "morning_star":    sig.get("morning_star", False),
                 "three_white_soldiers": sig.get("three_white_soldiers", False),
+                "accum_score":     sig.get("accum_score", 0),
+                "news_accelerating": sig.get("news_accelerating", False),
+                "news_velocity":   sig.get("news_velocity", 0.0),
+                "news_count_24h":  sig.get("news_count_24h", 0),
+                "pm_gap_pct":      sig.get("pm_gap_pct", 0.0),
+                "pm_gap_up":       sig.get("pm_gap_up", False),
+                "pm_gap_down":     sig.get("pm_gap_down", False),
+                "pm_big_gap_up":   sig.get("pm_big_gap_up", False),
+                "pm_price":        sig.get("pm_price", 0.0),
             }
 
         tlog["positions"] = [
