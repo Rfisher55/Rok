@@ -783,12 +783,12 @@ def get_options_flow_candidates(tickers: list, max_check: int = 25) -> dict:
             if not exps:
                 continue
             # Use nearest expiry with enough time (7-30 days out)
-            from datetime import date as _date
-            today   = _date.today()
+            today   = datetime.now(timezone.utc).date()
             target  = None
             for exp in exps[:6]:
                 try:
-                    exp_date = _date.fromisoformat(exp)
+                    from datetime import date as _dt_date
+                    exp_date = _dt_date.fromisoformat(exp)
                     days_out = (exp_date - today).days
                     if 5 <= days_out <= 35:
                         target = exp
