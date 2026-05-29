@@ -1514,6 +1514,9 @@ body.beginner-mode #beginner-banner { display:block }
     <!-- Live ROK signal movers (JS-populated) -->
     <div id="mkt-signal-movers" style="display:none;margin-bottom:.85rem"></div>
 
+    <!-- Live Breakout Scanner (JS-populated) -->
+    <div id="mkt-breakout-scanner" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Live unusual options flow (JS-populated) -->
     <div id="mkt-options-flow" style="display:none;margin-bottom:.85rem"></div>
 
@@ -2011,6 +2014,8 @@ body.beginner-mode #beginner-banner { display:block }
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <!-- Portfolio Autopilot (JS-populated) -->
+    <div id="port-autopilot" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-spy-benchmark" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-goal-tracker" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
@@ -2741,7 +2746,9 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); renderPortfolioSpyBenchmark(); }
     if (activeTab === 'signals') { updateLiveMacroStrip(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); }
-    if (activeTab === 'intel') { renderSectorFlow(_sectorFlowCache); }
+    if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); }
+    if (activeTab === 'market') { renderBreakoutScanner(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); }
     updateGlobalRiskAlert();
     updateFearGreedFromVIX();
     renderLivePortStrip();
@@ -3608,8 +3615,8 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); }
   }
   window.showTab = showTab;
@@ -7862,6 +7869,145 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderLiveMarketBreadth = renderLiveMarketBreadth;
+
+  // ── LIVE BREAKOUT SCANNER ────────────────────────────────
+  function renderBreakoutScanner() {
+    const el = document.getElementById('mkt-breakout-scanner');
+    if (!el) return;
+    const universe = ROK.stock_universe || [];
+    const buys = universe.filter(s => s.rok_signal === 'buy' && s.week_high != null);
+    if (!buys.length) { el.style.display = 'none'; return; }
+
+    const candidates = buys.map(s => {
+      const lp = liveprices[s.ticker];
+      const price = lp?.price || s.price;
+      if (!price || !s.week_high || s.week_high <= 0) return null;
+      const distToHigh = (s.week_high - price) / s.week_high * 100;
+      const isBreaking = distToHigh <= 2;
+      const isNear = distToHigh > 2 && distToHigh <= 7;
+      if (!isBreaking && !isNear) return null;
+      return { ticker: s.ticker, company: s.company_name || s.ticker, price, weekHigh: s.week_high, distToHigh, isBreaking, chg: lp?.change_pct || s.change_pct || 0, strength: s.strength || 50 };
+    }).filter(Boolean).sort((a, b) => a.distToHigh - b.distToHigh);
+
+    if (!candidates.length) { el.style.display = 'none'; return; }
+
+    const rows = candidates.slice(0, 8).map(c => {
+      const brkColor = c.isBreaking ? 'var(--au)' : 'var(--wh3)';
+      const badge = c.isBreaking
+        ? `<span style="font-size:7px;padding:1px 5px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:3px;color:var(--au);font-weight:800;letter-spacing:.06em">🚀 BREAKING OUT</span>`
+        : `<span style="font-size:7px;padding:1px 5px;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.18);border-radius:3px;color:var(--b);font-weight:700">${c.distToHigh.toFixed(1)}% to high</span>`;
+      const chgColor = c.chg >= 0 ? 'var(--g)' : 'var(--r)';
+      return `<div onclick="openModal('${c.ticker}')" style="display:flex;align-items:center;gap:.55rem;padding:.4rem .5rem;border-radius:8px;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(255,255,255,.04)" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background=''">
+        <span style="font-family:var(--disp);font-size:1rem;letter-spacing:.06em;color:${brkColor};min-width:44px">${c.ticker}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:8.5px;color:var(--wh4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.company.substring(0,22)}</div>
+          <div style="margin-top:2px">${badge}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10.5px;font-weight:700;color:var(--wh)">$${c.price.toFixed(2)}</div>
+          <div style="font-size:9px;font-weight:700;color:${chgColor}">${c.chg>=0?'+':''}${c.chg.toFixed(2)}%</div>
+          <div style="font-size:7.5px;color:var(--wh4)">52W: $${c.weekHigh.toFixed(2)}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const breaking = candidates.filter(c => c.isBreaking).length;
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,215,0,.15);border-radius:12px;padding:.75rem 1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+        <span style="font-size:8px;font-weight:800;letter-spacing:.14em;color:var(--au)">🚀 BREAKOUT SCANNER</span>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          ${breaking > 0 ? `<span style="font-size:7px;padding:1px 5px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.25);border-radius:3px;color:var(--au);font-weight:700">${breaking} BREAKING NOW</span>` : ''}
+          <span style="color:var(--g);font-size:7px">● LIVE</span>
+        </div>
+      </div>
+      <div style="font-size:9.5px;color:var(--wh3);margin-bottom:.5rem;line-height:1.5">ROK buy signals approaching or breaking through their 52-week high. A breakout above the yearly high is often the start of a significant new move.</div>
+      ${rows}
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.45rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.05)">Within 7% of 52-week high. Live prices used when available. Tap to see full details.</div>
+    </div>`;
+  }
+  window.renderBreakoutScanner = renderBreakoutScanner;
+
+  // ── PORTFOLIO AUTOPILOT ──────────────────────────────────
+  function renderPortfolioAutopilot() {
+    const el = document.getElementById('port-autopilot');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+
+    const rows = tickers.map(ticker => {
+      const entry = port[ticker];
+      const lp = liveprices[ticker];
+      const price = lp?.price || null;
+      const entryPrice = entry?.price || null;
+      const shares = entry?.shares || null;
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const signal = stock?.rok_signal || 'neutral';
+      const target = stock?.price_target || null;
+      const stop = stock?.stop_loss || null;
+
+      let pct = null;
+      if (price != null && entryPrice != null && entryPrice > 0) pct = (price - entryPrice) / entryPrice * 100;
+
+      // Determine autopilot action
+      let action, actionColor, actionBg, explanation;
+      if (signal === 'sell') {
+        action = '🚨 EXIT'; actionColor = 'var(--r)'; actionBg = 'rgba(255,34,85,.08)';
+        explanation = 'ROK gives this a SELL signal. Consider exiting to protect capital.';
+      } else if (pct != null && pct >= 25) {
+        action = '💰 TAKE PROFITS'; actionColor = 'var(--au)'; actionBg = 'rgba(255,215,0,.07)';
+        explanation = `Up ${pct.toFixed(0)}% from your entry. Consider selling some to lock in gains.`;
+      } else if (pct != null && pct >= 15 && target != null && price != null && price >= target * 0.95) {
+        action = '💰 NEAR TARGET'; actionColor = 'var(--au)'; actionBg = 'rgba(255,215,0,.07)';
+        explanation = `Near ROK's price target of $${target.toFixed(2)}. Consider taking partial profits.`;
+      } else if (signal === 'buy' && pct != null && pct < 5) {
+        action = '📈 ADD MORE'; actionColor = 'var(--g)'; actionBg = 'rgba(0,255,136,.06)';
+        explanation = `ROK still likes this stock and price is near your entry. Good time to add.`;
+      } else if (signal === 'buy') {
+        action = '✅ HOLD'; actionColor = 'rgba(0,255,136,.7)'; actionBg = 'rgba(0,255,136,.04)';
+        explanation = 'ROK says BUY and you own it. Continue holding toward the target.';
+      } else if (signal === 'watch') {
+        action = '👀 WATCH'; actionColor = 'var(--au)'; actionBg = 'rgba(255,215,0,.05)';
+        explanation = 'ROK is neutral. Watch for a clearer signal before adding more.';
+      } else {
+        action = '➡️ HOLD'; actionColor = 'var(--wh3)'; actionBg = 'rgba(255,255,255,.03)';
+        explanation = 'No strong signal either way. Hold and monitor.';
+      }
+
+      const pctStr = pct != null ? `<span style="font-size:9px;font-weight:700;color:${pct >= 0 ? 'var(--g)' : 'var(--r)'}">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span>` : '';
+      const priceStr = price != null ? `$${price.toFixed(2)}` : '—';
+
+      return `<div style="background:${actionBg};border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.55rem .75rem;display:flex;align-items:flex-start;gap:.6rem">
+        <div style="flex-shrink:0;min-width:0;width:55px">
+          <div style="font-family:var(--disp);font-size:1rem;letter-spacing:.06em;color:var(--wh);cursor:pointer" onclick="openModal('${ticker}')">${ticker}</div>
+          <div style="font-size:9px;color:var(--wh4)">${priceStr} ${pctStr}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:800;color:${actionColor};margin-bottom:.2rem">${action}</div>
+          <div style="font-size:9px;color:var(--wh3);line-height:1.4">${explanation}</div>
+        </div>
+        ${action.includes('ADD') ? `<button onclick="openAlertDialog('${ticker}',${price||0},event)" style="flex-shrink:0;background:none;border:1px solid rgba(0,255,136,.2);border-radius:6px;color:var(--g);font-size:8.5px;padding:.25rem .45rem;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔔 Alert</button>` : ''}
+        ${action.includes('EXIT') || action.includes('PROFITS') || action.includes('TARGET') ? `<button onclick="openModal('${ticker}')" style="flex-shrink:0;background:none;border:1px solid rgba(255,34,85,.2);border-radius:6px;color:var(--r);font-size:8.5px;padding:.25rem .45rem;cursor:pointer;font-family:var(--font);touch-action:manipulation">View →</button>` : ''}
+      </div>`;
+    }).join('');
+
+    const urgentCount = tickers.filter(t => {
+      const s = (ROK.stock_universe || []).find(x => x.ticker === t);
+      return s?.rok_signal === 'sell';
+    }).length;
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid ${urgentCount > 0 ? 'rgba(255,34,85,.2)' : 'rgba(255,255,255,.08)'};border-radius:12px;padding:.75rem 1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem">
+        <span style="font-size:8.5px;font-weight:800;letter-spacing:.12em;color:var(--b)">🤖 PORTFOLIO AUTOPILOT</span>
+        ${urgentCount > 0 ? `<span style="font-size:8px;padding:1px 7px;background:rgba(255,34,85,.12);border:1px solid rgba(255,34,85,.25);border-radius:4px;color:var(--r);font-weight:700">${urgentCount} URGENT</span>` : '<span style="font-size:7px;color:var(--wh4)">live recommendations</span>'}
+      </div>
+      <div style="font-size:9.5px;color:var(--wh3);margin-bottom:.6rem;line-height:1.5">Based on live prices + ROK signals, here's what to do with each holding right now:</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem">${rows}</div>
+    </div>`;
+  }
+  window.renderPortfolioAutopilot = renderPortfolioAutopilot;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
