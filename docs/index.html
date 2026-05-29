@@ -2462,6 +2462,8 @@ body.beginner-mode #beginner-banner { display:block }
         <div class="port-how-row"><span></span><span><strong style="color:var(--au)">TAKE PROFITS</strong> = Stock near its target, could sell some and keep gains</span></div>
       </div>
     </details>
+    <!-- ROK Live Bot Positions (from trades.json, updated every 30s) -->
+    <div id="port-bot-live" style="margin-bottom:.75rem"></div>
     <div id="portfolio-summary"></div>
     <!-- Portfolio Daily Drawdown Warning (JS-populated) -->
     <div id="port-daily-drawdown" style="display:none;margin-bottom:.65rem"></div>
@@ -54425,6 +54427,62 @@ window.renderSectorRotation = renderSectorRotation;
       }
 
       intelEl.innerHTML = html;
+    }
+
+    // Update portfolio tab bot live section
+    const botLiveEl = document.getElementById('port-bot-live');
+    if (botLiveEl) {
+      const positions = data.positions || [];
+      const pv = data.portfolio_value || 0;
+      const bp = data.buying_power || 0;
+      const lu = data.last_updated ? new Date(data.last_updated) : null;
+      const minsAgo = lu ? Math.round((Date.now()-lu)/60000) : null;
+      const regime = data.regime || {};
+      const regCol = regime.regime==='bull'?'#00ff88':regime.regime==='bear'?'#ef5350':'#ffd54f';
+
+      let html = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:12px;padding:.85rem">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;flex-wrap:wrap;gap:.4rem">
+          <div>
+            <div style="font-size:8px;color:#4a6fa5;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.15rem">ROK BOT — LIVE POSITIONS</div>
+            <div style="font-family:var(--disp);font-size:1.4rem;color:#82b1ff">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            ${minsAgo !== null ? `<span style="font-size:8px;font-weight:700;color:${minsAgo<10?'#00ff88':minsAgo<30?'#ffd54f':'#555'};border:1px solid;border-color:${minsAgo<10?'rgba(0,255,136,.3)':minsAgo<30?'rgba(255,215,0,.25)':'rgba(255,255,255,.1)'};border-radius:20px;padding:2px 8px">BOT ${minsAgo<60?minsAgo+'m':Math.floor(minsAgo/60)+'h'} ago</span>` : ''}
+            ${regime.regime ? `<span style="font-size:8px;font-weight:800;color:${regCol};border:1px solid;border-radius:20px;padding:2px 8px;border-color:${regCol}40">${regime.regime.toUpperCase()} · VIX ${(regime.vix||0).toFixed(1)}</span>` : ''}
+            <span style="font-size:8px;color:#64b5f6">Cash \$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+          </div>
+        </div>`;
+
+      if (positions.length === 0) {
+        html += `<div style="color:#3a5a8a;font-size:10px;padding:.3rem 0">No open positions — bot is scanning ${data.scan_universe||0} stocks and will buy when signals align</div>`;
+      } else {
+        const totalUnreal = positions.reduce((s,p) => s + (p.pnl_usd||0), 0);
+        const totalUnrealCol = totalUnreal >= 0 ? '#00ff88' : '#ef5350';
+        html += `<div style="font-size:8px;color:${totalUnrealCol};font-weight:700;margin-bottom:.4rem">Unrealized P&L: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</div>`;
+        html += `<div style="display:flex;flex-direction:column;gap:.3rem">`;
+        positions.forEach(p => {
+          const pct = p.pnl_pct || 0;
+          const pnlColor = pct >= 0 ? '#00ff88' : '#ef5350';
+          const pnlUsd = p.pnl_usd != null ? `${p.pnl_usd >= 0 ? '+' : ''}$${Math.abs(p.pnl_usd).toFixed(0)}` : '';
+          const barW = Math.min(Math.abs(pct) * 4, 100);
+          const barCol = pct >= 0 ? 'rgba(0,255,136,.2)' : 'rgba(255,34,85,.2)';
+          const sideLbl = p.side === 'short' ? 'SHORT' : 'LONG';
+          const sideCol = p.side === 'short' ? '#ef5350' : '#00ff88';
+          html += `<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:.5rem .7rem;border:1px solid rgba(255,255,255,.05);position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;height:100%;width:${barW}%;background:${barCol};pointer-events:none"></div>
+            <div style="position:relative;display:flex;align-items:center;gap:.5rem">
+              <div style="font-family:var(--disp);font-size:1.05rem;color:#ffd54f;min-width:50px;font-weight:900">\$${p.ticker}</div>
+              <div style="font-size:7.5px;background:${sideCol};color:#000;padding:1px 5px;border-radius:3px;font-weight:900">${sideLbl}</div>
+              <div style="flex:1;font-size:8px;color:#3a5a8a">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · \$${(p.cost||0).toFixed(2)}</div>
+              <div style="font-size:11px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
+              <div style="font-size:8.5px;color:${pnlColor};font-weight:700">${pnlUsd}</div>
+            </div>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+      botLiveEl.innerHTML = html;
     }
   }
 

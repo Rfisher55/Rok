@@ -599,6 +599,29 @@ _BEAR_CATALYSTS = [
     "bankruptcy", "layoffs", "restructuring", "ceo resigns",
 ]
 
+def get_earnings_beat_candidates(candidates: list) -> set:
+    """
+    Find stocks that recently beat earnings estimates and are gapping up.
+    These are high-probability continuation setups (earnings momentum).
+    Returns set of ticker symbols.
+    """
+    beats = set()
+    try:
+        # Use yfinance screener for recent earnings beats
+        res = yf.screen("earnings_beat")
+        for q in (res.get("quotes") or [])[:20]:
+            sym   = q.get("symbol", "")
+            chg   = q.get("regularMarketChangePercent", 0) or 0
+            # Only take stocks up 2%+ on earnings day (positive reaction)
+            if sym and sym in candidates and chg >= 2.0:
+                beats.add(sym)
+    except Exception:
+        pass
+    if beats:
+        logger.info(f"Earnings beat candidates: {', '.join(sorted(beats))}")
+    return beats
+
+
 def detect_catalyst(headlines: list) -> tuple[float, str]:
     """
     Fast keyword scan of headlines. Returns (boost, catalyst_label).
@@ -2004,6 +2027,9 @@ def run():
         options_flow = get_options_flow_candidates(list(set(flow_check)), max_check=20)
     bullish_options = {s for s, d in options_flow.items() if d.get("bullish")}
 
+    # Earnings beat plays — stocks that just beat estimates and are reacting positively
+    earnings_beats = get_earnings_beat_candidates(set(candidates)) if _time_ok(230) else set()
+
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
     now_utc     = datetime.now(timezone.utc)
@@ -2247,14 +2273,15 @@ def run():
                 except Exception:
                     pass
 
-        # Technical pass — include sector rotation + gap + squeeze bonuses
+        # Technical pass — include sector rotation + gap + squeeze + earnings bonuses
         tech_scores = {
             tk: score(tk, live[tk],
                       regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
                                 + (10 if tk in gap_ups else 0)
                                 + (12 if tk in squeeze_cands else 0)
                                 + (8  if tk in recent_sells else 0)
-                                + (14 if tk in bullish_options else 0))  # unusual call flow
+                                + (14 if tk in bullish_options else 0)
+                                + (18 if tk in earnings_beats else 0))  # earnings beat continuation
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -2289,20 +2316,23 @@ def run():
                 sent, catalyst = ai_sentiment(tk, use_sonnet=use_sonnet, signals=live.get(tk))
             else:
                 sent, catalyst = 0, ""
-            sec_adj      = sector_adjs.get(sec, 0)
-            gap_adj      = 10 if tk in gap_ups else 0
-            squeeze_adj  = 12 if tk in squeeze_cands else 0
-            options_adj  = 14 if tk in bullish_options else 0
-            reentry_adj  = 8  if tk in recent_sells else 0
-            final_sc    = score(tk, live[tk], sentiment=sent,
-                                regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj + options_adj + reentry_adj)
+            sec_adj       = sector_adjs.get(sec, 0)
+            gap_adj       = 10 if tk in gap_ups else 0
+            squeeze_adj   = 12 if tk in squeeze_cands else 0
+            options_adj   = 14 if tk in bullish_options else 0
+            reentry_adj   = 8  if tk in recent_sells else 0
+            earnings_adj  = 18 if tk in earnings_beats else 0
+            final_sc      = score(tk, live[tk], sentiment=sent,
+                                  regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
+                                            + options_adj + reentry_adj + earnings_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 extras = []
-                if gap_adj:     extras.append("gap")
-                if squeeze_adj: extras.append("squeeze")
-                if options_adj: extras.append("call-flow")
-                if reentry_adj: extras.append("re-entry")
+                if gap_adj:       extras.append("gap")
+                if squeeze_adj:   extras.append("squeeze")
+                if options_adj:   extras.append("call-flow")
+                if reentry_adj:   extras.append("re-entry")
+                if earnings_adj:  extras.append("earnings-beat")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
 
         final_scores.sort(key=lambda x: -x[1])
