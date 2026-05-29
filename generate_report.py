@@ -204,15 +204,30 @@ def _run():
         except Exception:
             pass
 
-    # ── Load live trading data (positions + scan top) ─────────────
+    # ── Load live trading data (positions + scan top + market context) ─
     trades_path = docs_dir / "trades.json"
     current_positions = []
     last_scan_top = []
+    live_market_context = {}
     try:
         if trades_path.exists():
             td = json.loads(trades_path.read_text())
             current_positions = td.get("positions", [])
             last_scan_top     = td.get("last_scan_top", [])
+            # Extract live market context for richer AI prompt
+            live_market_context = {
+                "market_open":     td.get("market_open"),
+                "timing_quality":  td.get("timing_quality"),
+                "day_type":        td.get("day_type"),
+                "day_efficiency":  td.get("day_efficiency"),
+                "strategy_hint":   td.get("strategy_hint"),
+                "vts_regime":      td.get("regime", {}).get("vts_regime"),
+                "effective_min_score": td.get("effective_min_score"),
+                "win_rate":        td.get("win_rate"),
+                "drawdown_pct":    td.get("drawdown_pct"),
+                "profit_factor":   td.get("profit_factor"),
+                "portfolio_beta":  td.get("portfolio_beta"),
+            }
             logger.info(f"Loaded {len(current_positions)} positions and {len(last_scan_top)} scan candidates from trades.json")
     except Exception as _te:
         logger.warning(f"Could not load trades.json: {_te}")
@@ -253,8 +268,9 @@ def _run():
                 market_breadth=market_breadth,
                 put_call_ratio=put_call_ratio,
                 insider_buys=insider_buys,
-                current_positions=current_positions,  # new: what the bot holds now
-                scan_top=last_scan_top,                # new: what was scanned last cycle
+                current_positions=current_positions,    # what the bot holds now
+                scan_top=last_scan_top,                  # what was scanned last cycle
+                live_market_context=live_market_context, # day type, timing, performance stats
             ),
             default=None,
             label="ClaudeAI",

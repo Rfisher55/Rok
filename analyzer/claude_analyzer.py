@@ -251,7 +251,7 @@ def build_prompt(
     ticker_mentions=None, reddit_posts=None, news_articles=None,
     stock_data=None, sec_filings=None, fear_greed=None,
     earnings_calendar=None, unusual_options=None, short_squeeze_candidates=None,
-    market_indices=None, aggregate_sentiment=None,
+    market_indices=None, aggregate_sentiment=None, live_market_context=None,
     stocktwits_trending=None, technical_data=None,
     congressional_buys=None, market_breadth=None, put_call_ratio=None,
     insider_buys=None, current_positions=None, scan_top=None, **kwargs,
@@ -445,10 +445,36 @@ def build_prompt(
         sec_filings=sec_str,
         insider_buys=insider_str,
     )
+    # Build live market context string
+    lmc = live_market_context or {}
+    lmc_lines = []
+    if lmc.get("day_type") and lmc["day_type"] != "unknown":
+        dt = lmc["day_type"]
+        eff = lmc.get("day_efficiency", 0.5)
+        hint = lmc.get("strategy_hint", "neutral")
+        lmc_lines.append(f"  Day type: {dt} (efficiency {round(eff*100)}%) → strategy: {hint}")
+    if lmc.get("vts_regime"):
+        lmc_lines.append(f"  VIX term structure: {lmc['vts_regime']} (contango=calm, backwardation=fear spike)")
+    if lmc.get("timing_quality") is not None:
+        tq_map = {3: "PRIME (power hour or morning sweet spot)", 2: "GOOD", 1: "CAUTION (lunch lull)", 0: "WAIT (first/last 10min)"}
+        lmc_lines.append(f"  Market timing: {tq_map.get(lmc['timing_quality'], 'unknown')}")
+    if lmc.get("win_rate") is not None:
+        wr = round((lmc["win_rate"] or 0) * 100, 1)
+        pf = lmc.get("profit_factor")
+        lmc_lines.append(f"  Bot performance: {wr}% win rate{f' | profit factor {pf}' if pf else ''}")
+    if lmc.get("drawdown_pct", 0) > 3:
+        lmc_lines.append(f"  ⚠ Portfolio in drawdown: {lmc['drawdown_pct']:.1f}% — be selective with new entries")
+    if lmc.get("portfolio_beta"):
+        lmc_lines.append(f"  Portfolio beta: {lmc['portfolio_beta']:.2f}")
+    lmc_str = "\n".join(lmc_lines) if lmc_lines else "  No live context available"
+
     # Append live trading context so AI can give position-specific guidance
     return base + f"""
 
 ━━━ LIVE TRADING CONTEXT (PRIORITY — ROK BOT IS ACTIVELY HOLDING THESE) ━━━
+
+LIVE MARKET CONDITIONS:
+{lmc_str}
 
 OPEN POSITIONS WITH LIVE TECHNICAL SIGNALS:
 {positions_str}
@@ -466,8 +492,9 @@ CRITICAL INSTRUCTIONS:
    confidence (1-10), thesis (why hold or exit), risk (biggest threat), and target (price target or exit level)
 2. Flag any position with PSAR_FLIPPED_BEARISH + SUPERTREND_BEARISH + negative P&L as urgent sell
 3. Flag any position with TRIPLE_TF_ALIGNED + STRONG_ACCUMULATION as strong hold
-4. Mention specific held tickers by name in rok_message — users see this as their pocket guide
-5. Include top scan candidates as new buy ideas if they have strong signals
+4. Adjust advice for day type: on TREND day favor momentum plays; on RANGE day favor mean-reversion exits
+5. Mention specific held tickers by name in rok_message — users see this as their pocket guide
+6. Include top scan candidates as new buy ideas if they have strong signals
 """
 
 
@@ -482,6 +509,7 @@ def run_analysis(
     stocktwits_trending=None, technical_data=None,
     congressional_buys=None, market_breadth=None, put_call_ratio=None,
     insider_buys=None, current_positions=None, scan_top=None,
+    live_market_context=None,
 ) -> dict:
     if not api_key:
         logger.warning("No API key — demo mode")
@@ -498,6 +526,7 @@ def run_analysis(
         congressional_buys=congressional_buys, market_breadth=market_breadth,
         put_call_ratio=put_call_ratio, insider_buys=insider_buys,
         current_positions=current_positions, scan_top=scan_top,
+        live_market_context=live_market_context,
     )
 
     try:
