@@ -1875,7 +1875,10 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div style="font-size:10px;color:var(--wh3);margin-top:.4rem">Track stocks you already own — ROK will tell you when to sell or buy more</div>
     </div>
 
-    <button class="port-share-btn" id="port-share-btn" onclick="sharePortfolio()" style="display:none">📤 SHARE MY PICKS</button>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem">
+      <button class="port-share-btn" id="port-share-btn" onclick="sharePortfolio()" style="display:none">📤 SHARE</button>
+      <button id="port-csv-btn" onclick="exportPortfolioCSV()" style="display:none;padding:.55rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;font-size:11px;font-weight:700;color:var(--wh2);cursor:pointer;font-family:var(--font);touch-action:manipulation;align-items:center;gap:.3rem">📥 EXPORT CSV</button>
+    </div>
     <button class="port-add-btn" onclick="showTab('screener')">🔍 FIND MORE STOCKS IN SCREENER</button>
   </div><!-- /tab-portfolio -->
 
@@ -2904,9 +2907,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     });
     if (badge) badge.textContent = alerts > 0 ? '🔴' + alerts : tickers.length > 0 ? tickers.length : '';
     if (alertDot) alertDot.style.display = alerts > 0 ? 'block' : 'none';
-    // Show/hide share button
+    // Show/hide share/export buttons
     const sb = document.getElementById('port-share-btn');
     if (sb) sb.style.display = tickers.length ? 'flex' : 'none';
+    const csvBtn = document.getElementById('port-csv-btn');
+    if (csvBtn) csvBtn.style.display = tickers.length ? 'flex' : 'none';
     // Summary boxes
     const sumEl = document.getElementById('portfolio-summary');
     if (!sumEl || !tickers.length) { if(sumEl) sumEl.innerHTML=''; return; }
@@ -3026,6 +3031,47 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     }
   }
   window.sharePortfolio = sharePortfolio;
+
+  function exportPortfolioCSV() {
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { showAppAlert('No portfolio to export', 'warn'); return; }
+    const rows = [['Ticker','Company','Buy Price','Current Price','Shares','Invested $','Current Value $','Gain/Loss $','Gain/Loss %','ROK Signal','Added Date']];
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const lp = liveprices[ticker];
+      const cur = lp ? lp.price : (stock ? stock.price : null);
+      const sh = entry.shares || 0;
+      const invested = sh ? sh * entry.price : entry.price;
+      const curVal = sh && cur ? sh * cur : (cur || '');
+      const gl = sh && cur ? (sh * (cur - entry.price)).toFixed(2) : '';
+      const glPct = cur && entry.price ? (((cur - entry.price) / entry.price) * 100).toFixed(2) : '';
+      rows.push([
+        ticker,
+        stock?.company_name || ticker,
+        entry.price?.toFixed(2) || '',
+        cur?.toFixed(2) || '',
+        sh || '',
+        invested.toFixed(2),
+        curVal ? Number(curVal).toFixed(2) : '',
+        gl,
+        glPct ? glPct + '%' : '',
+        stock?.rok_signal || '',
+        entry.date || '',
+      ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rok-portfolio-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showAppAlert('📥 Portfolio CSV downloaded', 'good', 4000);
+  }
+  window.exportPortfolioCSV = exportPortfolioCSV;
 
   function shareSignal(ticker, catalyst, price, target) {
     const upside = price && target && price > 0 ? Math.round((target - price) / price * 100) : 0;
@@ -3250,6 +3296,40 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.addManualTicker = addManualTicker;
 
+  // ── QUICK TICKER LOOKUP ───────────────────────────────────
+  async function quickLookupTicker(ticker) {
+    const btn = document.getElementById('sc-lookup-btn');
+    const priceDiv = document.getElementById('sc-lookup-price');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching…'; }
+    try {
+      const url = `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${ticker}`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      const json = await res.json();
+      const q = json?.quoteResponse?.result?.[0];
+      if (q?.regularMarketPrice) {
+        const price = q.regularMarketPrice;
+        const chgPct = q.regularMarketChangePercent || 0;
+        const name = q.shortName || q.longName || ticker;
+        liveprices[ticker] = { price, change_pct: chgPct };
+        if (priceDiv) priceDiv.innerHTML = `<div style="display:flex;align-items:baseline;gap:.6rem;margin:.4rem 0">
+          <span style="font-size:1.6rem;font-weight:900;color:var(--wh)">$${price.toFixed(2)}</span>
+          <span style="font-size:13px;font-weight:700;color:${chgPct>=0?'var(--g)':'var(--r)'}">${chgPct>=0?'+':''}${chgPct.toFixed(2)}% today</span>
+          <span style="font-size:9px;color:var(--g);opacity:.8">● LIVE</span>
+        </div><div style="font-size:10px;color:var(--wh3);margin-bottom:.35rem">${name}</div>`;
+        // Update the Track It button
+        const trackBtn = document.querySelector('.sc-empty button[onclick*="boughtIt"]');
+        if (trackBtn) { trackBtn.onclick = () => boughtIt(ticker, price); }
+        const alertBtn = document.querySelector('.sc-empty button[onclick*="openAlertDialog"]');
+        if (alertBtn) { alertBtn.onclick = (e) => openAlertDialog(ticker, price, e); }
+      } else {
+        if (priceDiv) priceDiv.innerHTML = `<div style="font-size:11px;color:var(--wh3)">⚠️ Could not fetch price for $${ticker}. It may be an invalid symbol.</div>`;
+      }
+    } catch {
+      if (priceDiv) priceDiv.innerHTML = `<div style="font-size:11px;color:var(--wh3)">⚠️ Network error — check your connection and try again.</div>`;
+    }
+  }
+  window.quickLookupTicker = quickLookupTicker;
+
   // Update bought buttons on page load based on saved portfolio
   function syncBoughtButtons() {
     const p = getPortfolio();
@@ -3350,13 +3430,17 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const cleanQ = scQuery.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (cleanQ && cleanQ.length >= 1 && cleanQ.length <= 6 && /^[A-Z]+$/.test(cleanQ)) {
         const lp = liveprices[cleanQ];
-        const lpHtml = lp ? `<div style="font-size:1.4rem;font-weight:900;color:${lp.change_pct>=0?'var(--g)':'var(--r)'};margin:.3rem 0">$${lp.price.toFixed(2)} <span style="font-size:12px">${lp.change_pct>=0?'+':''}${lp.change_pct.toFixed(2)}% today</span></div>` : '';
-        grid.innerHTML = `<div class="sc-empty" style="text-align:left;padding:1.2rem;max-width:360px;grid-column:1/-1">
-          <div style="font-family:var(--disp);font-size:1.5rem;color:var(--wh);margin-bottom:.3rem">$${cleanQ}</div>
+        const inPort = isInPortfolio(cleanQ);
+        const lpHtml = lp
+          ? `<div style="display:flex;align-items:baseline;gap:.6rem;margin:.4rem 0"><span style="font-size:1.6rem;font-weight:900;color:var(--wh)">$${lp.price.toFixed(2)}</span><span style="font-size:13px;font-weight:700;color:${lp.change_pct>=0?'var(--g)':'var(--r)'}">${lp.change_pct>=0?'+':''}${lp.change_pct.toFixed(2)}% today</span><span style="font-size:9px;color:var(--g);opacity:.8">● LIVE</span></div>`
+          : `<div id="sc-lookup-price" style="margin:.4rem 0;font-size:11px;color:var(--wh3)"><button id="sc-lookup-btn" onclick="quickLookupTicker('${cleanQ}')" style="padding:.4rem .9rem;border-radius:8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.25);color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔍 Fetch live price for $${cleanQ}</button></div>`;
+        grid.innerHTML = `<div class="sc-empty" style="text-align:left;padding:1.2rem;max-width:380px;grid-column:1/-1;background:var(--blk3);border:1px solid rgba(255,255,255,.08);border-radius:12px">
+          <div style="font-family:var(--disp);font-size:1.7rem;letter-spacing:.08em;color:var(--wh);margin-bottom:.1rem">$${cleanQ}</div>
           ${lpHtml}
-          <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem">ROK doesn't have a current signal for <strong>$${cleanQ}</strong> — it wasn't in today's top 60 analyzed stocks. This doesn't mean it's bad, just that ROK didn't analyze it today.</div>
+          <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55">ROK didn't analyze <strong>$${cleanQ}</strong> in today's scan — it wasn't in the top 60 monitored stocks. You can still track it manually, set a price alert, or check Yahoo Finance for more info.</div>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-            <button onclick="openAlertDialog('${cleanQ}',${lp?lp.price:0},event)" style="padding:.45rem .9rem;border-radius:8px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.25);color:var(--au);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔔 Set Price Alert</button>
+            <button onclick="boughtIt('${cleanQ}',${lp?lp.price:0})" style="padding:.45rem .9rem;border-radius:8px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">${inPort?'✅ In My Stocks':'💰 Track It'}</button>
+            <button onclick="openAlertDialog('${cleanQ}',${lp?lp.price:0},event)" style="padding:.45rem .9rem;border-radius:8px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.25);color:var(--au);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">🔔 Set Alert</button>
             <a href="https://finance.yahoo.com/quote/${cleanQ}" target="_blank" rel="noopener" style="padding:.45rem .9rem;border-radius:8px;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);color:var(--b);font-size:11px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center">📊 Yahoo Finance ↗</a>
           </div>
         </div>`;
