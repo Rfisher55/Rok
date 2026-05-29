@@ -1722,12 +1722,13 @@ def get_btc_dominance() -> float:
 def fetch_crypto_data() -> dict:
     """
     Fetch price + indicators for all CRYPTO_UNIVERSE coins via yfinance.
+    Uses 90d daily data (same as equity) for full technical analysis.
     Returns {alpaca_symbol: signal_dict}.
     """
     result = {}
     for alpaca_sym, yf_sym in CRYPTO_UNIVERSE.items():
         try:
-            daily  = yf.download(yf_sym, period="15d", interval="1d",
+            daily  = yf.download(yf_sym, period="90d", interval="1d",
                                  auto_adjust=True, progress=False)
             hourly = yf.download(yf_sym, period="3d",  interval="1h",
                                  auto_adjust=True, progress=False)
@@ -1742,8 +1743,9 @@ def fetch_crypto_data() -> dict:
 
 def crypto_score(sig: dict) -> int:
     """
-    Score a crypto asset 0-100. More weight on momentum + volume since
-    crypto is purely sentiment/flow driven.
+    Score a crypto asset 0-100. Crypto is 24/7 and sentiment-driven,
+    so we weight momentum and volume heavily, but also apply institutional
+    pattern signals now that we have full 90d data.
     """
     s      = 8
     chg    = sig.get("change_pct",  0) or 0
@@ -1760,6 +1762,16 @@ def crypto_score(sig: dict) -> int:
     w_r    = sig.get("williams_r", -50) or -50
     m_slp  = sig.get("macd_slope",   0) or 0
     ttm    = sig.get("ttm_squeeze_fired", False)
+    ema200 = sig.get("price_vs_ema200", 0) or 0
+    rs63   = sig.get("rs63", 0) or 0
+    adx    = sig.get("adx", 0) or 0
+    mtf    = sig.get("mtf_aligned", False)
+    fib_s  = sig.get("fib_support", False)
+    macd_bd= sig.get("macd_bull_div", False)
+    cup_h  = sig.get("cup_handle", False)
+    mom_a  = sig.get("mom_accel", False)
+    demand = sig.get("at_demand_zone", False)
+    trend_r= sig.get("trend_reversal", False)
 
     if   chg > 5:   s += 28
     elif chg > 2:   s += 18
@@ -1781,12 +1793,11 @@ def crypto_score(sig: dict) -> int:
     if   40 < bb < 80: s += 8
     if   vwap > 0.3:  s += 8
     elif vwap < -0.3: s -= 6
-    # New momentum indicators
     if   roc5 >  8:  s += 14
     elif roc5 >  3:  s +=  8
     elif roc5 < -8:  s -= 12
     elif roc5 < -3:  s -=  6
-    if   stoch_k < 20: s += 12  # oversold crypto = high-conviction bounce
+    if   stoch_k < 20: s += 12  # oversold = high-conviction bounce
     elif stoch_k > 85: s -=  8
     if   ema50 >  5:  s +=  8   # above 50-day EMA = uptrend
     elif ema50 < -5:  s -= 10
@@ -1795,6 +1806,19 @@ def crypto_score(sig: dict) -> int:
     if   m_slp > 0:  s +=  8    # MACD slope rising
     elif m_slp < 0:  s -=  6
     if ttm:          s += 16    # TTM squeeze fired = breakout
+    # Deep indicator signals (from 90d data)
+    if   ema200 > 10: s += 8    # above 200d EMA = macro bull trend
+    elif ema200 < -10: s -= 10
+    if   rs63 > 15:   s += 8    # top quarterly performer
+    elif rs63 > 5:    s += 4
+    if   adx >= 30:   s += 6    # strong trend = ride it
+    if mtf:           s += 10   # multi-timeframe aligned
+    if fib_s:         s += 8    # at Fibonacci support
+    if macd_bd:       s += 10   # MACD bullish divergence
+    if cup_h:         s += 14   # Cup & Handle on crypto = very powerful
+    if mom_a:         s += 9    # momentum accelerating
+    if demand:        s += 7    # at demand zone
+    if trend_r:       s += 12   # trend reversal detected
 
     return max(0, min(100, int(s)))
 
