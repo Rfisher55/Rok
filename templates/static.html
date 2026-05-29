@@ -1518,6 +1518,9 @@ body.beginner-mode #beginner-banner { display:block }
     <!-- Live gainers & losers leaderboard (JS-populated) -->
     <div id="mkt-gainers-losers" style="margin-bottom:.85rem"></div>
 
+    <!-- Live trending tickers (JS-populated) -->
+    <div id="mkt-trending" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Live market news feed (JS-populated) -->
     <div id="mkt-news-feed" style="display:none;margin-bottom:.85rem"></div>
 
@@ -2083,6 +2086,7 @@ body.beginner-mode #beginner-banner { display:block }
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <div id="port-goal-tracker" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
     <div id="port-active-alerts" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
@@ -2949,6 +2953,9 @@ body.beginner-mode #beginner-banner { display:block }
         <div id="modal-options-inner"></div>
       </div>
       ${buildModalSimilarStocks(s)}
+      <div id="modal-analyst-section" style="padding:0 1.1rem .5rem;display:none">
+        <div id="modal-analyst-inner"></div>
+      </div>
       <div id="modal-news-section" style="padding:0 1.1rem .65rem">
         <div id="modal-news-inner" style="font-size:10px;color:var(--wh3)">Loading news…</div>
       </div>
@@ -2988,6 +2995,8 @@ body.beginner-mode #beginner-banner { display:block }
     if (sig === 'buy') loadModalOptions(ticker);
     // Fetch live intraday chart
     loadModalIntradayChart(ticker);
+    // Fetch live analyst data
+    loadModalAnalystData(ticker);
   }
 
   async function loadModalIntradayChart(ticker) {
@@ -3328,6 +3337,63 @@ body.beginner-mode #beginner-banner { display:block }
     }
   }
 
+  async function loadModalAnalystData(ticker) {
+    const sec = document.getElementById('modal-analyst-section');
+    const el = document.getElementById('modal-analyst-inner');
+    if (!el || !sec) return;
+    try {
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&fields=averageAnalystRating,numberOfAnalystOpinions,targetMeanPrice,targetHighPrice,targetLowPrice,regularMarketPrice`,
+        { signal: AbortSignal.timeout(7000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const q = (j?.quoteResponse?.result || [])[0];
+      if (!q) return;
+      const rating = q.averageAnalystRating;
+      const count = q.numberOfAnalystOpinions;
+      const targetMean = q.targetMeanPrice;
+      const targetHigh = q.targetHighPrice;
+      const targetLow = q.targetLowPrice;
+      const curPrice = q.regularMarketPrice;
+      if (!rating && !targetMean) return;
+
+      const ratingColor = rating?.toLowerCase().includes('buy') || rating?.toLowerCase().includes('strong')
+        ? 'var(--g)' : rating?.toLowerCase().includes('hold') ? 'var(--au)' : 'var(--r)';
+      const upside = curPrice && targetMean ? ((targetMean - curPrice) / curPrice * 100).toFixed(0) : null;
+
+      let html = `<div style="font-size:8px;font-weight:700;letter-spacing:.14em;color:var(--wh3);text-transform:uppercase;margin-bottom:.4rem">👥 WALL ST ANALYST CONSENSUS <span style="color:var(--g);font-size:7px">● LIVE</span></div>`;
+
+      if (rating && count) {
+        html += `<div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.4rem">
+          <div style="background:${ratingColor}22;border:1px solid ${ratingColor}44;border-radius:8px;padding:.35rem .7rem;text-align:center">
+            <div style="font-size:9px;font-weight:800;color:${ratingColor};text-transform:uppercase">${rating}</div>
+            <div style="font-size:8px;color:var(--wh4)">${count} analyst${count!==1?'s':''}</div>
+          </div>
+          ${targetMean ? `<div>
+            <div style="font-size:10px;color:var(--wh2)">Price target: <strong style="color:${upside > 0 ? 'var(--g)' : 'var(--r)'}">$${targetMean.toFixed(2)}</strong>${upside ? ` (${upside > 0 ? '+' : ''}${upside}% upside)` : ''}</div>
+            ${targetLow && targetHigh ? `<div style="font-size:9px;color:var(--wh4)">Range: $${targetLow.toFixed(0)} – $${targetHigh.toFixed(0)}</div>` : ''}
+          </div>` : ''}
+        </div>`;
+      }
+
+      const ratingMap = {
+        'strong buy': '🟢🟢 Very bullish consensus — analysts strongly recommend buying',
+        'buy': '🟢 Bullish consensus — most analysts recommend buying',
+        'hold': '🟡 Neutral consensus — hold if you own it, no rush to buy',
+        'underperform': '🔴 Bearish consensus — analysts expect it to underperform the market',
+        'sell': '🔴🔴 Very bearish consensus — analysts recommend selling',
+      };
+      const ratingKey = rating?.toLowerCase().replace('strong ', 'strong ');
+      const explain = Object.entries(ratingMap).find(([k]) => ratingKey?.includes(k))?.[1];
+      if (explain) html += `<div style="font-size:10px;color:var(--wh3);padding:.3rem .5rem;background:rgba(255,255,255,.03);border-radius:6px">${explain}</div>`;
+
+      sec.style.display = 'block';
+      sec.style.borderTop = 'var(--bdr2)';
+      el.innerHTML = html;
+    } catch { /* silent */ }
+  }
+
   function timeAgo(ms) {
     const diff = Date.now() - ms;
     const h = Math.floor(diff / 36e5);
@@ -3395,7 +3461,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -3889,6 +3955,9 @@ body.beginner-mode #beginner-banner { display:block }
       </div>`;
     })()}`;
 
+    // Goal tracker
+    if (totalNow > 0) renderPortfolioGoalTracker(totalNow);
+
     // Pre-fill DCA calculator with current portfolio value
     try {
       const dcaCurrent = document.getElementById('dca-current');
@@ -4113,6 +4182,96 @@ body.beginner-mode #beginner-banner { display:block }
     </details>`;
   }
   window.renderPortfolioHealthCheck = renderPortfolioHealthCheck;
+
+  // ── PORTFOLIO GOAL TRACKER ──────────────────────────────
+  const GOAL_KEY = 'rok_port_goal_v1';
+  function renderPortfolioGoalTracker(totalNow) {
+    const el = document.getElementById('port-goal-tracker');
+    if (!el || !totalNow || totalNow <= 0) { if (el) el.style.display = 'none'; return; }
+    const saved = JSON.parse(localStorage.getItem(GOAL_KEY) || 'null');
+    const goal = saved ? saved.goal : null;
+    const goalDate = saved ? saved.date : null;
+
+    const inputSection = `<div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+      <span style="font-size:9px;color:var(--wh4)">$</span>
+      <input id="goal-amount-inp" type="number" min="100" step="100" placeholder="e.g. 10000"
+        value="${goal || ''}"
+        style="width:90px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:7px;padding:.3rem .5rem;font-size:12px;color:var(--wh);outline:none;font-family:var(--font)"
+        oninput="savePortGoal()"/>
+      <span style="font-size:9px;color:var(--wh4)">by</span>
+      <input id="goal-date-inp" type="date"
+        value="${goalDate || ''}"
+        style="width:120px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:7px;padding:.3rem .5rem;font-size:11px;color:var(--wh);outline:none;font-family:var(--font)"
+        oninput="savePortGoal()"/>
+    </div>`;
+
+    if (!goal || goal <= totalNow) {
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(153,85,255,.15);border-radius:10px;padding:.6rem .85rem">
+        <div style="font-size:8.5px;font-weight:800;letter-spacing:.12em;color:rgba(153,85,255,.7);text-transform:uppercase;margin-bottom:.4rem">🎯 SET YOUR INVESTING GOAL</div>
+        <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.45rem">I want my portfolio to reach:</div>
+        ${inputSection}
+        ${goal && goal <= totalNow ? `<div style="margin-top:.4rem;font-size:11px;color:var(--g);font-weight:700">🎉 You've reached your goal! Time to set a new one.</div>` : ''}
+      </div>`;
+      return;
+    }
+
+    const progress = Math.min(100, (totalNow / goal * 100));
+    const remaining = goal - totalNow;
+    const progressColor = progress >= 75 ? 'var(--g)' : progress >= 40 ? 'var(--au)' : 'var(--b)';
+
+    // Estimate time to goal using portfolio history
+    let etaHtml = '';
+    try {
+      const snaps = JSON.parse(localStorage.getItem('rok_port_history_v1') || '[]');
+      if (snaps.length >= 2) {
+        const oldest = snaps[0];
+        const daysDiff = (Date.now() - oldest[0]) / 86400000;
+        if (daysDiff > 0.5) {
+          const dailyReturn = (totalNow - oldest[1]) / oldest[1] / daysDiff;
+          if (dailyReturn > 0) {
+            const daysToGoal = Math.log(goal / totalNow) / Math.log(1 + dailyReturn);
+            const etaDate = new Date(Date.now() + daysToGoal * 86400000);
+            if (daysToGoal < 3650) {
+              const etaStr = etaDate.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+              etaHtml = `<div style="font-size:9px;color:var(--wh4);margin-top:.3rem">📈 At current rate: ~${etaStr}</div>`;
+            }
+          }
+        }
+      }
+    } catch(e) {}
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(153,85,255,.15);border-radius:10px;padding:.6rem .85rem">
+      <div style="font-size:8.5px;font-weight:800;letter-spacing:.12em;color:rgba(153,85,255,.7);text-transform:uppercase;margin-bottom:.4rem">🎯 MY INVESTING GOAL</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+        <div>
+          <div style="font-size:11px;color:var(--wh3)">Current: <strong style="color:var(--wh)">$${totalNow.toLocaleString('en-US',{maximumFractionDigits:0})}</strong></div>
+          <div style="font-size:11px;color:var(--wh3)">Goal: <strong style="color:rgba(153,85,255,.9)">$${Number(goal).toLocaleString('en-US',{maximumFractionDigits:0})}</strong></div>
+          ${etaHtml}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:1.4rem;font-weight:900;color:${progressColor}">${progress.toFixed(0)}%</div>
+          <div style="font-size:9px;color:var(--wh4)">$${remaining.toLocaleString('en-US',{maximumFractionDigits:0})} to go</div>
+        </div>
+      </div>
+      <div style="height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-bottom:.35rem">
+        <div style="height:100%;width:${progress}%;background:${progressColor};border-radius:4px;transition:width .8s ease"></div>
+      </div>
+      ${inputSection}
+    </div>`;
+  }
+  window.renderPortfolioGoalTracker = renderPortfolioGoalTracker;
+
+  window.savePortGoal = function() {
+    const amt = parseFloat(document.getElementById('goal-amount-inp')?.value);
+    const date = document.getElementById('goal-date-inp')?.value;
+    if (amt > 0) {
+      localStorage.setItem(GOAL_KEY, JSON.stringify({ goal: amt, date: date || null }));
+      // Re-render portfolio summary to refresh the goal tracker
+      renderPortfolioSummary();
+    }
+  };
 
   // ── LIVE EARNINGS CALENDAR (for portfolio stocks) ────────
   let _earningsCache = {};  // ticker → { date, daysUntil, eps_est }
@@ -5693,6 +5852,71 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderGainersLosers = renderGainersLosers;
+
+  // ── LIVE TRENDING TICKERS ─────────────────────────────
+  async function fetchTrendingTickers() {
+    const el = document.getElementById('mkt-trending');
+    if (!el) return;
+    try {
+      const r = await fetch(
+        'https://query1.finance.yahoo.com/v1/finance/trending/US?count=10&useQuotes=true',
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const quotes = j?.finance?.result?.[0]?.quotes || [];
+      if (!quotes.length) return;
+
+      // Fetch live prices for these tickers
+      const syms = quotes.map(q => q.symbol).join(',');
+      const pr = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChangePercent,shortName`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      const pj = await pr.json();
+      const priceMap = {};
+      (pj?.quoteResponse?.result || []).forEach(q => {
+        priceMap[q.symbol] = { price: q.regularMarketPrice, chg: q.regularMarketChangePercent, name: q.shortName };
+      });
+
+      const items = quotes.slice(0, 8).map(q => {
+        const sym = q.symbol;
+        const pd = priceMap[sym] || {};
+        const price = pd.price;
+        const chg = pd.chg;
+        const name = (pd.name || q.shortName || sym).substring(0, 18);
+        const chgColor = chg == null ? 'var(--wh3)' : chg >= 0 ? 'var(--g)' : 'var(--r)';
+        const universe = ROK.stock_universe || [];
+        const isInRok = universe.some(s => s.ticker === sym);
+        const rokSignal = isInRok ? (universe.find(s => s.ticker === sym)?.rok_signal || 'neutral') : null;
+        const rokBadge = rokSignal && rokSignal !== 'neutral'
+          ? `<span style="font-size:6.5px;padding:1px 3px;border-radius:3px;background:${rokSignal==='buy'?'rgba(0,255,136,.12)':'rgba(255,34,85,.1)'};color:${rokSignal==='buy'?'var(--g)':'var(--r)'};border:1px solid ${rokSignal==='buy'?'rgba(0,255,136,.25)':'rgba(255,34,85,.25)'};font-weight:700">${rokSignal.toUpperCase()}</span>`
+          : '';
+        return `<div onclick="openModal('${sym}')" style="display:flex;align-items:center;justify-content:space-between;padding:.35rem .5rem;border-radius:7px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background=''">
+          <div style="display:flex;align-items:center;gap:.4rem;min-width:0">
+            <span style="font-size:10px;font-weight:800;color:var(--wh);flex-shrink:0">${sym}</span>
+            ${rokBadge}
+            <span style="font-size:8.5px;color:var(--wh4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${price != null ? `<span style="font-size:10px;font-weight:700;color:var(--wh)">$${price.toFixed(2)}</span>` : ''}
+            ${chg != null ? `<span style="font-size:9px;font-weight:700;color:${chgColor};margin-left:4px">${chg>=0?'+':''}${chg.toFixed(1)}%</span>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center">
+          <span>🔥 TRENDING ON YAHOO FINANCE</span>
+          <span style="color:var(--g);font-size:7px">● LIVE</span>
+        </div>
+        ${items}
+        <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.05)">Stocks most searched/viewed on Yahoo Finance right now. Stocks with a ROK badge have an active signal.</div>
+      </div>`;
+    } catch { /* silent */ }
+  }
+  window.fetchTrendingTickers = fetchTrendingTickers;
 
   // ── LIVE MARKET BREADTH (computed from universe) ─────
   function renderLiveMarketBreadth() {
