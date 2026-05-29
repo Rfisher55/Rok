@@ -1257,6 +1257,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="next-refresh-row" style="display:none;margin-bottom:.4rem;text-align:right;font-size:9px;color:var(--wh4)"></div>
     <!-- Today's Best Trade Setup (JS-populated) -->
     <div id="todays-best-setup" style="display:none;margin-bottom:.85rem"></div>
+    <!-- Hot ROK Picks today (JS-populated) -->
+    <div id="hot-rok-picks" style="display:none;margin-bottom:.85rem"></div>
 
     
     
@@ -2037,6 +2039,8 @@ body.beginner-mode #beginner-banner { display:block }
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <!-- Portfolio Daily Drawdown Warning (JS-populated) -->
+    <div id="port-daily-drawdown" style="display:none;margin-bottom:.65rem"></div>
     <!-- Portfolio Win/Loss Breakdown (JS-populated) -->
     <div id="port-winloss" style="display:none;margin-bottom:.65rem"></div>
     <!-- Portfolio Risk Score (JS-populated) -->
@@ -2776,8 +2780,10 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); }
+    if (activeTab === 'signals') { renderHotROKPicks(); }
     checkSignalPriceDrops();
+    checkPriceTargetHits();
     updateGlobalRiskAlert();
     updateFearGreedFromVIX();
     renderLivePortStrip();
@@ -3737,9 +3743,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); }
   }
   window.showTab = showTab;
@@ -5079,6 +5085,7 @@ body.beginner-mode #beginner-banner { display:block }
 
   function renderPortfolio() {
     renderPortfolioSummary();
+    renderPortfolioDailyDrawdown();
     renderPortfolioWinLoss();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
@@ -8690,6 +8697,145 @@ body.beginner-mode #beginner-banner { display:block }
     });
   }
   window.checkSignalPriceDrops = checkSignalPriceDrops;
+
+  // ── PRICE TARGET HIT ALERT ───────────────────────────────
+  function checkPriceTargetHits() {
+    const PORT_TARGET_KEY = 'rok_target_hit_v1';
+    const sent = JSON.parse(sessionStorage.getItem(PORT_TARGET_KEY) || '{}');
+    const port = getPortfolio();
+    const { state } = getMarketState();
+    if (state === 'closed') return;
+
+    Object.keys(port).forEach(ticker => {
+      const det = sigDetails[ticker] || {};
+      const targetRaw = det.price_target;
+      if (!targetRaw) return;
+      const target = Number(targetRaw);
+      if (!target || isNaN(target)) return;
+      const lp = liveprices[ticker];
+      if (!lp || lp.price == null) return;
+      if (lp.price >= target && !sent[ticker]) {
+        sent[ticker] = 1;
+        sessionStorage.setItem(PORT_TARGET_KEY, JSON.stringify(sent));
+        const entry = port[ticker];
+        if (entry && entry.price) {
+          const gain = ((target - entry.price) / entry.price * 100).toFixed(1);
+          showAppAlert(`🎯 ${ticker} HIT ROK's price target! $${lp.price.toFixed(2)} ≥ target $${target.toFixed(2)} · You're up ~${gain}% — consider taking profits!`, 'good', 10000);
+          setTimeout(launchConfetti, 300);
+        }
+      }
+    });
+  }
+  window.checkPriceTargetHits = checkPriceTargetHits;
+
+  // ── HOT ROK PICKS TODAY ──────────────────────────────────
+  function renderHotROKPicks() {
+    const el = document.getElementById('hot-rok-picks');
+    if (!el) return;
+    const buys = ROK.buy_signals || [];
+    if (!buys.length) { el.style.display = 'none'; return; }
+
+    const { state } = getMarketState();
+    const scored = buys.map(s => {
+      const lp = liveprices[s.ticker];
+      if (!lp || lp.price == null) return null;
+      const chg = lp.change_pct || 0;
+      const vol = Math.max(1, lp.vol_ratio || 1);
+      const strength = (s.signal_strength || (sigDetails[s.ticker] && sigDetails[s.ticker].signal_strength) || 5);
+      const rsiBonus = s.rsi != null && s.rsi < 55 ? 2 : 0;
+      const score = (chg > 0 ? chg * Math.min(vol, 4) : chg) + strength * 0.6 + rsiBonus;
+      const det = sigDetails[s.ticker] || {};
+      return { ...s, score, chg, vol: lp.vol_ratio, price: lp.price, det };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 3);
+
+    if (!scored.length) { el.style.display = 'none'; return; }
+
+    const rows = scored.map((s, i) => {
+      const rankColor = i === 0 ? 'var(--au)' : i === 1 ? 'var(--wh2)' : 'var(--wh4)';
+      const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+      const chgColor = s.chg >= 0 ? 'var(--g)' : 'var(--r)';
+      const volBadge = s.vol && s.vol >= 2 ? `<span style="font-size:7.5px;padding:1px 5px;border-radius:4px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.2);color:var(--au);font-weight:700;margin-left:.3rem">🔥 ${s.vol.toFixed(1)}× vol</span>` : '';
+      const stopBadge = s.det.stop_loss ? `<span style="font-size:7.5px;padding:1px 5px;border-radius:4px;background:rgba(255,34,85,.07);border:1px solid rgba(255,34,85,.15);color:rgba(255,100,100,.8);font-weight:700">stop $${Number(s.det.stop_loss).toFixed(2)}</span>` : '';
+      const targetBadge = s.det.price_target ? `<span style="font-size:7.5px;padding:1px 5px;border-radius:4px;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.18);color:var(--g);font-weight:700">tgt $${Number(s.det.price_target).toFixed(2)}</span>` : '';
+      return `<div onclick="openModal('${s.ticker}')" style="display:flex;align-items:center;gap:.65rem;padding:.5rem .7rem;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:9px;cursor:pointer">
+        <div style="font-size:1.1rem;line-height:1;flex-shrink:0">${rankLabel}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+            <span style="font-family:var(--disp);font-size:.95rem;font-weight:900;color:var(--wh)">${s.ticker}</span>
+            ${volBadge}
+            ${stopBadge}
+            ${targetBadge}
+          </div>
+          <div style="font-size:9px;color:var(--wh4);margin-top:1px">${(s.company_name||'').substring(0,24)} · Strength ${s.signal_strength||5}/10</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:1rem;font-weight:800;color:var(--wh)">$${s.price.toFixed(2)}</div>
+          <div style="font-size:9.5px;font-weight:700;color:${chgColor}">${s.chg>=0?'+':''}${s.chg.toFixed(2)}%</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const stateNote = state !== 'open' ? `<div style="font-size:8.5px;color:var(--wh4);margin-top:.35rem">${state === 'pre' ? '☀️ Pre-market prices' : state === 'post' ? '🌆 After-hours prices' : '🌙 Market closed — last prices'}</div>` : '';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,255,136,.12);border-radius:12px;padding:.75rem 1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+        <span style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--g);text-transform:uppercase">🔥 HOT ROK PICKS TODAY</span>
+        <span style="font-size:7px;color:var(--g)">● LIVE · ranked by momentum</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.35rem">${rows}</div>
+      ${stateNote}
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.45rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.35rem">Tap any pick for full analysis, entry point, and trade plan</div>
+    </div>`;
+  }
+  window.renderHotROKPicks = renderHotROKPicks;
+
+  // ── PORTFOLIO DAILY DRAWDOWN WARNING ────────────────────
+  function renderPortfolioDailyDrawdown() {
+    const el = document.getElementById('port-daily-drawdown');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+
+    let todayChange = 0, totalValue = 0, hasData = false;
+    tickers.forEach(ticker => {
+      const entry = port[ticker];
+      const lp = liveprices[ticker];
+      if (!lp || !entry.price || lp.change_pct == null) return;
+      const sh = entry.shares || (1000 / entry.price);
+      const curVal = sh * lp.price;
+      const prevVal = curVal / (1 + lp.change_pct / 100);
+      todayChange += curVal - prevVal;
+      totalValue += curVal;
+      hasData = true;
+    });
+
+    if (!hasData || totalValue <= 0) { el.style.display = 'none'; return; }
+    const drawdownPct = (todayChange / (totalValue - todayChange)) * 100;
+
+    if (drawdownPct >= -2) { el.style.display = 'none'; return; }
+
+    const severity = drawdownPct <= -5 ? 'severe' : drawdownPct <= -3 ? 'moderate' : 'mild';
+    const borderColor = severity === 'severe' ? 'rgba(255,34,85,.3)' : 'rgba(255,136,0,.25)';
+    const bgColor = severity === 'severe' ? 'rgba(255,34,85,.06)' : 'rgba(255,136,0,.05)';
+    const textColor = severity === 'severe' ? 'var(--r)' : 'var(--au)';
+    const icon = severity === 'severe' ? '🚨' : '⚠️';
+    const advice = severity === 'severe'
+      ? `Your portfolio is down ${Math.abs(drawdownPct).toFixed(1)}% today — a significant single-day drop. Check if any stop-losses have been hit. Avoid panic selling unless signals confirm.`
+      : `Portfolio down ${Math.abs(drawdownPct).toFixed(1)}% today. This is normal market volatility. Review stop-losses and hold if fundamentals unchanged.`;
+    const dollarStr = todayChange < 0 ? `-$${Math.abs(todayChange).toFixed(0)}` : `+$${todayChange.toFixed(0)}`;
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:${bgColor};border:1px solid ${borderColor};border-radius:10px;padding:.65rem .85rem;display:flex;align-items:flex-start;gap:.6rem">
+      <div style="font-size:1.2rem;flex-shrink:0;line-height:1.2">${icon}</div>
+      <div style="flex:1">
+        <div style="font-size:9.5px;font-weight:800;color:${textColor};margin-bottom:.25rem">TODAY'S P&L: ${dollarStr} (${drawdownPct.toFixed(1)}%)</div>
+        <div style="font-size:10px;color:var(--wh2);line-height:1.45">${advice}</div>
+      </div>
+    </div>`;
+  }
+  window.renderPortfolioDailyDrawdown = renderPortfolioDailyDrawdown;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
