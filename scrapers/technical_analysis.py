@@ -29,12 +29,27 @@ def _bollinger(close, period: int = 20, n_std: float = 2.0):
     return sma + n_std * sd, sma, sma - n_std * sd
 
 
+def _get_hist(ticker: str, period: str):
+    """Download ticker history, flatten MultiIndex if needed (yfinance >= 0.2.x)."""
+    import yfinance as yf
+    # Prefer Ticker.history() — simpler column structure
+    try:
+        hist = yf.Ticker(ticker).history(period=period)
+        if not hist.empty:
+            return hist
+    except Exception:
+        pass
+    # Fallback to download
+    hist = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+    if isinstance(hist.columns, __import__("pandas").MultiIndex):
+        hist.columns = [col[0] for col in hist.columns]
+    return hist
+
+
 def analyze_ticker(ticker: str) -> dict:
     """Full TA snapshot for a single ticker. Returns None on failure."""
     try:
-        import yfinance as yf
-
-        hist = yf.download(ticker, period="60d", auto_adjust=True, progress=False)
+        hist = _get_hist(ticker, "60d")
         if hist.empty or len(hist) < 26:
             return None
 
@@ -58,7 +73,7 @@ def analyze_ticker(ticker: str) -> dict:
         vol_ratio = round(float(volume.iloc[-1]) / vol_10d, 2) if vol_10d and vol_10d > 0 else None
 
         # 52-week levels
-        hist_1y = yf.download(ticker, period="1y", auto_adjust=True, progress=False)
+        hist_1y = _get_hist(ticker, "1y")
         w52_high = round(float(hist_1y["High"].max()), 2) if not hist_1y.empty else None
         w52_low = round(float(hist_1y["Low"].min()), 2) if not hist_1y.empty else None
         pct_from_high = round((price - w52_high) / w52_high * 100, 1) if w52_high else None

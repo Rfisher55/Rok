@@ -46,35 +46,55 @@ def get_fear_greed_index() -> dict:
 
 
 def get_put_call_ratio() -> dict:
-    """CBOE total equity put/call ratio from their public stats endpoint."""
+    """CBOE total equity put/call ratio — tries multiple endpoints."""
+    urls = [
+        "https://cdn.cboe.com/api/global/us_options_market_statistics/daily-market-statistics.json",
+        "https://www.cboe.com/us/options/market_statistics/daily_market_statistics.json",
+        "https://data.cboe.com/api/global/us_options_market_statistics/daily-market-statistics.json",
+    ]
+    for url in urls:
+        try:
+            r = requests.get(url, headers=_JSON, timeout=10)
+            if not r.ok:
+                continue
+            data = r.json()
+            # Try nested and flat formats
+            pcr = (data.get("data") or data).get("total_put_call_ratio") or data.get("total_put_call_ratio")
+            equity_pcr = (data.get("data") or data).get("equity_put_call_ratio") or data.get("equity_put_call_ratio")
+            if pcr is None:
+                # Search all keys
+                flat = data.get("data", data)
+                for key in flat:
+                    if "put" in str(key).lower() and "call" in str(key).lower() and "total" in str(key).lower():
+                        pcr = flat[key]
+                        break
+                    if "equity" in str(key).lower() and "put" in str(key).lower():
+                        equity_pcr = equity_pcr or flat[key]
+            if pcr is not None:
+                pcr = float(pcr)
+                return {
+                    "total": round(pcr, 3),
+                    "equity": round(float(equity_pcr), 3) if equity_pcr else None,
+                    "signal": "FEAR" if pcr > 1.2 else "GREED" if pcr < 0.7 else "NEUTRAL",
+                }
+        except Exception as e:
+            logger.debug(f"Put/Call ratio {url}: {e}")
+
+    # Fallback: estimate from yfinance VIX — high VIX implies high put buying
     try:
-        r = requests.get(
-            "https://cdn.cboe.com/api/global/us_options_market_statistics/daily-market-statistics.json",
-            headers=_JSON,
-            timeout=10,
-        )
-        r.raise_for_status()
-        data = r.json()
-        pcr = data.get("data", {}).get("total_put_call_ratio")
-        equity_pcr = data.get("data", {}).get("equity_put_call_ratio")
-        if pcr is None:
-            # Try alternate key
-            for key in ["putCallRatio", "put_call_ratio", "pcr"]:
-                if key in data:
-                    pcr = data[key]
-                    break
-        return {
-            "total": round(float(pcr), 3) if pcr else None,
-            "equity": round(float(equity_pcr), 3) if equity_pcr else None,
-            "signal": (
-                "FEAR" if pcr and float(pcr) > 1.2
-                else "GREED" if pcr and float(pcr) < 0.7
-                else "NEUTRAL"
-            ),
-        }
-    except Exception as e:
-        logger.debug(f"Put/Call ratio: {e}")
-        return {"total": None, "equity": None, "signal": "UNKNOWN"}
+        vix = yf.Ticker("^VIX").history(period="1d")
+        if not vix.empty:
+            vix_level = float(vix["Close"].iloc[-1])
+            estimated_pcr = round(0.7 + vix_level / 100, 3)
+            return {
+                "total": estimated_pcr,
+                "equity": None,
+                "signal": "FEAR" if vix_level > 25 else "GREED" if vix_level < 15 else "NEUTRAL",
+                "note": "estimated from VIX",
+            }
+    except Exception:
+        pass
+    return {"total": None, "equity": None, "signal": "UNKNOWN"}
 
 
 def get_market_breadth() -> dict:
@@ -139,7 +159,14 @@ def get_market_breadth() -> dict:
 
 
 def get_earnings_calendar(days_ahead: int = 7) -> list:
-    """Upcoming earnings from Yahoo Finance earnings calendar."""
+    """Upcoming earnings — Yahoo Finance calendar scrape with yfinance fallback."""
+    earnings = _get_earnings_web(days_ahead)
+    if not earnings:
+        earnings = _get_earnings_yfinance(days_ahead)
+    return earnings
+
+
+def _get_earnings_web(days_ahead: int) -> list:
     earnings = []
     try:
         start = datetime.utcnow().strftime("%Y-%m-%d")
@@ -156,43 +183,175 @@ def get_earnings_calendar(days_ahead: int = 7) -> list:
             for row in table.find_all("tr")[1:35]:
                 cols = row.find_all("td")
                 if len(cols) >= 3:
+                    ticker = cols[0].get_text(strip=True).split()[0].upper()
+                    if not ticker or len(ticker) > 5:
+                        continue
                     earnings.append({
-                        "ticker": cols[0].get_text(strip=True),
+                        "ticker": ticker,
                         "company": cols[1].get_text(strip=True) if len(cols) > 1 else "",
                         "date": cols[2].get_text(strip=True) if len(cols) > 2 else "",
                         "timing": cols[3].get_text(strip=True) if len(cols) > 3 else "",
                         "eps_estimate": cols[4].get_text(strip=True) if len(cols) > 4 else "n/a",
                     })
     except Exception as e:
-        logger.warning(f"Earnings calendar: {e}")
+        logger.warning(f"Earnings calendar web: {e}")
+    return earnings
+
+
+def _get_earnings_yfinance(days_ahead: int) -> list:
+    """Fallback: check yfinance.Ticker.calendar for upcoming earnings on known tickers."""
+    earnings = []
+    candidates = [
+        "NVDA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "AVGO",
+        "AMD", "PLTR", "CRWD", "NFLX", "ORCL", "CRM", "ADBE",
+        "JPM", "BAC", "GS", "V", "MA", "PYPL",
+        "LLY", "MRNA", "PFE", "JNJ", "ABBV",
+    ]
+    cutoff = datetime.utcnow() + timedelta(days=days_ahead)
+    for ticker in candidates:
+        try:
+            cal = yf.Ticker(ticker).calendar
+            if cal is None or cal.empty:
+                continue
+            # calendar has 'Earnings Date' column as index or col
+            if "Earnings Date" in cal.index:
+                ed = cal.loc["Earnings Date"]
+                if isinstance(ed, (list, tuple)):
+                    ed = ed[0]
+            elif "Earnings Date" in cal.columns:
+                ed = cal["Earnings Date"].iloc[0]
+            else:
+                continue
+            if hasattr(ed, "to_pydatetime"):
+                ed = ed.to_pydatetime()
+            elif hasattr(ed, "item"):
+                import pandas as pd
+                ed = pd.Timestamp(ed).to_pydatetime()
+            if ed and ed.replace(tzinfo=None) <= cutoff:
+                info = yf.Ticker(ticker).info
+                earnings.append({
+                    "ticker": ticker,
+                    "company": info.get("longName") or info.get("shortName") or ticker,
+                    "date": ed.strftime("%Y-%m-%d"),
+                    "timing": "Before/After Market",
+                    "eps_estimate": str(info.get("epsCurrentYear") or "n/a"),
+                })
+        except Exception:
+            pass
+        if len(earnings) >= 12:
+            break
     return earnings
 
 
 def get_unusual_options_activity() -> list:
-    """Unusual options activity from Finviz screener."""
+    """
+    Unusual options activity — multi-source: Barchart → Market Chameleon → Yahoo high-volume options.
+    Returns list of {ticker, description} sorted by options volume.
+    """
+    activity = _unusual_opts_barchart()
+    if not activity:
+        activity = _unusual_opts_market_chameleon()
+    if not activity:
+        activity = _unusual_opts_yahoo_screener()
+    return activity[:20]
+
+
+def _unusual_opts_barchart() -> list:
+    """Barchart unusual options — public page, no key required."""
     activity = []
     try:
         r = requests.get(
-            "https://finviz.com/screener.ashx?v=111&f=sh_opt_unusual&o=-volume",
-            headers=_BROWSER,
-            timeout=12,
+            "https://www.barchart.com/options/unusual-activity/stocks",
+            headers={**_BROWSER, "Referer": "https://www.barchart.com/"},
+            timeout=14,
         )
-        r.raise_for_status()
+        if not r.ok:
+            return []
         soup = BeautifulSoup(r.text, "lxml")
-
-        # Try multiple selectors since Finviz changes layout
-        rows = soup.select("table#screener-table tr") or soup.select("tr.styled-row") or []
-        for row in rows[:20]:
+        for row in soup.select("table tbody tr, .bc-table tbody tr")[:25]:
             cols = row.find_all("td")
-            if len(cols) >= 2:
-                ticker = cols[0].get_text(strip=True)
-                if ticker and ticker.isupper() and 1 <= len(ticker) <= 5:
-                    activity.append({
-                        "ticker": ticker,
-                        "description": " | ".join(c.get_text(strip=True) for c in cols[1:6] if c.get_text(strip=True)),
-                    })
+            if len(cols) < 3:
+                continue
+            ticker = cols[0].get_text(strip=True).split()[0].upper()
+            if not ticker or not ticker.isalpha() or len(ticker) > 5:
+                continue
+            desc_parts = [c.get_text(strip=True) for c in cols[1:7] if c.get_text(strip=True)]
+            activity.append({"ticker": ticker, "description": " | ".join(desc_parts)})
+        return activity
     except Exception as e:
-        logger.warning(f"Unusual options: {e}")
+        logger.debug(f"Barchart unusual opts: {e}")
+    return []
+
+
+def _unusual_opts_market_chameleon() -> list:
+    """Market Chameleon unusual options flow page."""
+    activity = []
+    try:
+        r = requests.get(
+            "https://marketchameleon.com/volReports/UnusualOptionVolume",
+            headers=_BROWSER,
+            timeout=14,
+        )
+        if not r.ok:
+            return []
+        soup = BeautifulSoup(r.text, "lxml")
+        for row in soup.select("table tbody tr")[:25]:
+            cols = row.find_all("td")
+            if len(cols) < 2:
+                continue
+            ticker = cols[0].get_text(strip=True).upper()
+            if not ticker or not ticker.isalpha() or len(ticker) > 5:
+                continue
+            desc_parts = [c.get_text(strip=True) for c in cols[1:6] if c.get_text(strip=True)]
+            activity.append({"ticker": ticker, "description": " | ".join(desc_parts)})
+        return activity
+    except Exception as e:
+        logger.debug(f"Market Chameleon unusual opts: {e}")
+    return []
+
+
+def _unusual_opts_yahoo_screener() -> list:
+    """
+    Yahoo Finance: derive unusual options candidates from stocks with high
+    options implied move (high IV). Uses yfinance to get option chain volume
+    for known high-volume underlyings.
+    """
+    activity = []
+    # Broad universe of commonly active options tickers
+    candidates = [
+        "SPY", "QQQ", "AAPL", "TSLA", "NVDA", "AMD", "META", "AMZN", "MSFT",
+        "GOOGL", "NFLX", "BABA", "PLTR", "SOFI", "RIVN", "GME", "AMC", "MARA",
+        "COIN", "HOOD", "F", "BAC", "GS", "JPM", "XOM", "CVNA", "SMCI",
+    ]
+    try:
+        for sym in candidates[:20]:
+            try:
+                tk = yf.Ticker(sym)
+                dates = tk.options
+                if not dates:
+                    continue
+                chain = tk.option_chain(dates[0])
+                calls = chain.calls
+                puts = chain.puts
+                if calls.empty and puts.empty:
+                    continue
+                # High volume/OI ratio = unusual
+                c_vol = int(calls["volume"].sum()) if "volume" in calls.columns else 0
+                p_vol = int(puts["volume"].sum()) if "volume" in puts.columns else 0
+                total_vol = c_vol + p_vol
+                if total_vol < 500:
+                    continue
+                pcr = round(p_vol / c_vol, 2) if c_vol else 0
+                bias = "BULLISH" if pcr < 0.7 else "BEARISH" if pcr > 1.3 else "NEUTRAL"
+                activity.append({
+                    "ticker": sym,
+                    "description": f"Vol: {total_vol:,} | P/C: {pcr} | Bias: {bias}",
+                })
+            except Exception:
+                pass
+        activity.sort(key=lambda x: int(x["description"].split("Vol: ")[1].split(" |")[0].replace(",", "")), reverse=True)
+    except Exception as e:
+        logger.debug(f"Yahoo options screener: {e}")
     return activity
 
 

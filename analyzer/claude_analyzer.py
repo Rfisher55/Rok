@@ -94,6 +94,9 @@ Score: {fg_score}/100 | Rating: {fg_rating} | Direction: {fg_direction} | Prev: 
 ═══ SEC INSIDER TRADES & 8-K FILINGS (last 7 days) ═══
 {sec_filings}
 
+═══ RECENT INSIDER PURCHASES — CEOs/CFOS BUYING OWN STOCK (last 14 days) ═══
+{insider_buys}
+
 ═══ ANALYSIS INSTRUCTIONS ═══
 1. Cross-reference every source. Congressional buy + insider Form 4 buy + unusual options on same ticker = maximum conviction pick.
 2. Congressional buys are disclosed 45 days late by law — these senators have already started profiting. Identify the most-bought tickers.
@@ -169,8 +172,9 @@ Respond ONLY with this exact JSON structure (no other text):
     "Plain English risk 3"
   ],
   "sector_heat": {{
-    "hottest": "Sector name — why, with specific tickers or numbers",
-    "coldest": "Sector name — why, with specific tickers or numbers"
+    "Technology": {{"change_pct": 1.2, "signal": "bullish", "note": "AI demand driving broad sector strength"}},
+    "Healthcare": {{"change_pct": -0.3, "signal": "neutral", "note": "Mixed earnings results"}},
+    "Energy": {{"change_pct": 0.8, "signal": "bullish", "note": "Oil prices rising on supply constraints"}}
   }},
   "sector_rotation": "1-2 sentences on where institutional money is flowing this week",
   "short_squeeze_alerts": [
@@ -194,7 +198,9 @@ Respond ONLY with this exact JSON structure (no other text):
     {{
       "ticker": "XXXX",
       "buy_count": <int>,
-      "members_preview": "Names",
+      "sell_count": <int or 0>,
+      "members_preview": "Names of members who bought",
+      "latest_date": "Most recent trade date e.g. '2 weeks ago'",
       "why_notable": "Why this congressional buy pattern matters for the stock"
     }}
   ],
@@ -238,6 +244,7 @@ def build_prompt(
     market_indices=None, aggregate_sentiment=None,
     stocktwits_trending=None, technical_data=None,
     congressional_buys=None, market_breadth=None, put_call_ratio=None,
+    insider_buys=None, **kwargs,
 ) -> str:
     today = datetime.utcnow().strftime("%B %d, %Y")
     fg = fear_greed or {}
@@ -325,6 +332,14 @@ def build_prompt(
         for f in (sec_filings or [])[:20]
     ) or "  No SEC filings"
 
+    insider_str = "\n".join(
+        f"  ${b.get('ticker')} ({b.get('company', '')}): {b.get('insider_name', '')} [{b.get('title', '')}] "
+        f"bought {b.get('shares', 0):,} shares"
+        + (f" = ${b.get('value_usd', 0):,}" if b.get('value_usd') else "")
+        + f" on {b.get('date', '')}"
+        for b in (insider_buys or [])[:15]
+    ) or "  No recent insider purchases"
+
     return ANALYSIS_PROMPT.format(
         today=today,
         fg_score=fg.get("score", 50),
@@ -346,6 +361,7 @@ def build_prompt(
         short_squeeze=squeeze_str,
         congressional_trades=congress_str,
         sec_filings=sec_str,
+        insider_buys=insider_str,
     )
 
 
@@ -359,6 +375,7 @@ def run_analysis(
     aggregate_sentiment=None,
     stocktwits_trending=None, technical_data=None,
     congressional_buys=None, market_breadth=None, put_call_ratio=None,
+    insider_buys=None,
 ) -> dict:
     if not api_key:
         logger.warning("No API key — demo mode")
@@ -373,7 +390,7 @@ def run_analysis(
         market_indices=market_indices, aggregate_sentiment=aggregate_sentiment,
         stocktwits_trending=stocktwits_trending, technical_data=technical_data,
         congressional_buys=congressional_buys, market_breadth=market_breadth,
-        put_call_ratio=put_call_ratio,
+        put_call_ratio=put_call_ratio, insider_buys=insider_buys,
     )
 
     try:

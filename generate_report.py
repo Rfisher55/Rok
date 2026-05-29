@@ -19,6 +19,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _compute_sector_heat(stock_data, signal_lookup):
+    """Compute sector-level stats from stock data as sector_heat fallback."""
+    sector_map = {}
+    for s in stock_data:
+        raw = s.get("sector") or ""
+        sector = raw.split("/")[0].strip() if raw else None
+        if not sector:
+            continue
+        if sector not in sector_map:
+            sector_map[sector] = {"count": 0, "buys": 0, "sells": 0, "chg_sum": 0.0}
+        m = sector_map[sector]
+        m["count"] += 1
+        sig = signal_lookup.get(s.get("ticker", ""), {}).get("type", "neutral")
+        if sig == "buy":
+            m["buys"] += 1
+        elif sig == "sell":
+            m["sells"] += 1
+        m["chg_sum"] += s.get("change_pct") or 0.0
+    result = {}
+    for sector, v in sector_map.items():
+        if v["count"] > 0:
+            avg_chg = round(v["chg_sum"] / v["count"], 2)
+            result[sector] = {
+                "change_pct": avg_chg,
+                "buy_count": v["buys"],
+                "sell_count": v["sells"],
+                "stock_count": v["count"],
+                "signal": "bullish" if v["buys"] > v["sells"] else "bearish" if v["sells"] > v["buys"] else "neutral",
+            }
+    return result
+
+
 def _safe(fn, *args, default=None, label=""):
     try:
         result = fn(*args)
@@ -139,6 +171,7 @@ def run():
         lambda: sec_scraper.get_recent_insider_trades(7) + sec_scraper.get_recent_8k_filings(7),
         default=list, label="SEC",
     )
+    insider_buys = _safe(sec_scraper.get_insider_buys, 14, default=list, label="InsiderBuys")
 
     # ── Load history (for last_analysis fallback) ─────────────────
     history_path = Path(__file__).parent / "docs" / "history.json"
@@ -156,25 +189,27 @@ def run():
     # Only call Claude if API key is present
     if Config.ANTHROPIC_API_KEY:
         analysis = _safe(
-            claude_analyzer.run_analysis,
-            Config.ANTHROPIC_API_KEY,
-            Config.CLAUDE_MODEL,
-            top_tickers,
-            reddit_posts,
-            news_articles,
-            stock_data,
-            sec_filings,
-            fear_greed,
-            earnings_cal,
-            unusual_opts,
-            short_squeeze,
-            market_indices,
-            agg_sentiment,
-            stocktwits_data,
-            ta_data,
-            congress_buys,
-            market_breadth,
-            put_call_ratio,
+            lambda: claude_analyzer.run_analysis(
+                api_key=Config.ANTHROPIC_API_KEY,
+                model=Config.CLAUDE_MODEL,
+                ticker_mentions=top_tickers,
+                reddit_posts=reddit_posts,
+                news_articles=news_articles,
+                stock_data=stock_data,
+                sec_filings=sec_filings,
+                fear_greed=fear_greed,
+                earnings_calendar=earnings_cal,
+                unusual_options=unusual_opts,
+                short_squeeze_candidates=short_squeeze,
+                market_indices=market_indices,
+                aggregate_sentiment=agg_sentiment,
+                stocktwits_trending=stocktwits_data,
+                technical_data=ta_data,
+                congressional_buys=congress_buys,
+                market_breadth=market_breadth,
+                put_call_ratio=put_call_ratio,
+                insider_buys=insider_buys,
+            ),
             default=None,
             label="ClaudeAI",
         )
@@ -263,16 +298,24 @@ def run():
                 sig["pct_from_52w_high"] = ta.get("pct_from_52w_high")
                 sig["week_52_high"] = ta.get("week_52_high")
                 sig["macd_signal"] = ta.get("macd_signal_label")
+            # Analyst consensus data
+            if not sig.get("analyst_count") and sd.get("analyst_count"):
+                sig["analyst_count"] = sd["analyst_count"]
+            if not sig.get("recommendation") and sd.get("recommendation"):
+                sig["recommendation"] = sd["recommendation"]
+            # Earnings date warning
+            if not sig.get("earnings_date") and sd.get("earnings_date"):
+                sig["earnings_date"] = sd["earnings_date"]
             # Build data_signals from available sources
             if not sig.get("data_signals"):
                 dsigs = []
                 # Check congressional buys
                 if any(c.get("ticker") == t for c in congress_buys[:20]):
                     dsigs.append("congressional")
-                # Check SEC filings for insider trades
+                # Check SEC filings or insider buys for insider trades
                 if any(
                     isinstance(f, dict) and f.get("ticker") == t
-                    for f in (sec_filings or [])
+                    for f in (sec_filings or []) + (insider_buys or [])
                 ):
                     dsigs.append("insider")
                 # Check unusual options
@@ -290,7 +333,19 @@ def run():
         if not sig.get("signal_strength"):
             sig["signal_strength"] = 6
         if not sig.get("risk_level"):
-            sig["risk_level"] = "Medium"
+            # Calculate risk level from beta and market cap
+            beta = sd.get("beta") if sd else None
+            mc = sd.get("market_cap") if sd else None
+            if beta and beta > 1.8:
+                sig["risk_level"] = "High"
+            elif beta and beta < 0.7:
+                sig["risk_level"] = "Low"
+            elif mc and mc >= 100_000_000_000:  # $100B+ = mega cap = lower risk
+                sig["risk_level"] = "Low"
+            elif mc and mc < 2_000_000_000:  # <$2B = small cap = higher risk
+                sig["risk_level"] = "High"
+            else:
+                sig["risk_level"] = "Medium"
         if not sig.get("time_horizon"):
             sig["time_horizon"] = "1-3 months"
     logger.info("Signal enrichment complete")
@@ -374,11 +429,29 @@ def run():
         "watch_list": analysis.get("watch_list", []),
         "notable_trends": analysis.get("notable_trends", []),
         "macro_risks": analysis.get("macro_risks", []),
-        "sector_heat": analysis.get("sector_heat", {}),
+        "sector_heat": analysis.get("sector_heat", {}) or _compute_sector_heat(stock_data, signal_lookup),
         "sector_rotation": analysis.get("sector_rotation", ""),
         "rok_message": analysis.get("rok_message", ""),
-        "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []),
-        "earnings_plays": analysis.get("earnings_plays", []),
+        "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []) or [
+            {
+                "ticker": s.get("ticker", ""),
+                "short_float": "High short interest",
+                "setup": s.get("company", ""),
+                "social_velocity": "high",
+            }
+            for s in (short_squeeze or [])[:6]
+            if s.get("ticker") and s.get("ticker").isalpha() and len(s.get("ticker","")) <= 5
+        ],
+        "earnings_plays": analysis.get("earnings_plays", []) or [
+            {
+                "ticker": e.get("ticker", ""),
+                "earnings_date": e.get("date", ""),
+                "direction": "NEUTRAL",
+                "play": f"Reports {e.get('timing', 'soon')}. Watch for surprise beats/misses.",
+            }
+            for e in (earnings_cal or [])[:6]
+            if e.get("ticker")
+        ],
         "congressional_plays": analysis.get("congressional_plays", []),
         "technical_breakouts": analysis.get("technical_breakouts", []) or [
             {
@@ -406,6 +479,7 @@ def run():
             "unusual_options": len(unusual_opts),
             "congress_trades": len(congress_buys),
             "technical": len(ta_data),
+            "insider_buys": len(insider_buys),
         },
         "recent_runs": recent_runs,
         "history_summary": history_summary,
@@ -415,6 +489,32 @@ def run():
         "stock_universe": stock_data,
         "buy_count": buy_count,
         "sell_count": sell_count,
+        "insider_buys": insider_buys[:12],
+        # Backwards-compat aliases used in template
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "run_history": history["runs"][-8:],
+        "news_items": [
+            {
+                "title": a.get("title", ""),
+                "source": a.get("source", ""),
+                "url": a.get("url", ""),
+                "sentiment": a.get("sentiment_score", 0),
+                "tickers": a.get("mentioned_tickers", []),
+            }
+            for a in news_articles[:20]
+            if a.get("title")
+        ],
+        "reddit_posts": reddit_posts[:10],
+        "trending_tickers": [{"ticker": t, "count": c} for t, c in top_tickers[:15]],
+        "portfolio": [],
+        "sparklines": {},
+        "fear_greed_history": [],
+        "market_pulse": {
+            "vix": (market_indices or {}).get("VIX", {}).get("price"),
+            "put_call_ratio": (put_call_ratio or {}).get("total"),
+            "sp500_change": (market_indices or {}).get("S&P 500", {}).get("change_pct"),
+            "nasdaq_change": (market_indices or {}).get("NASDAQ", {}).get("change_pct"),
+        },
     }
 
     # ── Render HTML ───────────────────────────────────────────────

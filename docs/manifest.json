@@ -1,12 +1,12 @@
 {
-  "name": "ROK Stock Intelligence",
+  "name": "ROK — AI Stock Intelligence",
   "short_name": "ROK",
-  "description": "AI-powered buy/sell/watch signals, screener, and market intelligence. Updated hourly.",
+  "description": "AI-powered buy/sell/watch signals updated every 15 minutes. Track your portfolio, get stop-loss alerts, and see what Congress & insiders are buying.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#030508",
-  "theme_color": "#050505",
+  "background_color": "#020408",
+  "theme_color": "#020408",
   "orientation": "any",
   "categories": ["finance", "business"],
   "icons": [
@@ -23,9 +23,23 @@
       "purpose": "any maskable"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "⚡ Signals",
+      "short_name": "Signals",
+      "description": "See today's buy/sell signals",
+      "url": "./#signals"
+    },
+    {
+      "name": "💼 My Stocks",
+      "short_name": "Portfolio",
+      "description": "Track your portfolio",
+      "url": "./#portfolio"
+    }
+  ],
   "screenshots": [
     {
-      "label": "ROK Signals",
+      "label": "ROK Buy Signals",
       "form_factor": "narrow"
     }
   ]
