@@ -285,26 +285,36 @@ def _roc(closes, period=5):
     return round((closes[-1] - prev) / prev * 100, 2)
 
 def _vwap(hourly):
-    """Compute VWAP from today's hourly bars. Returns (vwap, position_pct)."""
+    """Compute VWAP with ±2σ bands from today's hourly bars.
+    Returns (vwap, position_pct, vwap_zscore).
+    vwap_zscore: price's z-score from VWAP (>2 = overbought band, <-2 = oversold band)."""
     if hourly is None:
-        return None, 50.0
+        return None, 50.0, 0.0
     try:
         if "Volume" not in hourly.columns or "Close" not in hourly.columns:
-            return None, 50.0
+            return None, 50.0, 0.0
         h = hourly.dropna(subset=["Close", "Volume"])
         if len(h) < 2:
-            return None, 50.0
+            return None, 50.0, 0.0
         # Use last 8 bars (≈1 trading day in hourly)
         h = h.iloc[-8:]
         tp = (h["High"] + h["Low"] + h["Close"]) / 3
-        cum_pv = (tp * h["Volume"]).cumsum()
-        cum_v  = h["Volume"].cumsum()
-        vwap   = float((cum_pv / cum_v).iloc[-1])
-        price  = float(h["Close"].iloc[-1])
+        cum_pv  = (tp * h["Volume"]).cumsum()
+        cum_v   = h["Volume"].cumsum()
+        vwap_v  = cum_pv / cum_v
+        vwap    = float(vwap_v.iloc[-1])
+        price   = float(h["Close"].iloc[-1])
         vwap_pos = (price - vwap) / vwap * 100 if vwap > 0 else 0
-        return round(vwap, 2), round(vwap_pos, 2)
+
+        # VWAP σ: volume-weighted std of typical price around VWAP
+        cum_vol  = float(cum_v.iloc[-1])
+        cum_var  = ((tp - vwap_v)**2 * h["Volume"]).cumsum()
+        vwap_std = float((cum_var / cum_v).iloc[-1]) ** 0.5 if cum_vol > 0 else 0
+        vwap_z   = (price - vwap) / vwap_std if vwap_std > 0 else 0
+
+        return round(vwap, 2), round(vwap_pos, 2), round(vwap_z, 2)
     except Exception:
-        return None, 50.0
+        return None, 50.0, 0.0
 
 
 def _williams_r(closes, highs, lows, period=10):
@@ -1104,14 +1114,15 @@ def _extract(daily, hourly):
         atr_val = _atr(highs, lows, closes)
 
     # Hourly indicators
-    rsi_val          = 50.0
-    ema_cross        = 0.0
-    macd_val         = 0.0
-    bb_pos           = 50.0
-    intraday         = 0.0
-    vwap_pos         = 0.0
-    williams_r       = -50.0
-    macd_slope_val   = 0.0
+    rsi_val           = 50.0
+    ema_cross         = 0.0
+    macd_val          = 0.0
+    bb_pos            = 50.0
+    intraday          = 0.0
+    vwap_pos          = 0.0
+    vwap_z            = 0.0
+    williams_r        = -50.0
+    macd_slope_val    = 0.0
     ttm_squeeze_fired = False
 
     if hourly is not None and "Close" in hourly.columns:
@@ -1138,7 +1149,7 @@ def _extract(daily, hourly):
         if len(hc) >= 20:
             bb_pos = _bollinger(hc)
 
-        _, vwap_pos = _vwap(h)
+        _, vwap_pos, vwap_z = _vwap(h)
 
         if "High" in h.columns and "Low" in h.columns:
             hh = list(h["High"])
@@ -1211,6 +1222,7 @@ def _extract(daily, hourly):
         "williams_r":         round(williams_r, 1),
         "macd_slope":         round(macd_slope_val, 4),
         "ttm_squeeze_fired":  ttm_squeeze_fired,
+        "vwap_z":             round(vwap_z, 2),
     }
 
 
@@ -1478,6 +1490,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     w_r       = d.get("williams_r",       -50) or -50
     m_slope   = d.get("macd_slope",         0) or 0
     ttm_fired = d.get("ttm_squeeze_fired", False)
+    vwap_z_v  = d.get("vwap_z",             0) or 0
 
     # Stochastic RSI: oversold bounce (+14) or overbought (-8)
     if   stoch_k < 20 and stoch_d < 20: s += 14
@@ -1508,6 +1521,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
 
     # TTM Squeeze fired: BB just broke out of Keltner — high-conviction breakout (+16)
     if ttm_fired:  s += 16
+
+    # VWAP z-score: price vs VWAP standard deviation bands
+    # At -2σ band: price cheap vs intraday flow → bounce setup (+10)
+    # At +2.5σ: exhaustion zone → avoid entry (-8)
+    if   vwap_z_v < -2.0:  s += 10  # deep oversold vs VWAP
+    elif vwap_z_v < -1.0:  s +=  5  # below VWAP σ band
+    elif vwap_z_v > 2.5:   s -=  8  # VWAP exhaustion zone
+    elif vwap_z_v > 1.5:   s -=  3
 
     # Market regime adjustment
     s += regime_adj
@@ -1862,13 +1883,16 @@ def run():
                     m_slope  = live_sig.get("macd_slope", 0) or 0
                     stoch_k  = live_sig.get("stoch_k",   50) or 50
                     w_r_val  = live_sig.get("williams_r", -50) or -50
+                    vwap_z_live = live_sig.get("vwap_z", 0) or 0
                     if live_sc <= 8 and pnl_pct < 0:
                         reason = f"signal deteriorated (score={live_sc}, {pnl_pct:+.1f}%)"
                     elif live_sc <= 14 and pnl_pct < -3:
                         reason = f"weak signal + losing (score={live_sc}, {pnl_pct:+.1f}%)"
                     elif m_slope < -0.03 and stoch_k > 78 and w_r_val > -22 and pnl_pct > 3:
-                        # Momentum exhaustion: MACD falling + overbought stoch + overbought W%R
                         reason = f"momentum exhaustion (stoch={stoch_k:.0f}, W%R={w_r_val:.0f}, {pnl_pct:+.1f}%)"
+                    elif vwap_z_live > 2.5 and pnl_pct > 2:
+                        # Price at +2.5σ VWAP band = mean reversion target hit = take profits
+                        reason = f"VWAP exhaustion band (z={vwap_z_live:.1f}, {pnl_pct:+.1f}%)"
 
             # Track ever-hit-5pct milestone for breakeven lock
             if pnl_pct >= 5 and sym in peaks:
