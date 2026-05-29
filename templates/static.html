@@ -958,6 +958,23 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <span class="tp-why">{{ top.catalyst or top.rok_take or 'Strong buy signal — multiple data sources agree' }}{% if top_upside > 0 %} — {{ top_upside }}% upside to target{% endif %}</span>
       <button onclick="openModal('{{ top.ticker }}')">SEE WHY →</button>
     </div>
+    {# "NEW TO INVESTING?" quick-start box — shows if there are macro risks #}
+    {% if data.macro_risks %}
+    <details style="margin-bottom:.65rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.14);border-radius:10px;overflow:hidden">
+      <summary style="padding:.55rem .85rem;cursor:pointer;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--au);list-style:none;display:flex;align-items:center;justify-content:space-between;-webkit-tap-highlight-color:transparent">
+        <span>⚠️ RISKS TO KNOW ABOUT RIGHT NOW</span><span style="font-size:9px;color:var(--wh3)">tap to expand</span>
+      </summary>
+      <div style="padding:.3rem .85rem .7rem">
+        {% for risk in data.macro_risks %}
+        <div style="display:flex;gap:.5rem;align-items:flex-start;padding:.3rem 0;border-bottom:1px solid rgba(255,255,255,.04){% if loop.last %};border-bottom:none{% endif %}">
+          <span style="font-size:.9rem;flex-shrink:0">⚠️</span>
+          <div style="font-size:11px;color:var(--wh2);line-height:1.55">{{ risk }}</div>
+        </div>
+        {% endfor %}
+        <div style="margin-top:.5rem;font-size:10px;color:var(--wh3);padding:.35rem .5rem;background:rgba(255,215,0,.05);border-radius:6px">💡 <strong>What to do:</strong> These risks don't mean "don't invest" — they mean keep your stop-loss orders in place and don't bet more than you can afford to lose.</div>
+      </div>
+    </details>
+    {% endif %}
     {% endif %}
 
     <!-- Stats strip -->

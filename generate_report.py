@@ -420,6 +420,31 @@ def run():
         "buy_count": buy_count,
         "sell_count": sell_count,
         "insider_buys": insider_buys[:12],
+        # Backwards-compat aliases used in template
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "run_history": history["runs"][-8:],
+        "news_items": [
+            {
+                "title": a.get("title", ""),
+                "source": a.get("source", ""),
+                "url": a.get("url", ""),
+                "sentiment": a.get("sentiment_score", 0),
+                "tickers": a.get("mentioned_tickers", []),
+            }
+            for a in news_articles[:20]
+            if a.get("title")
+        ],
+        "reddit_posts": reddit_posts[:10],
+        "trending_tickers": [{"ticker": t, "count": c} for t, c in top_tickers[:15]],
+        "portfolio": [],
+        "sparklines": {},
+        "fear_greed_history": [],
+        "market_pulse": {
+            "vix": (market_indices or {}).get("VIX", {}).get("price"),
+            "put_call_ratio": (put_call_ratio or {}).get("total"),
+            "sp500_change": (market_indices or {}).get("S&P 500", {}).get("change_pct"),
+            "nasdaq_change": (market_indices or {}).get("NASDAQ", {}).get("change_pct"),
+        },
     }
 
     # ── Render HTML ───────────────────────────────────────────────
