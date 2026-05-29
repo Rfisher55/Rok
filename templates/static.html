@@ -1636,6 +1636,12 @@ body.beginner-mode #beginner-banner { display:block }
     <!-- Upcoming events calendar (JS-populated) -->
     <div id="mkt-events" style="display:none;margin-bottom:.85rem"></div>
 
+    <!-- Earnings Radar for all ROK stocks (JS-populated) -->
+    <div id="mkt-earnings-radar" style="display:none;margin-bottom:.85rem"></div>
+
+    <!-- Sector Rotation Strategy (JS-populated) -->
+    <div id="mkt-sector-strategy" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Pulse row -->
     <div class="mkt-grid" style="margin-bottom:1.1rem">
       <div class="mkt-card">
@@ -3003,7 +3009,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
-    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); }
+    if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); }
     if (activeTab === 'signals') { renderSignalChanges(); }
     if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); }
     if (activeTab === 'signals') { renderHotROKPicks(); }
@@ -3969,7 +3975,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); setTimeout(fetchSignalsLiveNews, 2000); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); }
     if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); }
   }
@@ -8279,6 +8285,7 @@ body.beginner-mode #beginner-banner { display:block }
       _sectorFlowCache = data;
       _sectorFlowTs = now;
       renderSectorFlow(data);
+      renderSectorStrategy();
     } catch {
       el.innerHTML = '<div style="color:var(--wh4);font-size:10px;padding:.4rem">Unable to load sector data right now — try refreshing</div>';
     }
@@ -9216,6 +9223,160 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderSignalChanges = renderSignalChanges;
+
+  // ── EARNINGS RADAR (Market Tab) ──────────────────────────
+  function renderEarningsRadar() {
+    const el = document.getElementById('mkt-earnings-radar');
+    if (!el) return;
+    const universe = ROK.stock_universe || [];
+    const earningsPlays = ROK.earnings_plays || [];
+
+    // Collect all earnings from universe
+    const upcoming = [];
+    const now = Date.now();
+    const twoWeeksMs = 14 * 86400000;
+
+    universe.forEach(s => {
+      if (!s.earnings_date) return;
+      try {
+        const d = new Date(s.earnings_date);
+        if (isNaN(d.getTime())) return;
+        const daysUntil = Math.round((d - now) / 86400000);
+        if (daysUntil < -2 || daysUntil > 14) return;
+        const lp = liveprices[s.ticker];
+        upcoming.push({
+          ticker: s.ticker, name: s.company_name || '', sig: s.rok_signal,
+          daysUntil, dateStr: s.earnings_date, price: lp?.price || s.price || 0,
+          chg: lp?.change_pct, vol: lp?.vol_ratio
+        });
+      } catch {}
+    });
+
+    // Add earnings plays not already included
+    earningsPlays.forEach(ep => {
+      if (upcoming.some(u => u.ticker === ep.ticker)) return;
+      if (!ep.earnings_date) return;
+      try {
+        const d = new Date(ep.earnings_date);
+        const daysUntil = Math.round((d - now) / 86400000);
+        if (daysUntil < -2 || daysUntil > 14) return;
+        const lp = liveprices[ep.ticker];
+        upcoming.push({
+          ticker: ep.ticker, name: ep.company || ep.ticker, sig: 'watch',
+          daysUntil, dateStr: ep.earnings_date, price: lp?.price || 0,
+          chg: lp?.change_pct
+        });
+      } catch {}
+    });
+
+    if (!upcoming.length) { el.style.display = 'none'; return; }
+    upcoming.sort((a, b) => a.daysUntil - b.daysUntil);
+
+    const rows = upcoming.slice(0, 10).map(s => {
+      const dayLabel = s.daysUntil < 0 ? 'REPORTED' : s.daysUntil === 0 ? '📅 TODAY' : s.daysUntil === 1 ? '📅 TOMORROW' : `📅 in ${s.daysUntil}d`;
+      const dayColor = s.daysUntil <= 0 ? 'var(--r)' : s.daysUntil === 1 ? 'var(--or)' : s.daysUntil <= 3 ? 'var(--au)' : 'var(--wh3)';
+      const sigBadge = s.sig === 'buy' ? `<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.22);color:var(--g);font-weight:700">ROK BUY</span>` : s.sig === 'sell' ? `<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:rgba(255,34,85,.1);border:1px solid rgba(255,34,85,.2);color:var(--r);font-weight:700">ROK SELL</span>` : '';
+      const chgStr = s.chg != null ? `<span style="font-size:8.5px;font-weight:700;color:${s.chg>=0?'var(--g)':'var(--r)'}">${s.chg>=0?'+':''}${s.chg.toFixed(1)}%</span>` : '';
+      return `<div onclick="openModal('${s.ticker}')" style="display:flex;align-items:center;gap:.6rem;padding:.4rem .55rem;border-radius:7px;background:rgba(255,255,255,.025);cursor:pointer">
+        <div style="min-width:72px;flex-shrink:0">
+          <div style="font-size:8.5px;font-weight:800;color:${dayColor}">${dayLabel}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+            <span style="font-family:var(--disp);font-size:.9rem;font-weight:900;color:var(--wh)">${s.ticker}</span>
+            ${sigBadge}
+          </div>
+          <div style="font-size:8.5px;color:var(--wh4)">${s.name.substring(0,22)}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${s.price ? `<div style="font-size:10px;font-weight:700;color:var(--wh)">$${s.price.toFixed(2)}</div>` : ''}
+          ${chgStr}
+        </div>
+      </div>`;
+    }).join('');
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,215,0,.14);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--au);text-transform:uppercase;margin-bottom:.2rem">📅 ROK EARNINGS RADAR — NEXT 14 DAYS</div>
+      <div style="font-size:9px;color:var(--wh4);margin-bottom:.55rem">Earnings season: stocks often move ±10-20% on report day. Size down before earnings if unsure.</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem">${rows}</div>
+    </div>`;
+  }
+  window.renderEarningsRadar = renderEarningsRadar;
+
+  // ── SECTOR ROTATION STRATEGY ─────────────────────────────
+  function renderSectorStrategy() {
+    const el = document.getElementById('mkt-sector-strategy');
+    if (!el) return;
+    if (!_sectorFlowCache || !_sectorFlowCache.length) { el.style.display = 'none'; return; }
+
+    // Sort sectors by change pct
+    const sorted = [..._sectorFlowCache].sort((a, b) => b.change_pct - a.change_pct);
+    const topSectors = sorted.slice(0, 3);
+    const bottomSectors = sorted.slice(-3).reverse();
+
+    // Map sector ETF names to screener sector keywords
+    const sectorMap = {
+      'Technology': 'Technology', 'Financials': 'Financial', 'Energy': 'Energy',
+      'Healthcare': 'Healthcare', 'Comm. Svcs': 'Communication', 'Industrials': 'Industrial',
+      'Cons. Discr.': 'Consumer', 'Cons. Staples': 'Consumer', 'Utilities': 'Utilities',
+      'Materials': 'Materials', 'Real Estate': 'Real Estate'
+    };
+
+    // Find ROK buy signals in top sectors
+    const buys = ROK.buy_signals || [];
+    const sectorsForBuys = topSectors.map(s => sectorMap[s.name] || s.name);
+    const alignedBuys = buys.filter(b => {
+      const bSec = (b.sector || '').split('/')[0].trim();
+      return sectorsForBuys.some(ts => bSec.includes(ts) || ts.includes(bSec.split(' ')[0]));
+    }).slice(0, 3);
+
+    const top3Html = topSectors.map(s => {
+      const color = s.change_pct >= 0 ? 'var(--g)' : 'var(--r)';
+      return `<div style="display:flex;align-items:center;gap:.4rem;padding:.3rem .5rem;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:6px">
+        <span style="font-size:10px;font-weight:800;color:var(--wh)">${s.name}</span>
+        <span style="font-size:9px;font-weight:700;color:${color};margin-left:auto">${s.change_pct>=0?'+':''}${s.change_pct.toFixed(2)}%</span>
+      </div>`;
+    }).join('');
+
+    const bottom3Html = bottomSectors.map(s => {
+      const color = s.change_pct >= 0 ? 'var(--g)' : 'var(--r)';
+      return `<div style="display:flex;align-items:center;gap:.4rem;padding:.3rem .5rem;background:rgba(255,34,85,.03);border:1px solid rgba(255,34,85,.08);border-radius:6px">
+        <span style="font-size:10px;font-weight:800;color:var(--wh)">${s.name}</span>
+        <span style="font-size:9px;font-weight:700;color:${color};margin-left:auto">${s.change_pct>=0?'+':''}${s.change_pct.toFixed(2)}%</span>
+      </div>`;
+    }).join('');
+
+    const alignedBuysHtml = alignedBuys.length ? `<div style="margin-top:.55rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--g);text-transform:uppercase;margin-bottom:.3rem">✅ ROK BUY SIGNALS IN HOT SECTORS</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.3rem">
+        ${alignedBuys.map(b => {
+          const lp = liveprices[b.ticker];
+          const chg = lp?.change_pct;
+          const chgStr = chg != null ? ` ${chg>=0?'+':''}${chg.toFixed(1)}%` : '';
+          return `<div onclick="openModal('${b.ticker}')" style="padding:.3rem .6rem;border-radius:6px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.22);cursor:pointer;font-size:9.5px;font-weight:700;color:var(--g)">${b.ticker}${chgStr}</div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,204,255,.12);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--b);text-transform:uppercase;margin-bottom:.5rem">🧭 SECTOR ROTATION STRATEGY</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.4rem">
+        <div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--g);margin-bottom:.3rem;text-transform:uppercase">📈 BUY THESE SECTORS</div>
+          <div style="display:flex;flex-direction:column;gap:.25rem">${top3Html}</div>
+        </div>
+        <div>
+          <div style="font-size:7.5px;font-weight:700;color:var(--r);margin-bottom:.3rem;text-transform:uppercase">📉 AVOID / REDUCE</div>
+          <div style="display:flex;flex-direction:column;gap:.25rem">${bottom3Html}</div>
+        </div>
+      </div>
+      ${alignedBuysHtml}
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.35rem">Based on live sector ETF performance. Trade WITH the strongest sectors.</div>
+    </div>`;
+  }
+  window.renderSectorStrategy = renderSectorStrategy;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
