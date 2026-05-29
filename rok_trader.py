@@ -3755,16 +3755,36 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
-    # Multi-timeframe confluence: daily and hourly signals aligned?
-    # True when BOTH daily and hourly confirm the same direction
-    mtf_aligned = False   # daily uptrend + hourly uptrend = high confidence
-    mtf_conflict = False  # daily downtrend + hourly uptrend = false signal risk
+    # Multi-timeframe confluence: weekly / daily / hourly all aligned?
+    mtf_aligned  = False   # daily + hourly confirm same direction
+    mtf_conflict = False   # daily down but hourly up = false signal risk
+    mtf_triple   = False   # all three timeframes (weekly+daily+hourly) aligned
+    mtf_score    = 0       # 0-3: how many of three timeframes are bullish
     try:
-        _daily_up   = daily_trend > 0.2 and daily_rsi > 45    # daily uptrend
-        _hourly_up  = ema_cross > 0.1 and rsi_val > 45        # hourly uptrend
+        _daily_up   = daily_trend > 0.2 and daily_rsi > 45
+        _hourly_up  = ema_cross > 0.1 and rsi_val > 45
         _daily_down = daily_trend < -0.2 and daily_rsi < 55
         mtf_aligned  = _daily_up and _hourly_up
-        mtf_conflict = _daily_down and _hourly_up   # trying to buy against daily trend
+        mtf_conflict = _daily_down and _hourly_up
+
+        # Weekly trend: price above 5-week (25-day) EMA and trending up
+        _weekly_bull = False
+        try:
+            dc_w = list(daily["Close"])
+            if len(dc_w) >= 25:
+                ema25 = _ema(dc_w, 25)
+                ema50_w = _ema(dc_w, 50) if len(dc_w) >= 50 else ema25
+                if ema25 and ema50_w:
+                    _weekly_bull = (dc_w[-1] > ema25
+                                    and ema25 > ema50_w * 0.995     # 25 EMA > 50 EMA = uptrend
+                                    and dc_w[-1] > dc_w[-5])        # higher than 5 days ago
+        except Exception:
+            pass
+
+        mtf_score = sum([bool(_weekly_bull), bool(_daily_up), bool(_hourly_up)])
+        mtf_triple = mtf_score == 3   # all three timeframes confirmed
+        # Override mtf_aligned to require at least weekly+daily OR daily+hourly
+        mtf_aligned = (_daily_up and _hourly_up) or (_weekly_bull and _daily_up)
     except Exception:
         pass
 
@@ -3882,6 +3902,8 @@ def _extract(daily, hourly):
         "rs5":             rs5,
         "rs63":            rs63,
         "mtf_aligned":       mtf_aligned,
+        "mtf_triple":        mtf_triple,
+        "mtf_score":         mtf_score,
         "mtf_conflict":      mtf_conflict,
         "price_vs_ema200":   round(price_vs_ema200, 2),
         "trend_reversal":    trend_reversal,
@@ -4263,8 +4285,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif ema200_pos < -3:   s -=  6
 
     # Multi-timeframe confluence: bonus when daily+hourly both confirm direction (+12/-10)
-    # MTF alignment is the single strongest quality filter — reduces false signals significantly
-    if d.get("mtf_aligned", False):   s += 12   # daily uptrend + hourly uptrend = highest conviction
+    # Triple alignment (weekly+daily+hourly) is the highest-conviction setup in technical trading
+    if d.get("mtf_triple", False):    s += 18   # all 3 TFs aligned = rare, high-conviction
+    elif d.get("mtf_aligned", False): s += 12   # daily+hourly = high conviction
     if d.get("mtf_conflict", False):  s -= 10   # fighting the daily trend = high failure rate
 
     # Daily RSI confirmation (+8/-8)
@@ -5843,6 +5866,8 @@ def run():
                 "fib_support":    live.get(tk, {}).get("fib_support", False),
                 "macd_bull_div":  live.get(tk, {}).get("macd_bull_div", False),
                 "mtf_aligned":    live.get(tk, {}).get("mtf_aligned", False),
+                "mtf_triple":     live.get(tk, {}).get("mtf_triple", False),
+                "mtf_score":      live.get(tk, {}).get("mtf_score", 0),
                 "trend_reversal": live.get(tk, {}).get("trend_reversal", False),
                 "bull_flag":      live.get(tk, {}).get("bull_flag", False),
                 "cup_handle":     live.get(tk, {}).get("cup_handle", False),
@@ -6148,6 +6173,8 @@ def run():
                                         sig.get("ichimoku_tk_bull", False), sig.get("ichimoku_chikou", False)]),
                 "macd_bull_div":   sig.get("macd_bull_div", False),
                 "mtf_aligned":     sig.get("mtf_aligned", False),
+                "mtf_triple":      sig.get("mtf_triple", False),
+                "mtf_score":       sig.get("mtf_score", 0),
                 "price_vs_ema200": round(sig.get("price_vs_ema200", 0), 2),
                 "mfi":             round(sig.get("mfi", 50), 1),
                 "mfi_overbought":  sig.get("mfi_overbought", False),
