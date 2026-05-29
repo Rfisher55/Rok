@@ -868,6 +868,34 @@ def _double_top(highs, lows, closes) -> dict:
         return {"detected": False, "neckline": 0.0}
 
 
+def _higher_lows_trend(lows, closes, lookback: int = 20, min_pivots: int = 2) -> bool:
+    """
+    Detect higher lows pattern — the foundation of an uptrend.
+    Finds local pivot lows in the last 'lookback' bars and checks if each
+    successive low is higher than the previous (ascending floor of support).
+    Requires at least min_pivots consecutive higher lows.
+    """
+    n = min(lookback, len(lows))
+    if n < 8:
+        return False
+    try:
+        l = lows[-n:]
+        pivot_lows = []
+        for i in range(1, n - 1):
+            if l[i] <= l[i - 1] and l[i] <= l[i + 1]:
+                pivot_lows.append(l[i])
+        if len(pivot_lows) < min_pivots:
+            return False
+        # Check that consecutive pivots are strictly higher
+        for i in range(1, len(pivot_lows)):
+            if pivot_lows[i] <= pivot_lows[i - 1] * 1.001:  # tolerance 0.1%
+                return False
+        # Also confirm current close is above the last pivot low
+        return closes[-1] > pivot_lows[-1]
+    except Exception:
+        return False
+
+
 # ── Market regime detection ───────────────────────────────────────────────────
 def market_regime():
     """
@@ -1565,12 +1593,15 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
         if signals:
             rsi       = signals.get("rsi", 50)
             roc5      = signals.get("roc5", 0)
+            roc20     = signals.get("roc20", 0)
             stoch_k   = signals.get("stoch_k", 50)
             ema50     = signals.get("price_vs_ema50", 0)
+            ema200    = signals.get("price_vs_ema200", 0)
             vr        = signals.get("vol_ratio", 1)
             chg       = signals.get("change_pct", 0)
             w_r       = signals.get("williams_r", -50)
             rs5       = signals.get("rs5", 0)
+            rs63      = signals.get("rs63", 0)
             at_brk      = signals.get("at_breakout", False)
             consec      = signals.get("consec_green", 0)
             near_s      = signals.get("near_support", False)
@@ -1633,8 +1664,10 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             tech_context = (
                 f"\nTechnical: RSI={rsi:.0f}, DailyRSI={daily_rsi:.0f}, StochRSI_K={stoch_k:.0f}, "
                 f"BB%={bb_pos:.0f}, W%R={w_r:.0f}, ADX={adx_v:.0f}, "
-                f"5d_ROC={roc5:+.1f}%, EMA50_pos={ema50:+.1f}%, "
-                f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, RS5_vs_SPY={rs5:+.1f}%"
+                f"5d_ROC={roc5:+.1f}%, 20d_ROC={roc20:+.1f}%, "
+                f"EMA50_pos={ema50:+.1f}%, EMA200_pos={ema200:+.1f}%, "
+                f"Vol_ratio={vr:.1f}x, Day_chg={chg:+.1f}%, "
+                f"RS5_vs_SPY={rs5:+.1f}%, RS63_vs_SPY={rs63:+.1f}%"
                 + (f"\nSetup flags: {', '.join(extras)}" if extras else "")
             )
 
@@ -2863,6 +2896,14 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Higher Lows: ascending floor of support = established uptrend
+    higher_lows = False
+    try:
+        if "Low" in daily.columns and len(daily) >= 10:
+            higher_lows = _higher_lows_trend(list(daily["Low"]), list(daily["Close"]), lookback=20, min_pivots=2)
+    except Exception:
+        pass
+
     # Double Bottom: W-pattern bullish reversal
     double_bottom = False
     double_bottom_neckline = 0.0
@@ -2951,6 +2992,7 @@ def _extract(daily, hourly):
         "above_poc":           vp_poc.get("above_poc", False),
         "poc_breakout":        vp_poc.get("poc_breakout", False),
         "mom_accel":           mom_accel,
+        "higher_lows":            higher_lows,
         "double_bottom":          double_bottom,
         "double_bottom_neckline": double_bottom_neckline,
         "double_top":             double_top,
@@ -3141,6 +3183,7 @@ def momentum_grade(d, final_score=0):
     if d.get("cup_handle", False):             criteria += 2  # cup & handle (double weight — elite pattern)
     if d.get("at_demand_zone", False):         criteria += 1  # at institutional demand zone
     if d.get("mom_accel", False):              criteria += 1  # momentum accelerating
+    if d.get("higher_lows", False):           criteria += 1  # ascending support structure
     if d.get("double_bottom", False):         criteria += 1  # W-pattern bullish reversal
     if d.get("ema_stacked_bull", False):      criteria += 2  # EMA stack aligned (high quality trend)
 
@@ -3467,6 +3510,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Momentum acceleration: ROC5 rising faster than prior ROC5 (+10)
     # Catches stocks early in a new breakout — before everyone piles in
     if d.get("mom_accel", False): s += 10
+
+    # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
+    if d.get("higher_lows", False): s += 6
 
     # Double Bottom: W-pattern bullish reversal (+10) — confirmed break above neckline
     if d.get("double_bottom", False): s += 10
@@ -4195,6 +4241,14 @@ def run():
                     if ema50_pos < -3 and roc5_val < -5:
                         logger.debug(f"DCA SKIP {sym} — downtrend (EMA50={ema50_pos:.1f}%, ROC5={roc5_val:.1f}%)")
                         continue
+                    # Skip if full EMA stack is bearish — all timeframes declining
+                    if live_sig.get("ema_stacked_bear", False):
+                        logger.debug(f"DCA SKIP {sym} — EMA stack bearish (all EMAs declining)")
+                        continue
+                    # DCA only at equal or better price for pullback scenario
+                    if is_pullback_dca and current >= cost * 1.01:
+                        logger.debug(f"DCA SKIP {sym} — pullback DCA but price above cost (current={current:.2f}, cost={cost:.2f})")
+                        continue
                     dca_sc = score(sym, live_sig, regime_adj=regime_adj)
                     min_score = 25 if is_winner_pyramid else 28
                     if dca_sc >= min_score:
@@ -4453,6 +4507,7 @@ def run():
                 if breakout_adj:   extras.append("52W-breakout")
                 if live.get(tk, {}).get("cup_handle"):    extras.append("C&H")
                 if live.get(tk, {}).get("mom_accel"):     extras.append("accel")
+                if live.get(tk, {}).get("higher_lows"):    extras.append("HL↑")
                 if live.get(tk, {}).get("double_bottom"):  extras.append("2-BTM")
                 if live.get(tk, {}).get("double_top"):     extras.append("2-TOP")
                 if live.get(tk, {}).get("poc_breakout"):    extras.append("POC-BRK")
@@ -4509,6 +4564,7 @@ def run():
                 "cup_pivot":      live.get(tk, {}).get("cup_handle_pivot", 0.0),
                 "at_demand_zone": live.get(tk, {}).get("at_demand_zone", False),
                 "mom_accel":      live.get(tk, {}).get("mom_accel", False),
+                "higher_lows":    live.get(tk, {}).get("higher_lows", False),
                 "double_bottom":  live.get(tk, {}).get("double_bottom", False),
                 "double_bottom_neckline": live.get(tk, {}).get("double_bottom_neckline", 0.0),
                 "double_top":     live.get(tk, {}).get("double_top", False),
