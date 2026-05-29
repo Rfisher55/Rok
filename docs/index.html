@@ -4663,6 +4663,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-tax-check-now" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-bot-activity" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-projected-val" style="display:none;margin-bottom:.85rem"></div>
+    <div id="port-rok-live-feed" style="margin-bottom:.85rem"></div>
     <div id="port-scorecard-now" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-trade-log" style="display:none;margin-bottom:.85rem"></div>
     <div id="port-diversify"></div>
@@ -5556,6 +5557,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderTradeLog();
      renderRsiLiveScan();
      renderRelativePower();
+     renderRokLiveFeed();
   checkSignalPriceDrops();
     checkPriceTargetHits();
     updateGlobalRiskAlert();
@@ -6662,6 +6664,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderTradeLog();
      renderRsiLiveScan();
      renderRelativePower();
+     renderRokLiveFeed();
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); renderConvictionLeaderboard(); renderUniverseStats(); renderVolumeSpikeAlerts(); renderSmartMoneyTracker(); }
   }
   window.showTab = showTab;
@@ -8300,6 +8303,7 @@ body.beginner-mode #beginner-banner { display:block }
      renderProjectedVal();
      renderScorecardNow();
      renderTradeLog();
+     renderRokLiveFeed();
     renderPortfolioHealthCheck();
     renderPortfolioRiskScore();
     renderPortfolioAutopilot();
@@ -54477,6 +54481,81 @@ function renderRelativePower() {
   </div>`;
 }
 window.renderRelativePower = renderRelativePower;
+
+async function renderRokLiveFeed() {
+  const el = document.getElementById('port-rok-live-feed');
+  if (!el) return;
+  el.innerHTML = `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:.85rem"><div style="color:#aaa;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem">ROK Live Trades</div><div style="color:#555;font-size:.8rem">Loading...</div></div>`;
+  try {
+    const r = await fetch('/docs/trades.json?t=' + Date.now());
+    if (!r.ok) throw new Error('not found');
+    const data = await r.json();
+    _renderRokLiveFeedData(el, data);
+  } catch {
+    try {
+      const r2 = await fetch('trades.json?t=' + Date.now());
+      if (!r2.ok) throw new Error('not found');
+      const data2 = await r2.json();
+      _renderRokLiveFeedData(el, data2);
+    } catch {
+      el.innerHTML = `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:.85rem">
+        <div style="color:#aaa;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem">ROK Live Trades</div>
+        <div style="color:#555;font-size:.8rem">Trade log will appear here once the bot places its first order during market hours.</div>
+        <div style="color:#444;font-size:.72rem;margin-top:.3rem">Bot runs every 5 min Mon-Fri 9:30 AM - 4 PM ET</div>
+      </div>`;
+    }
+  }
+}
+
+function _renderRokLiveFeedData(el, data) {
+  const trades = (data.trades || []).slice(0, 15);
+  const positions = data.positions || [];
+  const portVal = data.portfolio_value || 0;
+  const lastUp = data.last_updated ? (() => {
+    const diff = Math.round((Date.now() - new Date(data.last_updated).getTime()) / 60000);
+    return diff < 2 ? 'just now' : diff < 60 ? `${diff}m ago` : `${Math.round(diff/60)}h ago`;
+  })() : '';
+
+  const tradeRows = trades.map(t => {
+    const isBuy = t.action === 'BUY';
+    const col = isBuy ? '#66bb6a' : '#ef5350';
+    const dt = new Date(t.time).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const detail = isBuy
+      ? `$${(t.notional||0).toFixed(0)} @ $${t.price}`
+      : `${t.qty} shares @ $${t.price}${t.pnl_pct != null ? ` (${t.pnl_pct > 0 ? '+' : ''}${t.pnl_pct.toFixed(1)}%)` : ''}`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:.3rem 0;border-bottom:1px solid #1a1a1a">
+      <span style="background:${col}22;color:${col};font-weight:700;font-size:.72rem;padding:2px 6px;border-radius:3px;width:32px;text-align:center">${t.action}</span>
+      <span style="font-weight:700;color:#e0e0e0;font-size:.88rem;width:42px">${t.ticker}</span>
+      <span style="color:#888;font-size:.75rem;flex:1">${detail}</span>
+      ${t.score ? `<span style="color:#555;font-size:.68rem">score ${t.score}</span>` : ''}
+      <span style="color:#444;font-size:.68rem;white-space:nowrap">${dt}</span>
+    </div>`;
+  }).join('');
+
+  const posRows = positions.map(p => {
+    const col = p.pnl_pct >= 0 ? '#66bb6a' : '#ef5350';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid #1a1a1a">
+      <span style="font-weight:700;color:#ccc;font-size:.85rem">${p.ticker}</span>
+      <span style="color:#888;font-size:.75rem">$${(p.market_val||0).toFixed(0)}</span>
+      <span style="color:${col};font-weight:700;font-size:.82rem">${p.pnl_pct>=0?'+':''}${(p.pnl_pct||0).toFixed(1)}%</span>
+      <span style="color:${col};font-size:.75rem">${p.pnl_usd>=0?'+':''}$${(p.pnl_usd||0).toFixed(0)}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:.85rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
+      <span style="color:#82b1ff;font-size:.85rem;font-weight:700">ROK Live Trade Feed</span>
+      <span style="color:#555;font-size:.7rem">Updated ${lastUp}</span>
+    </div>
+    ${portVal ? `<div style="background:#111;border-radius:5px;padding:.4rem .6rem;margin-bottom:.6rem;display:flex;justify-content:space-between">
+      <span style="color:#777;font-size:.78rem">Paper Portfolio</span>
+      <span style="color:#82b1ff;font-weight:700;font-size:.9rem">$${portVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+    </div>` : ''}
+    ${positions.length ? `<div style="color:#aaa;font-size:.72rem;font-weight:600;text-transform:uppercase;margin-bottom:.3rem">Open Positions</div>${posRows}<div style="height:.5rem"></div>` : ''}
+    ${trades.length ? `<div style="color:#aaa;font-size:.72rem;font-weight:600;text-transform:uppercase;margin-bottom:.3rem">Recent Trades</div>${tradeRows}` : '<div style="color:#555;font-size:.8rem">No trades yet — bot fires every 5 min during market hours</div>'}
+  </div>`;
+}
+window.renderRokLiveFeed = renderRokLiveFeed;
 
   //  SENTIMENT DIVERGENCE ALERT
   function renderSentimentDivergence() {
