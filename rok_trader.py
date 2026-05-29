@@ -357,6 +357,51 @@ def sector_rotation() -> dict:
         return {}
 
 
+# ── Pre-market gap scanner ────────────────────────────────────────────────────
+def get_premarket_gaps(fractionable_set: set) -> list:
+    """
+    Detect stocks gapping up >3% or down >3% from prior close.
+    Called once at market open. Returns [(sym, gap_pct, direction), ...].
+    Uses 2-day 1h data to find pre-market vs prior close.
+    """
+    gaps = []
+    # Check top movers from screeners for gaps
+    screener_syms = get_market_movers()
+    check_syms = list(set(screener_syms) & fractionable_set)[:50]
+    if not check_syms:
+        return gaps
+    try:
+        kw  = dict(group_by="ticker", auto_adjust=True, progress=False)
+        raw = yf.download(" ".join(check_syms), period="2d", interval="1h", **kw)
+        if raw.empty:
+            return gaps
+        for sym in check_syms:
+            try:
+                if len(check_syms) == 1:
+                    closes = list(raw["Close"].dropna())
+                else:
+                    lvl = raw.columns.get_level_values(0)
+                    if "Close" not in lvl or sym not in raw["Close"]:
+                        continue
+                    closes = list(raw["Close"][sym].dropna())
+                if len(closes) < 8:
+                    continue
+                prev_close   = float(closes[-9]) if len(closes) >= 9 else float(closes[0])
+                current      = float(closes[-1])
+                gap_pct      = (current - prev_close) / prev_close * 100
+                if abs(gap_pct) >= 3.0:
+                    direction = "up" if gap_pct > 0 else "down"
+                    gaps.append((sym, round(gap_pct, 2), direction))
+            except Exception:
+                pass
+    except Exception as e:
+        logger.debug(f"Gap scanner error: {e}")
+    gaps.sort(key=lambda x: -abs(x[1]))
+    if gaps:
+        logger.info(f"Gap scan: {' | '.join(f'{s}:{g:+.1f}%' for s,g,_ in gaps[:5])}")
+    return gaps
+
+
 # ── Earnings calendar check ───────────────────────────────────────────────────
 def has_earnings_soon(sym, days=3):
     """Returns True if this stock has earnings within `days` days — skip it. Cached."""
@@ -1162,12 +1207,14 @@ def run():
         sys.exit(1)
 
     # Market clock
+    market_open = False
     try:
         clock = alpaca_get("/v2/clock")
-        if not clock.get("is_open"):
+        market_open = bool(clock.get("is_open"))
+        if market_open:
+            logger.info(f"Market OPEN — next close: {clock.get('next_close', '?')}")
+        else:
             logger.info(f"Market closed. Next open: {clock.get('next_open', '?')}")
-            return
-        logger.info(f"Market OPEN — next close: {clock.get('next_close', '?')}")
     except Exception as e:
         logger.error(f"Alpaca unreachable: {e}")
         sys.exit(1)
@@ -1177,6 +1224,23 @@ def run():
     portfolio_val = float(acct.get("portfolio_value", 0))
     buying_power  = float(acct.get("buying_power",   0))
     logger.info(f"Portfolio: ${portfolio_val:,.2f} | Cash: ${buying_power:,.2f}")
+
+    # If market closed, only run crypto — skip equity pipeline
+    if not market_open:
+        if ENABLE_CRYPTO:
+            tlog = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
+            peaks = _load(PEAK_FILE, {})
+            made_ref = []
+            buying_power = run_crypto_trades(
+                tlog, peaks, portfolio_val, buying_power, made_ref
+            )
+            _save(PEAK_FILE, peaks)
+            tlog["last_updated"]    = datetime.now(timezone.utc).isoformat()
+            tlog["portfolio_value"] = portfolio_val
+            tlog["buying_power"]    = round(buying_power, 2)
+            _save(TRADES_FILE, tlog)
+            logger.info(f"Off-hours crypto-only run complete.")
+        return
 
     # Market regime
     regime = market_regime()
@@ -1205,6 +1269,14 @@ def run():
     top_movers_for_ai = [s for s in candidates if s not in BASE_UNIVERSE][:12]
     regime_adj   = ai_market_context(regime, top_movers_for_ai)
     sector_adjs  = sector_rotation()   # {sector: -8..+8}
+
+    # Pre-market gap scan (bonus score for strong gap-up stocks)
+    gap_ups = set()
+    if _time_ok(260):
+        gaps = get_premarket_gaps(set(candidates))
+        gap_ups = {sym for sym, pct, direction in gaps if direction == "up" and pct >= 3}
+        if gap_ups:
+            logger.info(f"Gap-up candidates: {', '.join(sorted(gap_ups))}")
 
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
     made_trades = False
@@ -1333,7 +1405,8 @@ def run():
         # Technical pass — include sector rotation bonus
         tech_scores = {
             tk: score(tk, live[tk],
-                      regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0))
+                      regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
+                                + (10 if tk in gap_ups else 0))
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
@@ -1361,7 +1434,8 @@ def run():
             else:
                 sent, catalyst = 0, ""
             sec_adj  = sector_adjs.get(sec, 0)
-            final_sc = score(tk, live[tk], sentiment=sent, regime_adj=regime_adj + sec_adj)
+            gap_adj  = 10 if tk in gap_ups else 0
+            final_sc = score(tk, live[tk], sentiment=sent, regime_adj=regime_adj + sec_adj + gap_adj)
             if final_sc >= MIN_BUY_SCORE:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} sec={sec} cat='{catalyst}'")
