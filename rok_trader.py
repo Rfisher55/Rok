@@ -605,20 +605,51 @@ def has_earnings_soon(sym, days=3):
 
 # ── Catalyst keyword detector (fast, no API) ─────────────────────────────────
 _BULL_CATALYSTS = [
+    # Earnings
     "earnings beat", "beats estimates", "record revenue", "raised guidance",
-    "fda approval", "fda approved", "fda clears", "breakthrough",
-    "merger", "acquisition", "buyout", "takeover", "deal",
+    "exceeds expectations", "blowout quarter", "record profit", "record earnings",
+    "strong demand", "robust growth", "accelerating growth",
+    # FDA / biotech
+    "fda approval", "fda approved", "fda clears", "breakthrough therapy",
+    "positive phase", "phase 3 success", "regulatory approval", "ema approval",
+    # M&A
+    "merger", "acquisition", "buyout", "takeover", "deal", "going private",
+    "strategic acquisition", "bolt-on acquisition",
+    # Partnerships / contracts
     "partnership", "contract win", "awarded contract", "major contract",
+    "landmark deal", "government contract", "multi-year deal",
+    # Capital returns
     "share buyback", "repurchase", "dividend increase", "special dividend",
+    "stock split", "reverse split elimination",
+    # Analyst actions
     "upgrade", "outperform", "buy rating", "price target raised",
-    "short squeeze", "massive volume",
+    "strong buy", "overweight", "initiates coverage",
+    # Technical
+    "short squeeze", "all-time high", "52-week high", "breakout",
+    "massive volume", "institutional buying", "insider buying",
+    # AI / tech
+    "ai partnership", "generative ai", "data center", "nvidia partnership",
+    # General positive
+    "record", "milestone", "launch", "expansion",
 ]
 _BEAR_CATALYSTS = [
+    # Earnings
     "misses estimates", "earnings miss", "revenue miss", "guidance cut",
-    "lowers guidance", "fda rejects", "clinical failure", "recall",
-    "lawsuit", "sec investigation", "fraud", "accounting",
+    "lowers guidance", "below expectations", "disappoints", "weak results",
+    # FDA / biotech
+    "fda rejects", "clinical failure", "complete response letter",
+    "fda hold", "trial failure", "negative data", "safety concern",
+    # Legal / regulatory
+    "lawsuit", "sec investigation", "fraud", "accounting irregularities",
+    "criminal charges", "class action", "subpoena", "antitrust",
+    # Analyst
     "downgrade", "underperform", "sell rating", "price target cut",
-    "bankruptcy", "layoffs", "restructuring", "ceo resigns",
+    "market perform", "reduces target",
+    # Corporate
+    "bankruptcy", "chapter 11", "layoffs", "restructuring", "ceo resigns",
+    "coo departs", "delisted", "going concern", "liquidity concern",
+    # Revenue
+    "customer loss", "lost contract", "competition pressure",
 ]
 
 def get_earnings_beat_candidates(candidates: list) -> set:
