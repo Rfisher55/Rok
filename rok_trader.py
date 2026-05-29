@@ -335,6 +335,32 @@ def _bollinger(closes, period=20, num_std=2):
         return 50.0
     return round((closes[-1] - lower) / (upper - lower) * 100, 1)
 
+def _keltner_channel(highs, lows, closes, ema_period=20, atr_period=14, mult=2.0):
+    """
+    Keltner Channel: EMA ± mult*ATR.
+    Returns (position_pct, above_upper, below_lower) where position_pct is 0-100
+    (0 = at lower band, 50 = at midline, 100 = at upper band, >100 = above upper).
+    Breakout above upper KC = strong momentum; below lower KC = oversold.
+    """
+    n = len(closes)
+    if n < max(ema_period, atr_period) + 2:
+        return 50.0, False, False
+    try:
+        midline = _ema(closes, ema_period)
+        atr_val = _atr(highs, lows, closes, period=atr_period)
+        if not midline or not atr_val or atr_val <= 0:
+            return 50.0, False, False
+        upper = midline + mult * atr_val
+        lower = midline - mult * atr_val
+        cur = closes[-1]
+        if upper == lower:
+            return 50.0, False, False
+        pos = round((cur - lower) / (upper - lower) * 100, 1)
+        return pos, cur > upper, cur < lower
+    except Exception:
+        return 50.0, False, False
+
+
 def _stoch_rsi(closes, rsi_period=14, stoch_period=14):
     """Stochastic RSI — measures RSI's position within its recent range (0-100).
     Returns (k, d) where k < 20 = oversold bounce, k > 80 = overbought."""
@@ -1655,6 +1681,12 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
                 extras.append("EMA5>EMA10>EMA20>EMA50 — full bull alignment (all timeframes agree)")
             if signals.get("ema_stacked_bear"):
                 extras.append("EMA stack fully bearish (all EMAs declining)")
+            if signals.get("kc_breakout"):
+                extras.append("Keltner Channel breakout — price above EMA+2×ATR (strong momentum)")
+            if signals.get("kc_oversold"):
+                extras.append("Keltner Channel oversold — price below EMA-2×ATR (mean-reversion setup)")
+            if signals.get("higher_lows"):
+                extras.append("Higher Lows pattern — ascending support floor confirmed")
             if signals.get("trend_reversal"):
                 extras.append("20-EMA trend reversal with volume + RSI recovery")
             if signals.get("bull_flag"):
@@ -2590,6 +2622,19 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Keltner Channel: price vs EMA±ATR envelope
+    kc_pos      = 50.0   # position 0-100+ (>100 = above upper band)
+    kc_breakout = False  # price above upper Keltner = strong momentum breakout
+    kc_oversold = False  # price below lower Keltner = mean-reversion candidate
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 22:
+            kc_pos, kc_breakout, kc_oversold = _keltner_channel(
+                list(daily["High"]), list(daily["Low"]), list(daily["Close"]),
+                ema_period=20, atr_period=14, mult=2.0
+            )
+    except Exception:
+        pass
+
     # Ichimoku Cloud — comprehensive trend/support/resistance analysis
     ichimoku = {"above_cloud": False, "cloud_bullish": False, "tk_ks_bullish": False, "chikou_bullish": False}
     try:
@@ -2982,6 +3027,9 @@ def _extract(daily, hourly):
         "macd_bull_div":       macd_div.get("bullish_div", False),
         "macd_bear_div":       macd_div.get("bearish_div", False),
         "chandelier_stop":     chandelier_stop,
+        "kc_pos":              round(kc_pos, 1),
+        "kc_breakout":         kc_breakout,
+        "kc_oversold":         kc_oversold,
         "cup_handle":          cup_handle.get("breakout_ready", False),
         "cup_handle_pivot":    cup_handle.get("pivot_price", 0.0),
         "cup_depth_pct":       cup_handle.get("cup_depth_pct", 0.0),
@@ -3510,6 +3558,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Momentum acceleration: ROC5 rising faster than prior ROC5 (+10)
     # Catches stocks early in a new breakout — before everyone piles in
     if d.get("mom_accel", False): s += 10
+
+    # Keltner Channel breakout: price above upper band = strong institutional momentum (+9)
+    # Oversold: price below lower band = mean-reversion setup (+5 for oversold bounces)
+    if d.get("kc_breakout", False): s += 9
+    elif d.get("kc_oversold", False): s += 5   # mean-reversion candidate
 
     # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
     if d.get("higher_lows", False): s += 6
@@ -4513,6 +4566,8 @@ def run():
                 if live.get(tk, {}).get("poc_breakout"):    extras.append("POC-BRK")
                 elif live.get(tk, {}).get("above_poc"):    extras.append("abv-POC")
                 if live.get(tk, {}).get("ema_stacked_bull"): extras.append("EMA-stack")
+                if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
+                elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
                 logger.info(f"  {tk}: tech={tech_sc} sent={sent:+.1f} final={final_sc} grade={_grade_now} sec={sec} cat='{catalyst}' [{','.join(extras) or 'base'}]")
             else:
@@ -4574,6 +4629,8 @@ def run():
                 "poc_breakout":   live.get(tk, {}).get("poc_breakout", False),
                 "ema_stacked_bull": live.get(tk, {}).get("ema_stacked_bull", False),
                 "ema_stacked_bear": live.get(tk, {}).get("ema_stacked_bear", False),
+                "kc_breakout":      live.get(tk, {}).get("kc_breakout", False),
+                "kc_oversold":      live.get(tk, {}).get("kc_oversold", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
