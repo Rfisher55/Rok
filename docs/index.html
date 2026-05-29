@@ -1723,6 +1723,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   </div>
 </div>
 
+<!-- SHOULD I BUY? GUIDANCE SHEET -->
+<div id="guidance-overlay" class="modal-overlay" style="align-items:flex-end">
+  <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.2);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;margin:0 auto;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
+      <div style="font-size:13px;font-weight:800;color:var(--wh)">🤔 Should you buy this?</div>
+      <button onclick="document.getElementById('guidance-overlay').classList.remove('open')" style="background:none;border:none;color:var(--wh3);font-size:1.4rem;cursor:pointer;padding:.2rem .4rem;line-height:1">×</button>
+    </div>
+    <div id="guidance-body" style="font-size:11.5px;color:var(--wh2);line-height:1.7"></div>
+    <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap" id="guidance-actions"></div>
+  </div>
+</div>
+
 <!-- BUY DIALOG -->
 <div id="buy-dialog-overlay" class="modal-overlay" style="align-items:flex-end">
   <div style="background:var(--blk3);border:1px solid rgba(0,255,136,.25);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;margin:0 auto">
@@ -2655,6 +2667,88 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.boughtIt = boughtIt;
 
+  function showGuidance(ticker, event) {
+    if (event) { event.stopPropagation(); event.preventDefault(); }
+    const overlay = document.getElementById('guidance-overlay');
+    const body = document.getElementById('guidance-body');
+    const actions = document.getElementById('guidance-actions');
+    if (!overlay || !body) return;
+
+    const s = (ROK.stock_universe || []).find(x => x.ticker === ticker);
+    const det = sigDetails[ticker] || {};
+    const lp = liveprices[ticker];
+    const curPrice = lp ? lp.price : (s ? s.price : null);
+    const mkt = getMarketState();
+    const sig = s ? (s.rok_signal || 'neutral') : (det.rok_signal || 'buy');
+    const strength = det.signal_strength || (s && s.signal_strength) || 5;
+    const stop = det.stop_loss;
+    const target = det.price_target || (s && s.analyst_target);
+    const mc = s ? s.market_cap : null;
+    const isLargeCap = mc && mc >= 10e9;
+    const rsi = s ? s.rsi : null;
+
+    const questions = [];
+
+    // Question 1: Is market open?
+    if (mkt.state === 'closed') {
+      questions.push(`<div style="padding:.6rem .75rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);border-radius:10px;margin-bottom:.5rem">
+        <strong style="color:var(--au)">⏰ Market is closed right now</strong><br>
+        <span style="font-size:10.5px;color:var(--wh3)">You can't buy stocks outside of trading hours (9:30am–4pm ET). Write this down and check the signal again when market opens tomorrow. Signal may change overnight.</span>
+      </div>`);
+    } else if (mkt.state === 'pre') {
+      questions.push(`<div style="padding:.6rem .75rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);border-radius:10px;margin-bottom:.5rem">
+        <strong style="color:var(--au)">🌅 Pre-market now (4am–9:30am ET)</strong><br>
+        <span style="font-size:10.5px;color:var(--wh3)">You can buy in pre-market, but prices are less reliable and spreads are wider. Consider waiting for market open at 9:30am ET for a better fill.</span>
+      </div>`);
+    }
+
+    // Question 2: Signal strength assessment
+    const strengthMsg = strength >= 8
+      ? `✅ <strong>ROK is highly confident (${strength}/10)</strong> — this is one of the stronger signals today.`
+      : strength >= 6
+      ? `🟡 <strong>ROK is moderately confident (${strength}/10)</strong> — decent signal, but not rock solid. Size smaller.`
+      : `⚠️ <strong>ROK is cautiously signaling (${strength}/10)</strong> — weaker conviction. Only enter if you've done your own research.`;
+    questions.push(`<div style="margin-bottom:.5rem">${strengthMsg}</div>`);
+
+    // Question 3: Risk level
+    if (!isLargeCap && mc && mc < 2e9) {
+      questions.push(`<div style="margin-bottom:.5rem">⚠️ <strong style="color:var(--au)">Small-cap stock — higher risk.</strong> These move fast and can drop 10-20% quickly. Only risk money you can afford to lose. Limit to 5-10% of your portfolio max.</div>`);
+    } else if (isLargeCap) {
+      questions.push(`<div style="margin-bottom:.5rem">✅ <strong>Large/mega-cap stock — safer for beginners.</strong> These are well-known established companies that don't usually crash overnight.</div>`);
+    }
+
+    // Question 4: Overbought warning
+    if (rsi && rsi > 72) {
+      questions.push(`<div style="margin-bottom:.5rem">⚠️ <strong style="color:var(--au)">RSI ${Math.round(rsi)} — already overbought.</strong> The stock has moved up a lot recently. There may be a better entry point in 3-5 days. Consider waiting or buying a half position now.</div>`);
+    }
+
+    // Question 5: Position sizing
+    if (stop && curPrice) {
+      const riskPct = ((curPrice - stop) / curPrice * 100).toFixed(1);
+      questions.push(`<div style="margin-bottom:.5rem">📐 <strong>How much to buy?</strong> ROK's stop-loss is $${Number(stop).toFixed(2)} — that's ${riskPct}% below current price. <strong>Rule of thumb: never risk more than 1-2% of your account on one trade.</strong> If your account is $5,000 and the stop is ${riskPct}% away, your max position should be ~$${Math.round(5000 * 0.02 / (parseFloat(riskPct)/100)).toFixed(0)} (adjust for your actual account size).</div>`);
+    }
+
+    // Conclusion
+    const conclude = sig === 'buy' && strength >= 7 && (mkt.state === 'open' || mkt.state === 'pre')
+      ? `<div style="padding:.65rem .75rem;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:10px;margin-top:.35rem"><strong style="color:var(--g)">✅ ROK says: worth considering.</strong> Start with a small position (half of what you planned), set a stop-loss, and add more if the stock continues upward.</div>`
+      : mkt.state === 'closed'
+      ? `<div style="padding:.65rem .75rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);border-radius:10px;margin-top:.35rem"><strong style="color:var(--au)">📋 Action:</strong> Save this signal and check again when market opens at 9:30am ET. Signals refresh every 15 minutes.</div>`
+      : `<div style="padding:.65rem .75rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);border-radius:10px;margin-top:.35rem"><strong style="color:var(--au)">🤔 Proceed with caution.</strong> The signal exists but has some risk factors. Do your own research before buying. Tap 📊 to see more details.</div>`;
+    questions.push(conclude);
+
+    body.innerHTML = questions.join('');
+    actions.innerHTML = `
+      <button onclick="openModal('${ticker}');document.getElementById('guidance-overlay').classList.remove('open')" style="flex:1;padding:.6rem .9rem;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">📊 See Full Details</button>
+      <button onclick="boughtIt('${ticker}',${curPrice||0});document.getElementById('guidance-overlay').classList.remove('open')" style="flex:1;padding:.6rem .9rem;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);border-radius:10px;color:var(--g);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation">💰 Buy & Track It</button>`;
+    overlay.classList.add('open');
+  }
+  window.showGuidance = showGuidance;
+
+  // Close guidance on backdrop click
+  document.getElementById('guidance-overlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
   function updateBoughtBtn(ticker, owned) {
     const btn = document.getElementById('btn-' + ticker);
     if (!btn) return;
@@ -3576,6 +3670,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (e.key === 'Escape') { searchEl.value = ''; applySearch(''); }
     });
   }
+
+  // Keyboard shortcut: press "/" to focus screener search
+  document.addEventListener('keydown', e => {
+    if (e.key !== '/') return;
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+    e.preventDefault();
+    // Switch to screener if not already there, then focus
+    const mob = document.getElementById('mob-srch-input');
+    const target = mob && getComputedStyle(mob).display !== 'none' ? mob : searchEl;
+    if (target) { showTab('screener'); setTimeout(() => target.focus(), 150); }
+  });
 
   // ── LIVE TIMER → "Next: Xm Ys" countdown ──────────────────
   const ts = ROK.generated_timestamp;
