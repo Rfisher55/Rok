@@ -1429,6 +1429,34 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Pivot-based support/resistance levels
+    # If price is breaking above the most recent pivot high = resistance breakout (+bonus)
+    # If price is below the most recent pivot low = in downtrend (score penalty applied via change_pct)
+    at_breakout = False
+    near_support = False
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 10:
+            highs = list(daily["High"])
+            lows  = list(daily["Low"])
+            closes_pivot = list(daily["Close"])
+            # Find most recent pivot high (local max in last 10 bars, excluding last 2)
+            pivot_high = None
+            for i in range(len(highs) - 3, max(0, len(highs) - 12), -1):
+                if highs[i] >= highs[i-1] and highs[i] >= highs[i+1]:
+                    pivot_high = highs[i]
+                    break
+            pivot_low = None
+            for i in range(len(lows) - 3, max(0, len(lows) - 12), -1):
+                if lows[i] <= lows[i-1] and lows[i] <= lows[i+1]:
+                    pivot_low = lows[i]
+                    break
+            if pivot_high and price > pivot_high * 1.003:  # broke above with 0.3% buffer
+                at_breakout = True
+            if pivot_low and price < pivot_low * 1.005:    # within 0.5% of support
+                near_support = True
+    except Exception:
+        pass
+
     # RSI divergence signals
     rsi_divergence       = False   # bearish: price up, RSI down
     rsi_bull_divergence  = False   # bullish: price down, RSI up (hidden strength)
@@ -1526,6 +1554,8 @@ def _extract(daily, hourly):
         "rsi_bull_divergence": rsi_bull_divergence,
         "consec_green":        consec_green,
         "vol_dry_up":          vol_dry_up,
+        "at_breakout":         at_breakout,
+        "near_support":        near_support,
     }
 
 
@@ -1849,6 +1879,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Volume dry-up on pullback: selling exhaustion signal (+9)
     # Classic Wyckoff "test" pattern — big money not selling on the dip
     if d.get("vol_dry_up", False): s += 9
+
+    # Pivot breakout: price just cleared a recent resistance level (+12)
+    # High-probability setup — resistance becomes support
+    if d.get("at_breakout", False): s += 12
+
+    # Near support: buying at proven demand zone (+6)
+    if d.get("near_support", False): s += 6
 
     # Market regime adjustment
     s += regime_adj
