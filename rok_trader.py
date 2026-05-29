@@ -34,7 +34,7 @@ MAX_POSITIONS      = 8      # max open positions at once
 MAX_POSITION_PCT   = 0.12   # max 12% of portfolio per trade
 STOP_LOSS_PCT      = 0.07   # sell if down 7%
 PROFIT_TARGET_PCT  = 0.20   # sell if up 20%
-MIN_BUY_SCORE      = 60     # minimum signal score to enter a trade
+MIN_BUY_SCORE      = 45     # minimum signal score to enter a trade (paper: aggressive)
 
 
 # ── Alpaca helpers ──────────────────────────────────────────────────────────
