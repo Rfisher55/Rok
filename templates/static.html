@@ -1909,6 +1909,8 @@ body.beginner-mode #beginner-banner { display:block }
       </div>
       <span class="sc-cnt" id="sc-cnt"></span>
     </div>
+    <!-- Live Pulse Bar (JS-populated) -->
+    <div id="sc-live-pulse" style="display:none;align-items:center;gap:.4rem;flex-wrap:wrap;padding:.35rem .6rem;background:rgba(255,255,255,.025);border-radius:8px;margin-bottom:.45rem;font-size:9px;border:1px solid rgba(255,255,255,.06)"></div>
     <!-- Sector quick-filter chips (populated by JS) -->
     <div id="sc-sector-chips" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem"></div>
     <!-- Active price alerts strip (populated by JS) -->
@@ -2224,6 +2226,18 @@ body.beginner-mode #beginner-banner { display:block }
         <div id="intel-sector-flow" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to load live sector data…</div>
       </div>
 
+      <!-- LIVE: RSI Extremes Scanner (JS-populated) -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr">
+          <h2 class="s-ttl" style="color:var(--au)">📊 LIVE RSI EXTREMES SCANNER</h2>
+          <span class="s-sub">Oversold bounce plays & overbought stocks to avoid <span style="color:var(--g);font-size:7px">● LIVE</span></span>
+        </div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.5;padding:.4rem .6rem;background:rgba(255,215,0,.04);border-radius:6px;border-left:2px solid rgba(255,215,0,.25)">
+          💡 <strong style="color:var(--au)">RSI (Relative Strength Index)</strong> measures if a stock is being over-bought or over-sold. Below 35 = oversold (may bounce up). Above 72 = overbought (may pull back). Use with other signals for best results.
+        </div>
+        <div id="intel-rsi-scanner" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to scan RSI extremes…</div>
+      </div>
+
     </div><!-- /intel-grid -->
   </div><!-- /tab-intel -->
 
@@ -2239,6 +2253,8 @@ body.beginner-mode #beginner-banner { display:block }
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <!-- Portfolio Win/Loss Breakdown (JS-populated) -->
+    <div id="port-winloss" style="display:none;margin-bottom:.65rem"></div>
     <!-- Portfolio Risk Score (JS-populated) -->
     <div id="port-risk-score" style="display:none;margin-bottom:.65rem"></div>
     <!-- Portfolio Autopilot (JS-populated) -->
@@ -2973,10 +2989,11 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); updateFearGreedFromVIX(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); renderPortfolioSpyBenchmark(); }
     if (activeTab === 'signals') { updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); }
-    if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); }
-    if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); }
+    if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
+    if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); }
-    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); }
+    if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); }
+    checkSignalPriceDrops();
     updateGlobalRiskAlert();
     updateFearGreedFromVIX();
     renderLivePortStrip();
@@ -3934,12 +3951,12 @@ body.beginner-mode #beginner-banner { display:block }
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     activeTab = id;
-    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
-    else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
+    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
+    else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); setTimeout(fetchPortfolioDividends, 1500); }
-    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); setTimeout(fetchPortfolioDividends, 1500); }
+    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); }
   }
   window.showTab = showTab;
 
@@ -5278,6 +5295,7 @@ body.beginner-mode #beginner-banner { display:block }
 
   function renderPortfolio() {
     renderPortfolioSummary();
+    renderPortfolioWinLoss();
     renderActiveAlertsPanel();
     renderPortfolioSectorAlloc();
     renderPortfolioHealthCheck();
@@ -8708,6 +8726,186 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderRelativeStrength = renderRelativeStrength;
+
+  // ── RSI EXTREMES SCANNER (Intel Tab) ──────────────────────
+  function renderRSIScanner() {
+    const el = document.getElementById('intel-rsi-scanner');
+    if (!el) return;
+    const universe = ROK.stock_universe || [];
+    const buyTickers = new Set((ROK.buy_signals || []).map(s => s.ticker));
+
+    const oversold = [], overbought = [];
+    universe.forEach(s => {
+      if (!s.rsi || s.rsi <= 0) return;
+      const lp = liveprices[s.ticker];
+      const price = lp?.price || s.price || 0;
+      const chg = lp?.change_pct ?? null;
+      const obj = { ticker: s.ticker, name: s.company_name || '', rsi: s.rsi, price, chg, isBuy: buyTickers.has(s.ticker) };
+      if (s.rsi < 35) oversold.push(obj);
+      else if (s.rsi > 72) overbought.push(obj);
+    });
+    oversold.sort((a, b) => a.rsi - b.rsi);
+    overbought.sort((a, b) => b.rsi - a.rsi);
+
+    if (!oversold.length && !overbought.length) {
+      el.innerHTML = '<div style="font-size:10px;color:var(--wh4);padding:.6rem 0;text-align:center">No RSI extremes detected right now — market is balanced.</div>';
+      return;
+    }
+
+    const renderRSIRow = (s, type) => {
+      const isOver = type === 'oversold';
+      const color = isOver ? 'var(--g)' : 'var(--r)';
+      const chgStr = s.chg != null ? `<span style="color:${s.chg>=0?'var(--g)':'var(--r)'};margin-left:.3rem;font-size:9px">${s.chg>=0?'+':''}${s.chg.toFixed(1)}%</span>` : '';
+      const buyBadge = s.isBuy ? `<span style="font-size:7px;padding:1px 4px;border-radius:3px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--g);font-weight:700;margin-left:.3rem">ROK BUY</span>` : '';
+      const tip = isOver
+        ? 'Potentially oversold — ROK signals may indicate a bounce coming'
+        : 'Potentially overbought — avoid chasing, wait for pullback';
+      return `<div onclick="openModal('${s.ticker}')" style="display:flex;align-items:center;gap:.6rem;padding:.4rem .55rem;background:${isOver?'rgba(0,255,136,.035)':'rgba(255,34,85,.03)'};border:1px solid ${isOver?'rgba(0,255,136,.1)':'rgba(255,34,85,.08)'};border-radius:8px;cursor:pointer;margin-bottom:.3rem">
+        <div style="font-family:var(--disp);font-size:1.05rem;font-weight:900;color:${color};min-width:44px">${s.ticker}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9.5px;color:var(--wh2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name.substring(0,22)}${buyBadge}</div>
+          <div style="font-size:9px;color:var(--wh4);margin-top:1px">${tip}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;font-weight:800;color:${color}">RSI ${s.rsi.toFixed(0)}</div>
+          <div style="font-size:9px;color:var(--wh2)">${s.price ? '$'+s.price.toFixed(2) : ''}${chgStr}</div>
+        </div>
+      </div>`;
+    };
+
+    el.innerHTML = `
+      ${oversold.length ? `<div style="margin-bottom:.65rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--g);margin-bottom:.4rem;text-transform:uppercase">💎 POTENTIALLY OVERSOLD (RSI &lt; 35) — May bounce soon</div>
+        ${oversold.slice(0, 5).map(s => renderRSIRow(s, 'oversold')).join('')}
+      </div>` : ''}
+      ${overbought.length ? `<div>
+        <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--r);margin-bottom:.4rem;text-transform:uppercase">🔥 POTENTIALLY OVERBOUGHT (RSI &gt; 72) — Use caution</div>
+        ${overbought.slice(0, 5).map(s => renderRSIRow(s, 'overbought')).join('')}
+      </div>` : ''}
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.35rem">RSI alone is not a trade signal — always combine with ROK's overall rating and market conditions.</div>
+    `;
+  }
+  window.renderRSIScanner = renderRSIScanner;
+
+  // ── SCREENER LIVE PULSE BAR ──────────────────────────────
+  function renderScLivePulse() {
+    const el = document.getElementById('sc-live-pulse');
+    if (!el) return;
+    const buys = (ROK.buy_signals || []).length;
+    const sells = (ROK.sell_signals || []).length;
+    const spy = liveprices['SPY'];
+    const vix = liveprices['^VIX'];
+    const { state } = getMarketState();
+
+    let upCount = 0, downCount = 0;
+    (ROK.stock_universe || []).forEach(s => {
+      const lp = liveprices[s.ticker];
+      if (!lp || lp.change_pct == null) return;
+      if (lp.change_pct >= 0) upCount++; else downCount++;
+    });
+
+    const stateColor = state === 'open' ? 'var(--g)' : state === 'pre' ? 'var(--au)' : 'var(--wh4)';
+    const stateIcon = state === 'open' ? '🟢' : state === 'pre' ? '☀️' : state === 'post' ? '🌆' : '🌙';
+    const stateLabel = state === 'open' ? 'LIVE' : state === 'pre' ? 'PRE-MKT' : state === 'post' ? 'AFTER-HRS' : 'CLOSED';
+    const sep = `<span style="color:rgba(255,255,255,.12)">·</span>`;
+
+    const parts = [
+      `<span style="font-size:8.5px;font-weight:800;color:${stateColor}">${stateIcon} ${stateLabel}</span>`,
+      sep,
+      `<span style="font-size:9px;font-weight:700;color:var(--g)">🟢 ${buys} BUY</span>`,
+      `<span style="font-size:9px;font-weight:700;color:var(--r)">🔴 ${sells} SELL</span>`,
+    ];
+    if (spy) parts.push(sep, `<span style="font-size:9px;font-weight:700;color:${spy.change_pct>=0?'var(--g)':'var(--r)'}">SPY ${spy.change_pct>=0?'+':''}${spy.change_pct.toFixed(2)}%</span>`);
+    if (vix) parts.push(sep, `<span style="font-size:9px;font-weight:700;color:${vix.price>25?'var(--r)':vix.price>18?'var(--au)':'var(--g)'}">VIX ${vix.price.toFixed(0)}</span>`);
+    if (upCount + downCount > 3) parts.push(sep, `<span style="font-size:8.5px;color:var(--wh3)">📊 ${upCount}↑ ${downCount}↓</span>`);
+
+    el.style.display = 'flex';
+    el.innerHTML = parts.join('');
+  }
+  window.renderScLivePulse = renderScLivePulse;
+
+  // ── PORTFOLIO WIN/LOSS BREAKDOWN ─────────────────────────
+  function renderPortfolioWinLoss() {
+    const el = document.getElementById('port-winloss');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (tickers.length < 2) { el.style.display = 'none'; return; }
+
+    let wins = 0, losses = 0, flat = 0;
+    let bigWin = null, bigLoss = null;
+    tickers.forEach(ticker => {
+      const entry = port[ticker];
+      const lp = liveprices[ticker];
+      const st = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const cur = lp?.price || (st?.price);
+      if (!cur || !entry.price) return;
+      const pct = (cur - entry.price) / entry.price * 100;
+      if (pct >= 1) { wins++; if (!bigWin || pct > bigWin.pct) bigWin = { ticker, pct }; }
+      else if (pct <= -1) { losses++; if (!bigLoss || pct < bigLoss.pct) bigLoss = { ticker, pct }; }
+      else flat++;
+    });
+
+    const total = wins + losses + flat;
+    if (!total) { el.style.display = 'none'; return; }
+
+    const winPct = Math.round(wins / total * 100);
+    const lossPct = Math.round(losses / total * 100);
+    const flatPct = 100 - winPct - lossPct;
+    const scoreColor = winPct >= 60 ? 'var(--g)' : winPct >= 40 ? 'var(--au)' : 'var(--r)';
+    const insight = winPct >= 70 ? 'Portfolio is mostly profitable — great job!' : winPct >= 50 ? 'More winners than losers — solid.' : winPct >= 30 ? 'More losses than wins — consider reviewing your losers.' : 'Portfolio struggling — focus on stop-losses.';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem">📊 PORTFOLIO WIN/LOSS BREAKDOWN</div>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:1.8rem;font-weight:900;color:${scoreColor};line-height:1">${winPct}%</div>
+          <div style="font-size:8px;color:var(--wh4)">winners</div>
+        </div>
+        <div style="flex:1">
+          <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;gap:2px;margin-bottom:.35rem">
+            ${wins > 0 ? `<div style="flex:${wins};background:var(--g);border-radius:5px 0 0 5px;min-width:4px"></div>` : ''}
+            ${flat > 0 ? `<div style="flex:${flat};background:rgba(255,255,255,.2)"></div>` : ''}
+            ${losses > 0 ? `<div style="flex:${losses};background:var(--r);border-radius:0 5px 5px 0;min-width:4px"></div>` : ''}
+          </div>
+          <div style="display:flex;gap:.65rem;font-size:9px">
+            <span style="color:var(--g)">✅ ${wins} up</span>
+            ${flat > 0 ? `<span style="color:var(--wh4)">➡ ${flat} flat</span>` : ''}
+            <span style="color:var(--r)">❌ ${losses} down</span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:9.5px;color:var(--wh3);line-height:1.4;margin-bottom:.4rem">${insight}</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:9px">
+        ${bigWin ? `<span style="padding:2px 7px;border-radius:5px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);color:var(--g)">🏆 Best: ${bigWin.ticker} +${bigWin.pct.toFixed(1)}%</span>` : ''}
+        ${bigLoss ? `<span style="padding:2px 7px;border-radius:5px;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.12);color:var(--r)">⚠ Worst: ${bigLoss.ticker} ${bigLoss.pct.toFixed(1)}%</span>` : ''}
+      </div>
+    </div>`;
+  }
+  window.renderPortfolioWinLoss = renderPortfolioWinLoss;
+
+  // ── SIGNAL PRICE DROP EARLY WARNING ─────────────────────
+  function checkSignalPriceDrops() {
+    const DROP_KEY = 'rok_signal_drop_v1';
+    const sent = JSON.parse(sessionStorage.getItem(DROP_KEY) || '{}');
+    const buys = ROK.buy_signals || [];
+    const { state } = getMarketState();
+    if (state === 'closed') return;
+
+    buys.forEach(s => {
+      if (!s.price || s.price <= 0) return;
+      const lp = liveprices[s.ticker];
+      if (!lp || lp.price == null) return;
+      const dropPct = (s.price - lp.price) / s.price * 100; // positive = dropped below signal price
+      if (dropPct >= 5 && !sent[s.ticker]) {
+        sent[s.ticker] = 1;
+        sessionStorage.setItem(DROP_KEY, JSON.stringify(sent));
+        showAppAlert(`⚠ ${s.ticker} has dropped ${dropPct.toFixed(1)}% below ROK's signal price ($${s.price.toFixed(2)}). If you own it, review your stop-loss.`, 'warn', 8000);
+      }
+    });
+  }
+  window.checkSignalPriceDrops = checkSignalPriceDrops;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
