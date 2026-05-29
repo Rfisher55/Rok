@@ -993,6 +993,34 @@ def _gamma_exposure(sym: str, max_age_sec: int = 1800) -> dict:
     return result
 
 
+_SHORT_DATA_CACHE: dict = {}
+
+def _short_data(sym: str, max_age_sec: int = 7200) -> dict:
+    """Fetch short interest data (cached 2 hours — updates twice monthly).
+    Returns: short_float (0-1), short_ratio (days to cover), high_short (bool >15%).
+    """
+    import time as _time
+    now = _time.time()
+    if sym in _SHORT_DATA_CACHE:
+        cached, ts = _SHORT_DATA_CACHE[sym]
+        if now - ts < max_age_sec:
+            return cached
+    result = {"short_float": 0.0, "short_ratio": 0.0, "high_short": False}
+    try:
+        info = yf.Ticker(sym).info
+        sf = float(info.get("shortPercentOfFloat") or 0)
+        sr = float(info.get("shortRatio") or 0)
+        result = {
+            "short_float": round(sf, 3),
+            "short_ratio": round(sr, 1),
+            "high_short":  sf > 0.15,
+        }
+    except Exception:
+        pass
+    _SHORT_DATA_CACHE[sym] = (result, now)
+    return result
+
+
 _NEWS_VEL_CACHE: dict = {}
 
 def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
@@ -4470,6 +4498,21 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("gamma_wall_up", 0.0)
                             sig.setdefault("gamma_wall_down", 0.0)
                             sig.setdefault("squeeze_potential", False)
+                        # Short interest: only for held positions (avoids slow .info calls for all candidates)
+                        if held and tk in held:
+                            try:
+                                sd_info = _short_data(tk)
+                                sig["short_float"] = sd_info.get("short_float", 0.0)
+                                sig["short_ratio"] = sd_info.get("short_ratio", 0.0)
+                                sig["high_short"]  = sd_info.get("high_short", False)
+                            except Exception:
+                                sig.setdefault("short_float", 0.0)
+                                sig.setdefault("short_ratio", 0.0)
+                                sig.setdefault("high_short", False)
+                        else:
+                            sig.setdefault("short_float", 0.0)
+                            sig.setdefault("short_ratio", 0.0)
+                            sig.setdefault("high_short", False)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -4982,6 +5025,24 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif d.get("gex_sign", 0) == -1:        s += 3   # negative GEX = trending, momentum persists
     # Note: positive GEX = mean-reverting = slight penalty for momentum breakout plays
     elif d.get("gex_sign", 0) == 1:         s -= 1
+
+    # Short Interest: high short float + rising price = short squeeze fuel
+    # Combines with other momentum signals to detect potential short squeeze setups
+    _sf  = d.get("short_float", 0.0) or 0.0
+    _sr  = d.get("short_ratio", 0.0) or 0.0
+    _hs  = d.get("high_short", False)
+    if _hs:
+        # High short + accumulation = prime squeeze setup
+        if (d.get("accum_score", 0) or 0) >= 6:  s += 6
+        # High short + gamma squeeze = maximum explosive setup
+        elif d.get("squeeze_potential"):          s += 4
+        # High short + rising OBV = quiet accumulation against shorts
+        elif d.get("obv_rising"):                 s += 3
+        else:                                     s += 1   # standalone high short (risky without catalyst)
+        # Very high short (>25%) is riskier — could also gap down on bad news
+        if _sf > 0.25:                            s -= 1   # penalty for "death by short"
+    # Long days-to-cover + rising = short covering squeeze more prolonged
+    if _sr >= 5 and _hs and d.get("mom_accel"):   s += 2
 
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
@@ -6425,6 +6486,8 @@ def run():
                     if _d_buy.get("squeeze_potential"):    reason += " [γSQZ]"
                     if (_d_buy.get("accum_score", 0) or 0) >= 8:
                         reason += f" [ACC{_d_buy.get('accum_score',0)}]"
+                    if _d_buy.get("high_short"):
+                        reason += f" [SI{round((_d_buy.get('short_float',0) or 0)*100)}%]"
                     if tk in vol_surge_cands and tk in squeeze_cands:
                         reason += " [VOL+SQZ]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
@@ -6581,6 +6644,9 @@ def run():
                 "gamma_wall_up":   sig.get("gamma_wall_up", 0.0),
                 "gamma_wall_down": sig.get("gamma_wall_down", 0.0),
                 "squeeze_potential": sig.get("squeeze_potential", False),
+                "short_float":     sig.get("short_float", 0.0),
+                "short_ratio":     sig.get("short_ratio", 0.0),
+                "high_short":      sig.get("high_short", False),
             }
 
         tlog["positions"] = [

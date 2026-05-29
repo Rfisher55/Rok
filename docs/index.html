@@ -54839,6 +54839,16 @@ window.renderSectorRotation = renderSectorRotation;
           const lsMtfTriple = ls.mtf_triple ? `<span style="font-size:6px;font-weight:900;color:#00e676" title="Triple timeframe aligned: weekly+daily+hourly bullish">3TF✓</span>` : '';
           const lsGex = ls.squeeze_potential ? `<span style="font-size:6px;font-weight:900;color:#e040fb" title="Gamma squeeze potential">γSQZ🎯</span>` : (ls.gex_sign === -1 ? `<span style="font-size:6px;color:#ce93d8" title="Negative GEX — trending conditions">γ−</span>` : '');
           const lsGammaWall = ls.gamma_wall_up > 0 && p.price > 0 && ls.gamma_wall_up > p.price ? `<span style="font-size:6px;color:#82b1ff" title="Gamma wall at $${(ls.gamma_wall_up||0).toFixed(0)}">γ↑$${(ls.gamma_wall_up||0).toFixed(0)}</span>` : '';
+          const lsShortInt = (() => {
+            const sf = ls.short_float || 0;
+            const sr = ls.short_ratio || 0;
+            if (!sf) return '';
+            const pct = Math.round(sf * 100);
+            const dtc = sr >= 1 ? ` ${sr.toFixed(0)}d` : '';
+            if (ls.high_short) return `<span style="font-size:6px;font-weight:900;color:#ff6090;background:rgba(255,96,144,.12);border-radius:3px;padding:0 3px" title="High short interest ${pct}% float shorted${sr>=1?' — '+sr.toFixed(1)+' days to cover':''} — squeeze risk">SI${pct}%🔥${dtc}</span>`;
+            if (pct >= 8) return `<span style="font-size:6px;color:#f48fb1" title="Short interest ${pct}% of float${sr>=1?' — '+sr.toFixed(1)+' days to cover':''}">SI${pct}%${dtc}</span>`;
+            return '';
+          })();
           const lsVwapBand = (() => {
             if (!ls.vwap_b1u || !p.price) return '';
             const pr = p.price;
@@ -54892,7 +54902,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
-                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}</div>` : ''}
+                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
                   const il = intelSig.type === 'buy' ? 'AI BUY' : intelSig.type === 'sell' ? 'AI SELL' : 'AI WATCH';
