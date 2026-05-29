@@ -510,6 +510,27 @@ def get_premarket_gaps(fractionable_set: set) -> list:
     return gaps
 
 
+# ── Macro event calendar (FOMC, CPI, NFP) ────────────────────────────────────
+# Dates when market moves wildly — reduce size, skip new buys same day
+# FOMC decision dates 2025-2026 (announced months in advance by the Fed)
+_MACRO_EVENTS = {
+    "2025-03-19", "2025-05-07", "2025-06-18", "2025-07-30",
+    "2025-09-17", "2025-10-29", "2025-12-10",
+    "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17",
+    "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
+}
+
+def near_macro_event(days_before: int = 1) -> bool:
+    """True if today or tomorrow is a major macro event (FOMC, etc.)."""
+    today = datetime.now(timezone.utc).date()
+    for d in range(days_before + 1):
+        check = (today + timedelta(days=d)).isoformat()
+        if check in _MACRO_EVENTS:
+            logger.info(f"Macro event in {d}d ({check}) — cautious mode")
+            return True
+    return False
+
+
 # ── Earnings calendar check ───────────────────────────────────────────────────
 def has_earnings_soon(sym, days=3):
     """Returns True if this stock has earnings within `days` days — skip it. Cached."""
@@ -1499,12 +1520,16 @@ def bearish_score(tk, d):
 
 
 # ── Position sizing ───────────────────────────────────────────────────────────
-def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0):
-    """ATR-based risk sizing, scaled down when VIX is high."""
+def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False):
+    """ATR-based risk sizing, scaled down when VIX is high or macro event day."""
     vix_scale = 1.0
     if vix > VIX_EXTREME_THRESH:   vix_scale = 0.4
     elif vix > VIX_HIGH_THRESH:    vix_scale = 0.65
     elif vix > 20:                 vix_scale = 0.85
+
+    # Halve position size on FOMC/CPI day — expect extreme volatility
+    if macro_day:
+        vix_scale *= 0.5
 
     if atr and atr > 0 and price > 0:
         stop_dist   = 2 * atr
@@ -1613,8 +1638,9 @@ def run():
     _fetch_spy_perf()
 
     # Market regime
-    regime = market_regime()
-    vix    = regime["vix"]
+    regime    = market_regime()
+    vix       = regime["vix"]
+    macro_day = near_macro_event(days_before=1)
     if vix > VIX_EXTREME_THRESH:
         logger.warning(f"VIX={vix:.0f} EXTREME — halting new buys, protecting capital.")
 
@@ -1831,6 +1857,12 @@ def run():
                     live_sig = live.get(sym, {})
                     if not live_sig:
                         continue
+                    # Skip DCA if stock is in a clear downtrend (EMA50 falling + negative ROC)
+                    ema50_pos = live_sig.get("price_vs_ema50", 0) or 0
+                    roc5_val  = live_sig.get("roc5", 0) or 0
+                    if ema50_pos < -3 and roc5_val < -5:
+                        logger.debug(f"DCA SKIP {sym} — downtrend (EMA50={ema50_pos:.1f}%, ROC5={roc5_val:.1f}%)")
+                        continue
                     dca_sc = score(sym, live_sig, regime_adj=regime_adj)
                     if dca_sc >= 28:  # high conviction only
                         dca_notional = min(
@@ -1912,7 +1944,7 @@ def run():
                     d        = live[tk]
                     price    = d["price"]
                     atr      = d.get("atr")
-                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix)
+                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix, macro_day=macro_day)
                     # Size up for strong catalysts or squeeze setups
                     if catalyst and sent >= 5:
                         notional = min(notional * 1.5, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
@@ -1969,7 +2001,7 @@ def run():
                     if price <= 0:
                         continue
                     atr      = d.get("atr")
-                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix)
+                    notional = calc_notional(portfolio_val, buying_power, price, atr, vix, macro_day=macro_day)
                     notional = round(notional * 0.6, 2)   # size shorts smaller
                     if notional < 1:
                         continue
