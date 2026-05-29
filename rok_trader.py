@@ -3133,6 +3133,33 @@ def run():
     tlog["sharpe_ratio"]    = _sharpe_ratio
     tlog["max_drawdown"]    = round(_max_dd, 2)
 
+    # Plain-English summary of this cycle's decision for the dashboard
+    try:
+        _top_scan = tlog.get("last_scan_top", [])
+        _n_pos = len(tlog.get("positions", []))
+        _regime_desc = regime.get("regime", "neutral").upper()
+        _vix_now = regime.get("vix", 0)
+        if made_trades:
+            _recent = [t for t in tlog["trades"] if t.get("action") in ("BUY", "DCA", "SELL", "COVER")][-3:]
+            _acts = " · ".join(f"{t['action']} {t['ticker']}" for t in _recent)
+            _last_decision = f"Bot executed: {_acts}. Regime: {_regime_desc}, VIX {_vix_now:.1f}."
+        elif _open_guard:
+            _last_decision = f"Market just opened — waiting for opening volatility to settle (10 min guard). VIX {_vix_now:.1f}."
+        elif _close_guard:
+            _last_decision = f"Near market close — no new buys in last 20 min. VIX {_vix_now:.1f}."
+        elif _consecutive_losses:
+            _last_decision = f"Consecutive loss guard active — last 3 trades were losses. Protecting capital. VIX {_vix_now:.1f}."
+        elif vix > VIX_EXTREME_THRESH:
+            _last_decision = f"VIX {_vix_now:.1f} is extreme — all buys suspended until market calms."
+        elif _top_scan:
+            _top_str = ", ".join(f"${s['ticker']}({s['score']})" for s in _top_scan[:3])
+            _last_decision = f"Scanned {len(candidates)} stocks. Top picks: {_top_str}. Regime: {_regime_desc}. No buys met final threshold."
+        else:
+            _last_decision = f"Scanned {len(candidates)} stocks. No candidates passed scoring. Regime: {_regime_desc}, VIX {_vix_now:.1f}."
+        tlog["last_decision"] = _last_decision
+    except Exception:
+        pass
+
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
         "t": now_utc.isoformat(),

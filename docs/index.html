@@ -54483,6 +54483,13 @@ window.renderSectorRotation = renderSectorRotation;
       if (data.error) {
         html += `<div style="background:rgba(255,34,85,.1);border:1px solid rgba(255,34,85,.3);border-radius:8px;padding:.6rem .85rem;margin-bottom:.6rem;font-size:10px;color:var(--r)">⚠️ ${data.error}</div>`;
       }
+      // Last bot decision — plain English summary of what happened last cycle
+      if (data.last_decision) {
+        html += `<div style="background:rgba(130,177,255,.06);border:1px solid rgba(130,177,255,.15);border-radius:8px;padding:.5rem .75rem;margin-bottom:.65rem;display:flex;align-items:flex-start;gap:.5rem">
+          <div style="width:5px;height:5px;border-radius:50%;background:#82b1ff;flex-shrink:0;margin-top:5px;animation:livePulse 2s ease infinite"></div>
+          <div style="font-size:9px;color:#82b1ff;line-height:1.5">${data.last_decision}</div>
+        </div>`;
+      }
       if (trades.length === 0 && positions.length === 0) {
         html += `<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;margin-bottom:.5rem">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
       }
