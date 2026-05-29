@@ -388,8 +388,26 @@ def run():
         "sector_heat": analysis.get("sector_heat", {}),
         "sector_rotation": analysis.get("sector_rotation", ""),
         "rok_message": analysis.get("rok_message", ""),
-        "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []),
-        "earnings_plays": analysis.get("earnings_plays", []),
+        "short_squeeze_alerts": analysis.get("short_squeeze_alerts", []) or [
+            {
+                "ticker": s.get("ticker", ""),
+                "short_float": "High short interest",
+                "setup": s.get("company", ""),
+                "social_velocity": "high",
+            }
+            for s in (short_squeeze or [])[:6]
+            if s.get("ticker") and s.get("ticker").isalpha() and len(s.get("ticker","")) <= 5
+        ],
+        "earnings_plays": analysis.get("earnings_plays", []) or [
+            {
+                "ticker": e.get("ticker", ""),
+                "earnings_date": e.get("date", ""),
+                "direction": "NEUTRAL",
+                "play": f"Reports {e.get('timing', 'soon')}. Watch for surprise beats/misses.",
+            }
+            for e in (earnings_cal or [])[:6]
+            if e.get("ticker")
+        ],
         "congressional_plays": analysis.get("congressional_plays", []),
         "technical_breakouts": analysis.get("technical_breakouts", []) or [
             {
