@@ -889,6 +889,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <!-- ── SIGNALS TAB ─────────────────────────────────────── -->
   <div class="tab-pane active" id="tab-signals">
 
+    <!-- Portfolio alert banner (filled by JS when portfolio has alerts) -->
+    <div id="signals-portfolio-alert" style="display:none;margin-bottom:.65rem;padding:.6rem .85rem;background:rgba(255,34,85,.08);border:1px solid rgba(255,34,85,.22);border-radius:10px;cursor:pointer" onclick="showTab('portfolio')">
+      <div style="font-size:10.5px;font-weight:700;color:var(--r)" id="signals-portfolio-alert-text"></div>
+      <div style="font-size:10px;color:var(--wh3);margin-top:2px">Tap here → check your 💼 MY STOCKS tab for details</div>
+    </div>
+
     
     
     
@@ -1848,6 +1854,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     // Update portfolio P&L if visible
     if (activeTab === 'portfolio') renderPortfolio();
+    if (activeTab === 'signals') updateSignalsPortfolioAlert();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2185,7 +2192,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') renderScreener();
-    if (id === 'signals') initSignalSparks();
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -2337,6 +2344,30 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (sb) sb.style.display = Object.keys(getPortfolio()).length ? 'flex' : 'none';
   }
   window.removeFromPortfolio = removeFromPortfolio;
+
+  function updateSignalsPortfolioAlert() {
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) return;
+    const alertBanner = document.getElementById('signals-portfolio-alert');
+    const alertText = document.getElementById('signals-portfolio-alert-text');
+    if (!alertBanner || !alertText) return;
+    const alertItems = [];
+    tickers.forEach(ticker => {
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const det = sigDetails[ticker] || {};
+      const lp = liveprices[ticker];
+      const curPrice = lp ? lp.price : (stock ? stock.price : null);
+      if (stock && stock.rok_signal === 'sell') alertItems.push(`🔴 ${ticker} has a SELL signal`);
+      else if (det.stop_loss && curPrice && curPrice < det.stop_loss) alertItems.push(`⚠ ${ticker} hit stop-loss`);
+    });
+    if (alertItems.length) {
+      alertText.textContent = alertItems.slice(0, 2).join(' · ') + (alertItems.length > 2 ? ` +${alertItems.length - 2} more` : '');
+      alertBanner.style.display = 'block';
+    } else {
+      alertBanner.style.display = 'none';
+    }
+  }
 
   function renderPortfolioSummary() {
     const p = getPortfolio();
@@ -2917,6 +2948,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     screenerBuilt = true;
     syncBoughtButtons();
     renderPortfolioSummary();
+    updateSignalsPortfolioAlert();
     initPortfolioHowTo();
     updateMarketStatus();
     setInterval(updateMarketStatus, 60000);
@@ -2973,11 +3005,18 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       if (msg) {
         sent[notifKey] = 1;
         sessionStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
-        // Show in-app alert bar
-        showAppAlert(msg, ticker.includes('stop') ? 'sell' : 'target');
-        // Try browser notification
+        showAppAlert(msg, msg.includes('stop') ? 'sell' : 'target');
         if (Notification.permission === 'granted') {
           new Notification('ROK Alert', { body: msg, icon: './icon-192.png' }).onclick = () => showTab('portfolio');
+        }
+      }
+      // Earnings warning (once per session per ticker)
+      if (stock && stock.earnings_date) {
+        const earnKey = `earn_${ticker}`;
+        if (!sent[earnKey]) {
+          sent[earnKey] = 1;
+          sessionStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
+          showAppAlert(`📅 ${ticker} reports earnings ${stock.earnings_date} — expect volatility! Consider sizing down before then.`, 'info', 9000);
         }
       }
     });
