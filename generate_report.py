@@ -252,11 +252,17 @@ def run():
                 sig["stop_loss"] = round(sig["current_price"] * 0.92, 2)
             if not sig.get("sector"):
                 sig["sector"] = sd.get("sector", "")
-            # Volume spike and RSI
+            # Volume spike and RSI — prefer TA data (60d window) over yahoo 30d
+            ta = ta_data.get(t, {}) if ta_data else {}
             if not sig.get("vol_ratio"):
-                sig["vol_ratio"] = sd.get("vol_ratio")
+                sig["vol_ratio"] = ta.get("volume_ratio") or sd.get("vol_ratio")
             if not sig.get("rsi"):
-                sig["rsi"] = sd.get("rsi")
+                sig["rsi"] = ta.get("rsi") or sd.get("rsi")
+            # 52-week position data
+            if ta:
+                sig["pct_from_52w_high"] = ta.get("pct_from_52w_high")
+                sig["week_52_high"] = ta.get("week_52_high")
+                sig["macd_signal"] = ta.get("macd_signal_label")
             # Build data_signals from available sources
             if not sig.get("data_signals"):
                 dsigs = []

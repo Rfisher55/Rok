@@ -890,12 +890,40 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   <!-- ── SIGNALS TAB ─────────────────────────────────────── -->
   <div class="tab-pane active" id="tab-signals">
 
-    {% if data.week_summary or data.rok_message %}
-    <div class="briefing-card">
-      <div class="briefing-hdr"><span class="briefing-icon">🧠</span><span class="briefing-label">ROK'S TAKE TODAY</span></div>
-      <div class="briefing-txt">{{ data.week_summary or data.rok_message }}</div>
+    {# Quick market snapshot row #}
+    <div style="display:flex;gap:.5rem;align-items:stretch;flex-wrap:wrap;margin-bottom:.75rem">
+      {% set sent = data.market_sentiment|upper %}
+      <div style="flex:0 0 auto;background:{% if sent == 'BULLISH' %}linear-gradient(135deg,rgba(0,255,136,.12),rgba(0,255,136,.06)){% elif sent == 'BEARISH' %}linear-gradient(135deg,rgba(255,34,85,.12),rgba(255,34,85,.06)){% else %}linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,215,0,.04)){% endif %};border:1px solid {% if sent == 'BULLISH' %}rgba(0,255,136,.25){% elif sent == 'BEARISH' %}rgba(255,34,85,.25){% else %}rgba(255,215,0,.2){% endif %};border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
+        <span style="font-size:1.3rem">{% if sent == 'BULLISH' %}🟢{% elif sent == 'BEARISH' %}🔴{% else %}🟡{% endif %}</span>
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Market</div>
+          <div style="font-size:14px;font-weight:900;color:{% if sent == 'BULLISH' %}var(--g){% elif sent == 'BEARISH' %}var(--r){% else %}var(--au){% endif %}">{{ sent }}</div>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.18);border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
+        <span style="font-size:1.3rem">⚡</span>
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Buy Signals</div>
+          <div style="font-size:14px;font-weight:900;color:var(--g)">{{ data.buy_signals|length }}</div>
+        </div>
+      </div>
+      {% if data.fear_greed and data.fear_greed.score is defined %}
+      {% set fgs = data.fear_greed.score %}
+      <div style="flex:0 0 auto;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.6rem .85rem;display:flex;align-items:center;gap:.5rem">
+        <span style="font-size:1.3rem">{% if fgs < 30 %}😨{% elif fgs > 70 %}🤑{% else %}😐{% endif %}</span>
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase">Fear/Greed</div>
+          <div style="font-size:14px;font-weight:900;color:{% if fgs < 30 %}var(--g){% elif fgs > 70 %}var(--r){% else %}var(--au){% endif %}">{{ fgs|round(0)|int }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if data.week_summary or data.rok_message %}
+      <div style="flex:1;min-width:160px;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(255,215,0,.04));border:1px solid rgba(0,204,255,.15);border-radius:10px;padding:.6rem .85rem;position:relative;overflow:hidden">
+        <div style="font-size:7.5px;font-weight:800;letter-spacing:.18em;color:var(--b);text-transform:uppercase;margin-bottom:.25rem">🧠 ROK'S TAKE</div>
+        <div style="font-size:11.5px;color:var(--wh2);line-height:1.5;font-style:italic">{{ (data.week_summary or data.rok_message)[:160] }}{% if (data.week_summary or data.rok_message)|length > 160 %}…{% endif %}</div>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
 
     {% if data.buy_signals %}
     {% set top = data.buy_signals[0] %}
@@ -967,7 +995,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               {% endfor %}
             </div>
             {% endif %}
-            {% if s.vol_ratio and s.vol_ratio > 1.8 %}<div style="margin-bottom:5px"><span class="vol-badge">🚀 {{ '%.1f'|format(s.vol_ratio) }}x AVG VOLUME</span>{% if s.rsi %}&nbsp;<span class="rsi-badge {{ 'overbought' if s.rsi > 70 else 'oversold' if s.rsi < 30 else 'neutral' }}">RSI {{ s.rsi|round(0)|int }}</span>{% endif %}</div>{% elif s.rsi %}<div style="margin-bottom:5px"><span class="rsi-badge {{ 'overbought' if s.rsi > 70 else 'oversold' if s.rsi < 30 else 'neutral' }}">RSI {{ s.rsi|round(0)|int }}</span></div>{% endif %}
+            {% if s.vol_ratio and s.vol_ratio > 1.8 or s.rsi or s.pct_from_52w_high is defined %}
+            <div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:3px">
+              {% if s.vol_ratio and s.vol_ratio > 1.8 %}<span class="vol-badge">🚀 {{ '%.1f'|format(s.vol_ratio) }}x VOL</span>{% endif %}
+              {% if s.rsi %}<span class="rsi-badge {{ 'overbought' if s.rsi > 70 else 'oversold' if s.rsi < 30 else 'neutral' }}">RSI {{ s.rsi|round(0)|int }}</span>{% endif %}
+              {% if s.pct_from_52w_high is defined and s.pct_from_52w_high is not none %}
+              {% set d52 = s.pct_from_52w_high|round(0)|int %}
+              <span style="font-size:8.5px;padding:2px 6px;border-radius:10px;{{ 'background:rgba(0,255,136,.08);color:var(--g);border:1px solid rgba(0,255,136,.2)' if d52 > -10 else 'background:rgba(0,204,255,.06);color:var(--b);border:1px solid rgba(0,204,255,.15)' }}">{{ d52 }}% from 52W high</span>
+              {% endif %}
+            </div>
+            {% endif %}
             {% if s.current_price or s.price_target %}
             <div class="prow">
               {% if s.current_price %}<span class="p-cur" data-ticker="{{ s.ticker }}" data-price="{{ s.current_price }}">${{ '%.2f'|format(s.current_price) }}</span>{% endif %}
