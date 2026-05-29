@@ -32,7 +32,7 @@ MAX_POSITIONS     = 8      # max open positions at once
 MAX_POSITION_PCT  = 0.12   # max 12% of portfolio per trade
 STOP_LOSS_PCT     = 0.07   # sell if down 7%
 PROFIT_TARGET_PCT = 0.20   # sell if up 20%
-MIN_BUY_SCORE     = 30     # paper trading: buy anything showing momentum
+MIN_BUY_SCORE     = 20     # paper trading: buy anything with slight momentum
 
 
 # ── Alpaca helpers ──────────────────────────────────────────────────────────
