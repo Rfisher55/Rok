@@ -289,6 +289,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .sc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .sc-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.12)}
 .sc-card.buy{border-color:rgba(0,255,136,.18);box-shadow:0 0 14px rgba(0,255,136,.15),0 2px 18px rgba(0,0,0,.5)}.sc-card.buy::before{background:var(--g)}
+.sc-card.top-pick{border-color:rgba(255,215,0,.35)!important;box-shadow:0 0 18px rgba(255,215,0,.2),0 2px 18px rgba(0,0,0,.5)!important}.sc-card.top-pick::before{background:linear-gradient(90deg,var(--au),var(--g))!important}
 .sc-card.sell{border-color:rgba(255,34,85,.18);box-shadow:0 0 14px rgba(255,34,85,.15),0 2px 18px rgba(0,0,0,.5)}.sc-card.sell::before{background:var(--r)}
 .sc-card.watch{border-color:rgba(255,215,0,.18);box-shadow:0 0 14px rgba(255,215,0,.15),0 2px 18px rgba(0,0,0,.5)}.sc-card.watch::before{background:var(--au)}
 .sc-card.neutral::before{background:var(--wh4)}
@@ -959,13 +960,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
       <div style="font-size:11.5px;color:var(--wh2);line-height:1.65">
         {% if sent == 'BULLISH' and buy_n > 0 %}
-          Scroll down to see ROK's {{ buy_n }} buy recommendation{{ 's' if buy_n != 1 }}. If you're new, start with the top pick and invest only what you can afford to lose. <strong>Always set a stop loss.</strong>
+          Scroll down to see ROK's {{ buy_n }} buy recommendation{{ 's' if buy_n != 1 }}. If you're new, start with the top pick and invest only what you can afford to lose. <strong>Never put more than 5-10% of your money in any single stock.</strong>
         {% elif sent == 'BULLISH' %}
           The market looks healthy but ROK doesn't see clear entry points yet. <strong>Wait for stronger signals</strong> — check back in 15 minutes or watch the stocks in the 👀 WATCH LIST.
         {% elif sent == 'BEARISH' %}
-          Markets are under pressure. If you own stocks, check your <strong>💼 MY STOCKS</strong> tab for sell alerts. Avoid buying new positions until the market stabilizes.
+          Markets are under pressure. If you own stocks, check your <strong>💼 MY STOCKS</strong> tab for sell alerts. Avoid opening new positions until conditions improve — protecting capital is more important than missing gains.
         {% else %}
-          ROK sees mixed conditions. If you're invested, hold your positions. If you're looking to buy, consider <strong>half-positions</strong> — invest half your normal amount and wait for more clarity.
+          ROK sees mixed conditions. If you're invested, hold your positions. If you're looking to buy, consider <strong>smaller position sizes</strong> (half your normal amount) and wait for clearer signals — patience is a trading skill.
         {% endif %}
       </div>
     </div>
@@ -2528,6 +2529,14 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (!calcEl) return;
     const price = parseFloat(priceEl?.value) || 0;
     const shares = parseInt(sharesEl?.value) || 0;
+    // Update suggested stop-loss based on entry price
+    const slEl = document.getElementById('buy-dialog-stoploss');
+    const det = sigDetails[_boughtItTicker] || {};
+    if (price > 0 && slEl && !det.stop_loss) {
+      const suggestedStop = (price * 0.92).toFixed(2);
+      slEl.style.display = 'block';
+      slEl.innerHTML = `💡 <strong style="color:var(--au)">Suggested stop-loss: $${suggestedStop}</strong> (8% below your entry) — if the price drops here, consider selling to limit your loss.`;
+    }
     if (!price || !shares) { calcEl.innerHTML = '<span style="color:var(--wh4)">Enter price + shares to see your investment size</span>'; return; }
     const invested = price * shares;
     const tgt = _boughtItTarget;
@@ -3004,13 +3013,17 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const upHtml = up != null ? `<span class="sc-upside ${up >= 0 ? 'up' : 'down'}">${up >= 0 ? '+' : ''}${up}%↑</span>` : '';
       const starCls = starred.has(s.ticker) ? 'star-btn starred' : 'star-btn';
       const changedBadge = sigChanged(s.ticker) ? `<span class="sig-changed">CHANGED</span>` : '';
+      const sigDet = sigDetails[s.ticker] || {};
+      const isTopPick = sig === 'buy' && (sigDet.signal_strength >= 8 || s.signal_strength >= 8);
+      const topPickBadge = isTopPick ? `<div style="font-size:7.5px;font-weight:800;letter-spacing:.06em;color:var(--au);text-transform:uppercase;margin-bottom:2px">⭐ ROK TOP PICK</div>` : '';
       const earnHtml = s.earnings_date ? `<span class="sc-sector" style="color:rgba(255,215,0,.6);border-color:rgba(255,215,0,.16)">↑${s.earnings_date}</span>` : '';
       const inPort = isInPortfolio(s.ticker);
       const portBtn = `<button style="margin-top:.4rem;width:100%;padding:.38rem;border-radius:7px;border:1px solid ${inPort?'rgba(0,255,136,.35)':'rgba(255,255,255,.1)'};background:${inPort?'rgba(0,255,136,.1)':'rgba(255,255,255,.04)'};color:${inPort?'var(--g)':'var(--wh3)'};font-size:9.5px;font-weight:700;letter-spacing:.05em;cursor:pointer;touch-action:manipulation" onclick="event.stopPropagation();boughtIt('${s.ticker}',${price||0})">${inPort?'✓ IN MY STOCKS':'+ ADD TO MY STOCKS'}</button>`;
       const mc = s.market_cap;
       const capLabel = mc >= 200e9 ? ['MEGA CAP','rgba(255,215,0,.7)'] : mc >= 10e9 ? ['LARGE CAP','rgba(0,255,136,.6)'] : mc >= 2e9 ? ['MID CAP','rgba(0,204,255,.6)'] : mc >= 300e6 ? ['SMALL CAP','rgba(255,136,0,.6)'] : mc > 0 ? ['MICRO CAP','rgba(255,34,85,.5)'] : null;
       const capHtml = capLabel ? `<span title="${capLabel[0]}: ${mc >= 200e9 ? 'Trillion-dollar company, very stable' : mc >= 10e9 ? 'Multi-billion dollar company, relatively safe' : mc >= 2e9 ? 'Medium-sized company, moderate risk' : 'Smaller company, higher risk/reward'}" style="font-size:7px;font-weight:700;letter-spacing:.05em;color:${capLabel[1]};opacity:.85">${capLabel[0]}</span>` : '';
-      return `<div class="sc-card ${sig}" data-sc-ticker="${s.ticker}" onclick="openModal('${s.ticker}')">
+      return `<div class="sc-card ${sig}${isTopPick ? ' top-pick' : ''}" data-sc-ticker="${s.ticker}" onclick="openModal('${s.ticker}')">
+        ${topPickBadge}
         <div class="sc-top">
           <div><div class="sc-ticker">${s.ticker}</div><div class="sc-co">${(s.company_name || '').substring(0, 20)}</div></div>
           <div class="sc-r">
