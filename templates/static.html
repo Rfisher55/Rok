@@ -1024,7 +1024,10 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
               <div class="stop-explainer"><span style="color:var(--r)">⚠ Stop loss: ${{ '%.2f'|format(s.stop_loss) }} ({{ loss_pct }}%)</span> — sell here to protect yourself if it goes wrong</div>
               {% endif %}
             </div>
-            <button class="bought-btn buy-action" id="btn-{{ s.ticker }}" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})">💰 BOUGHT IT — ADD TO MY STOCKS</button>
+            <div style="display:flex;gap:.4rem;margin-top:.5rem">
+              <button class="bought-btn buy-action" id="btn-{{ s.ticker }}" style="flex:1" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})">💰 BOUGHT IT</button>
+              <button onclick="event.stopPropagation();shareSignal('{{ s.ticker }}','{{ s.catalyst or s.rok_take or '' }}',{{ s.current_price or 0 }},{{ s.price_target or 0 }})" style="padding:.6rem .8rem;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Share this trade idea">📤</button>
+            </div>
           </div>
           {% endfor %}
           {% if not data.buy_signals %}<div style="color:var(--wh3);font-size:12px;padding:.5rem">No buy signals this run.</div>{% endif %}
@@ -1468,6 +1471,32 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         </div>
       </div>
       {% endif %}
+
+      <!-- ROK GLOSSARY -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--b)">📖 ROK GLOSSARY — PLAIN ENGLISH</h2><span class="s-sub">What all these terms actually mean</span></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.55rem;margin-top:.35rem">
+          {% for term, def in [
+            ('ROK Score (0-100)', 'How confident ROK is in a signal. 80+ = very strong. 60+ = good. Below 60 = use caution.'),
+            ('Stop Loss', 'The price where you should sell if the trade goes wrong. Like a seatbelt — it limits how much you can lose.'),
+            ('Price Target', "Wall Street analysts' best guess for where a stock is headed. Not a guarantee, but useful as a goal."),
+            ('Risk/Reward (R:R)', 'Compares potential loss to potential gain. 1:2 means risking $1 to make $2. Higher is better.'),
+            ('RSI (Momentum)', 'Measures if a stock is being bought or sold too aggressively. Above 70 = maybe too hot. Below 30 = possibly cheap.'),
+            ('Volume Spike', "Today's trading volume vs the 30-day average. 2x+ means unusual interest — hedge funds or institutions are moving."),
+            ('Congressional Buy', 'A US senator or representative disclosed buying this stock with their own money. Required by law within 45 days.'),
+            ('Insider Buy (Form 4)', "A company executive bought their own company's stock. Insiders only buy with personal money when they expect it to go up."),
+            ('Unusual Options', 'A large fund placed a big bet that this stock moves significantly. These trades often cost $1M+.'),
+            ('Short Squeeze', 'When lots of traders bet a stock falls, but it goes up instead, forcing them to all buy at once — causing a rapid price spike.'),
+            ('Fear & Greed Index', 'CNN measures overall market emotion. High fear (under 30) often means stocks are cheap. High greed (over 70) = be careful.'),
+            ('Put/Call Ratio', 'Measures how many bets hedge funds are making on stocks going down vs up. Below 0.8 = bullish. Above 1.2 = bearish.'),
+          ] %}
+          <div style="background:var(--blk4);border-radius:8px;padding:.6rem .75rem;border:var(--bdr2)">
+            <div style="font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--au);text-transform:uppercase;margin-bottom:.25rem">{{ term }}</div>
+            <div style="font-size:11px;color:var(--wh2);line-height:1.5">{{ def }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
 
     </div><!-- /intel-grid -->
   </div><!-- /tab-intel -->
@@ -2186,6 +2215,23 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
   window.sharePortfolio = sharePortfolio;
 
+  function shareSignal(ticker, catalyst, price, target) {
+    const upside = price && target && price > 0 ? Math.round((target - price) / price * 100) : 0;
+    let text = `ROK Signal: BUY $${ticker}`;
+    if (price) text += ` @ $${price.toFixed(2)}`;
+    if (upside > 0) text += ` — ${upside}% upside potential`;
+    if (catalyst) text += `\n${catalyst.substring(0, 120)}`;
+    text += '\nSee full analysis: https://rfisher55.github.io/Rok';
+    if (navigator.share) {
+      navigator.share({ title: `ROK: BUY $${ticker}`, text }).catch(() => {});
+    } else {
+      navigator.clipboard?.writeText(text)
+        .then(() => showAppAlert(`📤 $${ticker} trade idea copied!`, 'info'))
+        .catch(() => prompt('Copy this trade idea:', text));
+    }
+  }
+  window.shareSignal = shareSignal;
+
   function fmtDate(iso) {
     if (!iso) return '';
     try {
@@ -2430,6 +2476,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           ${s.pe_ratio != null && s.pe_ratio > 0 ? `<span class="sc-pe">PE ${s.pe_ratio.toFixed(1)}</span>` : ''}
           ${upHtml}
           ${earnHtml}
+          ${s.rsi != null ? `<span class="rsi-badge ${s.rsi > 70 ? 'overbought' : s.rsi < 30 ? 'oversold' : 'neutral'}" style="font-size:7.5px;padding:1px 4px">RSI ${Math.round(s.rsi)}</span>` : ''}
+          ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
         </div>
         ${portBtn}
       </div>`;
