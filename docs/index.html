@@ -54443,6 +54443,7 @@ window.renderSectorRotation = renderSectorRotation;
             ${data.market_quality != null ? (() => { const mq = data.market_quality; const mqCol = mq >= 65 ? '#00ff88' : mq >= 50 ? '#ffd54f' : mq >= 35 ? '#ff9800' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Mkt Quality</div><div style="font-size:14px;font-weight:900;color:${mqCol}">${mq}/100</div></div>`; })() : ''}
             ${data.scan_breadth_pct != null ? (() => { const bp = data.scan_breadth_pct; const bpCol = bp >= 60 ? '#00ff88' : bp >= 40 ? '#ffd54f' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scan A/D</div><div style="font-size:14px;font-weight:900;color:${bpCol}">${bp}%</div></div>`; })() : ''}
             ${data.effective_min_score != null && data.effective_min_score !== 18 ? `<div style="text-align:center"><div style="font-size:8px;color:#ff9800;font-weight:700;text-transform:uppercase">Min Score</div><div style="font-size:11px;font-weight:900;color:#ff9800">${data.effective_min_score}↑</div></div>` : ''}
+            ${data.portfolio_beta != null ? (() => { const pb = data.portfolio_beta; const pbCol = pb > 1.5 ? '#ef5350' : pb > 1.2 ? '#ffab40' : pb > 0.8 ? '#ffd54f' : '#69f0ae'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Port β</div><div style="font-size:14px;font-weight:900;color:${pbCol}">${pb.toFixed(2)}</div></div>`; })() : ''}
           </div>
         </div>
         <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600;margin-bottom:.3rem">
@@ -54472,6 +54473,32 @@ window.renderSectorRotation = renderSectorRotation;
         healthEl.innerHTML += `<div style="margin-top:.5rem">
           <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector Rotation</div>
           <div style="display:flex;flex-direction:column;gap:2px">${secHtml}</div>
+        </div>`;
+      }
+
+      // Sector ETF health heatmap (live ETF data: above EMA20, 1d/5d change)
+      const sectorEtf = data.sector_etf_trends || {};
+      const etfEntries = Object.entries(sectorEtf).sort((a,b) => (b[1].chg5d||0) - (a[1].chg5d||0));
+      if (etfEntries.length > 0) {
+        const etfHtml = etfEntries.map(([sec, e]) => {
+          const bull = e.bullish;
+          const c5 = e.chg5d != null ? e.chg5d : 0;
+          const c1 = e.chg1d != null ? e.chg1d : 0;
+          const bg = bull ? 'rgba(0,255,136,.07)' : 'rgba(255,34,85,.06)';
+          const dot = bull ? '<span style="color:#00ff88;font-size:8px">●</span>' : '<span style="color:#ef5350;font-size:8px">●</span>';
+          const c5col = c5 >= 2 ? '#00ff88' : c5 >= 0 ? '#69f0ae' : c5 >= -2 ? '#ffab40' : '#ef5350';
+          const c1col = c1 >= 0.5 ? '#69f0ae' : c1 >= 0 ? '#aaa' : '#ef5350';
+          return `<div style="display:flex;align-items:center;gap:.35rem;padding:.18rem .35rem;background:${bg};border-radius:4px">
+            ${dot}
+            <span style="font-size:7px;color:#4a6fa5;min-width:52px;font-weight:600">${sec}</span>
+            <span style="font-size:7.5px;font-weight:800;color:${c5col};min-width:38px">${c5>=0?'+':''}${c5.toFixed(1)}%5d</span>
+            <span style="font-size:7px;color:${c1col}">${c1>=0?'+':''}${c1.toFixed(1)}%1d</span>
+            ${e.above_ema20 ? '<span style="font-size:6px;color:#82b1ff;font-weight:700">EMA✓</span>' : '<span style="font-size:6px;color:#555">EMA✗</span>'}
+          </div>`;
+        }).join('');
+        healthEl.innerHTML += `<div style="margin-top:.6rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector ETF Health</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${etfHtml}</div>
         </div>`;
       }
     }

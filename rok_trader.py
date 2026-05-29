@@ -2382,6 +2382,7 @@ def _extract(daily, hourly):
     stoch_k        = 50.0
     stoch_d        = 50.0
     roc5           = 0.0
+    roc20          = 0.0
     price_vs_ema50  = 0.0
     price_vs_ema200 = 0.0
     try:
@@ -2394,6 +2395,8 @@ def _extract(daily, hourly):
             if e10 and e10 > 0:
                 daily_trend = (e5 - e10) / e10 * 100 if e5 else 0.0
             roc5 = _roc(dc, 5)
+        if len(dc) >= 20:
+            roc20 = _roc(dc, 20)
         if len(dc) >= 30:
             stoch_k, stoch_d = _stoch_rsi(dc, rsi_period=14, stoch_period=14)
         if len(dc) >= 50:
@@ -2781,6 +2784,7 @@ def _extract(daily, hourly):
         "stoch_k":            round(stoch_k, 1),
         "stoch_d":            round(stoch_d, 1),
         "roc5":               round(roc5, 2),
+        "roc20":              round(roc20, 2),
         "price_vs_ema50":     round(price_vs_ema50, 2),
         "williams_r":         round(williams_r, 1),
         "macd_slope":         round(macd_slope_val, 4),
@@ -3167,6 +3171,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     stoch_k   = d.get("stoch_k",           50) or 50
     stoch_d   = d.get("stoch_d",           50) or 50
     roc5      = d.get("roc5",               0) or 0
+    roc20     = d.get("roc20",              0) or 0
     ema50_pos = d.get("price_vs_ema50",     0) or 0
     w_r       = d.get("williams_r",       -50) or -50
     m_slope   = d.get("macd_slope",         0) or 0
@@ -3185,6 +3190,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif roc5 >  0:  s +=  3
     elif roc5 < -5:  s -= 12
     elif roc5 < -2:  s -=  6
+
+    # 20-day rate of change: medium-term trend confirmation (+6/-6)
+    if   roc20 > 10:  s +=  6
+    elif roc20 >  5:  s +=  3
+    elif roc20 < -10: s -=  6
+    elif roc20 <  -5: s -=  3
 
     # Price vs 50-day EMA — trend confirmation (+8/-10)
     if   ema50_pos >  3:  s +=  8
@@ -4642,6 +4653,8 @@ def run():
     tlog["avg_loss_pct"]    = _avg_loss
     tlog["portfolio_heat"]  = round(_portfolio_heat, 2)
     tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
+    tlog["sector_etf_trends"]  = sector_etf_trends  # {sector: {bullish, chg5d, chg1d, above_ema20}}
+    tlog["portfolio_beta"]     = _port_beta_est      # estimated portfolio beta
     tlog["sharpe_ratio"]       = _sharpe_ratio
     tlog["max_drawdown"]       = round(_max_dd, 2)
     try:
