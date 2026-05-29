@@ -54123,10 +54123,15 @@ window.renderSectorRotation = renderSectorRotation;
       const winRate = total > 0 ? Math.round(wins/total*100) : 0;
       const totalPnl = (stats.total_pnl || 0).toFixed(2);
       const pnlColor = totalPnl >= 0 ? 'var(--g)' : 'var(--r)';
+      const openPos = data.open_positions || (data.positions||[]).length || 0;
+      const scanSize = data.scan_universe || 0;
+      const macroDay = data.macro_day ? '⚠️ FOMC/MACRO' : '';
+      const statusColor = data.status === 'ok' ? 'var(--g)' : data.status ? 'var(--au)' : 'var(--wh3)';
       snap.innerHTML = `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem">
         <div style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,0,0,.2));border:1.5px solid rgba(0,255,136,.25);border-radius:12px;padding:.7rem 1rem;display:flex;align-items:center;gap:.7rem">
           <div><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase">Portfolio</div><div style="font-family:var(--disp);font-size:1.5rem;color:var(--g)">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
           <div><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase">Cash</div><div style="font-size:13px;font-weight:800;color:var(--b)">\$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+          <div><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase">Positions</div><div style="font-size:13px;font-weight:800;color:var(--au)">${openPos}</div></div>
         </div>
         <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem">
           <div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">ROK Bot Performance</div>
@@ -54136,7 +54141,8 @@ window.renderSectorRotation = renderSectorRotation;
             <div><div style="font-size:8px;color:var(--wh4)">P&amp;L</div><div style="font-size:13px;font-weight:800;color:${pnlColor}">${totalPnl >= 0 ? '+' : ''}${totalPnl}%</div></div>
           </div>
         </div>
-        ${regime.regime ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:13px;font-weight:800;color:${regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)'};">${regime.regime.toUpperCase()}</div><div style="font-size:8px;color:var(--wh3)">VIX ${(regime.vix||0).toFixed(1)}</div></div>` : ''}
+        ${regime.regime ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:13px;font-weight:800;color:${regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)'};">${regime.regime.toUpperCase()}</div><div style="font-size:8px;color:var(--wh3)">VIX ${(regime.vix||0).toFixed(1)} ${macroDay}</div></div>` : ''}
+        ${scanSize ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Scanner</div><div style="font-size:13px;font-weight:800;color:var(--wh)">${scanSize}</div><div style="font-size:8px;color:${statusColor}">${data.status||'—'}</div></div>` : ''}
       </div>`;
     }
 

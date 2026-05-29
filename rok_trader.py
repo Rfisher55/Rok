@@ -790,6 +790,12 @@ def crypto_score(sig: dict) -> int:
     macd   = sig.get("macd",        0) or 0
     bb     = sig.get("bb_pos",     50) or 50
     vwap   = sig.get("vwap_pos",    0) or 0
+    roc5   = sig.get("roc5",        0) or 0
+    stoch_k = sig.get("stoch_k",   50) or 50
+    ema50  = sig.get("price_vs_ema50", 0) or 0
+    w_r    = sig.get("williams_r", -50) or -50
+    m_slp  = sig.get("macd_slope",   0) or 0
+    ttm    = sig.get("ttm_squeeze_fired", False)
 
     if   chg > 5:   s += 28
     elif chg > 2:   s += 18
@@ -811,6 +817,20 @@ def crypto_score(sig: dict) -> int:
     if   40 < bb < 80: s += 8
     if   vwap > 0.3:  s += 8
     elif vwap < -0.3: s -= 6
+    # New momentum indicators
+    if   roc5 >  8:  s += 14
+    elif roc5 >  3:  s +=  8
+    elif roc5 < -8:  s -= 12
+    elif roc5 < -3:  s -=  6
+    if   stoch_k < 20: s += 12  # oversold crypto = high-conviction bounce
+    elif stoch_k > 85: s -=  8
+    if   ema50 >  5:  s +=  8   # above 50-day EMA = uptrend
+    elif ema50 < -5:  s -= 10
+    if   w_r < -80:  s += 10    # oversold Williams %R
+    elif w_r > -20:  s -=  6
+    if   m_slp > 0:  s +=  8    # MACD slope rising
+    elif m_slp < 0:  s -=  6
+    if ttm:          s += 16    # TTM squeeze fired = breakout
 
     return max(0, min(100, int(s)))
 
@@ -2102,12 +2122,17 @@ def run():
     tlog["portfolio_value"] = portfolio_val
     tlog["buying_power"]    = round(buying_power, 2)
     tlog["regime"]          = regime
+    tlog["status"]          = "ok"
+    tlog["macro_day"]       = macro_day
+    tlog["open_positions"]  = len(tlog.get("positions", []))
+    tlog["scan_universe"]   = len(candidates)
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
         "t": now_utc.isoformat(),
         "v": round(portfolio_val, 2),
         "c": round(buying_power, 2),
+        "p": len(tlog.get("positions", [])),
     }
     history = tlog.setdefault("perf_history", [])
     history.append(snap)
@@ -2117,6 +2142,7 @@ def run():
     logger.info(
         f"Cycle done. Trades: {'yes' if made_trades else 'none'}. "
         f"Regime: {regime['regime']}. Portfolio: ${portfolio_val:,.0f}. "
+        f"Positions: {len(tlog.get('positions', []))}. "
         f"Log: {len(tlog['trades'])} entries."
     )
 
