@@ -1050,6 +1050,10 @@ body.beginner-mode #beginner-banner { display:block }
       <div style="font-size:10.5px;font-weight:700;color:var(--r)" id="signals-portfolio-alert-text"></div>
       <div style="font-size:10px;color:var(--wh3);margin-top:2px">Tap here → check your 💼 MY STOCKS tab for details</div>
     </div>
+    <!-- Live macro mini-strip: VIX, TNX, DXY — updated by JS -->
+    <div id="live-macro-strip" style="display:none;margin-bottom:.6rem"></div>
+    <!-- Next refresh countdown -->
+    <div id="next-refresh-row" style="display:none;margin-bottom:.4rem;text-align:right;font-size:9px;color:var(--wh4)"></div>
 
     {# Quick market snapshot row #}
     {% set sent = data.market_sentiment|upper %}
@@ -2102,6 +2106,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-earnings-cal" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-news" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-ath-banner" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
@@ -2529,9 +2535,22 @@ body.beginner-mode #beginner-banner { display:block }
   }
 
   function updatePriceInDOM(ticker, price, changePct) {
+    const lp = liveprices[ticker] || {};
+    const { state } = getMarketState();
+    // Build pre/post market badge if applicable
+    let extBadge = '';
+    if (state === 'pre' && lp.pre_price != null) {
+      const c = lp.pre_chg_pct;
+      const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+      extBadge = ` <span style="font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.2);color:var(--au);margin-left:3px">PRE $${lp.pre_price.toFixed(2)}</span>`;
+    } else if (state === 'post' && lp.post_price != null) {
+      const c = lp.post_chg_pct;
+      const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+      extBadge = ` <span style="font-size:8px;padding:1px 4px;border-radius:4px;background:rgba(0,204,255,.1);border:1px solid rgba(0,204,255,.2);color:var(--b);margin-left:3px">AH $${lp.post_price.toFixed(2)}</span>`;
+    }
     // Update signal card prices
     document.querySelectorAll(`[data-ticker="${ticker}"][data-price]`).forEach(el => {
-      el.textContent = '$' + price.toFixed(2);
+      el.innerHTML = '$' + price.toFixed(2) + extBadge;
       el.dataset.price = price;
     });
     // Update screener prices
@@ -2575,9 +2594,10 @@ body.beginner-mode #beginner-banner { display:block }
 
   async function fetchYahooPrices(tickers) {
     const sym = tickers.join(',');
+    const fields = 'regularMarketPrice,regularMarketChangePercent,regularMarketVolume,averageDailyVolume3Month,preMarketPrice,preMarketChangePercent,postMarketPrice,postMarketChangePercent,marketState,fiftyTwoWeekHigh,fiftyTwoWeekLow';
     const urls = [
-      `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${sym}`,
-      `https://query2.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${sym}`,
+      `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${sym}&fields=${fields}`,
+      `https://query2.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${sym}&fields=${fields}`,
     ];
     for (const url of urls) {
       try {
@@ -2587,7 +2607,22 @@ body.beginner-mode #beginner-banner { display:block }
         const quotes = json?.quoteResponse?.result || [];
         quotes.forEach(q => {
           if (q.symbol && q.regularMarketPrice != null) {
-            liveprices[q.symbol] = { price: q.regularMarketPrice, change_pct: q.regularMarketChangePercent || 0 };
+            const vol = q.regularMarketVolume;
+            const avgVol = q.averageDailyVolume3Month;
+            liveprices[q.symbol] = {
+              price: q.regularMarketPrice,
+              change_pct: q.regularMarketChangePercent || 0,
+              volume: vol || null,
+              avg_volume: avgVol || null,
+              vol_ratio: (vol && avgVol && avgVol > 0) ? vol / avgVol : null,
+              pre_price: q.preMarketPrice || null,
+              pre_chg_pct: q.preMarketChangePercent || null,
+              post_price: q.postMarketPrice || null,
+              post_chg_pct: q.postMarketChangePercent || null,
+              market_state: q.marketState || null,
+              week_high: q.fiftyTwoWeekHigh || null,
+              week_low: q.fiftyTwoWeekLow || null,
+            };
           }
         });
         return true;
@@ -2639,12 +2674,34 @@ body.beginner-mode #beginner-banner { display:block }
     }
 
     // Update DOM
+    const portTickers = new Set(Object.keys(getPortfolio()));
+    const volSpikeAlerts = [];
     Object.entries(liveprices).forEach(([ticker, d]) => {
       updatePriceInDOM(ticker, d.price, d.change_pct);
       // Update stock_universe in memory for portfolio calculations
       const su = (ROK.stock_universe || []).find(s => s.ticker === ticker);
       if (su) { su.price = d.price; su.change_pct = d.change_pct; }
+      // Volume spike detection for portfolio stocks
+      if (portTickers.has(ticker) && d.vol_ratio != null && d.vol_ratio >= 3) {
+        const { state } = getMarketState();
+        if (state === 'open') volSpikeAlerts.push({ ticker, ratio: d.vol_ratio, chg: d.change_pct });
+      }
     });
+    // Show volume spike toasts (throttled: only once per 15 mins per ticker)
+    const VOL_SPIKE_KEY = 'rok_vol_spike_v1';
+    try {
+      const seen = JSON.parse(sessionStorage.getItem(VOL_SPIKE_KEY) || '{}');
+      volSpikeAlerts.forEach(({ ticker, ratio, chg }) => {
+        const lastSeen = seen[ticker] || 0;
+        if (Date.now() - lastSeen > 15 * 60 * 1000) {
+          const dir = chg >= 0 ? '🚀' : '🔻';
+          const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
+          showAppAlert(`${dir} ${ticker} volume spike! ${ratio.toFixed(1)}× avg volume · ${chgStr} today`, 'info', 7000);
+          seen[ticker] = Date.now();
+        }
+      });
+      sessionStorage.setItem(VOL_SPIKE_KEY, JSON.stringify(seen));
+    } catch { /* ignore */ }
 
     // Update header index bar with live prices
     document.querySelectorAll('[data-idx-ticker]').forEach(el => {
@@ -2681,10 +2738,13 @@ body.beginner-mode #beginner-banner { display:block }
     updateMarketLiveBrief();
     if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
+    if (activeTab === 'signals') updateLiveMacroStrip();
     renderLivePortStrip();
     updateTickerTape();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
+    // Set next refresh time for countdown
+    _nextRefreshAt = Date.now() + 3 * 60 * 1000;
   }
   window.refreshLivePrices = refreshLivePrices;
 
@@ -2842,6 +2902,30 @@ body.beginner-mode #beginner-banner { display:block }
         ${priceTarget ? `<span style="font-size:11px;color:var(--wh3)">Target <strong style="color:var(--wh2)">$${Number(priceTarget).toFixed(2)}</strong></span>` : ''}
         ${lp ? `<span style="font-size:9px;color:var(--g);opacity:.7">● LIVE</span>` : ''}
       </div>
+      ${(() => {
+        if (!lp) return '';
+        const { state } = getMarketState();
+        const badges = [];
+        if (lp.vol_ratio != null && lp.vol_ratio >= 2) {
+          const volColor = lp.vol_ratio >= 4 ? 'var(--r)' : 'var(--au)';
+          badges.push(`<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.2);color:${volColor};font-weight:700">🔥 ${lp.vol_ratio.toFixed(1)}× avg volume</span>`);
+        }
+        if (state === 'pre' && lp.pre_price != null) {
+          const c = lp.pre_chg_pct || 0;
+          const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+          badges.push(`<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);color:var(--au);font-weight:700">🌅 PRE-MARKET $${lp.pre_price.toFixed(2)} <span style="color:${cc}">${c >= 0?'+':''}${c.toFixed(2)}%</span></span>`);
+        } else if (state === 'post' && lp.post_price != null) {
+          const c = lp.post_chg_pct || 0;
+          const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+          badges.push(`<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);color:var(--b);font-weight:700">🌙 AFTER-HOURS $${lp.post_price.toFixed(2)} <span style="color:${cc}">${c >= 0?'+':''}${c.toFixed(2)}%</span></span>`);
+        } else if ((state === 'closed') && lp.post_price != null) {
+          const c = lp.post_chg_pct || 0;
+          const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+          badges.push(`<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--wh3);font-weight:700">Last AH $${lp.post_price.toFixed(2)} <span style="color:${cc}">${c >= 0?'+':''}${c.toFixed(2)}%</span></span>`);
+        }
+        if (!badges.length) return '';
+        return `<div style="padding:0 1.1rem .55rem;display:flex;gap:.4rem;flex-wrap:wrap">${badges.join('')}</div>`;
+      })()}
       ${s.price_history && s.price_history.length > 3 ? `<div style="height:72px;padding:0 1.1rem;margin-bottom:.6rem"><canvas id="modal-spark" height="72"></canvas></div>` : ''}
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--blk4);border-top:var(--bdr2);border-bottom:var(--bdr2);margin-bottom:.85rem">
         <div class="modal-stat" title="${s.market_cap >= 200e9 ? 'MEGA CAP: Trillion-dollar company — Apple, Microsoft tier. Very stable.' : s.market_cap >= 10e9 ? 'LARGE CAP: Multi-billion dollar company. Relatively safe, well-known.' : s.market_cap >= 2e9 ? 'MID CAP: Medium sized company. More growth potential, more risk.' : 'SMALL CAP: Smaller company. High risk, high reward. Beginners be careful.'}"><div class="modal-stat-lbl">MKT CAP</div><div class="modal-stat-val">${fmtCap(s.market_cap)}</div><div style="font-size:7.5px;color:${s.market_cap >= 10e9 ? 'rgba(0,255,136,.6)' : s.market_cap >= 2e9 ? 'rgba(0,204,255,.6)' : 'rgba(255,136,0,.6)'};">${s.market_cap >= 200e9 ? 'MEGA' : s.market_cap >= 10e9 ? 'LARGE' : s.market_cap >= 2e9 ? 'MID' : s.market_cap > 0 ? 'SMALL' : ''} CAP</div></div>
@@ -3470,7 +3554,7 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); }
     if (id === 'portfolio') renderPortfolio();
   }
@@ -4793,7 +4877,137 @@ body.beginner-mode #beginner-banner { display:block }
         drawSpark(`psp-${ticker}`, ph, isUp ? '#00ff88' : '#ff2255');
       }
     });
+    // After rendering portfolio, call ATH tracker and news
+    checkPortfolioATH();
+    fetchPortfolioNews();
   }
+
+  // ── PORTFOLIO ALL-TIME HIGH TRACKER ─────────────────────────
+  const PORT_ATH_KEY = 'rok_port_ath_v1';
+  function checkPortfolioATH() {
+    const el = document.getElementById('port-ath-banner');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    let totalNow = 0;
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const lp = liveprices[ticker];
+      const st = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const cur = lp ? lp.price : (st ? st.price : null);
+      if (cur && entry.price) {
+        const sh = entry.shares || (1000 / entry.price);
+        totalNow += sh * cur;
+      }
+    });
+    if (totalNow <= 0) { el.style.display = 'none'; return; }
+    let ath = parseFloat(localStorage.getItem(PORT_ATH_KEY) || '0');
+    const isNewATH = totalNow > ath;
+    if (isNewATH) {
+      ath = totalNow;
+      localStorage.setItem(PORT_ATH_KEY, ath.toFixed(2));
+    }
+    if (ath <= 0) { el.style.display = 'none'; return; }
+    const pctFromATH = ath > 0 ? ((totalNow - ath) / ath * 100) : 0;
+    const atATH = Math.abs(pctFromATH) < 0.5;
+    if (isNewATH && !atATH) {
+      // Just set new ATH — celebrate
+    }
+    el.style.display = 'block';
+    if (isNewATH || atATH) {
+      el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(0,255,136,.06));border:1px solid rgba(255,215,0,.3);border-radius:10px;padding:.55rem .85rem;display:flex;align-items:center;gap:.65rem;cursor:pointer" onclick="launchConfetti()">
+        <span style="font-size:1.5rem">🏆</span>
+        <div>
+          <div style="font-size:10px;font-weight:800;color:var(--au);letter-spacing:.1em">NEW ALL-TIME HIGH!</div>
+          <div style="font-size:12px;font-weight:700;color:var(--wh)">Your portfolio hit $${totalNow.toLocaleString('en-US',{maximumFractionDigits:0})} — best ever! Tap to celebrate 🎉</div>
+        </div>
+      </div>`;
+    } else {
+      const pctStr = Math.abs(pctFromATH).toFixed(1) + '%';
+      const dollarsFromATH = Math.abs(totalNow - ath).toFixed(0);
+      el.innerHTML = `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.45rem .85rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span style="font-size:1rem">📊</span>
+          <div>
+            <div style="font-size:9px;font-weight:700;color:var(--wh3);letter-spacing:.08em">ALL-TIME HIGH</div>
+            <div style="font-size:11px;font-weight:700;color:var(--wh)">$${ath.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--r);font-weight:700">-${pctStr} from ATH</div>
+          <div style="font-size:9px;color:var(--wh4)">$${dollarsFromATH} to recover</div>
+        </div>
+      </div>`;
+    }
+  }
+  window.checkPortfolioATH = checkPortfolioATH;
+
+  // ── LIVE NEWS FOR PORTFOLIO STOCKS ────────────────────────────
+  let _portNewsCache = { tickers: '', ts: 0, html: '' };
+  async function fetchPortfolioNews() {
+    const el = document.getElementById('port-news');
+    if (!el) return;
+    const tickers = Object.keys(getPortfolio());
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    const tickerKey = tickers.sort().join(',');
+    const now = Date.now();
+    if (_portNewsCache.tickers === tickerKey && now - _portNewsCache.ts < 10 * 60 * 1000 && _portNewsCache.html) {
+      el.style.display = 'block';
+      el.innerHTML = _portNewsCache.html;
+      return;
+    }
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem"><div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.4rem">📰 LATEST NEWS FOR YOUR STOCKS</div><div style="font-size:10px;color:var(--wh4)">Loading…</div></div>`;
+    try {
+      // Fetch news for up to 4 portfolio stocks
+      const fetchTickers = tickers.slice(0, 4);
+      const allNews = [];
+      for (const ticker of fetchTickers) {
+        try {
+          const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`, { signal: AbortSignal.timeout(5000) });
+          // Actually use the search endpoint for news
+          const nr = await fetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${ticker}&newsCount=3&quotesCount=0&enableFuzzyQuery=false`, { signal: AbortSignal.timeout(5000) });
+          if (!nr.ok) continue;
+          const nj = await nr.json();
+          const newsArr = nj?.news || [];
+          newsArr.slice(0, 2).forEach(n => {
+            allNews.push({
+              ticker,
+              title: n.title || '',
+              publisher: n.publisher || '',
+              published: n.providerPublishTime || 0,
+            });
+          });
+        } catch { /* ignore per-ticker failures */ }
+      }
+      if (!allNews.length) { el.style.display = 'none'; return; }
+      // Sort by most recent
+      allNews.sort((a, b) => b.published - a.published);
+      const newsRows = allNews.slice(0, 6).map(n => {
+        const ago = n.published ? Math.round((Date.now() / 1000 - n.published) / 3600) : null;
+        const agoStr = ago === null ? '' : ago < 1 ? 'just now' : ago < 24 ? `${ago}h ago` : `${Math.round(ago/24)}d ago`;
+        const tickerBadge = `<span style="font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.2);color:var(--au);font-weight:700;margin-right:4px">${n.ticker}</span>`;
+        return `<div style="padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:flex-start;gap:.5rem">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10.5px;color:var(--wh);font-weight:600;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${tickerBadge}${n.title}</div>
+            <div style="font-size:8.5px;color:var(--wh4);margin-top:1.5px">${n.publisher}${agoStr ? ' · ' + agoStr : ''}</div>
+          </div>
+        </div>`;
+      }).join('');
+      const html = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center">
+          <span>📰 LATEST NEWS FOR YOUR STOCKS</span>
+          <span style="color:var(--g);font-size:7px">● LIVE</span>
+        </div>
+        ${newsRows}
+        <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.04)">Showing latest news for ${fetchTickers.join(', ')}</div>
+      </div>`;
+      _portNewsCache = { tickers: tickerKey, ts: Date.now(), html };
+      el.innerHTML = html;
+    } catch { el.style.display = 'none'; }
+  }
+  window.fetchPortfolioNews = fetchPortfolioNews;
 
   // Manual add any ticker to portfolio
   async function addManualTicker() {
@@ -5119,7 +5333,14 @@ body.beginner-mode #beginner-banner { display:block }
           ${upHtml}
           ${earnHtml}
           ${s.rsi != null ? `<span class="rsi-badge glossary-term ${s.rsi > 70 ? 'overbought' : s.rsi < 30 ? 'oversold' : 'neutral'}" data-term="RSI" style="font-size:7.5px;padding:1px 4px" title="${s.rsi > 70 ? 'RSI ' + Math.round(s.rsi) + ' = OVERBOUGHT: Stock may be due for a pullback' : s.rsi < 30 ? 'RSI ' + Math.round(s.rsi) + ' = OVERSOLD: Stock may be due for a bounce up' : 'RSI ' + Math.round(s.rsi) + ' = Neutral momentum'}">RSI ${Math.round(s.rsi)}</span>` : ''}
-          ${s.vol_ratio != null && s.vol_ratio > 1.8 ? `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;animation:none" title="${s.vol_ratio.toFixed(1)}x normal volume — unusual trading activity. Big money (hedge funds/institutions) may be moving this stock.">${s.vol_ratio.toFixed(1)}x vol</span>` : ''}
+          ${(() => {
+            const liveVol = lp && lp.vol_ratio;
+            const staticVol = s.vol_ratio;
+            const vr = liveVol != null ? liveVol : staticVol;
+            if (!vr || vr <= 1.8) return '';
+            const spike = vr >= 4;
+            return `<span class="vol-badge" style="font-size:7.5px;padding:1px 5px;${spike?'':'animation:none'}" title="${vr.toFixed(1)}x normal volume — unusual trading activity. Big money (hedge funds/institutions) may be moving this stock.">${liveVol ? '🔴 ' : ''}${vr.toFixed(1)}x vol</span>`;
+          })()}
         </div>
         ${strengthHtml}
         ${(() => {
@@ -5740,6 +5961,51 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderInvestTodayVerdict = renderInvestTodayVerdict;
+
+  // ── LIVE MACRO MINI-STRIP (signals tab) ──────────────────
+  let _nextRefreshAt = 0;
+  function updateLiveMacroStrip() {
+    const el = document.getElementById('live-macro-strip');
+    if (!el) return;
+    const vix = liveprices['^VIX'];
+    const spy = liveprices['SPY'];
+    const qqq = liveprices['QQQ'];
+    if (!vix && !spy) { el.style.display = 'none'; return; }
+    const items = [];
+    if (spy) {
+      const c = spy.change_pct;
+      const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+      items.push(`<div style="display:flex;align-items:center;gap:.3rem;flex-shrink:0"><span style="font-size:8px;color:var(--wh4)">SPY</span><span style="font-size:10px;font-weight:700;color:var(--wh)">$${spy.price.toFixed(2)}</span><span style="font-size:9px;font-weight:700;color:${cc}">${c>=0?'+':''}${c.toFixed(2)}%</span></div>`);
+    }
+    if (qqq) {
+      const c = qqq.change_pct;
+      const cc = c >= 0 ? 'var(--g)' : 'var(--r)';
+      items.push(`<div style="display:flex;align-items:center;gap:.3rem;flex-shrink:0"><span style="font-size:8px;color:var(--wh4)">QQQ</span><span style="font-size:10px;font-weight:700;color:var(--wh)">$${qqq.price.toFixed(2)}</span><span style="font-size:9px;font-weight:700;color:${cc}">${c>=0?'+':''}${c.toFixed(2)}%</span></div>`);
+    }
+    if (vix) {
+      const vixVal = vix.price;
+      const vixColor = vixVal > 30 ? 'var(--r)' : vixVal > 20 ? 'var(--au)' : 'var(--g)';
+      const vixLabel = vixVal > 30 ? '⚠ HIGH FEAR' : vixVal > 20 ? '😐 NERVOUS' : '😊 CALM';
+      items.push(`<div style="display:flex;align-items:center;gap:.3rem;flex-shrink:0"><span style="font-size:8px;color:var(--wh4)">VIX</span><span style="font-size:10px;font-weight:700;color:${vixColor}">${vixVal.toFixed(1)}</span><span style="font-size:8px;color:${vixColor}">${vixLabel}</span></div>`);
+    }
+    el.style.display = 'block';
+    const time = lastRefreshTime ? lastRefreshTime.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:.85rem;overflow-x:auto;scrollbar-width:none;padding:.35rem .7rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;flex-wrap:nowrap">
+      ${items.join('<div style="width:1px;height:14px;background:rgba(255,255,255,.1);flex-shrink:0"></div>')}
+      ${time ? `<span style="font-size:8px;color:var(--wh4);margin-left:auto;flex-shrink:0">updated ${time}</span>` : ''}
+    </div>
+    ${vix && vix.price > 28 ? `<div style="margin-top:.35rem;padding:.35rem .7rem;background:rgba(255,34,85,.07);border:1px solid rgba(255,34,85,.2);border-radius:7px;font-size:10px;color:rgba(255,120,120,.9)">⚠️ <strong>VIX above 28 = elevated fear.</strong> Stocks can swing 2-5% intraday. Use smaller position sizes today and watch your stop-losses closely.</div>` : ''}`;
+
+    // Next refresh countdown
+    const countEl = document.getElementById('next-refresh-row');
+    if (countEl && _nextRefreshAt > 0) {
+      const secs = Math.max(0, Math.round((_nextRefreshAt - Date.now()) / 1000));
+      const m = Math.floor(secs / 60), s = secs % 60;
+      countEl.style.display = 'block';
+      countEl.textContent = `Next price refresh in ${m}:${String(s).padStart(2,'0')}`;
+    }
+  }
+  window.updateLiveMacroStrip = updateLiveMacroStrip;
 
   // ── LIVE MARKET NEWS FEED ────────────────────────────────
   async function fetchMarketNewsFeed() {
@@ -6596,6 +6862,10 @@ body.beginner-mode #beginner-banner { display:block }
     setInterval(refreshLivePrices, 3 * 60 * 1000);
     // Initial refresh after 5 seconds (let page settle)
     setTimeout(refreshLivePrices, 5000);
+    // Countdown to next refresh (updates every second)
+    setInterval(() => {
+      if (activeTab === 'signals') updateLiveMacroStrip();
+    }, 15000); // update macro strip every 15 seconds for countdown
 
     // ── SIGNAL HISTORY TRACKING ──────────────────────────
     (function() {
