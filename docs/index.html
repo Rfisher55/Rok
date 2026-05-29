@@ -1259,6 +1259,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <!-- Reddit Buzz -->
     
 
+    <!-- Sector Heatmap (JS-populated) -->
+    <div id="sector-heatmap" style="display:none;margin-bottom:1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem">🗺️ SECTOR BREAKDOWN</div>
+      <div id="sector-heatmap-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.35rem"></div>
+      <div style="font-size:9px;color:var(--wh4);margin-top:.35rem">Tap a sector to filter the screener</div>
+    </div>
+
   </div><!-- /tab-market -->
 
   <!-- ── SCREENER TAB ────────────────────────────────────── -->
@@ -1586,6 +1593,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     </details>
     <div id="portfolio-summary"></div>
     <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
+    <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
@@ -2447,7 +2455,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); renderSectorHeatmap(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -2956,8 +2964,97 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     } catch { return ''; }
   }
 
+  function renderPortfolioHealthCheck() {
+    const el = document.getElementById('port-health-check');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (tickers.length === 0) { el.style.display = 'none'; return; }
+
+    let score = 100;
+    const issues = [];
+    const wins = [];
+
+    // Check diversification
+    if (tickers.length === 1) {
+      score -= 20;
+      issues.push({ icon: '⚠️', msg: `Only 1 stock — <strong>put all eggs in one basket is risky.</strong> Add 3-5 different stocks to reduce risk.` });
+    } else if (tickers.length >= 5) {
+      wins.push({ icon: '✅', msg: `Good diversification — ${tickers.length} positions spread your risk.` });
+    }
+
+    // Check stop-losses set
+    const alerts = getAlerts();
+    let hasStopLoss = 0;
+    tickers.forEach(t => {
+      const hasAlert = alerts.some(a => a.ticker === t && a.direction === 'below' && !a.triggered);
+      const det = sigDetails[t] || {};
+      if (hasAlert || det.stop_loss) hasStopLoss++;
+    });
+    if (hasStopLoss < tickers.length) {
+      const missing = tickers.length - hasStopLoss;
+      score -= missing * 10;
+      issues.push({ icon: '🔔', msg: `${missing} stock${missing !== 1 ? 's have' : ' has'} no stop-loss alert. <strong>Protect your downside</strong> — tap 🔔 on any card to set one.` });
+    } else {
+      wins.push({ icon: '✅', msg: 'Stop-loss protection set for all positions.' });
+    }
+
+    // Check for overdue sell signals
+    const sellSigs = tickers.filter(t => {
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === t);
+      return stock && stock.rok_signal === 'sell';
+    });
+    if (sellSigs.length > 0) {
+      score -= sellSigs.length * 15;
+      issues.push({ icon: '🚨', msg: `ROK says <strong style="color:var(--r)">SELL ${sellSigs.join(', ')}</strong> — you still own ${sellSigs.length === 1 ? 'it' : 'them'}. Consider acting.` });
+    }
+
+    // Check market regime
+    const regime = (ROK.market_regime || '').toUpperCase();
+    if (regime === 'BEAR' || regime === 'CORRECTION') {
+      score -= 10;
+      issues.push({ icon: '📉', msg: `We're in a <strong style="color:var(--r)">${regime}</strong> market. Consider reducing position sizes and keeping more cash.` });
+    } else if (regime === 'BULL') {
+      wins.push({ icon: '🐂', msg: `Bull market conditions — your holdings are in a favorable environment.` });
+    }
+
+    // Check for concentrated sector exposure
+    const sectorCount = {};
+    tickers.forEach(t => {
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === t);
+      const sec = stock && stock.sector ? stock.sector.split('/')[0].trim() : null;
+      if (sec) sectorCount[sec] = (sectorCount[sec] || 0) + 1;
+    });
+    const topSector = Object.entries(sectorCount).sort((a, b) => b[1] - a[1])[0];
+    if (topSector && tickers.length >= 3 && topSector[1] / tickers.length > 0.6) {
+      score -= 10;
+      issues.push({ icon: '🏗️', msg: `${Math.round(topSector[1] / tickers.length * 100)}% of your stocks are in <strong>${topSector[0]}</strong> — sector concentration risk.` });
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    const grade = score >= 90 ? ['A', 'var(--g)'] : score >= 75 ? ['B', 'rgba(0,255,136,.7)'] : score >= 60 ? ['C', 'var(--au)'] : score >= 45 ? ['D', 'var(--or)'] : ['F', 'var(--r)'];
+
+    el.style.display = 'block';
+    el.innerHTML = `<details style="background:var(--blk3);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.75rem 1rem">
+      <summary style="cursor:pointer;display:flex;align-items:center;gap:.65rem;list-style:none">
+        <span style="font-size:1.8rem;font-weight:900;color:${grade[1]};font-family:var(--disp)">${grade[0]}</span>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:800;color:var(--wh)">Portfolio Health: ${score}/100</div>
+          <div style="font-size:9.5px;color:var(--wh3)">${issues.length === 0 ? 'Looking good! No issues detected.' : `${issues.length} issue${issues.length !== 1 ? 's' : ''} found — tap to see`}</div>
+        </div>
+        <span style="font-size:9px;color:var(--wh4)">▼</span>
+      </summary>
+      <div style="margin-top:.65rem;display:flex;flex-direction:column;gap:.35rem">
+        ${issues.map(i => `<div style="display:flex;align-items:flex-start;gap:.45rem;font-size:10.5px;color:var(--wh2);line-height:1.5"><span style="flex-shrink:0;font-size:.9rem">${i.icon}</span><span>${i.msg}</span></div>`).join('')}
+        ${wins.map(w => `<div style="display:flex;align-items:flex-start;gap:.45rem;font-size:10px;color:var(--wh3);line-height:1.5"><span style="flex-shrink:0;font-size:.9rem">${w.icon}</span><span>${w.msg}</span></div>`).join('')}
+      </div>
+    </details>`;
+  }
+  window.renderPortfolioHealthCheck = renderPortfolioHealthCheck;
+
   function renderPortfolio() {
     renderPortfolioSummary();
+    renderPortfolioHealthCheck();
     renderDiversificationCheck();
     const grid = document.getElementById('portfolio-grid');
     if (!grid) return;
@@ -3798,6 +3895,67 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div style="font-size:11px;color:var(--wh2);line-height:1.55">${detail}${vixNote}</div>`;
   }
 
+  // ── SECTOR HEATMAP ────────────────────────────────────
+  function renderSectorHeatmap() {
+    const container = document.getElementById('sector-heatmap');
+    const grid = document.getElementById('sector-heatmap-grid');
+    if (!container || !grid) return;
+    const stocks = ROK.stock_universe || [];
+    if (!stocks.length) { container.style.display = 'none'; return; }
+
+    // Aggregate by sector
+    const sectorMap = {};
+    stocks.forEach(s => {
+      const sec = s.sector ? s.sector.split('/')[0].trim() : null;
+      if (!sec) return;
+      if (!sectorMap[sec]) sectorMap[sec] = { count: 0, buys: 0, sells: 0, watches: 0, chgSum: 0 };
+      const m = sectorMap[sec];
+      m.count++;
+      const sig = s.rok_signal || 'neutral';
+      if (sig === 'buy') m.buys++;
+      else if (sig === 'sell') m.sells++;
+      else if (sig === 'watch') m.watches++;
+      // use live price change if available
+      const lp = liveprices[s.ticker];
+      m.chgSum += (lp ? lp.change_pct : (s.change_pct || 0));
+    });
+
+    const sectors = Object.entries(sectorMap).filter(([, v]) => v.count >= 1).sort((a, b) => b[1].count - a[1].count);
+    if (!sectors.length) { container.style.display = 'none'; return; }
+
+    container.style.display = 'block';
+    grid.innerHTML = sectors.map(([sec, v]) => {
+      const avgChg = v.chgSum / v.count;
+      const score = (v.buys - v.sells * 0.7) / v.count; // sentiment score
+      let bg, borderColor, textColor;
+      if (avgChg >= 1.5 || score >= 0.4) {
+        bg = 'rgba(0,255,136,.1)'; borderColor = 'rgba(0,255,136,.3)'; textColor = 'var(--g)';
+      } else if (avgChg >= 0.3 || score >= 0.15) {
+        bg = 'rgba(0,255,136,.05)'; borderColor = 'rgba(0,255,136,.15)'; textColor = 'rgba(0,255,136,.7)';
+      } else if (avgChg <= -1.5 || score <= -0.3) {
+        bg = 'rgba(255,34,85,.1)'; borderColor = 'rgba(255,34,85,.3)'; textColor = 'var(--r)';
+      } else if (avgChg <= -0.3 || score <= -0.1) {
+        bg = 'rgba(255,34,85,.05)'; borderColor = 'rgba(255,34,85,.15)'; textColor = 'rgba(255,100,100,.7)';
+      } else {
+        bg = 'rgba(255,255,255,.03)'; borderColor = 'rgba(255,255,255,.08)'; textColor = 'var(--wh3)';
+      }
+      const chgStr = avgChg >= 0 ? `+${avgChg.toFixed(2)}%` : `${avgChg.toFixed(2)}%`;
+      const buyBar = v.count > 0 ? Math.round(v.buys / v.count * 100) : 0;
+      return `<div onclick="setSectorFilter('${sec.replace(/'/g,'').replace(/"/g,'')}');showTab('screener')" style="background:${bg};border:1px solid ${borderColor};border-radius:10px;padding:.5rem .65rem;cursor:pointer;transition:border-color .15s" title="Tap to filter screener by ${sec}">
+        <div style="font-size:9.5px;font-weight:700;color:var(--wh);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.2rem">${sec}</div>
+        <div style="font-size:11px;font-weight:800;color:${textColor}">${chgStr}</div>
+        <div style="display:flex;gap:3px;font-size:8px;color:var(--wh4);margin-top:.2rem;flex-wrap:wrap">
+          ${v.buys > 0 ? `<span style="color:var(--g)">▲${v.buys}</span>` : ''}
+          ${v.sells > 0 ? `<span style="color:var(--r)">▼${v.sells}</span>` : ''}
+          ${v.watches > 0 ? `<span style="color:var(--au)">👀${v.watches}</span>` : ''}
+          <span>${v.count} stocks</span>
+        </div>
+        ${buyBar > 0 ? `<div style="height:2px;background:rgba(255,255,255,.07);border-radius:1px;margin-top:.3rem;overflow:hidden"><div style="height:100%;width:${buyBar}%;background:var(--g);border-radius:1px"></div></div>` : ''}
+      </div>`;
+    }).join('');
+  }
+  window.renderSectorHeatmap = renderSectorHeatmap;
+
   // ── RECENTLY VIEWED ───────────────────────────────────
   function renderRecentlyViewed() {
     const el = document.getElementById('recently-viewed');
@@ -4147,11 +4305,29 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     } else {
       el.className = `app-alert ${type === 'warn' || type === 'sell' || type === 'stop' ? 'warn' : ''}`;
     }
-    el.style.cssText = 'cursor:pointer;pointer-events:auto';
+    el.style.cssText = 'cursor:pointer;pointer-events:auto;transition:transform .2s ease,opacity .2s ease';
     el.textContent = msg;
-    el.onclick = () => { showTab('portfolio'); if (el.parentNode) el.parentNode.removeChild(el); };
+    const dismiss = () => {
+      if (!el.parentNode) return;
+      el.style.opacity = '0'; el.style.transform = 'translateY(-8px)';
+      setTimeout(() => el.parentNode && el.parentNode.removeChild(el), 200);
+    };
+    el.onclick = () => { showTab('portfolio'); dismiss(); };
+    // Swipe up to dismiss
+    let touchStartY = 0;
+    el.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+    el.addEventListener('touchmove', e => {
+      const dy = e.touches[0].clientY - touchStartY;
+      if (dy < -10) el.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    el.addEventListener('touchend', e => {
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (dy < -40) dismiss();
+      else el.style.transform = '';
+    });
     container.appendChild(el);
-    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, duration || 6000);
+    const t = setTimeout(dismiss, duration || 6000);
+    el._timer = t;
   }
 
   function requestNotifPermission() {
