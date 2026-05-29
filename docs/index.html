@@ -54392,6 +54392,32 @@ window.renderSectorRotation = renderSectorRotation;
         });
         html += `</div>`;
       }
+      // Last scan candidates (even when no trades executed)
+      const topScan = data.last_scan_top || [];
+      const rejected = data.last_scan_rejected || [];
+      if (topScan.length || rejected.length) {
+        html += `<div style="margin-top:.65rem;font-size:9px;font-weight:800;letter-spacing:.1em;color:#4a6fa5;text-transform:uppercase;margin-bottom:.35rem">Last Scan — Top Candidates</div>`;
+        html += `<div style="display:flex;flex-direction:column;gap:.2rem;margin-bottom:.4rem">`;
+        topScan.forEach(s => {
+          const cat = s.catalyst ? `<span style="font-size:7.5px;color:var(--au);margin-left:.3rem">${s.catalyst}</span>` : '';
+          html += `<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:rgba(0,255,136,.04);border-radius:6px;border-left:2.5px solid rgba(0,255,136,.3)">
+            <span style="font-family:var(--disp);color:var(--au);min-width:42px;font-size:.95rem">\$${s.ticker}</span>
+            <span style="font-size:8.5px;font-weight:800;color:var(--g);min-width:28px">${s.score}</span>
+            <span style="font-size:7.5px;color:#4a6fa5">${s.sector}</span>
+            ${cat}
+            ${s.sent ? `<span style="font-size:7.5px;color:${s.sent>=3?'var(--g)':s.sent<=-3?'var(--r)':'var(--wh4)'};margin-left:auto">AI ${s.sent>=0?'+':''}${s.sent}</span>` : ''}
+          </div>`;
+        });
+        rejected.slice(0,3).forEach(s => {
+          html += `<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .5rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:2.5px solid rgba(255,255,255,.08)">
+            <span style="font-family:var(--disp);color:#555;min-width:42px;font-size:.95rem">\$${s.ticker}</span>
+            <span style="font-size:8.5px;color:#555;min-width:28px">${s.score}</span>
+            <span style="font-size:7.5px;color:#333">rejected</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+
       intelEl.innerHTML = html;
     }
   }

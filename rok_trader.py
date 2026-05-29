@@ -2225,8 +2225,21 @@ def run():
 
         final_scores.sort(key=lambda x: -x[1])
 
+        # Write diagnostics so dashboard can show why no trades happened
+        tlog["last_scan_top"] = [
+            {"ticker": tk, "score": sc, "sent": round(sent, 1), "sector": sec, "catalyst": cat}
+            for tk, sc, sent, sec, cat in (final_scores or [])[:8]
+        ]
+        tlog["last_scan_rejected"] = [
+            {"ticker": tk, "score": sc}
+            for tk, sc in candidates_buy[:5]
+            if not any(tk == f[0] for f in final_scores)
+        ]
+
         if not final_scores:
             logger.info(f"No longs passed threshold {MIN_BUY_SCORE}.")
+            if candidates_buy:
+                logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
             for tk, sc, sent, sec, catalyst in final_scores[:open_long_slots]:
                 try:
