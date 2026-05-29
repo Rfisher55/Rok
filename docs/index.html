@@ -1221,6 +1221,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
       <span class="sc-cnt" id="sc-cnt"></span>
     </div>
+    <!-- Sector quick-filter chips (populated by JS) -->
+    <div id="sc-sector-chips" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.7rem"></div>
     <div id="sc-grid" class="sc-grid">
       <div class="sc-empty">Loading…</div>
     </div>
@@ -2190,7 +2192,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     activeTab = id;
-    if (id === 'screener' && !screenerBuilt) { renderScreener(); screenerBuilt = true; }
+    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') renderScreener();
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); }
     if (id === 'portfolio') renderPortfolio();
@@ -2670,7 +2672,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }, {passive:true});
 
   // ── SCREENER ──────────────────────────────────────────────
-  let scFilter = 'all', scQuery = '', scSort = 'signal', scSortDir = 1;
+  let scFilter = 'all', scQuery = '', scSort = 'signal', scSortDir = 1, scSector = '';
 
   function sortList(list) {
     const so = { buy: 0, sell: 1, watch: 2, neutral: 3 };
@@ -2688,6 +2690,24 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     });
   }
 
+  function buildSectorChips() {
+    const stocks = ROK.stock_universe || [];
+    const chipsEl = document.getElementById('sc-sector-chips');
+    if (!chipsEl || !stocks.length) return;
+    const sectors = new Set();
+    stocks.forEach(s => { if (s.sector) sectors.add(s.sector.split('/')[0].trim()); });
+    const sectorList = [...sectors].sort();
+    if (sectorList.length < 2) { chipsEl.style.display = 'none'; return; }
+    const chipStyle = (active) => `padding:.25rem .6rem;border-radius:12px;font-size:10px;font-weight:600;cursor:pointer;touch-action:manipulation;border:1px solid ${active ? 'rgba(0,204,255,.4)' : 'rgba(255,255,255,.1)'};background:${active ? 'rgba(0,204,255,.12)' : 'rgba(255,255,255,.04)'};color:${active ? 'var(--b)' : 'var(--wh3)'}`;
+    chipsEl.innerHTML = `<button style="${chipStyle(!scSector)}" onclick="setSectorFilter('')">All Sectors</button>` +
+      sectorList.map(s => `<button style="${chipStyle(scSector === s)}" onclick="setSectorFilter('${s.replace(/'/g,'')}')">${s}</button>`).join('');
+  }
+  window.setSectorFilter = function(sector) {
+    scSector = sector;
+    buildSectorChips();
+    renderScreener();
+  };
+
   function renderScreener() {
     const stocks = ROK.stock_universe || [];
     const grid = document.getElementById('sc-grid');
@@ -2699,6 +2719,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const q = scQuery.toLowerCase();
       list = list.filter(s => s.ticker.toLowerCase().includes(q) || (s.company_name || '').toLowerCase().includes(q));
     }
+    if (scSector) {
+      list = list.filter(s => s.sector && s.sector.split('/')[0].trim() === scSector);
+    }
     if (scFilter === 'beginner') {
       list = list.filter(s => s.rok_signal === 'buy' && s.market_cap && s.market_cap >= 10e9);
     } else if (scFilter !== 'all') {
@@ -2706,7 +2729,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     }
     list = sortList([...list]);
 
-    if (cnt) cnt.textContent = list.length + ' stocks';
+    if (cnt) cnt.textContent = list.length + ' stock' + (list.length !== 1 ? 's' : '') + (scSector ? ` · ${scSector}` : '');
 
     if (!list.length) {
       const link = scQuery
@@ -2944,6 +2967,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   // ── INIT ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     initSignalSparks();
+    buildSectorChips();
     renderScreener();
     screenerBuilt = true;
     syncBoughtButtons();
