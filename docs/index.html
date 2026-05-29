@@ -274,6 +274,15 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 .sec-flow-cnt{font-size:9px;color:var(--wh3)}.sec-flow-note{font-size:9.5px;color:var(--wh3);margin-top:4px;line-height:1.35}
 .rot-txt{font-size:11px;color:var(--wh2);font-style:italic;padding:.45rem .75rem;background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.3);border-radius:0 4px 4px 0;margin-bottom:.75rem}
 
+/* ── BEGINNER MODE ─────────────────────────────────────── */
+body.beginner-mode .rsi-badge, body.beginner-mode .vol-badge,
+body.beginner-mode .dsig-plain.technical,
+body.beginner-mode .sc-card .sc-rsi, body.beginner-mode .sc-card .sc-pe,
+body.beginner-mode .modal-stat:not(.modal-stat-main) { display:none !important }
+body.beginner-mode #beginner-mode-btn { background:rgba(0,204,255,.15); border-color:rgba(0,204,255,.35); color:var(--b) }
+#beginner-banner { display:none; background:rgba(0,204,255,.06); border:1px solid rgba(0,204,255,.15); border-radius:10px; padding:.55rem .9rem; margin-bottom:.6rem; font-size:11px; color:var(--wh2); line-height:1.5 }
+body.beginner-mode #beginner-banner { display:block }
+
 /* ── STRESS TEST ───────────────────────────────────────── */
 .stress-btn{background:var(--blk4);border:1px solid rgba(255,136,0,.15);border-radius:8px;padding:.35rem .75rem;font-size:10px;font-weight:700;color:var(--wh3);cursor:pointer;font-family:var(--font);touch-action:manipulation;transition:all .12s}
 .stress-btn.active,.stress-btn:hover{background:rgba(255,136,0,.1);border-color:rgba(255,136,0,.3);color:var(--or)}
@@ -953,6 +962,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <span class="regime">BULL</span>
       <span class="sent BULLISH">BULLISH</span>
       <button class="refresh-btn" id="refresh-btn" onclick="refreshLivePrices()" title="Refresh prices">↻</button>
+      <button id="beginner-mode-btn" onclick="toggleBeginnerMode()" title="Toggle beginner mode (hides technical indicators)" style="background:none;border:1px solid rgba(255,255,255,.1);color:var(--wh4);border-radius:20px;padding:.2rem .55rem;font-size:9px;font-weight:700;letter-spacing:.06em;cursor:pointer;font-family:var(--font);touch-action:manipulation;white-space:nowrap">🎓 LEARN</button>
       <button class="onboard-help-btn" onclick="showOnboarding()" title="How to use ROK">?</button>
     </div>
   </div>
@@ -1083,6 +1093,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     <!-- Morning briefing — populated by JS -->
     <div id="morning-briefing"></div>
+    <!-- Beginner mode banner -->
+    <div id="beginner-banner">🎓 <strong>Beginner Mode ON</strong> — Technical jargon hidden. Focus on ROK's plain-English recommendations. <button onclick="toggleBeginnerMode()" style="background:none;border:none;color:var(--b);font-size:10.5px;cursor:pointer;font-family:var(--font);text-decoration:underline;padding:0">Turn off</button></div>
 
     <!-- Today's personalized action tasks — populated by JS -->
     <div id="mkt-countdown"></div>
@@ -2529,6 +2541,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div id="modal-options-section" style="padding:0 1.1rem .5rem;display:none">
         <div id="modal-options-inner"></div>
       </div>
+      ${buildModalSimilarStocks(s)}
       <div id="modal-news-section" style="padding:0 1.1rem .65rem">
         <div id="modal-news-inner" style="font-size:10px;color:var(--wh3)">Loading news…</div>
       </div>
@@ -2567,6 +2580,46 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     // Load options snapshot for buy signals
     if (sig === 'buy') loadModalOptions(ticker);
   }
+
+  // ── MODAL SIMILAR STOCKS ────────────────────────────────
+  function buildModalSimilarStocks(s) {
+    const sector = (s.sector || '').split('/')[0].trim();
+    if (!sector) return '';
+    const universe = ROK.stock_universe || [];
+    const similar = universe
+      .filter(x => x.ticker !== s.ticker && x.sector && x.sector.split('/')[0].trim() === sector)
+      .sort((a, b) => {
+        // Prefer same signal, then by signal strength
+        const ss = { buy: 0, watch: 1, neutral: 2, sell: 3 };
+        const da = (ss[a.rok_signal]??3) - (ss[s.rok_signal]??3);
+        const db = (ss[b.rok_signal]??3) - (ss[s.rok_signal]??3);
+        return Math.abs(da) - Math.abs(db);
+      })
+      .slice(0, 4);
+    if (!similar.length) return '';
+    const rows = similar.map(x => {
+      const lp = liveprices[x.ticker];
+      const price = lp ? lp.price : x.price;
+      const chg = lp ? lp.change_pct : (x.change_pct || 0);
+      const sig = x.rok_signal || 'neutral';
+      const sigColor = sig === 'buy' ? 'var(--g)' : sig === 'sell' ? 'var(--r)' : 'var(--au)';
+      return `<button onclick="openModal('${x.ticker}')" style="background:var(--blk4);border:var(--bdr);border-radius:9px;padding:.4rem .6rem;display:flex;align-items:center;gap:.5rem;cursor:pointer;font-family:var(--font);touch-action:manipulation;text-align:left">
+        <div>
+          <div style="font-family:var(--disp);font-size:.95rem;color:${sigColor};letter-spacing:.06em">${x.ticker}</div>
+          <div style="font-size:8.5px;color:var(--wh4)">${sig.toUpperCase()}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          ${price != null ? `<div style="font-size:10px;color:var(--wh2)">$${price.toFixed(2)}</div>` : ''}
+          ${chg != null ? `<div style="font-size:9px;font-weight:700;color:${chg>=0?'var(--g)':'var(--r)'}">${chg>=0?'+':''}${chg.toFixed(1)}%</div>` : ''}
+        </div>
+      </button>`;
+    }).join('');
+    return `<div style="padding:0 1.1rem .65rem;border-top:var(--bdr2);padding-top:.65rem">
+      <div style="font-size:8px;font-weight:700;letter-spacing:.14em;color:var(--wh3);text-transform:uppercase;margin-bottom:.4rem">🏢 MORE ${sector.toUpperCase()} STOCKS</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.35rem">${rows}</div>
+    </div>`;
+  }
+  window.buildModalSimilarStocks = buildModalSimilarStocks;
 
   // ── MODAL OPTIONS SNAPSHOT ──────────────────────────────
   async function loadModalOptions(ticker) {
@@ -4622,6 +4675,20 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   window.buildModalForYou = buildModalForYou;
   window.computeRiskLevel = computeRiskLevel;
 
+  // ── BEGINNER MODE ────────────────────────────────────────
+  const BEGINNER_KEY = 'rok_beginner_mode_v1';
+  function toggleBeginnerMode() {
+    const isOn = !document.body.classList.contains('beginner-mode');
+    document.body.classList.toggle('beginner-mode', isOn);
+    localStorage.setItem(BEGINNER_KEY, isOn ? '1' : '');
+    if (isOn) {
+      showAppAlert('🎓 Beginner Mode ON — technical jargon hidden. ROK will explain everything in plain English.', 'info', 5000);
+    }
+  }
+  window.toggleBeginnerMode = toggleBeginnerMode;
+  // Restore beginner mode on load
+  if (localStorage.getItem(BEGINNER_KEY)) document.body.classList.add('beginner-mode');
+
   function renderTodaysTasks() {
     const el = document.getElementById('todays-tasks');
     if (!el) return;
@@ -5295,6 +5362,25 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       active.map(a => `<button onclick="removeAlert('${a.ticker}','${a.direction}')" style="font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.22);color:var(--au);cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:var(--font)" title="Tap to remove alert">${a.ticker} ${a.direction==='above'?'↑':'↓'} $${Number(a.target).toFixed(2)} <span style="opacity:.45;font-size:8px">✕</span></button>`).join('');
   }
 
+  // ── ALERT SOUND ─────────────────────────────────────────
+  function playAlertSound(type) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const freqs = type === 'buy' ? [523, 659, 784] : type === 'sell' ? [392, 330, 262] : [523, 523];
+      freqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.3);
+        osc.start(ctx.currentTime + i * 0.15);
+        osc.stop(ctx.currentTime + i * 0.15 + 0.35);
+      });
+    } catch(e) { /* audio not supported */ }
+  }
+
   function checkPriceAlerts() {
     const alerts = getAlerts();
     let changed = false;
@@ -5309,6 +5395,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       changed = true;
       const msg = `🔔 PRICE ALERT: ${a.ticker} ${a.direction === 'above' ? '↑ reached' : '↓ fell to'} $${a.target.toFixed(2)} (now $${price.toFixed(2)})`;
       showAppAlert(msg, 'info', 12000);
+      playAlertSound(a.direction === 'above' ? 'buy' : 'sell');
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
       if (Notification.permission === 'granted') {
         try { new Notification('ROK Price Alert 🔔', { body: msg, icon: './icon-192.png' }); } catch(e) {}
       }
@@ -5320,7 +5408,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const hBtn = document.getElementById('alert-hist-btn');
       if (hBtn) hBtn.style.display = 'inline-flex';
     });
-    if (changed) { saveAlerts(alerts); renderAlertStrip(); renderScreener(); }
+    if (changed) { saveAlerts(alerts); renderAlertStrip(); renderScreener(); renderActiveAlertsPanel(); }
   }
 
   // Close alert dialog on overlay backdrop click
@@ -5446,6 +5534,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         sent[notifKey] = 1;
         sessionStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
         showAppAlert(msg, msg.includes('stop') ? 'sell' : 'target');
+        playAlertSound(msg.includes('stop') ? 'sell' : 'buy');
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
         if (Notification.permission === 'granted') {
           new Notification('ROK Alert', { body: msg, icon: './icon-192.png' }).onclick = () => showTab('portfolio');
         }
