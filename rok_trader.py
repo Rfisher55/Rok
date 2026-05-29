@@ -658,7 +658,7 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
 
 
 # ── Holistic market AI call ───────────────────────────────────────────────────
-def ai_market_context(regime, top_movers):
+def ai_market_context(regime, top_movers, sector_adjs: dict = None):
     """
     Ask Claude for a macro market read that adjusts our overall confidence.
     Returns an adjustment score -5 to +5.
@@ -667,11 +667,19 @@ def ai_market_context(regime, top_movers):
         return 0
     try:
         movers_str = ", ".join(top_movers[:10])
+        on_macro   = near_macro_event(1)
+        sec_str    = ""
+        if sector_adjs:
+            hot  = sorted(sector_adjs.items(), key=lambda x: -x[1])[:3]
+            cold = sorted(sector_adjs.items(), key=lambda x:  x[1])[:2]
+            sec_str = (f"\n- Hot sectors: {', '.join(f'{s}({v:+d})' for s,v in hot)}"
+                       f"\n- Cold sectors: {', '.join(f'{s}({v:+d})' for s,v in cold)}")
         prompt = (
-            f"Today's market context for an automated US equity trader:\n"
-            f"- Regime: {regime['regime']} (VIX={regime['vix']:.0f}, SPY trend={regime['spy_trend']:+.1f}%)\n"
-            f"- Top movers today: {movers_str}\n\n"
-            f"Should the bot be aggressive or cautious today? "
+            f"Automated US equity trader context for today:\n"
+            f"- Regime: {regime['regime']} (VIX={regime['vix']:.0f}, SPY 5d={regime['spy_trend']:+.1f}%)\n"
+            f"- FOMC/macro event {'TODAY' if on_macro else 'not imminent'}\n"
+            f"- Top movers: {movers_str}{sec_str}\n\n"
+            f"Should the bot be aggressive (+3 to +5) or cautious (-3 to -5) today? "
             f"Return ONLY JSON: {{\"adj\":<-5 to 5>, \"note\":\"<10 words>\"}}"
         )
         r = requests.post(
@@ -1208,30 +1216,50 @@ def _dl(tickers, period, interval):
     return result
 
 
-def _quick_score(daily_1d):
-    """Fast momentum score from 1-day daily data only (no hourly). Used in pre-screen."""
-    if daily_1d is None or len(daily_1d) < 2:
+def _min_volume_ok(daily, min_avg_vol: int) -> bool:
+    """True if stock's average daily volume meets minimum threshold."""
+    if daily is None or "Volume" not in getattr(daily, "columns", []):
+        return True  # can't check = allow through
+    try:
+        avg = float(daily["Volume"].mean())
+        return avg >= min_avg_vol
+    except Exception:
+        return True
+
+
+def _quick_score(daily_5d):
+    """Fast momentum score from 5-day daily data. Used in Phase 1 pre-screen.
+    Includes 1-day change, 5-day ROC, and volume ratio."""
+    if daily_5d is None or len(daily_5d) < 2:
         return 0
-    d   = daily_1d.dropna(subset=["Close"])
+    d = daily_5d.dropna(subset=["Close"])
     if len(d) < 2:
         return 0
     price = float(d["Close"].iloc[-1])
     prev  = float(d["Close"].iloc[-2])
     if price < 2 or prev <= 0:     # skip penny stocks
         return 0
-    chg      = (price - prev) / prev * 100
+    chg1d    = (price - prev) / prev * 100
+    roc5     = (price - float(d["Close"].iloc[0])) / float(d["Close"].iloc[0]) * 100 if len(d) >= 5 else 0
     vol      = float(d["Volume"].iloc[-1]) if "Volume" in d else 0
     avg_vol  = float(d["Volume"].mean())   if "Volume" in d else vol
     vol_ratio = vol / avg_vol if avg_vol > 0 else 1.0
-    # Rough momentum × volume score
     s = 5
-    if chg   > 3:   s += 20
-    elif chg > 1:   s += 10
-    elif chg > 0:   s +=  4
-    elif chg < -3:  s -= 15
-    if vol_ratio > 2.5: s += 15
-    elif vol_ratio > 1.5: s += 8
-    elif vol_ratio < 0.5: s -= 5
+    # 1-day change signal
+    if   chg1d >  3:  s += 20
+    elif chg1d >  1:  s += 10
+    elif chg1d >  0:  s +=  4
+    elif chg1d < -3:  s -= 15
+    # 5-day momentum (ROC5) — key pre-screen filter
+    if   roc5 >  8:  s += 15
+    elif roc5 >  3:  s +=  8
+    elif roc5 >  0:  s +=  3
+    elif roc5 < -8:  s -= 12
+    elif roc5 < -3:  s -=  6
+    # Volume confirmation
+    if   vol_ratio > 2.5: s += 15
+    elif vol_ratio > 1.5: s +=  8
+    elif vol_ratio < 0.5: s -=  5
     return s
 
 
@@ -1248,21 +1276,23 @@ def fetch_batch(tickers, held_symbols=None, period_d="15d"):
     tickers = list(set(tickers))
     held    = set(held_symbols or [])
     result  = {}
-    CHUNK   = 80     # larger chunks for speed
-    FULL_CAP = 80    # max tickers for full technical analysis
+    CHUNK    = 80     # larger chunks for speed
+    FULL_CAP = 100   # max tickers for full technical analysis (increased from 80)
+    MIN_AVG_VOL = 200_000   # minimum avg daily volume to avoid illiquid names
 
     # ── Phase 1: quick momentum pre-screen ─────────────────────────────
     quick_daily = {}
     for i in range(0, len(tickers), CHUNK):
         chunk = tickers[i : i + CHUNK]
         try:
-            quick_daily.update(_dl(chunk, "2d", "1d"))
+            quick_daily.update(_dl(chunk, "5d", "1d"))   # 5d gives us 5-day ROC
         except Exception as e:
             logger.warning(f"Quick scan chunk error: {e}")
 
-    # Rank by quick score
+    # Rank by quick score; filter out low-volume names
     quick_ranked = sorted(
-        [(tk, _quick_score(quick_daily.get(tk))) for tk in tickers],
+        [(tk, _quick_score(quick_daily.get(tk))) for tk in tickers
+         if _min_volume_ok(quick_daily.get(tk), MIN_AVG_VOL) or tk in held],
         key=lambda x: -x[1],
     )
     logger.info(
@@ -1661,10 +1691,12 @@ def run():
     # Fetch live data (two-phase: quick pre-screen all, full analysis on top 80)
     live = fetch_batch(candidates, held_symbols=set(held.keys()))
 
+    # Sector rotation (computed before AI context so it can be included in prompt)
+    sector_adjs  = sector_rotation()   # {sector: -8..+8}
+
     # AI market context adjustment (use top movers from screeners)
     top_movers_for_ai = [s for s in candidates if s not in BASE_UNIVERSE][:12]
-    regime_adj   = ai_market_context(regime, top_movers_for_ai)
-    sector_adjs  = sector_rotation()   # {sector: -8..+8}
+    regime_adj   = ai_market_context(regime, top_movers_for_ai, sector_adjs=sector_adjs)
 
     # Pre-market gap scan (bonus score for strong gap-up stocks)
     gap_ups = set()
@@ -1893,12 +1925,25 @@ def run():
             sec = SECTOR_MAP.get(sym, "other")
             sector_counts[sec] = sector_counts.get(sec, 0) + 1
 
+        # Momentum re-entry: stocks recently sold for profit get a 3-day re-entry window
+        # They get a +8 bonus score to reflect high-conviction setup
+        recent_sells = set()
+        cutoff = now_utc - timedelta(days=3)
+        for t in tlog.get("trades", []):
+            if t.get("action") in ("SELL", "SELL_HALF") and (t.get("pnl_pct") or 0) > 3:
+                try:
+                    if datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > cutoff:
+                        recent_sells.add(t.get("ticker", ""))
+                except Exception:
+                    pass
+
         # Technical pass — include sector rotation + gap + squeeze bonuses
         tech_scores = {
             tk: score(tk, live[tk],
                       regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
                                 + (10 if tk in gap_ups else 0)
-                                + (12 if tk in squeeze_cands else 0))
+                                + (12 if tk in squeeze_cands else 0)
+                                + (8  if tk in recent_sells else 0))
             for tk in live if tk not in held
         }
         candidates_buy = sorted(
