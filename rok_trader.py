@@ -2625,7 +2625,7 @@ def run():
         except Exception as e:
             logger.warning(f"Sell check error {sym}: {e}")
 
-    # ── DCA: add to strong held positions on pullbacks ───────────────────
+    # ── DCA: add to strong held positions on pullbacks OR VWAP reclaim ───────
     if not _open_guard and not _close_guard and vix <= VIX_EXTREME_THRESH:
         for sym, pos in list(longs.items()):
             try:
@@ -2633,36 +2633,53 @@ def run():
                 qty     = float(pos.get("qty", 0))
                 if cost <= 0 or qty <= 0:
                     continue
-                current = live.get(sym, {}).get("price", cost)
-                pnl_pct = (current - cost) / cost * 100
-                # Add to position if: small loss (-5% to -1.5%), strong signal, and position not at max
-                mkt_val = current * qty
-                if -5.0 <= pnl_pct <= -1.5 and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.8:
-                    live_sig = live.get(sym, {})
-                    if not live_sig:
-                        continue
-                    # Skip DCA if stock is in a clear downtrend (EMA50 falling + negative ROC)
+                current  = live.get(sym, {}).get("price", cost)
+                pnl_pct  = (current - cost) / cost * 100
+                mkt_val  = current * qty
+                live_sig = live.get(sym, {})
+                if not live_sig:
+                    continue
+
+                # Scenario A: Small loss pullback DCA (-5% to -1.5%)
+                is_pullback_dca = -5.0 <= pnl_pct <= -1.5 and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.8
+
+                # Scenario B: Winner pyramid — VWAP reclaim on a profitable position (+1% to +8%)
+                # When a winner dips below VWAP then reclaims it, that's institutions adding on the dip
+                is_winner_pyramid = (
+                    1.0 <= pnl_pct <= 8.0
+                    and live_sig.get("vwap_reclaim", False)
+                    and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.9
+                    and not peaks.get(sym, {}).get("half_out", False)   # don't pyramid after partial sell
+                )
+
+                if is_pullback_dca or is_winner_pyramid:
+                    # Skip if stock is in a clear downtrend (EMA50 falling + negative ROC)
                     ema50_pos = live_sig.get("price_vs_ema50", 0) or 0
                     roc5_val  = live_sig.get("roc5", 0) or 0
                     if ema50_pos < -3 and roc5_val < -5:
                         logger.debug(f"DCA SKIP {sym} — downtrend (EMA50={ema50_pos:.1f}%, ROC5={roc5_val:.1f}%)")
                         continue
                     dca_sc = score(sym, live_sig, regime_adj=regime_adj)
-                    if dca_sc >= 28:  # high conviction only
+                    min_score = 25 if is_winner_pyramid else 28
+                    if dca_sc >= min_score:
+                        # Pyramid adds are smaller (25% of current size vs 50%)
+                        size_pct = 0.25 if is_winner_pyramid else 0.5
                         dca_notional = min(
-                            mkt_val * 0.5,                        # add up to 50% of current size
+                            mkt_val * size_pct,
                             portfolio_val * MAX_POSITION_PCT - mkt_val,
-                            buying_power * 0.15,
+                            buying_power * 0.12,
                         )
                         if dca_notional >= 50:
-                            logger.info(f"DCA {sym} — adding ${dca_notional:.0f} (pnl={pnl_pct:+.1f}%, score={dca_sc})")
+                            dca_type = "pyramid (VWAP reclaim)" if is_winner_pyramid else "pullback"
+                            logger.info(f"DCA {sym} [{dca_type}] — adding ${dca_notional:.0f} (pnl={pnl_pct:+.1f}%, score={dca_sc})")
                             r = alpaca_post("/v2/orders", {
                                 "symbol": sym, "notional": str(round(dca_notional, 2)),
                                 "side": "buy", "type": "market", "time_in_force": "day",
                             })
                             if r:
                                 buying_power -= dca_notional
-                                log_trade(tlog, "DCA", sym, current, dca_notional, score=dca_sc, reason=f"dca pullback {pnl_pct:+.1f}%")
+                                log_trade(tlog, "DCA", sym, current, dca_notional, score=dca_sc,
+                                          reason=f"dca {dca_type} {pnl_pct:+.1f}%")
                                 made_trades = True
             except Exception as e:
                 logger.debug(f"DCA error {sym}: {e}")
