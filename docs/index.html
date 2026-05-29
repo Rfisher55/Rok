@@ -54725,6 +54725,15 @@ window.renderSectorRotation = renderSectorRotation;
             return `<span style="font-size:6px;color:${col}" title="LR slope ${ls.lr_slope}%/yr, R²=${ls.lr_r2}">LR${ls.lr_slope>0?'+':''}${Math.round(ls.lr_slope)}%${pos}</span>`;
           })() : '';
           const lsAccel = ls.price_accel_pos ? `<span style="font-size:6px;color:#b9f6ca" title="Price accelerating">ACCEL</span>` : '';
+          const lsVwapBand = (() => {
+            if (!ls.vwap_b1u || !p.price) return '';
+            const pr = p.price;
+            if (pr >= ls.vwap_b2u * 0.998) return `<span style="font-size:6px;color:#ef5350" title="At VWAP +2σ — overbought intraday">V+2σ</span>`;
+            if (pr >= ls.vwap_b1u * 0.998) return `<span style="font-size:6px;color:#ffa726" title="At VWAP +1σ">V+1σ</span>`;
+            if (ls.vwap_b2d > 0 && pr <= ls.vwap_b2d * 1.002) return `<span style="font-size:6px;color:#00e676;font-weight:800" title="At VWAP -2σ — oversold intraday bounce zone">V-2σ BUY</span>`;
+            if (ls.vwap_b1d > 0 && pr <= ls.vwap_b1d * 1.002) return `<span style="font-size:6px;color:#69f0ae" title="At VWAP -1σ — support">V-1σ</span>`;
+            return '';
+          })();
           const earnD  = p.earnings_days != null ? (() => { const d = p.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col};background:rgba(255,167,38,.1);padding:1px 4px;border-radius:3px" title="Days to earnings">📅${d}d</span>`; })() : '';
           // Pivot point levels display: show which level price is nearest to
           const lsPivot = (() => {
@@ -54768,7 +54777,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
-                ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsCandle}</div>` : ''}
+                ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
