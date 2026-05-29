@@ -1842,6 +1842,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
     </details>
     <div id="portfolio-summary"></div>
+    <div id="port-value-chart" style="margin-bottom:.6rem;display:none"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
@@ -2878,6 +2879,48 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="port-sum-box"><div class="port-sum-val" style="color:${alerts?'var(--r)':'var(--g)'}">${alerts}</div><div class="port-sum-lbl">Alerts</div></div>
     </div>
     ${!hasRealShares && totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position. Add shares when tracking for real P&amp;L</div>` : ''}`;
+
+    // Store portfolio value snapshot for chart
+    if (totalNow > 0) {
+      try {
+        const snapKey = 'rok_port_history_v1';
+        const snaps = JSON.parse(localStorage.getItem(snapKey) || '[]');
+        const now = Date.now();
+        // Only add snapshot if last snap was >5 minutes ago or none exists
+        if (!snaps.length || now - snaps[snaps.length - 1][0] > 5 * 60 * 1000) {
+          snaps.push([now, Math.round(totalNow * 100) / 100]);
+          // Keep last 48 snapshots (4 days of 30-min intervals)
+          if (snaps.length > 48) snaps.splice(0, snaps.length - 48);
+          localStorage.setItem(snapKey, JSON.stringify(snaps));
+          renderPortfolioValueChart(snaps, totalInvested > 0 ? totalInvested : null);
+        } else if (snaps.length >= 2) {
+          renderPortfolioValueChart(snaps, totalInvested > 0 ? totalInvested : null);
+        }
+      } catch(e) {}
+    }
+  }
+
+  function renderPortfolioValueChart(snaps, baseline) {
+    const el = document.getElementById('port-value-chart');
+    if (!el || snaps.length < 2) { if(el) el.style.display='none'; return; }
+    el.style.display = 'block';
+    const values = snaps.map(s => s[1]);
+    const first = values[0];
+    const last = values[values.length - 1];
+    const isUp = last >= first;
+    const color = isUp ? '#00ff88' : '#ff2255';
+    const pct = first > 0 ? ((last - first) / first * 100).toFixed(1) : '0';
+    const pctColor = isUp ? 'var(--g)' : 'var(--r)';
+    el.innerHTML = `<div style="font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.25rem;display:flex;justify-content:space-between;align-items:center">
+      <span>📈 PORTFOLIO VALUE (${snaps.length} snapshots)</span>
+      <span style="color:${pctColor}">${isUp?'+':''}${pct}% since tracking started</span>
+    </div>
+    <div style="height:40px;border-radius:5px;overflow:hidden;background:rgba(0,0,0,.2)"><canvas id="port-val-spark" height="40"></canvas></div>`;
+    setTimeout(() => {
+      const ex = Chart.getChart('port-val-spark');
+      if (ex) ex.destroy();
+      drawSpark('port-val-spark', values, color);
+    }, 30);
   }
 
   // Phase 6: Share portfolio
