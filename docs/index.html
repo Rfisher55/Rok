@@ -1366,11 +1366,12 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         </div>
         <div class="mini-grid">
           
-          <div class="mini-card">
+          <div class="mini-card" style="cursor:pointer" onclick="switchToScreener('GME')">
             <div class="mini-ticker sq-ticker">$GME</div>
             <div class="mini-sub">22% shorted shorted</div>
             <span class="mini-tag high">high</span>
             <div class="mini-txt">GameStop Corp</div>
+            <div style="font-size:8px;color:var(--wh3);margin-top:3px">Tap to look up →</div>
           </div>
           
         </div>
@@ -1382,15 +1383,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div class="intel-section">
         <div class="s-hdr"><h2 class="s-ttl ttl-earn">📅 UPCOMING EARNINGS TO WATCH</h2></div>
         <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.55;padding:.4rem .65rem;background:rgba(0,204,255,.05);border-radius:5px;border-left:2px solid rgba(0,204,255,.25)">
-          These companies report profits soon — price often jumps or drops big after the announcement.
+          These companies report profits soon — price often jumps or drops 10–20% after the announcement. Watch these, but don't bet big right before earnings.
         </div>
         <div class="mini-grid">
           
-          <div class="mini-card">
+          <div class="mini-card" style="cursor:pointer" onclick="switchToScreener('NVDA')">
             <div class="mini-ticker e-ticker">$NVDA</div>
             <div class="mini-sub">2026-06-05</div>
             <span class="mini-tag BULLISH">BULLISH</span>
             <div class="mini-txt">Beat estimates expected</div>
+            <div style="font-size:8px;color:var(--wh3);margin-top:3px">Tap to look up →</div>
           </div>
           
         </div>
@@ -1401,13 +1403,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       
       <div class="intel-section">
         <div class="s-hdr"><h2 class="s-ttl" style="color:var(--b)">⚡ MOMENTUM SIGNALS</h2></div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.55;padding:.4rem .65rem;background:rgba(0,204,255,.05);border-radius:5px;border-left:2px solid rgba(0,204,255,.2)">
+          These stocks are showing strong chart patterns — price may be about to break out. These are technical signals only; combine with fundamentals before trading.
+        </div>
         <div class="mini-grid">
           
-          <div class="mini-card">
+          <div class="mini-card" style="cursor:pointer" onclick="switchToScreener('AAPL')">
             <div class="mini-ticker" style="color:var(--b)">$AAPL</div>
             <div class="mini-sub" style="color:var(--b);font-size:8.5px;text-transform:uppercase;letter-spacing:.07em">MACD BULLISH CROSS</div>
             <div class="mini-txt">MACD crossed above zero | Volume 2.1x</div>
-            <div style="font-size:8.5px;color:var(--wh3);margin-top:3px">3-7 days</div>
+            <div style="font-size:8.5px;color:var(--wh3);margin-top:3px">3-7 days · Tap to look up →</div>
           </div>
           
         </div>
@@ -1996,9 +2001,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       </div>
       ${s.price_history && s.price_history.length > 3 ? `<div style="height:72px;padding:0 1.1rem;margin-bottom:.6rem"><canvas id="modal-spark" height="72"></canvas></div>` : ''}
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--blk4);border-top:var(--bdr2);border-bottom:var(--bdr2);margin-bottom:.85rem">
-        <div class="modal-stat"><div class="modal-stat-lbl">MKT CAP</div><div class="modal-stat-val">${fmtCap(s.market_cap)}</div></div>
-        <div class="modal-stat"><div class="modal-stat-lbl">P/E</div><div class="modal-stat-val">${s.pe_ratio != null && s.pe_ratio > 0 ? s.pe_ratio.toFixed(1) : '—'}</div></div>
-        <div class="modal-stat"><div class="modal-stat-lbl">VOLUME</div><div class="modal-stat-val">${fmtVol(s.volume)}</div></div>
+        <div class="modal-stat" title="${s.market_cap >= 200e9 ? 'MEGA CAP: Trillion-dollar company — Apple, Microsoft tier. Very stable.' : s.market_cap >= 10e9 ? 'LARGE CAP: Multi-billion dollar company. Relatively safe, well-known.' : s.market_cap >= 2e9 ? 'MID CAP: Medium sized company. More growth potential, more risk.' : 'SMALL CAP: Smaller company. High risk, high reward. Beginners be careful.'}"><div class="modal-stat-lbl">MKT CAP</div><div class="modal-stat-val">${fmtCap(s.market_cap)}</div><div style="font-size:7.5px;color:${s.market_cap >= 10e9 ? 'rgba(0,255,136,.6)' : s.market_cap >= 2e9 ? 'rgba(0,204,255,.6)' : 'rgba(255,136,0,.6)'};">${s.market_cap >= 200e9 ? 'MEGA' : s.market_cap >= 10e9 ? 'LARGE' : s.market_cap >= 2e9 ? 'MID' : s.market_cap > 0 ? 'SMALL' : ''} CAP</div></div>
+        <div class="modal-stat" title="P/E Ratio: how much investors pay per $1 of earnings. Under 15 = cheap. 15-25 = fair. Over 30 = expensive/high-growth stock."><div class="modal-stat-lbl">P/E RATIO</div><div class="modal-stat-val">${s.pe_ratio != null && s.pe_ratio > 0 ? s.pe_ratio.toFixed(1) : '—'}</div><div style="font-size:7.5px;color:${s.pe_ratio < 15 ? 'rgba(0,255,136,.6)' : s.pe_ratio > 30 ? 'rgba(255,34,85,.5)' : 'rgba(255,215,0,.5)'};">${s.pe_ratio < 15 ? 'CHEAP' : s.pe_ratio > 30 ? 'PRICEY' : s.pe_ratio > 0 ? 'FAIR' : ''}</div></div>
+        <div class="modal-stat" title="Daily trading volume — how many shares changed hands today. High volume = more interest from big money."><div class="modal-stat-lbl">VOLUME</div><div class="modal-stat-val">${fmtVol(s.volume)}</div></div>
         ${earningsRow}
       </div>
       ${(() => {
@@ -2355,8 +2360,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const curPrice = lp ? lp.price : (stock ? stock.price : null);
       if (curPrice && entry.price) { totalPct += (curPrice - entry.price) / entry.price * 100; count++; }
     });
-    // Calculate dollar P&L: use actual shares when available, else $1000 estimate
+    // Calculate dollar P&L + today's change
     let totalInvested = 0, totalNow = 0, hasRealShares = false;
+    let todayDollarChange = 0;
     tickers.forEach(ticker => {
       const entry = p[ticker];
       const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
@@ -2367,6 +2373,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         if (entry.shares) hasRealShares = true;
         totalInvested += sh * entry.price;
         totalNow += sh * curPrice;
+        // Today's change based on live price change_pct
+        if (lp && lp.change_pct != null) {
+          const prevPrice = curPrice / (1 + lp.change_pct / 100);
+          todayDollarChange += sh * (curPrice - prevPrice);
+        }
       }
     });
     const totalDollarGain = totalNow - totalInvested;
@@ -2379,10 +2390,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const pnlLabel = hasRealShares ? 'Real P&amp;L' : 'Est. P&amp;L*';
     const fmtMoney = v => v >= 1000 ? '$' + (v/1000).toFixed(1) + 'k' : '$' + v.toFixed(0);
     const nowValHtml = totalNow > 0 ? `<div style="font-size:9px;color:var(--wh3);margin-top:1px">${fmtMoney(totalInvested)} → ${fmtMoney(totalNow)}</div>` : '';
-    sumEl.innerHTML = `<div class="port-summary" style="grid-template-columns:repeat(4,1fr)">
+    const todayColor = todayDollarChange >= 0 ? 'var(--g)' : 'var(--r)';
+    const todayFmt = todayDollarChange >= 0
+      ? `+$${todayDollarChange.toFixed(hasRealShares ? 2 : 0)}`
+      : `-$${Math.abs(todayDollarChange).toFixed(hasRealShares ? 2 : 0)}`;
+    const hasTodayData = Object.values(liveprices).some(v => v.change_pct != null);
+    sumEl.innerHTML = `<div class="port-summary" style="grid-template-columns:repeat(${hasTodayData ? 5 : 4},1fr)">
       <div class="port-sum-box"><div class="port-sum-val" style="color:var(--au)">${tickers.length}</div><div class="port-sum-lbl">Tracking</div></div>
-      <div class="port-sum-box"><div class="port-sum-val" style="color:${cc}">${avgPct>=0?'+':''}${avgPct.toFixed(1)}%</div><div class="port-sum-lbl">Avg Return</div></div>
+      <div class="port-sum-box"><div class="port-sum-val" style="color:${cc}">${avgPct>=0?'+':''}${avgPct.toFixed(1)}%</div><div class="port-sum-lbl">Total Return</div></div>
       <div class="port-sum-box"><div class="port-sum-val" style="color:${moneyColor};font-size:1.1rem">${totalInvested > 0 ? dollarFmt : '—'}</div>${nowValHtml}<div class="port-sum-lbl">${pnlLabel}</div></div>
+      ${hasTodayData && totalNow > 0 ? `<div class="port-sum-box"><div class="port-sum-val" style="color:${todayColor};font-size:1.1rem">${todayFmt}</div><div class="port-sum-lbl">Today 🟢</div></div>` : ''}
       <div class="port-sum-box"><div class="port-sum-val" style="color:${alerts?'var(--r)':'var(--g)'}">${alerts}</div><div class="port-sum-lbl">Alerts</div></div>
     </div>
     ${!hasRealShares && totalInvested > 0 ? `<div style="font-size:9px;color:var(--wh3);text-align:center;margin-bottom:.5rem;opacity:.6">* Based on $1,000 per position. Add shares when tracking for real P&amp;L</div>` : ''}`;
