@@ -2692,6 +2692,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         dollarGainHtml = `<div style="font-size:9px;color:${pct >= 0 ? 'var(--g)' : 'var(--r)'};margin-top:1px">${pct >= 0 ? '+' : ''}$${est} on $1k</div>`;
       }
       const sharesTagHtml = numShares ? `<div style="font-size:8.5px;color:var(--wh3);">${numShares} share${numShares!==1?'s':''}</div>` : '';
+      const ph = stock ? (stock.price_history || []) : [];
+      const sparkHtml = ph.length > 3 ? `<div style="height:30px;margin:.35rem 0 .2rem;border-radius:3px;overflow:hidden;background:rgba(0,0,0,.15)"><canvas id="psp-${ticker}" height="30"></canvas></div>` : '';
 
       return `<div class="port-card" onclick="openModal('${ticker}')">
         <div class="port-top">
@@ -2713,6 +2715,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           <div><div class="port-price-lbl">ROK SAYS</div><div style="font-size:9px;font-weight:800;color:${recColor};line-height:1.2;margin-top:2px">${rec}</div></div>
           ${priceTarget ? `<div><div class="port-price-lbl">TARGET</div><div class="port-price-val" style="color:var(--g)">$${Number(priceTarget).toFixed(2)}</div></div>` : ''}
         </div>
+        ${sparkHtml}
         ${progressBar}
         <div class="port-rec" style="padding:.5rem .65rem">
           <span class="port-rec-msg">${recMsg}</span>
@@ -2724,6 +2727,20 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       `<div class="port-alert-item ${a.includes('SELL')||a.includes('⚠')?'sell':'target'}">${a}</div>`
     ).join('')}</div>` : '';
     grid.innerHTML = alertsHtml + `<div class="port-grid">${cards}</div>`;
+    // Draw sparklines for portfolio holdings
+    tickers.forEach(ticker => {
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const ph = stock ? (stock.price_history || []) : [];
+      if (ph.length > 3) {
+        const entry = p[ticker];
+        const curP = liveprices[ticker] ? liveprices[ticker].price : (stock ? stock.price : null);
+        const buyP = entry ? entry.price : null;
+        const isUp = curP && buyP ? curP >= buyP : ph[ph.length-1] >= ph[0];
+        const ex = Chart.getChart(`psp-${ticker}`);
+        if (ex) ex.destroy();
+        drawSpark(`psp-${ticker}`, ph, isUp ? '#00ff88' : '#ff2255');
+      }
+    });
   }
 
   // Manual add any ticker to portfolio
