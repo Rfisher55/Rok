@@ -2790,7 +2790,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 <div id="price-flash" class="price-flash">✓ PRICES UPDATED</div>
 
 <!-- GLOBAL ALERT BAR -->
-<div id="app-alerts" style="position:fixed;top:52px;left:0;right:0;z-index:600;padding:.3rem .75rem;display:none;pointer-events:auto"></div>
+<div id="app-alerts"></div>
 
 <!-- ONBOARDING OVERLAY -->
 <div id="onboard-overlay" class="onboard-overlay">
@@ -3246,12 +3246,15 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           Loading…
         </div>
       </div>` : ''}
+      <div id="modal-news-section" style="padding:0 1.1rem .65rem">
+        <div id="modal-news-inner" style="font-size:10px;color:var(--wh3)">Loading news…</div>
+      </div>
       <div style="padding:.75rem 1.1rem 1.1rem;border-top:var(--bdr2);display:flex;gap:.6rem">
         <a href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.65rem;background:var(--blk4);border:var(--bdr2);border-radius:6px;font-size:11px;font-weight:600;color:var(--wh2);text-decoration:none">Yahoo Finance ↗</a>
-        <a href="https://finance.yahoo.com/quote/${s.ticker}/news/" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;padding:.65rem;background:var(--blk4);border:var(--bdr2);border-radius:6px;font-size:11px;font-weight:600;color:var(--wh2);text-decoration:none">Latest News ↗</a>
         <button onclick="boughtIt('${s.ticker}', ${curPrice || 0}); doCloseModal();" style="flex:1;padding:.65rem;background:${sig==='buy'?'rgba(0,255,136,.12)':'rgba(255,215,0,.08)'};border:1px solid ${sig==='buy'?'rgba(0,255,136,.3)':'rgba(255,215,0,.2)'};border-radius:6px;font-size:11px;font-weight:700;color:${sig==='buy'?'var(--g)':'var(--au)'};cursor:pointer;touch-action:manipulation">
           ${sig==='buy'?'💰 BOUGHT IT':'📊 TRACK IT'}
         </button>
+        <button onclick="shareSignal('${s.ticker}','${(det.catalyst||det.rok_take||'').replace(/'/g,'')}',${curPrice||0},${priceTarget||0})" style="padding:.65rem .9rem;background:rgba(0,204,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:6px;font-size:13px;cursor:pointer;color:var(--b);touch-action:manipulation" title="Share trade idea">📤</button>
       </div>`;
 
     document.getElementById('modal-overlay').classList.add('open');
@@ -3268,6 +3271,42 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (sig === 'buy' && priceTarget2 && curPrice2) {
       setTimeout(() => updateCalc(curPrice2, priceTarget2), 60);
     }
+    // Load live news headlines
+    loadModalNews(ticker);
+  }
+
+  async function loadModalNews(ticker) {
+    const el = document.getElementById('modal-news-inner');
+    if (!el) return;
+    try {
+      const res = await fetch(
+        `https://query1.finance.yahoo.com/v1/finance/search?q=${ticker}&lang=en-US&region=US&quotesCount=0&newsCount=4&enableFuzzyQuery=false&newsQuerySchema=v3&enableCb=true&enableNavLinks=false`,
+        { signal: AbortSignal.timeout(6000) }
+      );
+      const j = await res.json();
+      const items = j?.news || [];
+      if (!items.length) { el.parentElement.style.display = 'none'; return; }
+      const html = items.slice(0, 3).map(n => {
+        const ago = n.providerPublishTime ? timeAgo(n.providerPublishTime * 1000) : '';
+        return `<a href="${n.link}" target="_blank" rel="noopener" style="display:block;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.04);text-decoration:none;color:var(--wh2);font-size:11px;line-height:1.4;cursor:pointer">
+          <span style="opacity:.65;font-size:9px;color:var(--wh3)">${n.publisher || ''} · ${ago}</span><br>
+          ${n.title || ''}
+        </a>`;
+      }).join('');
+      el.parentElement.style.borderTop = 'var(--bdr2)';
+      el.innerHTML = `<div style="font-size:8px;font-weight:700;letter-spacing:.14em;color:var(--wh3);text-transform:uppercase;margin-bottom:.4rem">📰 LATEST NEWS</div>${html}`;
+    } catch {
+      el.parentElement.style.display = 'none';
+    }
+  }
+
+  function timeAgo(ms) {
+    const diff = Date.now() - ms;
+    const h = Math.floor(diff / 36e5);
+    const m = Math.floor(diff / 6e4);
+    if (h >= 24) return Math.floor(h / 24) + 'd ago';
+    if (h >= 1) return h + 'h ago';
+    return m + 'm ago';
   }
   function updateCalc(price, target) {
     const el = document.getElementById('calc-invest');
@@ -3921,13 +3960,16 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     const container = document.getElementById('app-alerts');
     if (!container) return;
     const el = document.createElement('div');
-    el.className = `port-alert-item ${type}`;
-    el.style.cssText = 'cursor:pointer;margin-bottom:.35rem';
+    if (type === 'info') {
+      el.className = 'app-alert';
+    } else {
+      el.className = `app-alert ${type === 'warn' || type === 'sell' || type === 'stop' ? 'warn' : ''}`;
+    }
+    el.style.cssText = 'cursor:pointer;pointer-events:auto';
     el.textContent = msg;
-    el.onclick = () => showTab('portfolio');
+    el.onclick = () => { showTab('portfolio'); if (el.parentNode) el.parentNode.removeChild(el); };
     container.appendChild(el);
-    container.style.display = 'block';
-    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 30000);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 6000);
   }
 
   function requestNotifPermission() {
