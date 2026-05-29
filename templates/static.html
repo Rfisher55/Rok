@@ -1611,6 +1611,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div id="sc-sector-chips" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem"></div>
     <!-- Active price alerts strip (populated by JS) -->
     <div id="alert-strip" style="display:none"></div>
+    <!-- Recently viewed stocks -->
+    <div id="recently-viewed" style="display:none;margin-bottom:.55rem"></div>
     <!-- Live top movers (populated after price refresh) -->
     <div id="sc-movers" style="display:none;margin-bottom:.6rem"></div>
     <div id="sc-grid" class="sc-grid">
@@ -2246,6 +2248,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     (ROK.stock_universe || []).slice(0, 20).forEach(s => tickers.add(s.ticker));
     getAlerts().filter(a => !a.triggered).forEach(a => tickers.add(a.ticker));
     Object.keys(getPortfolio()).forEach(t => tickers.add(t));
+    // Also fetch live prices for starred stocks not already in the list
+    starred.forEach(t => tickers.add(t));
     const tickerList = [...tickers].filter(Boolean);
 
     // Fetch in batches of 10
@@ -2296,6 +2300,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     checkPriceAlerts();
     updateLiveMarketMood();
     updateTopMovers();
+    renderRecentlyViewed();
     renderTodaysTasks();
     updateMarketLiveBrief();
     if (btn) { btn.classList.remove('spinning'); }
@@ -2534,6 +2539,13 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 
     document.getElementById('modal-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
+    // Track recently viewed
+    try {
+      const rv = JSON.parse(localStorage.getItem('rok_recently_viewed_v1') || '[]');
+      const updated = [ticker, ...rv.filter(t => t !== ticker)].slice(0, 8);
+      localStorage.setItem('rok_recently_viewed_v1', JSON.stringify(updated));
+      renderRecentlyViewed();
+    } catch(e) {}
 
     if (s.price_history && s.price_history.length > 3) {
       const isUp = s.price_history[s.price_history.length - 1] >= s.price_history[0];
@@ -2640,8 +2652,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     activeTab = id;
-    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
-    else if (id === 'screener') { renderAlertStrip(); updateTopMovers(); renderScreener(); }
+    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
+    else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); }
     if (id === 'portfolio') renderPortfolio();
@@ -3902,6 +3914,26 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <div style="font-size:13px;font-weight:700;color:var(--wh);margin-bottom:.2rem">${headline}</div>
       <div style="font-size:11px;color:var(--wh2);line-height:1.55">${detail}${vixNote}</div>`;
   }
+
+  // ── RECENTLY VIEWED ───────────────────────────────────
+  function renderRecentlyViewed() {
+    const el = document.getElementById('recently-viewed');
+    if (!el) return;
+    try {
+      const rv = JSON.parse(localStorage.getItem('rok_recently_viewed_v1') || '[]');
+      if (!rv.length) { el.style.display = 'none'; return; }
+      el.style.display = 'block';
+      el.innerHTML = `<div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+        <span style="font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;flex-shrink:0">Recently viewed:</span>
+        ${rv.map(t => {
+          const lp = liveprices[t];
+          const chgHtml = lp ? `<span style="font-size:8px;color:${lp.change_pct>=0?'var(--g)':'var(--r)'}">${lp.change_pct>=0?'+':''}${lp.change_pct.toFixed(1)}%</span>` : '';
+          return `<button onclick="openModal('${t}')" style="padding:2px 8px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:700;color:var(--wh2);cursor:pointer;font-family:var(--font);touch-action:manipulation;display:inline-flex;align-items:center;gap:3px">$${t}${chgHtml}</button>`;
+        }).join('')}
+      </div>`;
+    } catch(e) { el.style.display = 'none'; }
+  }
+  window.renderRecentlyViewed = renderRecentlyViewed;
 
   // ── TOP MOVERS STRIP ────────────────────────────────────
   function updateTopMovers() {
