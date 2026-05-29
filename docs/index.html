@@ -413,10 +413,42 @@ body.beginner-mode #beginner-banner { display:block }
 .disclaimer{font-size:8.5px;color:var(--wh3);opacity:.5;margin-top:.1rem}
 .ftr-time{font-size:9px;color:var(--wh3);white-space:nowrap;flex-shrink:0}
 
+/* ── MOBILE LIVE INDEX STRIP ────────────────────────────── */
+.mob-idx-strip{display:none;background:rgba(2,4,8,.97);border-bottom:1px solid rgba(0,204,255,.08);padding:4px 0;flex-shrink:0}
+.mob-idx-scroll{display:flex;gap:.65rem;overflow-x:auto;padding:3px 1rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.mob-idx-scroll::-webkit-scrollbar{display:none}
+.mob-idx-item{display:flex;align-items:center;gap:.3rem;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.mob-idx-lbl{font-size:8px;font-weight:700;letter-spacing:.06em;color:var(--wh4)}
+.mob-idx-price{font-size:11px;font-weight:700;color:var(--wh1)}
+.mob-idx-chg{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px}
+.mob-idx-div{width:1px;height:14px;background:rgba(255,255,255,.1);flex-shrink:0}
+@media(max-width:768px){.mob-idx-strip{display:block}}
+
+/* ── BUDGET CALCULATOR ──────────────────────────────────── */
+.budget-calc{background:rgba(0,255,136,.035);border:1px solid rgba(0,255,136,.13);border-radius:10px;padding:.6rem .85rem;margin-bottom:.75rem}
+.budget-inp{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--wh1);font-size:12px;padding:.3rem .55rem;font-family:var(--font);width:100px}
+.budget-row{display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.03);border-radius:6px;padding:.3rem .55rem;font-size:11px;cursor:pointer;transition:background .12s}
+.budget-row:hover{background:rgba(255,255,255,.06)}
+.budget-ticker{font-weight:700;min-width:50px;font-family:var(--disp);font-size:1rem;letter-spacing:.06em}
+.budget-shares{font-size:13px;font-weight:700;color:var(--wh1);margin-left:auto}
+
+/* ── SECTOR ETF ROTATION ────────────────────────────────── */
+.sector-etf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.4rem}
+.sector-etf-tile{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:.45rem .6rem;text-align:center;cursor:pointer;transition:all .15s}
+.sector-etf-tile:hover{background:rgba(255,255,255,.06)}
+.sector-etf-tile.etf-up{border-color:rgba(0,255,136,.2);background:rgba(0,255,136,.04)}
+.sector-etf-tile.etf-down{border-color:rgba(255,34,85,.18);background:rgba(255,34,85,.035)}
+.sector-etf-name{font-size:8px;font-weight:800;letter-spacing:.07em;color:var(--wh3);text-transform:uppercase;margin-bottom:.1rem}
+.sector-etf-ticker{font-size:7.5px;color:var(--wh4);margin-bottom:.2rem}
+.sector-etf-price{font-size:11.5px;font-weight:700;color:var(--wh1);margin:.1rem 0}
+.sector-etf-chg{font-size:10px;font-weight:800}
+.sector-etf-bar{height:3px;border-radius:2px;margin-top:.3rem;background:rgba(255,255,255,.07)}
+.sector-etf-fill{height:100%;border-radius:2px;transition:width .5s ease}
+
 /* ── RESPONSIVE ─────────────────────────────────────────── */
 @media(max-width:1200px){.sig-layout{grid-template-columns:1fr 1fr}.mkt-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.sig-layout{grid-template-columns:1fr}.mkt-grid{grid-template-columns:1fr}.intel-grid{grid-template-columns:1fr}.sr-row{grid-template-columns:1fr}.tape-row{grid-template-columns:1fr}}
-@media(max-width:768px){.idx-bar{display:none}.tab-pane{padding:.9rem 1rem}.stats-row{grid-template-columns:repeat(4,1fr)}.sc-grid{grid-template-columns:repeat(2,1fr)}.track-grid{grid-template-columns:repeat(3,1fr)}.tab-search{display:none}.sc-sort{display:none}}
+@media(max-width:768px){.idx-bar{display:none}.tab-pane{padding:.9rem 1rem}.stats-row{grid-template-columns:repeat(4,1fr)}.sc-grid{grid-template-columns:repeat(2,1fr)}.track-grid{grid-template-columns:repeat(3,1fr)}.tab-search{display:none}.sc-sort{display:none}.sector-etf-grid{grid-template-columns:repeat(3,1fr)}}
 
 /* ── MOBILE: native bottom-nav layout ───────────────────── */
 .mob-srch{display:none}
@@ -967,6 +999,41 @@ body.beginner-mode #beginner-banner { display:block }
     </div>
   </div>
 </header>
+
+<!-- MOBILE LIVE INDEX STRIP (hidden on desktop, visible on mobile ≤768px) -->
+<div class="mob-idx-strip" id="mob-idx-strip">
+  <div class="mob-idx-scroll" id="mob-idx-scroll">
+    
+    
+    
+    
+    
+    <div class="mob-idx-item" data-mob-idx="SPY" onclick="openModal('SPY')">
+      <span class="mob-idx-lbl">S&amp;P 500</span>
+      <span class="mob-idx-price" data-mob-price="SPY">$5,300.00</span>
+      <span class="mob-idx-chg up" data-mob-chg="SPY">+0.50%</span>
+    </div>
+    
+    
+    
+    <div class="mob-idx-div"></div>
+    <div class="mob-idx-item" data-mob-idx="QQQ" onclick="openModal('QQQ')">
+      <span class="mob-idx-lbl">NASDAQ</span>
+      <span class="mob-idx-price" data-mob-price="QQQ">$18,900.00</span>
+      <span class="mob-idx-chg up" data-mob-chg="QQQ">+0.80%</span>
+    </div>
+    
+    
+    
+    <div class="mob-idx-div"></div>
+    <div class="mob-idx-item" data-mob-idx="^VIX" onclick="openModal('^VIX')">
+      <span class="mob-idx-lbl">VIX</span>
+      <span class="mob-idx-price" data-mob-price="^VIX">14.2</span>
+      <span class="mob-idx-chg down" data-mob-chg="^VIX">-2.10%</span>
+    </div>
+    
+  </div>
+</div>
 
 <!-- TICKER TAPE (live-updated by JS) -->
 <div class="ticker-tape" id="ticker-tape-bar">
@@ -1588,6 +1655,35 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="recently-viewed" style="display:none;margin-bottom:.55rem"></div>
     <!-- Live top movers (populated after price refresh) -->
     <div id="sc-movers" style="display:none;margin-bottom:.6rem"></div>
+
+    <!-- BUDGET CALCULATOR -->
+    <div class="budget-calc" id="budget-calc-wrap">
+      <div style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none" onclick="toggleBudgetCalc()">
+        <span style="font-size:10px;font-weight:800;letter-spacing:.09em;color:var(--g)">💰 BUDGET CALCULATOR</span>
+        <span style="font-size:9px;color:var(--wh4)">How many shares can I buy?</span>
+        <span id="budget-calc-arrow" style="margin-left:auto;font-size:11px;color:var(--wh4)">▼</span>
+      </div>
+      <div id="budget-calc-body" style="display:none;margin-top:.55rem">
+        <div style="display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-bottom:.45rem">
+          <label style="font-size:9px;color:var(--wh3);font-weight:700">MY BUDGET</label>
+          <div style="display:flex;align-items:center;gap:.2rem">
+            <span style="font-size:11px;color:var(--wh3)">$</span>
+            <input class="budget-inp" id="budget-amount" type="number" placeholder="1000" min="1" step="100" oninput="runBudgetCalc()">
+          </div>
+          <label style="font-size:9px;color:var(--wh3);font-weight:700">SHOW</label>
+          <select id="budget-filter" onchange="runBudgetCalc()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:var(--wh1);font-size:10px;padding:.3rem .5rem;font-family:var(--font)">
+            <option value="buy">🟢 BUY signals only</option>
+            <option value="all">All stocks</option>
+            <option value="portfolio">My Portfolio stocks</option>
+          </select>
+        </div>
+        <div style="font-size:9px;color:var(--wh4);margin-bottom:.4rem">Live prices used when available · Tap any row to open stock details</div>
+        <div id="budget-results" style="display:flex;flex-direction:column;gap:.3rem;max-height:230px;overflow-y:auto">
+          <div style="font-size:11px;color:var(--wh4);text-align:center;padding:.6rem">Enter a budget above ↑</div>
+        </div>
+      </div>
+    </div>
+
     <div id="sc-grid" class="sc-grid">
       <div class="sc-empty">Loading…</div>
     </div>
@@ -1874,6 +1970,18 @@ body.beginner-mode #beginner-banner { display:block }
       <div class="intel-section" style="grid-column:1/-1">
         <div class="s-hdr"><h2 class="s-ttl" style="color:var(--or)">💥 LIVE SHORT SQUEEZE SCANNER</h2><span class="s-sub">ROK stocks with high short interest that could explode upward <span style="color:var(--g);font-size:7px">● LIVE</span></span></div>
         <div id="intel-squeeze-scanner" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to scan for squeeze setups…</div>
+      </div>
+
+      <!-- LIVE: Sector ETF Money Flow (JS-populated) -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr">
+          <h2 class="s-ttl" style="color:var(--b)">🌊 LIVE SECTOR MONEY FLOW</h2>
+          <span class="s-sub">Where is money flowing today? <span style="color:var(--g);font-size:7px">● LIVE</span></span>
+        </div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.5;padding:.4rem .6rem;background:rgba(0,204,255,.04);border-radius:6px;border-left:2px solid rgba(0,204,255,.25)">
+          💡 <strong style="color:var(--b)">Sector rotation</strong> = large funds move money between industries. Green tiles = money flowing <em>in</em>. Red tiles = money flowing <em>out</em>. Trade with the flow, not against it.
+        </div>
+        <div id="intel-sector-flow" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to load live sector data…</div>
       </div>
 
     </div><!-- /intel-grid -->
@@ -2452,7 +2560,7 @@ body.beginner-mode #beginner-banner { display:block }
 
   async function fetchYahooPrices(tickers) {
     const sym = tickers.join(',');
-    const fields = 'regularMarketPrice,regularMarketChangePercent,regularMarketVolume,averageDailyVolume3Month,preMarketPrice,preMarketChangePercent,postMarketPrice,postMarketChangePercent,marketState,fiftyTwoWeekHigh,fiftyTwoWeekLow';
+    const fields = 'regularMarketPrice,regularMarketChangePercent,regularMarketVolume,averageDailyVolume3Month,preMarketPrice,preMarketChangePercent,postMarketPrice,postMarketChangePercent,marketState,fiftyTwoWeekHigh,fiftyTwoWeekLow,regularMarketDayHigh,regularMarketDayLow,regularMarketOpen';
     const urls = [
       `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${sym}&fields=${fields}`,
       `https://query2.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${sym}&fields=${fields}`,
@@ -2480,6 +2588,9 @@ body.beginner-mode #beginner-banner { display:block }
               market_state: q.marketState || null,
               week_high: q.fiftyTwoWeekHigh || null,
               week_low: q.fiftyTwoWeekLow || null,
+              day_high: q.regularMarketDayHigh || null,
+              day_low: q.regularMarketDayLow || null,
+              day_open: q.regularMarketOpen || null,
             };
           }
         });
@@ -2576,6 +2687,9 @@ body.beginner-mode #beginner-banner { display:block }
       }
     });
 
+    // Update mobile index strip
+    renderMobIdxStrip();
+
     lastRefreshTime = new Date();
     const timerEl = document.getElementById('update-timer');
     if (timerEl && lastRefreshTime) {
@@ -2597,6 +2711,8 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); updateFearGreedFromVIX(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); renderPortfolioSpyBenchmark(); }
     if (activeTab === 'signals') { updateLiveMacroStrip(); renderTodaysBestSetup(); }
+    if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); }
+    if (activeTab === 'intel') { renderSectorFlow(_sectorFlowCache); }
     updateGlobalRiskAlert();
     updateFearGreedFromVIX();
     renderLivePortStrip();
@@ -2802,6 +2918,28 @@ body.beginner-mode #beginner-banner { display:block }
         }
         if (!badges.length) return '';
         return `<div style="padding:0 1.1rem .55rem;display:flex;gap:.4rem;flex-wrap:wrap">${badges.join('')}</div>`;
+      })()}
+      ${(() => {
+        if (!lp?.day_high || !lp?.day_low || !curPrice) return '';
+        const lo = lp.day_low, hi = lp.day_high;
+        const pos = ((curPrice - lo) / (hi - lo) * 100).toFixed(0);
+        const pctFromLow = ((curPrice - lo) / lo * 100).toFixed(1);
+        const dayRange = hi - lo;
+        return `<div style="padding:0 1.1rem .65rem">
+          <div style="font-size:8px;color:var(--wh4);letter-spacing:.08em;margin-bottom:.3rem;display:flex;justify-content:space-between">
+            <span>TODAY'S RANGE</span>
+            <span style="color:var(--wh3)">${pctFromLow >= 0 ? '+' : ''}${pctFromLow}% from day low · Range: $${dayRange.toFixed(2)}</span>
+          </div>
+          <div style="position:relative;height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:visible">
+            <div style="position:absolute;height:100%;left:0;width:${pos}%;background:linear-gradient(90deg,rgba(255,34,85,.4),rgba(0,255,136,.6));border-radius:3px"></div>
+            <div style="position:absolute;top:-3px;left:${pos}%;width:2px;height:12px;background:var(--wh);border-radius:1px;transform:translateX(-50%)" title="Current: $${curPrice.toFixed(2)}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:.25rem">
+            <span style="font-size:9px;color:var(--r)">Low $${lo.toFixed(2)}</span>
+            <span style="font-size:9px;color:var(--wh4)">today's range</span>
+            <span style="font-size:9px;color:var(--g)">High $${hi.toFixed(2)}</span>
+          </div>
+        </div>`;
       })()}
       ${s.price_history && s.price_history.length > 3 ? `<div style="height:72px;padding:0 1.1rem;margin-bottom:.6rem"><canvas id="modal-spark" height="72"></canvas></div>` : ''}
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--blk4);border-top:var(--bdr2);border-bottom:var(--bdr2);margin-bottom:.85rem">
@@ -3443,7 +3581,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
     if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); }
-    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); }
+    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); }
   }
   window.showTab = showTab;
 
@@ -7306,6 +7444,189 @@ body.beginner-mode #beginner-banner { display:block }
     _squeezeCache = { ts: now, html };
   }
   window.fetchSqueezeScanner = fetchSqueezeScanner;
+
+  // ── MOBILE LIVE INDEX STRIP ──────────────────────────────
+  function renderMobIdxStrip() {
+    document.querySelectorAll('[data-mob-idx]').forEach(item => {
+      const sym = item.dataset.mobIdx;
+      const d = liveprices[sym];
+      if (!d) return;
+      const priceEl = item.querySelector('[data-mob-price]');
+      const chgEl = item.querySelector('[data-mob-chg]');
+      if (priceEl) priceEl.textContent = sym === '^VIX' ? d.price.toFixed(2) : '$' + d.price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+      if (chgEl) {
+        chgEl.textContent = (d.change_pct >= 0 ? '+' : '') + d.change_pct.toFixed(2) + '%';
+        chgEl.className = 'mob-idx-chg ' + (d.change_pct >= 0 ? 'up' : 'down');
+      }
+    });
+  }
+  window.renderMobIdxStrip = renderMobIdxStrip;
+
+  // ── BUDGET CALCULATOR ────────────────────────────────────
+  function toggleBudgetCalc() {
+    const body = document.getElementById('budget-calc-body');
+    const arrow = document.getElementById('budget-calc-arrow');
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+    if (!isOpen) {
+      const saved = parseFloat(localStorage.getItem('rok_account_size_v1') || '0');
+      const inp = document.getElementById('budget-amount');
+      if (inp && !inp.value && saved > 0) inp.value = Math.min(saved, 10000);
+      runBudgetCalc();
+    }
+  }
+  window.toggleBudgetCalc = toggleBudgetCalc;
+
+  function runBudgetCalc() {
+    const budget = parseFloat(document.getElementById('budget-amount')?.value || '0');
+    const filter = document.getElementById('budget-filter')?.value || 'buy';
+    const resultsEl = document.getElementById('budget-results');
+    if (!resultsEl) return;
+    if (!budget || budget < 1) {
+      resultsEl.innerHTML = '<div style="font-size:11px;color:var(--wh4);text-align:center;padding:.6rem">Enter a budget above ↑</div>';
+      return;
+    }
+
+    const universe = ROK.stock_universe || [];
+    let stocks;
+    if (filter === 'buy') {
+      stocks = universe.filter(s => s.rok_signal === 'buy');
+    } else if (filter === 'portfolio') {
+      const port = getPortfolio();
+      const portTickers = new Set(Object.keys(port));
+      stocks = universe.filter(s => portTickers.has(s.ticker));
+    } else {
+      stocks = universe;
+    }
+
+    const rows = stocks.map(s => {
+      const lp = liveprices[s.ticker];
+      const price = (lp?.price) || s.price || 0;
+      if (!price || price <= 0) return null;
+      const shares = Math.floor(budget / price);
+      if (shares < 1) return null;
+      const cost = shares * price;
+      const leftover = budget - cost;
+      return { ticker: s.ticker, price, shares, cost, leftover, signal: s.rok_signal, live: !!lp, company: s.company_name || '' };
+    }).filter(Boolean);
+
+    rows.sort((a, b) => b.shares - a.shares);
+
+    if (!rows.length) {
+      resultsEl.innerHTML = `<div style="font-size:11px;color:var(--wh4);text-align:center;padding:.6rem">No stocks match — try a larger budget or different filter</div>`;
+      return;
+    }
+
+    const fmt = n => n.toLocaleString('en-US', {style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2});
+    resultsEl.innerHTML = rows.slice(0, 20).map(r => {
+      const sigColor = r.signal === 'buy' ? 'var(--g)' : r.signal === 'sell' ? 'var(--r)' : 'var(--au)';
+      const livePill = r.live ? `<span style="font-size:7px;padding:1px 4px;background:rgba(0,255,136,.1);border-radius:3px;color:var(--g);font-weight:700">LIVE</span>` : '';
+      const shortName = r.company.length > 18 ? r.company.substring(0, 18) + '…' : r.company;
+      return `<div class="budget-row" onclick="openModal('${r.ticker}')">
+        <span class="budget-ticker" style="color:${sigColor}">${r.ticker}</span>
+        <span style="flex:1;min-width:0">
+          <div style="font-size:9px;color:var(--wh4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${shortName} ${livePill}</div>
+          <div style="font-size:9px;color:var(--wh4)">@ $${r.price.toFixed(2)}/share</div>
+        </span>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="budget-shares">${r.shares.toLocaleString()} shares</div>
+          <div style="font-size:8.5px;color:var(--wh4)">${fmt(r.cost)} · ${fmt(r.leftover)} left</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  window.runBudgetCalc = runBudgetCalc;
+
+  // ── SECTOR ETF MONEY FLOW ────────────────────────────────
+  const SECTOR_ETFS = [
+    { ticker: 'XLK', name: 'Technology' },
+    { ticker: 'XLF', name: 'Financials' },
+    { ticker: 'XLE', name: 'Energy' },
+    { ticker: 'XLV', name: 'Healthcare' },
+    { ticker: 'XLC', name: 'Comm. Svcs' },
+    { ticker: 'XLI', name: 'Industrials' },
+    { ticker: 'XLY', name: 'Cons. Discr.' },
+    { ticker: 'XLP', name: 'Cons. Staples' },
+    { ticker: 'XLU', name: 'Utilities' },
+    { ticker: 'XLB', name: 'Materials' },
+    { ticker: 'XLRE', name: 'Real Estate' },
+  ];
+  let _sectorFlowCache = null;
+  let _sectorFlowTs = 0;
+
+  async function fetchSectorFlow() {
+    const el = document.getElementById('intel-sector-flow');
+    if (!el) return;
+    const now = Date.now();
+    if (_sectorFlowCache && now - _sectorFlowTs < 10 * 60 * 1000) { renderSectorFlow(_sectorFlowCache); return; }
+    el.innerHTML = '<div style="color:var(--wh4);font-size:10px;padding:.4rem">Loading live sector data…</div>';
+    try {
+      const syms = SECTOR_ETFS.map(e => e.ticker).join(',');
+      const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${syms}&fields=regularMarketPrice,regularMarketChangePercent,regularMarketVolume,averageDailyVolume3Month`;
+      const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!resp.ok) throw new Error('Network error');
+      const json = await resp.json();
+      const quotes = json?.quoteResponse?.result || [];
+      const data = SECTOR_ETFS.map(sec => {
+        const q = quotes.find(r => r.symbol === sec.ticker);
+        const vol = q?.regularMarketVolume || 0;
+        const avgVol = q?.averageDailyVolume3Month || 0;
+        const volRatio = avgVol > 0 ? vol / avgVol : null;
+        return { ...sec, price: q?.regularMarketPrice || 0, change_pct: q?.regularMarketChangePercent || 0, volRatio };
+      });
+      _sectorFlowCache = data;
+      _sectorFlowTs = now;
+      renderSectorFlow(data);
+    } catch {
+      el.innerHTML = '<div style="color:var(--wh4);font-size:10px;padding:.4rem">Unable to load sector data right now — try refreshing</div>';
+    }
+  }
+  window.fetchSectorFlow = fetchSectorFlow;
+
+  function renderSectorFlow(data) {
+    const el = document.getElementById('intel-sector-flow');
+    if (!el || !data?.length) return;
+    const sorted = [...data].sort((a, b) => b.change_pct - a.change_pct);
+    const top = sorted[0], bot = sorted[sorted.length - 1];
+    const maxAbs = Math.max(...data.map(d => Math.abs(d.change_pct)), 0.01);
+
+    const summaryHtml = top && bot ? `<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.65rem">
+      <div style="padding:3px 10px;border-radius:5px;font-size:10px;font-weight:700;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--g)">
+        🔼 INFLOW: <strong>${top.name}</strong> (${top.ticker}) +${top.change_pct.toFixed(2)}%${top.volRatio != null && top.volRatio >= 1.5 ? ' · ' + top.volRatio.toFixed(1) + '× vol' : ''}
+      </div>
+      <div style="padding:3px 10px;border-radius:5px;font-size:10px;font-weight:700;background:rgba(255,34,85,.08);border:1px solid rgba(255,34,85,.2);color:var(--r)">
+        🔽 OUTFLOW: <strong>${bot.name}</strong> (${bot.ticker}) ${bot.change_pct.toFixed(2)}%${bot.volRatio != null && bot.volRatio >= 1.5 ? ' · ' + bot.volRatio.toFixed(1) + '× vol' : ''}
+      </div>
+    </div>` : '';
+
+    const tilesHtml = sorted.map(s => {
+      const up = s.change_pct >= 0;
+      const sign = up ? '+' : '';
+      const arrow = up ? '▲' : '▼';
+      const pct = Math.round((Math.abs(s.change_pct) / maxAbs) * 100);
+      const barColor = up ? '#00ff88' : '#ff2255';
+      const volHtml = s.volRatio != null && s.volRatio >= 1.5
+        ? `<div style="font-size:7.5px;color:var(--au);margin-top:.15rem;font-weight:700">${s.volRatio.toFixed(1)}× vol</div>`
+        : '';
+      return `<div class="sector-etf-tile ${up ? 'etf-up' : 'etf-down'}" onclick="openModal('${s.ticker}')">
+        <div class="sector-etf-name">${s.name}</div>
+        <div class="sector-etf-ticker">${s.ticker}</div>
+        <div class="sector-etf-price">${s.price > 0 ? '$' + s.price.toFixed(2) : '—'}</div>
+        <div class="sector-etf-chg ${up ? 'up' : 'down'}">${arrow} ${sign}${s.change_pct.toFixed(2)}%</div>
+        ${volHtml}
+        <div class="sector-etf-bar"><div class="sector-etf-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      </div>`;
+    }).join('');
+
+    const rotation = sorted.filter(s => s.change_pct > 0).length;
+    const moodText = rotation >= 8 ? 'Broad market rally — most sectors rising' : rotation >= 5 ? 'Mixed sector rotation — pick your spots' : 'Defensive rotation — money fleeing to safety';
+    const moodColor = rotation >= 8 ? 'var(--g)' : rotation >= 5 ? 'var(--au)' : 'var(--r)';
+
+    el.innerHTML = summaryHtml + `<div class="sector-etf-grid">${tilesHtml}</div>
+      <div style="margin-top:.55rem;font-size:9.5px;color:${moodColor};font-weight:600">${rotation}/11 sectors rising · ${moodText}</div>`;
+  }
 
   // ── LIVE MARKET BREADTH (computed from universe) ─────
   function renderLiveMarketBreadth() {
