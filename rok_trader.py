@@ -1,6 +1,6 @@
 """
 ROK Auto Trader — Alpaca Paper Trading Engine
-Runs via GitHub Actions every 30 minutes during US market hours.
+Runs via GitHub Actions every 5 minutes during US market hours.
 Reads live signals, buys high-score setups, sells at stop/target.
 """
 import logging
@@ -32,7 +32,7 @@ MAX_POSITIONS     = 8      # max open positions at once
 MAX_POSITION_PCT  = 0.12   # max 12% of portfolio per trade
 STOP_LOSS_PCT     = 0.07   # sell if down 7%
 PROFIT_TARGET_PCT = 0.20   # sell if up 20%
-MIN_BUY_SCORE     = 30     # paper trading: buy anything showing momentum
+MIN_BUY_SCORE     = 20     # paper trading: buy anything with slight momentum
 
 
 # ── Alpaca helpers ──────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ def fetch_live_data(tickers):
 # ── Signal engine ────────────────────────────────────────────────────────────
 
 def signal_score(tk, d):
-    """Score 0-100. Higher = stronger buy. Lower MIN_BUY_SCORE = more trades."""
+    """Score 0-100. Higher = stronger buy. Threshold 20 = paper trading mode."""
     score = 0
     chg   = d.get("change_pct",   0)  or 0
     vr    = d.get("vol_ratio",    1)  or 1
@@ -131,6 +131,9 @@ def signal_score(tk, d):
     wl    = d.get("week_low",  price) or price
     intra = d.get("intraday_mom", 0)  or 0
     rsi   = d.get("rsi",         50)  or 50
+
+    # Base 10 pts so even flat tickers can reach threshold
+    score = 10
 
     # Daily momentum (max +25)
     if   chg >  3:  score += 25
@@ -146,25 +149,25 @@ def signal_score(tk, d):
     elif intra < -1.0: score -= 15
     elif intra < -0.5: score -=  8
 
-    # Volume surge (max +25)
+    # Volume (max +25 — only penalize extreme low vol)
     if   vr > 2.5:  score += 25
     elif vr > 1.8:  score += 18
     elif vr > 1.3:  score += 10
-    elif vr < 0.6:  score -=  8
+    elif vr < 0.4:  score -=  8
 
-    # RSI sweet spot 55-74 (max +15)
-    if   55 < rsi < 75: score += 15
+    # RSI sweet spot 45-74 (max +15)
+    if   45 < rsi < 75: score += 15
     elif rsi >= 75:     score +=  5
     elif rsi >  50:     score +=  8
-    elif rsi <  30:     score -= 10
+    elif rsi <  25:     score -= 10
 
     # Position in 5-day range (max +15)
     rng = wh - wl
     if rng > 0:
         pos = (price - wl) / rng * 100
-        if   40 < pos < 80: score += 15
-        elif pos >= 80:     score +=  8
-        elif pos <  20:     score -=  8
+        if   30 < pos < 85: score += 15
+        elif pos >= 85:     score +=  8
+        elif pos <  15:     score -=  8
 
     return max(0, min(100, int(score)))
 
