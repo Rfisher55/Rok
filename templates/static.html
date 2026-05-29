@@ -576,7 +576,35 @@ body.beginner-mode #beginner-banner { display:block }
   .c-ticker{font-size:1.8rem}
   .p-cur{font-size:16px}
   .rok-msg{font-size:12px;line-height:1.6}
+
+  /* Globally increase minimum font sizes */
+  .what-it-means{font-size:13px}
+  .wim-lbl{font-size:9px}
+  .reasons li{font-size:13px}
+  .rok-take{font-size:13px}
+  .rot-txt{font-size:13px}
+  .metric-sub{font-size:12px}
+  .sec-flow-note{font-size:11px}
+  .rok-msg{font-size:13px}
+  .mbrf-greeting{font-size:11px}
+  .catalyst{font-size:11px}
+  /* All small text bumped up */
+  .w-risk,.w-pot,.w-tlbl,.w-ttxt{font-size:13px}
+  .p-tgt,.p-stop,.t-hz{font-size:12px}
+  .urg,.str-b,.pcr-sig,.regime,.live-pill,.idx-n,.c-co{font-size:10px}
+  /* Card internals */
+  .sbar-pct{font-size:12px}
+  .sec-flow-name,.sec-flow-cnt,.sec-flow-sig{font-size:11px}
+  /* Any span with font-size:8px or similar — override */
+  .rok-score-lbl{font-size:6px}
+
+  /* Simplify 4-col grids inside cards on mobile */
+  div[style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important}
+  div[style*="grid-template-columns:repeat(3,1fr)"]{grid-template-columns:repeat(2,1fr)!important}
 }
+
+/* Global base bump for card text readability */
+.mkt-card p,.mkt-card span:not([class]),.intel-section p,.intel-section span:not([class]){min-font-size:13px}
 
 /*  WHAT-IT-MEANS BOX (Phase 5)  */
 .what-it-means{background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.6rem .8rem;margin:.4rem 0;font-size:12px;line-height:1.55;color:var(--wh2)}
@@ -1654,7 +1682,7 @@ body.beginner-mode #beginner-banner { display:block }
               <div style="font-size:10.5px;color:var(--wh2);padding:.45rem .65rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.1);border-radius:8px;line-height:1.5"> <strong style="color:var(--au)">What you CAN do right now:</strong></div>
               <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span></span><span>Check the <strong style="color:var(--wh)">WATCH LIST</strong> tab below — those stocks are close to a buy signal</span></div>
               <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span></span><span>Use the <strong style="color:var(--wh)">SCREENER</strong> tab to browse all analyzed stocks and find ones near their lows</span></div>
-              <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span>⏰</span><span>ROK refreshes every 15 minutes — the next signal might be minutes away</span></div>
+              <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span></span><span>ROK refreshes every 15 minutes — the next signal might be minutes away</span></div>
               <div style="font-size:10.5px;color:var(--wh3);padding:.35rem .65rem;display:flex;gap:.5rem;align-items:flex-start"><span></span><span>No signals = perfect time to research and add to your watchlist using the  button</span></div>
             </div>
             <button onclick="showTab('screener')" style="width:100%;padding:.6rem;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation"> Browse All Stocks in Screener →</button>
@@ -4400,7 +4428,7 @@ body.beginner-mode #beginner-banner { display:block }
     // Market status — use the authoritative getMarketState()
     const { state: mktState } = getMarketState();
     const isMarketOpen = mktState === 'open';
-    const mktStatus = mktState === 'open' ? ' Market Open' : mktState === 'pre' ? '⏰ Pre-Market' : mktState === 'post' ? ' After Hours' : [0,6].includes(now.getDay()) ? ' Market Closed (Weekend)' : ' Market Closed';
+    const mktStatus = mktState === 'open' ? ' Market Open' : mktState === 'pre' ? ' Pre-Market' : mktState === 'post' ? ' After Hours' : [0,6].includes(now.getDay()) ? ' Market Closed (Weekend)' : ' Market Closed';
     const mktClass = isMarketOpen ? 'g' : 'r';
     // Signal summary
     const buys = (ROK.buy_signals||[]).length;
@@ -4925,7 +4953,7 @@ body.beginner-mode #beginner-banner { display:block }
     // Question 1: Is market open?
     if (mkt.state === 'closed') {
       questions.push(`<div style="padding:.6rem .75rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);border-radius:10px;margin-bottom:.5rem">
-        <strong style="color:var(--au)">⏰ Market is closed right now</strong><br>
+        <strong style="color:var(--au)"> Market is closed right now</strong><br>
         <span style="font-size:10.5px;color:var(--wh3)">You can't buy stocks outside of trading hours (9:30am–4pm ET). Write this down and check the signal again when market opens tomorrow. Signal may change overnight.</span>
       </div>`);
     } else if (mkt.state === 'pre') {
@@ -6795,7 +6823,7 @@ body.beginner-mode #beginner-banner { display:block }
       setTimeout(() => { if (hintEl) hintEl.innerHTML = 'Track stocks you already own — ROK will tell you when to sell or buy more'; }, 3000);
       return;
     }
-    if (hintEl) hintEl.innerHTML = `<span style="color:var(--b)">⏳ Fetching live price for $${ticker}…</span>`;
+    if (hintEl) hintEl.innerHTML = `<span style="color:var(--b)"> Fetching live price for $${ticker}…</span>`;
     try {
       if (_autoFillAbort) _autoFillAbort.abort();
       _autoFillAbort = new AbortController();
@@ -6900,7 +6928,7 @@ body.beginner-mode #beginner-banner { display:block }
   async function quickLookupTicker(ticker) {
     const btn = document.getElementById('sc-lookup-btn');
     const priceDiv = document.getElementById('sc-lookup-price');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Fetching…'; }
+    if (btn) { btn.disabled = true; btn.textContent = ' Fetching…'; }
     try {
       const url = `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${ticker}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
@@ -7954,7 +7982,7 @@ body.beginner-mode #beginner-banner { display:block }
       verdict = ' MAYBE — Proceed carefully'; verdictColor = 'var(--au)';
       verdictBg = 'rgba(255,215,0,.06)'; action = 'Conditions are mixed. If you invest, use smaller than normal position sizes and make sure you have stop-losses.';
     } else if (score >= -1) {
-      verdict = '⏸ WAIT — Not ideal conditions'; verdictColor = 'var(--au)';
+      verdict = ' WAIT — Not ideal conditions'; verdictColor = 'var(--au)';
       verdictBg = 'rgba(255,215,0,.04)'; action = 'Market conditions aren\'t great right now. Consider waiting for a better entry point unless you\'re a long-term investor.';
     } else {
       verdict = ' NO — Avoid new positions today'; verdictColor = 'var(--r)';
@@ -10272,10 +10300,10 @@ body.beginner-mode #beginner-banner { display:block }
       factors.push({ icon: '', text: state === 'pre' ? 'Pre-market: wider spreads, wait for open at 9:30am ET' : state === 'post' ? 'After-hours: low liquidity, wider spreads' : 'Market closed — plan for tomorrow', color: 'var(--wh4)' });
     } else if (minuteOfDay >= 570 && minuteOfDay <= 585) { // 9:30-9:45
       score -= 1;
-      factors.push({ icon: '⏰', text: 'Opening bell zone (9:30-9:45am ET) — wait 15 min for volatility to settle', color: 'var(--au)' });
+      factors.push({ icon: '', text: 'Opening bell zone (9:30-9:45am ET) — wait 15 min for volatility to settle', color: 'var(--au)' });
     } else if (minuteOfDay >= 930 && minuteOfDay <= 960) { // 3:30-4pm
       score -= 1;
-      factors.push({ icon: '⏰', text: 'Last 30 min (3:30-4pm ET) — institutional rebalancing, expect volatile price action', color: 'var(--au)' });
+      factors.push({ icon: '', text: 'Last 30 min (3:30-4pm ET) — institutional rebalancing, expect volatile price action', color: 'var(--au)' });
     } else {
       factors.push({ icon: '', text: 'Market open — normal trading hours, liquidity is good', color: 'var(--g)' });
     }
@@ -10297,7 +10325,7 @@ body.beginner-mode #beginner-banner { display:block }
 
     score = Math.max(1, Math.min(10, score));
     const scoreColor = score >= 7 ? 'var(--g)' : score >= 5 ? 'var(--au)' : 'var(--r)';
-    const verdict = score >= 7 ? ' Good Time To Buy' : score >= 5 ? ' Proceed Carefully' : '⏸ Consider Waiting';
+    const verdict = score >= 7 ? ' Good Time To Buy' : score >= 5 ? ' Proceed Carefully' : ' Consider Waiting';
     const action = score >= 7 ? 'Multiple factors align in your favor. A good day to act on ROK buy signals with normal position sizes.'
       : score >= 5 ? 'Mixed conditions. If buying, use slightly smaller sizes and make sure you have a stop-loss set.'
       : 'Current conditions are not ideal for new entries. Consider waiting for VIX to drop or SPY to stabilize.';
@@ -10310,7 +10338,7 @@ body.beginner-mode #beginner-banner { display:block }
           <div style="font-size:7px;color:var(--wh4);letter-spacing:.1em">/10</div>
         </div>
         <div style="flex:1">
-          <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase;margin-bottom:.2rem">⏱ SMART BUY TIMING SCORE</div>
+          <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase;margin-bottom:.2rem"> SMART BUY TIMING SCORE</div>
           <div style="font-size:1rem;font-weight:800;color:${scoreColor};margin-bottom:.2rem">${verdict}</div>
           <div style="font-size:9.5px;color:var(--wh2);line-height:1.4">${action}</div>
         </div>
@@ -10683,7 +10711,7 @@ body.beginner-mode #beginner-banner { display:block }
       <div style="font-size:10.5px;color:var(--wh3);margin-bottom:.7rem">${tip}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .6rem;margin-bottom:.5rem">
         <div style="font-size:8px;font-weight:700;color:var(--g);letter-spacing:.08em">LONG-TERM  (1yr+)<br><span style="color:var(--wh3);font-weight:400">Taxed at 0–20%</span></div>
-        <div style="font-size:8px;font-weight:700;color:var(--au);letter-spacing:.08em">SHORT-TERM ⏳ (&lt;1yr)<br><span style="color:var(--wh3);font-weight:400">Taxed up to 37%</span></div>
+        <div style="font-size:8px;font-weight:700;color:var(--au);letter-spacing:.08em">SHORT-TERM  (&lt;1yr)<br><span style="color:var(--wh3);font-weight:400">Taxed up to 37%</span></div>
       </div>
       ${ltRows || '<div style="font-size:10px;color:var(--wh4);padding:.3rem 0">None yet — keep holding!</div>'}
       ${stRows}
@@ -12720,7 +12748,7 @@ body.beginner-mode #beginner-banner { display:block }
     el.innerHTML = `<div class="card" style="border-left:3px solid ${statusColor}">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem">
         <div style="display:flex;align-items:center;gap:.4rem">
-          <span style="font-size:1.2rem">⏰</span>
+          <span style="font-size:1.2rem"></span>
           <div>
             <div style="font-weight:700;font-size:.9rem;color:var(--acc)">Best Entry Times</div>
             <div style="font-size:.68rem;color:var(--wh4)">When to buy — and when NOT to buy — today</div>
@@ -12851,7 +12879,7 @@ body.beginner-mode #beginner-banner { display:block }
       <div style="display:flex;flex-direction:column;gap:.5rem">
         ${tracked.map(h => {
           const progColor = h.progress >= 75 ? '#ffd600' : h.progress >= 40 ? '#00e676' : '#64b5f6';
-          const action = h.isAbove ? ' Target Hit! Take profits' : h.progress >= 75 ? ' Near target — start scaling out' : h.progress >= 40 ? ' Good progress — hold' : '⏳ Building — be patient';
+          const action = h.isAbove ? ' Target Hit! Take profits' : h.progress >= 75 ? ' Near target — start scaling out' : h.progress >= 40 ? ' Good progress — hold' : ' Building — be patient';
           const potential = (h.target - h.current) * h.shares;
           return `<div style="padding:.45rem .55rem;background:rgba(255,255,255,.025);border-radius:7px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.3rem">
@@ -15159,7 +15187,7 @@ body.beginner-mode #beginner-banner { display:block }
         <div style="font-size:.82rem;font-weight:600;color:#e0e6f0">${e.icon} ${e.name}</div>
         <span style="background:${impactColor[e.impact]}22;color:${impactColor[e.impact]};font-size:.62rem;padding:2px 6px;border-radius:3px;white-space:nowrap;margin-left:6px">${e.impact}</span>
       </div>
-      <div style="font-size:.7rem;color:#ffb74d;margin-bottom:3px">⏰ ${e.timing}</div>
+      <div style="font-size:.7rem;color:#ffb74d;margin-bottom:3px"> ${e.timing}</div>
       <div style="font-size:.72rem;color:#8899aa;margin-bottom:3px">${e.desc}</div>
       <div style="font-size:.7rem;color:#546e7a">Affects: ${e.sectors}</div>
     </div>`).join('');
@@ -15390,7 +15418,7 @@ body.beginner-mode #beginner-banner { display:block }
     const drawdown = totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
     if (drawdown >= 0) {
       el.innerHTML = `<div style="background:linear-gradient(135deg,#0d1b2a,#102030);border:1px solid #1e3a5f;border-radius:10px;padding:14px 16px">
-        <div style="font-size:.8rem;font-weight:700;color:#90caf9;letter-spacing:.06em;margin-bottom:8px">⏱ RECOVERY TIME</div>
+        <div style="font-size:.8rem;font-weight:700;color:#90caf9;letter-spacing:.06em;margin-bottom:8px"> RECOVERY TIME</div>
         <div style="text-align:center;padding:16px;color:#26a69a">
           <div style="font-size:1.5rem"></div>
           <div style="font-size:.85rem;font-weight:600;margin-top:4px">Portfolio is in profit!</div>
@@ -15414,7 +15442,7 @@ body.beginner-mode #beginner-banner { display:block }
       </div>`;
     }).join('');
     el.innerHTML = `<div style="background:linear-gradient(135deg,#0d1b2a,#102030);border:1px solid #1e3a5f;border-radius:10px;padding:14px 16px">
-      <div style="font-size:.8rem;font-weight:700;color:#90caf9;letter-spacing:.06em;margin-bottom:10px">⏱ RECOVERY TIME ESTIMATOR</div>
+      <div style="font-size:.8rem;font-weight:700;color:#90caf9;letter-spacing:.06em;margin-bottom:10px"> RECOVERY TIME ESTIMATOR</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <div style="background:#0a1929;border-radius:8px;padding:10px;text-align:center">
           <div style="font-size:.7rem;color:#8899aa;margin-bottom:3px">CURRENT LOSS</div>
@@ -15626,7 +15654,7 @@ body.beginner-mode #beginner-banner { display:block }
       recDetail = `ROK has SELL signals + VIX is low. Cheap puts can protect portfolio or profit from declines. Look at 30-day puts 5% out of money.`;
     } else {
       recommendation = 'No strong options setup right now';
-      recIcon = '⏳';
+      recIcon = '';
       recCol = '#8899aa';
       recDetail = 'Wait for a clear ROK signal before entering options. Options are high risk without a directional edge.';
     }
@@ -15634,7 +15662,7 @@ body.beginner-mode #beginner-banner { display:block }
       { term: 'Call Option', def: 'Bet that stock goes UP. You profit if price rises above your "strike price" before expiry.', icon: '' },
       { term: 'Put Option', def: 'Bet that stock goes DOWN. You profit if price falls below your "strike price" before expiry.', icon: '' },
       { term: 'IV (Implied Volatility)', def: 'The "price" of options. High VIX = expensive options. Low VIX = cheap options.', icon: '' },
-      { term: 'Expiry', def: 'Options expire worthless if the price doesn\'t move your way. Use 30-45 day expiry for most trades.', icon: '⏰' }
+      { term: 'Expiry', def: 'Options expire worthless if the price doesn\'t move your way. Use 30-45 day expiry for most trades.', icon: '' }
     ];
     el.innerHTML = `<div style="background:linear-gradient(135deg,#0d1b2a,#102030);border:1px solid #1e3a5f;border-radius:10px;padding:14px 16px">
       <div style="font-size:.8rem;font-weight:700;color:#90caf9;letter-spacing:.06em;margin-bottom:10px"> OPTIONS QUICK GUIDE</div>
@@ -16351,7 +16379,7 @@ body.beginner-mode #beginner-banner { display:block }
         'Target 10-15% gain (2:1 risk/reward minimum)'
       ];
     } else {
-      action = 'STAY PATIENT'; icon = '⏳'; col = '#90caf9'; bg = 'linear-gradient(135deg,#050a1a,#0a1529)';
+      action = 'STAY PATIENT'; icon = ''; col = '#90caf9'; bg = 'linear-gradient(135deg,#050a1a,#0a1529)';
       reason = `Market conditions are neutral. No urgent action required — wait for clearer signals.`;
       steps = ['Review your current positions and stops', 'Update your watchlist with stocks showing early strength', 'Practice paper trading with any new setups you see', 'The best trade is sometimes no trade — patience is a skill'];
     }
@@ -16516,7 +16544,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (!buySignals.length || vixLvl > 30 || spyChg < -2) {
       el.innerHTML = `<div style="background:linear-gradient(135deg,#0d1b2a,#102030);border:1px solid #1e3a5f;border-radius:10px;padding:14px 16px">
         <div style="font-size:.8rem;font-weight:700;color:#90caf9;letter-spacing:.06em;margin-bottom:8px"> TRADE IDEA GENERATOR</div>
-        <div style="text-align:center;padding:16px;color:#8899aa;font-size:.8rem">⏳ No actionable trade ideas right now.<br>Market conditions or signals not favorable.<br>Come back when VIX < 25 and SPY is positive.</div>
+        <div style="text-align:center;padding:16px;color:#8899aa;font-size:.8rem"> No actionable trade ideas right now.<br>Market conditions or signals not favorable.<br>Come back when VIX < 25 and SPY is positive.</div>
       </div>`;
       return;
     }
@@ -16889,7 +16917,7 @@ body.beginner-mode #beginner-banner { display:block }
     }).length;
     el.innerHTML = `<div style="background:#1a1a2e;border:1px solid #2a2a4a;border-radius:10px;padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-weight:700;font-size:1rem;color:#ce93d8">⏱ Signal Age Tracker</span>
+        <span style="font-weight:700;font-size:1rem;color:#ce93d8"> Signal Age Tracker</span>
         ${staleCount ? `<span style="background:#b71c1c;color:#fff;font-size:.72rem;padding:2px 7px;border-radius:5px">${staleCount} STALE</span>` : `<span style="background:#1b5e20;color:#a5d6a7;font-size:.72rem;padding:2px 7px;border-radius:5px">All Fresh</span>`}
       </div>
       ${staleCount ? `<div style="background:#3e0000;border:1px solid #7f0000;border-radius:6px;padding:8px 10px;margin-bottom:10px;font-size:.8rem;color:#ef9a9a"> ${staleCount} signal(s) are 14+ days old. Stale signals may no longer reflect current market conditions — review before trading.</div>` : ''}
@@ -19209,7 +19237,7 @@ body.beginner-mode #beginner-banner { display:block }
     underwater.sort((a, b) => a.pctDown - b.pctDown); // most underwater first
     el.style.display = 'block';
     el.innerHTML = `<div style="background:var(--blk2);border:1px solid rgba(255,82,82,.15);border-radius:10px;padding:.85rem 1rem">
-      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#ef9a9a;text-transform:uppercase;margin-bottom:.5rem">⏱ BREAKEVEN TIME ESTIMATE</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#ef9a9a;text-transform:uppercase;margin-bottom:.5rem"> BREAKEVEN TIME ESTIMATE</div>
       <div style="font-size:.68rem;color:#aaa;margin-bottom:.5rem">For positions below your buy price — estimated recovery timeline:</div>
       ${underwater.slice(0, 5).map(p => {
         const urgency = p.pctDown < -15 ? '#ff5252' : p.pctDown < -7 ? '#ffb300' : '#90caf9';
@@ -19647,7 +19675,7 @@ body.beginner-mode #beginner-banner { display:block }
     const stCount = positions.length - ltCount;
     el.style.display = 'block';
     el.innerHTML = `<div style="background:var(--blk2);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.85rem 1rem">
-      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#80deea;text-transform:uppercase;margin-bottom:.5rem">⏳ TIME IN MARKET</div>
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:#80deea;text-transform:uppercase;margin-bottom:.5rem"> TIME IN MARKET</div>
       <div style="display:flex;gap:.65rem;margin-bottom:.6rem">
         <div style="padding:.3rem .6rem;background:rgba(105,240,174,.1);border-radius:7px;text-align:center">
           <div style="font-size:.85rem;font-weight:700;color:#69f0ae">${ltCount}</div>
@@ -21994,7 +22022,7 @@ body.beginner-mode #beginner-banner { display:block }
       { label: 'Volume', val: volPt, max: 20 },
     ];
     el.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:10px;padding:.85rem;border:1px solid #2a2a4a">
-      <div style="font-size:.7rem;font-weight:700;color:${color};margin-bottom:.5rem">⏱ Market Timing Score</div>
+      <div style="font-size:.7rem;font-weight:700;color:${color};margin-bottom:.5rem"> Market Timing Score</div>
       <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.6rem">
         <div style="position:relative;width:62px;height:62px">
           <svg viewBox="0 0 36 36" style="width:62px;height:62px;transform:rotate(-90deg)">
@@ -22189,7 +22217,7 @@ body.beginner-mode #beginner-banner { display:block }
           </div>`;
         }).join('')}
       </div>` : ''}
-      <div style="font-size:.62rem;color:#777">${shape === 'BACKWARDATION' ? ' Backwardation = near-term stress. Often contrarian buy signal.' : shape === 'CONTANGO' || shape === 'CALM' ? ' Normal conditions — vol premium sellers in control.' : '⏳ Transition phase — wait for clearer signal.'}</div>
+      <div style="font-size:.62rem;color:#777">${shape === 'BACKWARDATION' ? ' Backwardation = near-term stress. Often contrarian buy signal.' : shape === 'CONTANGO' || shape === 'CALM' ? ' Normal conditions — vol premium sellers in control.' : ' Transition phase — wait for clearer signal.'}</div>
     </div>`;
   }
   window.renderVIXTermStructure = renderVIXTermStructure;
@@ -22532,7 +22560,7 @@ body.beginner-mode #beginner-banner { display:block }
     const longTerm  = datedPositions.filter(p => p.days >= 365).length;
     const formatDays = d => d >= 365 ? `${(d/365).toFixed(1)}yr` : d >= 30 ? `${Math.round(d/30)}mo` : `${d}d`;
     el.innerHTML = `<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:10px;padding:.85rem;border:1px solid #2a2a4a">
-      <div style="font-size:.7rem;font-weight:700;color:#90caf9;margin-bottom:.5rem">⏳ Portfolio Age Analysis</div>
+      <div style="font-size:.7rem;font-weight:700;color:#90caf9;margin-bottom:.5rem"> Portfolio Age Analysis</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:.5rem">
         <div style="background:#0d1117;border-radius:6px;padding:.3rem;text-align:center">
           <div style="font-size:.85rem;font-weight:800;color:#90caf9">${formatDays(avgDays)}</div>
@@ -24377,7 +24405,7 @@ body.beginner-mode #beginner-banner { display:block }
       const halfFilled = isUp ? d.price < open - (open - prevClose) * 0.5 : d.price > open + (prevClose - open) * 0.5;
       // Probability based on gap size (smaller gaps fill more often)
       const fillProb = Math.abs(gapPct) < 1 ? 75 : Math.abs(gapPct) < 2 ? 60 : Math.abs(gapPct) < 4 ? 45 : 30;
-      const status = filled ? ' FILLED' : halfFilled ? '½ Half-filled' : '⏳ Unfilled';
+      const status = filled ? ' FILLED' : halfFilled ? '½ Half-filled' : ' Unfilled';
       const statusColor = filled ? '#22c55e' : halfFilled ? '#f59e0b' : '#94a3b8';
       gaps.push({ t, gapPct, fillProb, status, statusColor });
     });
@@ -26772,7 +26800,7 @@ body.beginner-mode #beginner-banner { display:block }
     const nowMsg = !inMkt ? '<div style="font-size:.72rem;color:#64748b;margin-bottom:.4rem">Market is currently closed. Plan your entries for tomorrow:</div>' :
       currentWindow ? `<div style="font-size:.72rem;color:${currentWindow.color};font-weight:600;margin-bottom:.4rem">Current window: <strong>${currentWindow.label}</strong> — ${currentWindow.note}</div>` : '';
     el.innerHTML = `<div style="background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px;padding:.85rem">
-      <div style="font-size:.7rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">⏰ Best Entry Time of Day</div>
+      <div style="font-size:.7rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem"> Best Entry Time of Day</div>
       ${nowMsg}
       ${rows}
       <div style="font-size:.62rem;color:#475569;margin-top:.4rem">Based on historical intraday patterns. 10-11:30 AM and 2:30-3:30 PM historically offer the best risk/reward for entries.</div>
@@ -29681,7 +29709,7 @@ body.beginner-mode #beginner-banner { display:block }
       <div style="background:#21262d;border-radius:8px;padding:.4rem .7rem;font-size:.75rem;color:#8b949e">
         ${overallScore >= 60 ? ' Multiple quality breakouts — market in breakout mode, favor momentum' :
           overallScore >= 30 ? ' Some breakout strength — selective opportunities available' :
-          '⏳ No clear breakouts — wait for cleaner setup with volume confirmation'}
+          ' No clear breakouts — wait for cleaner setup with volume confirmation'}
       </div>
     </div>`;
   }
@@ -30093,7 +30121,7 @@ body.beginner-mode #beginner-banner { display:block }
       <div style="background:#21262d;border-radius:8px;padding:.4rem .7rem;font-size:.75rem;color:#8b949e">
         ${pct >= 70 ? ' Strong directional trend — momentum strategies favored, avoid counter-trend' :
           pct >= 45 ? ' Moderate trend — use breakout entries with confirmation' :
-          '⏸ Choppy/weak trend — range-bound conditions, consider mean-reversion plays'}
+          ' Choppy/weak trend — range-bound conditions, consider mean-reversion plays'}
       </div>
     </div>`;
   }
@@ -30152,7 +30180,7 @@ body.beginner-mode #beginner-banner { display:block }
       <div style="background:#21262d;border-radius:8px;padding:.4rem .7rem;font-size:.75rem;color:#8b949e">
         ${riskOn ? ' High risk appetite — favorable for growth stocks, IPOs, and high-beta plays' :
           riskOff ? ' Risk-off mode — market rotating to safety, reduce speculative positions' :
-          '⏸ Cautious environment — mixed signals, wait for clearer risk direction'}
+          ' Cautious environment — mixed signals, wait for clearer risk direction'}
       </div>
     </div>`;
   }
@@ -30582,7 +30610,7 @@ body.beginner-mode #beginner-banner { display:block }
       </div>` : ''}
       <div style="background:#21262d;border-radius:8px;padding:.4rem .7rem;font-size:.75rem;color:#8b949e">
         ${stale.length > 0 ? ' Review thesis on stale losers — opportunity cost may outweigh holding' :
-          '⏰ Some positions have aged without much movement — verify thesis still holds'}
+          ' Some positions have aged without much movement — verify thesis still holds'}
       </div>
     </div>`;
   }
@@ -31150,7 +31178,7 @@ body.beginner-mode #beginner-banner { display:block }
         <div style="font-size:.7rem;color:#8b949e;margin-top:.25rem">Harvestable loss: $${totalHarvestable.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
       </div>` : ''}
       ${shortTermGainers.length > 0 ? `<div style="background:#f0b42911;border:1px solid #f0b42933;border-radius:8px;padding:.4rem .7rem;margin-bottom:.5rem">
-        <div style="font-size:.7rem;color:#f0b429">⏳ ${shortTermGainers.length} positions approaching 1-year mark — hold for lower long-term tax rate</div>
+        <div style="font-size:.7rem;color:#f0b429"> ${shortTermGainers.length} positions approaching 1-year mark — hold for lower long-term tax rate</div>
       </div>` : ''}
       <div style="background:#21262d;border-radius:8px;padding:.4rem .7rem;font-size:.75rem;color:#8b949e">
          Long-term gains taxed at 0/15/20% vs 37% short-term. Timing matters!
@@ -31601,7 +31629,7 @@ body.beginner-mode #beginner-banner { display:block }
           driveDir === 'Down Drive' && drivePower > 30 ? ' Strong down drive — short-side pressure, wait before buying dips' :
           driveDir === 'Up Drive' ? ' Mild up drive — confirm with volume before adding exposure' :
           driveDir === 'Down Drive' ? ' Mild down drive — stay defensive until direction clarifies' :
-          '⏸ Choppy open — ORB strategy: wait for breakout above/below opening range'}
+          ' Choppy open — ORB strategy: wait for breakout above/below opening range'}
       </div>
     </div>`;
   }
@@ -32732,7 +32760,7 @@ body.beginner-mode #beginner-banner { display:block }
     const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
     el.innerHTML = `<div style="background:linear-gradient(135deg,#0d1e1a,#1a1e0d);border-radius:12px;padding:14px 16px;border:1px solid #1a3a2a;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="color:#b2dfdb;font-weight:700;font-size:.85rem;">⏰ ENTRY WINDOW LIVE</span>
+        <span style="color:#b2dfdb;font-weight:700;font-size:.85rem;"> ENTRY WINDOW LIVE</span>
         <span style="color:#aaa;font-size:.72rem;">${timeStr} ET</span>
       </div>
       <div style="text-align:center;margin-bottom:8px;">
@@ -34701,7 +34729,7 @@ body.beginner-mode #beginner-banner { display:block }
                      p.gainPct >= 30 ? ' Trim 25-50%' :
                      p.gainPct >= 20 ? ' Trim 15-25%' :
                      p.gainPct >= 10 ? ' At T1 — raise stop' :
-                     p.gainPct >= 0 ? '⏳ Hold' : ' At loss';
+                     p.gainPct >= 0 ? ' Hold' : ' At loss';
       const nextStr = nextPrice ? `Next: $${nextPrice.toFixed(2)} (+${nextLevel}%)` : 'Past all targets';
       return `<div style="padding:4px 8px;margin-bottom:4px;background:#0d1117;border-radius:6px;border-left:3px solid ${color};">
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -39498,7 +39526,7 @@ body.beginner-mode #beginner-banner { display:block }
     const divs = [];
     // Divergence 1: ROK bullish but market down
     if (sent === 'BULLISH' && spyChg <= -1) {
-      divs.push({ type: 'bullish-lag', icon: '⏳', text: `ROK analysis is <strong style="color:var(--g)">BULLISH</strong> but SPY is down <strong style="color:var(--r)">${Math.abs(spyChg).toFixed(2)}%</strong> today. This can be a lag — ROK's forward-looking signals may resolve positively if the dip is temporary. Watch for support levels to hold.` });
+      divs.push({ type: 'bullish-lag', icon: '', text: `ROK analysis is <strong style="color:var(--g)">BULLISH</strong> but SPY is down <strong style="color:var(--r)">${Math.abs(spyChg).toFixed(2)}%</strong> today. This can be a lag — ROK's forward-looking signals may resolve positively if the dip is temporary. Watch for support levels to hold.` });
     }
     // Divergence 2: ROK bearish but market up
     if (sent === 'BEARISH' && spyChg >= 1) {
@@ -40553,7 +40581,7 @@ body.beginner-mode #beginner-banner { display:block }
       if (diff <= 0) { el.style.display = 'none'; return; }
       const dh = Math.floor(diff / 3600), dm = Math.floor((diff % 3600) / 60), ds = diff % 60;
       el.style.display = 'block';
-      el.innerHTML = `<span style="font-size:10px;color:var(--wh3);letter-spacing:.08em">⏳ ${state === 'pre' ? 'PRE-MARKET' : 'AFTER-HOURS'}</span><span class="cd-time">${dh > 0 ? dh+'h ' : ''}${dm}m ${String(ds).padStart(2,'0')}s</span><span style="font-size:9.5px;color:var(--wh4)">${label}</span>`;
+      el.innerHTML = `<span style="font-size:10px;color:var(--wh3);letter-spacing:.08em"> ${state === 'pre' ? 'PRE-MARKET' : 'AFTER-HOURS'}</span><span class="cd-time">${dh > 0 ? dh+'h ' : ''}${dm}m ${String(ds).padStart(2,'0')}s</span><span style="font-size:9.5px;color:var(--wh4)">${label}</span>`;
     }
     updateCountdown();
     setInterval(updateCountdown, 1000);
