@@ -532,17 +532,19 @@ def _roc(closes, period=5):
 
 def _vwap(hourly):
     """Compute VWAP with ±2σ bands from today's hourly bars.
-    Returns (vwap, position_pct, vwap_zscore, vwap_reclaim).
+    Returns (vwap, position_pct, vwap_zscore, vwap_reclaim, band1_up, band2_up, band1_dn, band2_dn).
     vwap_zscore: price's z-score from VWAP (>2 = overbought band, <-2 = oversold band).
-    vwap_reclaim: True if price dipped below VWAP intraday and has since reclaimed it."""
+    vwap_reclaim: True if price dipped below VWAP intraday and has since reclaimed it.
+    band1/band2: VWAP ± 1σ and ± 2σ levels (institutional target zones).
+    """
     if hourly is None:
-        return None, 50.0, 0.0, False
+        return None, 50.0, 0.0, False, 0.0, 0.0, 0.0, 0.0
     try:
         if "Volume" not in hourly.columns or "Close" not in hourly.columns:
-            return None, 50.0, 0.0, False
+            return None, 50.0, 0.0, False, 0.0, 0.0, 0.0, 0.0
         h = hourly.dropna(subset=["Close", "Volume"])
         if len(h) < 2:
-            return None, 50.0, 0.0, False
+            return None, 50.0, 0.0, False, 0.0, 0.0, 0.0, 0.0
         # Use last 8 bars (≈1 trading day in hourly)
         h = h.iloc[-8:]
         tp = (h["High"] + h["Low"] + h["Close"]) / 3
@@ -558,6 +560,11 @@ def _vwap(hourly):
         cum_var  = ((tp - vwap_v)**2 * h["Volume"]).cumsum()
         vwap_std = float((cum_var / cum_v).iloc[-1]) ** 0.5 if cum_vol > 0 else 0
         vwap_z   = (price - vwap) / vwap_std if vwap_std > 0 else 0
+        # VWAP band levels
+        b1u = round(vwap + vwap_std, 2)
+        b2u = round(vwap + 2 * vwap_std, 2)
+        b1d = round(vwap - vwap_std, 2)
+        b2d = round(vwap - 2 * vwap_std, 2)
 
         # VWAP reclaim: price dipped below VWAP intraday then closed back above it
         vwap_reclaim = False
@@ -572,9 +579,9 @@ def _vwap(hourly):
                         vwap_reclaim = True
                         break
 
-        return round(vwap, 2), round(vwap_pos, 2), round(vwap_z, 2), vwap_reclaim
+        return round(vwap, 2), round(vwap_pos, 2), round(vwap_z, 2), vwap_reclaim, b1u, b2u, b1d, b2d
     except Exception:
-        return None, 50.0, 0.0, False
+        return None, 50.0, 0.0, False, 0.0, 0.0, 0.0, 0.0
 
 
 def _williams_r(closes, highs, lows, period=10):
@@ -3199,6 +3206,7 @@ def _extract(daily, hourly):
     vwap_pos          = 0.0
     vwap_z            = 0.0
     vwap_reclaim      = False
+    vwap_b1u = vwap_b2u = vwap_b1d = vwap_b2d = 0.0
     williams_r        = -50.0
     macd_slope_val    = 0.0
     ttm_squeeze_fired = False
@@ -3227,7 +3235,7 @@ def _extract(daily, hourly):
         if len(hc) >= 20:
             bb_pos = _bollinger(hc)
 
-        _, vwap_pos, vwap_z, vwap_reclaim = _vwap(h)
+        _, vwap_pos, vwap_z, vwap_reclaim, vwap_b1u, vwap_b2u, vwap_b1d, vwap_b2d = _vwap(h)
 
         if "High" in h.columns and "Low" in h.columns:
             hh = list(h["High"])
@@ -3866,6 +3874,10 @@ def _extract(daily, hourly):
         "macd":            round(macd_val, 3),
         "bb_pos":          round(bb_pos, 1),
         "vwap_pos":        round(vwap_pos, 2),
+        "vwap_b1u":        vwap_b1u,   # VWAP + 1σ (resistance)
+        "vwap_b2u":        vwap_b2u,   # VWAP + 2σ (strong resistance / overbought)
+        "vwap_b1d":        vwap_b1d,   # VWAP - 1σ (support)
+        "vwap_b2d":        vwap_b2d,   # VWAP - 2σ (oversold bounce zone)
         "rs1":             rs1,
         "rs5":             rs5,
         "rs63":            rs63,
@@ -5547,6 +5559,22 @@ def run():
     if _port_beta_est > 1.5:
         _eff_min_score += 5
         logger.info(f"Portfolio beta guard: beta≈{_port_beta_est:.2f} — raising threshold to {_eff_min_score}")
+
+    # Time-of-day score adjustment: lower threshold during statistically optimal windows
+    # Power Hour (3pm-3:45pm ET): institutional accumulation at day's end, strong follow-through
+    # Mid-morning sweet spot (10am-11:30am): post-opening noise settled, trends confirmed
+    # Avoid: lunch lull (11:30am-1pm) — low volume, choppy, mean-reverting
+    _intraday_adj = 0
+    if market_open and not _open_guard and not _close_guard:
+        if 180 <= _minutes_since_open <= 225:  # 3pm-3:45pm: power hour
+            _intraday_adj = -3  # lower threshold: strong institutional activity
+            logger.info("Power Hour entry window — lowering min score by 3")
+        elif 30 <= _minutes_since_open <= 90:   # 10am-11:30am: morning momentum sweet spot
+            _intraday_adj = -2  # slightly lower: noise settled, trends emerging
+            logger.info("Morning momentum window (10am-11:30am) — lowering min score by 2")
+        elif 90 <= _minutes_since_open <= 150:  # 11:30am-1pm: lunch lull
+            _intraday_adj = +4  # raise threshold: avoid choppy low-volume trades
+    _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj)
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
         # Sector counts for diversification

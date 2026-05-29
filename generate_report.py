@@ -61,12 +61,12 @@ def run():
         _run()
     except Exception as e:
         logger.error(f"Pipeline error: {e}", exc_info=True)
-        # Write a minimal fallback intel_report.json so the dashboard
-        # doesn't break if it tries to fetch this file.
+        # Always write ALL three output files so git add never fails on missing paths.
         docs_dir = Path(__file__).parent / "docs"
         docs_dir.mkdir(exist_ok=True)
+        now = datetime.now(timezone.utc).isoformat()
         fallback = {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": now,
             "error": str(e),
             "market_sentiment": "UNKNOWN",
             "buy_signals": [],
@@ -78,7 +78,15 @@ def run():
         (docs_dir / "intel_report.json").write_text(
             json.dumps(fallback, cls=_Encoder, indent=2), encoding="utf-8"
         )
-        logger.info("Wrote fallback intel_report.json")
+        # Write history.json stub if it doesn't exist yet
+        history_path = docs_dir / "history.json"
+        if not history_path.exists():
+            history_path.write_text(json.dumps({"runs": []}, indent=2), encoding="utf-8")
+        # Write prices.json stub if it doesn't exist yet
+        prices_path = docs_dir / "prices.json"
+        if not prices_path.exists():
+            prices_path.write_text(json.dumps({}), encoding="utf-8")
+        logger.info("Wrote fallback output files")
 
 
 def _run():

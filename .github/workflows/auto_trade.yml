@@ -50,6 +50,9 @@ jobs:
         run: |
           git config user.name "ROK Trader Bot"
           git config user.email "rok-trader@users.noreply.github.com"
-          git add docs/trades.json docs/peaks.json
+          # --ignore-missing: don't fail if files weren't written (e.g. bot crashed before saving)
+          git add --ignore-missing docs/trades.json docs/peaks.json
           git diff --staged --quiet || git commit -m "Trade log — $(date -u +'%b %d %H:%M UTC')"
+          git fetch origin main
+          git rebase origin/main || git rebase --abort || true
           git push origin HEAD:main || true
