@@ -1561,8 +1561,40 @@ def has_earnings_soon(sym, days=3):
     return result
 
 
-_PRE_EARN_CACHE: dict = {}
-_EARN_GUARD_CACHE: dict = {}
+_PRE_EARN_CACHE:    dict = {}
+_EARN_GUARD_CACHE:  dict = {}
+_EARN_DAYS_CACHE:   dict = {}
+
+def get_earnings_days(sym) -> int | None:
+    """Return number of calendar days to next earnings, or None if unknown.
+    Positive = future earnings, 0 = today, negative = already passed.
+    Cached per run to avoid redundant yfinance calls.
+    """
+    if sym in _EARN_DAYS_CACHE:
+        return _EARN_DAYS_CACHE[sym]
+    result = None
+    try:
+        cal = yf.Ticker(sym).calendar
+        if cal is not None and not cal.empty:
+            now = datetime.now(timezone.utc).date()
+            best = None
+            for col in cal.columns:
+                if "earnings" in str(col).lower():
+                    for val in cal[col]:
+                        try:
+                            ed = pd.Timestamp(val).date()
+                            days = (ed - now).days
+                            if days >= -1:  # allow 1 day past (AM reporters)
+                                if best is None or days < best:
+                                    best = days
+                        except Exception:
+                            pass
+            result = best
+    except Exception:
+        pass
+    _EARN_DAYS_CACHE[sym] = result
+    return result
+
 
 def earnings_too_close(sym, guard_days: int = 2) -> bool:
     """
@@ -5121,6 +5153,7 @@ def run():
                 "force_index_rising": live.get(tk, {}).get("force_index_rising", False),
                 "true_beta":          live.get(tk, {}).get("true_beta", 1.0),
                 "true_alpha":         live.get(tk, {}).get("true_alpha", 0.0),
+                "earnings_days":      get_earnings_days(tk),
                 "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
@@ -5363,6 +5396,7 @@ def run():
                 "stop_price": round(float(p.get("avg_entry_price", 0)) * (1 - STOP_LOSS_PCT), 2),
                 "target_price": round(float(p.get("avg_entry_price", 0)) * (1 + PROFIT_TARGET_PCT), 2),
                 "peak_price": peaks.get(p.get("symbol", ""), {}).get("peak", 0) if isinstance(peaks.get(p.get("symbol", "")), dict) else 0,
+                "earnings_days": get_earnings_days(p.get("symbol", "")),
                 "live_signals": _pos_signals(p.get("symbol", "")),
             }
             for p in curr
