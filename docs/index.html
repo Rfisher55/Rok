@@ -54718,13 +54718,26 @@ window.renderSectorRotation = renderSectorRotation;
           const lsMfi  = ls.mfi != null ? `<span style="font-size:6.5px;color:${ls.mfi<25?'#69f0ae':ls.mfi>80?'#ef5350':'#555'}" title="Money Flow Index">MFI${Math.round(ls.mfi)}</span>` : '';
           const lsST   = ls.supertrend_stop > 0 && p.price > 0 ? `<span style="font-size:6px;font-weight:800;color:${ls.supertrend_bull===false?'#ef5350':p.price<ls.supertrend_stop?'#ef5350':'#00e5ff'}" title="Supertrend stop">ST$${ls.supertrend_stop.toFixed(2)}</span>` : '';
           const earnD  = p.earnings_days != null ? (() => { const d = p.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col};background:rgba(255,167,38,.1);padding:1px 4px;border-radius:3px" title="Days to earnings">📅${d}d</span>`; })() : '';
-          html += `<div style="background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden">
+          // Distance to stop: use best available stop (Chandelier > Supertrend > ATR stop)
+          const stopLevel = ls.chandelier_stop > 0 ? ls.chandelier_stop : (ls.supertrend_stop > 0 && ls.supertrend_bull ? ls.supertrend_stop : p.stop_price);
+          const distToStop = stopLevel && p.price > 0 ? ((p.price - stopLevel) / p.price * 100) : null;
+          const distStopHtml = distToStop != null ? (() => {
+            const col = distToStop < 2 ? '#ef5350' : distToStop < 4 ? '#ffa726' : distToStop < 7 ? '#ffd54f' : '#4a6fa5';
+            const icon = distToStop < 2 ? '⚠' : distToStop < 4 ? '⚡' : '';
+            return `<span style="font-size:7px;font-weight:800;color:${col}" title="Distance to stop loss">STOP${icon} ${distToStop.toFixed(1)}% away@$${stopLevel.toFixed(2)}</span>`;
+          })() : '';
+          const peakPctStr = p.peak_price > 0 && p.price > 0 ? (() => {
+            const dd = (p.price - p.peak_price) / p.peak_price * 100;
+            return dd < -1 ? `<span style="font-size:6.5px;color:#ef5350" title="Drawdown from peak">▼${Math.abs(dd).toFixed(1)}%peak</span>` : '';
+          })() : '';
+          html += `<div style="background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,255,255,.06)${distToStop != null && distToStop < 2 ? ';border-color:rgba(255,34,85,.4)' : ''};position:relative;overflow:hidden">
             <div style="position:absolute;top:0;left:0;height:100%;width:${barW}%;background:${barCol};pointer-events:none"></div>
             <div style="position:relative;display:flex;align-items:center;gap:.6rem">
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
+                ${(distStopHtml||peakPctStr) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}</div>` : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
@@ -54760,12 +54773,21 @@ window.renderSectorRotation = renderSectorRotation;
           const pnlVal = t.pnl_pct;
           const pnl = pnlVal != null ? `${pnlVal >= 0 ? '+' : ''}${pnlVal.toFixed(2)}%` : '';
           const scoreStr = t.score != null ? ` [${t.score}]` : '';
-          html += `<div style="display:flex;align-items:center;gap:.5rem;padding:.38rem .55rem;background:var(--blk4);border-radius:7px;border-left:2.5px solid ${actionColor}">
-            <span style="font-size:8px;font-weight:900;color:${actionColor};min-width:54px;letter-spacing:.05em">${t.action}${scoreStr}</span>
-            <span style="font-family:var(--disp);color:var(--au);font-size:1rem;min-width:42px">$${t.ticker}</span>
-            <span style="flex:1;font-size:8.5px;color:var(--wh3)">${t.reason||''}</span>
-            <span style="font-size:9.5px;font-weight:800;color:${pnlVal != null ? (pnlVal>=0?'var(--g)':'var(--r)') : 'var(--wh4)'}">${pnl}</span>
-            <span style="font-size:7.5px;color:var(--wh4)">${timeStr}</span>
+          // Entry signal chips for BUY trades
+          const entrySignals = t.entry_signals || [];
+          const sigChips = entrySignals.slice(0, 6).map(s => {
+            const sLabel = s.replace(/_/g,' ').toUpperCase().slice(0,8);
+            return `<span style="background:rgba(0,180,255,.12);color:#80deea;font-size:5.5px;padding:1px 3px;border-radius:2px">${sLabel}</span>`;
+          }).join('');
+          html += `<div style="padding:.38rem .55rem;background:var(--blk4);border-radius:7px;border-left:2.5px solid ${actionColor}">
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <span style="font-size:8px;font-weight:900;color:${actionColor};min-width:54px;letter-spacing:.05em">${t.action}${scoreStr}</span>
+              <span style="font-family:var(--disp);color:var(--au);font-size:1rem;min-width:42px">$${t.ticker}</span>
+              <span style="flex:1;font-size:8px;color:var(--wh3)">${(t.reason||'').slice(0,60)}</span>
+              <span style="font-size:9.5px;font-weight:800;color:${pnlVal != null ? (pnlVal>=0?'var(--g)':'var(--r)') : 'var(--wh4)'}">${pnl}</span>
+              <span style="font-size:7.5px;color:var(--wh4)">${timeStr}</span>
+            </div>
+            ${sigChips ? `<div style="display:flex;gap:2px;margin-top:.18rem;flex-wrap:wrap">${sigChips}</div>` : ''}
           </div>`;
         });
         html += `</div>`;
