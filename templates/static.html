@@ -53115,51 +53115,98 @@ async function renderRokLiveFeed() {
 }
 
 function _renderRokLiveFeedData(el, data) {
-  const trades = (data.trades || []).slice(0, 15);
-  const positions = data.positions || [];
-  const portVal = data.portfolio_value || 0;
+  const trades    = (data.trades    || []).slice(0, 20);
+  const positions = (data.positions || []);
+  const portVal   = data.portfolio_value || 0;
+  const buyPow    = data.buying_power    || 0;
+  const regime    = data.regime          || null;
+  const stats     = data.stats           || null;
   const lastUp = data.last_updated ? (() => {
     const diff = Math.round((Date.now() - new Date(data.last_updated).getTime()) / 60000);
     return diff < 2 ? 'just now' : diff < 60 ? `${diff}m ago` : `${Math.round(diff/60)}h ago`;
   })() : '';
 
+  // Action badge colors
+  const actionColor = a => ({
+    'BUY':'#66bb6a','SELL':'#ef5350','SHORT':'#ff9800',
+    'COVER':'#29b6f6','SELL_HALF':'#ab47bc'
+  }[a] || '#90a4ae');
+
   const tradeRows = trades.map(t => {
-    const isBuy = t.action === 'BUY';
-    const col = isBuy ? '#66bb6a' : '#ef5350';
-    const dt = new Date(t.time).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
-    const detail = isBuy
-      ? `$${(t.notional||0).toFixed(0)} @ $${t.price}`
-      : `${t.qty} shares @ $${t.price}${t.pnl_pct != null ? ` (${t.pnl_pct > 0 ? '+' : ''}${t.pnl_pct.toFixed(1)}%)` : ''}`;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:.3rem 0;border-bottom:1px solid #1a1a1a">
-      <span style="background:${col}22;color:${col};font-weight:700;font-size:.72rem;padding:2px 6px;border-radius:3px;width:32px;text-align:center">${t.action}</span>
-      <span style="font-weight:700;color:#e0e0e0;font-size:.88rem;width:42px">${t.ticker}</span>
-      <span style="color:#888;font-size:.75rem;flex:1">${detail}</span>
-      ${t.score ? `<span style="color:#555;font-size:.68rem">score ${t.score}</span>` : ''}
-      <span style="color:#444;font-size:.68rem;white-space:nowrap">${dt}</span>
+    const col = actionColor(t.action);
+    const dt  = new Date(t.time).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const amt = t.notional != null
+      ? `$${(+t.notional).toFixed(0)} @ $${t.price}`
+      : `${(+t.qty||0).toFixed(4)} sh @ $${t.price}`;
+    const pnl = t.pnl_pct != null
+      ? `<span style="color:${t.pnl_pct>=0?'#66bb6a':'#ef5350'};font-size:.7rem;margin-left:4px">${t.pnl_pct>0?'+':''}${t.pnl_pct.toFixed(1)}%</span>` : '';
+    const rsn = t.reason ? `<span style="color:#555;font-size:.66rem;margin-left:4px" title="${t.reason}">${t.reason.split('(')[0].trim()}</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:.28rem 0;border-bottom:1px solid #181818">
+      <span style="background:${col}22;color:${col};font-weight:700;font-size:.68rem;padding:1px 5px;border-radius:3px;min-width:50px;text-align:center">${t.action}</span>
+      <span style="font-weight:700;color:#e0e0e0;font-size:.85rem;min-width:40px">${t.ticker}</span>
+      <span style="color:#777;font-size:.72rem;flex:1">${amt}${pnl}</span>
+      ${rsn}
+      ${t.score ? `<span style="color:#444;font-size:.66rem">s${t.score}</span>` : ''}
+      <span style="color:#383838;font-size:.65rem;white-space:nowrap">${dt}</span>
     </div>`;
   }).join('');
 
-  const posRows = positions.map(p => {
+  const longs  = positions.filter(p => (p.side||'long')==='long');
+  const shorts = positions.filter(p => p.side==='short');
+
+  const posRow = (p, isShort) => {
     const col = p.pnl_pct >= 0 ? '#66bb6a' : '#ef5350';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid #1a1a1a">
-      <span style="font-weight:700;color:#ccc;font-size:.85rem">${p.ticker}</span>
-      <span style="color:#888;font-size:.75rem">$${(p.market_val||0).toFixed(0)}</span>
-      <span style="color:${col};font-weight:700;font-size:.82rem">${p.pnl_pct>=0?'+':''}${(p.pnl_pct||0).toFixed(1)}%</span>
-      <span style="color:${col};font-size:.75rem">${p.pnl_usd>=0?'+':''}$${(p.pnl_usd||0).toFixed(0)}</span>
+    const sideTag = isShort ? `<span style="color:#ff9800;font-size:.62rem;margin-left:3px">SHORT</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:.22rem 0;border-bottom:1px solid #181818">
+      <span style="font-weight:700;color:#ccc;font-size:.82rem;min-width:44px">${p.ticker}${sideTag}</span>
+      <span style="color:#555;font-size:.7rem;flex:1">$${(p.market_val||0).toFixed(0)}</span>
+      <span style="color:${col};font-weight:700;font-size:.8rem">${p.pnl_pct>=0?'+':''}${(p.pnl_pct||0).toFixed(1)}%</span>
+      <span style="color:${col};font-size:.72rem">${p.pnl_usd>=0?'+':''}$${(p.pnl_usd||0).toFixed(0)}</span>
     </div>`;
-  }).join('');
+  };
+  const posRows = [...longs.map(p=>posRow(p,false)), ...shorts.map(p=>posRow(p,true))].join('');
 
-  el.innerHTML = `<div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:.85rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem">
-      <span style="color:#82b1ff;font-size:.85rem;font-weight:700">ROK Live Trade Feed</span>
-      <span style="color:#555;font-size:.7rem">Updated ${lastUp}</span>
+  // Regime badge
+  let regimeBadge = '';
+  if (regime) {
+    const rc = {'bull':'#66bb6a','neutral':'#ffd54f','bear':'#ef5350'}[regime.regime||'neutral']||'#aaa';
+    const regLabel = (regime.regime||'neutral').toUpperCase();
+    regimeBadge = `<div style="display:flex;gap:8px;align-items:center;margin-bottom:.55rem;flex-wrap:wrap">
+      <span style="background:${rc}22;color:${rc};font-weight:700;font-size:.72rem;padding:2px 8px;border-radius:4px;border:1px solid ${rc}44">${regLabel} MARKET</span>
+      ${regime.vix ? `<span style="color:#888;font-size:.72rem">VIX <span style="color:${regime.vix>30?'#ef5350':regime.vix>20?'#ffd54f':'#66bb6a'};font-weight:700">${regime.vix.toFixed(1)}</span></span>` : ''}
+      ${regime.spy_trend != null ? `<span style="color:#888;font-size:.72rem">SPY <span style="color:${regime.spy_trend>0?'#66bb6a':'#ef5350'};font-weight:700">${regime.spy_trend>0?'+':''}${regime.spy_trend.toFixed(1)}%</span> vs 20EMA</span>` : ''}
+    </div>`;
+  }
+
+  // Stats bar
+  let statsBar = '';
+  if (stats && (stats.wins || stats.losses)) {
+    const total = (stats.wins||0) + (stats.losses||0);
+    const wr    = total ? ((stats.wins/total)*100).toFixed(0) : 0;
+    const pnlCol = (stats.total_pnl||0) >= 0 ? '#66bb6a' : '#ef5350';
+    statsBar = `<div style="display:flex;gap:12px;background:#111;border-radius:5px;padding:.35rem .6rem;margin-bottom:.55rem;flex-wrap:wrap">
+      <span style="color:#666;font-size:.72rem">Win Rate <span style="color:#82b1ff;font-weight:700">${wr}%</span></span>
+      <span style="color:#666;font-size:.72rem">${stats.wins||0}W / ${stats.losses||0}L</span>
+      <span style="color:#666;font-size:.72rem">Total P&L <span style="color:${pnlCol};font-weight:700">${(stats.total_pnl||0)>0?'+':''}${(stats.total_pnl||0).toFixed(1)}%</span></span>
+    </div>`;
+  }
+
+  el.innerHTML = `<div style="background:#05111f;border:1px solid #1e3a5f;border-radius:8px;padding:.85rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+      <span style="color:#82b1ff;font-size:.88rem;font-weight:700">ROK Live Trade Feed</span>
+      <span style="color:#444;font-size:.68rem">${lastUp ? 'Updated ' + lastUp : 'Awaiting first run'}</span>
     </div>
-    ${portVal ? `<div style="background:#111;border-radius:5px;padding:.4rem .6rem;margin-bottom:.6rem;display:flex;justify-content:space-between">
-      <span style="color:#777;font-size:.78rem">Paper Portfolio</span>
-      <span style="color:#82b1ff;font-weight:700;font-size:.9rem">$${portVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+    ${regimeBadge}
+    ${portVal ? `<div style="background:#0d1e35;border-radius:5px;padding:.35rem .6rem;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:#555;font-size:.75rem">Paper Portfolio</span>
+      <span style="color:#82b1ff;font-weight:700;font-size:.92rem">$${portVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+      <span style="color:#444;font-size:.72rem">Cash: <span style="color:#64b5f6">$${buyPow.toLocaleString('en-US',{maximumFractionDigits:0})}</span></span>
     </div>` : ''}
-    ${positions.length ? `<div style="color:#aaa;font-size:.72rem;font-weight:600;text-transform:uppercase;margin-bottom:.3rem">Open Positions</div>${posRows}<div style="height:.5rem"></div>` : ''}
-    ${trades.length ? `<div style="color:#aaa;font-size:.72rem;font-weight:600;text-transform:uppercase;margin-bottom:.3rem">Recent Trades</div>${tradeRows}` : '<div style="color:#555;font-size:.8rem">No trades yet — bot fires every 5 min during market hours</div>'}
+    ${statsBar}
+    ${positions.length ? `<div style="color:#555;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem">Open Positions (${positions.length})</div>${posRows}<div style="height:.45rem"></div>` : ''}
+    ${trades.length
+      ? `<div style="color:#555;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem">Recent Trades</div>${tradeRows}`
+      : `<div style="color:#444;font-size:.78rem;padding:.5rem 0">No trades yet — bot fires every 5 min Mon–Fri 9:30 AM – 4 PM ET</div>`}
   </div>`;
 }
 window.renderRokLiveFeed = renderRokLiveFeed;
