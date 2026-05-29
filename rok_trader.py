@@ -557,6 +557,70 @@ def _williams_r(closes, highs, lows, period=10):
     return round(-100 * (hh - closes[-1]) / (hh - ll), 1)
 
 
+def _mfi(closes, highs, lows, volumes, period=14):
+    """Money Flow Index: volume-weighted RSI (0-100).
+    MFI < 20 = oversold (institutional accumulation). MFI > 80 = overbought.
+    Divergence: price rising but MFI falling = distribution (smart money exiting).
+    """
+    if len(closes) < period + 2:
+        return 50.0
+    try:
+        pos_flow = neg_flow = 0.0
+        for i in range(-period, 0):
+            tp     = (highs[i] + lows[i] + closes[i]) / 3
+            tp_prv = (highs[i-1] + lows[i-1] + closes[i-1]) / 3
+            mf     = tp * volumes[i]
+            if tp > tp_prv:
+                pos_flow += mf
+            elif tp < tp_prv:
+                neg_flow += mf
+        if neg_flow == 0:
+            return 100.0
+        mfr = pos_flow / neg_flow
+        return round(100 - 100 / (1 + mfr), 1)
+    except Exception:
+        return 50.0
+
+
+def _supertrend(closes, highs, lows, period=10, multiplier=3.0):
+    """Supertrend: ATR-based trailing stop. Returns (direction, stop_level).
+    direction=1 means bullish (price above supertrend), -1 bearish.
+    Widely used by institutional traders as a dynamic trend filter.
+    """
+    if len(closes) < period + 2:
+        return 1, 0.0
+    try:
+        import numpy as np
+        h = np.array(highs[-period*3:], dtype=float)
+        l = np.array(lows[-period*3:],  dtype=float)
+        c = np.array(closes[-period*3:],dtype=float)
+        n = len(c)
+        tr = np.maximum(h[1:] - l[1:], np.maximum(np.abs(h[1:] - c[:-1]), np.abs(l[1:] - c[:-1])))
+        atr = np.zeros(len(tr))
+        atr[0] = tr[0]
+        for i in range(1, len(tr)):
+            atr[i] = (atr[i-1] * (period - 1) + tr[i]) / period
+        # Upper/lower basic bands
+        hl2   = (h[1:] + l[1:]) / 2
+        upper = hl2 + multiplier * atr
+        lower = hl2 - multiplier * atr
+        # Final supertrend (follow-through logic)
+        sup = np.zeros(len(c)-1)
+        dir_ = np.ones(len(c)-1, dtype=int)
+        sup[0]  = lower[0]
+        dir_[0] = 1
+        for i in range(1, len(c)-1):
+            if c[i] > sup[i-1]:
+                sup[i]  = max(lower[i], sup[i-1]) if dir_[i-1] == 1 else lower[i]
+                dir_[i] = 1
+            else:
+                sup[i]  = min(upper[i], sup[i-1]) if dir_[i-1] == -1 else upper[i]
+                dir_[i] = -1
+        return int(dir_[-1]), round(float(sup[-1]), 4)
+    except Exception:
+        return 1, 0.0
+
+
 def _adx(high, low, close, period=14):
     """Average Directional Index — measures trend strength (0-100). >25 = trending."""
     if len(close) < period + 2:
@@ -1797,6 +1861,12 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             if signals.get("rvol_surge"):
                 rvol_val = signals.get("rvol", 1)
                 extras.append(f"RVOL surge {rvol_val:.1f}× avg volume — institutional buying confirmed")
+            if signals.get("mfi_bull_div"):
+                extras.append(f"MFI bull divergence (MFI={signals.get('mfi',50):.0f}) — money flowing IN while price fell; institutional accumulation")
+            elif signals.get("mfi_oversold"):
+                extras.append(f"MFI oversold ({signals.get('mfi',50):.0f}) — volume-weighted RSI at accumulation zone")
+            if signals.get("supertrend_bull"):
+                extras.append(f"Supertrend bullish (stop ${signals.get('supertrend_stop',0):.2f}) — ATR-based trend confirmed; institutional algos are long")
             if signals.get("kc_breakout"):
                 extras.append("Keltner Channel breakout — price above EMA+2×ATR (strong momentum)")
             if signals.get("kc_oversold"):
@@ -2796,6 +2866,46 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Money Flow Index (MFI): volume-weighted RSI (0-100)
+    # MFI < 20 = oversold accumulation zone. MFI > 80 = overbought distribution.
+    # More reliable than RSI alone because it incorporates volume (real buying pressure).
+    mfi_val     = 50.0
+    mfi_oversold  = False   # MFI < 25 with price stabilizing = smart money accumulation
+    mfi_overbought = False  # MFI > 80 = distribution risk
+    mfi_bull_div   = False  # price falling but MFI rising = hidden institutional buying
+    try:
+        if all(col in daily.columns for col in ["High", "Low", "Close", "Volume"]) and len(daily) >= 16:
+            _dc = list(daily["Close"])
+            _dh = list(daily["High"])
+            _dl = list(daily["Low"])
+            _dv = list(daily["Volume"].fillna(0))
+            mfi_val        = _mfi(_dc, _dh, _dl, _dv, period=14)
+            mfi_oversold   = mfi_val < 25 and chg_pct > -1.0   # cheap + stabilizing
+            mfi_overbought = mfi_val > 80
+            # Divergence: price down last 10 bars but MFI rising = smart money accumulating
+            if len(_dc) >= 12:
+                price_down   = _dc[-1] < _dc[-10]
+                mfi_10ago    = _mfi(_dc[:-10], _dh[:-10], _dl[:-10], _dv[:-10], period=14)
+                mfi_bull_div = price_down and mfi_val > mfi_10ago + 5
+    except Exception:
+        pass
+
+    # Supertrend: ATR-based dynamic trailing stop. direction=1 = bullish (above supertrend).
+    # Universally used by institutional and algorithmic traders as trend confirmation.
+    # When price crosses below supertrend = trend reversal signal (high conviction sell).
+    supertrend_dir   = 1    # 1=bullish, -1=bearish
+    supertrend_stop  = 0.0  # the actual stop price level
+    supertrend_bull  = False
+    try:
+        if all(col in daily.columns for col in ["High", "Low", "Close"]) and len(daily) >= 35:
+            supertrend_dir, supertrend_stop = _supertrend(
+                list(daily["Close"]), list(daily["High"]), list(daily["Low"]),
+                period=10, multiplier=3.0
+            )
+            supertrend_bull = (supertrend_dir == 1)
+    except Exception:
+        pass
+
     # Bull flag: flagpole (strong surge) followed by tight consolidation → breakout
     # One of the highest-probability momentum continuation patterns
     bull_flag = False
@@ -3191,6 +3301,13 @@ def _extract(daily, hourly):
         "ichimoku_bull_cloud": ichimoku.get("cloud_bullish", False),
         "ichimoku_tk_bull":    ichimoku.get("tk_ks_bullish", False),
         "ichimoku_chikou":     ichimoku.get("chikou_bullish", False),
+        "mfi":                 round(mfi_val, 1),
+        "mfi_oversold":        mfi_oversold,
+        "mfi_overbought":      mfi_overbought,
+        "mfi_bull_div":        mfi_bull_div,
+        "supertrend_bull":     supertrend_bull,
+        "supertrend_stop":     supertrend_stop,
+        "supertrend_dir":      supertrend_dir,
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "macd_bull_div":       macd_div.get("bullish_div", False),
@@ -3743,6 +3860,21 @@ def score(tk, d, sentiment=0, regime_adj=0):
 
     # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+7)
     if d.get("obv_rising", False): s += 7
+
+    # Money Flow Index (MFI): volume-weighted RSI
+    # MFI < 20 = oversold accumulation (smart money buying quietly): +8
+    # MFI bull divergence = price falling but money flowing IN: +7
+    # MFI > 80 = overbought distribution: -4 (reduce conviction)
+    mfi = d.get("mfi", 50) or 50
+    if d.get("mfi_bull_div", False):   s += 7
+    elif d.get("mfi_oversold", False): s += 8
+    elif d.get("mfi_overbought", False): s -= 4
+
+    # Supertrend: ATR-based dynamic trend confirmation
+    # Price above Supertrend line = bullish trend confirmed (+7)
+    # Price below Supertrend = bearish trend active (-5)
+    if d.get("supertrend_bull", False):         s += 7
+    elif d.get("supertrend_dir", 1) == -1:      s -= 5
 
     # Keltner Channel breakout: price above upper band = strong institutional momentum (+9)
     # Oversold: price below lower band = mean-reversion setup (+5 for oversold bounces)
@@ -4367,10 +4499,17 @@ def run():
             _chan_stop = _atr_sig.get("chandelier_stop", 0) or 0
             _use_chandelier = (_chan_stop > 0 and cost > 0 and pnl_pct > 2
                                and price < _chan_stop and age_days >= 3)
+            # Supertrend exit: price crossed below Supertrend stop = trend reversal (high conviction)
+            _st_stop  = _atr_sig.get("supertrend_stop", 0) or 0
+            _st_bull  = _atr_sig.get("supertrend_bull", True)
+            _use_supertrend = (not _st_bull and _st_stop > 0 and pnl_pct > 2
+                               and age_days >= 2 and price < _st_stop * 1.01)
             # Pre-earnings sell: exit ANY position within 2 days of earnings to avoid binary risk
             # We rode the pre-earnings drift — now protect profits before the volatile event
             if has_earnings_soon(sym, days=2):
                 reason = f"pre-earnings exit (earnings in <2d, {pnl_pct:+.1f}%)"
+            elif _use_supertrend and not _use_chandelier:
+                reason = f"supertrend reversal (price ${price:.2f} < stop ${_st_stop:.2f}, {pnl_pct:+.1f}%)"
             elif _use_chandelier:
                 reason = f"chandelier exit (price ${price:.2f} < stop ${_chan_stop:.2f}, {pnl_pct:+.1f}%)"
             elif pnl_pct <= -_atr_stop_pct:
@@ -4443,22 +4582,25 @@ def run():
                         d_rsi = live_sig.get("daily_rsi", 50) or 50
                         bb_pos_live = live_sig.get("bb_pos", 50) or 50
                         kc_break_live = live_sig.get("kc_breakout", False)
+                        mfi_ob_live = live_sig.get("mfi_overbought", False)
+                        st_bull     = live_sig.get("supertrend_bull", True)
                         ob_signals = sum([
                             d_rsi > 80,
                             stoch_k > 85,
                             bb_pos_live > 92,
                             kc_break_live and d_rsi > 75,
                             w_r_val > -10,
+                            mfi_ob_live,              # MFI > 80 = distribution
                         ])
-                        if ob_signals >= 3 and pnl_pct > 3 and not half_out:
+                        if ob_signals >= 4 and pnl_pct > 3 and not half_out:
                             reason = (
-                                f"extreme overbought ({ob_signals}/5 signals) — "
+                                f"extreme overbought ({ob_signals}/6 signals) — "
                                 f"RSI={d_rsi:.0f}, stoch={stoch_k:.0f}, BB={bb_pos_live:.0f}% "
-                                f"({pnl_pct:+.1f}%)"
+                                f"MFI={live_sig.get('mfi',50):.0f} ({pnl_pct:+.1f}%)"
                             )
-                        elif ob_signals >= 4 and pnl_pct > 1.5:
+                        elif ob_signals >= 5 and pnl_pct > 1.5:
                             reason = (
-                                f"overbought convergence ({ob_signals}/5) — "
+                                f"overbought convergence ({ob_signals}/6) — "
                                 f"proactive exit ({pnl_pct:+.1f}%)"
                             )
 
@@ -4797,7 +4939,10 @@ def run():
                 if live.get(tk, {}).get("ema_stacked_bull"): extras.append("EMA-stack")
                 if live.get(tk, {}).get("vcp"):               extras.append("VCP")
                 if live.get(tk, {}).get("obv_rising"):        extras.append("OBV↑")
-                if live.get(tk, {}).get("rvol_surge"):       extras.append(f"RVOL{live.get(tk,{}).get('rvol',1):.1f}x")
+                if live.get(tk, {}).get("rvol_surge"):        extras.append(f"RVOL{live.get(tk,{}).get('rvol',1):.1f}x")
+                if live.get(tk, {}).get("mfi_bull_div"):      extras.append(f"MFI-div{live.get(tk,{}).get('mfi',50):.0f}")
+                elif live.get(tk, {}).get("mfi_oversold"):    extras.append(f"MFI-OS{live.get(tk,{}).get('mfi',50):.0f}")
+                if live.get(tk, {}).get("supertrend_bull"):   extras.append("ST-BULL")
                 if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
                 elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
@@ -4866,6 +5011,11 @@ def run():
                 "obv_rising":       live.get(tk, {}).get("obv_rising", False),
                 "rvol":             live.get(tk, {}).get("rvol", 1.0),
                 "rvol_surge":       live.get(tk, {}).get("rvol_surge", False),
+                "mfi":              live.get(tk, {}).get("mfi", 50),
+                "mfi_oversold":     live.get(tk, {}).get("mfi_oversold", False),
+                "mfi_bull_div":     live.get(tk, {}).get("mfi_bull_div", False),
+                "supertrend_bull":  live.get(tk, {}).get("supertrend_bull", False),
+                "supertrend_stop":  live.get(tk, {}).get("supertrend_stop", 0.0),
                 "vcp":              live.get(tk, {}).get("vcp", False),
                 "grade":          momentum_grade(live.get(tk, {}), sc),
             }
