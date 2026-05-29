@@ -1357,6 +1357,7 @@ body.beginner-mode #beginner-banner { display:block }
             <div style="display:flex;gap:.4rem;margin-top:.5rem">
               <button class="bought-btn buy-action" id="btn-{{ s.ticker }}" style="flex:1" onclick="event.stopPropagation();boughtIt('{{ s.ticker }}',{{ s.current_price or 0 }})">💰 BOUGHT IT</button>
               <button onclick="event.stopPropagation();showGuidance('{{ s.ticker }}',event)" style="padding:.6rem .8rem;background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.18);border-radius:10px;color:var(--au);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Should I buy this? Get personalized guidance">🤔</button>
+              <button onclick="event.stopPropagation();copyTradeSetup('{{ s.ticker }}',{{ s.current_price or 0 }},{{ s.price_target or 0 }},{{ s.stop_loss or 0 }})" style="padding:.6rem .8rem;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.18);border-radius:10px;color:var(--g);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Copy trade setup to clipboard">📋</button>
               <button onclick="event.stopPropagation();shareSignal('{{ s.ticker }}','{{ s.catalyst or s.rok_take or '' }}',{{ s.current_price or 0 }},{{ s.price_target or 0 }})" style="padding:.6rem .8rem;background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:10px;color:var(--b);font-size:12px;cursor:pointer;flex-shrink:0;touch-action:manipulation" title="Share this trade idea">📤</button>
             </div>
           </div>
@@ -1533,6 +1534,9 @@ body.beginner-mode #beginner-banner { display:block }
 
     <!-- Live trending tickers (JS-populated) -->
     <div id="mkt-trending" style="display:none;margin-bottom:.85rem"></div>
+
+    <!-- Live unusual options flow (JS-populated) -->
+    <div id="mkt-options-flow" style="display:none;margin-bottom:.85rem"></div>
 
     <!-- Live market news feed (JS-populated) -->
     <div id="mkt-news-feed" style="display:none;margin-bottom:.85rem"></div>
@@ -2085,6 +2089,12 @@ body.beginner-mode #beginner-banner { display:block }
         </div>
       </div>
 
+      <!-- LIVE: Whale Radar — top options bets from ROK universe (JS-populated) -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr"><h2 class="s-ttl" style="color:var(--b)">🐋 LIVE WHALE RADAR — OPTIONS BETS</h2><span class="s-sub">Real-time options flow from ROK-analyzed stocks <span style="color:var(--g);font-size:7px">● LIVE</span></span></div>
+        <div id="intel-whale-radar" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to load live options data…</div>
+      </div>
+
     </div><!-- /intel-grid -->
   </div><!-- /tab-intel -->
 
@@ -2108,6 +2118,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-earnings-cal" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-news" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-ath-banner" style="display:none;margin-bottom:.65rem"></div>
+    <div id="port-daily-digest" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
 
@@ -2736,7 +2747,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); }
+    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
     if (activeTab === 'signals') updateLiveMacroStrip();
     renderLivePortStrip();
@@ -3555,8 +3566,9 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
     if (id === 'portfolio') renderPortfolio();
+    if (id === 'intel') fetchWhaleRadar();
   }
   window.showTab = showTab;
 
@@ -4163,6 +4175,29 @@ body.beginner-mode #beginner-banner { display:block }
     showAppAlert('📥 Portfolio CSV downloaded', 'good', 4000);
   }
   window.exportPortfolioCSV = exportPortfolioCSV;
+
+  function copyTradeSetup(ticker, price, target, stop) {
+    const lp = liveprices[ticker];
+    const livePrice = lp ? lp.price : price;
+    const det = sigDetails[ticker] || {};
+    const useTarget = target || det.price_target || 0;
+    const useStop = stop || det.stop_loss || 0;
+    const upside = useTarget && livePrice ? Math.round((useTarget - livePrice) / livePrice * 100) : 0;
+    const risk = useStop && livePrice ? Math.abs(Math.round((useStop - livePrice) / livePrice * 100)) : 0;
+    const rr = risk > 0 && upside > 0 ? (upside / risk).toFixed(1) : null;
+    let text = `📋 ROK Trade Setup — $${ticker}\n`;
+    text += `──────────────────\n`;
+    text += `Entry:  $${livePrice ? livePrice.toFixed(2) : '?'}\n`;
+    if (useTarget) text += `Target: $${Number(useTarget).toFixed(2)}  (+${upside}%)\n`;
+    if (useStop) text += `Stop:   $${Number(useStop).toFixed(2)}  (-${risk}%)\n`;
+    if (rr) text += `R:R ratio:  1 : ${rr}\n`;
+    text += `──────────────────\n`;
+    text += `Generated by ROK AI · rfisher55.github.io/Rok`;
+    navigator.clipboard?.writeText(text)
+      .then(() => showAppAlert(`📋 ${ticker} trade setup copied to clipboard!`, 'good', 4000))
+      .catch(() => { try { prompt('Copy this trade setup:', text); } catch(e) {} });
+  }
+  window.copyTradeSetup = copyTradeSetup;
 
   function shareSignal(ticker, catalyst, price, target) {
     const upside = price && target && price > 0 ? Math.round((target - price) / price * 100) : 0;
@@ -4816,7 +4851,18 @@ body.beginner-mode #beginner-banner { display:block }
         </div>
         <div class="port-prices" style="grid-template-columns:${priceGridCols}">
           <div><div class="port-price-lbl">YOU PAID</div><div class="port-price-val">$${Number(buyPrice).toFixed(2)}</div></div>
-          <div><div class="port-price-lbl">NOW${lp?' 🟢':''}</div><div class="port-price-val ${cc}">${currentPrice != null ? '$'+currentPrice.toFixed(2) : '—'}</div></div>
+          <div>
+            <div class="port-price-lbl">NOW${lp?' 🟢':''}</div>
+            <div class="port-price-val ${cc}">${currentPrice != null ? '$'+currentPrice.toFixed(2) : '—'}</div>
+            ${(() => {
+              if (!lp) return '';
+              const { state } = getMarketState();
+              if (state === 'pre' && lp.pre_price) return `<div style="font-size:8px;color:var(--au)">PRE $${lp.pre_price.toFixed(2)}</div>`;
+              if ((state === 'post' || state === 'closed') && lp.post_price) return `<div style="font-size:8px;color:var(--b)">AH $${lp.post_price.toFixed(2)}</div>`;
+              if (lp.change_pct != null) return `<div style="font-size:8px;color:${lp.change_pct >= 0 ? 'var(--g)' : 'var(--r)'}">${lp.change_pct >= 0 ? '+' : ''}${lp.change_pct.toFixed(2)}% today</div>`;
+              return '';
+            })()}
+          </div>
           <div><div class="port-price-lbl">ROK SAYS</div><div style="font-size:9px;font-weight:800;color:${recColor};line-height:1.2;margin-top:2px">${rec}</div></div>
           ${priceTarget ? `<div><div class="port-price-lbl">TARGET</div><div class="port-price-val" style="color:var(--g)">$${Number(priceTarget).toFixed(2)}</div></div>` : ''}
         </div>
@@ -4877,9 +4923,10 @@ body.beginner-mode #beginner-banner { display:block }
         drawSpark(`psp-${ticker}`, ph, isUp ? '#00ff88' : '#ff2255');
       }
     });
-    // After rendering portfolio, call ATH tracker and news
+    // After rendering portfolio, call ATH tracker, news, and daily digest
     checkPortfolioATH();
     fetchPortfolioNews();
+    renderPortfolioDailyDigest();
   }
 
   // ── PORTFOLIO ALL-TIME HIGH TRACKER ─────────────────────────
@@ -5008,6 +5055,100 @@ body.beginner-mode #beginner-banner { display:block }
     } catch { el.style.display = 'none'; }
   }
   window.fetchPortfolioNews = fetchPortfolioNews;
+
+  // ── PORTFOLIO DAILY DIGEST ──────────────────────────────────
+  function renderPortfolioDailyDigest() {
+    const el = document.getElementById('port-daily-digest');
+    if (!el) return;
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+    const { state } = getMarketState();
+
+    const rows = [];
+    let totalGainToday = 0, hasToday = false;
+    let winners = [], losers = [], alerts = [];
+
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const lp = liveprices[ticker];
+      const st = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const cur = lp ? lp.price : (st ? st.price : null);
+      if (!cur || !entry.price) return;
+
+      const sh = entry.shares || (1000 / entry.price);
+      const pct = (cur - entry.price) / entry.price * 100;
+      const det = sigDetails[ticker] || {};
+
+      // Today's change
+      if (lp && lp.change_pct != null) {
+        hasToday = true;
+        const prevPrice = cur / (1 + lp.change_pct / 100);
+        totalGainToday += sh * (cur - prevPrice);
+        if (lp.change_pct >= 2) winners.push({ ticker, chg: lp.change_pct, price: cur });
+        if (lp.change_pct <= -2) losers.push({ ticker, chg: lp.change_pct, price: cur });
+      }
+
+      // Action alerts
+      const sig = st ? (st.rok_signal || 'neutral') : 'neutral';
+      if (sig === 'sell') alerts.push(`🔴 ROK says SELL $${ticker}`);
+      else if (det.stop_loss && cur < det.stop_loss) alerts.push(`⚠️ $${ticker} below stop-loss $${det.stop_loss.toFixed(2)}`);
+      else if (det.price_target && cur >= det.price_target * 0.97) alerts.push(`🎯 $${ticker} near target $${det.price_target.toFixed(2)} — consider taking profits`);
+    });
+
+    const gainColor = totalGainToday >= 0 ? 'var(--g)' : 'var(--r)';
+    const gainSign = totalGainToday >= 0 ? '+' : '';
+    const marketContext = state === 'open' ? 'Market is open' : state === 'pre' ? 'Pre-market' : state === 'post' ? 'After hours' : 'Market closed';
+
+    let html = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.6rem;display:flex;justify-content:space-between;align-items:center">
+        <span>📊 TODAY'S PORTFOLIO RECAP</span>
+        <span style="font-size:7.5px;color:var(--wh4)">${marketContext} · ${new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span>
+      </div>`;
+
+    if (hasToday) {
+      html += `<div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.6rem;padding:.5rem .7rem;background:${totalGainToday >= 0 ? 'rgba(0,255,136,.06)' : 'rgba(255,34,85,.06)'};border-radius:9px;border:1px solid ${totalGainToday >= 0 ? 'rgba(0,255,136,.15)' : 'rgba(255,34,85,.15)'}">
+        <span style="font-size:1.5rem">${totalGainToday >= 0 ? '📈' : '📉'}</span>
+        <div>
+          <div style="font-size:10px;color:var(--wh3)">Total change today</div>
+          <div style="font-size:1.2rem;font-weight:900;color:${gainColor}">${gainSign}$${Math.abs(totalGainToday).toFixed(2)}</div>
+        </div>
+      </div>`;
+    }
+
+    if (winners.length) {
+      html += `<div style="margin-bottom:.4rem"><div style="font-size:8.5px;font-weight:700;color:var(--g);letter-spacing:.07em;margin-bottom:.25rem">🚀 WINNING TODAY</div>
+        ${winners.map(w => `<div style="display:flex;align-items:center;justify-content:space-between;padding:.25rem .45rem;border-radius:6px;background:rgba(0,255,136,.04)">
+          <span style="font-size:10px;font-weight:700;color:var(--wh)">${w.ticker}</span>
+          <span style="font-size:10px;font-weight:700;color:var(--g)">+${w.chg.toFixed(2)}% · $${w.price.toFixed(2)}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    if (losers.length) {
+      html += `<div style="margin-bottom:.4rem"><div style="font-size:8.5px;font-weight:700;color:var(--r);letter-spacing:.07em;margin-bottom:.25rem">📉 UNDER PRESSURE</div>
+        ${losers.map(l => `<div style="display:flex;align-items:center;justify-content:space-between;padding:.25rem .45rem;border-radius:6px;background:rgba(255,34,85,.04)">
+          <span style="font-size:10px;font-weight:700;color:var(--wh)">${l.ticker}</span>
+          <span style="font-size:10px;font-weight:700;color:var(--r)">${l.chg.toFixed(2)}% · $${l.price.toFixed(2)}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    if (alerts.length) {
+      html += `<div style="margin-top:.35rem;padding:.4rem .55rem;background:rgba(255,34,85,.05);border:1px solid rgba(255,34,85,.15);border-radius:8px">
+        ${alerts.map(a => `<div style="font-size:10px;color:rgba(255,100,100,.9);padding:.15rem 0">${a}</div>`).join('')}
+      </div>`;
+    }
+
+    if (!hasToday && !alerts.length) {
+      html += `<div style="font-size:10px;color:var(--wh4);text-align:center;padding:.5rem 0">Prices updating… check back in a moment.</div>`;
+    }
+
+    html += `</div>`;
+    el.style.display = 'block';
+    el.innerHTML = html;
+  }
+  window.renderPortfolioDailyDigest = renderPortfolioDailyDigest;
 
   // Manual add any ticker to portfolio
   async function addManualTicker() {
@@ -6276,6 +6417,163 @@ body.beginner-mode #beginner-banner { display:block }
     } catch { /* silent */ }
   }
   window.fetchTrendingTickers = fetchTrendingTickers;
+
+  // ── LIVE UNUSUAL OPTIONS FLOW ────────────────────────
+  let _optionsFlowCache = { ts: 0, html: '' };
+  async function fetchUnusualOptionsFlow() {
+    const el = document.getElementById('mkt-options-flow');
+    if (!el) return;
+    const now = Date.now();
+    if (now - _optionsFlowCache.ts < 8 * 60 * 1000 && _optionsFlowCache.html) {
+      el.style.display = 'block';
+      el.innerHTML = _optionsFlowCache.html;
+      return;
+    }
+    // Fetch options for the top ROK buy signals (max 5 to avoid rate limits)
+    const buys = (ROK.buy_signals || []).slice(0, 5);
+    if (!buys.length) return;
+    const results = [];
+    for (const s of buys) {
+      try {
+        const r = await fetch(
+          `https://query1.finance.yahoo.com/v7/finance/options/${s.ticker}`,
+          { signal: AbortSignal.timeout(6000) }
+        );
+        if (!r.ok) continue;
+        const j = await r.json();
+        const chain = j?.optionChain?.result?.[0];
+        if (!chain) continue;
+        const calls = chain.options?.[0]?.calls || [];
+        const puts = chain.options?.[0]?.puts || [];
+        const expDate = chain.options?.[0]?.expirationDate;
+        const expStr = expDate ? new Date(expDate * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const totalCallVol = calls.reduce((a, c) => a + (c.volume || 0), 0);
+        const totalPutVol = puts.reduce((a, c) => a + (c.volume || 0), 0);
+        if (!totalCallVol && !totalPutVol) continue;
+        const pcRatio = totalCallVol > 0 ? totalPutVol / totalCallVol : null;
+        // Find highest-volume call
+        const topCall = calls.sort((a, b) => (b.volume || 0) - (a.volume || 0))[0];
+        const lp = liveprices[s.ticker];
+        const price = lp ? lp.price : s.current_price;
+        results.push({ ticker: s.ticker, company: (s.company || '').substring(0, 20), pcRatio, totalCallVol, totalPutVol, topCall, expStr, price });
+      } catch { /* silent */ }
+    }
+    if (!results.length) { el.style.display = 'none'; return; }
+    const rows = results.map(r => {
+      const pcColor = r.pcRatio == null ? 'var(--wh3)' : r.pcRatio < 0.7 ? 'var(--g)' : r.pcRatio > 1.3 ? 'var(--r)' : 'var(--au)';
+      const bias = r.pcRatio == null ? '' : r.pcRatio < 0.7 ? '🐂 Call-heavy' : r.pcRatio > 1.3 ? '🐻 Put-heavy' : '⚖️ Balanced';
+      const topStrikeNote = r.topCall ? ` · Top call: $${r.topCall.strike} strike (${(r.topCall.volume||0).toLocaleString()} vol)` : '';
+      const callFmt = r.totalCallVol >= 1000 ? (r.totalCallVol/1000).toFixed(0)+'K' : r.totalCallVol;
+      const putFmt = r.totalPutVol >= 1000 ? (r.totalPutVol/1000).toFixed(0)+'K' : r.totalPutVol;
+      return `<div onclick="openModal('${r.ticker}')" style="display:flex;align-items:center;gap:.6rem;padding:.45rem .55rem;border-radius:8px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04)" onmouseenter="this.style.background='rgba(255,255,255,.03)'" onmouseleave="this.style.background=''">
+        <div style="min-width:44px">
+          <div style="font-size:11px;font-weight:800;color:var(--g)">${r.ticker}</div>
+          ${r.price ? `<div style="font-size:9px;color:var(--wh4)">$${r.price.toFixed(2)}</div>` : ''}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;font-weight:700;color:${pcColor}">${bias}</div>
+          <div style="font-size:8.5px;color:var(--wh4)">Calls: ${callFmt} · Puts: ${putFmt}${topStrikeNote} · Exp ${r.expStr}</div>
+        </div>
+        ${r.pcRatio != null ? `<div style="text-align:right;flex-shrink:0"><div style="font-size:10px;font-weight:700;color:${pcColor}">${r.pcRatio.toFixed(2)}</div><div style="font-size:8px;color:var(--wh4)">P/C</div></div>` : ''}
+      </div>`;
+    }).join('');
+    const html = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center">
+        <span>🎰 OPTIONS FLOW — ROK BUY SIGNALS</span>
+        <span style="color:var(--g);font-size:7px">● LIVE</span>
+      </div>
+      ${rows}
+      <div style="font-size:9px;color:var(--wh4);margin-top:.45rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.05);line-height:1.5">
+        💡 <strong>P/C &lt; 0.7</strong> = more calls than puts = traders bet this goes up. <strong>P/C &gt; 1.3</strong> = more puts = traders expect a drop. Tap any stock to see full details.
+      </div>
+    </div>`;
+    _optionsFlowCache = { ts: Date.now(), html };
+    el.style.display = 'block';
+    el.innerHTML = html;
+  }
+  window.fetchUnusualOptionsFlow = fetchUnusualOptionsFlow;
+
+  // ── WHALE RADAR — INTEL TAB ──────────────────────────
+  let _whaleCache = { ts: 0, html: '' };
+  async function fetchWhaleRadar() {
+    const el = document.getElementById('intel-whale-radar');
+    if (!el) return;
+    const now = Date.now();
+    if (now - _whaleCache.ts < 10 * 60 * 1000 && _whaleCache.html) {
+      el.innerHTML = _whaleCache.html; return;
+    }
+    el.innerHTML = `<div style="font-size:10px;color:var(--wh4);padding:.4rem 0">🔄 Scanning options flow for ${(ROK.buy_signals||[]).length + (ROK.watch_list||[]).length} stocks…</div>`;
+    const candidates = [
+      ...(ROK.buy_signals || []),
+      ...(ROK.watch_list || []).slice(0, 3),
+    ].slice(0, 8);
+    if (!candidates.length) { el.innerHTML = '<div style="font-size:10px;color:var(--wh4)">No signals to scan</div>'; return; }
+
+    const allData = [];
+    for (const s of candidates) {
+      try {
+        const r = await fetch(`https://query1.finance.yahoo.com/v7/finance/options/${s.ticker}`, { signal: AbortSignal.timeout(5000) });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const chain = j?.optionChain?.result?.[0];
+        if (!chain?.options?.[0]) continue;
+        const calls = chain.options[0].calls || [];
+        const puts = chain.options[0].puts || [];
+        const expDate = chain.options[0].expirationDate;
+        const expStr = expDate ? new Date(expDate * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const callVol = calls.reduce((a, c) => a + (c.volume || 0), 0);
+        const putVol = puts.reduce((a, c) => a + (c.volume || 0), 0);
+        const totalVol = callVol + putVol;
+        if (totalVol < 100) continue;
+        const pcr = callVol > 0 ? putVol / callVol : null;
+        // Find top unusual call: highest vol relative to OI
+        const unusual = calls
+          .filter(c => c.openInterest > 0 && c.volume > 50)
+          .map(c => ({ ...c, ratio: c.volume / c.openInterest }))
+          .sort((a, b) => b.ratio - a.ratio)[0];
+        const lp = liveprices[s.ticker];
+        const price = lp ? lp.price : s.current_price;
+        allData.push({ ticker: s.ticker, company: (s.company || '').substring(0, 18), callVol, putVol, pcr, expStr, unusual, price, sig: s.rok_signal || 'buy' });
+      } catch { /* skip */ }
+    }
+    if (!allData.length) { el.innerHTML = '<div style="font-size:10px;color:var(--wh4);padding:.35rem 0">No significant options activity found right now — check back when market is open.</div>'; return; }
+
+    // Sort by total options volume (most active first)
+    allData.sort((a, b) => (b.callVol + b.putVol) - (a.callVol + a.putVol));
+
+    const html = `<div style="display:flex;flex-direction:column;gap:.35rem">
+      ${allData.map(d => {
+        const pcColor = d.pcr == null ? 'var(--wh3)' : d.pcr < 0.7 ? 'var(--g)' : d.pcr > 1.3 ? 'var(--r)' : 'var(--au)';
+        const bias = d.pcr == null ? '' : d.pcr < 0.5 ? '🐂 Strong call bias — traders VERY bullish' : d.pcr < 0.7 ? '🐂 Bullish — more calls than puts' : d.pcr > 1.5 ? '🐻 Strong put bias — traders VERY bearish' : d.pcr > 1.3 ? '🐻 Bearish — more puts than calls' : '⚖️ Balanced flow';
+        const callK = d.callVol >= 1000 ? (d.callVol/1000).toFixed(0)+'K' : d.callVol;
+        const putK = d.putVol >= 1000 ? (d.putVol/1000).toFixed(0)+'K' : d.putVol;
+        const unusualNote = d.unusual ? `📣 Unusual: $${d.unusual.strike} call — ${d.unusual.volume} vol vs ${d.unusual.openInterest} OI (${d.unusual.ratio.toFixed(1)}× ratio)` : '';
+        return `<div onclick="openModal('${d.ticker}')" style="background:var(--blk4);border:1px solid rgba(0,204,255,.1);border-radius:10px;padding:.6rem .8rem;cursor:pointer" onmouseenter="this.style.borderColor='rgba(0,204,255,.25)'" onmouseleave="this.style.borderColor='rgba(0,204,255,.1)'">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <span style="font-family:var(--disp);font-size:1.1rem;color:var(--b)">${d.ticker}</span>
+              <span style="font-size:8.5px;color:var(--wh4)">${d.company}</span>
+              ${d.price ? `<span style="font-size:9px;color:var(--wh3)">$${d.price.toFixed(2)}</span>` : ''}
+            </div>
+            <div style="text-align:right">
+              ${d.pcr != null ? `<div style="font-size:10px;font-weight:800;color:${pcColor}">P/C: ${d.pcr.toFixed(2)}</div>` : ''}
+              <div style="font-size:8px;color:var(--wh4)">${d.expStr}</div>
+            </div>
+          </div>
+          <div style="font-size:10px;font-weight:600;color:${pcColor};margin-bottom:.25rem">${bias}</div>
+          <div style="display:flex;gap:.6rem;font-size:9px;color:var(--wh3)">
+            <span style="color:var(--g)">📈 ${callK} calls</span>
+            <span style="color:var(--r)">📉 ${putK} puts</span>
+          </div>
+          ${unusualNote ? `<div style="font-size:9px;color:var(--au);margin-top:.3rem;padding:.25rem .45rem;background:rgba(255,215,0,.05);border-radius:5px">${unusualNote}</div>` : ''}
+        </div>`;
+      }).join('')}
+      <div style="font-size:9px;color:var(--wh4);margin-top:.2rem;line-height:1.5">💡 Options flow shows where big money is placing bets. High call volume = bullish. High put volume = bearish. "Unusual" = much higher volume than normal, possible big-money signal.</div>
+    </div>`;
+    _whaleCache = { ts: Date.now(), html };
+    el.innerHTML = html;
+  }
+  window.fetchWhaleRadar = fetchWhaleRadar;
 
   // ── LIVE MARKET BREADTH (computed from universe) ─────
   function renderLiveMarketBreadth() {
