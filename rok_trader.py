@@ -2832,10 +2832,11 @@ def bearish_score(tk, d):
 
 # ── Position sizing ───────────────────────────────────────────────────────────
 def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
-                  score_val=0, win_rate=0.5, drawdown_pct=0.0):
+                  score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5):
     """
-    ATR-based risk sizing with Kelly criterion scaling for high-conviction trades.
-    Shrinks position when portfolio is in drawdown.
+    ATR-based risk sizing with full Kelly criterion for high-conviction trades.
+    Full Kelly: f* = (W*B - L) / B  where W=win%, L=loss%, B=avg_win/avg_loss (payoff)
+    Shrinks position when portfolio is in drawdown or market is volatile.
     """
     vix_scale = 1.0
     if vix > VIX_EXTREME_THRESH:   vix_scale = 0.4
@@ -2858,13 +2859,18 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
     else:
         notional = portfolio_val * MAX_POSITION_PCT * vix_scale
 
-    # Kelly criterion bonus for very high-conviction signals (score >= 75)
-    if score_val >= 85 and win_rate > 0.55:
-        kelly = win_rate - (1 - win_rate)   # simplified Kelly fraction
-        kelly_scale = min(1.5, max(1.0, 1 + kelly * 0.5))
-        notional = min(notional * kelly_scale, portfolio_val * MAX_POSITION_PCT * 1.5)
-    elif score_val >= 75 and win_rate > 0.52:
-        notional = min(notional * 1.25, portfolio_val * MAX_POSITION_PCT * 1.25)
+    # Full Kelly criterion for high-conviction signals
+    # f* = (W*B - (1-W)) / B  where B = payoff ratio (avg_win / avg_loss)
+    if score_val >= 75 and win_rate > 0.50 and payoff_ratio > 0:
+        W = win_rate
+        B = max(0.5, min(5.0, payoff_ratio))   # cap payoff ratio 0.5-5x
+        kelly_f = (W * B - (1 - W)) / B        # full Kelly fraction
+        kelly_f = max(0, min(0.25, kelly_f))   # cap at 25% (quarter-Kelly for safety)
+        if kelly_f > 0:
+            # Kelly bonus: scale notional up by kelly fraction proportional to score
+            score_boost = (score_val - 75) / 25   # 0→1 as score goes 75→100
+            kelly_scale = 1 + kelly_f * score_boost
+            notional = min(notional * kelly_scale, portfolio_val * MAX_POSITION_PCT * 1.5)
 
     cap = min(portfolio_val * MAX_POSITION_PCT, buying_power * 0.95)
     return round(min(notional, cap), 2)
@@ -2966,6 +2972,37 @@ def run():
             logger.info(f"Off-hours crypto-only run complete.")
         return
 
+    # Cancel stale open orders: limit orders from prior cycles that didn't fill,
+    # and orphaned bracket stop-loss orders from positions that were already sold
+    try:
+        open_orders = alpaca_get("/v2/orders?status=open&limit=100")
+        held_syms_quick = {p["symbol"] for p in alpaca_get("/v2/positions")}
+        _cancelled_orders = 0
+        for o in (open_orders or []):
+            sym   = o.get("symbol", "")
+            otype = o.get("type", "")
+            oclass= o.get("order_class", "")
+            # Cancel: (1) day-limit orders older than 10 min that haven't filled
+            # (2) orphaned child stop orders for positions we no longer hold
+            created = o.get("created_at", "")
+            try:
+                created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                age_min = (datetime.now(timezone.utc) - created_dt).total_seconds() / 60
+            except Exception:
+                age_min = 0
+            is_orphan_stop = (oclass == "bracket" or otype in ("stop", "stop_limit")) and sym not in held_syms_quick
+            is_stale_limit = otype == "limit" and age_min > 12
+            if is_orphan_stop or is_stale_limit:
+                try:
+                    requests.delete(f"{ALPACA_BASE}/v2/orders/{o['id']}", headers=_h(), timeout=10)
+                    _cancelled_orders += 1
+                except Exception:
+                    pass
+        if _cancelled_orders:
+            logger.info(f"Cancelled {_cancelled_orders} stale open orders")
+    except Exception as _oe:
+        logger.debug(f"Open order cleanup: {_oe}")
+
     # Pre-cache SPY performance for relative strength calculations
     _fetch_spy_perf()
 
@@ -2985,11 +3022,15 @@ def run():
     if drawdown_pct > 2:
         logger.info(f"Portfolio drawdown: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — risk reduced")
 
-    # Win rate from trade history for Kelly sizing
+    # Win rate + payoff ratio from trade history for full Kelly criterion
     _trade_stats = _prior_tlog.get("stats", {})
     _wins  = _trade_stats.get("wins",   0)
     _losses= _trade_stats.get("losses", 0)
     win_rate = _wins / max(1, _wins + _losses)
+    # Compute actual payoff ratio from recent closed trades
+    _avg_win_pct  = _prior_tlog.get("avg_win_pct",  0) or 0
+    _avg_loss_pct = _prior_tlog.get("avg_loss_pct", 0) or 0
+    _payoff_ratio = abs(_avg_win_pct / _avg_loss_pct) if _avg_loss_pct != 0 else 1.5
 
     # Positions + peaks
     positions = alpaca_get("/v2/positions")
@@ -3652,7 +3693,8 @@ def run():
                     atr      = d.get("atr")
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
-                                             win_rate=win_rate, drawdown_pct=drawdown_pct)
+                                             win_rate=win_rate, drawdown_pct=drawdown_pct,
+                                             payoff_ratio=_payoff_ratio)
                     # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
                     # allow slightly larger positions; if deeply underwater, shrink further
                     if _portfolio_heat > 5:
@@ -3766,7 +3808,8 @@ def run():
                     atr      = d.get("atr")
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
-                                             win_rate=win_rate, drawdown_pct=drawdown_pct)
+                                             win_rate=win_rate, drawdown_pct=drawdown_pct,
+                                             payoff_ratio=_payoff_ratio)
                     notional = round(notional * 0.6, 2)   # size shorts smaller
                     if notional < 1:
                         continue
