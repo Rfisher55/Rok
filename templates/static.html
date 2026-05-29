@@ -1583,19 +1583,32 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <!-- Section 1: SENATORS & CONGRESS BOUGHT THESE -->
       {% set cong_items = data.congressional_plays if data.congressional_plays else data.congressional_buys|default([]) %}
       {% if cong_items %}
-      <div class="intel-section">
+      <div class="intel-section" style="grid-column:1/-1">
         <div class="s-hdr">
           <h2 class="s-ttl ttl-cong">🏛️ SENATORS &amp; CONGRESS BOUGHT THESE</h2>
+          <span class="s-sub">Last 45 days · STOCK Act disclosures</span>
         </div>
         <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(153,85,255,.05);border-radius:6px;border-left:2px solid rgba(153,85,255,.3)">
-          By law, senators &amp; congress members must disclose stock purchases within 45 days. When they buy, it often means good news is coming.
+          💡 <strong style="color:var(--p)">Why this matters:</strong> By law, congress members must disclose stock trades within 45 days. Studies show they outperform the market by ~10% annually. When <em>multiple</em> members buy the same stock, it's worth paying attention.
         </div>
-        <div class="mini-grid">
+        <div style="display:flex;flex-direction:column;gap:.45rem">
           {% for c in cong_items[:8] %}
-          <div class="mini-card">
-            <div class="mini-ticker cong-ticker">${{ c.ticker }}</div>
-            <div class="mini-sub">{{ c.buy_count }} congress member{{ 's' if c.buy_count != 1 }} bought</div>
-            <div class="mini-txt">{{ c.members_preview }}</div>
+          {% set total = (c.buy_count|default(0)) + (c.sell_count|default(0)) %}
+          {% set buy_pct = (c.buy_count / total * 100)|round(0)|int if total > 0 else 100 %}
+          <div style="background:var(--blk4);border-radius:10px;padding:.65rem .85rem;border:1px solid rgba(153,85,255,.12);display:flex;align-items:center;gap:.75rem;cursor:pointer" onclick="switchToScreener('{{ c.ticker }}')">
+            <div style="font-family:var(--disp);font-size:1.4rem;color:var(--p);letter-spacing:.08em;min-width:52px">${{ c.ticker }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem;flex-wrap:wrap">
+                <span style="font-size:10px;font-weight:700;color:var(--wh2)">{{ c.buy_count }} member{{ 's' if c.buy_count != 1 }} BOUGHT{% if c.sell_count %} · {{ c.sell_count }} SOLD{% endif %}</span>
+                {% if buy_pct >= 80 %}<span style="font-size:8px;padding:1px 6px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);border-radius:10px;color:var(--g);font-weight:700">BULLISH</span>{% elif buy_pct >= 50 %}<span style="font-size:8px;padding:1px 6px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:10px;color:var(--au);font-weight:700">MIXED</span>{% endif %}
+                {% if c.latest_date %}<span style="font-size:8.5px;color:var(--wh4)">Latest: {{ c.latest_date }}</span>{% endif %}
+              </div>
+              <div style="font-size:10px;color:var(--wh3)">{{ c.members_preview }}</div>
+            </div>
+            <div style="flex-shrink:0;width:40px;text-align:center">
+              <div style="font-size:11px;font-weight:700;color:var(--p)">{{ buy_pct }}%</div>
+              <div style="font-size:8px;color:var(--wh4)">buys</div>
+            </div>
           </div>
           {% endfor %}
         </div>
@@ -1611,22 +1624,26 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
         <div style="font-size:11px;color:var(--wh3);margin-bottom:.75rem;line-height:1.55;padding:.5rem .65rem;background:rgba(255,136,0,.05);border-radius:6px;border-left:2px solid rgba(255,136,0,.3)">
           When a CEO or CFO spends their own money buying their company's stock, it's a strong bullish signal — they believe the price is going higher.
         </div>
-        <div class="mini-grid">
+        <div style="display:flex;flex-direction:column;gap:.4rem">
           {% for b in data.insider_buys[:8] %}
-          <div class="mini-card" onclick="openModal('{{ b.ticker }}')" style="cursor:pointer">
-            <div class="mini-ticker" style="color:var(--or)">${{ b.ticker }}</div>
-            {% if b.company %}<div style="font-size:8.5px;color:var(--wh3);margin-bottom:2px">{{ b.company }}</div>{% endif %}
-            <div class="mini-sub" style="color:var(--or)">
-              {% if b.value_usd and b.value_usd > 0 %}
-                ${{ '{:,}'.format(b.value_usd) }} purchase
-              {% elif b.shares and b.shares > 0 %}
-                {{ '{:,}'.format(b.shares) }} shares
-              {% else %}
-                Insider purchase
-              {% endif %}
+          <div onclick="openModal('{{ b.ticker }}')" style="cursor:pointer;background:var(--blk4);border-radius:10px;padding:.55rem .8rem;border:1px solid rgba(255,136,0,.12);display:flex;align-items:center;gap:.65rem">
+            <div style="font-family:var(--disp);font-size:1.3rem;color:var(--or);letter-spacing:.06em;min-width:46px">${{ b.ticker }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:10px;font-weight:700;color:var(--wh2);margin-bottom:.15rem">
+                {{ b.insider_name }}{% if b.title %} <span style="color:var(--wh3);font-weight:400">· {{ b.title }}</span>{% endif %}
+              </div>
+              {% if b.company %}<div style="font-size:8.5px;color:var(--wh4)">{{ b.company[:30] }}</div>{% endif %}
             </div>
-            <div class="mini-txt">{{ b.insider_name }}{% if b.title %} · {{ b.title }}{% endif %}</div>
-            {% if b.date %}<div style="font-size:8px;color:var(--wh4);margin-top:2px">{{ b.date }}</div>{% endif %}
+            <div style="text-align:right;flex-shrink:0">
+              {% if b.value_usd and b.value_usd > 0 %}
+              <div style="font-size:11px;font-weight:800;color:var(--or)">
+                {% if b.value_usd >= 1000000 %}${{ '%.1f'|format(b.value_usd/1000000) }}M{% elif b.value_usd >= 1000 %}${{ '{:,}'.format((b.value_usd/1000)|round(0)|int) }}k{% else %}${{ '{:,}'.format(b.value_usd) }}{% endif %}
+              </div>
+              {% elif b.shares %}
+              <div style="font-size:11px;font-weight:800;color:var(--or)">{{ '{:,}'.format(b.shares) }} sh</div>
+              {% endif %}
+              {% if b.date %}<div style="font-size:8px;color:var(--wh4)">{{ b.date }}</div>{% endif %}
+            </div>
           </div>
           {% endfor %}
         </div>
