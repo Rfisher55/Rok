@@ -1537,6 +1537,9 @@ body.beginner-mode #beginner-banner { display:block }
     <!-- Live trending tickers (JS-populated) -->
     <div id="mkt-trending" style="display:none;margin-bottom:.85rem"></div>
 
+    <!-- Live ROK signal movers (JS-populated) -->
+    <div id="mkt-signal-movers" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Live unusual options flow (JS-populated) -->
     <div id="mkt-options-flow" style="display:none;margin-bottom:.85rem"></div>
 
@@ -2801,7 +2804,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); updateFearGreedFromVIX(); }
+    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); updateFearGreedFromVIX(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); renderPortfolioSpyBenchmark(); }
     if (activeTab === 'signals') { updateLiveMacroStrip(); renderTodaysBestSetup(); }
     updateGlobalRiskAlert();
@@ -2832,6 +2835,7 @@ body.beginner-mode #beginner-banner { display:block }
   }
   window.getMarketState = getMarketState;
 
+  let _lastMarketState = null;
   function updateMarketStatus() {
     const pill = document.getElementById('mkt-status-pill');
     const txt = document.getElementById('mkt-status-txt');
@@ -2862,6 +2866,22 @@ body.beginner-mode #beginner-banner { display:block }
         txt.textContent = daysUntil >= 2 ? `CLOSED · Opens ${day === 5 ? 'Monday' : 'Monday'}` : `CLOSED · Opens in ${Math.floor(minsToOpen/60)}h`;
       }
     }
+
+    // Detect market state transitions and show toast notifications
+    if (_lastMarketState && _lastMarketState !== state) {
+      if (state === 'open') {
+        showAppAlert('🔔 Market is NOW OPEN — refreshing live prices…', 'info', 5000);
+        if (Notification.permission === 'granted') {
+          try { new Notification('ROK — Market Open 🟢', { body: 'NYSE is open for trading. Check your signals.', icon: './icon-192.png' }); } catch(e) {}
+        }
+        setTimeout(refreshLivePrices, 500);
+      } else if (state === 'post' && _lastMarketState === 'open') {
+        showAppAlert('🔔 Market just CLOSED — prices are now post-market. Prices may differ from close.', 'info', 6000);
+      } else if (state === 'pre' && _lastMarketState === 'closed') {
+        showAppAlert('🌅 Pre-market trading has started — prices are live but volume is thin.', 'info', 5000);
+      }
+    }
+    _lastMarketState = state;
   }
 
   // ── ONBOARDING (Phase 3) ──────────────────────────────────
@@ -3622,7 +3642,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
     if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); }
   }
@@ -4176,6 +4196,25 @@ body.beginner-mode #beginner-banner { display:block }
 
     // Goal tracker
     if (totalNow > 0) renderPortfolioGoalTracker(totalNow);
+
+    // Portfolio-level return milestone celebrations
+    if (totalInvested > 0 && totalNow > 0) {
+      const portReturnPct = (totalNow - totalInvested) / totalInvested * 100;
+      try {
+        const PMILE_KEY = 'rok_port_milestones_v1';
+        const sent = JSON.parse(sessionStorage.getItem(PMILE_KEY) || '{}');
+        const milestones = [5, 10, 25, 50];
+        milestones.forEach(m => {
+          if (portReturnPct >= m && !sent[`pm_${m}`]) {
+            sent[`pm_${m}`] = 1;
+            sessionStorage.setItem(PMILE_KEY, JSON.stringify(sent));
+            const emoji = m >= 50 ? '🏆🔥' : m >= 25 ? '🚀💰' : m >= 10 ? '🎯📈' : '✅';
+            showAppAlert(`${emoji} Portfolio milestone! Your total return just crossed +${m}%. Keep it up!`, 'good', 8000);
+            if (m >= 10) setTimeout(launchConfetti, 400);
+          }
+        });
+      } catch(e) {}
+    }
 
     // Pre-fill DCA calculator with current portfolio value
     try {
@@ -6466,6 +6505,45 @@ body.beginner-mode #beginner-banner { display:block }
       tasks.push({ icon: '💼', text: '<strong>You haven\'t tracked any stocks yet.</strong> Tap ⚡ on any signal card to add it to My Stocks and track your gains/losses in real time.' });
     }
 
+    // VIX-based market warning
+    const vixLp = liveprices['^VIX'];
+    if (vixLp?.price) {
+      if (vixLp.price >= 30) {
+        tasks.push({ icon: '🌪️', urgent: true, text: `<strong style="color:var(--r)">EXTREME market volatility (VIX = ${vixLp.price.toFixed(1)})</strong> — stocks can swing 5-10% in hours. Reduce position sizes. Only trade what you can afford to lose.` });
+      } else if (vixLp.price >= 25) {
+        tasks.push({ icon: '⚠️', text: `<strong style="color:var(--au)">High volatility warning (VIX = ${vixLp.price.toFixed(1)})</strong> — use smaller than normal position sizes and make sure all positions have stop-losses.` });
+      }
+    }
+
+    // Check for portfolio stocks without stop-loss alerts
+    if (portTickers.length > 0) {
+      const alerts = getAlerts().filter(a => !a.triggered);
+      const unprotected = portTickers.filter(t => !alerts.some(a => a.ticker === t && a.direction === 'below'));
+      if (unprotected.length > 0 && portTickers.length >= 2) {
+        tasks.push({ icon: '🛡️', text: `<strong style="color:var(--au)">${unprotected.slice(0,3).join(', ')} ${unprotected.length > 3 ? '+ '+(unprotected.length-3)+' more' : ''} have no stop-loss alert</strong> — tap 💼 MY STOCKS and set alerts to protect yourself from big losses.` });
+      }
+    }
+
+    // Portfolio doing great today — add positive reinforcement
+    if (portTickers.length >= 2) {
+      let portTodayGain = 0, portTodayVal = 0;
+      portTickers.forEach(t => {
+        const lp = liveprices[t];
+        const entry = getPortfolio()[t];
+        if (!lp?.price) return;
+        const sh = entry?.shares || 1;
+        const val = lp.price * sh;
+        portTodayVal += val;
+        portTodayGain += (lp.change_pct / 100) * val;
+      });
+      if (portTodayVal > 0) {
+        const todayPct = (portTodayGain / portTodayVal) * 100;
+        if (todayPct >= 3) {
+          tasks.push({ icon: '🚀', text: `<strong style="color:var(--g)">Great day! Your portfolio is up ${todayPct.toFixed(1)}% today</strong> — consider whether to lock in profits on your biggest winners or keep holding.` });
+        }
+      }
+    }
+
     if (tasks.length === 0) {
       el.style.display = 'none';
       return;
@@ -6934,6 +7012,47 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderGainersLosers = renderGainersLosers;
+
+  // ── ROK SIGNAL MOVERS (live price sorted) ────────────────
+  function renderROKSignalMovers() {
+    const el = document.getElementById('mkt-signal-movers');
+    if (!el) return;
+    const buys = ROK.buy_signals || [];
+    if (!buys.length) { el.style.display = 'none'; return; }
+
+    const port = getPortfolio();
+    const withPrices = buys.map(s => {
+      const lp = liveprices[s.ticker];
+      if (!lp?.price || lp.change_pct == null) return null;
+      return { ticker: s.ticker, name: (s.company_name || s.ticker).substring(0, 16), price: lp.price, chg: lp.change_pct, owned: !!port[s.ticker], strength: s.signal_strength || 5 };
+    }).filter(Boolean);
+
+    if (!withPrices.length) { el.style.display = 'none'; return; }
+    withPrices.sort((a, b) => Math.abs(b.chg) - Math.abs(a.chg));
+    const top = withPrices.slice(0, 8);
+
+    const items = top.map(s => {
+      const chgColor = s.chg >= 0 ? 'var(--g)' : 'var(--r)';
+      const arrow = s.chg >= 0 ? '▲' : '▼';
+      const ownBadge = s.owned ? `<span style="font-size:6.5px;padding:1px 3px;background:rgba(0,204,255,.1);border:1px solid rgba(0,204,255,.25);border-radius:3px;color:var(--b)">OWNED</span>` : '';
+      return `<div onclick="openModal('${s.ticker}')" style="flex:0 0 auto;background:var(--blk3);border:1px solid ${s.chg>=0?'rgba(0,255,136,.12)':'rgba(255,34,85,.1)'};border-radius:10px;padding:.45rem .7rem;cursor:pointer;min-width:90px;text-align:center">
+        <div style="font-size:10px;font-weight:800;color:var(--wh);display:flex;align-items:center;justify-content:center;gap:.25rem">${s.ticker}${ownBadge}</div>
+        <div style="font-size:1.1rem;font-weight:900;color:var(--wh);margin:.1rem 0">$${s.price.toFixed(2)}</div>
+        <div style="font-size:10px;font-weight:700;color:${chgColor}">${arrow} ${Math.abs(s.chg).toFixed(2)}%</div>
+      </div>`;
+    }).join('');
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--wh3);text-transform:uppercase;margin-bottom:.55rem;display:flex;justify-content:space-between;align-items:center">
+        <span>⚡ ROK BUY SIGNALS — LIVE MOVERS</span>
+        <span style="color:var(--g);font-size:7px">● LIVE</span>
+      </div>
+      <div style="display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.35rem;-webkit-overflow-scrolling:touch;scrollbar-width:none">${items}</div>
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem">Sorted by biggest moves today. Tap any to see full analysis.</div>
+    </div>`;
+  }
+  window.renderROKSignalMovers = renderROKSignalMovers;
 
   // ── LIVE SPY/QQQ INTRADAY CHART ──────────────────────
   async function fetchSpyChart() {
