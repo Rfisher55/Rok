@@ -269,7 +269,7 @@ def _save(path, data):
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(data, indent=2))
 
-def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=None):
+def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=None, signals=None):
     e = {
         "time":    datetime.now(timezone.utc).isoformat(),
         "action":  action,
@@ -283,6 +283,19 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["notional"] = round(float(amount), 2)
     else:
         e["qty"] = float(amount)
+
+    # Store active signals at entry for performance tracking
+    if action == "BUY" and signals:
+        _SIGNAL_KEYS = [
+            "cup_handle", "at_demand_zone", "mom_accel", "vcp", "obv_rising",
+            "kc_breakout", "higher_lows", "double_bottom", "poc_breakout",
+            "ema_stacked_bull", "trend_reversal", "bull_flag", "mtf_aligned",
+            "ttm_squeeze_fired", "at_breakout", "vwap_reclaim", "gap_and_hold",
+            "nr7_signal", "fib_support", "macd_bull_div", "rsi_bull_divergence",
+            "ichimoku_above", "orb_breakout", "above_poc",
+        ]
+        e["entry_signals"] = [k for k in _SIGNAL_KEYS if signals.get(k)]
+
     tlog.setdefault("trades", []).insert(0, e)
     tlog["trades"] = tlog["trades"][:500]
 
@@ -294,6 +307,20 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             stats["wins"] = stats.get("wins", 0) + 1
         else:
             stats["losses"] = stats.get("losses", 0) + 1
+
+    # Update signal performance stats when SELL closes a position
+    if action in ("SELL", "SELL_HALF") and pnl is not None:
+        # Find matching BUY for this ticker in recent trades
+        for t in tlog.get("trades", []):
+            if t.get("action") == "BUY" and t.get("ticker") == sym and t.get("entry_signals"):
+                perf = tlog.setdefault("signal_performance", {})
+                for sig in t["entry_signals"]:
+                    sp = perf.setdefault(sig, {"wins": 0, "total": 0, "total_pnl": 0.0})
+                    sp["total"] += 1
+                    sp["total_pnl"] = round(sp.get("total_pnl", 0) + pnl, 2)
+                    if pnl > 0:
+                        sp["wins"] += 1
+                break
 
 
 # ── Technical indicators ──────────────────────────────────────────────────────
@@ -4884,7 +4911,8 @@ def run():
                         reason += f" [POC-BRK ${_d_buy.get('poc_price', 0)}]"
                     elif _d_buy.get("above_poc"):
                         reason += f" [abv-POC ${_d_buy.get('poc_price', 0)}]"
-                    log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason)
+                    log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
+                              signals=live.get(tk, {}))
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
@@ -5084,6 +5112,28 @@ def run():
     tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
     tlog["sector_etf_trends"]  = sector_etf_trends  # {sector: {bullish, chg5d, chg1d, above_ema20}}
     tlog["portfolio_beta"]     = _port_beta_est      # estimated portfolio beta
+
+    # Compute per-signal win rates from accumulated performance data
+    try:
+        _sig_perf = tlog.get("signal_performance", {})
+        _sig_wr = {
+            k: {
+                "win_rate": round(v["wins"] / max(1, v["total"]) * 100, 1),
+                "total":    v["total"],
+                "avg_pnl":  round(v.get("total_pnl", 0) / max(1, v["total"]), 2),
+            }
+            for k, v in _sig_perf.items()
+            if v.get("total", 0) >= 3  # need at least 3 trades for meaningful stats
+        }
+        tlog["signal_win_rates"] = dict(sorted(_sig_wr.items(), key=lambda x: -x[1]["win_rate"]))
+        # Log top/bottom performers
+        if _sig_wr:
+            _top = sorted(_sig_wr.items(), key=lambda x: -x[1]["win_rate"])[:3]
+            _bot = sorted(_sig_wr.items(), key=lambda x:  x[1]["win_rate"])[:2]
+            _top_str = " | ".join(f"{k}:{v['win_rate']}%({v['total']}t)" for k, v in _top)
+            logger.info(f"Signal perf (top): {_top_str}")
+    except Exception:
+        pass
     tlog["sharpe_ratio"]       = _sharpe_ratio
     tlog["max_drawdown"]       = round(_max_dd, 2)
     try:

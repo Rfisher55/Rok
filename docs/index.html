@@ -54635,6 +54635,28 @@ window.renderSectorRotation = renderSectorRotation;
         </div>`;
       }
 
+      // Signal performance win rates (self-learning — builds over time)
+      const sigWr = data.signal_win_rates || {};
+      const sigWrEntries = Object.entries(sigWr).filter(([,v]) => v.total >= 3);
+      if (sigWrEntries.length > 0) {
+        const sigWrHtml = sigWrEntries.slice(0, 8).map(([sig, v]) => {
+          const col = v.win_rate >= 70 ? '#00ff88' : v.win_rate >= 55 ? '#ffd54f' : v.win_rate >= 45 ? '#ff9800' : '#ef5350';
+          const avgCol = v.avg_pnl >= 0 ? '#69f0ae' : '#ef5350';
+          const sigLabel = sig.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          return `<div style="display:flex;align-items:center;gap:.4rem;padding:.18rem .35rem;background:rgba(255,255,255,.02);border-radius:4px">
+            <span style="font-size:7px;color:#4a6fa5;min-width:80px;font-weight:600">${sigLabel}</span>
+            <div style="flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:2px"><div style="width:${v.win_rate}%;height:100%;background:${col};border-radius:2px"></div></div>
+            <span style="font-size:8px;font-weight:800;color:${col};min-width:28px;text-align:right">${v.win_rate}%</span>
+            <span style="font-size:7px;color:${avgCol};min-width:30px">${v.avg_pnl>=0?'+':''}${v.avg_pnl}%</span>
+            <span style="font-size:6.5px;color:#3a5a8a">${v.total}t</span>
+          </div>`;
+        }).join('');
+        html += `<div style="margin-bottom:.6rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Signal Win Rates (live learning)</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${sigWrHtml}</div>
+        </div>`;
+      }
+
       // Last scan candidates (even when no trades executed)
       const topScan = data.last_scan_top || [];
       const rejected = data.last_scan_rejected || [];
