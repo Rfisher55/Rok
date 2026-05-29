@@ -797,11 +797,11 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 </div>
 {% endif %}
 
-<!-- ROK MESSAGE -->
-{% if data.rok_message %}
+<!-- ROK MOOD BAR -->
+{% if data.market_mood or data.rok_message %}
 <div class="rok-bar">
-  <span class="rok-lbl">ROK SAYS</span>
-  <span class="rok-msg">{{ data.rok_message }}</span>
+  <span class="rok-lbl">ROK</span>
+  <span class="rok-msg">{% if data.market_mood %}{{ data.market_mood }}{% if data.rok_message %} · {{ data.rok_message[:120] }}{% endif %}{% else %}{{ data.rok_message }}{% endif %}</span>
 </div>
 {% endif %}
 
@@ -1367,6 +1367,9 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
 <!-- PRICE UPDATED FLASH -->
 <div id="price-flash" class="price-flash">✓ PRICES UPDATED</div>
 
+<!-- GLOBAL ALERT BAR -->
+<div id="app-alerts" style="position:fixed;top:52px;left:0;right:0;z-index:600;padding:.3rem .75rem;display:none;pointer-events:auto"></div>
+
 <!-- ONBOARDING OVERLAY -->
 <div id="onboard-overlay" class="onboard-overlay">
   <div class="onboard-modal">
@@ -1696,8 +1699,21 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   }
 
   function openModal(ticker) {
-    const s = (ROK.stock_universe || []).find(x => x.ticker === ticker);
-    if (!s) return;
+    let s = (ROK.stock_universe || []).find(x => x.ticker === ticker);
+    // For manually-added tickers not in stock_universe, create a minimal stub
+    if (!s) {
+      const lp = liveprices[ticker];
+      const p = getPortfolio()[ticker];
+      if (!lp && !p) return;
+      s = {
+        ticker,
+        company_name: ticker,
+        price: lp ? lp.price : (p ? p.price : null),
+        change_pct: lp ? lp.change_pct : 0,
+        price_history: [],
+        rok_signal: 'neutral',
+      };
+    }
     const det = sigDetails[ticker] || {};
     const sig = s.rok_signal || 'neutral';
     const chg = s.change_pct || 0;
@@ -2033,6 +2049,27 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       const addedDate = fmtDate(entry.date);
       const hasTarget = !!(priceTarget);
       const priceGridCols = hasTarget ? 'repeat(4,1fr)' : 'repeat(3,1fr)';
+      // Progress bar: how far from buy price to target
+      let progressBar = '';
+      if (priceTarget && buyPrice && buyPrice > 0 && currentPrice != null) {
+        const totalRange = priceTarget - buyPrice;
+        const progress = totalRange > 0 ? Math.max(0, Math.min(100, (currentPrice - buyPrice) / totalRange * 100)) : 0;
+        const progressColor = pct >= 0 ? 'var(--g)' : 'var(--r)';
+        progressBar = `
+          <div style="margin:.5rem 0 .3rem">
+            <div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--wh3);margin-bottom:.25rem">
+              <span>ENTRY $${buyPrice.toFixed(2)}</span>
+              <span style="color:${progressColor};font-weight:700">${progress.toFixed(0)}% to target</span>
+              <span style="color:var(--g)">TARGET $${priceTarget.toFixed(2)}</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${progress}%;background:${progressColor};border-radius:2px;transition:width .5s ease"></div>
+            </div>
+          </div>`;
+      }
+      const dollarGain = currentPrice && buyPrice ? ((currentPrice - buyPrice) / buyPrice * 1000).toFixed(0) : null;
+      const dollarGainHtml = dollarGain ? `<div style="font-size:9px;color:${pct >= 0 ? 'var(--g)' : 'var(--r)'};margin-top:1px">${pct >= 0 ? '+' : ''}$${dollarGain} on $1k</div>` : '';
+
       return `<div class="port-card" onclick="openModal('${ticker}')">
         <div class="port-top">
           <div>
@@ -2040,16 +2077,20 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
             <div class="port-name">${((stock && stock.company_name) || '').substring(0,24)}</div>
             ${addedDate ? `<div class="port-added">Added ${addedDate}</div>` : ''}
           </div>
-          <button class="port-remove" onclick="event.stopPropagation();removeFromPortfolio('${ticker}')">✕ Remove</button>
+          <div style="text-align:right">
+            <div class="port-price-val ${cc}" style="font-size:1.4rem;font-weight:900;line-height:1">${pnl}</div>
+            ${dollarGainHtml}
+            <button class="port-remove" onclick="event.stopPropagation();removeFromPortfolio('${ticker}')" style="font-size:10px;margin-top:3px">✕ Remove</button>
+          </div>
         </div>
         <div class="port-prices" style="grid-template-columns:${priceGridCols}">
           <div><div class="port-price-lbl">YOU PAID</div><div class="port-price-val">$${Number(buyPrice).toFixed(2)}</div></div>
           <div><div class="port-price-lbl">NOW${lp?' 🟢':''}</div><div class="port-price-val ${cc}">${currentPrice != null ? '$'+currentPrice.toFixed(2) : '—'}</div></div>
-          <div><div class="port-price-lbl">GAIN/LOSS</div><div class="port-price-val ${cc}" style="font-size:1.15rem;font-weight:900">${pnl}</div></div>
+          <div><div class="port-price-lbl">ROK SAYS</div><div style="font-size:9px;font-weight:800;color:${recColor};line-height:1.2;margin-top:2px">${rec}</div></div>
           ${priceTarget ? `<div><div class="port-price-lbl">TARGET</div><div class="port-price-val" style="color:var(--g)">$${Number(priceTarget).toFixed(2)}</div></div>` : ''}
         </div>
-        <div class="port-rec">
-          <span class="port-rec-badge" style="color:${recColor};border-color:${recColor};background:${recColor}1a">${rec}</span>
+        ${progressBar}
+        <div class="port-rec" style="padding:.5rem .65rem">
           <span class="port-rec-msg">${recMsg}</span>
         </div>
       </div>`;
@@ -2350,6 +2391,71 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+
+  // ── PRICE ALERT CHECKER ──────────────────────────────────────
+  const NOTIF_KEY = 'rok_notif_sent_v1';
+  function checkPortfolioAlerts() {
+    const p = getPortfolio();
+    const tickers = Object.keys(p);
+    if (!tickers.length) return;
+    const sent = JSON.parse(sessionStorage.getItem(NOTIF_KEY) || '{}');
+    tickers.forEach(ticker => {
+      const entry = p[ticker];
+      const det = sigDetails[ticker] || {};
+      const lp = liveprices[ticker];
+      const stock = (ROK.stock_universe || []).find(s => s.ticker === ticker);
+      const curPrice = lp ? lp.price : (stock ? stock.price : null);
+      if (!curPrice) return;
+      const stopLoss = det.stop_loss;
+      const priceTarget = det.price_target || (stock && stock.analyst_target);
+      const notifKey = `${ticker}_${Math.floor(curPrice)}`;
+      if (sent[notifKey]) return;
+      let msg = null;
+      if (stopLoss && curPrice < stopLoss) {
+        msg = `🔴 ${ticker} hit stop-loss ($${curPrice.toFixed(2)} < $${stopLoss.toFixed(2)}) — consider selling`;
+      } else if (priceTarget && curPrice >= priceTarget * 0.97) {
+        msg = `🎯 ${ticker} near price target $${priceTarget.toFixed(2)} — consider taking profits`;
+      }
+      if (msg) {
+        sent[notifKey] = 1;
+        sessionStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
+        // Show in-app alert bar
+        showAppAlert(msg, ticker.includes('stop') ? 'sell' : 'target');
+        // Try browser notification
+        if (Notification.permission === 'granted') {
+          new Notification('ROK Alert', { body: msg, icon: './icon-192.png' }).onclick = () => showTab('portfolio');
+        }
+      }
+    });
+  }
+
+  function showAppAlert(msg, type) {
+    const container = document.getElementById('app-alerts');
+    if (!container) return;
+    const el = document.createElement('div');
+    el.className = `port-alert-item ${type}`;
+    el.style.cssText = 'cursor:pointer;margin-bottom:.35rem';
+    el.textContent = msg;
+    el.onclick = () => showTab('portfolio');
+    container.appendChild(el);
+    container.style.display = 'block';
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 30000);
+  }
+
+  function requestNotifPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const asked = localStorage.getItem('rok_notif_asked_v1');
+      if (!asked) {
+        localStorage.setItem('rok_notif_asked_v1', '1');
+        setTimeout(() => {
+          Notification.requestPermission().catch(() => {});
+        }, 10000);
+      }
+    }
+  }
+  requestNotifPermission();
+  // Check alerts every minute
+  setInterval(checkPortfolioAlerts, 60000);
 })();
 </script>
 </body>

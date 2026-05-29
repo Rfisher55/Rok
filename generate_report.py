@@ -333,6 +333,21 @@ def run():
     bullish_count = sum(1 for r in recent_runs if (r.get("sentiment") or "").upper() == "BULLISH")
     history_summary = f"ROK was bullish {bullish_count} out of the last {len(recent_runs)} runs"
 
+    # ── Plain-language market mood ────────────────────────────────
+    sentiment = (analysis.get("market_sentiment") or "NEUTRAL").upper()
+    fg_score = (fear_greed or {}).get("score", 50)
+    buy_count_now = len(analysis.get("buy_signals", []))
+    if sentiment == "BULLISH" and buy_count_now >= 5:
+        market_mood = f"🟢 Markets are looking strong — ROK found {buy_count_now} stocks worth buying right now"
+    elif sentiment == "BULLISH":
+        market_mood = f"🟢 Markets are leaning bullish — ROK sees some opportunities"
+    elif sentiment == "BEARISH":
+        market_mood = "🔴 Markets are under pressure — ROK recommends being careful"
+    elif fg_score and fg_score < 30:
+        market_mood = "🟡 Fear is high but that often means buying opportunities are near"
+    else:
+        market_mood = "🟡 Markets are mixed — ROK is watching closely for clear signals"
+
     # ── Build page data ───────────────────────────────────────────
     buy_count = len(analysis.get("buy_signals", []))
     sell_count = len(analysis.get("sell_signals", []))
@@ -383,6 +398,7 @@ def run():
         },
         "recent_runs": recent_runs,
         "history_summary": history_summary,
+        "market_mood": market_mood,
         "track_record": track_record,
         "generated_timestamp": datetime.now(timezone.utc).isoformat(),
         "stock_universe": stock_data,
