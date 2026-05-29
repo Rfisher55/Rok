@@ -1261,6 +1261,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="hot-rok-picks" style="display:none;margin-bottom:.85rem"></div>
     <!-- Signal Changes this session (JS-populated) -->
     <div id="sig-changes-panel" style="display:none;margin-bottom:.75rem"></div>
+    <!-- Full Trade Plans for Top ROK Picks (JS-populated) -->
+    <div id="sig-trade-plans" style="display:none;margin-bottom:.85rem"></div>
 
     
     
@@ -2039,6 +2041,18 @@ body.beginner-mode #beginner-banner { display:block }
           💡 <strong style="color:var(--au)">RSI (Relative Strength Index)</strong> measures if a stock is being over-bought or over-sold. Below 35 = oversold (may bounce up). Above 72 = overbought (may pull back). Use with other signals for best results.
         </div>
         <div id="intel-rsi-scanner" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to scan RSI extremes…</div>
+      </div>
+
+      <!-- LIVE: Hidden Gems Scanner (JS-populated) -->
+      <div class="intel-section" style="grid-column:1/-1">
+        <div class="s-hdr">
+          <h2 class="s-ttl" style="color:var(--p)">💎 HIDDEN GEMS SCANNER</h2>
+          <span class="s-sub">ROK buy signals with strong fundamentals but low hype <span style="color:var(--g);font-size:7px">● LIVE</span></span>
+        </div>
+        <div style="font-size:11px;color:var(--wh3);margin-bottom:.65rem;line-height:1.5;padding:.4rem .6rem;background:rgba(153,85,255,.04);border-radius:6px;border-left:2px solid rgba(153,85,255,.25)">
+          💡 <strong style="color:var(--p)">Hidden Gems</strong> = ROK buy signals that have solid fundamentals (low P/E, high signal strength) but aren't getting media attention. These are often the best long-term opportunities.
+        </div>
+        <div id="intel-hidden-gems" style="font-size:10px;color:var(--wh4);padding:.5rem 0">Tap the INTEL tab to scan for hidden gems…</div>
       </div>
 
     </div><!-- /intel-grid -->
@@ -2825,7 +2839,8 @@ body.beginner-mode #beginner-banner { display:block }
     if (activeTab === 'screener') { const bc = document.getElementById('budget-calc-body'); if (bc && bc.style.display !== 'none') runBudgetCalc(); renderScLivePulse(); }
     if (activeTab === 'intel') { if (_sectorFlowCache) renderSectorFlow(_sectorFlowCache); renderRSIScanner(); }
     if (activeTab === 'market') { renderBreakoutScanner(); renderRelativeStrength(); renderExtHoursMovers(); renderVolatilityRankings(); renderEarningsRadar(); if (_sectorFlowCache) renderSectorStrategy(); renderBuyTiming(); }
-    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); }
+    if (activeTab === 'signals') { renderSignalChanges(); renderHotROKPicks(); renderFullTradePlans(); }
+    if (activeTab === 'intel') { renderRSIScanner(); renderHiddenGems(); }
     if (activeTab === 'portfolio') { renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); }
     checkSignalPriceDrops();
     checkPriceTargetHits();
@@ -3788,10 +3803,10 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScLivePulse(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); setTimeout(fetchSignalsLiveNews, 2000); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); updateLiveCommentary(); renderTodaysBestSetup(); renderHotROKPicks(); renderSignalChanges(); renderFullTradePlans(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); renderExtHoursMovers(); renderVolatilityRankings(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); renderEarningsRadar(); renderSectorStrategy(); renderBuyTiming(); }
     if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); renderPortfolioWinLoss(); renderPortfolioDailyDrawdown(); renderPortfolioRebalance(); renderPortfolioAttribution(); setTimeout(fetchPortfolioDividends, 1500); }
-    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); }
+    if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); renderRSIScanner(); renderHiddenGems(); }
   }
   window.showTab = showTab;
 
@@ -9414,6 +9429,169 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderPortfolioAttribution = renderPortfolioAttribution;
+
+  // ── FULL TRADE PLANS PANEL (Signals Tab) ─────────────────
+  function renderFullTradePlans() {
+    const el = document.getElementById('sig-trade-plans');
+    if (!el) return;
+    const buys = ROK.buy_signals || [];
+    if (!buys.length) { el.style.display = 'none'; return; }
+
+    const acctSize = parseFloat(localStorage.getItem('rok_account_size_v1') || '0');
+    const riskPct = 2; // 2% risk per trade
+
+    const plans = buys.map(s => {
+      const det = sigDetails[s.ticker] || {};
+      const lp = liveprices[s.ticker];
+      const price = lp?.price || s.price || 0;
+      const target = det.price_target ? Number(det.price_target) : null;
+      const stop = det.stop_loss ? Number(det.stop_loss) : null;
+      if (!price || !target || !stop || target <= price || stop >= price) return null;
+      const rr = (target - price) / (price - stop);
+      if (rr < 1.0) return null;
+      const strength = det.signal_strength || s.signal_strength || 5;
+      const gainPct = (target - price) / price * 100;
+      const riskPerShare = price - stop;
+      let sharesStr = '—';
+      if (acctSize > 0 && riskPerShare > 0) {
+        const maxRiskDollar = acctSize * riskPct / 100;
+        const shares = Math.floor(maxRiskDollar / riskPerShare);
+        const cost = shares * price;
+        sharesStr = shares > 0 ? `${shares} sh ($${cost.toFixed(0)})` : '< 1 sh';
+      }
+      const score = rr * strength;
+      return { ticker: s.ticker, name: s.company_name || '', price, target, stop, rr, gainPct, strength, sharesStr, score, chg: lp?.change_pct };
+    }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 5);
+
+    if (!plans.length) { el.style.display = 'none'; return; }
+
+    const rows = plans.map((p, i) => {
+      const chgColor = p.chg != null ? (p.chg >= 0 ? 'var(--g)' : 'var(--r)') : 'var(--wh3)';
+      const chgStr = p.chg != null ? `${p.chg>=0?'+':''}${p.chg.toFixed(1)}%` : '—';
+      const rrColor = p.rr >= 3 ? 'var(--g)' : p.rr >= 2 ? 'rgba(0,255,136,.7)' : 'var(--au)';
+      return `<div onclick="openModal('${p.ticker}')" style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 1fr;gap:.3rem;align-items:center;padding:.45rem .55rem;border-radius:7px;background:rgba(255,255,255,.025);cursor:pointer;font-size:9px">
+        <div>
+          <div style="font-family:var(--disp);font-size:.9rem;font-weight:900;color:var(--wh)">${p.ticker}</div>
+          <div style="font-size:8px;color:${chgColor}">${chgStr} today</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:9px;font-weight:700;color:var(--b)">$${p.price.toFixed(2)}</div>
+          <div style="font-size:7.5px;color:var(--wh4)">ENTRY</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:9px;font-weight:700;color:var(--g)">$${p.target.toFixed(2)}</div>
+          <div style="font-size:7.5px;color:var(--wh4)">+${p.gainPct.toFixed(0)}%</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:9px;font-weight:700;color:var(--r)">$${p.stop.toFixed(2)}</div>
+          <div style="font-size:7.5px;color:var(--wh4)">STOP</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;font-weight:800;color:${rrColor}">${p.rr.toFixed(1)}:1</div>
+          ${acctSize > 0 ? `<div style="font-size:7.5px;color:var(--wh4)">${p.sharesStr}</div>` : `<div style="font-size:7.5px;color:var(--wh4)">STR ${p.strength}/10</div>`}
+        </div>
+      </div>`;
+    }).join('');
+
+    const headerNote = acctSize > 0
+      ? `Shares based on $${acctSize.toLocaleString()} account, 2% risk/trade`
+      : `Add account size in any modal → "Position Sizing" for custom share counts`;
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(0,255,136,.12);border-radius:12px;padding:.75rem 1rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--g);text-transform:uppercase;margin-bottom:.25rem">📋 TOP ROK TRADE PLANS</div>
+      <div style="font-size:8.5px;color:var(--wh4);margin-bottom:.5rem">${headerNote}</div>
+      <div style="display:grid;grid-template-columns:90px 1fr 1fr 1fr 1fr;gap:.3rem;padding:.25rem .55rem;font-size:7.5px;font-weight:700;color:var(--wh4);letter-spacing:.06em;text-transform:uppercase">
+        <span>Stock</span><span style="text-align:center">Entry</span><span style="text-align:center">Target</span><span style="text-align:center">Stop</span><span style="text-align:right">R:R / Shares</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.25rem">${rows}</div>
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.35rem">Tap any row for full analysis. R:R = Risk:Reward (higher = better). Min 1:1 shown.</div>
+    </div>`;
+  }
+  window.renderFullTradePlans = renderFullTradePlans;
+
+  // ── HIDDEN GEMS SCANNER (Intel Tab) ─────────────────────
+  function renderHiddenGems() {
+    const el = document.getElementById('intel-hidden-gems');
+    if (!el) return;
+    const buys = ROK.buy_signals || [];
+    if (!buys.length) { el.innerHTML = '<div style="color:var(--wh4);font-size:10px;padding:.4rem 0">No buy signals available right now.</div>'; return; }
+
+    // Score each buy signal for "hidden gem" quality:
+    // Low P/E (value), high signal strength, not near 52W high (not overbought)
+    const gems = buys.map(s => {
+      const lp = liveprices[s.ticker];
+      const price = lp?.price || s.price || 0;
+      const strength = s.signal_strength || (sigDetails[s.ticker] && sigDetails[s.ticker].signal_strength) || 5;
+      const pe = s.pe_ratio;
+      const rsi = s.rsi;
+      const mc = s.market_cap;
+      const weekHigh = lp?.week_high || s.week_high;
+      const pctFromHigh = (weekHigh && price) ? (price - weekHigh) / weekHigh * 100 : 0; // negative = below high
+
+      let gemScore = 0;
+      const reasons = [];
+
+      // Strength premium
+      if (strength >= 8) { gemScore += 3; reasons.push(`Strong signal (${strength}/10)`); }
+      else if (strength >= 6) { gemScore += 1; reasons.push(`Good signal (${strength}/10)`); }
+
+      // Value: low P/E
+      if (pe != null && pe > 0) {
+        if (pe < 12) { gemScore += 3; reasons.push(`Very cheap PE: ${pe.toFixed(1)}`); }
+        else if (pe < 18) { gemScore += 2; reasons.push(`Fair value PE: ${pe.toFixed(1)}`); }
+        else if (pe < 25) { gemScore += 1; }
+      }
+
+      // Not at 52W high (room to run)
+      if (pctFromHigh < -20) { gemScore += 2; reasons.push(`${Math.abs(pctFromHigh).toFixed(0)}% below 52W high`); }
+      else if (pctFromHigh < -10) { gemScore += 1; }
+
+      // RSI not overbought
+      if (rsi != null) {
+        if (rsi < 45) { gemScore += 2; reasons.push(`RSI ${Math.round(rsi)} — not overbought`); }
+        else if (rsi < 60) { gemScore += 1; }
+        else { gemScore -= 1; } // overbought penalty
+      }
+
+      // Mid/small cap bonus (less analyst coverage)
+      if (mc && mc < 10e9 && mc > 500e6) { gemScore += 1; reasons.push('Mid-cap: less Wall Street coverage'); }
+
+      return { ...s, price, strength, gemScore, reasons, chg: lp?.change_pct };
+    }).filter(g => g.gemScore >= 4).sort((a, b) => b.gemScore - a.gemScore).slice(0, 6);
+
+    if (!gems.length) {
+      el.innerHTML = '<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;text-align:center">No hidden gems identified right now — try again when market conditions change.</div>';
+      return;
+    }
+
+    const rows = gems.map(g => {
+      const chgColor = g.chg != null ? (g.chg >= 0 ? 'var(--g)' : 'var(--r)') : 'var(--wh3)';
+      const chgStr = g.chg != null ? `${g.chg>=0?'+':''}${g.chg.toFixed(1)}%` : '';
+      const gemBars = '💎'.repeat(Math.min(3, Math.floor(g.gemScore / 2)));
+      const det = sigDetails[g.ticker] || {};
+      const targetStr = det.price_target ? `→ $${Number(det.price_target).toFixed(2)}` : '';
+      return `<div onclick="openModal('${g.ticker}')" style="display:flex;align-items:flex-start;gap:.6rem;padding:.5rem .6rem;background:rgba(153,85,255,.035);border:1px solid rgba(153,85,255,.1);border-radius:9px;cursor:pointer;margin-bottom:.3rem">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem">
+            <span style="font-family:var(--disp);font-size:.95rem;font-weight:900;color:var(--wh)">${g.ticker}</span>
+            <span style="font-size:.8rem">${gemBars}</span>
+            ${g.pe_ratio && g.pe_ratio > 0 ? `<span style="font-size:7.5px;padding:1px 4px;border-radius:3px;background:rgba(0,204,255,.08);border:1px solid rgba(0,204,255,.2);color:var(--b);font-weight:700">PE ${g.pe_ratio.toFixed(0)}</span>` : ''}
+          </div>
+          <div style="font-size:9px;color:var(--wh4)">${(g.company_name||'').substring(0,22)}</div>
+          <div style="font-size:8.5px;color:var(--wh3);margin-top:.2rem">${g.reasons.slice(0,2).join(' · ')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:10px;font-weight:700;color:var(--wh)">${g.price ? '$'+g.price.toFixed(2) : ''}</div>
+          <div style="font-size:8.5px;color:${chgColor}">${chgStr}</div>
+          <div style="font-size:7.5px;color:var(--g)">${targetStr}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = rows + `<div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem">Hidden gems are undervalued stocks flying under the radar. They require patience — these may take weeks or months to play out.</div>`;
+  }
+  window.renderHiddenGems = renderHiddenGems;
 
   // ── LIVE TICKER TAPE UPDATE ───────────────────────────
   function updateTickerTape() {
