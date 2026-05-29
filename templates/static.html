@@ -616,6 +616,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
   cursor:pointer;transition:all .15s;touch-action:manipulation
 }
+.quick-amt-btn{padding:.35rem .65rem;background:rgba(0,204,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;color:var(--b);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);touch-action:manipulation;transition:background .15s}
+.quick-amt-btn:hover,.quick-amt-btn:active{background:rgba(0,204,255,.15);border-color:rgba(0,204,255,.4)}
 .bought-btn.buy-action{background:rgba(0,255,136,.12);color:var(--g);border:1px solid rgba(0,255,136,.3)}
 .bought-btn.buy-action:active,.bought-btn.buy-action.owned{background:rgba(0,255,136,.22);box-shadow:0 0 14px rgba(0,255,136,.3)}
 .bought-btn.sell-action{background:rgba(255,215,0,.08);color:var(--au);border:1px solid rgba(255,215,0,.22)}
@@ -1588,6 +1590,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     <div id="sc-sector-chips" style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem"></div>
     <!-- Active price alerts strip (populated by JS) -->
     <div id="alert-strip" style="display:none"></div>
+    <!-- Live top movers (populated after price refresh) -->
+    <div id="sc-movers" style="display:none;margin-bottom:.6rem"></div>
     <div id="sc-grid" class="sc-grid">
       <div class="sc-empty">Loading…</div>
     </div>
@@ -1964,6 +1968,15 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
           onkeydown="if(event.key==='Enter')confirmBoughtIt()"/>
       </div>
     </div>
+    <div style="margin-bottom:.55rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--wh3);text-transform:uppercase;margin-bottom:.3rem">OR ENTER HOW MUCH $ YOU WANT TO INVEST</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+        <button onclick="setQuickAmount(100)" class="quick-amt-btn">$100</button>
+        <button onclick="setQuickAmount(250)" class="quick-amt-btn">$250</button>
+        <button onclick="setQuickAmount(500)" class="quick-amt-btn">$500</button>
+        <button onclick="setQuickAmount(1000)" class="quick-amt-btn">$1,000</button>
+      </div>
+    </div>
     <div id="buy-dialog-calc" style="min-height:28px;margin-bottom:.5rem;font-size:11px;color:var(--wh3)"></div>
     <div id="buy-dialog-stoploss" style="display:none;margin-bottom:.55rem;padding:.4rem .7rem;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.2);border-radius:8px;font-size:10.5px;color:var(--wh2);line-height:1.55"></div>
     <div style="margin-bottom:.6rem;padding:.38rem .7rem;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.12);border-radius:8px;font-size:10px;color:var(--wh3)">
@@ -2225,6 +2238,7 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     if (activeTab === 'signals') updateSignalsPortfolioAlert();
     checkPriceAlerts();
     updateLiveMarketMood();
+    updateTopMovers();
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
   }
@@ -2560,8 +2574,8 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
     activeTab = id;
-    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderScreener(); screenerBuilt = true; }
-    else if (id === 'screener') { renderAlertStrip(); renderScreener(); }
+    if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
+    else if (id === 'screener') { renderAlertStrip(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); }
     if (id === 'portfolio') renderPortfolio();
   }
@@ -2663,6 +2677,27 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
   window.cancelBoughtIt = function() {
     document.getElementById('buy-dialog-overlay')?.classList.remove('open');
     if (_boughtItResolve) { _boughtItResolve(null); _boughtItResolve = null; }
+  };
+
+  window.setQuickAmount = function(dollars) {
+    const priceEl = document.getElementById('buy-dialog-price');
+    const sharesEl = document.getElementById('buy-dialog-shares');
+    if (!priceEl || !sharesEl) return;
+    const price = parseFloat(priceEl.value);
+    if (!price || price <= 0) {
+      priceEl.style.borderColor = 'rgba(255,34,85,.6)';
+      setTimeout(() => { priceEl.style.borderColor = ''; }, 1500);
+      priceEl.focus();
+      return;
+    }
+    const shares = Math.floor(dollars / price);
+    if (shares < 1) {
+      const calcEl = document.getElementById('buy-dialog-calc');
+      if (calcEl) calcEl.innerHTML = `<span style="color:var(--au)">$${dollars} buys less than 1 share at $${price.toFixed(2)} — enter a smaller $ amount or use fractional shares with your broker</span>`;
+      return;
+    }
+    sharesEl.value = shares;
+    updateBuyCalc();
   };
 
   async function boughtIt(ticker, price) {
@@ -3377,6 +3412,36 @@ header,nav,.content,footer,.modal-overlay{position:relative;z-index:1}
       <span style="font-size:10px;font-weight:600;color:var(--wh3);flex-shrink:0">${parts.join(' · ')}</span>
       <span style="font-size:10.5px;color:var(--wh2);flex:1;min-width:160px">${advice}</span>
     </div>`;
+  }
+
+  // ── TOP MOVERS STRIP ────────────────────────────────────
+  function updateTopMovers() {
+    const el = document.getElementById('sc-movers');
+    if (!el) return;
+    const all = ROK.stock_universe || [];
+    const withPrices = all.filter(s => liveprices[s.ticker] && liveprices[s.ticker].change_pct != null)
+      .map(s => ({ ticker: s.ticker, chg: liveprices[s.ticker].change_pct, price: liveprices[s.ticker].price }));
+    if (withPrices.length < 4) { el.style.display = 'none'; return; }
+    withPrices.sort((a, b) => b.chg - a.chg);
+    const gainers = withPrices.slice(0, 3);
+    const losers = withPrices.slice(-3).reverse();
+    const chip = ({ticker, chg, price}, isGainer) => {
+      const col = isGainer ? 'var(--g)' : 'var(--r)';
+      const bg = isGainer ? 'rgba(0,255,136,.07)' : 'rgba(255,34,85,.07)';
+      const border = isGainer ? 'rgba(0,255,136,.2)' : 'rgba(255,34,85,.2)';
+      return `<button onclick="openAlertDialog('${ticker}',${price||0},event)" style="padding:3px 8px;border-radius:8px;background:${bg};border:1px solid ${border};cursor:pointer;font-family:var(--font);display:inline-flex;align-items:center;gap:4px;touch-action:manipulation">
+        <span style="font-family:var(--disp);font-size:11px;font-weight:700;color:${col}">${ticker}</span>
+        <span style="font-size:10px;font-weight:700;color:${col}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>
+      </button>`;
+    };
+    el.style.cssText = 'display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.55rem;padding:.35rem .6rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:8px';
+    el.innerHTML =
+      `<span style="font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--wh4);text-transform:uppercase;flex-shrink:0">📊 TODAY</span>` +
+      `<span style="font-size:8.5px;color:var(--g);font-weight:700;flex-shrink:0">▲ TOP</span>` +
+      gainers.map(s => chip(s, true)).join('') +
+      `<span style="color:rgba(255,255,255,.1);flex-shrink:0">│</span>` +
+      `<span style="font-size:8.5px;color:var(--r);font-weight:700;flex-shrink:0">▼ BOT</span>` +
+      losers.map(s => chip(s, false)).join('');
   }
 
   // ── PORTFOLIO DIVERSIFICATION ────────────────────────────
