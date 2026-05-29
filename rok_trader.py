@@ -461,6 +461,64 @@ def _macd_slope(closes):
     return round((e12_now - e26_now) - (e12_prev - e26_prev), 4)
 
 
+def _macd_divergence(closes):
+    """Detect MACD bullish/bearish divergence.
+    Bullish: price makes lower low, MACD histogram makes higher low (hidden buying pressure).
+    Bearish: price makes higher high, MACD histogram makes lower high.
+    Returns dict: {bullish_div, bearish_div, hist_now, hist_prev}
+    """
+    result = {"bullish_div": False, "bearish_div": False, "hist_now": 0.0, "hist_prev": 0.0}
+    if len(closes) < 40:
+        return result
+    try:
+        def _hist_at(c):
+            e12 = _ema(c, 12)
+            e26 = _ema(c, 26)
+            if not e12 or not e26:
+                return 0.0
+            macd_line = e12 - e26
+            signal = _ema([e12 - _ema(c[:i+1], 26) or 0 for i in range(26, len(c))], 9)
+            return macd_line - (signal or 0)
+
+        hist_now   = _hist_at(closes)
+        hist_5ago  = _hist_at(closes[:-5])
+        hist_10ago = _hist_at(closes[:-10])
+
+        result["hist_now"]  = round(hist_now, 4)
+        result["hist_prev"] = round(hist_5ago, 4)
+
+        price_now  = closes[-1]
+        price_5ago = closes[-6]
+
+        # Bullish divergence: price lower but histogram higher (momentum not confirming weakness)
+        if price_now < price_5ago and hist_now > hist_5ago and hist_now < 0:
+            result["bullish_div"] = True
+        # Bearish divergence: price higher but histogram lower (momentum not confirming strength)
+        if price_now > price_5ago and hist_now < hist_5ago and hist_now > 0:
+            result["bearish_div"] = True
+    except Exception:
+        pass
+    return result
+
+
+def _chandelier_exit(highs, closes, period=22, multiplier=3.0):
+    """Chandelier Exit: highest close in N bars - multiplier × ATR.
+    Best-in-class trailing stop — used by institutional traders.
+    Returns the stop level as a price (0 if not computable)."""
+    if len(highs) < period + 1 or len(closes) < period + 1:
+        return 0.0
+    try:
+        highest_close = max(closes[-period:])
+        atr_val = _atr(list(highs[-(period+1):]),
+                       [min(highs[i], closes[i]) for i in range(-(period+1), 0)],
+                       list(closes[-(period+1):]), period)
+        if not atr_val:
+            return 0.0
+        return round(highest_close - multiplier * atr_val, 4)
+    except Exception:
+        return 0.0
+
+
 def _ttm_squeeze(closes, highs, lows, period=20):
     """TTM Squeeze: returns (in_squeeze, just_fired).
     just_fired = was squeezed (BB inside KC) last bar, now breaking out = high-conviction breakout."""
@@ -1956,6 +2014,24 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # MACD divergence on daily closes
+    macd_div = {"bullish_div": False, "bearish_div": False, "hist_now": 0.0, "hist_prev": 0.0}
+    try:
+        if len(daily) >= 40:
+            macd_div = _macd_divergence(list(daily["Close"]))
+    except Exception:
+        pass
+
+    # Chandelier Exit — institutional trailing stop price
+    chandelier_stop = 0.0
+    try:
+        if "High" in daily.columns and len(daily) >= 23:
+            chandelier_stop = _chandelier_exit(
+                list(daily["High"]), list(daily["Close"]), period=22, multiplier=3.0
+            )
+    except Exception:
+        pass
+
     # Ichimoku Cloud — comprehensive trend/support/resistance analysis
     ichimoku = {"above_cloud": False, "cloud_bullish": False, "tk_ks_bullish": False, "chikou_bullish": False}
     try:
@@ -2181,6 +2257,9 @@ def _extract(daily, hourly):
         "ichimoku_chikou":     ichimoku.get("chikou_bullish", False),
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
+        "macd_bull_div":       macd_div.get("bullish_div", False),
+        "macd_bear_div":       macd_div.get("bearish_div", False),
+        "chandelier_stop":     chandelier_stop,
     }
 
 
@@ -2524,6 +2603,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Fibonacci retracement support: bouncing off 38.2/50/61.8% level = institutional buy zone (+9)
     if d.get("fib_support", False):    s += 9
     if d.get("fib_resistance", False): s -= 5
+
+    # MACD divergence: price and momentum disagree — leading reversal signal (+11/-8)
+    if d.get("macd_bull_div", False): s += 11   # price lower, MACD higher = hidden bullish strength
+    if d.get("macd_bear_div", False): s -= 8    # price higher, MACD lower = momentum weakening
 
     # NR7 / inside bar: volatility contraction before expansion (+8/+6)
     # These patterns precede large directional moves — buy the squeeze
@@ -3070,10 +3153,16 @@ def run():
                 _atr_stop_pct = min(STOP_LOSS_PCT * 100, max(3.0, _atr_pct * 2.5))
             else:
                 _atr_stop_pct = STOP_LOSS_PCT * 100
+            # Chandelier Exit: if price closes below highest_close - 3×ATR, trend has reversed
+            _chan_stop = _atr_sig.get("chandelier_stop", 0) or 0
+            _use_chandelier = (_chan_stop > 0 and cost > 0 and pnl_pct > 2
+                               and price < _chan_stop and age_days >= 3)
             # Pre-earnings sell: exit ANY position within 2 days of earnings to avoid binary risk
             # We rode the pre-earnings drift — now protect profits before the volatile event
             if has_earnings_soon(sym, days=2):
                 reason = f"pre-earnings exit (earnings in <2d, {pnl_pct:+.1f}%)"
+            elif _use_chandelier:
+                reason = f"chandelier exit (price ${price:.2f} < stop ${_chan_stop:.2f}, {pnl_pct:+.1f}%)"
             elif pnl_pct <= -_atr_stop_pct:
                 reason = f"stop loss ({pnl_pct:+.1f}% ≤ -{_atr_stop_pct:.1f}%)"
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
@@ -3442,6 +3531,7 @@ def run():
                                        live.get(tk,{}).get("ichimoku_tk_bull", False),
                                        live.get(tk,{}).get("ichimoku_chikou", False)]),
                 "fib_support":    live.get(tk, {}).get("fib_support", False),
+                "macd_bull_div":  live.get(tk, {}).get("macd_bull_div", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]

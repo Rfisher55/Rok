@@ -54616,7 +54616,8 @@ window.renderSectorRotation = renderSectorRotation;
             s.breakout_52w  ? '<span style="background:rgba(255,165,0,.2);color:#ffcc02;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">52W↑</span>' : '',
             s.earnings_beat ? '<span style="background:rgba(100,200,100,.18);color:#a5d6a7;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">EPS✓</span>' : '',
             (s.ichimoku >= 3) ? '<span style="background:rgba(156,39,176,.18);color:#ce93d8;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">ICH×'+s.ichimoku+'</span>' : '',
-            s.fib_support   ? '<span style="background:rgba(255,215,0,.15);color:#ffe57f;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">FIB</span>' : '',
+            s.fib_support      ? '<span style="background:rgba(255,215,0,.15);color:#ffe57f;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">FIB</span>' : '',
+            s.macd_bull_div    ? '<span style="background:rgba(0,230,118,.15);color:#69f0ae;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">MACD↗</span>' : '',
           ].filter(Boolean).join('');
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
             <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
