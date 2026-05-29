@@ -997,6 +997,12 @@ body.beginner-mode #beginner-banner { display:block }
   </div>
 </div>
 
+<!-- NEW DATA AVAILABLE BANNER -->
+<div id="refresh-available-banner" style="display:none;background:linear-gradient(90deg,rgba(0,255,136,.1),rgba(0,204,255,.08));border-bottom:1px solid rgba(0,255,136,.25);padding:.4rem 1rem;align-items:center;justify-content:space-between;gap:.5rem;font-size:10.5px;color:var(--wh2);cursor:pointer;flex-shrink:0" onclick="location.reload()">
+  <span>🔄 <strong>New ROK signals available</strong> — tap to refresh and see the latest picks</span>
+  <button onclick="event.stopPropagation();location.reload()" style="padding:.25rem .7rem;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.35);border-radius:8px;color:var(--g);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);flex-shrink:0;touch-action:manipulation">Refresh</button>
+</div>
+
 <!-- ROK MOOD BAR -->
 {% if data.market_mood or data.rok_message %}
 <div class="rok-bar">
@@ -1503,6 +1509,9 @@ body.beginner-mode #beginner-banner { display:block }
     </div>
     {% endif %}
 
+    <!-- Live SPY/QQQ chart (JS-populated) -->
+    <div id="mkt-spy-chart" style="display:none;margin-bottom:.85rem"></div>
+
     <!-- Live market briefing (JS-populated) -->
     <div id="mkt-live-brief" style="display:none;margin-bottom:.85rem;padding:.75rem 1rem;background:linear-gradient(135deg,rgba(0,204,255,.06),rgba(0,255,136,.03));border:1px solid rgba(0,204,255,.18);border-radius:12px"></div>
 
@@ -1806,6 +1815,7 @@ body.beginner-mode #beginner-banner { display:block }
         <button class="sort-btn" data-sort="rsi" title="Sort by RSI — most oversold first">RSI</button>
         <button class="sort-btn" data-sort="cap" title="Sort by market cap — bigger companies first">Cap</button>
         <button class="sort-btn" data-sort="volume" title="Sort by unusual volume — high activity first">Vol</button>
+        <button class="sort-btn" data-sort="opportunity" title="Sort by combined opportunity score: signal + low RSI + high volume">⚡ Score</button>
       </div>
       <span class="sc-cnt" id="sc-cnt"></span>
     </div>
@@ -2669,7 +2679,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); }
+    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); }
     renderLivePortStrip();
     updateTickerTape();
@@ -3461,7 +3471,7 @@ body.beginner-mode #beginner-banner { display:block }
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); }
-    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); }
+    if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); }
     if (id === 'portfolio') renderPortfolio();
   }
   window.showTab = showTab;
@@ -4901,6 +4911,20 @@ body.beginner-mode #beginner-banner { display:block }
         const [av, bv] = pairs.rsi;
         return av - bv; // lowest RSI (most oversold) first
       }
+      if (scSort === 'opportunity') {
+        // Composite: signal strength (0-10) + oversold bonus (RSI<40 = +3) + volume bonus (vol_ratio>2 = +2) + pct_from_52w bonus
+        const opp = s => {
+          let sc = (s.signal_strength || 5);
+          if (s.rsi != null && s.rsi < 40) sc += 3 * (1 - s.rsi / 40);
+          if (s.vol_ratio != null && s.vol_ratio > 2) sc += Math.min(3, s.vol_ratio / 2);
+          if (s.pct_from_52w_high != null && s.pct_from_52w_high < -20) sc += 2;
+          if (s.rok_signal === 'buy') sc += 5;
+          const lp = liveprices[s.ticker];
+          if (lp && lp.change_pct > 2) sc += 1;
+          return sc;
+        };
+        return opp(b) - opp(a); // higher score first
+      }
       const [av, bv] = pairs[scSort] || [0, 0];
       return scSortDir * (bv - av);
     });
@@ -5291,6 +5315,15 @@ body.beginner-mode #beginner-banner { display:block }
     };
     updateAge();
     setInterval(updateAge, 60000);
+
+    // Show "new data available" banner after 16+ minutes
+    const refreshBanner = document.getElementById('refresh-available-banner');
+    if (refreshBanner) {
+      setTimeout(() => {
+        const mins = Math.floor((Date.now() - genTime) / 60000);
+        if (mins >= 16) { refreshBanner.style.display = 'flex'; }
+      }, (16 - Math.floor((Date.now() - new Date(ts)) / 60000)) * 60000);
+    }
   }
 
   // ── MOBILE SEARCH ─────────────────────────────────────────
@@ -5852,6 +5885,66 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderGainersLosers = renderGainersLosers;
+
+  // ── LIVE SPY/QQQ INTRADAY CHART ──────────────────────
+  async function fetchSpyChart() {
+    const el = document.getElementById('mkt-spy-chart');
+    if (!el) return;
+    const { state } = getMarketState();
+    const range = (state === 'open' || state === 'post') ? '1d' : '5d';
+
+    try {
+      // Fetch SPY intraday
+      const r = await fetch(
+        `https://query1.finance.yahoo.com/v8/finance/chart/SPY?interval=5m&range=${range}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) return;
+      const j = await r.json();
+      const chart = j?.chart?.result?.[0];
+      if (!chart) return;
+      const timestamps = chart.timestamp || [];
+      const closes = chart.indicators?.quote?.[0]?.close || [];
+      const opens = chart.indicators?.quote?.[0]?.open || [];
+      const valid = timestamps.map((t, i) => ({ t, c: closes[i] })).filter(x => x.c != null);
+      if (valid.length < 5) return;
+
+      const prevClose = chart.meta?.previousClose || chart.meta?.chartPreviousClose || valid[0].c;
+      const lastClose = valid[valid.length - 1].c;
+      const changeFromOpen = prevClose > 0 ? ((lastClose - prevClose) / prevClose * 100) : 0;
+      const isUp = changeFromOpen >= 0;
+      const color = isUp ? '#00ff88' : '#ff2255';
+      const values = valid.map(x => x.c);
+
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:var(--blk3);border:1px solid ${isUp ? 'rgba(0,255,136,.15)' : 'rgba(255,34,85,.15)'};border-radius:12px;padding:.7rem 1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem">
+          <div>
+            <span style="font-size:9px;font-weight:800;letter-spacing:.12em;color:var(--wh3);text-transform:uppercase">SPY S&amp;P 500 ETF · TODAY</span>
+            <span style="font-size:7px;color:var(--g);margin-left:.4rem">● LIVE</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.1rem;font-weight:900;color:var(--wh)">$${lastClose.toFixed(2)}</div>
+            <div style="font-size:11px;font-weight:700;color:${isUp ? 'var(--g)' : 'var(--r)'}">
+              ${changeFromOpen >= 0 ? '+' : ''}${changeFromOpen.toFixed(2)}%
+            </div>
+          </div>
+        </div>
+        <div style="height:60px;border-radius:6px;overflow:hidden"><canvas id="spy-intraday-canvas" height="60"></canvas></div>
+        <div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--wh4);margin-top:.3rem">
+          <span>${range === '1d' ? 'Market Open' : '5 Days'}</span>
+          <span>${valid.length} bars · 5 min</span>
+          <span>Now</span>
+        </div>
+      </div>`;
+      setTimeout(() => {
+        const ex = Chart.getChart('spy-intraday-canvas');
+        if (ex) ex.destroy();
+        drawSpark('spy-intraday-canvas', values, color);
+      }, 30);
+    } catch { /* silent */ }
+  }
+  window.fetchSpyChart = fetchSpyChart;
 
   // ── LIVE TRENDING TICKERS ─────────────────────────────
   async function fetchTrendingTickers() {
