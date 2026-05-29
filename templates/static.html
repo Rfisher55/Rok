@@ -1054,6 +1054,8 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="live-macro-strip" style="display:none;margin-bottom:.6rem"></div>
     <!-- Next refresh countdown -->
     <div id="next-refresh-row" style="display:none;margin-bottom:.4rem;text-align:right;font-size:9px;color:var(--wh4)"></div>
+    <!-- Today's Best Trade Setup (JS-populated) -->
+    <div id="todays-best-setup" style="display:none;margin-bottom:.85rem"></div>
 
     {# Quick market snapshot row #}
     {% set sent = data.market_sentiment|upper %}
@@ -2177,13 +2179,51 @@ body.beginner-mode #beginner-banner { display:block }
         <input id="manual-ticker" type="text" placeholder="Ticker (e.g. AAPL)" maxlength="6"
           style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.5rem .85rem;font-size:16px;color:var(--wh);outline:none;text-transform:uppercase;font-family:var(--font)"
           oninput="this.value=this.value.toUpperCase()"
+          onblur="autoFillManualPrice(this.value)"
           onkeydown="if(event.key==='Enter')addManualTicker()"/>
         <input id="manual-price" type="number" placeholder="Price $" step="0.01" min="0"
           style="width:110px;background:rgba(255,255,255,.06);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.5rem .75rem;font-size:16px;color:var(--wh);outline:none;font-family:var(--font)"
           onkeydown="if(event.key==='Enter')addManualTicker()"/>
         <button onclick="addManualTicker()" style="background:rgba(0,204,255,.12);border:1px solid rgba(0,204,255,.25);border-radius:8px;padding:.5rem 1rem;font-size:12px;font-weight:700;color:var(--b);cursor:pointer;white-space:nowrap;touch-action:manipulation">ADD</button>
       </div>
-      <div style="font-size:10px;color:var(--wh3);margin-top:.4rem">Track stocks you already own — ROK will tell you when to sell or buy more</div>
+      <div id="manual-ticker-hint" style="font-size:10px;color:var(--wh3);margin-top:.4rem">Track stocks you already own — ROK will tell you when to sell or buy more</div>
+    </div>
+
+    <!-- Position sizing calculator -->
+    <div style="margin-top:.75rem;background:var(--blk3);border:1px solid rgba(153,85,255,.18);border-radius:12px;padding:.85rem 1rem">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.15em;color:rgba(153,85,255,.9);text-transform:uppercase;margin-bottom:.55rem">🎯 HOW MANY SHARES SHOULD I BUY?</div>
+      <div style="font-size:10px;color:var(--wh3);margin-bottom:.65rem">Enter your details — ROK calculates the exact position size to limit your risk</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem">
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">ACCOUNT SIZE ($)</div>
+          <input id="pos-account" type="number" placeholder="e.g. 10000" min="100" step="100"
+            style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:7px;padding:.45rem .65rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font)"
+            oninput="calcPositionSize()"/>
+        </div>
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">RISK PER TRADE</div>
+          <select id="pos-risk" onchange="calcPositionSize()"
+            style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:7px;padding:.45rem .65rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font);-webkit-appearance:none">
+            <option value="1">1% (Conservative)</option>
+            <option value="2" selected>2% (Standard)</option>
+            <option value="3">3% (Aggressive)</option>
+            <option value="5">5% (Very Aggressive)</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">ENTRY PRICE ($)</div>
+          <input id="pos-entry" type="number" placeholder="e.g. 150.00" min="0.01" step="0.01"
+            style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:7px;padding:.45rem .65rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font)"
+            oninput="calcPositionSize()"/>
+        </div>
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">STOP-LOSS PRICE ($)</div>
+          <input id="pos-stop" type="number" placeholder="e.g. 138.00" min="0.01" step="0.01"
+            style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(153,85,255,.2);border-radius:7px;padding:.45rem .65rem;font-size:14px;color:var(--wh);outline:none;font-family:var(--font)"
+            oninput="calcPositionSize()"/>
+        </div>
+      </div>
+      <div id="pos-result" style="font-size:12px;color:var(--wh3);padding:.45rem .65rem;background:rgba(153,85,255,.05);border:1px solid rgba(153,85,255,.1);border-radius:8px;line-height:1.7">Enter your account size and trade prices above</div>
     </div>
 
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.65rem">
@@ -2754,10 +2794,11 @@ body.beginner-mode #beginner-banner { display:block }
     renderROKTrackRecord();
     renderMorningBriefing();
     updateMarketLiveBrief();
-    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
+    if (activeTab === 'market') { fetchSectorEtfs(); renderUpcomingEvents(); renderInvestTodayVerdict(); renderGainersLosers(); renderLiveMarketBreadth(); fetchSpyChart(); fetchUnusualOptionsFlow(); updateFearGreedFromVIX(); }
     if (activeTab === 'portfolio') { renderActiveAlertsPanel(); fetchPortfolioIntraday(); }
-    if (activeTab === 'signals') updateLiveMacroStrip();
+    if (activeTab === 'signals') { updateLiveMacroStrip(); renderTodaysBestSetup(); }
     updateGlobalRiskAlert();
+    updateFearGreedFromVIX();
     renderLivePortStrip();
     updateTickerTape();
     if (btn) { btn.classList.remove('spinning'); }
@@ -3573,9 +3614,9 @@ body.beginner-mode #beginner-banner { display:block }
     activeTab = id;
     if (id === 'screener' && !screenerBuilt) { buildSectorChips(); renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); screenerBuilt = true; }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
-    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); }
+    if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); }
-    if (id === 'portfolio') renderPortfolio();
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); }
     if (id === 'intel') fetchWhaleRadar();
   }
   window.showTab = showTab;
@@ -3772,8 +3813,65 @@ body.beginner-mode #beginner-banner { display:block }
       : `✓ Check 💼 MY STOCKS tab daily — ROK will tell you when to sell`;
     showAppAlert(`✓ ${ticker} added at $${Number(usePrice).toFixed(2)}${sharesTxt} — ${nextStep}`, 'good', 6000);
     renderPortfolioSummary();
+    // Offer smart alert suggestions if no alerts exist yet for this ticker
+    const existingAlerts = getAlerts().filter(a => a.ticker === ticker && !a.triggered);
+    if (!existingAlerts.length) {
+      setTimeout(() => suggestAlertsAfterBuy(ticker, usePrice, det2), 2500);
+    }
   }
   window.boughtIt = boughtIt;
+
+  // ── SMART ALERT SUGGESTIONS AFTER ADDING STOCK ───────────
+  function suggestAlertsAfterBuy(ticker, buyPrice, det) {
+    const stopPrice = det?.stop_loss ? Number(det.stop_loss) : buyPrice * 0.92;
+    const targetPrice = det?.price_target ? Number(det.price_target) : buyPrice * 1.15;
+    const stopPct = ((stopPrice - buyPrice) / buyPrice * 100).toFixed(1);
+    const targetPct = ((targetPrice - buyPrice) / buyPrice * 100).toFixed(1);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'smart-alert-toast';
+    overlay.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);width:min(340px,92vw);background:linear-gradient(135deg,rgba(10,15,20,.97),rgba(15,25,35,.97));border:1px solid rgba(0,204,255,.25);border-radius:16px;padding:1rem 1.1rem;z-index:9990;box-shadow:0 8px 32px rgba(0,0,0,.6);animation:fadeInUp .3s ease';
+    overlay.innerHTML = `
+      <div style="font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--b);text-transform:uppercase;margin-bottom:.5rem">🛡️ PROTECT YOUR ${ticker} POSITION</div>
+      <div style="font-size:10.5px;color:var(--wh2);line-height:1.5;margin-bottom:.7rem">Set alerts so ROK notifies you automatically — no need to watch the screen all day</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.7rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .6rem;background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.2);border-radius:8px">
+          <div>
+            <div style="font-size:8px;color:var(--wh4)">🔴 STOP-LOSS ALERT</div>
+            <div style="font-size:11px;font-weight:700;color:var(--r)">$${stopPrice.toFixed(2)} <span style="font-size:9px;color:var(--wh3)">(${stopPct}%)</span></div>
+            <div style="font-size:9px;color:var(--wh4)">Sell if ${ticker} falls here</div>
+          </div>
+          <button onclick="setQuickAlert('${ticker}','below',${stopPrice.toFixed(2)});this.closest('#smart-alert-toast')?.remove()" style="background:rgba(255,34,85,.15);border:1px solid rgba(255,34,85,.3);border-radius:7px;padding:.35rem .7rem;font-size:10px;font-weight:700;color:var(--r);cursor:pointer;touch-action:manipulation;white-space:nowrap">SET ✓</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .6rem;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px">
+          <div>
+            <div style="font-size:8px;color:var(--wh4)">🟢 TARGET ALERT</div>
+            <div style="font-size:11px;font-weight:700;color:var(--g)">$${targetPrice.toFixed(2)} <span style="font-size:9px;color:var(--wh3)">(+${targetPct}%)</span></div>
+            <div style="font-size:9px;color:var(--wh4)">Take profit if ${ticker} hits here</div>
+          </div>
+          <button onclick="setQuickAlert('${ticker}','above',${targetPrice.toFixed(2)});this.closest('#smart-alert-toast')?.remove()" style="background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.25);border-radius:7px;padding:.35rem .7rem;font-size:10px;font-weight:700;color:var(--g);cursor:pointer;touch-action:manipulation;white-space:nowrap">SET ✓</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:.5rem">
+        <button onclick="setQuickAlert('${ticker}','below',${stopPrice.toFixed(2)});setQuickAlert('${ticker}','above',${targetPrice.toFixed(2)});document.getElementById('smart-alert-toast')?.remove()" style="flex:1;background:rgba(0,204,255,.12);border:1px solid rgba(0,204,255,.25);border-radius:8px;padding:.45rem;font-size:10px;font-weight:700;color:var(--b);cursor:pointer;touch-action:manipulation">✓ SET BOTH ALERTS</button>
+        <button onclick="document.getElementById('smart-alert-toast')?.remove()" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:.45rem .75rem;font-size:10px;color:var(--wh4);cursor:pointer;touch-action:manipulation">Skip</button>
+      </div>`;
+    document.getElementById('smart-alert-toast')?.remove();
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.remove(), 25000);
+  }
+  window.suggestAlertsAfterBuy = suggestAlertsAfterBuy;
+
+  function setQuickAlert(ticker, direction, price) {
+    const alerts = getAlerts();
+    const already = alerts.some(a => a.ticker === ticker && a.direction === direction && !a.triggered);
+    if (already) { showAppAlert(`Alert already exists for ${ticker}`, 'info', 2500); return; }
+    alerts.push({ ticker, target: Number(price), direction, created: Date.now(), triggered: false });
+    saveAlerts(alerts);
+    renderAlertStrip();
+    showAppAlert(`✓ Alert set: notify when ${ticker} goes ${direction} $${Number(price).toFixed(2)}`, 'good', 3500);
+  }
+  window.setQuickAlert = setQuickAlert;
 
   function showGuidance(ticker, event) {
     if (event) { event.stopPropagation(); event.preventDefault(); }
@@ -5327,6 +5425,122 @@ body.beginner-mode #beginner-banner { display:block }
   }
   window.addManualTicker = addManualTicker;
 
+  // ── AUTO-FILL PRICE WHEN TICKER IS ENTERED ────────────────
+  let _autoFillAbort = null;
+  async function autoFillManualPrice(rawTicker) {
+    const ticker = rawTicker.trim().toUpperCase();
+    const priceEl = document.getElementById('manual-price');
+    const hintEl = document.getElementById('manual-ticker-hint');
+    if (!ticker || ticker.length < 1 || ticker.length > 6 || !/^[A-Z]/.test(ticker)) return;
+    if (priceEl && parseFloat(priceEl.value) > 0) return; // already has price
+    // Check liveprices cache first
+    if (liveprices[ticker]?.price) {
+      if (priceEl) priceEl.value = liveprices[ticker].price.toFixed(2);
+      if (hintEl) hintEl.innerHTML = `<span style="color:var(--g)">✓ Live price auto-filled from market data</span>`;
+      setTimeout(() => { if (hintEl) hintEl.innerHTML = 'Track stocks you already own — ROK will tell you when to sell or buy more'; }, 3000);
+      return;
+    }
+    if (hintEl) hintEl.innerHTML = `<span style="color:var(--b)">⏳ Fetching live price for $${ticker}…</span>`;
+    try {
+      if (_autoFillAbort) _autoFillAbort.abort();
+      _autoFillAbort = new AbortController();
+      const url = `https://query1.finance.yahoo.com/v7/finance/quote?formatted=false&symbols=${ticker}&fields=regularMarketPrice,regularMarketChangePercent,shortName`;
+      const res = await fetch(url, { signal: _autoFillAbort.signal });
+      const json = await res.json();
+      const q = json?.quoteResponse?.result?.[0];
+      if (q?.regularMarketPrice) {
+        const price = q.regularMarketPrice;
+        const chg = q.regularMarketChangePercent || 0;
+        const name = (q.shortName || ticker).substring(0, 28);
+        liveprices[ticker] = { price, change_pct: chg };
+        if (priceEl && !parseFloat(priceEl.value)) priceEl.value = price.toFixed(2);
+        if (hintEl) hintEl.innerHTML = `<span style="color:var(--g)">✓ ${name} — $${price.toFixed(2)} <span style="color:${chg>=0?'var(--g)':'var(--r)'}">${chg>=0?'+':''}${chg.toFixed(2)}% today</span> · Price auto-filled ✨</span>`;
+        setTimeout(() => { if (hintEl) hintEl.innerHTML = 'Track stocks you already own — ROK will tell you when to sell or buy more'; }, 4000);
+      } else {
+        if (hintEl) hintEl.innerHTML = `<span style="color:var(--au)">⚠️ Could not find $${ticker} — check the ticker symbol</span>`;
+        setTimeout(() => { if (hintEl) hintEl.innerHTML = 'Track stocks you already own — ROK will tell you when to sell or buy more'; }, 3500);
+      }
+    } catch(e) {
+      if (e.name !== 'AbortError') {
+        if (hintEl) hintEl.innerHTML = 'Track stocks you already own — ROK will tell you when to sell or buy more';
+      }
+    }
+  }
+  window.autoFillManualPrice = autoFillManualPrice;
+
+  // ── POSITION SIZE CALCULATOR ──────────────────────────────
+  function calcPositionSize() {
+    const account = parseFloat(document.getElementById('pos-account')?.value) || 0;
+    const riskPct = parseFloat(document.getElementById('pos-risk')?.value) || 2;
+    const entry = parseFloat(document.getElementById('pos-entry')?.value) || 0;
+    const stop = parseFloat(document.getElementById('pos-stop')?.value) || 0;
+    const res = document.getElementById('pos-result');
+    if (!res) return;
+
+    // Pre-fill account size from localStorage if empty
+    const acctEl = document.getElementById('pos-account');
+    if (acctEl && !acctEl.value) {
+      const saved = parseFloat(localStorage.getItem('rok_account_size_v1')) || 0;
+      if (saved > 0) { acctEl.value = saved; }
+    }
+
+    if (!account || !entry || !stop) {
+      res.innerHTML = 'Enter your account size and trade prices above';
+      return;
+    }
+    if (stop >= entry) {
+      res.innerHTML = `<span style="color:var(--r)">⚠️ Stop-loss must be below entry price</span>`;
+      return;
+    }
+
+    const dollarRisk = account * (riskPct / 100);
+    const riskPerShare = entry - stop;
+    const shares = Math.floor(dollarRisk / riskPerShare);
+    const positionSize = shares * entry;
+    const portPct = (positionSize / account * 100).toFixed(1);
+    const stopPct = ((stop - entry) / entry * 100).toFixed(1);
+    const rr = entry / stop > 1 ? ((entry * 1.15 - entry) / riskPerShare).toFixed(1) : '—'; // assume 15% target
+
+    if (shares < 1) {
+      res.innerHTML = `<span style="color:var(--au)">⚠️ Account too small for this trade at ${riskPct}% risk — try a lower-priced stock or increase account size</span>`;
+      return;
+    }
+
+    const sizeWarn = positionSize > account * 0.3
+      ? `<div style="font-size:9px;color:var(--au);margin-top:.35rem">⚠️ This is ${portPct}% of your account — consider reducing position size for better diversification</div>`
+      : '';
+
+    res.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem">
+        <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.15);border-radius:7px;padding:.4rem .5rem;text-align:center">
+          <div style="font-size:8px;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">SHARES TO BUY</div>
+          <div style="font-size:1.4rem;font-weight:900;color:var(--g)">${shares}</div>
+        </div>
+        <div style="background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.15);border-radius:7px;padding:.4rem .5rem;text-align:center">
+          <div style="font-size:8px;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">MAX LOSS</div>
+          <div style="font-size:1.4rem;font-weight:900;color:var(--r)">$${dollarRisk.toFixed(0)}</div>
+        </div>
+        <div style="background:rgba(0,204,255,.06);border:1px solid rgba(0,204,255,.15);border-radius:7px;padding:.4rem .5rem;text-align:center">
+          <div style="font-size:8px;color:var(--wh4);letter-spacing:.08em;margin-bottom:2px">POSITION SIZE</div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--b)">$${positionSize.toFixed(0)}</div>
+        </div>
+      </div>
+      <div style="font-size:9.5px;color:var(--wh3);line-height:1.7">
+        Buy <strong style="color:var(--wh)">${shares} shares @ $${entry.toFixed(2)}</strong> · Stop at <strong style="color:var(--r)">$${stop.toFixed(2)} (${stopPct}%)</strong> · Risking <strong style="color:var(--r)">${riskPct}% of account ($${dollarRisk.toFixed(0)})</strong>
+      </div>
+      ${sizeWarn}
+      <div style="font-size:9px;color:var(--wh4);margin-top:.3rem">💡 If stopped out, you lose $${dollarRisk.toFixed(0)} — that's the most you can lose on this trade</div>`;
+  }
+  window.calcPositionSize = calcPositionSize;
+
+  // Pre-fill position calc account size on tab load
+  function initPositionCalc() {
+    const saved = parseFloat(localStorage.getItem('rok_account_size_v1')) || 0;
+    const acctEl = document.getElementById('pos-account');
+    if (acctEl && !acctEl.value && saved > 0) { acctEl.value = saved; calcPositionSize(); }
+  }
+  window.initPositionCalc = initPositionCalc;
+
   // ── QUICK TICKER LOOKUP ───────────────────────────────────
   async function quickLookupTicker(ticker) {
     const btn = document.getElementById('sc-lookup-btn');
@@ -6190,16 +6404,57 @@ body.beginner-mode #beginner-banner { display:block }
       const scoreEl = document.getElementById('fg-gauge-score');
       const explainEl = document.getElementById('fg-gauge-explain');
       const badge = document.getElementById('fg-live-badge');
-      if (pin) pin.style.left = `calc(${pct}% - 7px)`;
+      if (pin) { pin.style.left = `calc(${pct}% - 7px)`; pin.dataset.cnnSet = '1'; }
       if (scoreEl) scoreEl.textContent = `${score}/100 — ${rating}`;
       if (explainEl) {
         if (score < 30) explainEl.textContent = '🟢 Everyone is scared = often a great time to buy stocks at a discount';
         else if (score > 70) explainEl.textContent = '🔴 Everyone is greedy = stocks are expensive, be more careful';
         else explainEl.textContent = '🟡 Markets are calm — normal conditions';
       }
-      if (badge) { badge.style.display = 'block'; }
+      if (badge) { badge.style.display = 'block'; badge.textContent = '● LIVE'; }
     } catch { /* silent */ }
   }
+
+  // ── LIVE VIX → FEAR & GREED UPDATER ─────────────────────
+  function updateFearGreedFromVIX() {
+    const vix = liveprices['^VIX'];
+    const spy = liveprices['SPY'];
+    if (!vix?.price) return;
+    const vixVal = vix.price;
+    const spyChg = spy?.change_pct || 0;
+
+    // Compute composite score (inverted VIX → fear/greed)
+    // VIX 10=100, VIX 20=60, VIX 25=40, VIX 30=25, VIX 40=10
+    let score = Math.round(100 - (vixVal - 10) * 3.5);
+    // Blend SPY momentum: up >1.5% = +8, down >1.5% = -8
+    if (spyChg >= 1.5) score += 8;
+    else if (spyChg >= 0.5) score += 4;
+    else if (spyChg <= -1.5) score -= 8;
+    else if (spyChg <= -0.5) score -= 4;
+    score = Math.max(5, Math.min(95, score));
+
+    const rating = score >= 75 ? 'Extreme Greed' : score >= 55 ? 'Greed' : score >= 45 ? 'Neutral' : score >= 30 ? 'Fear' : 'Extreme Fear';
+    const pct = Math.min(98, Math.max(2, score));
+
+    const pin = document.getElementById('fg-gauge-pin');
+    const scoreEl = document.getElementById('fg-gauge-score');
+    const explainEl = document.getElementById('fg-gauge-explain');
+    const badge = document.getElementById('fg-live-badge');
+
+    // Only update if we haven't gotten a CNN score recently (CNN is more accurate)
+    // We signal CNN score via a data attribute on the pin
+    if (pin && !pin.dataset.cnnSet) {
+      pin.style.left = `calc(${pct}% - 7px)`;
+      if (scoreEl) scoreEl.textContent = `${score}/100 — ${rating} (VIX-based)`;
+      if (explainEl) {
+        if (score < 30) explainEl.textContent = '🟢 VIX is elevated — fear is high, often a good time to buy at a discount';
+        else if (score > 70) explainEl.textContent = '🔴 VIX is low — complacency is high, be careful chasing highs';
+        else explainEl.textContent = `🟡 VIX at ${vixVal.toFixed(1)} — normal market conditions`;
+      }
+      if (badge) { badge.style.display = 'block'; badge.textContent = '● VIX'; }
+    }
+  }
+  window.updateFearGreedFromVIX = updateFearGreedFromVIX;
 
   // ── MARKET TAB LIVE BRIEF ────────────────────────────────
   function updateMarketLiveBrief() {
@@ -6340,6 +6595,101 @@ body.beginner-mode #beginner-banner { display:block }
     }
   }
   window.updateLiveMacroStrip = updateLiveMacroStrip;
+
+  // ── TODAY'S BEST TRADE SETUP ─────────────────────────────
+  function renderTodaysBestSetup() {
+    const el = document.getElementById('todays-best-setup');
+    if (!el) return;
+    const buys = ROK.buy_signals || [];
+    if (!buys.length) { el.style.display = 'none'; return; }
+
+    // Pick the highest-conviction setup: has price target + stop loss + best signal strength
+    const candidates = buys.map(s => {
+      const det = sigDetails[s.ticker] || {};
+      const lp = liveprices[s.ticker];
+      const price = lp ? lp.price : (s.current_price || s.price || 0);
+      const target = det.price_target ? Number(det.price_target) : (s.analyst_target ? Number(s.analyst_target) : null);
+      const stop = det.stop_loss ? Number(det.stop_loss) : null;
+      const strength = s.signal_strength || det.signal_strength || 5;
+      const hasFullSetup = price && target && stop && target > price && stop < price;
+      const rr = hasFullSetup ? (target - price) / (price - stop) : 0;
+      return { ...s, price, target, stop, strength, hasFullSetup, rr };
+    }).filter(c => c.hasFullSetup && c.rr >= 1.5)
+      .sort((a, b) => (b.rr * b.strength) - (a.rr * a.strength));
+
+    if (!candidates.length) {
+      // Fallback: just show the strongest signal even without full setup
+      const best = buys.sort((a, b) => (b.signal_strength || 5) - (a.signal_strength || 5))[0];
+      if (!best) { el.style.display = 'none'; return; }
+      const lp = liveprices[best.ticker];
+      const price = lp ? lp.price : (best.current_price || best.price || 0);
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(0,255,136,.07),rgba(0,0,0,.2));border:1px solid rgba(0,255,136,.22);border-radius:14px;padding:.85rem 1rem;cursor:pointer" onclick="openModal('${best.ticker}')">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:rgba(0,255,136,.7);text-transform:uppercase;margin-bottom:.4rem">⚡ TODAY'S TOP ROK PICK</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:1.3rem;font-weight:900;color:var(--wh)">${best.ticker}</div>
+            <div style="font-size:10px;color:var(--wh3)">${(best.company_name || '').substring(0, 28)}</div>
+          </div>
+          <div style="text-align:right">
+            ${price ? `<div style="font-size:1.2rem;font-weight:900;color:var(--g)" id="tbs-price">$${price.toFixed(2)}</div>` : ''}
+            <div style="font-size:9px;color:var(--wh3)">Signal strength: ${best.signal_strength || 5}/10</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;color:var(--wh3);margin-top:.35rem">Tap for full analysis, entry point, and trade plan →</div>
+      </div>`;
+      return;
+    }
+
+    const s = candidates[0];
+    const pct = s.target ? ((s.target - s.price) / s.price * 100) : 0;
+    const riskPct = s.stop ? ((s.price - s.stop) / s.price * 100) : 0;
+    const rrStr = s.rr.toFixed(1);
+    const lp = liveprices[s.ticker];
+    const chg = lp?.change_pct;
+    const chgStr = chg != null ? `<span style="color:${chg>=0?'var(--g)':'var(--r)'};font-size:9px"> ${chg>=0?'+':''}${chg.toFixed(2)}%</span>` : '';
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(0,0,0,.3));border:2px solid rgba(0,255,136,.3);border-radius:14px;padding:.9rem 1.1rem;cursor:pointer;box-shadow:0 0 20px rgba(0,255,136,.06)" onclick="openModal('${s.ticker}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:rgba(0,255,136,.7);text-transform:uppercase">⚡ TODAY'S BEST TRADE SETUP · ${new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</div>
+        <span style="font-size:8px;color:var(--g);font-weight:700">● LIVE</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.6rem">
+        <div style="flex:1">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--wh);letter-spacing:-.01em">${s.ticker} <span style="font-size:1rem;font-weight:700;color:var(--g)">$${s.price.toFixed(2)}</span>${chgStr}</div>
+          <div style="font-size:10px;color:var(--wh3)">${(s.company_name || '').substring(0, 32)}</div>
+        </div>
+        <div style="flex-shrink:0;background:rgba(0,0,0,.3);border-radius:8px;padding:.35rem .65rem;text-align:center">
+          <div style="font-size:8px;color:var(--wh4);letter-spacing:.07em">R:R RATIO</div>
+          <div style="font-size:1.3rem;font-weight:900;color:var(--g)">${rrStr}:1</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.55rem">
+        <div style="background:rgba(0,204,255,.07);border:1px solid rgba(0,204,255,.2);border-radius:8px;padding:.4rem .5rem;text-align:center">
+          <div style="font-size:7.5px;color:var(--wh4);letter-spacing:.08em;margin-bottom:1px">ENTRY</div>
+          <div style="font-size:12px;font-weight:800;color:var(--b)">$${s.price.toFixed(2)}</div>
+          <div style="font-size:8px;color:var(--wh4)">current price</div>
+        </div>
+        <div style="background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.4rem .5rem;text-align:center">
+          <div style="font-size:7.5px;color:var(--wh4);letter-spacing:.08em;margin-bottom:1px">TARGET</div>
+          <div style="font-size:12px;font-weight:800;color:var(--g)">$${s.target.toFixed(2)}</div>
+          <div style="font-size:8px;color:var(--g)">+${pct.toFixed(1)}% gain</div>
+        </div>
+        <div style="background:rgba(255,34,85,.07);border:1px solid rgba(255,34,85,.2);border-radius:8px;padding:.4rem .5rem;text-align:center">
+          <div style="font-size:7.5px;color:var(--wh4);letter-spacing:.08em;margin-bottom:1px">STOP-LOSS</div>
+          <div style="font-size:12px;font-weight:800;color:var(--r)">$${s.stop.toFixed(2)}</div>
+          <div style="font-size:8px;color:var(--r)">-${riskPct.toFixed(1)}% max loss</div>
+        </div>
+      </div>
+      <div style="font-size:9.5px;color:var(--wh3);line-height:1.5;margin-bottom:.45rem">💡 <strong>Plain English:</strong> Buy ${s.ticker} around <strong style="color:var(--wh)">$${s.price.toFixed(2)}</strong>. If it hits <strong style="color:var(--g)">$${s.target.toFixed(2)}</strong> you make +${pct.toFixed(0)}%. If wrong, sell at <strong style="color:var(--r)">$${s.stop.toFixed(2)}</strong> to limit loss to -${riskPct.toFixed(0)}%. Risk $${(s.price-s.stop).toFixed(2)} to potentially make $${(s.target-s.price).toFixed(2)} per share.</div>
+      <div style="display:flex;gap:.5rem">
+        <button onclick="event.stopPropagation();boughtIt('${s.ticker}',${s.price.toFixed(2)})" style="flex:1;padding:.5rem;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);border-radius:8px;font-size:11px;font-weight:700;color:var(--g);cursor:pointer;touch-action:manipulation">💰 BOUGHT IT — TRACK IT</button>
+        <button onclick="event.stopPropagation();openModal('${s.ticker}')" style="padding:.5rem .75rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:11px;color:var(--wh3);cursor:pointer;touch-action:manipulation">📊 FULL ANALYSIS</button>
+      </div>
+    </div>`;
+  }
+  window.renderTodaysBestSetup = renderTodaysBestSetup;
 
   // ── LIVE MARKET NEWS FEED ────────────────────────────────
   async function fetchMarketNewsFeed() {
@@ -7309,6 +7659,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderTodaysTasks();
     renderROKTrackRecord();
     renderMorningBriefing();
+    renderTodaysBestSetup();
     renderLivePortStrip();
     updateTickerTape();
     updateMarketLiveBrief();
