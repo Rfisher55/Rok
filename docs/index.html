@@ -54864,6 +54864,8 @@ window.renderSectorRotation = renderSectorRotation;
             s.supertrend_bull  ? '<span style="background:rgba(0,255,100,.18);color:#b9f6ca;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px">ST▲</span>' : '',
             s.force_index_div  ? '<span style="background:rgba(120,80,255,.25);color:#ce93d8;font-size:6.5px;font-weight:900;padding:1px 4px;border-radius:3px">FI-DIV</span>' : (s.force_index_rising ? '<span style="background:rgba(100,60,200,.15);color:#b39ddb;font-size:6.5px;font-weight:700;padding:1px 4px;border-radius:3px">FI↑</span>' : ''),
             (s.true_alpha > 8) ? `<span style="background:rgba(255,215,0,.18);color:#ffd600;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">α${s.true_alpha.toFixed(0)}%</span>` : '',
+            s.ha_bull          ? `<span style="background:rgba(0,255,180,.15);color:#80cbc4;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">HA×${s.ha_consec_bull||''}</span>` : '',
+            s.donchian_up      ? '<span style="background:rgba(255,255,0,.18);color:#fff176;font-size:6.5px;font-weight:900;padding:1px 4px;border-radius:3px">DON↑</span>' : '',
             (s.earnings_days != null && s.earnings_days <= 20) ? (() => { const d = s.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col}">📅${d}d</span>`; })() : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';

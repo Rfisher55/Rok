@@ -604,6 +604,61 @@ def _beta_regression(stock_closes, spy_closes, period=63):
         return 1.0, 0.0
 
 
+def _heikin_ashi_trend(opens, highs, lows, closes, lookback=5):
+    """Heikin-Ashi candles remove noise and show pure trend.
+    HA-Close = (O+H+L+C)/4. HA-Open = (prev_HA_O + prev_HA_C) / 2.
+    Returns: (bullish_trend, bearish_trend, consecutive_bull, consecutive_bear)
+    - consecutive_bull >= 3 with no lower shadows = strong trend
+    """
+    if len(closes) < lookback + 2:
+        return False, False, 0, 0
+    try:
+        ha_open   = [(opens[0] + closes[0]) / 2]
+        ha_close  = [(opens[0] + highs[0] + lows[0] + closes[0]) / 4]
+        for i in range(1, len(closes)):
+            ha_c = (opens[i] + highs[i] + lows[i] + closes[i]) / 4
+            ha_o = (ha_open[-1] + ha_close[-1]) / 2
+            ha_open.append(ha_o)
+            ha_close.append(ha_c)
+        # Count consecutive HA bull/bear candles
+        c_bull = c_bear = 0
+        for i in range(-1, -lookback-1, -1):
+            if ha_close[i] > ha_open[i]:
+                if c_bear > 0: break
+                c_bull += 1
+            elif ha_close[i] < ha_open[i]:
+                if c_bull > 0: break
+                c_bear += 1
+            else:
+                break
+        bullish = c_bull >= 3
+        bearish = c_bear >= 3
+        return bullish, bearish, c_bull, c_bear
+    except Exception:
+        return False, False, 0, 0
+
+
+def _donchian_breakout(closes, highs, lows, period=20):
+    """Donchian Channel: N-period high/low breakout — used in Turtle Trading.
+    Price above 20-day high = bullish breakout. Below 20-day low = bearish.
+    Returns (breakout_up, breakout_down, channel_pct_position)
+    channel_pct_position: 0=at low, 100=at high, 50=middle of channel.
+    """
+    if len(closes) < period + 2:
+        return False, False, 50.0
+    try:
+        ch_high = max(highs[-period-1:-1])  # exclude today to check if today breaks it
+        ch_low  = min(lows[-period-1:-1])
+        price   = closes[-1]
+        ch_range = ch_high - ch_low
+        pos = (price - ch_low) / ch_range * 100 if ch_range > 0 else 50.0
+        breakout_up   = price > ch_high * 1.001   # 0.1% buffer to avoid false breakouts
+        breakout_down = price < ch_low  * 0.999
+        return breakout_up, breakout_down, round(pos, 1)
+    except Exception:
+        return False, False, 50.0
+
+
 def _mfi(closes, highs, lows, volumes, period=14):
     """Money Flow Index: volume-weighted RSI (0-100).
     MFI < 20 = oversold (institutional accumulation). MFI > 80 = overbought.
@@ -1954,6 +2009,11 @@ def ai_sentiment(ticker, use_sonnet=False, signals: dict = None):
             true_beta_v  = signals.get("true_beta",  1) or 1
             if true_alpha_v > 8:
                 extras.append(f"Jensen's alpha {true_alpha_v:+.1f}% (beta={true_beta_v:.2f}) — outperforms SPY risk-adjusted; high-quality stock")
+            if signals.get("ha_bull"):
+                ha_n = signals.get("ha_consec_bull", 3)
+                extras.append(f"Heikin-Ashi {ha_n} consecutive bull candles — clean institutional uptrend, no noise")
+            if signals.get("donchian_up"):
+                extras.append("Donchian 20-day high breakout — Turtle Trading momentum signal; institutional trend confirmation")
             if signals.get("kc_breakout"):
                 extras.append("Keltner Channel breakout — price above EMA+2×ATR (strong momentum)")
             if signals.get("kc_oversold"):
@@ -3020,6 +3080,31 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Heikin-Ashi trend: noise-filtered candles — 3+ consecutive bull HA = strong trend
+    # Eliminates head-fakes; institutional traders use HA for trend confirmation
+    ha_bull = ha_bear = False
+    ha_consec_bull = ha_consec_bear = 0
+    try:
+        if all(col in daily.columns for col in ["Open", "High", "Low", "Close"]) and len(daily) >= 10:
+            ha_bull, ha_bear, ha_consec_bull, ha_consec_bear = _heikin_ashi_trend(
+                list(daily["Open"]), list(daily["High"]), list(daily["Low"]), list(daily["Close"]),
+                lookback=7
+            )
+    except Exception:
+        pass
+
+    # Donchian Channel breakout: N-day high breakout = turtle-trading momentum signal
+    # Price above 20-day high = new sustained uptrend (high institutional conviction)
+    donchian_up = donchian_down = False
+    donchian_pct = 50.0
+    try:
+        if all(col in daily.columns for col in ["High", "Low", "Close"]) and len(daily) >= 22:
+            donchian_up, donchian_down, donchian_pct = _donchian_breakout(
+                list(daily["Close"]), list(daily["High"]), list(daily["Low"]), period=20
+            )
+    except Exception:
+        pass
+
     # Bull flag: flagpole (strong surge) followed by tight consolidation → breakout
     # One of the highest-probability momentum continuation patterns
     bull_flag = False
@@ -3427,6 +3512,12 @@ def _extract(daily, hourly):
         "force_index_div":     fi_bull_div,
         "true_beta":           true_beta,
         "true_alpha":          true_alpha,
+        "ha_bull":             ha_bull,
+        "ha_bear":             ha_bear,
+        "ha_consec_bull":      ha_consec_bull,
+        "donchian_up":         donchian_up,
+        "donchian_down":       donchian_down,
+        "donchian_pct":        donchian_pct,
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "macd_bull_div":       macd_div.get("bullish_div", False),
@@ -4006,6 +4097,20 @@ def score(tk, d, sentiment=0, regime_adj=0):
     true_alpha_v = d.get("true_alpha", 0) or 0
     if true_alpha_v > 15:   s += 6   # exceptional alpha generator
     elif true_alpha_v > 8:  s += 3   # solid alpha
+
+    # Heikin-Ashi trend: 3+ consecutive HA bull candles = clean institutional uptrend (+7)
+    # 5+ consecutive = extremely strong trend (+10); bearish HA = -4
+    ha_c = d.get("ha_consec_bull", 0) or 0
+    if d.get("ha_bull", False):
+        if ha_c >= 5:   s += 10
+        elif ha_c >= 3: s += 7
+    elif d.get("ha_bear", False): s -= 4
+
+    # Donchian Channel breakout: 20-day high breakout = turtle-trading momentum signal (+8)
+    # High position in channel (>80%): approaching resistance but still strong (+3)
+    if d.get("donchian_up", False):                               s += 8
+    elif (d.get("donchian_pct", 50) or 50) >= 80:                s += 3
+    elif d.get("donchian_down", False):                           s -= 6
 
     # Keltner Channel breakout: price above upper band = strong institutional momentum (+9)
     # Oversold: price below lower band = mean-reversion setup (+5 for oversold bounces)
@@ -5074,8 +5179,10 @@ def run():
                 if live.get(tk, {}).get("mfi_bull_div"):      extras.append(f"MFI-div{live.get(tk,{}).get('mfi',50):.0f}")
                 elif live.get(tk, {}).get("mfi_oversold"):    extras.append(f"MFI-OS{live.get(tk,{}).get('mfi',50):.0f}")
                 if live.get(tk, {}).get("supertrend_bull"):   extras.append("ST-BULL")
-                if live.get(tk, {}).get("force_index_div"):   extras.append("FI-DIV")
+                if live.get(tk, {}).get("force_index_div"):     extras.append("FI-DIV")
                 elif live.get(tk, {}).get("force_index_rising"): extras.append("FI↑")
+                if live.get(tk, {}).get("ha_bull"):              extras.append(f"HA×{live.get(tk,{}).get('ha_consec_bull',0)}")
+                if live.get(tk, {}).get("donchian_up"):          extras.append("DON-BRK")
                 if live.get(tk, {}).get("kc_breakout"):      extras.append("KC-BRK")
                 elif live.get(tk, {}).get("kc_oversold"):    extras.append("KC-OVS")
                 if _grade_now == "A+":              extras.append("GRADE:A+")
