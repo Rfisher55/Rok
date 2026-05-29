@@ -2047,12 +2047,13 @@ def _extract(daily, hourly):
                 _, ttm_squeeze_fired = _ttm_squeeze(hc, hh, hl, period=20)
 
     # Daily trend alignment (weekly proxy using 15-day daily data)
-    daily_trend = 0.0
-    daily_rsi   = 50.0
-    stoch_k     = 50.0
-    stoch_d     = 50.0
-    roc5        = 0.0
-    price_vs_ema50 = 0.0
+    daily_trend    = 0.0
+    daily_rsi      = 50.0
+    stoch_k        = 50.0
+    stoch_d        = 50.0
+    roc5           = 0.0
+    price_vs_ema50  = 0.0
+    price_vs_ema200 = 0.0
     try:
         dc = list(daily["Close"])
         if len(dc) >= 15:
@@ -2069,6 +2070,15 @@ def _extract(daily, hourly):
             e50 = _ema(dc, 50)
             if e50 and e50 > 0:
                 price_vs_ema50 = (dc[-1] - e50) / e50 * 100
+        # 200-day EMA: above = institutional uptrend, below = bear territory
+        if len(dc) >= 200:
+            e200 = _ema(dc, 200)
+            if e200 and e200 > 0:
+                price_vs_ema200 = (dc[-1] - e200) / e200 * 100
+        elif len(dc) >= 63:
+            # Use 63-day as proxy if 200 not available (93-day period = 1 quarter)
+            e200 = _ema(dc, len(dc))
+            price_vs_ema200 = (dc[-1] - e200) / e200 * 100 if e200 else 0.0
     except Exception:
         pass
 
@@ -2313,8 +2323,9 @@ def _extract(daily, hourly):
         "rs1":             rs1,
         "rs5":             rs5,
         "rs63":            rs63,
-        "mtf_aligned":     mtf_aligned,
-        "mtf_conflict":    mtf_conflict,
+        "mtf_aligned":       mtf_aligned,
+        "mtf_conflict":      mtf_conflict,
+        "price_vs_ema200":   round(price_vs_ema200, 2),
         "atr":             round(atr_val, 3) if atr_val else None,
         "stoch_k":            round(stoch_k, 1),
         "stoch_d":            round(stoch_d, 1),
@@ -2506,6 +2517,43 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
     return result
 
 
+# ── Momentum Grade: letter grade for signal quality ──────────────────────────
+def momentum_grade(d, final_score=0):
+    """
+    Assign A+/A/B/C/D/F grade based on signal quality criteria.
+    Based on how many institutional-quality signals are present.
+    """
+    criteria = 0
+    # Trend quality
+    if d.get("price_vs_ema200", 0) > 3:       criteria += 1  # above 200 EMA
+    if d.get("price_vs_ema50", 0) > 0:        criteria += 1  # above 50 EMA
+    if d.get("mtf_aligned", False):            criteria += 2  # daily + hourly aligned (double weight)
+    # Momentum
+    if (d.get("daily_rsi", 50) or 50) > 50:   criteria += 1  # daily RSI bullish
+    if (d.get("adx", 0) or 0) >= 25:          criteria += 1  # strong trend
+    if (d.get("rs5", 0) or 0) > 2:            criteria += 1  # outperforming SPY
+    if (d.get("rs63", 0) or 0) > 5:           criteria += 1  # quarterly leader
+    # Setup quality
+    if d.get("ichimoku_above", False):         criteria += 1  # Ichimoku bullish
+    if d.get("ttm_squeeze_fired", False):      criteria += 1  # squeeze breakout
+    if d.get("fib_support", False):            criteria += 1  # Fibonacci support
+    if d.get("macd_bull_div", False):          criteria += 1  # MACD divergence
+    if d.get("at_breakout", False):            criteria += 1  # technical breakout
+    if d.get("vwap_reclaim", False):           criteria += 1  # VWAP reclaim
+
+    # Score contribution
+    if   final_score >= 80: criteria += 2
+    elif final_score >= 65: criteria += 1
+
+    if   criteria >= 12: return "A+"
+    elif criteria >= 10: return "A"
+    elif criteria >= 8:  return "B+"
+    elif criteria >= 6:  return "B"
+    elif criteria >= 4:  return "C"
+    elif criteria >= 2:  return "D"
+    else:                return "F"
+
+
 # ── Signal scoring ────────────────────────────────────────────────────────────
 def score(tk, d, sentiment=0, regime_adj=0):
     """
@@ -2558,6 +2606,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif daily_tr > 0.1:  s +=  4
     elif daily_tr < -0.5: s -= 10
     elif daily_tr < -0.1: s -=  5
+
+    # 200-day EMA position: institutional trend filter (+8/-12)
+    # Above 200 EMA = institutional money in buy mode; below = distribution/bear phase
+    ema200_pos = d.get("price_vs_ema200", 0) or 0
+    if   ema200_pos > 10:   s +=  8   # clearly in bull territory
+    elif ema200_pos > 3:    s +=  4
+    elif ema200_pos < -10:  s -= 12   # bear territory — very cautious
+    elif ema200_pos < -3:   s -=  6
 
     # Multi-timeframe confluence: bonus when daily+hourly both confirm direction (+12/-10)
     # MTF alignment is the single strongest quality filter — reduces false signals significantly
@@ -3697,6 +3753,7 @@ def run():
                 "fib_support":    live.get(tk, {}).get("fib_support", False),
                 "macd_bull_div":  live.get(tk, {}).get("macd_bull_div", False),
                 "mtf_aligned":    live.get(tk, {}).get("mtf_aligned", False),
+                "grade":          momentum_grade(live.get(tk, {}), sc),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -3883,9 +3940,11 @@ def run():
                 "rs5":            round(sig.get("rs5", 0), 2),
                 "rs63":           round(sig.get("rs63", 0), 2),
                 "chandelier_stop": round(sig.get("chandelier_stop", 0), 2),
-                "ichimoku":       sum([sig.get("ichimoku_above", False), sig.get("ichimoku_bull_cloud", False),
-                                       sig.get("ichimoku_tk_bull", False), sig.get("ichimoku_chikou", False)]),
-                "macd_bull_div":  sig.get("macd_bull_div", False),
+                "ichimoku":        sum([sig.get("ichimoku_above", False), sig.get("ichimoku_bull_cloud", False),
+                                        sig.get("ichimoku_tk_bull", False), sig.get("ichimoku_chikou", False)]),
+                "macd_bull_div":   sig.get("macd_bull_div", False),
+                "mtf_aligned":     sig.get("mtf_aligned", False),
+                "price_vs_ema200": round(sig.get("price_vs_ema200", 0), 2),
             }
 
         tlog["positions"] = [

@@ -54622,10 +54622,12 @@ window.renderSectorRotation = renderSectorRotation;
             s.macd_bull_div    ? '<span style="background:rgba(0,230,118,.15);color:#69f0ae;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">MACD↗</span>' : '',
             s.mtf_aligned      ? '<span style="background:rgba(0,200,255,.15);color:#80deea;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px">MTF✓</span>' : '',
           ].filter(Boolean).join('');
+          const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
             <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
               <span style="font-family:var(--disp);color:var(--au);min-width:42px;font-size:.95rem">\$${s.ticker}</span>
               <span style="font-size:10px;font-weight:900;color:#00ff88;min-width:22px">${s.score}</span>
+              ${s.grade ? `<span style="font-size:7px;font-weight:900;color:#000;background:${gradeCol};padding:1px 5px;border-radius:3px;letter-spacing:.05em">${s.grade}</span>` : ''}
               ${s.price ? `<span style="font-size:8px;color:#aaa">\$${s.price}</span>` : ''}
               <span style="font-size:8px;font-weight:700;color:${chgCol}">${(s.chg_pct||0)>=0?'+':''}${(s.chg_pct||0).toFixed(2)}%</span>
               <span style="font-size:7.5px;color:#4a6fa5">${s.sector||''}</span>
