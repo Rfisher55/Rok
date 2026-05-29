@@ -3475,6 +3475,33 @@ def run():
     _avg_win  = round(_gross_wins  / max(1, sum(1 for t in _closed if t["pnl_pct"] > 0)), 2) if _closed else None
     _avg_loss = round(_gross_losses/ max(1, sum(1 for t in _closed if t["pnl_pct"] < 0)), 2) if _closed else None
 
+    # Signal attribution analytics: which reason-tags correlate with wins vs losses
+    _signal_analytics = {}
+    try:
+        _signal_tags = ["gap", "squeeze", "vol-surge", "call-flow", "earnings-beat",
+                         "pre-earnings", "mean-rev", "52W-breakout", "persistent", "re-entry"]
+        for tag in _signal_tags:
+            _trades_with = [t for t in _closed if tag in (t.get("reason", "") or "")]
+            if len(_trades_with) >= 2:
+                _wins_with   = [t for t in _trades_with if t["pnl_pct"] > 0]
+                _avg_pnl_tag = round(sum(t["pnl_pct"] for t in _trades_with) / len(_trades_with), 2)
+                _signal_analytics[tag] = {
+                    "trades":  len(_trades_with),
+                    "wins":    len(_wins_with),
+                    "wr":      round(len(_wins_with) / len(_trades_with) * 100, 1),
+                    "avg_pnl": _avg_pnl_tag,
+                }
+        # Recent 10 closed trades for quick dashboard display
+        _recent_closed = sorted(_closed, key=lambda t: t.get("time", ""), reverse=True)[:10]
+        tlog["recent_closed_trades"] = [
+            {"ticker": t.get("ticker",""), "pnl_pct": round(t["pnl_pct"],2),
+             "reason": (t.get("reason","") or "")[:40], "time": t.get("time","")}
+            for t in _recent_closed
+        ]
+    except Exception:
+        pass
+    tlog["signal_analytics"] = _signal_analytics
+
     # Sharpe-like ratio: avg trade return / std dev (measures consistency)
     _sharpe_ratio = None
     try:
