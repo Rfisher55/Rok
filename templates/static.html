@@ -2248,6 +2248,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-sector-alloc" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-health-check" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-earnings-cal" style="display:none;margin-bottom:.75rem"></div>
+    <div id="port-dividend-tracker" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-news" style="display:none;margin-bottom:.75rem"></div>
     <div id="port-ath-banner" style="display:none;margin-bottom:.65rem"></div>
     <div id="port-daily-digest" style="display:none;margin-bottom:.75rem"></div>
@@ -3303,6 +3304,49 @@ body.beginner-mode #beginner-banner { display:block }
       </div>` : ''}
       ${rokTake ? `<div style="padding:0 1.1rem .75rem"><div class="rok-take">${rokTake}</div></div>` : ''}
       ${buildModalForYou(s, sig, det, curPrice)}
+      ${sig === 'buy' && det.stop_loss && curPrice ? (() => {
+        const acctSize = parseFloat(localStorage.getItem('rok_account_size_v1') || '0');
+        const stop = det.stop_loss;
+        const riskPerShare = curPrice - stop;
+        if (riskPerShare <= 0) return '';
+        const sections = [];
+        if (acctSize > 0) {
+          const riskPct = 2; // 2% default
+          const dollarRisk = acctSize * riskPct / 100;
+          const shares = Math.floor(dollarRisk / riskPerShare);
+          const totalCost = shares * curPrice;
+          const maxLoss = shares * riskPerShare;
+          const leftoverCash = acctSize - totalCost;
+          const pctOfPort = (totalCost / acctSize * 100).toFixed(0);
+          if (shares > 0) {
+            sections.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem">
+              <div style="background:rgba(0,204,255,.05);border:1px solid rgba(0,204,255,.12);border-radius:7px;padding:.4rem .6rem;text-align:center">
+                <div style="font-size:1.4rem;font-weight:900;color:var(--b);line-height:1">${shares.toLocaleString()}</div>
+                <div style="font-size:8px;color:var(--wh4);margin-top:1px">shares to buy</div>
+              </div>
+              <div style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:7px;padding:.4rem .6rem;text-align:center">
+                <div style="font-size:1.4rem;font-weight:900;color:var(--g);line-height:1">$${totalCost.toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+                <div style="font-size:8px;color:var(--wh4);margin-top:1px">total position</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.2rem;font-size:10.5px;color:var(--wh2)">
+              <div>✅ Max loss if stop hit: <strong style="color:var(--r)">$${maxLoss.toFixed(2)}</strong> (${riskPct}% of your $${acctSize.toLocaleString()} account)</div>
+              <div>📊 Position size: <strong>${pctOfPort}%</strong> of portfolio — ${pctOfPort <= 10 ? '✅ conservative' : pctOfPort <= 20 ? '⚠️ moderate' : '🔥 aggressive'}</div>
+              ${leftoverCash > 0 ? `<div style="color:var(--wh4)">💵 Remaining cash after this trade: $${leftoverCash.toLocaleString('en-US', {minimumFractionDigits:0,maximumFractionDigits:0})}</div>` : ''}
+            </div>`);
+          }
+        } else {
+          sections.push(`<div style="font-size:10px;color:var(--wh3);line-height:1.5">
+            <div style="margin-bottom:.3rem">Risk per share: <strong style="color:var(--r)">$${riskPerShare.toFixed(2)}</strong> (from entry to stop)</div>
+            <div style="font-size:9px;color:var(--wh4)">Set your account size in the 💼 Portfolio tab to get exact position sizing.</div>
+          </div>`);
+        }
+        return `<div style="padding:.75rem 1.1rem;border-top:var(--bdr2)">
+          <div style="font-size:8px;font-weight:800;letter-spacing:.15em;color:var(--b);text-transform:uppercase;margin-bottom:.5rem">📐 QUICK TRADE PLAN</div>
+          <div style="font-size:9px;color:var(--wh3);margin-bottom:.4rem">Entry: <strong>$${curPrice.toFixed(2)}</strong> · Stop: <strong style="color:var(--r)">$${stop.toFixed(2)}</strong>${det.price_target ? ` · Target: <strong style="color:var(--g)">$${Number(det.price_target).toFixed(2)}</strong>` : ''} · Risk/share: <strong>$${riskPerShare.toFixed(2)}</strong></div>
+          ${sections.join('')}
+        </div>`;
+      })() : ''}
       ${sig === 'buy' && priceTarget && curPrice ? `
       <div style="padding:.75rem 1.1rem;border-top:var(--bdr2)">
         <div style="font-size:8px;font-weight:700;letter-spacing:.15em;color:var(--g);text-transform:uppercase;margin-bottom:.65rem">💰 PROFIT CALCULATOR</div>
@@ -3892,7 +3936,7 @@ body.beginner-mode #beginner-banner { display:block }
     else if (id === 'screener') { renderAlertStrip(); renderRecentlyViewed(); updateTopMovers(); renderScreener(); }
     if (id === 'signals') { initSignalSparks(); updateSignalsPortfolioAlert(); renderTodaysTasks(); renderROKTrackRecord(); renderMorningBriefing(); updateLiveMacroStrip(); renderTodaysBestSetup(); setTimeout(fetchSignalsLiveNews, 2000); }
     if (id === 'market') { updateMarketLiveBrief(); fetchLiveFearGreed(); fetchSectorEtfs(); renderSectorHeatmap(); renderUpcomingEvents(); renderInvestTodayVerdict(); fetchMarketNewsFeed(); fetchLiveCommodities(); renderGainersLosers(); renderROKSignalMovers(); renderLiveMarketBreadth(); fetchTrendingTickers(); fetchSpyChart(); fetchUnusualOptionsFlow(); renderBreakoutScanner(); renderRelativeStrength(); }
-    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); }
+    if (id === 'portfolio') { renderPortfolio(); initPositionCalc(); renderPortfolioAutopilot(); renderPortfolioRiskScore(); setTimeout(fetchPortfolioDividends, 1500); }
     if (id === 'intel') { fetchWhaleRadar(); fetchSqueezeScanner(); fetchSectorFlow(); }
   }
   window.showTab = showTab;
@@ -5237,6 +5281,7 @@ body.beginner-mode #beginner-banner { display:block }
     renderPortfolioHealthCheck();
     renderPortfolioRiskScore();
     renderPortfolioAutopilot();
+    setTimeout(fetchPortfolioDividends, 2000);
     fetchPortfolioEarnings();
     renderDiversificationCheck();
     const grid = document.getElementById('portfolio-grid');
@@ -8373,6 +8418,90 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
   window.renderPortfolioRiskScore = renderPortfolioRiskScore;
+
+  // ── PORTFOLIO DIVIDEND TRACKER ───────────────────────────
+  let _divCache = {};
+  async function fetchPortfolioDividends() {
+    const el = document.getElementById('port-dividend-tracker');
+    if (!el) return;
+    const port = getPortfolio();
+    const tickers = Object.keys(port);
+    if (!tickers.length) { el.style.display = 'none'; return; }
+
+    // Fetch dividend data for uncached tickers
+    const toFetch = tickers.filter(t => !_divCache[t] && Date.now() - (_divCache[t+'_ts'] || 0) > 30 * 60 * 1000);
+    if (toFetch.length) {
+      try {
+        const syms = toFetch.join(',');
+        const r = await fetch(
+          `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(syms)}&fields=trailingAnnualDividendYield,trailingAnnualDividendRate,forwardDividendYield,forwardDividendRate,dividendDate,exDividendDate`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        if (r.ok) {
+          const j = await r.json();
+          (j?.quoteResponse?.result || []).forEach(q => {
+            const yld = q.trailingAnnualDividendYield || q.forwardDividendYield || 0;
+            const rate = q.trailingAnnualDividendRate || q.forwardDividendRate || 0;
+            const exDiv = q.exDividendDate ? new Date(q.exDividendDate * 1000) : null;
+            _divCache[q.symbol] = { yield: yld, rate, exDiv };
+            _divCache[q.symbol + '_ts'] = Date.now();
+          });
+        }
+      } catch { /* silent */ }
+    }
+
+    // Build display
+    const rows = tickers.map(t => {
+      const d = _divCache[t];
+      if (!d || !d.yield || d.yield < 0.001) return null; // no dividend
+      const lp = liveprices[t];
+      const price = lp?.price || getPortfolio()[t]?.price || 0;
+      const entry = getPortfolio()[t];
+      const shares = entry?.shares || 0;
+      const annualIncome = shares > 0 ? shares * (d.rate || 0) : null;
+      const daysToExDiv = d.exDiv ? Math.round((d.exDiv - Date.now()) / 86400000) : null;
+      const upcoming = daysToExDiv != null && daysToExDiv >= -5 && daysToExDiv <= 30;
+      return { ticker: t, yield: d.yield, rate: d.rate, annualIncome, exDiv: d.exDiv, daysToExDiv, upcoming };
+    }).filter(Boolean);
+
+    if (!rows.length) {
+      // None of the portfolio stocks pay dividends
+      el.style.display = 'block';
+      el.innerHTML = `<div style="background:var(--blk3);border:var(--bdr2);border-radius:10px;padding:.65rem .85rem">
+        <div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--wh4)">💰 DIVIDEND TRACKER</div>
+        <div style="font-size:10px;color:var(--wh4);margin-top:.3rem">None of your current holdings pay dividends. ROK buy signals often focus on growth stocks.</div>
+      </div>`;
+      return;
+    }
+
+    const totalAnnual = rows.reduce((s, r) => s + (r.annualIncome || 0), 0);
+    const upcomingEx = rows.filter(r => r.upcoming).sort((a,b) => a.daysToExDiv - b.daysToExDiv);
+
+    el.style.display = 'block';
+    el.innerHTML = `<div style="background:var(--blk3);border:1px solid rgba(255,215,0,.1);border-radius:12px;padding:.75rem 1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+        <span style="font-size:8.5px;font-weight:800;letter-spacing:.12em;color:var(--au)">💰 DIVIDEND TRACKER</span>
+        ${totalAnnual > 0 ? `<span style="font-size:10px;font-weight:700;color:var(--au)">$${totalAnnual.toFixed(2)}/yr estimated</span>` : ''}
+      </div>
+      ${upcomingEx.length > 0 ? `<div style="background:rgba(255,215,0,.07);border:1px solid rgba(255,215,0,.15);border-radius:6px;padding:.4rem .6rem;margin-bottom:.45rem;font-size:9.5px;color:var(--au)">
+        📅 Ex-dividend soon: ${upcomingEx.map(r => `<strong>${r.ticker}</strong> (${r.daysToExDiv === 0 ? 'TODAY' : r.daysToExDiv < 0 ? `${Math.abs(r.daysToExDiv)}d ago` : r.daysToExDiv + 'd'})`).join(', ')}
+        <div style="font-size:8.5px;color:var(--wh4);margin-top:1px">You must own shares before the ex-dividend date to receive payment</div>
+      </div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:.3rem">
+        ${rows.map(r => {
+          const yldColor = r.yield >= 0.04 ? 'var(--g)' : r.yield >= 0.02 ? 'var(--au)' : 'var(--wh3)';
+          return `<div onclick="openModal('${r.ticker}')" style="display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;border-radius:6px;cursor:pointer;transition:background .12s" onmouseenter="this.style.background='rgba(255,255,255,.04)'" onmouseleave="this.style.background=''">
+            <span style="font-family:var(--disp);font-size:.9rem;min-width:42px;color:var(--au)">${r.ticker}</span>
+            <span style="flex:1;font-size:9.5px;font-weight:700;color:${yldColor}">${(r.yield * 100).toFixed(2)}% yield</span>
+            ${r.rate ? `<span style="font-size:9px;color:var(--wh3)">$${r.rate.toFixed(2)}/yr per share</span>` : ''}
+            ${r.annualIncome ? `<span style="font-size:9px;font-weight:700;color:var(--au)">≈$${r.annualIncome.toFixed(0)}/yr</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:8.5px;color:var(--wh4);margin-top:.4rem;padding-top:.35rem;border-top:1px solid rgba(255,255,255,.05)">Dividend yield = annual dividend / share price. Ex-div dates from Yahoo Finance.</div>
+    </div>`;
+  }
+  window.fetchPortfolioDividends = fetchPortfolioDividends;
 
   // ── RELATIVE STRENGTH SCANNER ────────────────────────────
   function renderRelativeStrength() {
