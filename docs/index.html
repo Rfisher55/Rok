@@ -54769,6 +54769,25 @@ window.renderSectorRotation = renderSectorRotation;
       }
 
       if (positions.length) {
+        // Portfolio Action Summary: quick-glance overview of what needs attention
+        const posActions = positions.map(p => positionAction(p.live_signals||{}, p.pnl_pct||0));
+        const sellCount   = posActions.filter(a => a.action === 'SELL').length;
+        const trimCount   = posActions.filter(a => a.action === 'TRIM').length;
+        const watchCount  = posActions.filter(a => a.action === 'WATCH').length;
+        const holdCount   = posActions.filter(a => a.action.includes('HOLD')).length;
+        const needsAttn   = sellCount + trimCount + watchCount;
+        const portPnl     = positions.length > 0 ? positions.reduce((a,p) => a + (p.pnl_pct||0), 0) / positions.length : 0;
+        html += `<div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:.55rem .8rem;margin-bottom:.55rem">
+          <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+            <span style="font-size:8px;font-weight:800;letter-spacing:.08em;color:#4a6fa5;text-transform:uppercase">Portfolio Briefing</span>
+            ${sellCount   ? `<span style="font-size:7px;font-weight:900;color:#ef5350;border:1px solid rgba(255,34,85,.3);border-radius:4px;padding:1px 6px">⚠ ${sellCount} SELL</span>` : ''}
+            ${trimCount   ? `<span style="font-size:7px;font-weight:900;color:#ff7043;border:1px solid rgba(255,112,67,.3);border-radius:4px;padding:1px 6px">${trimCount} TRIM</span>` : ''}
+            ${watchCount  ? `<span style="font-size:7px;color:#ffd54f;border:1px solid rgba(255,213,79,.25);border-radius:4px;padding:1px 6px">${watchCount} WATCH</span>` : ''}
+            ${holdCount   ? `<span style="font-size:7px;color:#69f0ae;border:1px solid rgba(105,240,174,.2);border-radius:4px;padding:1px 6px">${holdCount} HOLD</span>` : ''}
+            <span style="font-size:7px;color:${portPnl>=0?'#00ff88':'#ef5350'};margin-left:auto">avg ${portPnl>=0?'+':''}${portPnl.toFixed(1)}%</span>
+          </div>
+          ${needsAttn > 0 ? `<div style="font-size:7px;color:#888;margin-top:.2rem">${sellCount > 0 ? 'Action needed — check SELL positions first. ' : ''}${trimCount > 0 ? 'Consider trimming extended gains. ' : ''}${watchCount > 0 ? 'Monitor WATCH positions closely.' : ''}</div>` : `<div style="font-size:7px;color:#4a6fa5;margin-top:.15rem">All positions holding well — no urgent action required.</div>`}
+        </div>`;
         html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Open Positions (${positions.length})</div>`;
         html += `<div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.75rem">`;
         positions.forEach(p => {
@@ -54781,6 +54800,16 @@ window.renderSectorRotation = renderSectorRotation;
           const barCol = pct >= 0 ? 'rgba(0,255,136,.35)' : 'rgba(255,34,85,.35)';
           const ls = p.live_signals || {};
           const posAct = positionAction(ls, pct);
+          // Cross-reference intel report for AI signal on this position
+          const intelSig = (() => {
+            if (!_intelCache) return null;
+            const allSigs = [
+              ...(_intelCache.buy_signals||[]).map(s=>({...s,type:'buy'})),
+              ...(_intelCache.sell_signals||[]).map(s=>({...s,type:'sell'})),
+              ...(_intelCache.watch_list||[]).map(s=>({...s,type:'watch'})),
+            ];
+            return allSigs.find(s => s.ticker === p.ticker) || null;
+          })();
           const lsRsi = ls.rsi != null ? `<span style="font-size:6.5px;color:${ls.rsi>65?'#ef5350':ls.rsi<40?'#00ff88':'#888'}">RSI${Math.round(ls.rsi)}</span>` : '';
           const lsVwap = ls.vwap_pos != null ? `<span style="font-size:6.5px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#555'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP</span>` : '';
           const lsRcl = ls.vwap_reclaim ? `<span style="font-size:6.5px;font-weight:800;color:#00ffc8">VWAP↑</span>` : '';
@@ -54859,6 +54888,15 @@ window.renderSectorRotation = renderSectorRotation;
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap">${distStopHtml}${peakPctStr}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}</div>` : ''}
+                ${intelSig ? (() => {
+                  const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
+                  const il = intelSig.type === 'buy' ? 'AI BUY' : intelSig.type === 'sell' ? 'AI SELL' : 'AI WATCH';
+                  const reason = (intelSig.reason || intelSig.rationale || intelSig.catalyst || '').slice(0,80);
+                  return `<div style="margin-top:.2rem;background:rgba(0,0,0,.3);border-left:2px solid ${ic}55;border-radius:4px;padding:.2rem .45rem">
+                    <span style="font-size:6px;font-weight:900;color:${ic};letter-spacing:.06em">${il} </span>
+                    <span style="font-size:6.5px;color:#888;line-height:1.4">${reason}</span>
+                  </div>`;
+                })() : ''}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
