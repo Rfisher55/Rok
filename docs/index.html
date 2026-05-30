@@ -56269,6 +56269,23 @@ window.renderSectorRotation = renderSectorRotation;
                 else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
               })() : ''}
+              ${(() => {
+                const rec = p.recommendation;
+                const reason = p.rec_reason || '';
+                if (!rec || rec === 'HOLD') return '';
+                const recStyles = {
+                  'ADD':    {col:'#00e676', bg:'rgba(0,230,118,.15)', icon:'➕'},
+                  'REDUCE': {col:'#ef5350', bg:'rgba(255,82,82,.12)', icon:'➖'},
+                  'TIGHTEN':{col:'#ff9800', bg:'rgba(255,152,0,.12)', icon:'⚠'},
+                  'REVIEW': {col:'#ffd54f', bg:'rgba(255,213,79,.1)', icon:'🔍'},
+                  'EXTEND': {col:'#69f0ae', bg:'rgba(105,240,174,.1)', icon:'🚀'},
+                };
+                const s = recStyles[rec] || {col:'#888', bg:'rgba(255,255,255,.05)', icon:'ℹ'};
+                return `<div style="margin-top:.35rem;display:inline-flex;align-items:center;gap:.3rem;background:${s.bg};border:1px solid ${s.col}44;border-radius:4px;padding:2px 6px">
+                  <span style="font-size:7.5px;font-weight:900;color:${s.col}">${s.icon} ${rec}</span>
+                  ${reason ? `<span style="font-size:6.5px;color:${s.col};opacity:.8">${reason}</span>` : ''}
+                </div>`;
+              })()}
             </div>
           </div>`;
         });

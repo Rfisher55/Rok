@@ -7667,6 +7667,14 @@ def run():
                 "high_short":         sig.get("high_short", False),
                 "atm_iv":             sig.get("atm_iv", 0.0),
                 "rs_sector":          round(sig.get("rs_sector", 0.0), 2),
+                "rs252":              round(sig.get("rs252", 0.0), 2),
+                "rs_rating":          sig.get("rs_rating", 50),
+                "ema21_pullback":     sig.get("ema21_pullback", False),
+                "ema21_touch":        sig.get("ema21_touch", False),
+                "macd_bear_div":      sig.get("macd_bear_div", False),
+                "macd_bull_div":      sig.get("macd_bull_div", False),
+                "rsi_divergence":     sig.get("rsi_divergence", False),
+                "rsi_bull_divergence": sig.get("rsi_bull_divergence", False),
                 "w52_range_pos":      sig.get("w52_range_pos", 0.0),
                 "expected_move_wk":   sig.get("expected_move_wk", 0.0),
                 "expected_move_mo":   sig.get("expected_move_mo", 0.0),
@@ -7780,6 +7788,28 @@ def run():
             _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
             _pos["trail_stop_price"] = _trail_stop_price
             _pos["dist_from_trail"]  = _dist_from_trail
+            # Position recommendation: simple rule-based action advice for the dashboard
+            _rec_action = "HOLD"
+            _rec_reason = ""
+            _ls_r = _pos.get("live_signals", {})
+            _sh_r = [h["s"] for h in _pos.get("score_history", []) if isinstance(h.get("s"), (int, float))]
+            _age_r = _pos.get("days_held", 0)
+            if _ls_r.get("macd_bear_div") and _pnl > 5:
+                _rec_action = "REDUCE"; _rec_reason = "MACD bearish div"
+            elif _dist_from_trail < 1.5 and _trail_stop_price > 0:
+                _rec_action = "TIGHTEN"; _rec_reason = f"near trail stop ({_dist_from_trail:.1f}%)"
+            elif _pnl >= 15 and not _ls_r.get("supertrend_bull", True):
+                _rec_action = "REDUCE"; _rec_reason = "supertrend reversed, locked gains"
+            elif _ls_r.get("ema21_pullback") and _pnl > 0 and not _ls_r.get("hv_expanding"):
+                _rec_action = "ADD"; _rec_reason = "EMA21 pullback re-entry"
+            elif _age_r >= 7 and _pnl < 1.5 and _pnl > -2:
+                _rec_action = "REVIEW"; _rec_reason = "dead money 7d"
+            elif len(_sh_r) >= 4 and _sh_r[0] - _sh_r[-1] >= 15:
+                _rec_action = "REVIEW"; _rec_reason = "score degrading"
+            elif _pnl >= 20 and _ls_r.get("mtf_triple") and _ls_r.get("supertrend_bull", True):
+                _rec_action = "EXTEND"; _rec_reason = "high-conviction, let run"
+            _pos["recommendation"] = _rec_action
+            _pos["rec_reason"]     = _rec_reason
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
 
