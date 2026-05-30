@@ -8125,6 +8125,94 @@ body.beginner-mode #beginner-banner { display:block }
         </div>` : `<div style="font-size:8.5px;color:#2a3a4a;line-height:1.5">Neurons activate as the bot completes trades — each trade teaches the brain which signals work best. Starts learning from trade #1.</div>`}
       </div>
 
+      <!-- MONDAY ACTION PLAN -->
+      ${(() => {
+        if (!positions.length) return '';
+        const posNews = data.position_news || {};
+        const regime = data.regime || {};
+        const regimeLabel = regime.regime === 'bull' ? 'BULL' : regime.regime === 'bear' ? 'BEAR' : 'NEUTRAL';
+        const vix = regime.vix || 0;
+        const vixRisk = vix > 30 ? 'HIGH' : vix > 20 ? 'ELEVATED' : 'LOW';
+        const vixAdvice = vix > 30 ? 'tighten stops — high volatility expected' : vix > 20 ? 'use stops, be selective on adds' : 'good conditions for momentum setups';
+
+        const posCards = positions.map(p => {
+          const lp = (typeof liveprices !== 'undefined' ? liveprices[p.ticker] : null) || {};
+          const livePx = lp.price || p.price || p.cost || 0;
+          const cost = p.cost || 0;
+          const pct = cost > 0 && livePx > 0 ? ((livePx - cost) / cost * 100) : (p.pnl_pct || 0);
+          const pnlUsd = (p.qty || 0) > 0 && cost > 0 ? ((livePx - cost) * p.qty) : (p.pnl_usd || 0);
+          const stop = p.trail_stop_price || p.stop_price || (cost * 0.92);
+          const target = p.target_price || (cost * 1.20);
+          const distToStop = stop > 0 && livePx > 0 ? ((livePx - stop) / livePx * 100) : null;
+          const distToTarget = target > 0 && livePx > 0 ? ((target - livePx) / livePx * 100) : null;
+          const pct_col = pct >= 0 ? '#00e676' : '#ef5350';
+          const riskPct = distToStop != null ? distToStop.toFixed(1) : '?';
+          const rewardPct = distToTarget != null ? distToTarget.toFixed(1) : '?';
+          const action = pct <= -7 ? {txt:'⚠ AT STOP — bot will auto-sell',col:'#ef5350'} :
+                         pct <= -4 ? {txt:'🟠 Near stop — watch closely',col:'#ffa726'} :
+                         pct >= 15 ? {txt:'🎯 Near target — take partial profits?',col:'#ffd54f'} :
+                         pct >= 8  ? {txt:'📈 Strong gain — hold, trail stop tight',col:'#00e676'} :
+                         pct >= 2  ? {txt:'✓ Profitable — hold and let run',col:'#69f0ae'} :
+                                    {txt:'↔ Flat — hold, watch for break',col:'#82b1ff'};
+          // Top news headline for this position
+          const news = (posNews[p.ticker] || [])[0];
+          const newsHtml = news ? `<div style="font-size:.65rem;color:#445;margin-top:.2rem;line-height:1.3;font-style:italic">"${(news.title||'').slice(0,70)}${news.title&&news.title.length>70?'…':''}"</div>` : '';
+          return `<div style="padding:.4rem .5rem;background:rgba(255,255,255,.025);border-radius:7px;border-left:3px solid ${pct_col}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:.3rem;flex-wrap:wrap">
+              <span style="font-family:var(--disp);font-size:1rem;font-weight:900;color:#ffd54f">${p.ticker}</span>
+              <span style="font-size:8.5px;font-weight:800;color:${pct_col}">${pct>=0?'+':''}${pct.toFixed(2)}%  ${pnlUsd>=0?'+':''}$${Math.abs(pnlUsd).toFixed(0)}</span>
+            </div>
+            <div style="font-size:7.5px;color:${action.col};font-weight:700;margin:.1rem 0">${action.txt}</div>
+            <div style="display:flex;gap:.5rem;font-size:6.5px;color:#445;flex-wrap:wrap">
+              <span>Stop: $${stop.toFixed(2)} (${riskPct}% away)</span>
+              <span>·</span>
+              <span>Target: $${target.toFixed(2)} (+${rewardPct}%)</span>
+            </div>
+            ${newsHtml}
+          </div>`;
+        }).join('');
+
+        return `<div style="padding:.55rem .85rem;border-top:1px solid rgba(255,255,255,.06)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.45rem">
+            <span style="font-size:8px;font-weight:800;color:#ffd54f;text-transform:uppercase;letter-spacing:.08em">Monday Action Plan</span>
+            <span style="font-size:6.5px;color:#3a5a8a">Regime: ${regimeLabel} · VIX ${vix.toFixed(1)} (${vixRisk})</span>
+          </div>
+          <div style="font-size:6.5px;color:#4a6fa5;margin-bottom:.4rem;line-height:1.4">Market ${vixAdvice}. Bot will auto-manage stops. Review positions below:</div>
+          <div style="display:flex;flex-direction:column;gap:.3rem">
+            ${posCards}
+          </div>
+        </div>`;
+      })()}
+
+      <!-- POSITION NEWS -->
+      ${(() => {
+        const posNews = data.position_news || {};
+        const newsEntries = Object.entries(posNews).filter(([,arts]) => arts.length > 0);
+        if (!newsEntries.length) return '';
+        const newsRows = newsEntries.slice(0, 4).map(([sym, arts]) => {
+          return arts.slice(0, 2).map(art => {
+            const ago = art.pub ? (() => { try { const d=new Date(art.pub); const m=Math.round((Date.now()-d)/60000); return m<60?m+'m':Math.floor(m/60)+'h'; } catch{return '';} })() : '';
+            return `<div style="padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.03)">
+              <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:.1rem">
+                <span style="font-size:6.5px;font-weight:800;color:#82b1ff;background:rgba(130,177,255,.12);border-radius:3px;padding:0 3px">${sym}</span>
+                ${art.src ? `<span style="font-size:6px;color:#3a4a5a">${art.src}</span>` : ''}
+                ${ago ? `<span style="font-size:6px;color:#2a3a4a;margin-left:auto">${ago} ago</span>` : ''}
+              </div>
+              <div style="font-size:.68rem;color:#b0bec5;line-height:1.35">${(art.title||'').slice(0,100)}${art.title&&art.title.length>100?'…':''}</div>
+            </div>`;
+          }).join('');
+        }).join('');
+        if (!newsRows) return '';
+        const newsTs = data.position_news_ts ? (() => { try { const m=Math.round((Date.now()-new Date(data.position_news_ts))/60000); return m<60?m+'m':Math.floor(m/60)+'h'; } catch{return '';} })() : '';
+        return `<div style="padding:.5rem .85rem;border-top:1px solid rgba(255,255,255,.05)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+            <span style="font-size:7px;font-weight:700;color:#3a4a5a;text-transform:uppercase;letter-spacing:.06em">Position News</span>
+            ${newsTs ? `<span style="font-size:6px;color:#2a3a4a">${newsTs} ago</span>` : ''}
+          </div>
+          ${newsRows}
+        </div>`;
+      })()}
+
       <!-- ACTIVITY LOG -->
       ${(() => {
         const actLog = data.bot_activity_log || [];
