@@ -54085,6 +54085,55 @@ function _renderIntelReport(el, intel) {
           ${acHtml}${rsHtml}
         </div>`;
       })()}
+      ${(() => {
+        // ── MACD State + TTM Squeeze dual panel ───────────────────────────────
+        const mc = lp.macd_state_perf || [];
+        const sq = lp.squeeze_perf || [];
+        if (!mc.length && !sq.length) return '';
+        const MC_ORDER = ['bull_div','rising','recovering','negative'];
+        const MC_LABELS = {bull_div:'MACD Bull Div',rising:'MACD Rising',recovering:'MACD Recovering',negative:'MACD Negative'};
+        const MC_COLS = {bull_div:'#00e676',rising:'#82b1ff',recovering:'#ffd54f',negative:'#ef5350'};
+        const mcMap = {};
+        mc.forEach(s => mcMap[s.state] = s);
+        const mcCells = MC_ORDER.map(key => {
+          const s = mcMap[key];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:5px;color:#333">${MC_LABELS[key]||key}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border-top:2px solid ${MC_COLS[key]||'#444'};border-radius:4px;padding:.2rem;text-align:center">
+            <div style="font-size:5px;color:${MC_COLS[key]||'#888'};font-weight:700">${MC_LABELS[key]||key}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% (${s.total}T)</div>
+          </div>`;
+        }).join('');
+        const sqMap = {};
+        sq.forEach(s => sqMap[s.type] = s);
+        const sqS = sqMap['squeeze'];
+        const sqN = sqMap['no_squeeze'];
+        const sqCells = [
+          {key:'squeeze', label:'Squeeze Fired 🌀', bg:'rgba(130,177,255,.08)'},
+          {key:'no_squeeze', label:'No Squeeze', bg:'rgba(255,255,255,.04)'}
+        ].map(t => {
+          const s = sqMap[t.key];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.3rem;text-align:center;opacity:.3"><div style="font-size:6px;color:#333">${t.label}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${t.bg};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.3rem;text-align:center">
+            <div style="font-size:5.5px;color:#82b1ff;font-weight:700">${t.label}</div>
+            <div style="font-size:11px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const mcHtml = mc.length?`<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#00e676;font-weight:700;margin-bottom:.1rem">📉 MACD STATE AT ENTRY: which phase produces best outcomes?</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${mcCells}</div>
+        </div>`:'';
+        const sqHtml = sq.length?`<div>
+          <div style="font-size:5.5px;color:#82b1ff;font-weight:700;margin-bottom:.1rem">🌀 TTM SQUEEZE BREAKOUT: coiled spring vs normal entries</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.2rem">${sqCells}</div>
+        </div>`:'';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${mcHtml}${sqHtml}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

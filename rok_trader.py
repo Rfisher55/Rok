@@ -385,6 +385,14 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _rs_r = int(signals.get("rs_rating", 50) or 50)
         e["rs_rating_at_entry"] = _rs_r
         e["rs_bucket"] = ("elite" if _rs_r >= 90 else "strong" if _rs_r >= 75 else "average" if _rs_r >= 50 else "weak")
+        # MACD Neuron (37): MACD state at entry (bullish cross, positive, negative, divergence)
+        _macd_v = float(signals.get("macd", 0.0) or 0.0)
+        _macd_s = float(signals.get("macd_slope", 0.0) or 0.0)
+        _macd_d = bool(signals.get("macd_bull_div", False))
+        e["macd_state"] = ("bull_div" if _macd_d else "rising" if _macd_v > 0 and _macd_s > 0 else
+                           "recovering" if _macd_v < 0 and _macd_s > 0 else "negative")
+        # TTM Squeeze Breakout Neuron (38): was a squeeze fired at entry?
+        e["squeeze_fired"] = bool(signals.get("ttm_squeeze_fired", False))
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -967,6 +975,45 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _psp["total"] > 0:
                 _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
                 _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── MACD State Neuron: MACD phase at entry vs trade outcome ──────────────────
+    # Bull div (MACD diverging from price) = highest conviction; rising = confirming trend;
+    # recovering = crossing from negative; negative = counter-trend entry risk.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_mc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _mc_bkt = _buy_mc.get("macd_state", "negative") if _buy_mc else "negative"
+            _mc_perf = tlog.setdefault("macd_state_perf", {})
+            _mcp = _mc_perf.setdefault(_mc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _mc_bkt})
+            _mcp["total"] = _mcp.get("total", 0) + 1
+            _mcp["total_pnl"] = round(_mcp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _mcp["wins"] = _mcp.get("wins", 0) + 1
+            else: _mcp["losses"] = _mcp.get("losses", 0) + 1
+            if _mcp["total"] > 0:
+                _mcp["win_rate"] = round(_mcp["wins"] / _mcp["total"] * 100, 1)
+                _mcp["avg_pnl"]  = round(_mcp["total_pnl"] / _mcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── TTM Squeeze Breakout Neuron: coiled spring setups vs normal entries ──────
+    # TTM Squeeze = low-volatility compression → explosive directional breakout.
+    # The bot learns whether squeeze-fired entries outperform standard momentum entries.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_sq = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sq_fired = _buy_sq.get("squeeze_fired", False) if _buy_sq else False
+            _sq_key = "squeeze" if _sq_fired else "no_squeeze"
+            _sq_perf = tlog.setdefault("squeeze_perf", {})
+            _sqp = _sq_perf.setdefault(_sq_key, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "type": _sq_key})
+            _sqp["total"] = _sqp.get("total", 0) + 1
+            _sqp["total_pnl"] = round(_sqp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _sqp["wins"] = _sqp.get("wins", 0) + 1
+            else: _sqp["losses"] = _sqp.get("losses", 0) + 1
+            if _sqp["total"] > 0:
+                _sqp["win_rate"] = round(_sqp["wins"] / _sqp["total"] * 100, 1)
+                _sqp["avg_pnl"]  = round(_sqp["total_pnl"] / _sqp["total"], 2)
         except Exception:
             pass
 
@@ -10762,6 +10809,34 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 37. MACD State Neuron: MACD phase at entry vs outcome ─────────────────
+        _mc_raw = tlog.get("macd_state_perf", {})
+        _mc_insights = []
+        for _mcbk, _mcd in _mc_raw.items():
+            if _mcd.get("total", 0) >= 3:
+                _mc_insights.append({"state": _mcbk, "win_rate": _mcd.get("win_rate", 50),
+                                     "avg_pnl": _mcd.get("avg_pnl", 0), "total": _mcd.get("total", 0)})
+        if _mc_insights:
+            _mc_s = sorted(_mc_insights, key=lambda x: -x["win_rate"])
+            _mc_sum = " | ".join(f"MACD_{s['state']}:{s['win_rate']:.0f}%WR" for s in _mc_s)
+            _learn_log.append(f"MACD state WRs: {_mc_sum}")
+            _best_mc = _mc_s[0]
+            if _best_mc["state"] == "bull_div" and _best_mc["win_rate"] >= 60:
+                _learn_log.append(f"MACD bullish divergence is strongest entry signal ({_best_mc['win_rate']:.0f}% WR)")
+
+        # ── 38. TTM Squeeze Breakout Neuron: squeeze vs normal entries ─────────
+        _sq_raw = tlog.get("squeeze_perf", {})
+        _sq_squeeze = _sq_raw.get("squeeze", {})
+        _sq_normal  = _sq_raw.get("no_squeeze", {})
+        if _sq_squeeze.get("total", 0) >= 3 and _sq_normal.get("total", 0) >= 3:
+            _sq_wr   = _sq_squeeze.get("win_rate", 50)
+            _ns_wr   = _sq_normal.get("win_rate", 50)
+            _learn_log.append(f"TTM Squeeze entries: {_sq_wr:.0f}% WR vs normal: {_ns_wr:.0f}% WR")
+            if _sq_wr - _ns_wr >= 15:
+                _learn_log.append(f"Squeeze breakouts outperform by {_sq_wr-_ns_wr:.0f}pts — coil-release thesis confirmed")
+        _sq_insights = [{"type": k, "win_rate": v.get("win_rate", 50), "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                        for k, v in _sq_raw.items() if v.get("total", 0) >= 3]
+
         # ── 35. Institutional Accumulation Neuron: accum score vs outcome ────────
         _ac_raw = tlog.get("accum_perf", {})
         _ac_insights = []
@@ -11012,6 +11087,8 @@ def run():
             "consec_green_perf":    _cg_insights,           # consecutive green days vs outcome
             "accum_perf":           _ac_insights,           # institutional accumulation score vs outcome
             "rs_rating_perf":       _rs_insights,           # IBD RS Rating bracket vs outcome
+            "macd_state_perf":      _mc_insights,           # MACD state at entry vs outcome
+            "squeeze_perf":         _sq_insights,           # TTM squeeze breakout vs normal
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
