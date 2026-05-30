@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-30T16:44:21.231460+00:00",
+  "generated_at": "2026-05-30T17:47:55.217413+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -1055,104 +1055,169 @@
   },
   "ticker_mentions": [
     [
+      "COIN",
+      10
+    ],
+    [
+      "MSFT",
+      10
+    ],
+    [
+      "MSTR",
+      10
+    ],
+    [
+      "PLTR",
+      10
+    ],
+    [
+      "SOFI",
+      10
+    ],
+    [
+      "TSLA",
+      10
+    ],
+    [
       "COM",
-      307
+      302
     ],
     [
       "HTTPS",
-      303
+      299
     ],
     [
       "HREF",
-      301
+      296
     ],
     [
       "WWW",
-      268
+      264
     ],
     [
       "BR",
-      230
+      227
     ],
     [
       "LINK",
-      226
+      224
     ],
     [
       "USER",
-      221
+      219
     ],
     [
       "SPAN",
-      221
+      218
     ],
     [
       "CLASS",
-      217
-    ],
-    [
-      "SC",
-      215
+      210
     ],
     [
       "DIV",
-      215
+      208
     ],
     [
       "MD",
-      215
+      208
+    ],
+    [
+      "SC",
+      208
     ],
     [
       "AMP",
       159
     ],
     [
-      "TR",
-      126
-    ],
-    [
-      "IMG",
-      115
-    ],
-    [
       "TABLE",
-      115
+      117
     ],
     [
       "SRC",
-      115
+      117
+    ],
+    [
+      "IMG",
+      117
+    ],
+    [
+      "TR",
+      116
     ],
     [
       "WIDTH",
-      114
-    ],
-    [
-      "TITLE",
-      113
-    ],
-    [
-      "AUTO",
-      113
-    ],
-    [
-      "REDD",
-      112
-    ],
-    [
-      "ALT",
-      111
-    ],
-    [
-      "TD",
-      111
-    ],
-    [
-      "AS",
-      110
+      116
     ]
   ],
   "stocktwits_trending": [],
-  "congressional_buys": [],
+  "congressional_buys": [
+    {
+      "ticker": "GIL",
+      "buy_count": 4,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Gilbert Cisneros",
+      "latest_date": "2026-04-29"
+    },
+    {
+      "ticker": "TDG",
+      "buy_count": 4,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "April Mcclain Delaney",
+      "latest_date": "2026-04-29"
+    },
+    {
+      "ticker": "HD",
+      "buy_count": 3,
+      "sell_count": 1,
+      "member_count": 1,
+      "members_preview": "David J. Taylor",
+      "latest_date": "2026-05-15"
+    },
+    {
+      "ticker": "T",
+      "buy_count": 3,
+      "sell_count": 0,
+      "member_count": 2,
+      "members_preview": "David J. Taylor, Tim Moore",
+      "latest_date": "2026-05-18"
+    },
+    {
+      "ticker": "STE",
+      "buy_count": 3,
+      "sell_count": 0,
+      "member_count": 2,
+      "members_preview": "April Mcclain Delaney, Gilbert Cisneros",
+      "latest_date": "2026-05-01"
+    },
+    {
+      "ticker": "MEDP",
+      "buy_count": 2,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "David J. Taylor",
+      "latest_date": "2026-05-15"
+    },
+    {
+      "ticker": "PH",
+      "buy_count": 2,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "David J. Taylor",
+      "latest_date": "2026-05-15"
+    },
+    {
+      "ticker": "AMD",
+      "buy_count": 2,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Josh Gottheimer",
+      "latest_date": "2026-04-27"
+    }
+  ],
   "insider_buys": [],
   "track_record": [
     {
@@ -1199,67 +1264,6 @@
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-05-30",
-      "timestamp": "2026-05-30T02:50:02.484134",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-05-30",
       "timestamp": "2026-05-30T06:23:23.121265",
@@ -1686,14 +1690,257 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-05-30",
+      "timestamp": "2026-05-30T17:47:54.670959",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": null,
+          "target": null
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
     {
-      "title": "Why Jensen Huang Is Confident AI Spending From Hyperscalers Is Going to Only Get Bigger in the Future",
+      "title": "Why NVDY Shareholders Miss Half of NVIDIA\u2019s Explosive Moves in Strong Months",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/why-jensen-huang-confident-ai-162000081.html",
+      "url": "https://finance.yahoo.com/markets/options/articles/why-nvdy-shareholders-miss-half-174004944.html",
       "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Jim Cramer Discusses Micron\u2019s Trillion Dollar Journey",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-discusses-micron-trillion-172532243.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "These gas deals could make summer road trips a lot cheaper",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/these-gas-deals-could-make-summer-road-trips-a-lot-cheaper-194922927.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Coeur Mining Inc. (CDE) A Stock that Could 10x by 2030 While Returning Shareholder Value",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/coeur-mining-inc-cde-stock-164436281.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Here\u2019s Why Zoetis (ZTS) Is one of the Best Wide Moat Stocks to Buy According to Wall Street Analysts",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-zoetis-zts-one-best-164409945.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "I Think This Is the Most Misunderstood Tech Stock on the Market Right Now -- and That's Exactly Why I'm Buying",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/think-most-misunderstood-tech-stock-173500213.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Robust Recurring Revenue Affirms Trimble Inc. (TRMB) as a Stock That Could 10x by 2030",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/robust-recurring-revenue-affirms-trimble-164358733.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Is LPL Financial Holdings (LPLA) One of the Best Wide Moat Stocks to Buy According to Wall Street Analysts?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/lpl-financial-holdings-lpla-one-164326205.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Is Intuit Inc. (INTU) A stock that could 10x by 2030 Amid Restructuring and TurboTax Hit?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/intuit-inc-intu-stock-could-164314537.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "BioMarin Pharmaceutical Inc. (BMRN) A Stock that Could 10x by 2030 on Pipeline Development",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/biomarin-pharmaceutical-inc-bmrn-stock-164306433.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Investor Chris Camillo Predicts The \u2018Last Easy Trade\u2019 of the AI Supercycle Is About to Start",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/investor-chris-camillo-predicts-last-173321780.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Why is Bernstein Cautious While Charter Communications, Inc. (CHTR) Could 10x by 2030?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-bernstein-cautious-while-charter-164254049.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Is Equinox Gold Corp. (EQX) a Stock that Could 10X by 2030?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/equinox-gold-corp-eqx-stock-164238013.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Strategy Inc (MSTR) A Stock that Could 10x by 2030 amid Strong Financial Position",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/strategy-inc-mstr-stock-could-164206128.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Netflix, Inc. (NFLX) Expands Consumer Products With New Partnerships and Strong Growth Outlook",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/netflix-inc-nflx-expands-consumer-164145122.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Goldman Sachs massively resets Snowflake stock price target for 2026",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/goldman-sachs-massively-resets-snowflake-173300737.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "The Charles Schwab Corporation (SCHW) in a Phase of Robust Growth as a Long Term Stock to Buy",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/charles-schwab-corporation-schw-phase-164132711.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Is Microsoft Corporation (MSFT) A Stock to Buy for the Long Term?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/microsoft-corporation-msft-stock-buy-164120631.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Is Meta Platforms, Inc. (META) In Trouble Over Financial Scams On Platforms?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/meta-platforms-inc-meta-trouble-164109838.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Why is Palantir Technologies Inc. (PLTR) One of the Stocks to Buy for The Long Term?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-palantir-technologies-inc-pltr-164040616.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Inflation-hit Americans watch savings disappear",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/news/inflation-hit-americans-watch-savings-173249634.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Eli Lilly and Company (LLY): A Long Term Stock to Buy",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/eli-lilly-company-lly-long-164030753.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Booking Holdings Inc. (BKNG) Strengthens Balance Sheet as Q1 Results Impress",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/booking-holdings-inc-bkng-strengthens-164013783.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Salesforce Inc. (CRM) Adds TTEC Holdings as Agentforce Partner; TD Cowen Remains Bullish",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/salesforce-inc-crm-adds-ttec-163955610.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "This is why NVIDIA Corporation (NVDA) is a Top Stock to Buy for The Long Term",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-nvidia-corporation-nvda-top-163938966.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "CBIZ Stock Is Down 60%. Here's What a $21.7 Million Exit Could Mean",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/cbiz-stock-down-60-heres-173047998.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Shopify Inc. (SHOP): A Long Term Stock to Buy That Piper Sandler is Bullish On",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/shopify-inc-shop-long-term-163927996.html",
+      "sentiment": 1.0,
       "tickers": []
     },
     {
@@ -1716,204 +1963,95 @@
       "url": "https://finance.yahoo.com/markets/stocks/articles/chevron-corporation-cvx-renaissance-technologies-155754998.html",
       "sentiment": 0.0,
       "tickers": []
-    },
-    {
-      "title": "NVIDIA Corporation (NVDA): Renaissance Technologies Is Bullish on This Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/nvidia-corporation-nvda-renaissance-technologies-155659124.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "This Just-Released Economic Indicator Spells Doom for President Trump\u2019s Economy",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/economy/articles/just-released-economic-indicator-spells-161945107.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Franco-Nevada Corporation (FNV): Renaissance Technologies Trims Holding",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/franco-nevada-corporation-fnv-renaissance-155548826.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Exelixis, Inc. (EXEL): Renaissance Technologies Likes This Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/exelixis-inc-exel-renaissance-technologies-155441763.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "VeriSign Inc. (VRSN): Renaissance Technologies Admires This Company",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/verisign-inc-vrsn-renaissance-technologies-155404243.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Kinross Gold Corporation (KGC): Renaissance Technologies Is A Long-Term Admirer",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/kinross-gold-corporation-kgc-renaissance-155244772.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Jim Cramer has bold new message for Starbucks investors",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-bold-message-starbucks-161700757.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Apple Inc. (AAPL): Renaissance Technologies Opens New Position",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/apple-inc-aapl-renaissance-technologies-155158161.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Palantir Technologies Inc. (PLTR): Renaissance Technologies Continues Trimming Stake",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/palantir-technologies-inc-pltr-renaissance-155106404.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "United Therapeutics Corporation (UTHR): Renaissance Technologies Likes This Biotech Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/healthcare/articles/united-therapeutics-corporation-uthr-renaissance-155020668.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Steakholder Foods Ltd. (STKH): One of the Best Lab-Grown Meat Stocks to Invest In",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/steakholder-foods-ltd-stkh-one-154850041.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Gold\u2019s Pullback Creating a New Entry Opportunity?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/commodities/articles/gold-pullback-creating-entry-opportunity-160900197.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Tyson Foods Inc. (TSN): One of the Top Lab-Grown Meat Stocks to Invest In",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/tyson-foods-inc-tsn-one-154808649.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Beyond Meat Inc. (BYND): One of the Elite Lab-Grown Meat Stocks to Invest In",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/beyond-meat-inc-bynd-one-154727401.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Pluri Inc. (PLUR): One of the Premier Lab-Grown Meat Stocks to Invest In",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/pluri-inc-plur-one-premier-154621012.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "US Foods Holding Corp. (USFD): One of the Elite Alternative Meat Stocks to Buy?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/us-foods-holding-corp-usfd-154541726.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "A Once-in-a-Decade Buying Opportunity for This Dominant Growth Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/once-decade-buying-opportunity-dominant-160500694.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Performance Food Group Company (PFGC): One of the Top Alternative Meat Stocks to Buy?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/performance-food-group-company-pfgc-154504814.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Sysco Corporation (SYY): One of the Prominent Alternative Meat Stocks?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/sysco-corporation-syy-one-prominent-154414556.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Jim Cramer on Realty Income (O): \u201cI Think It\u2019s Going to Go Higher\u201d",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/jim-cramer-realty-income-o-153329677.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Claude AI Makes Bullish Case for Reddit (RDDT)",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/claude-ai-makes-bullish-case-152954977.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Could XRP Be the Next Bitcoin?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/could-xrp-next-bitcoin-160426522.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Dow Jones Futures: Market Hits Highs On Iran Hopes, These AI Stocks Struggle; Nvidia, Tesla Lead 5 Titans Near Buy Points",
-      "source": "Yahoo Finance",
-      "url": "https://www.investors.com/market-trend/stock-market-today/dow-jones-futures-iran-hopes-nvidia-tesla-stocks-near-buy-points/?src=A00220&yptr=yahoo",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Claude AI Says You Shoud Buy Inter (INTR) On The Dip",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/claude-ai-says-shoud-buy-151959229.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Should You Buy Ardelyx (ARDX)?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/buy-ardelyx-ardx-151801858.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Claude AI Top Stock Picks in 2026: Magnite (MGNI)",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/claude-ai-top-stock-picks-151735944.html",
-      "sentiment": 0.0,
-      "tickers": []
     }
   ],
   "source_stats": {
-    "reddit": 268,
-    "news": 245,
-    "stocks": 35,
+    "reddit": 261,
+    "news": 246,
+    "stocks": 37,
     "sec": 40,
     "earnings_upcoming": 25,
     "unusual_options": 20,
-    "congress_trades": 0,
+    "congress_trades": 15,
     "technical": 11,
     "insider_buys": 0
   },
   "buy_count": 7,
   "sell_count": 4,
-  "current_positions": [],
+  "current_positions": [
+    {
+      "ticker": "COIN",
+      "qty": 63.317855635,
+      "cost": 189.52,
+      "price": 189.03,
+      "market_val": 11968.974251,
+      "pnl_usd": -31.03,
+      "pnl_pct": -0.259,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "MSFT",
+      "qty": 27.025200999,
+      "cost": 444.03,
+      "price": 450.24,
+      "market_val": 12167.826498,
+      "pnl_usd": 167.83,
+      "pnl_pct": 1.399,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "MSTR",
+      "qty": 74.957836217,
+      "cost": 160.09,
+      "price": 159.09,
+      "market_val": 11925.042164,
+      "pnl_usd": -74.96,
+      "pnl_pct": -0.625,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "PLTR",
+      "qty": 76.737723785,
+      "cost": 156.376804,
+      "price": 156.54,
+      "market_val": 12012.523281,
+      "pnl_usd": 12.52,
+      "pnl_pct": 0.104,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "SOFI",
+      "qty": 651.697611292,
+      "cost": 18.413448,
+      "price": 18.22,
+      "market_val": 11873.930478,
+      "pnl_usd": -126.07,
+      "pnl_pct": -1.051,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "TSLA",
+      "qty": 27.401639531,
+      "cost": 437.93,
+      "price": 435.79,
+      "market_val": 11941.360491,
+      "pnl_usd": -58.64,
+      "pnl_pct": -0.489,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    }
+  ],
   "position_analysis": [],
   "rs_leaders": [],
   "ema21_setups": [],
