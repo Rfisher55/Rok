@@ -53129,6 +53129,69 @@ function _renderIntelReport(el, intel) {
       + '</div>';
   })();
 
+  // Gap performance statistics panel
+  const gapStatsHtml = (() => {
+    const gs = td.gap_stats;
+    if (!gs) return '';
+    const gu = gs.gap_up || {}, ng = gs.no_gap || {};
+    if ((gu.total || 0) < 2 && (ng.total || 0) < 2) return '';
+    const statPill = (label, val, color, title) => `<div style="display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.03);border-radius:6px;padding:.3rem .5rem;min-width:52px" title="${title}"><span style="font-size:5.5px;color:#4a6fa5;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1px">${label}</span><span style="font-size:9px;font-weight:800;color:${color}">${val}</span></div>`;
+    let panels = '';
+    if ((gu.total || 0) >= 2) {
+      const wrCol = (gu.win_rate||0) >= 60 ? '#00e676' : (gu.win_rate||0) >= 45 ? '#ffd54f' : '#ef5350';
+      const pnlCol = (gu.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef5350';
+      panels += `<div style="flex:1;min-width:110px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:7px;padding:.4rem .6rem">
+        <div style="font-size:6.5px;font-weight:800;color:#00e676;letter-spacing:.08em;margin-bottom:.35rem">GAP-UP ENTRIES</div>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+          ${statPill('TRADES',gu.total,'#ffd54f','Gap-up entries taken')}
+          ${statPill('WIN%',(gu.win_rate||0)+'%',wrCol,'Win rate on gap-up setups')}
+          ${statPill('AVG P&L',(gu.avg_pnl>=0?'+':'')+gu.avg_pnl+'%',pnlCol,'Average P&L per gap-up trade')}
+        </div>
+      </div>`;
+    }
+    if ((ng.total || 0) >= 2) {
+      const wrCol = (ng.win_rate||0) >= 60 ? '#00e676' : (ng.win_rate||0) >= 45 ? '#ffd54f' : '#ef5350';
+      const pnlCol = (ng.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef5350';
+      panels += `<div style="flex:1;min-width:110px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:.4rem .6rem">
+        <div style="font-size:6.5px;font-weight:800;color:#82b1ff;letter-spacing:.08em;margin-bottom:.35rem">NON-GAP ENTRIES</div>
+        <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+          ${statPill('TRADES',ng.total,'#ffd54f','Non-gap entries taken')}
+          ${statPill('WIN%',(ng.win_rate||0)+'%',wrCol,'Win rate')}
+          ${statPill('AVG P&L',(ng.avg_pnl>=0?'+':'')+ng.avg_pnl+'%',pnlCol,'Average P&L')}
+        </div>
+      </div>`;
+    }
+    if (!panels) return '';
+    return `<div style="margin-top:.5rem;padding:.5rem .65rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:9px">
+      <div style="font-size:7px;font-weight:800;color:#4a6fa5;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem"> GAP VS NON-GAP ENTRY STATS</div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap">${panels}</div>
+    </div>`;
+  })();
+
+  // Position Sizer Calculator — practical tool for determining share count and risk
+  const posSizerHtml = `<div style="margin-top:.5rem;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-radius:9px;padding:.6rem .75rem">
+    <div style="font-size:7px;font-weight:900;color:#00e5ff;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem"> POSITION SIZER</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem">
+      <div>
+        <div style="font-size:6px;color:#4a6fa5;margin-bottom:2px">Entry Price ($)</div>
+        <input id="ps-entry" type="number" step="0.01" placeholder="e.g. 150.00" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.4);border:1px solid rgba(0,229,255,.2);border-radius:4px;color:#e0e0e0;font-size:9px;padding:3px 6px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:6px;color:#4a6fa5;margin-bottom:2px">Stop Price ($)</div>
+        <input id="ps-stop" type="number" step="0.01" placeholder="e.g. 143.00" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.4);border:1px solid rgba(255,82,82,.2);border-radius:4px;color:#e0e0e0;font-size:9px;padding:3px 6px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:6px;color:#4a6fa5;margin-bottom:2px">Account Size ($)</div>
+        <input id="ps-acct" type="number" step="100" placeholder="e.g. 25000" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:4px;color:#e0e0e0;font-size:9px;padding:3px 6px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:6px;color:#4a6fa5;margin-bottom:2px">Risk per Trade (%)</div>
+        <input id="ps-risk" type="number" step="0.1" value="1.0" placeholder="1.0" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,.4);border:1px solid rgba(255,215,0,.15);border-radius:4px;color:#e0e0e0;font-size:9px;padding:3px 6px;outline:none">
+      </div>
+    </div>
+    <div id="ps-result" style="font-size:8px;color:#4a6fa5;padding:.3rem .4rem;background:rgba(0,0,0,.2);border-radius:5px;min-height:24px">Fill in the fields above to calculate position size</div>
+  </div>`;
+
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.7rem;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:800;color:${sentColor};text-shadow:0 0 12px ${sentColor}44">${sent}</span>
@@ -53137,8 +53200,44 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${gapStatsHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
+
+  // Live position sizer calculator
+  const psCalc = () => {
+    const entry = parseFloat(document.getElementById('ps-entry')?.value);
+    const stop  = parseFloat(document.getElementById('ps-stop')?.value);
+    const acct  = parseFloat(document.getElementById('ps-acct')?.value);
+    const risk  = parseFloat(document.getElementById('ps-risk')?.value) || 1.0;
+    const res   = document.getElementById('ps-result');
+    if (!res) return;
+    if (!entry || !stop || !acct || entry <= stop) {
+      res.innerHTML = '<span style="color:#4a6fa5">Fill in valid entry &gt; stop, and account size</span>';
+      return;
+    }
+    const riskAmt   = acct * risk / 100;
+    const riskPerSh = entry - stop;
+    const shares    = Math.floor(riskAmt / riskPerSh);
+    const notional  = shares * entry;
+    const pctAcct   = (notional / acct * 100).toFixed(1);
+    const stopPct   = ((entry - stop) / entry * 100).toFixed(2);
+    const tgt1r     = (entry + riskPerSh).toFixed(2);
+    const tgt2r     = (entry + riskPerSh * 2).toFixed(2);
+    const tgt3r     = (entry + riskPerSh * 3).toFixed(2);
+    const col1 = notional <= acct * 0.15 ? '#00e676' : notional <= acct * 0.25 ? '#ffd54f' : '#ef5350';
+    res.innerHTML = `<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <span style="font-size:9px;font-weight:900;color:#00e5ff">${shares} shares</span>
+      <span style="font-size:8.5px;color:${col1}">≈$${notional.toLocaleString('en-US',{maximumFractionDigits:0})} (${pctAcct}% of acct)</span>
+      <span style="font-size:8px;color:#ffd54f">Risk: $${riskAmt.toFixed(0)} (${stopPct}% stop)</span>
+      <span style="font-size:7.5px;color:#69f0ae">1R: $${tgt1r} · 2R: $${tgt2r} · 3R: $${tgt3r}</span>
+    </div>`;
+  };
+  setTimeout(() => {
+    ['ps-entry','ps-stop','ps-acct','ps-risk'].forEach(id => {
+      const el2 = document.getElementById(id);
+      if (el2) el2.addEventListener('input', psCalc);
+    });
+  }, 50);
 }
 window.fetchIntelReport = fetchIntelReport;
 
@@ -54709,6 +54808,42 @@ window.renderSectorRotation = renderSectorRotation;
   });
 
   // ── Load trades.json and populate live trader widgets ───────────────────
+  // Intraday move tracker: fires audio + toast when a bot position moves ≥3% intraday
+  const _intradayRefPrices = {};  // {ticker: price at first load today}
+  const _intradayAlertedPos = {}; // {ticker+dir: lastFiredTime}
+  const _intradayAlertDate  = { d: null };
+  function _checkIntradayMoves(data) {
+    const positions = data.positions || [];
+    if (!positions.length) return;
+    const todayStr = new Date().toDateString();
+    if (_intradayAlertDate.d !== todayStr) {
+      // New day: clear reference prices
+      Object.keys(_intradayRefPrices).forEach(k => delete _intradayRefPrices[k]);
+      Object.keys(_intradayAlertedPos).forEach(k => delete _intradayAlertedPos[k]);
+      _intradayAlertDate.d = todayStr;
+    }
+    positions.forEach(p => {
+      const sym = p.ticker;
+      const cur = p.price || 0;
+      if (!cur) return;
+      if (!_intradayRefPrices[sym]) { _intradayRefPrices[sym] = cur; return; }
+      const ref = _intradayRefPrices[sym];
+      const movePct = (cur - ref) / ref * 100;
+      const THRESH = 3.0;
+      const dir = movePct >= THRESH ? 'up' : movePct <= -THRESH ? 'down' : null;
+      if (!dir) return;
+      const alertKey = `${sym}_${dir}`;
+      const now = Date.now();
+      if (_intradayAlertedPos[alertKey] && now - _intradayAlertedPos[alertKey] < 1800000) return; // 30min cooldown
+      _intradayAlertedPos[alertKey] = now;
+      const col = dir === 'up' ? '#00e676' : '#ef5350';
+      const icon = dir === 'up' ? '▲' : '▼';
+      const msg = `${icon} $${sym} ${dir === 'up' ? '+' : ''}${movePct.toFixed(1)}% intraday — bot position moving`;
+      showAppAlert(msg, dir === 'up' ? 'success' : 'warning', 8000);
+      playAlertSound(dir === 'up' ? 'buy' : 'sell');
+    });
+  }
+
   // Smart Push Notifications for Priority Alerts (pri ≤ 2 = urgent)
   const _NOTIF_SEEN_KEY = 'rok_notif_seen_v1';
   function _checkPriorityNotifications(data) {
@@ -56208,6 +56343,8 @@ window.renderSectorRotation = renderSectorRotation;
             // Volume divergence signals
             s.vol_bullish_div ? '<span style="background:rgba(0,229,255,.18);color:#00e5ff;font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volume bullish divergence: new low + shrinking sell volume = institutional accumulation">VOL↗ACC</span>' : '',
             s.vol_bearish_div ? '<span style="background:rgba(239,83,80,.12);color:#ef9a9a;font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volume bearish divergence: new high + shrinking volume = distribution">VOL↘DIST</span>' : '',
+            // RS Line New High — IBD's most powerful buy confirmation
+            s.rs_line_new_high ? '<span style="background:rgba(255,215,0,.25);color:#ffd600;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px;border:1px solid rgba(255,215,0,.4)" title="RS Line at 52-week high: stock is outperforming S&P 500 at a new high — IBD\'s #1 institutional buy confirmation">RS★NEW</span>' : (s.rs_line_trending ? '<span style="background:rgba(255,213,79,.12);color:#ffd54f;font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="RS Line trending upward — stock strengthening vs market">RS↗</span>' : ''),
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
@@ -56580,6 +56717,9 @@ window.renderSectorRotation = renderSectorRotation;
                 }
                 if (ls.rsi_bull_divergence) parts.push('<span style="font-size:6px;color:#82b1ff;font-weight:700" title="RSI bullish divergence">RSI↗</span>');
                 else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
+                // RS Line New High — IBD's #1 buy confirmation (stock outperforming S&P at 52W high on RS line)
+                if (ls.rs_line_new_high) parts.push('<span style="font-size:6px;font-weight:900;color:#ffd600;background:rgba(255,215,0,.22);border:1px solid rgba(255,215,0,.4);padding:1px 5px;border-radius:3px" title="RS Line New High: stock/SPY ratio at 52-week high — IBD\'s #1 institutional buy confirmation">RS★NEW</span>');
+                else if (ls.rs_line_trending) parts.push('<span style="font-size:6px;color:#ffd54f;background:rgba(255,213,79,.1);padding:1px 3px;border-radius:2px" title="RS Line trending up — relative strength improving vs market">RS↗</span>');
                 // Earnings countdown badge — critical for risk management
                 if (p.earnings_days != null && p.earnings_days >= 0 && p.earnings_days <= 10) {
                   const ed = p.earnings_days;
@@ -56781,6 +56921,7 @@ window.renderSectorRotation = renderSectorRotation;
       }
     }
     // Fire push notifications for urgent alerts (non-intrusive — only granted permission)
+    try { _checkIntradayMoves(data); } catch(e) {}
     try { _checkPriorityNotifications(data); } catch(e) {}
   }
 

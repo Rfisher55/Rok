@@ -4958,6 +4958,32 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # RS Line New High: compares stock/SPY ratio to its own 52-week high
+    # IBD's single most reliable buy confirmation — RS line leading price to new highs
+    rs_line_new_high = False
+    rs_line_trending  = False
+    try:
+        _spy_closes = spy.get("closes", [])
+        dc2 = list(daily["Close"]) if "Close" in daily.columns else []
+        _n_rs = min(len(dc2), len(_spy_closes))
+        if _n_rs >= 60:
+            # align tails: last N closes for both
+            _stk = dc2[-_n_rs:]
+            _spx = _spy_closes[-_n_rs:]
+            # RS line = stock price / SPY price (normalized so it starts at 1.0)
+            _base_stk = _stk[0]; _base_spx = _spx[0]
+            if _base_stk > 0 and _base_spx > 0:
+                _rs_line = [(_stk[i] / _spx[i]) / (_base_stk / _base_spx) for i in range(_n_rs)]
+                _rs_now  = _rs_line[-1]
+                _rs_52wh = max(_rs_line[-min(252, _n_rs):])
+                rs_line_new_high = _rs_now >= _rs_52wh * 0.998
+                # RS line trending up: current above its own 10-bar average
+                if len(_rs_line) >= 10:
+                    _rs_ma10 = sum(_rs_line[-10:]) / 10
+                    rs_line_trending = _rs_now > _rs_ma10
+    except Exception:
+        pass
+
     # Cup & Handle breakout pattern (O'Neil CAN SLIM)
     cup_handle = {"detected": False, "breakout_ready": False, "pivot_price": 0.0}
     try:
@@ -5105,6 +5131,8 @@ def _extract(daily, hourly):
         "rs63":            rs63,
         "rs252":           rs252,
         "rs_rating":       rs_rating,
+        "rs_line_new_high":  rs_line_new_high,
+        "rs_line_trending":  rs_line_trending,
         "mtf_aligned":       mtf_aligned,
         "mtf_triple":        mtf_triple,
         "mtf_score":         mtf_score,
@@ -5643,6 +5671,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif rs_rating >= 60: s +=  2   # mild edge
     elif rs_rating <= 30: s -=  8   # chronic underperformer — avoid longs
     elif rs_rating <= 40: s -=  4   # below-average RS — weak relative performance
+
+    # RS Line New High: IBD's #1 buy confirmation signal (+10)
+    # When the RS line (stock/SPY ratio) hits a new 52-week high — especially before price —
+    # it reveals institutional accumulation before the breakout is visible to most traders.
+    if d.get("rs_line_new_high"):
+        s += 10
+    elif d.get("rs_line_trending"):
+        s +=  4
 
     # Multi-timeframe trend filter: daily EMA5/10 alignment (+8/-10)
     if   daily_tr > 0.5:  s +=  8
@@ -7749,6 +7785,8 @@ def run():
                 "rs_sector":         round(live.get(tk, {}).get("rs_sector", 0.0), 2),
                 "rs252":             round(live.get(tk, {}).get("rs252", 0.0), 2),
                 "rs_rating":         live.get(tk, {}).get("rs_rating", 50),
+                "rs_line_new_high":  live.get(tk, {}).get("rs_line_new_high", False),
+                "rs_line_trending":  live.get(tk, {}).get("rs_line_trending", False),
                 "ema21_pullback":    live.get(tk, {}).get("ema21_pullback", False),
                 "ema21_touch":       live.get(tk, {}).get("ema21_touch", False),
                 "fund_quality":      live.get(tk, {}).get("fund_quality", 0),
@@ -8159,6 +8197,8 @@ def run():
                 "adx_trend":      "strong" if sig.get("adx", 0) >= 25 else ("weak" if sig.get("adx", 0) < 15 else "moderate"),
                 "rs5":            round(sig.get("rs5", 0), 2),
                 "rs63":           round(sig.get("rs63", 0), 2),
+                "rs_line_new_high":  sig.get("rs_line_new_high", False),
+                "rs_line_trending":  sig.get("rs_line_trending", False),
                 "chandelier_stop": round(sig.get("chandelier_stop", 0), 2),
                 "ichimoku":        sum([sig.get("ichimoku_above", False), sig.get("ichimoku_bull_cloud", False),
                                         sig.get("ichimoku_tk_bull", False), sig.get("ichimoku_chikou", False)]),
@@ -8477,6 +8517,35 @@ def run():
     except Exception:
         pass
     tlog["signal_analytics"] = _signal_analytics
+
+    # Gap statistics: track performance of gap-up entries vs. non-gap entries
+    # Helps calibrate whether to buy gaps or wait for pullbacks.
+    try:
+        _gap_counts = {"up": {"total":0,"wins":0,"pnl":0.0}, "down": {"total":0,"wins":0,"pnl":0.0}}
+        _non_gap    = {"total":0,"wins":0,"pnl":0.0}
+        for _gs in _closed:
+            _gr = (_gs.get("reason") or "").lower()
+            _gp = _gs.get("pnl_pct", 0) or 0
+            _is_win = _gp > 0
+            if "pm+" in _gr or "gap" in _gr:
+                _gap_counts["up"]["total"] += 1
+                if _is_win: _gap_counts["up"]["wins"] += 1
+                _gap_counts["up"]["pnl"] = round(_gap_counts["up"]["pnl"] + _gp, 2)
+            elif "gap_down" in _gr:
+                _gap_counts["down"]["total"] += 1
+                if _is_win: _gap_counts["down"]["wins"] += 1
+                _gap_counts["down"]["pnl"] = round(_gap_counts["down"]["pnl"] + _gp, 2)
+            else:
+                _non_gap["total"] += 1
+                if _is_win: _non_gap["wins"] += 1
+                _non_gap["pnl"] = round(_non_gap["pnl"] + _gp, 2)
+        for _gc in list(_gap_counts.values()) + [_non_gap]:
+            if _gc["total"] > 0:
+                _gc["win_rate"] = round(_gc["wins"] / _gc["total"] * 100, 1)
+                _gc["avg_pnl"]  = round(_gc["pnl"] / _gc["total"], 2)
+        tlog["gap_stats"] = {"gap_up": _gap_counts["up"], "gap_down": _gap_counts["down"], "no_gap": _non_gap}
+    except Exception:
+        tlog.setdefault("gap_stats", {})
 
     # Sharpe-like ratio: avg trade return / std dev (measures consistency)
     _sharpe_ratio = None
