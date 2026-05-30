@@ -221,6 +221,16 @@ def _run():
                 key=lambda e: -(e.get("rs_rating") or 50)
             )[:6]
             _ema21_setups = [e["ticker"] for e in last_scan_top if e.get("ema21_pullback")][:5]
+            _pocket_pivots = [e["ticker"] for e in last_scan_top if e.get("pocket_pivot")][:5]
+            _htf_stocks = sorted(
+                [e for e in last_scan_top if e.get("htf")],
+                key=lambda e: -(e.get("htf_consec") or 0)
+            )[:4]
+            _tt8_stocks = [e["ticker"] for e in last_scan_top if e.get("tt_full")][:5]
+            _tt_leaders = sorted(
+                [e for e in last_scan_top if (e.get("trend_template") or 0) >= 6],
+                key=lambda e: -(e.get("trend_template") or 0)
+            )[:6]
             live_market_context = {
                 "market_open":     td.get("market_open"),
                 "timing_quality":  td.get("timing_quality"),
@@ -247,6 +257,10 @@ def _run():
                 "sector_etf_trends": td.get("sector_etf_trends", {}),
                 "rs_leaders":      [{"ticker": e["ticker"], "rs_rating": e.get("rs_rating"), "score": e.get("score")} for e in _rs_leaders],
                 "ema21_setups":    _ema21_setups,
+                "pocket_pivots":   _pocket_pivots,
+                "htf_stocks":      [{"ticker": e["ticker"], "htf_consec": e.get("htf_consec", 0)} for e in _htf_stocks],
+                "tt8_stocks":      _tt8_stocks,
+                "tt_leaders":      [{"ticker": e["ticker"], "trend_template": e.get("trend_template", 0)} for e in _tt_leaders],
             }
             logger.info(f"Loaded {len(current_positions)} positions and {len(last_scan_top)} scan candidates from trades.json")
     except Exception as _te:
@@ -485,6 +499,10 @@ def _run():
         "position_analysis": analysis.get("position_analysis", []),  # AI commentary on held positions
         "rs_leaders":      live_market_context.get("rs_leaders", []),
         "ema21_setups":    live_market_context.get("ema21_setups", []),
+        "pocket_pivots":   live_market_context.get("pocket_pivots", []),
+        "htf_stocks":      live_market_context.get("htf_stocks", []),
+        "tt8_stocks":      live_market_context.get("tt8_stocks", []),
+        "tt_leaders":      live_market_context.get("tt_leaders", []),
         "drawdown_halt":   live_market_context.get("drawdown_halt", False),
         "regime_max_pos":  live_market_context.get("regime_max_pos", 12),
         "scan_breadth_pct": live_market_context.get("scan_breadth_pct"),

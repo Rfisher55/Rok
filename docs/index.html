@@ -52828,9 +52828,14 @@ function _renderIntelReport(el, intel) {
     </div>` : '';
 
   // RS Rating leaderboard (IBD-style leaders from live scan)
-  const rsLeaders = intel.rs_leaders || [];
-  const ema21Setups = intel.ema21_setups || [];
-  const rsLeaderHtml = (rsLeaders.length > 0 || ema21Setups.length > 0) ? (() => {
+  const rsLeaders    = intel.rs_leaders    || [];
+  const ema21Setups  = intel.ema21_setups  || [];
+  const pocketPivots = intel.pocket_pivots || [];
+  const htfStocks    = intel.htf_stocks    || [];
+  const tt8Stocks    = intel.tt8_stocks    || [];
+  const ttLeaders    = intel.tt_leaders    || [];
+
+  const rsLeaderHtml = (rsLeaders.length > 0 || ema21Setups.length > 0 || pocketPivots.length > 0 || htfStocks.length > 0 || ttLeaders.length > 0) ? (() => {
     const leaderRows = rsLeaders.map(l => {
       const rr = l.rs_rating || 0;
       const col = rr >= 90 ? '#00e676' : rr >= 80 ? '#69f0ae' : '#ffd54f';
@@ -52847,11 +52852,37 @@ function _renderIntelReport(el, intel) {
         <span style="font-size:7px;color:#82b1ff;opacity:.7">E21↩</span>
       </span>`
     ).join('');
+    const ppRows = pocketPivots.map(t =>
+      `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.3);border-radius:5px;padding:2px 6px">
+        <span style="font-size:10px;font-weight:800;color:#ffd600">${t}</span>
+        <span style="font-size:7px;color:#ffd600;opacity:.7">PP</span>
+      </span>`
+    ).join('');
+    const htfRows = htfStocks.map(e =>
+      `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,109,0,.15);border:1px solid rgba(255,109,0,.35);border-radius:5px;padding:2px 6px">
+        <span style="font-size:10px;font-weight:800;color:#ff6d00">${e.ticker}</span>
+        <span style="font-size:7px;color:#ff6d00;opacity:.8">${e.htf_consec||0}d HTF</span>
+      </span>`
+    ).join('');
+    const ttRows = ttLeaders.map(e => {
+      const tt = e.trend_template || 0;
+      const col = tt === 8 ? '#00e676' : '#69f0ae';
+      return `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(0,200,100,.08);border:1px solid ${col}44;border-radius:5px;padding:2px 6px">
+        <span style="font-size:10px;font-weight:800;color:${col}">${e.ticker}</span>
+        <span style="font-size:7px;color:${col};opacity:.8">TT${tt}</span>
+      </span>`;
+    }).join('');
     return `<div style="background:rgba(0,230,118,.03);border:1px solid rgba(0,230,118,.12);border-radius:10px;padding:.6rem .75rem;margin-bottom:.75rem">
       ${rsLeaders.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#00e676;margin-bottom:.35rem"> RS LEADERS (IBD ≥80)</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:${ema21Setups.length?'.4rem':'0'}">${leaderRows}</div>` : ''}
-      ${ema21Setups.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#82b1ff;margin-bottom:.3rem${rsLeaders.length?';margin-top:.35rem':''}"> EMA21 PULLBACK SETUPS</div>
-        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ema21Rows}</div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:${(ema21Setups.length||ppRows||htfRows||ttRows)?'.4rem':'0'}">${leaderRows}</div>` : ''}
+      ${ema21Setups.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#82b1ff;margin-bottom:.3rem;margin-top:.25rem"> EMA21 PULLBACKS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:${(ppRows||htfRows||ttRows)?'.4rem':'0'}">${ema21Rows}</div>` : ''}
+      ${pocketPivots.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#ffd600;margin-bottom:.3rem;margin-top:.25rem"> POCKET PIVOTS (O'Neil)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:${(htfRows||ttRows)?'.4rem':'0'}">${ppRows}</div>` : ''}
+      ${htfStocks.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#ff6d00;margin-bottom:.3rem;margin-top:.25rem"> HIGH-TIGHT FLAGS (Minervini)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:${ttRows?'.4rem':'0'}">${htfRows}</div>` : ''}
+      ${ttLeaders.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#69f0ae;margin-bottom:.3rem;margin-top:.25rem"> TREND TEMPLATE LEADERS (SEPA ≥6/8)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ttRows}</div>` : ''}
     </div>`;
   })() : '';
 
@@ -55944,6 +55975,14 @@ window.renderSectorRotation = renderSectorRotation;
             (s.earnings_days != null && s.earnings_days <= 20) ? (() => { const d = s.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col}">📅${d}d</span>`; })() : '',
             s.hv_contracting ? '<span style="background:rgba(64,196,255,.12);color:#40c4ff;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volatility contracting — coil before breakout">HV↓COIL</span>' : (s.hv_expanding ? '<span style="background:rgba(255,145,0,.12);color:#ff9100;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volatility expanding — momentum move">HV↑EXP</span>' : ''),
             (s.consec_green >= 3) ? `<span style="background:rgba(0,230,118,.12);color:#00e676;font-size:6.5px;font-weight:900;padding:1px 4px;border-radius:3px" title="${s.consec_green} consecutive green days">${s.consec_green}🟢</span>` : '',
+            // Pocket Pivot — institutional buying surge
+            s.pocket_pivot ? '<span style="background:rgba(255,215,0,.25);color:#ffd600;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pocket Pivot: up day volume exceeds every down-day volume in prior 10 sessions — O\'Neil institutional buying signal">PP🎯</span>' : '',
+            // High-Tight Flag — Minervini explosive setup
+            s.htf ? `<span style="background:rgba(255,100,0,.3);color:#ff6d00;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="High-Tight Flag: ${s.htf_consec||0} consecutive closes near 52W high on volume — Minervini's most powerful pattern">HTF🚀</span>` : ((s.htf_consec||0) >= 2 ? `<span style="background:rgba(255,140,0,.18);color:#ffab40;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Building toward High-Tight Flag (${s.htf_consec} days near 52W high)">HTF${s.htf_consec}</span>` : ''),
+            // Minervini Trend Template score badge
+            (() => { const tt=s.trend_template||0; if(tt===8) return '<span style="background:rgba(0,230,118,.3);color:#00e676;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Minervini Trend Template 8/8 — all 8 SEPA criteria met: perfect institutional uptrend">TT8✓</span>'; if(tt>=6) return `<span style="background:rgba(0,200,100,.15);color:#69f0ae;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Trend Template ${tt}/8 — strong SEPA structure">TT${tt}</span>`; return ''; })(),
+            // Anchored VWAP — institutional support level
+            s.above_avwap_52wl ? (() => { const d=s.avwap_dist_pct||0; const col=d>15?'#80cbc4':d>5?'#4db6ac':'#26a69a'; return `<span style="background:rgba(38,166,154,.15);color:${col};font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Price ${d.toFixed(1)}% above Anchored VWAP from 52W low ($${(s.avwap_52wl||0).toFixed(2)}) — institutional cost basis respected">AVWAP+${d.toFixed(0)}%</span>`; })() : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
@@ -56266,6 +56305,10 @@ window.renderSectorRotation = renderSectorRotation;
                 if ((ls.macd_slope||0) > 0.02) parts.push('<span style="font-size:6px;color:#69f0ae">MACD↑</span>');
                 else if ((ls.macd_slope||0) < -0.02 && (ls.macd_bear_div||false)) parts.push('<span style="font-size:6px;color:#ef5350;font-weight:700">MACD⚠</span>');
                 if (ls.ema21_pullback) parts.push('<span style="font-size:6px;font-weight:800;color:#b9f6ca;background:rgba(185,246,202,.2);padding:1px 4px;border-radius:3px" title="EMA21 pullback — Minervini highest-prob entry">E21↩</span>');
+                if (ls.pocket_pivot) parts.push('<span style="font-size:6px;font-weight:800;color:#ffd600;background:rgba(255,215,0,.2);padding:1px 4px;border-radius:3px" title="Pocket Pivot: institutional buying surge">PP🎯</span>');
+                if (ls.htf) parts.push('<span style="font-size:6px;font-weight:900;color:#ff6d00;background:rgba(255,109,0,.2);padding:1px 4px;border-radius:3px" title="High-Tight Flag — explosive setup">HTF🚀</span>');
+                if ((ls.trend_template||0) >= 7) parts.push(`<span style="font-size:6px;font-weight:800;color:#00e676;background:rgba(0,230,118,.15);padding:1px 4px;border-radius:3px" title="Minervini Trend Template ${ls.trend_template}/8">TT${ls.trend_template}</span>`);
+                if (ls.above_avwap_52wl) parts.push(`<span style="font-size:6px;color:#26a69a;background:rgba(38,166,154,.12);padding:1px 3px;border-radius:2px" title="Above Anchored VWAP from 52W low (+${(ls.avwap_dist_pct||0).toFixed(1)}%)">AVWAP✓</span>`);
                 if (ls.rsi_bull_divergence) parts.push('<span style="font-size:6px;color:#82b1ff;font-weight:700" title="RSI bullish divergence">RSI↗</span>');
                 else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';

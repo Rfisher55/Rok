@@ -3860,6 +3860,91 @@ def _fetch_spy_perf() -> dict:
     return _SPY_PERF_CACHE
 
 
+def _pocket_pivot(closes: list, volumes: list, lookback: int = 10) -> bool:
+    """O'Neil/Kacher-Morales Pocket Pivot: up day whose volume exceeds every down-day volume in prior 10 sessions."""
+    if len(closes) < lookback + 2 or len(volumes) < lookback + 2:
+        return False
+    if closes[-1] <= closes[-2]:
+        return False
+    prior_down_vols = [volumes[i] for i in range(-lookback - 1, -1) if closes[i] < closes[i - 1]]
+    if not prior_down_vols:
+        return True  # no down days in lookback = trend dominance
+    return volumes[-1] > max(prior_down_vols)
+
+
+def _high_tight_flag(highs: list, closes: list, volumes: list) -> dict:
+    """
+    Minervini High-Tight Flag: stock rose ≥100% in ≤8 weeks, then consolidated ≤25%.
+    Simplified live signal: 3+ consecutive closes within 3% of the 52-week high on rising avg volume.
+    """
+    if len(highs) < 20 or len(closes) < 20:
+        return {"htf": False, "htf_consec": 0}
+    max_high = max(highs[-min(len(highs), 252):])
+    consec = 0
+    for i in range(-1, -min(8, len(highs)) - 1, -1):
+        if highs[i] >= max_high * 0.97:
+            consec += 1
+        else:
+            break
+    # Require volume confirmation on at least the most recent day
+    avg_v = sum(volumes[-20:]) / 20 if len(volumes) >= 20 else volumes[-1]
+    vol_ok = volumes[-1] >= avg_v * 1.1 if avg_v > 0 else True
+    return {"htf": consec >= 3 and vol_ok, "htf_consec": consec}
+
+
+def _trend_template_score(closes: list, highs: list, lows: list, rs_rating: int = 50) -> dict:
+    """
+    Minervini SEPA Trend Template: 8 criteria, each worth 1 point.
+    Score ≥7 = institutional-grade uptrend.
+    """
+    score = 0
+    criteria = {}
+    if len(closes) < 200:
+        return {"trend_template": score, "tt_criteria": criteria, "tt_full": False}
+    price = closes[-1]
+    ema50  = _ema(closes, 50)[-1]
+    ema150 = _ema(closes, 150)[-1]
+    ema200 = _ema(closes, 200)[-1]
+    # 200d slope: compare to 20 bars ago
+    ema200_prev = _ema(closes[:-20], 200)[-1] if len(closes) >= 220 else ema200
+    # 52W high/low from all available data (up to 252 bars)
+    look = closes[-252:]
+    hl252 = highs[-252:] if len(highs) >= 252 else highs
+    ll252 = lows[-252:] if len(lows) >= 252 else lows
+    high_52w = max(hl252)
+    low_52w  = min(ll252)
+
+    c1 = price > ema200;           score += c1; criteria["above_ema200"]   = c1
+    c2 = ema200 > ema200_prev;     score += c2; criteria["ema200_trending"] = c2
+    c3 = ema150 > ema200;          score += c3; criteria["ema150_gt_200"]   = c3
+    c4 = ema50  > ema150;          score += c4; criteria["ema50_gt_150"]    = c4
+    c5 = price  > ema50;           score += c5; criteria["above_ema50"]     = c5
+    c6 = price  >= low_52w * 1.25; score += c6; criteria["25pct_off_low"]   = c6
+    c7 = price  >= high_52w * 0.75;score += c7; criteria["within_25_high"]  = c7
+    c8 = rs_rating >= 70;          score += c8; criteria["rs_gte70"]        = c8
+    return {"trend_template": score, "tt_criteria": criteria, "tt_full": score == 8}
+
+
+def _anchored_vwap(daily) -> dict:
+    """VWAP anchored from the 52-week low date — acts as dynamic institutional support."""
+    try:
+        df = daily.tail(252).copy()
+        if len(df) < 5 or "Volume" not in df.columns:
+            return {"avwap_52wl": 0.0, "above_avwap_52wl": False, "avwap_dist_pct": 0.0}
+        low_idx = df["Low"].idxmin()
+        anchor = df[df.index >= low_idx]
+        if len(anchor) < 2:
+            return {"avwap_52wl": 0.0, "above_avwap_52wl": False, "avwap_dist_pct": 0.0}
+        tp  = (anchor["High"] + anchor["Low"] + anchor["Close"]) / 3
+        vol = anchor["Volume"].fillna(0)
+        avwap = float((tp * vol).cumsum().iloc[-1] / vol.cumsum().iloc[-1]) if vol.sum() > 0 else 0.0
+        cur   = float(df["Close"].iloc[-1])
+        dist  = round((cur - avwap) / avwap * 100, 2) if avwap > 0 else 0.0
+        return {"avwap_52wl": round(avwap, 2), "above_avwap_52wl": cur > avwap, "avwap_dist_pct": dist}
+    except Exception:
+        return {"avwap_52wl": 0.0, "above_avwap_52wl": False, "avwap_dist_pct": 0.0}
+
+
 def _extract(daily, hourly):
     if daily is None or len(daily) < 2:
         return None
@@ -4759,6 +4844,39 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # ── Pocket Pivot (O'Neil / Kacher-Morales) ─────────────────────────────────
+    pocket_pivot_signal = False
+    try:
+        if "Close" in daily.columns and "Volume" in daily.columns and len(daily) >= 12:
+            pocket_pivot_signal = _pocket_pivot(list(daily["Close"]), list(daily["Volume"]), lookback=10)
+    except Exception:
+        pass
+
+    # ── High-Tight Flag (Minervini) ─────────────────────────────────────────────
+    htf_result = {"htf": False, "htf_consec": 0}
+    try:
+        if "High" in daily.columns and "Volume" in daily.columns and len(daily) >= 20:
+            htf_result = _high_tight_flag(list(daily["High"]), list(daily["Close"]), list(daily["Volume"]))
+    except Exception:
+        pass
+
+    # ── Minervini Trend Template Score (0-8) ────────────────────────────────────
+    tt_result = {"trend_template": 0, "tt_criteria": {}, "tt_full": False}
+    try:
+        if "High" in daily.columns and "Low" in daily.columns and len(daily) >= 200:
+            tt_result = _trend_template_score(
+                list(daily["Close"]), list(daily["High"]), list(daily["Low"]), rs_rating
+            )
+    except Exception:
+        pass
+
+    # ── Anchored VWAP from 52W Low ──────────────────────────────────────────────
+    avwap_result = {"avwap_52wl": 0.0, "above_avwap_52wl": False, "avwap_dist_pct": 0.0}
+    try:
+        avwap_result = _anchored_vwap(daily)
+    except Exception:
+        pass
+
     return {
         "price":           round(price, 2),
         "change_pct":      round(chg_pct, 2),
@@ -4919,6 +5037,15 @@ def _extract(daily, hourly):
         "expected_move_wk":       expected_move_wk,
         "expected_move_mo":       expected_move_mo,
         "expected_move_pct_wk":   expected_move_pct_wk,
+        # ── Advanced pattern signals ────────────────────────────────────────────
+        "pocket_pivot":           pocket_pivot_signal,
+        "htf":                    htf_result.get("htf", False),
+        "htf_consec":             htf_result.get("htf_consec", 0),
+        "trend_template":         tt_result.get("trend_template", 0),
+        "tt_full":                tt_result.get("tt_full", False),
+        "avwap_52wl":             avwap_result.get("avwap_52wl", 0.0),
+        "above_avwap_52wl":       avwap_result.get("above_avwap_52wl", False),
+        "avwap_dist_pct":         avwap_result.get("avwap_dist_pct", 0.0),
     }
 
 
@@ -5777,6 +5904,36 @@ def score(tk, d, sentiment=0, regime_adj=0):
             # Very close to earnings: binary risk zone — slightly penalize new entries
             s -= 4  # too close — gap risk exceeds expected drift
 
+    # Pocket Pivot (O'Neil/Kacher-Morales): up day volume > every down-day volume in prior 10 sessions
+    # Identifies institutional buying pressure before the big move begins (+12)
+    if d.get("pocket_pivot", False): s += 12
+
+    # High-Tight Flag (Minervini): 3+ consecutive closes near 52W high on volume → explosive setup (+14)
+    _htf_c = d.get("htf_consec", 0) or 0
+    if d.get("htf", False):
+        s += 14
+    elif _htf_c >= 2:
+        s += 7  # building toward HTF — early alert
+
+    # Minervini Trend Template: institutional-grade uptrend qualification
+    # 8/8 = all criteria met → +15 (strongest structural quality bonus in the system)
+    # 7/8 = near-perfect → +10, 6/8 → +6, 5/8 → +3
+    _tt = d.get("trend_template", 0) or 0
+    if _tt == 8:   s += 15
+    elif _tt == 7: s += 10
+    elif _tt == 6: s +=  6
+    elif _tt == 5: s +=  3
+    elif _tt <= 2: s -=  5  # very weak structure — avoid new longs
+
+    # Anchored VWAP from 52W Low: price above institutional cost basis since the low
+    # Strong confirmation that smart money is in profit → trend continuation likely (+6)
+    if d.get("above_avwap_52wl", False):
+        _avwap_d = d.get("avwap_dist_pct", 0.0) or 0.0
+        if _avwap_d > 10:   s += 3   # extended above AVWAP — ok but less upside
+        elif _avwap_d > 0:  s += 6   # healthy position above AVWAP
+    elif not d.get("above_avwap_52wl", True):
+        s -= 4  # below institutional cost basis — bearish anchor
+
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
     # Combines win_rate + avg_pnl for expected-value-based adjustment
@@ -5897,6 +6054,18 @@ def bearish_score(tk, d):
     # EMA stack: fully stacked bear = reliable short setup (+8), bull = don't short (-8)
     if d.get("ema_stacked_bear", False): s += 8
     if d.get("ema_stacked_bull", False): s -= 8
+
+    # Trend Template: high score means strong bull structure — heavily penalize short entry
+    _tt_b = d.get("trend_template", 0) or 0
+    if   _tt_b == 8: s -= 15  # strongest bull structure — never short
+    elif _tt_b >= 6: s -= 8   # solid bull trend — avoid shorts
+    elif _tt_b <= 2: s +=  6  # weak / broken structure = short-friendly
+
+    # Pocket Pivot: institutional buying on volume confirmation — don't short
+    if d.get("pocket_pivot", False): s -= 8
+
+    # HTF: stock at 52W highs with volume = extremely bullish — strongly avoid shorts
+    if d.get("htf", False): s -= 12
 
     return max(0, min(100, int(s)))
 
@@ -7268,6 +7437,14 @@ def run():
                 "rs_rating":         live.get(tk, {}).get("rs_rating", 50),
                 "ema21_pullback":    live.get(tk, {}).get("ema21_pullback", False),
                 "ema21_touch":       live.get(tk, {}).get("ema21_touch", False),
+                "pocket_pivot":      live.get(tk, {}).get("pocket_pivot", False),
+                "htf":               live.get(tk, {}).get("htf", False),
+                "htf_consec":        live.get(tk, {}).get("htf_consec", 0),
+                "trend_template":    live.get(tk, {}).get("trend_template", 0),
+                "tt_full":           live.get(tk, {}).get("tt_full", False),
+                "above_avwap_52wl":  live.get(tk, {}).get("above_avwap_52wl", False),
+                "avwap_52wl":        live.get(tk, {}).get("avwap_52wl", 0.0),
+                "avwap_dist_pct":    live.get(tk, {}).get("avwap_dist_pct", 0.0),
                 # Kelly-suggested position size as % of portfolio (half-Kelly for safety)
                 "kelly_size_pct":    round(max(0, min(10.0, (
                     (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
@@ -7675,6 +7852,14 @@ def run():
                 "macd_bull_div":      sig.get("macd_bull_div", False),
                 "rsi_divergence":     sig.get("rsi_divergence", False),
                 "rsi_bull_divergence": sig.get("rsi_bull_divergence", False),
+                "pocket_pivot":        sig.get("pocket_pivot", False),
+                "htf":                 sig.get("htf", False),
+                "htf_consec":          sig.get("htf_consec", 0),
+                "trend_template":      sig.get("trend_template", 0),
+                "tt_full":             sig.get("tt_full", False),
+                "above_avwap_52wl":    sig.get("above_avwap_52wl", False),
+                "avwap_52wl":          sig.get("avwap_52wl", 0.0),
+                "avwap_dist_pct":      sig.get("avwap_dist_pct", 0.0),
                 "w52_range_pos":      sig.get("w52_range_pos", 0.0),
                 "expected_move_wk":   sig.get("expected_move_wk", 0.0),
                 "expected_move_mo":   sig.get("expected_move_mo", 0.0),
