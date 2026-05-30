@@ -8797,6 +8797,44 @@ def run():
             if is_correlated_with_held(tk, _held_syms, threshold=0.85):
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": "corr≥0.85 w/ held position"})
                 continue
+            # ── NEURAL GATE: accumulated learning hard-vetoes ─────────────────
+            # When multiple learned negative patterns fire simultaneously, skip the
+            # candidate. This uses the accumulated knowledge from all 40+ neurons
+            # to avoid setups that the bot has historically failed on.
+            try:
+                _ng_strikes = 0
+                _ng_reasons = []
+                _tk_sig = live.get(tk, {})
+                # Strike: in learned cold sector with <35% historical WR
+                _tk_sec = SECTOR_MAP.get(tk, "other")
+                _sec_wr_ng = tlog.get("sector_performance", {}).get(_tk_sec, {}).get("win_rate", 50) or 50
+                _sec_n_ng  = tlog.get("sector_performance", {}).get(_tk_sec, {}).get("total", 0) or 0
+                if _sec_n_ng >= 5 and _sec_wr_ng < 35:
+                    _ng_strikes += 1; _ng_reasons.append(f"cold sector {_tk_sec}({_sec_wr_ng:.0f}%WR)")
+                # Strike: ticker has poor history (memory score < -3)
+                if _LEARNED_TICKER_MEMORY.get(tk, 0) <= -3:
+                    _ng_strikes += 1; _ng_reasons.append(f"ticker memory penalty({_LEARNED_TICKER_MEMORY[tk]:+d})")
+                # Strike: SPY is down today AND learned penalty is active
+                if _LEARNED_SPY_DOWN_PENALTY:
+                    _spy_today = _fetch_spy_perf().get("d1", 0.0) or 0.0
+                    if _spy_today < -1.0:  # more than -1% SPY day
+                        _ng_strikes += 1; _ng_reasons.append(f"SPY down({_spy_today:+.1f}%) + learned penalty")
+                # Strike: in worst learned half-hour window
+                _ng_hw = f"{datetime.now(timezone.utc).hour:02d}{'30' if datetime.now(timezone.utc).minute >= 30 else '00'}"
+                if _LEARNED_WORST_HALFHOURS and _ng_hw in _LEARNED_WORST_HALFHOURS:
+                    _ng_strikes += 1; _ng_reasons.append(f"worst 30min window({_ng_hw})")
+                # Strike: falling score trend AND penalty active
+                if _LEARNED_FALLING_SCORE_PENALTY:
+                    _ng_sh = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    if len(_ng_sh) >= 2 and (_ng_sh[-1] - _ng_sh[0]) <= -8:
+                        _ng_strikes += 1; _ng_reasons.append(f"score falling({_ng_sh[-1]-_ng_sh[0]:.0f}pts)")
+                # VETO: 3+ strikes = neural gate fires
+                if _ng_strikes >= 3:
+                    logger.info(f"NEURAL GATE: {tk} vetoed ({_ng_strikes} strikes: {', '.join(_ng_reasons)})")
+                    _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"neural gate ({_ng_strikes} strikes)"})
+                    continue
+            except Exception:
+                pass
             # Use Sonnet for top 3 candidates (better reasoning), Haiku for rest
             rank = len(final_scores)
             use_sonnet = (rank < 3) and _time_ok(200)
