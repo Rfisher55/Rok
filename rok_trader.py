@@ -7804,32 +7804,74 @@ def run():
         _n_pos = len(tlog.get("positions", []))
         _regime_desc = regime.get("regime", "neutral").upper()
         _vix_now = regime.get("vix", 0)
+        _mq_now  = tlog.get("market_quality", 50)
+        _eff_thresh = tlog.get("effective_min_score", MIN_BUY_SCORE)
+        _hot_sec = sorted(sector_adjs.items(), key=lambda x: -x[1])[:2] if sector_adjs else []
+        _hot_str = " | ".join(f"{s}:+{v}" for s,v in _hot_sec if v > 0)
         if made_trades:
-            _recent = [t for t in tlog["trades"] if t.get("action") in ("BUY", "DCA", "SELL", "COVER")][-3:]
-            _acts = " · ".join(f"{t['action']} {t['ticker']}" for t in _recent)
-            _last_decision = f"Bot executed: {_acts}. Regime: {_regime_desc}, VIX {_vix_now:.1f}."
+            _recent = [t for t in tlog["trades"] if t.get("action") in ("BUY", "DCA", "SELL", "COVER")][-4:]
+            _acts = " · ".join(
+                f"{t['action']} ${t['ticker']} "
+                f"({'+'if(t.get('pnl_pct') or 0)>=0 else ''}{(t.get('pnl_pct') or 0):.1f}%)" if t.get("action") in ("SELL","COVER")
+                else f"{t['action']} ${t['ticker']} (score={t.get('score','?')})"
+                for t in _recent
+            )
+            _last_decision = (
+                f"Executed: {_acts}. "
+                f"Regime: {_regime_desc} · VIX {_vix_now:.1f} · MktQuality {_mq_now}/100 · "
+                f"{_n_pos} positions · threshold={_eff_thresh}. "
+                f"Hot sectors: {_hot_str or 'none'}."
+            )
         elif _open_guard:
-            _last_decision = f"Market just opened — waiting for opening volatility to settle (10 min guard). VIX {_vix_now:.1f}."
+            _last_decision = f"Opening guard: waiting 10 min for volatility to settle. VIX {_vix_now:.1f} · regime {_regime_desc}."
         elif _close_guard:
-            _last_decision = f"Near market close — no new buys in last 20 min. VIX {_vix_now:.1f}."
+            _last_decision = f"Close guard: no new buys last 20 min. Managing {_n_pos} open positions. VIX {_vix_now:.1f}."
         elif _consecutive_losses:
-            _last_decision = f"Consecutive loss guard active — last 3 trades were losses. Protecting capital. VIX {_vix_now:.1f}."
+            _last_decision = f"Loss guard: last 3 trades were losses — protecting capital. {_n_pos} open. VIX {_vix_now:.1f}."
         elif vix > VIX_EXTREME_THRESH:
-            _last_decision = f"VIX {_vix_now:.1f} is extreme — all buys suspended until market calms."
+            _last_decision = f"VIX {_vix_now:.1f} extreme — all buys suspended. Managing exits only. MktQuality {_mq_now}/100."
         elif _top_scan:
-            _top_str = ", ".join(f"${s['ticker']}({s['score']})" for s in _top_scan[:3])
-            _eff_thresh = tlog.get("effective_min_score", MIN_BUY_SCORE)
-            _hot_sec = sorted(sector_adjs.items(), key=lambda x: -x[1])[:2] if sector_adjs else []
-            _hot_str = " | ".join(f"{s}:+{v}" for s,v in _hot_sec if v > 0)
-            _mq_str  = f"MktQuality={tlog.get('market_quality',50)}/100"
-            _last_decision = (f"Scanned {len(candidates)} stocks. Top: {_top_str}. "
-                              f"Regime: {_regime_desc}, threshold={_eff_thresh}. "
-                              f"{_mq_str}. Hot sectors: {_hot_str or 'none'}.")
+            _top3 = _top_scan[:3]
+            _top_str = " · ".join(
+                f"${s['ticker']} score={s['score']} grade={s.get('grade','?')} "
+                f"{'[' + s['catalyst'][:30] + ']' if s.get('catalyst') else ''}"
+                for s in _top3
+            )
+            _last_decision = (
+                f"Scanned {len(candidates)} stocks. No trigger yet. "
+                f"Top candidates: {_top_str}. "
+                f"Regime: {_regime_desc} · VIX {_vix_now:.1f} · MktQuality {_mq_now}/100 · "
+                f"threshold={_eff_thresh}. Hot sectors: {_hot_str or 'none'}."
+            )
         else:
-            _last_decision = (f"Scanned {len(candidates)} stocks. No candidates passed scoring. "
-                              f"Regime: {_regime_desc}, VIX {_vix_now:.1f}, "
-                              f"MktQuality={tlog.get('market_quality',50)}/100.")
+            _last_decision = (
+                f"Scanned {len(candidates)} stocks — none passed threshold {_eff_thresh}. "
+                f"Regime: {_regime_desc} · VIX {_vix_now:.1f} · MktQuality {_mq_now}/100. "
+                f"Hot sectors: {_hot_str or 'none'}."
+            )
         tlog["last_decision"] = _last_decision
+    except Exception:
+        pass
+
+    # Today's trade summary: trades made in the last 24h with running P&L
+    try:
+        _today_str = now_utc.strftime("%Y-%m-%d")
+        _today_trades = [t for t in tlog.get("trades", []) if (t.get("time") or "")[:10] == _today_str]
+        _buys_today  = [t for t in _today_trades if t.get("action") in ("BUY", "DCA")]
+        _sells_today = [t for t in _today_trades if t.get("action") in ("SELL", "COVER")]
+        _partial_today = [t for t in _today_trades if t.get("action") == "SELL_HALF"]
+        _closed_pnl_today = sum(t.get("pnl_pct", 0) for t in _sells_today)
+        _partial_pnl_today = sum(t.get("pnl_pct", 0) for t in _partial_today)
+        tlog["trade_summary_today"] = {
+            "date":        _today_str,
+            "buys":        len(_buys_today),
+            "sells":       len(_sells_today),
+            "partials":    len(_partial_today),
+            "closed_pnl":  round(_closed_pnl_today, 2),
+            "partial_pnl": round(_partial_pnl_today, 2),
+            "buy_tickers":   [t["ticker"] for t in _buys_today],
+            "sell_tickers":  [t["ticker"] for t in _sells_today],
+        }
     except Exception:
         pass
 

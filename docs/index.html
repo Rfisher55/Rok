@@ -55044,6 +55044,30 @@ window.renderSectorRotation = renderSectorRotation;
           <div style="font-size:9px;color:#82b1ff;line-height:1.5">${data.last_decision}</div>
         </div>`;
       }
+      // Today's trade summary banner
+      if (data.trade_summary_today) {
+        const ts = data.trade_summary_today;
+        const tsTotal = (ts.buys||0) + (ts.sells||0) + (ts.partials||0);
+        const tsPnl = (ts.closed_pnl||0) + (ts.partial_pnl||0);
+        const tsPnlCol = tsPnl >= 0 ? '#00ff88' : '#ef5350';
+        if (tsTotal > 0) {
+          const mq = data.market_quality || 50;
+          const mqCol = mq >= 70 ? '#00ff88' : mq >= 50 ? '#ffd54f' : '#ef5350';
+          const mqBar = `<div style="display:inline-flex;align-items:center;gap:3px"><div style="width:32px;height:4px;background:rgba(255,255,255,.1);border-radius:2px"><div style="width:${mq}%;height:100%;background:${mqCol};border-radius:2px"></div></div><span style="font-size:6px;color:${mqCol}">${mq}/100</span></div>`;
+          html += `<div style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:.5rem .75rem;margin-bottom:.55rem">
+            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.2rem">
+              <span style="font-size:8px;font-weight:800;color:#4a6fa5;letter-spacing:.08em;text-transform:uppercase">Today</span>
+              ${ts.buys > 0 ? `<span style="font-size:7px;color:#00ff88;border:1px solid rgba(0,255,136,.2);border-radius:3px;padding:1px 5px">${ts.buys} BUY${ts.buys>1?'S':''}</span>` : ''}
+              ${ts.sells > 0 ? `<span style="font-size:7px;color:#ef5350;border:1px solid rgba(255,34,85,.2);border-radius:3px;padding:1px 5px">${ts.sells} SELL${ts.sells>1?'S':''}</span>` : ''}
+              ${ts.partials > 0 ? `<span style="font-size:7px;color:#ffd54f;border:1px solid rgba(255,213,79,.2);border-radius:3px;padding:1px 5px">${ts.partials} PARTIAL${ts.partials>1?'S':''}</span>` : ''}
+              ${tsPnl !== 0 ? `<span style="font-size:7px;font-weight:800;color:${tsPnlCol};margin-left:4px">${tsPnl>=0?'+':''}${tsPnl.toFixed(1)}% realized</span>` : ''}
+              <span style="margin-left:auto;font-size:6.5px;color:#4a6fa5">MktQuality: ${mqBar}</span>
+            </div>
+            ${ts.buy_tickers && ts.buy_tickers.length ? `<div style="font-size:6.5px;color:#555">Bought: ${ts.buy_tickers.map(t=>'$'+t).join(' · ')}</div>` : ''}
+            ${ts.sell_tickers && ts.sell_tickers.length ? `<div style="font-size:6.5px;color:#555">Sold: ${ts.sell_tickers.map(t=>'$'+t).join(' · ')}</div>` : ''}
+          </div>`;
+        }
+      }
       if (trades.length === 0 && positions.length === 0) {
         html += `<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;margin-bottom:.5rem">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
       }
@@ -55564,26 +55588,39 @@ window.renderSectorRotation = renderSectorRotation;
         html += `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--au);text-transform:uppercase;margin-bottom:.4rem">Recent Trades</div>`;
         html += `<div style="display:flex;flex-direction:column;gap:.25rem">`;
         trades.forEach(t => {
-          const actionColor = t.action==='BUY'||t.action==='DCA' ? 'var(--g)' : t.action==='SELL'||t.action==='SELL_HALF'||t.action==='COVER' ? 'var(--r)' : 'var(--au)';
+          const isBuy = t.action==='BUY'||t.action==='DCA';
+          const isSell = t.action==='SELL'||t.action==='SELL_HALF'||t.action==='COVER';
+          const actionColor = isBuy ? '#00ff88' : isSell ? '#ef5350' : '#ffd54f';
           const timeStr = t.time ? new Date(t.time).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
           const pnlVal = t.pnl_pct;
           const pnl = pnlVal != null ? `${pnlVal >= 0 ? '+' : ''}${pnlVal.toFixed(2)}%` : '';
-          const scoreStr = t.score != null ? ` [${t.score}]` : '';
-          // Entry signal chips for BUY trades
-          const entrySignals = t.entry_signals || [];
-          const sigChips = entrySignals.slice(0, 6).map(s => {
-            const sLabel = s.replace(/_/g,' ').toUpperCase().slice(0,8);
-            return `<span style="background:rgba(0,180,255,.12);color:#80deea;font-size:5.5px;padding:1px 3px;border-radius:2px">${sLabel}</span>`;
+          const pnlBg = pnlVal != null ? (pnlVal >= 2 ? 'rgba(0,255,136,.12)' : pnlVal < 0 ? 'rgba(255,34,85,.1)' : '') : '';
+          const scoreStr = t.score != null ? `${t.score}` : '';
+          // Extract signal tags from reason string (e.g. [DON-BRK] [RVOL2.3x] [ST$123])
+          const reason = t.reason || '';
+          const tagMatches = reason.match(/\[([^\]]+)\]/g) || [];
+          const reasonClean = reason.replace(/\[[^\]]+\]/g, '').trim().slice(0, 55);
+          const sigChips = tagMatches.slice(0, 6).map(tag => {
+            const label = tag.replace(/[\[\]]/g,'');
+            const col = label.includes('RVOL')||label.includes('VOL')?'#ffd54f':label.includes('DON')||label.includes('BRK')?'#82b1ff':label.includes('ST')||label.includes('SAR')?'#00ffc8':label.includes('SELL')||label.includes('STOP')||label.includes('ENG')?'#ef9a9a':'#80deea';
+            return `<span style="font-size:5.5px;color:${col};background:${col}18;padding:1px 3px;border-radius:2px;font-weight:700">${label.slice(0,12)}</span>`;
           }).join('');
-          html += `<div style="padding:.38rem .55rem;background:var(--blk4);border-radius:7px;border-left:2.5px solid ${actionColor}">
-            <div style="display:flex;align-items:center;gap:.5rem">
-              <span style="font-size:8px;font-weight:900;color:${actionColor};min-width:54px;letter-spacing:.05em">${t.action}${scoreStr}</span>
-              <span style="font-family:var(--disp);color:var(--au);font-size:1rem;min-width:42px">$${t.ticker}</span>
-              <span style="flex:1;font-size:8px;color:var(--wh3)">${(t.reason||'').slice(0,60)}</span>
-              <span style="font-size:9.5px;font-weight:800;color:${pnlVal != null ? (pnlVal>=0?'var(--g)':'var(--r)') : 'var(--wh4)'}">${pnl}</span>
-              <span style="font-size:7.5px;color:var(--wh4)">${timeStr}</span>
+          const entrySignals = t.entry_signals || [];
+          const extraChips = entrySignals.slice(0,4).filter(s => !tagMatches.some(t => t.includes(s.toUpperCase().slice(0,5)))).map(s => {
+            return `<span style="background:rgba(0,180,255,.1);color:#80deea;font-size:5.5px;padding:1px 3px;border-radius:2px">${s.replace(/_/g,' ').toUpperCase().slice(0,10)}</span>`;
+          }).join('');
+          html += `<div style="padding:.38rem .55rem;background:${pnlBg||'var(--blk4)'};border-radius:7px;border-left:2.5px solid ${actionColor}">
+            <div style="display:flex;align-items:center;gap:.4rem">
+              <span style="font-size:7.5px;font-weight:900;color:${actionColor};min-width:46px;letter-spacing:.04em">${t.action}</span>
+              <span style="font-family:var(--disp);color:#ffd54f;font-size:.95rem;min-width:42px;font-weight:900">$${t.ticker}</span>
+              ${scoreStr ? `<span style="font-size:6.5px;color:#4a6fa5;background:rgba(74,111,165,.15);border-radius:3px;padding:1px 4px">${scoreStr}</span>` : ''}
+              <span style="flex:1;font-size:7.5px;color:#546e7a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${reasonClean}</span>
+              <span style="font-size:9.5px;font-weight:900;color:${pnlVal != null ? (pnlVal>=0?'#00ff88':'#ef5350') : '#555'};min-width:40px;text-align:right">${pnl}</span>
             </div>
-            ${sigChips ? `<div style="display:flex;gap:2px;margin-top:.18rem;flex-wrap:wrap">${sigChips}</div>` : ''}
+            <div style="display:flex;align-items:center;gap:4px;margin-top:.2rem">
+              ${sigChips}${extraChips}
+              <span style="margin-left:auto;font-size:6.5px;color:#3a5a8a">${timeStr}</span>
+            </div>
           </div>`;
         });
         html += `</div>`;
