@@ -321,6 +321,16 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         # Price tier at entry
         _p = float(price)
         e["price_tier"] = ("micro" if _p < 10 else "small" if _p < 30 else "mid" if _p < 100 else "large")
+        # Macro event context at entry (FOMC/CPI/NFP awareness)
+        try:
+            _macro_ctx = get_macro_context()
+            e["macro_event"] = _macro_ctx["event"]    # "FOMC", "CPI", "NFP", "none"
+            e["macro_label"] = _macro_ctx["label"]    # "event_day", "day_before", "normal"
+        except Exception:
+            e["macro_event"] = "none"
+            e["macro_label"] = "normal"
+        # RSI at entry (daily RSI for swing entry quality tracking)
+        e["rsi_at_entry"] = round(float(signals.get("daily_rsi", 50) or 50), 1)
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -735,6 +745,50 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _dp["total"] > 0:
                     _dp["win_rate"] = round(_dp["wins"] / _dp["total"] * 100, 1)
                     _dp["avg_pnl"]  = round(_dp["total_pnl"] / _dp["total"], 2)
+        except Exception:
+            pass
+
+    # ── RSI Entry Zone Neuron: learn optimal RSI at entry ─────────────────────
+    # Tracks win rate by RSI bracket at time of purchase.
+    # Learns: does buying oversold (<35) or momentum (>60) produce better results?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ta = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _rsi_e = float(_buy_ta.get("rsi_at_entry", 50) or 50) if _buy_ta else None
+            if _rsi_e is not None:
+                _rsi_bkt = ("oversold" if _rsi_e < 35 else
+                            "neutral"  if _rsi_e < 55 else
+                            "momentum" if _rsi_e < 70 else "overbought")
+                _rsi_perf = tlog.setdefault("rsi_entry_perf", {})
+                _rp2 = _rsi_perf.setdefault(_rsi_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _rp2["total"] = _rp2.get("total", 0) + 1
+                _rp2["total_pnl"] = round(_rp2.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _rp2["wins"] = _rp2.get("wins", 0) + 1
+                else: _rp2["losses"] = _rp2.get("losses", 0) + 1
+                if _rp2["total"] > 0:
+                    _rp2["win_rate"] = round(_rp2["wins"] / _rp2["total"] * 100, 1)
+                    _rp2["avg_pnl"]  = round(_rp2["total_pnl"] / _rp2["total"], 2)
+        except Exception:
+            pass
+
+    # ── Macro Event Neuron: learn FOMC/CPI/NFP trade outcomes ─────────────────
+    # Tracks performance of trades entered on macro event days vs. normal days.
+    # Learns: should the bot avoid entering on FOMC day? Does day_before hurt?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_tb = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _macro_lbl = _buy_tb.get("macro_label", "normal") if _buy_tb else "normal"
+            _macro_ev  = _buy_tb.get("macro_event", "none") if _buy_tb else "none"
+            _macro_key = f"{_macro_lbl}_{_macro_ev}" if _macro_ev != "none" else "normal"
+            _macro_perf = tlog.setdefault("macro_event_perf", {})
+            _mp = _macro_perf.setdefault(_macro_key, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _mp["total"] = _mp.get("total", 0) + 1
+            _mp["total_pnl"] = round(_mp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _mp["wins"] = _mp.get("wins", 0) + 1
+            else: _mp["losses"] = _mp.get("losses", 0) + 1
+            if _mp["total"] > 0:
+                _mp["win_rate"] = round(_mp["wins"] / _mp["total"] * 100, 1)
+                _mp["avg_pnl"]  = round(_mp["total_pnl"] / _mp["total"], 2)
         except Exception:
             pass
 
@@ -2894,6 +2948,18 @@ def near_macro_event(days_before: int = 1) -> bool:
             logger.info(f"{event_type} macro event in {d}d ({check}) — cautious mode")
             return True
     return False
+
+def get_macro_context() -> dict:
+    """Returns macro event context for the current moment.
+    Used to tag trade entries so we can learn macro event performance."""
+    today = datetime.now(timezone.utc).date()
+    for d in range(3):  # check today + next 2 days
+        check = (today + timedelta(days=d)).isoformat()
+        if check in _MACRO_EVENTS:
+            event_type = "FOMC" if check in _FOMC_DATES else "CPI" if check in _CPI_DATES else "NFP"
+            return {"event": event_type, "days_away": d,
+                    "label": "event_day" if d == 0 else ("day_before" if d == 1 else "2d_before")}
+    return {"event": "none", "days_away": 99, "label": "normal"}
 
 
 # ── Earnings calendar check ───────────────────────────────────────────────────
@@ -10097,6 +10163,35 @@ def run():
             if _worst_dca and _worst_dca["win_rate"] < 40:
                 _learn_log.append(f"DCA hurts in {_worst_dca['regime']} markets ({_worst_dca['win_rate']:.0f}% WR) — cut faster")
 
+        # ── 20. RSI Entry Zone Neuron: optimal RSI at entry ───────────────────
+        _rsi_data = tlog.get("rsi_entry_perf", {})
+        _rsi_zone_insights = []
+        for _rz_bkt in ("oversold", "neutral", "momentum", "overbought"):
+            _rzd = _rsi_data.get(_rz_bkt, {})
+            if _rzd.get("total", 0) >= 3:
+                _rsi_zone_insights.append({"zone": _rz_bkt, "win_rate": _rzd.get("win_rate", 50),
+                                           "avg_pnl": _rzd.get("avg_pnl", 0), "total": _rzd.get("total", 0)})
+        if _rsi_zone_insights:
+            _rz_summary = " | ".join(f"{r['zone']}:{r['win_rate']:.0f}%WR" for r in _rsi_zone_insights)
+            _learn_log.append(f"RSI entry zone WRs: {_rz_summary}")
+            _best_rz = max(_rsi_zone_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"Best RSI entry zone: {_best_rz['zone']} (RSI {'<35' if _best_rz['zone']=='oversold' else '35-55' if _best_rz['zone']=='neutral' else '55-70' if _best_rz['zone']=='momentum' else '>70'}): {_best_rz['win_rate']:.0f}% WR")
+
+        # ── 21. Macro Event Neuron: FOMC/CPI/NFP trade performance ───────────
+        _macro_perf_raw = tlog.get("macro_event_perf", {})
+        _macro_insights = []
+        for _mk, _md in _macro_perf_raw.items():
+            if _md.get("total", 0) >= 2:
+                _macro_insights.append({"context": _mk, "win_rate": _md.get("win_rate", 50),
+                                        "avg_pnl": _md.get("avg_pnl", 0), "total": _md.get("total", 0)})
+        if _macro_insights:
+            _mac_sum = " | ".join(f"{m['context'].replace('_',' ')}:{m['win_rate']:.0f}%WR" for m in _macro_insights[:4])
+            _learn_log.append(f"Macro event trade WRs: {_mac_sum}")
+            # If event-day trades are failing, note it prominently
+            _ev_day = next((m for m in _macro_insights if "event_day" in m["context"]), None)
+            if _ev_day and _ev_day["win_rate"] < 40:
+                _learn_log.append(f"FOMC/CPI/NFP event-day entries failing ({_ev_day['win_rate']:.0f}% WR) — will skip on event days")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -10124,6 +10219,8 @@ def run():
             "breadth_perf":        _br_insights,           # breadth bracket performance
             "min_breadth_learned": _min_breadth_learned,   # learned breadth floor
             "dca_intelligence":    _dca_insights,          # DCA outcome by regime
+            "rsi_entry_zones":     _rsi_zone_insights,     # RSI at entry performance
+            "macro_event_perf":    _macro_insights,        # FOMC/CPI/NFP trade outcomes
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

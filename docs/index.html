@@ -53610,6 +53610,35 @@ function _renderIntelReport(el, intel) {
         </div>` : '';
         return `<div style="margin-bottom:.3rem">${bHtml}${dHtml}</div>`;
       })()}
+      ${(() => {
+        // ── RSI Entry Zone + Macro Event dual panel ────────────────────────
+        const rz = lp.rsi_entry_zones || [];
+        const me = lp.macro_event_perf || [];
+        if (!rz.length && !me.length) return '';
+        const zoneColors = {oversold:'#42a5f5',neutral:'#a5d6a7',momentum:'#ffd54f',overbought:'#ef9a9a'};
+        const rziCell = r => {
+          const col = r.win_rate >= 60 ? '#00e676' : r.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+          const hue = zoneColors[r.zone] || '#888';
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.2rem .3rem;text-align:center;border-top:2px solid ${hue}44">
+            <div style="font-size:5.5px;color:${hue};font-weight:700">${r.zone.charAt(0).toUpperCase()+r.zone.slice(1)}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${r.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${r.avg_pnl>=0?'#69f0ae':'#ef5350'}">${r.avg_pnl>=0?'+':''}${r.avg_pnl.toFixed(1)}% (${r.total}T)</div>
+          </div>`;
+        };
+        const rzHtml = rz.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.15rem">📉 RSI AT ENTRY PERFORMANCE</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${rz.map(rziCell).join('')}</div>
+        </div>` : '';
+        const meHtml = me.length ? `<div style="margin-top:.2rem">
+          <div style="font-size:5.5px;color:#ef9a9a;font-weight:700;margin-bottom:.15rem">📅 MACRO EVENT TRADE PERFORMANCE</div>
+          <div style="display:flex;gap:.2rem;flex-wrap:wrap">${me.map(m => {
+            const mCol = m.win_rate >= 60 ? '#00e676' : m.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+            const label = m.context.replace(/_/g,' ').replace('none','').trim() || 'Normal Day';
+            return `<span style="font-size:6px;background:rgba(0,0,0,.2);border-radius:3px;padding:1px 5px;color:${mCol};white-space:nowrap">${label}: ${m.win_rate.toFixed(0)}%</span>`;
+          }).join('')}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem">${rzHtml}${meHtml}</div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}
