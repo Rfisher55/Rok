@@ -1157,12 +1157,18 @@ def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
                 if title:
                     age_h = round((now - pub) / 3600, 1) if pub else None
                     _headlines.append({"t": title[:120], "s": src[:30], "h": age_h, "u": url})
+            # Classify the dominant catalyst type from recent headlines
+            _all_titles = [n.get("title","") for n in news if n.get("title")]
+            _cat_info = classify_catalyst(_all_titles)
             result = {
-                "count_24h":    count_24h,
-                "count_48h":    count_48h,
-                "velocity":     round(velocity, 2),
-                "accelerating": accel,
-                "headlines":    _headlines,
+                "count_24h":      count_24h,
+                "count_48h":      count_48h,
+                "velocity":       round(velocity, 2),
+                "accelerating":   accel,
+                "headlines":      _headlines,
+                "catalyst_type":  _cat_info["type"],
+                "catalyst_urg":   _cat_info["urgency"],
+                "catalyst_dir":   _cat_info["direction"],
             }
     except Exception:
         pass
@@ -2701,10 +2707,34 @@ def get_earnings_beat_candidates(candidates: list) -> set:
     return beats
 
 
+_CATALYST_TYPES = {
+    # High-urgency hard catalysts (binary, move stock 10-30%+)
+    "earnings":   ["earnings beat", "beats estimates", "record revenue", "raised guidance",
+                   "blowout quarter", "record profit", "record earnings", "misses estimates",
+                   "earnings miss", "revenue miss", "guidance cut", "lowers guidance"],
+    "fda":        ["fda approval", "fda approved", "fda clears", "breakthrough therapy",
+                   "positive phase", "phase 3 success", "regulatory approval",
+                   "fda rejects", "clinical failure", "complete response letter", "trial failure"],
+    "ma":         ["merger", "acquisition", "buyout", "takeover", "going private",
+                   "strategic acquisition", "deal agreed", "tender offer"],
+    "insider":    ["insider buying", "insider buy", "executive purchase", "ceo buys",
+                   "institutional buying", "13f", "direct purchase"],
+    "analyst":    ["upgrade", "price target raised", "strong buy", "outperform", "overweight",
+                   "initiates coverage", "downgrade", "price target cut", "sell rating"],
+    "contract":   ["contract win", "awarded contract", "major contract", "government contract",
+                   "landmark deal", "multi-year deal", "partnership"],
+    "buyback":    ["share buyback", "repurchase", "dividend increase", "special dividend", "stock split"],
+    "legal":      ["lawsuit", "sec investigation", "fraud", "class action", "subpoena", "antitrust", "bankruptcy"],
+}
+# Urgency tier: higher = more binary/immediate price impact
+_CATALYST_URGENCY = {"earnings": 5, "fda": 5, "ma": 5, "insider": 4, "legal": 4,
+                     "analyst": 3, "contract": 3, "buyback": 2}
+
 def detect_catalyst(headlines: list) -> tuple[float, str]:
     """
     Fast keyword scan of headlines. Returns (boost, catalyst_label).
     boost is -15 to +15 additive score points.
+    Also stores catalyst_type and urgency in thread-local for callers who need richer info.
     """
     text = " ".join(headlines).lower()
     bull_hits = [c for c in _BULL_CATALYSTS if c in text]
@@ -2712,6 +2742,27 @@ def detect_catalyst(headlines: list) -> tuple[float, str]:
     boost = min(15, len(bull_hits) * 6) - min(15, len(bear_hits) * 6)
     label = (bull_hits[0] if bull_hits else (bear_hits[0] if bear_hits else ""))
     return float(boost), label
+
+
+def classify_catalyst(headlines: list) -> dict:
+    """
+    Classify the dominant catalyst type, urgency, and direction from headlines.
+    Returns: {type, urgency (1-5), direction ('bull'/'bear'/'mixed'), label}
+    """
+    if not headlines:
+        return {"type": "none", "urgency": 0, "direction": "none", "label": ""}
+    text = " ".join(headlines).lower()
+    best_type, best_urg = "news", 1
+    for cat_type, keywords in _CATALYST_TYPES.items():
+        if any(kw in text for kw in keywords):
+            urg = _CATALYST_URGENCY.get(cat_type, 1)
+            if urg > best_urg:
+                best_type, best_urg = cat_type, urg
+    bull_hits = [c for c in _BULL_CATALYSTS if c in text]
+    bear_hits = [c for c in _BEAR_CATALYSTS if c in text]
+    direction = "bull" if len(bull_hits) > len(bear_hits) else ("bear" if len(bear_hits) > len(bull_hits) else "mixed")
+    label = bull_hits[0] if direction == "bull" and bull_hits else (bear_hits[0] if direction == "bear" and bear_hits else "")
+    return {"type": best_type, "urgency": best_urg, "direction": direction, "label": label}
 
 
 def get_52w_breakout_candidates(fractionable_set: set) -> set:
@@ -4926,10 +4977,16 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig["news_count_24h"]   = nv.get("count_24h", 0)
                             sig["news_velocity"]    = nv.get("velocity", 0.0)
                             sig["news_accelerating"] = nv.get("accelerating", False)
+                            sig["catalyst_type"]    = nv.get("catalyst_type", "none")
+                            sig["catalyst_urg"]     = nv.get("catalyst_urg", 0)
+                            sig["catalyst_dir"]     = nv.get("catalyst_dir", "none")
                         except Exception:
                             sig.setdefault("news_count_24h", 0)
                             sig.setdefault("news_velocity", 0.0)
                             sig.setdefault("news_accelerating", False)
+                            sig.setdefault("catalyst_type", "none")
+                            sig.setdefault("catalyst_urg", 0)
+                            sig.setdefault("catalyst_dir", "none")
                         # Pre-market gap: cached (5 min TTL) — pre-market price vs prior close
                         try:
                             pm = _premarket_info(tk)
@@ -6906,6 +6963,9 @@ def run():
                 "news_accelerating": live.get(tk, {}).get("news_accelerating", False),
                 "news_velocity":  live.get(tk, {}).get("news_velocity", 0.0),
                 "news_count_24h": live.get(tk, {}).get("news_count_24h", 0),
+                "catalyst_type":  live.get(tk, {}).get("catalyst_type", "none"),
+                "catalyst_urg":   live.get(tk, {}).get("catalyst_urg", 0),
+                "catalyst_dir":   live.get(tk, {}).get("catalyst_dir", "none"),
                 "pm_gap_pct":     live.get(tk, {}).get("pm_gap_pct", 0.0),
                 "pm_gap_up":      live.get(tk, {}).get("pm_gap_up", False),
                 "pm_gap_down":    live.get(tk, {}).get("pm_gap_down", False),

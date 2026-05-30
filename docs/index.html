@@ -55623,8 +55623,27 @@ window.renderSectorRotation = renderSectorRotation;
             s.shooting_star    ? '<span style="background:rgba(200,50,50,.18);color:#e57373;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Shooting Star">⭐SHOOT</span>' : '',
             // Smart Accumulation Score
             (s.accum_score >= 8) ? `<span style="background:rgba(0,255,180,.28);color:#00e5ff;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Smart accumulation score ${s.accum_score}/10 — institutional fingerprint (OBV+FI+MFI all bullish)">ACC${s.accum_score}🏦</span>` : ((s.accum_score||0) >= 5 ? `<span style="background:rgba(0,200,150,.18);color:#80cbc4;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Accumulation score ${s.accum_score}/10">ACC${s.accum_score}</span>` : ''),
+            // Catalyst type badge — shows specific catalyst driving the move
+            (() => {
+              const ct = s.catalyst_type || 'none';
+              const cu = s.catalyst_urg || 0;
+              const cd = s.catalyst_dir || 'none';
+              if (ct === 'none' || cu < 2) return '';
+              const typeMap = {earnings:'EARN', fda:'FDA', ma:'M&A', insider:'INSIDER',
+                               analyst:'ANALYST', contract:'CONTRACT', buyback:'BUYBACK', legal:'LEGAL', news:'NEWS'};
+              const colMap  = {earnings:'#ffd54f', fda:'#ce93d8', ma:'#80deea', insider:'#a5d6a7',
+                               analyst:'#90caf9', contract:'#80cbc4', buyback:'#fff176', legal:'#ef9a9a', news:'#ccc'};
+              const bgMap   = {earnings:'rgba(255,213,79,.2)', fda:'rgba(206,147,216,.2)', ma:'rgba(128,222,234,.2)',
+                               insider:'rgba(165,214,167,.2)', analyst:'rgba(144,202,249,.15)',
+                               contract:'rgba(128,203,196,.18)', buyback:'rgba(255,241,118,.18)',
+                               legal:'rgba(239,154,154,.2)', news:'rgba(200,200,200,.1)'};
+              const dirIcon = cd === 'bull' ? '↑' : cd === 'bear' ? '↓' : '';
+              const urgStr  = cu >= 5 ? '!!' : cu >= 4 ? '!' : '';
+              const lbl = typeMap[ct] || ct.toUpperCase();
+              return `<span style="background:${bgMap[ct]||'rgba(200,200,200,.1)'};color:${colMap[ct]||'#ccc'};font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Catalyst: ${ct} (urgency ${cu}/5)">${dirIcon}${lbl}${urgStr}</span>`;
+            })(),
             // News velocity
-            s.news_accelerating ? `<span style="background:rgba(255,200,0,.25);color:#ffd600;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="News accelerating — ${s.news_count_24h||0} articles in 24h vs ${s.news_count_48h||0} prior 24h">📰NEWS↑</span>` : ((s.news_velocity||0) > 1.5 ? `<span style="background:rgba(255,170,0,.18);color:#ffcc80;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Elevated news velocity">NEWS</span>` : ''),
+            s.news_accelerating ? `<span style="background:rgba(255,200,0,.25);color:#ffd600;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="News accelerating — ${s.news_count_24h||0} articles in 24h">📰NEWS↑</span>` : ((s.news_velocity||0) > 1.5 ? `<span style="background:rgba(255,170,0,.18);color:#ffcc80;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Elevated news velocity">NEWS</span>` : ''),
             // Pre-market gap
             s.pm_big_gap_up    ? `<span style="background:rgba(0,230,120,.35);color:#00ff88;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}% at $${(s.pm_price||0).toFixed(2)}">PM+${(s.pm_gap_pct||0).toFixed(1)}%🚀</span>` : (s.pm_gap_up ? `<span style="background:rgba(0,200,100,.22);color:#69f0ae;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}%">PM+${(s.pm_gap_pct||0).toFixed(1)}%</span>` : ''),
             s.pm_big_gap_down  ? `<span style="background:rgba(255,50,50,.3);color:#ff5252;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Pre-market gap down ${(s.pm_gap_pct||0).toFixed(1)}%">PM${(s.pm_gap_pct||0).toFixed(1)}%⬇</span>` : (s.pm_gap_down ? `<span style="background:rgba(200,50,50,.2);color:#ef9a9a;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Pre-market gap down">PM${(s.pm_gap_pct||0).toFixed(1)}%</span>` : ''),
