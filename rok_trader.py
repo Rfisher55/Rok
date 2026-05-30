@@ -3077,33 +3077,66 @@ _BREADTH_CACHE: dict = {}
 
 def get_market_breadth() -> dict:
     """
-    Estimate market breadth using a proxy basket of ETFs (advance/decline proxy).
-    Returns {adv_pct: float, note: str}.
+    Enhanced market breadth using a wide ETF basket (sector + factor + size).
+    Returns adv_pct, 5-day breadth trend, breadth thrust signal, and McClellan proxy.
     """
     global _BREADTH_CACHE
     if _BREADTH_CACHE:
         return _BREADTH_CACHE
     try:
-        # Use sector ETFs as breadth proxy: count how many are up today
-        probe_syms = ["XLK","XLF","XLV","XLE","XLY","XLI","XLP","XLC","XLU","XLRE","XLB","XME","IWM","MDY"]
-        raw = yf.download(" ".join(probe_syms), period="2d", interval="1d",
+        # Wide basket: 11 SPDR sectors + size/factor ETFs = 22 proxy instruments
+        probe_syms = [
+            "XLK","XLF","XLV","XLE","XLY","XLI","XLP","XLC","XLU","XLRE","XLB",
+            "IWM","MDY","IJR","IVV","QQQ","DIA","XME","IBB","XBI","ARKK","SOXX"
+        ]
+        raw = yf.download(" ".join(probe_syms), period="10d", interval="1d",
                           group_by="ticker", auto_adjust=True, progress=False)
-        adv = 0; total = 0
-        for sym in probe_syms:
-            try:
-                closes = list(raw["Close"][sym].dropna()) if sym in raw["Close"] else []
-                if len(closes) >= 2:
-                    total += 1
-                    if closes[-1] > closes[-2]: adv += 1
-            except Exception:
-                pass
-        adv_pct = round(adv / max(1, total) * 100, 1)
+        adv_series = []  # daily adv_pct over last 5 days
+        for day_offset in range(-5, 0):
+            day_adv = 0; day_total = 0
+            for sym in probe_syms:
+                try:
+                    closes = list(raw["Close"][sym].dropna())
+                    if len(closes) >= abs(day_offset) + 1:
+                        if closes[day_offset] > closes[day_offset - 1]:
+                            day_adv += 1
+                        day_total += 1
+                except Exception:
+                    pass
+            if day_total > 0:
+                adv_series.append(round(day_adv / day_total * 100, 1))
+        adv_pct = adv_series[-1] if adv_series else 50.0
+        adv_5d_avg = round(sum(adv_series) / len(adv_series), 1) if adv_series else 50.0
+        # Breadth trend: is breadth improving or deteriorating?
+        breadth_trend = "neutral"
+        if len(adv_series) >= 3:
+            if adv_series[-1] > adv_series[-3] + 10:
+                breadth_trend = "improving"
+            elif adv_series[-1] < adv_series[-3] - 10:
+                breadth_trend = "deteriorating"
+        # Breadth thrust: rare signal — adv_pct > 70 following a period < 40 within 10 days
+        breadth_thrust = adv_pct >= 68 and adv_5d_avg >= 60 and min(adv_series[:3]) < 45 if len(adv_series) >= 4 else False
+        # McClellan proxy: difference between fast (3d) and slow (5d) breadth EMA
+        mcl_fast = sum(adv_series[-3:]) / 3 if len(adv_series) >= 3 else adv_pct
+        mcl_slow = adv_5d_avg
+        mcl_osc  = round(mcl_fast - mcl_slow, 1)
         note = "broad advance" if adv_pct > 70 else "broad decline" if adv_pct < 30 else "mixed"
-        _BREADTH_CACHE = {"adv_pct": adv_pct, "note": note, "adv": adv, "total": total}
-        logger.info(f"Market breadth: {adv}/{total} sectors up ({adv_pct}%) — {note}")
+        total_counted = sum(1 for s in probe_syms)
+        _BREADTH_CACHE = {
+            "adv_pct":       adv_pct,
+            "adv_5d_avg":    adv_5d_avg,
+            "adv_series":    adv_series,
+            "breadth_trend": breadth_trend,
+            "breadth_thrust": breadth_thrust,
+            "mcl_osc":       mcl_osc,
+            "note":          note,
+            "total":         total_counted,
+        }
+        logger.info(f"Market breadth: today={adv_pct}% | 5d avg={adv_5d_avg}% | trend={breadth_trend} | MCL={mcl_osc:+.1f}")
         return _BREADTH_CACHE
     except Exception:
-        return {"adv_pct": 50.0, "note": "unknown", "adv": 0, "total": 0}
+        return {"adv_pct": 50.0, "adv_5d_avg": 50.0, "adv_series": [], "breadth_trend": "neutral",
+                "breadth_thrust": False, "mcl_osc": 0.0, "note": "unknown", "total": 0}
 
 
 def ai_market_context(regime, top_movers, sector_adjs: dict = None, extra_ctx: dict = None):
@@ -6908,6 +6941,37 @@ def run():
                     and not peaks.get(sym, {}).get("half_out", False)
                 )
 
+                # Scenario F: Smart Scale-In completion — EMA21 pullback after high-conviction entry
+                # We entered at 60% initially; now complete the position when price pulls back to EMA21
+                _pk_data = peaks.get(sym, {})
+                is_scale_in_complete = (
+                    _pk_data.get("scale_in_pending", False)
+                    and (_pk_data.get("scale_in_notional", 0) or 0) >= 25
+                    and live_sig.get("ema21_pullback", False)
+                    and pnl_pct > -2.0 and pnl_pct < 12.0   # still in healthy range
+                    and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
+                )
+                if is_scale_in_complete:
+                    _si_notional = min(
+                        _pk_data.get("scale_in_notional", 0),
+                        buying_power * 0.15,
+                        portfolio_val * MAX_POSITION_PCT - mkt_val
+                    )
+                    if _si_notional >= 25:
+                        logger.info(f"SCALE-IN {sym} — completing position ${_si_notional:.0f} at EMA21 pullback (pnl={pnl_pct:+.1f}%)")
+                        r_si = alpaca_post("/v2/orders", {
+                            "symbol": sym, "notional": str(round(_si_notional, 2)),
+                            "side": "buy", "type": "market", "time_in_force": "day",
+                        })
+                        if r_si:
+                            buying_power -= _si_notional
+                            log_trade(tlog, "DCA", sym, current, _si_notional, score=dca_sc,
+                                      reason=f"scale-in complete EMA21 pullback {pnl_pct:+.1f}%")
+                            peaks[sym]["scale_in_pending"] = False
+                            peaks[sym]["scale_in_notional"] = 0.0
+                            made_trades = True
+                    continue  # done with this position, skip other DCA scenarios
+
                 if is_pullback_dca or is_winner_pyramid or is_vwap_oversold or at_pivot_support or is_breakout_pyramid:
                     ema50_pos = live_sig.get("price_vs_ema50", 0) or 0
                     roc5_val  = live_sig.get("roc5", 0) or 0
@@ -7637,10 +7701,24 @@ def run():
                         reason += f" [SI{round((_d_buy.get('short_float',0) or 0)*100)}%]"
                     if tk in vol_surge_cands and tk in squeeze_cands:
                         reason += " [VOL+SQZ]"
+                    # Smart scale-in: highest-conviction setups enter at 60% to allow for pullback add
+                    _tt_buy     = _d_buy.get("trend_template", 0) or 0
+                    _htf_buy    = _d_buy.get("htf", False)
+                    _pp_buy     = _d_buy.get("pocket_pivot", False)
+                    _is_scalein = _tt_buy >= 7 or (_htf_buy and _pp_buy)
+                    if _is_scalein:
+                        _full_notional = notional
+                        notional = round(notional * 0.60, 2)  # enter at 60% initially
+                        reason += f" [SCALE-IN 60% TT{_tt_buy}]"
+                    else:
+                        _full_notional = notional
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=live.get(tk, {}))
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False,
-                                 "ever_hit_5pct": False, "atr_at_entry": atr or 0.0}
+                                 "ever_hit_5pct": False, "atr_at_entry": atr or 0.0,
+                                 "scale_in_pending": _is_scalein,
+                                 "scale_in_notional": round(_full_notional * 0.40, 2) if _is_scalein else 0.0,
+                                 "scale_in_ema21": round(_d_buy.get("avwap_52wl", 0) or price * 0.97, 2)}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
                     buying_power -= notional
@@ -7927,6 +8005,8 @@ def run():
                 "mae":           peaks.get(_sym, {}).get("mae", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "mfe":           peaks.get(_sym, {}).get("mfe", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "atr_at_entry":  peaks.get(_sym, {}).get("atr_at_entry", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
+                "scale_in_pending": peaks.get(_sym, {}).get("scale_in_pending", False) if isinstance(peaks.get(_sym), dict) else False,
+                "scale_in_notional": peaks.get(_sym, {}).get("scale_in_notional", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "grade":         momentum_grade(live.get(_sym, {}), score(_sym, live.get(_sym, {}))) if live.get(_sym) else "?",
                 "rs_rating":     live.get(_sym, {}).get("rs_rating", 50) if live.get(_sym) else 50,
                 "rs252":         round(live.get(_sym, {}).get("rs252", 0.0), 2) if live.get(_sym) else 0.0,
@@ -8095,6 +8175,24 @@ def run():
     except Exception:
         pass
 
+    # Risk of Ruin: probability of losing 30% of capital given win rate and payoff ratio
+    # Formula (Ralph Vince): RoR = ((1-edge) / (1+edge))^N where edge = W*payoff - (1-W)
+    _risk_of_ruin = None
+    try:
+        if win_rate > 0.3 and _payoff_ratio > 0.5 and len(_closed) >= 5:
+            import math as _ror_math
+            _W = win_rate; _R = _payoff_ratio
+            _edge = (_W * _R - (1 - _W)) / _R  # edge per trade (0-1 scale)
+            if _edge > 0 and _edge < 1:
+                # Ruin = 30% drawdown from current, sizing = 2% avg risk per trade
+                _risk_pct   = 0.30   # ruin threshold
+                _bet_frac   = 0.02   # avg % at risk per trade
+                _N_to_ruin  = _risk_pct / _bet_frac  # trades needed to reach ruin if all lose
+                _ror_per_trade = ((1 - _edge) / (1 + _edge))  # O'Shaughnessy formula
+                _risk_of_ruin  = round(_ror_per_trade ** _N_to_ruin * 100, 2)  # as percent
+    except Exception:
+        pass
+
     tlog["last_updated"]    = now_utc.isoformat()
     tlog["portfolio_value"] = portfolio_val
     tlog["buying_power"]    = round(buying_power, 2)
@@ -8239,6 +8337,7 @@ def run():
     tlog["sortino_ratio"]      = _sortino_ratio
     tlog["calmar_ratio"]       = _calmar_ratio
     tlog["max_drawdown"]       = round(_max_dd, 2)
+    tlog["risk_of_ruin"]       = _risk_of_ruin
     try:
         tlog["effective_min_score"] = _eff_min_score
     except NameError:

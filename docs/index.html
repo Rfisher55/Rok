@@ -52967,6 +52967,45 @@ function _renderIntelReport(el, intel) {
       `).join('')}
     </div>` : '';
 
+  // Trade Journal + Performance Metrics panel
+  const recentTrades = td.recent_closed_trades || [];
+  const streak = td.trade_streak || {};
+  const sharpe = td.sharpe_ratio;
+  const sortino = td.sortino_ratio;
+  const calmar = td.calmar_ratio;
+  const maxDd = td.max_drawdown;
+  const ror = td.risk_of_ruin;
+  const profitFactor = td.profit_factor;
+  const journalHtml = (() => {
+    const metricItems = [];
+    if (sharpe != null) metricItems.push(`<span style="font-size:8px;color:${sharpe>=1?'#69f0ae':sharpe>=0?'#ffd54f':'#ef5350'}" title="Sharpe ratio: avg return / std dev (≥1 = good)">Sharpe <b>${sharpe.toFixed(2)}</b></span>`);
+    if (sortino != null) metricItems.push(`<span style="font-size:8px;color:${sortino>=1.5?'#69f0ae':sortino>=0.5?'#ffd54f':'#ef5350'}" title="Sortino ratio: penalizes downside vol only (≥1.5 = good)">Sortino <b>${sortino.toFixed(2)}</b></span>`);
+    if (calmar != null) metricItems.push(`<span style="font-size:8px;color:${calmar>=2?'#69f0ae':calmar>=0.5?'#ffd54f':'#ef5350'}" title="Calmar ratio: annualized return / max drawdown (≥2 = great)">Calmar <b>${calmar.toFixed(2)}</b></span>`);
+    if (profitFactor != null) metricItems.push(`<span style="font-size:8px;color:${profitFactor>=2?'#69f0ae':profitFactor>=1.3?'#ffd54f':'#ef5350'}" title="Profit Factor: gross wins / gross losses (≥1.5 = good)">PF <b>${profitFactor.toFixed(2)}</b></span>`);
+    if (maxDd != null && maxDd > 0) metricItems.push(`<span style="font-size:8px;color:${maxDd<5?'#69f0ae':maxDd<15?'#ffd54f':'#ef5350'}" title="Historical max drawdown">MaxDD <b>-${maxDd.toFixed(1)}%</b></span>`);
+    if (ror != null) metricItems.push(`<span style="font-size:8px;color:${ror<1?'#69f0ae':ror<5?'#ffd54f':'#ef5350'}" title="Risk of Ruin: probability of 30% drawdown given current edge (lower = safer)">RoR <b>${ror.toFixed(1)}%</b></span>`);
+    const streakHtml = streak.count > 1 ? `<span style="font-size:7.5px;font-weight:800;color:${streak.type==='win'?'#00e676':'#ef5350'};background:${streak.type==='win'?'rgba(0,230,118,.12)':'rgba(239,83,80,.1)'};border-radius:3px;padding:1px 5px">${streak.type==='win'?'🔥':'💀'} ${streak.count} ${streak.type} streak</span>` : '';
+    if (!recentTrades.length && !metricItems.length) return '';
+    const tradeRows = recentTrades.slice(0, 8).map(t => {
+      const col = t.pnl_pct >= 0 ? '#69f0ae' : '#ef5350';
+      const ts = t.time ? new Date(t.time).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:9px;font-weight:800;color:var(--au);min-width:36px">\$${t.ticker||'?'}</span>
+        <span style="font-size:9px;font-weight:900;color:${col};min-width:46px">${t.pnl_pct>=0?'+':''}${t.pnl_pct.toFixed(1)}%</span>
+        <span style="font-size:7.5px;color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(t.reason||'').replace(/score=.*$/,'').trim()}</span>
+        <span style="font-size:7px;color:#3a5a8a;white-space:nowrap">${ts}</span>
+      </div>`;
+    }).join('');
+    return `<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.6rem .75rem;margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+        <span style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#b0bec5"> TRADE JOURNAL</span>
+        ${streakHtml}
+      </div>
+      ${metricItems.length ? `<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:${recentTrades.length?'.45rem':'0'}">${metricItems.join('')}</div>` : ''}
+      ${tradeRows}
+    </div>`;
+  })();
+
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.7rem;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:800;color:${sentColor};text-shadow:0 0 12px ${sentColor}44">${sent}</span>
@@ -52975,7 +53014,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 }
 window.fetchIntelReport = fetchIntelReport;
@@ -54940,7 +54979,21 @@ window.renderSectorRotation = renderSectorRotation;
               return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">10Y</div><div style="font-size:11px;font-weight:900;color:${rc}" title="10-Year Treasury yield — rate environment: ${re}">${regime.tnx_level.toFixed(2)}%</div><div style="font-size:7px;color:#555">${re}</div></div>`;
             })() : ''}
             ${drawdownPct > 1 ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Drawdown</div><div style="font-size:14px;font-weight:900;color:#ef5350">-${drawdownPct.toFixed(1)}%</div></div>` : ''}
-            ${bAdvPct !== undefined ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Breadth</div><div style="font-size:14px;font-weight:900;color:${bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#ffd54f'}">${bAdvPct}%</div></div>` : ''}
+            ${bAdvPct !== undefined ? (() => {
+              const bTrend = breadth.breadth_trend || 'neutral';
+              const bThrust = breadth.breadth_thrust || false;
+              const bMCL = breadth.mcl_osc != null ? breadth.mcl_osc : null;
+              const b5d = breadth.adv_5d_avg;
+              const bCol = bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#ffd54f';
+              const tArrow = bTrend==='improving'?' ↑':bTrend==='deteriorating'?' ↓':'';
+              const tCol = bTrend==='improving'?'#00e676':bTrend==='deteriorating'?'#ef5350':'#888';
+              return `<div style="text-align:center">
+                <div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Breadth</div>
+                <div style="font-size:14px;font-weight:900;color:${bCol}">${bAdvPct}%<span style="font-size:10px;color:${tCol}">${tArrow}</span></div>
+                ${bThrust ? '<div style="font-size:6.5px;font-weight:900;color:#00e676;background:rgba(0,230,118,.15);border-radius:3px;padding:1px 4px;margin-top:1px">THRUST🚀</div>' : (b5d != null ? `<div style="font-size:7px;color:#555">5d avg ${b5d}%</div>` : '')}
+                ${bMCL != null ? `<div style="font-size:6.5px;color:${bMCL>5?'#00e676':bMCL<-5?'#ef5350':'#888'}" title="McClellan Oscillator proxy">MCL ${bMCL>=0?'+':''}${bMCL}</div>` : ''}
+              </div>`;
+            })() : ''}
             ${data.market_quality != null ? (() => { const mq = data.market_quality; const mqCol = mq >= 65 ? '#00ff88' : mq >= 50 ? '#ffd54f' : mq >= 35 ? '#ff9800' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Mkt Quality</div><div style="font-size:14px;font-weight:900;color:${mqCol}">${mq}/100</div></div>`; })() : ''}
             ${data.scan_breadth_pct != null ? (() => { const bp = data.scan_breadth_pct; const bpCol = bp >= 60 ? '#00ff88' : bp >= 40 ? '#ffd54f' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scan A/D</div><div style="font-size:14px;font-weight:900;color:${bpCol}">${bp}%</div></div>`; })() : ''}
             ${data.effective_min_score != null && data.effective_min_score !== 18 ? `<div style="text-align:center"><div style="font-size:8px;color:#ff9800;font-weight:700;text-transform:uppercase">Min Score</div><div style="font-size:11px;font-weight:900;color:#ff9800">${data.effective_min_score}↑</div></div>` : ''}
@@ -56305,6 +56358,7 @@ window.renderSectorRotation = renderSectorRotation;
                 if ((ls.macd_slope||0) > 0.02) parts.push('<span style="font-size:6px;color:#69f0ae">MACD↑</span>');
                 else if ((ls.macd_slope||0) < -0.02 && (ls.macd_bear_div||false)) parts.push('<span style="font-size:6px;color:#ef5350;font-weight:700">MACD⚠</span>');
                 if (ls.ema21_pullback) parts.push('<span style="font-size:6px;font-weight:800;color:#b9f6ca;background:rgba(185,246,202,.2);padding:1px 4px;border-radius:3px" title="EMA21 pullback — Minervini highest-prob entry">E21↩</span>');
+                if (p.scale_in_pending) parts.push(`<span style="font-size:6px;font-weight:800;color:#ffab40;background:rgba(255,171,64,.18);border:1px solid rgba(255,171,64,.4);padding:1px 5px;border-radius:3px" title="Scale-in pending: waiting for EMA21 pullback to add $${(p.scale_in_notional||0).toFixed(0)} (40% of position)">⚡SCALE-IN $${(p.scale_in_notional||0).toFixed(0)}</span>`);
                 if (ls.pocket_pivot) parts.push('<span style="font-size:6px;font-weight:800;color:#ffd600;background:rgba(255,215,0,.2);padding:1px 4px;border-radius:3px" title="Pocket Pivot: institutional buying surge">PP🎯</span>');
                 if (ls.htf) parts.push('<span style="font-size:6px;font-weight:900;color:#ff6d00;background:rgba(255,109,0,.2);padding:1px 4px;border-radius:3px" title="High-Tight Flag — explosive setup">HTF🚀</span>');
                 if ((ls.trend_template||0) >= 7) parts.push(`<span style="font-size:6px;font-weight:800;color:#00e676;background:rgba(0,230,118,.15);padding:1px 4px;border-radius:3px" title="Minervini Trend Template ${ls.trend_template}/8">TT${ls.trend_template}</span>`);
