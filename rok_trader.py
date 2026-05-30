@@ -426,6 +426,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         else:
             e["intraday_mom_pct"] = 0.0
             e["intraday_mom_bucket"] = "early"
+        # ADX Trend Strength Neuron (44): directional trend conviction at entry.
+        # ADX >25 = strong trend (momentum algos' sweet spot), 15-25 = developing,
+        # <15 = no trend / choppy — high risk for directional strategies.
+        _adx_v = float(signals.get("adx", 0.0) or 0.0)
+        e["adx_at_entry"] = round(_adx_v, 1)
+        e["adx_bucket"] = ("strong" if _adx_v >= 25 else "developing" if _adx_v >= 15 else "weak")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1303,6 +1309,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── ADX Trend Strength Neuron (44): directional trend conviction at entry ─────
+    # Tracks performance by ADX strength at entry. Strong ADX (>25) = clear trend;
+    # weak ADX (<15) = choppy, counter-trend, high risk for momentum strategies.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ax = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ax_bkt = _buy_ax.get("adx_bucket", "developing") if _buy_ax else "developing"
+            _ax_perf = tlog.setdefault("adx_perf", {})
+            _axp = _ax_perf.setdefault(_ax_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _ax_bkt})
+            _axp["total"] = _axp.get("total", 0) + 1
+            _axp["total_pnl"] = round(_axp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _axp["wins"] = _axp.get("wins", 0) + 1
+            else:        _axp["losses"] = _axp.get("losses", 0) + 1
+            if _axp["total"] > 0:
+                _axp["win_rate"] = round(_axp["wins"] / _axp["total"] * 100, 1)
+                _axp["avg_pnl"]  = round(_axp["total_pnl"] / _axp["total"], 2)
         except Exception:
             pass
 
@@ -11335,6 +11360,23 @@ def run():
             if _im_best["win_rate"] - _im_worst["win_rate"] >= 15:
                 _learn_log.append(f"Best intraday timing: {_im_best['bucket']} ({_im_best['win_rate']:.0f}% WR avg {_im_best['avg_pnl']:+.1f}%) vs {_im_worst['bucket']} ({_im_worst['win_rate']:.0f}%)")
 
+        # ── 44. ADX Trend Strength Neuron ─────────────────────────────────────
+        _ax_raw = tlog.get("adx_perf", {})
+        _ax_insights = []
+        for _axk, _axd in _ax_raw.items():
+            if _axd.get("total", 0) >= 3:
+                _ax_insights.append({
+                    "bucket": _axk, "win_rate": _axd.get("win_rate", 50),
+                    "avg_pnl": _axd.get("avg_pnl", 0), "total": _axd.get("total", 0)
+                })
+        if _ax_insights:
+            _ax_best = max(_ax_insights, key=lambda x: x["win_rate"])
+            _ax_worst = min(_ax_insights, key=lambda x: x["win_rate"])
+            _ax_sum = " | ".join(f"ADX_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _ax_insights)
+            _learn_log.append(f"ADX trend strength WRs: {_ax_sum}")
+            if _ax_best["win_rate"] - _ax_worst["win_rate"] >= 15:
+                _learn_log.append(f"Strong ADX entries win rate {_ax_best['win_rate']:.0f}% vs weak {_ax_worst['win_rate']:.0f}% — trend conviction confirmed")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11388,6 +11430,7 @@ def run():
             "score_decay_threshold": _learned_decay_thresh,  # learned optimal decay trigger (pts)
             "poc_dist_perf":        _pc_insights,            # POC distance at entry vs outcome
             "intraday_mom_perf":    _im_insights,            # intraday momentum (% from open) vs outcome
+            "adx_perf":             _ax_insights,            # ADX trend strength at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

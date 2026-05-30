@@ -54184,31 +54184,56 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
-        // ── Intraday Momentum Neuron (43): % from open at entry ───────────────
+        // ── Intraday Momentum + ADX Trend Strength dual panel (Neurons 43+44) ──
         const im = lp.intraday_mom_perf || [];
-        if (!im.length) return '';
+        const ax = lp.adx_perf || [];
+        if (!im.length && !ax.length) return '';
         const IM_ORDER = ['extended','runner','early','pullback'];
         const IM_ICONS = {extended:'🔥',runner:'⚡',early:'🌅',pullback:'🔄'};
-        const IM_LABELS = {extended:'>5% from open',runner:'2-5% from open',early:'0-2% from open',pullback:'below open'};
+        const IM_LABELS = {extended:'>5% open',runner:'2-5% open',early:'0-2% open',pullback:'below open'};
         const IM_BG = {extended:'rgba(239,83,80,.07)',runner:'rgba(255,213,79,.07)',early:'rgba(0,230,118,.07)',pullback:'rgba(100,100,255,.07)'};
-        const imMap = {};
-        im.forEach(s => imMap[s.bucket] = s);
-        const imBest = im.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, im[0]);
+        const imMap = {}; im.forEach(s => imMap[s.bucket] = s);
+        const imBest = im.length ? im.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, im[0]) : null;
         const imCells = IM_ORDER.map(bkt => {
           const s = imMap[bkt];
-          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:8px">${IM_ICONS[bkt]}</div><div style="font-size:5px;color:#333">${IM_LABELS[bkt]}</div></div>`;
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${IM_ICONS[bkt]}</div><div style="font-size:5px;color:#333">${IM_LABELS[bkt]}</div></div>`;
           const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
-          const star = s.bucket === imBest.bucket ? ' ⭐' : '';
-          return `<div style="background:${IM_BG[bkt]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
-            <div style="font-size:8px">${IM_ICONS[bkt]}</div>
-            <div style="font-size:5.5px;color:#ccc;font-weight:700">${IM_LABELS[bkt]}${star}</div>
-            <div style="font-size:10px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+          const star = imBest && s.bucket === imBest.bucket ? '⭐' : '';
+          return `<div style="background:${IM_BG[bkt]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${IM_ICONS[bkt]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${IM_LABELS[bkt]}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
             <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
           </div>`;
         }).join('');
+        const AX_ORDER = ['strong','developing','weak'];
+        const AX_ICONS = {strong:'💪',developing:'📊',weak:'😴'};
+        const AX_BG = {strong:'rgba(0,230,118,.07)',developing:'rgba(255,213,79,.06)',weak:'rgba(239,83,80,.07)'};
+        const axMap = {}; ax.forEach(s => axMap[s.bucket] = s);
+        const axBest = ax.length ? ax.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, ax[0]) : null;
+        const axCells = AX_ORDER.map(bkt => {
+          const s = axMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${AX_ICONS[bkt]}</div><div style="font-size:5px;color:#333">${bkt} ADX</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = axBest && s.bucket === axBest.bucket ? '⭐' : '';
+          const adxRange = bkt==='strong'?'ADX≥25':bkt==='developing'?'ADX 15-25':'ADX<15';
+          return `<div style="background:${AX_BG[bkt]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${AX_ICONS[bkt]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${adxRange}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const imHtml = im.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">⚡ INTRADAY MOM (N43): % from open at entry — early bird vs chasing runners</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${imCells}</div>
+        </div>` : '';
+        const axHtml = ax.length ? `<div>
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">💪 ADX TREND STRENGTH (N44): directional trend conviction at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${axCells}</div>
+        </div>` : '';
         return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
-          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.2rem">⚡ INTRADAY MOMENTUM (Neuron 43): % moved from open at entry — early bird vs chasing runners</div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem">${imCells}</div>
+          ${imHtml}${axHtml}
         </div>`;
       })()}
       ${(() => {
