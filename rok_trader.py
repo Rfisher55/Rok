@@ -11181,6 +11181,16 @@ def run():
                         # Only size up in strong bull if recent win rate is solid
                         notional = round(notional * 1.10, 2)   # Strong bull + winning: +10%
 
+                    # ── Win/loss streak sizing neuron ─────────────────────────────────
+                    # When in a confirmed win streak the bot is in sync with the market.
+                    # When on a losing streak something is wrong — protect capital.
+                    if _win_streak_5:
+                        notional = min(notional * 1.18, portfolio_val * MAX_POSITION_PCT * 1.25)
+                        logger.info(f"WIN_STREAK_5 sizing: {tk} +18%")
+                    elif _win_streak_3:
+                        notional = min(notional * 1.08, portfolio_val * MAX_POSITION_PCT * 1.10)
+                        logger.debug(f"Win streak(3) sizing: {tk} +8%")
+
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
