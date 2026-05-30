@@ -227,6 +227,11 @@ def _run():
                 "drawdown_pct":    td.get("drawdown_pct"),
                 "profit_factor":   td.get("profit_factor"),
                 "portfolio_beta":  td.get("portfolio_beta"),
+                "portfolio_heat":  td.get("portfolio_heat"),
+                "market_quality":  td.get("market_quality"),
+                "scan_breadth_pct": td.get("scan_breadth_pct"),
+                "portfolio_concentration": td.get("portfolio_concentration", {}),
+                "sector_etf_trends": td.get("sector_etf_trends", {}),
             }
             logger.info(f"Loaded {len(current_positions)} positions and {len(last_scan_top)} scan candidates from trades.json")
     except Exception as _te:

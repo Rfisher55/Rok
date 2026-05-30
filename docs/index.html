@@ -54990,6 +54990,22 @@ window.renderSectorRotation = renderSectorRotation;
             if (pct >= 8) return `<span style="font-size:6px;color:#f48fb1" title="Short interest ${pct}% of float${sr>=1?' — '+sr.toFixed(1)+' days to cover':''}">SI${pct}%${dtc}</span>`;
             return '';
           })();
+          // P&L sparkline — shows recent P&L trend as micro bar chart
+          const lsPnlSpark = (() => {
+            const hist = (p.pnl_history || []).filter(h => typeof h.p === 'number');
+            if (hist.length < 3) return '';
+            const vals = hist.map(h => h.p);
+            const vMax = Math.max(...vals.map(Math.abs), 0.5);
+            const bars = vals.slice(-12).map(v => {
+              const h = Math.max(1, Math.round(Math.abs(v) / vMax * 8));
+              const c = v >= 0 ? '#00e676' : '#ef5350';
+              return `<span style="display:inline-block;width:3px;height:${h}px;background:${c};vertical-align:bottom;margin-right:1px;opacity:.85"></span>`;
+            }).join('');
+            const trend = vals[vals.length-1] - vals[0];
+            const trendStr = trend > 0.5 ? `+${trend.toFixed(1)}%↑` : trend < -0.5 ? `${trend.toFixed(1)}%↓` : '→flat';
+            const trendCol = trend > 0.5 ? '#69f0ae' : trend < -0.5 ? '#ef9a9a' : '#555';
+            return `<span style="font-size:6px;color:${trendCol}" title="P&L trend: ${trendStr} over last ${vals.length} scans">${bars}</span>`;
+          })();
           // Score degradation tracker — detects systematic weakening before price drops
           const lsScoreDeg = (() => {
             const hist = (p.score_history || []).filter(h => typeof h.s === 'number');
@@ -55111,7 +55127,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
-                ${(distStopHtml||peakPctStr||lsScoreDeg||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
+                ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsHV}${lsStreak}${lsFibLevels}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';

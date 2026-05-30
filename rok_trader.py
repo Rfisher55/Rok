@@ -6927,8 +6927,8 @@ def run():
             made_trades = True
 
     # ── Save state + dashboard snapshot ──────────────────────────────────
-    # Update score history for all held positions BEFORE saving peaks
-    # Keeps a rolling 12-scan window (~60 min) to detect score degradation
+    # Update score + P&L history for all held positions BEFORE saving peaks
+    # Keeps a rolling 24-scan window to detect score degradation and P&L trend
     if live and held:
         for _h_sym in list(held.keys()):
             _h_sig = live.get(_h_sym, {})
@@ -6939,7 +6939,15 @@ def run():
                 peaks[_h_sym] = {"peak": _h_sig.get("price", 0), "time": now_utc.isoformat(), "half_out": False}
             _sh = peaks[_h_sym].setdefault("score_history", [])
             _sh.append({"s": _h_sc, "t": now_utc.isoformat()})
-            peaks[_h_sym]["score_history"] = _sh[-12:]  # keep last 12 (1hr at 5min intervals)
+            peaks[_h_sym]["score_history"] = _sh[-24:]  # keep last 24 scans (~2hrs)
+            # P&L history — track unrealized return so we can show sparkline in dashboard
+            _h_cost = held[_h_sym].get("avg_entry_price", 0) or 0
+            _h_price = _h_sig.get("price", 0) or 0
+            if _h_cost > 0 and _h_price > 0:
+                _h_pnl = round((_h_price - _h_cost) / _h_cost * 100, 2)
+                _ph = peaks[_h_sym].setdefault("pnl_history", [])
+                _ph.append({"p": _h_pnl, "t": now_utc.isoformat()})
+                peaks[_h_sym]["pnl_history"] = _ph[-24:]
     _save(PEAK_FILE, peaks)
 
     try:
@@ -7062,6 +7070,7 @@ def run():
                 "earnings_days": get_earnings_days(p.get("symbol", "")),
                 "live_signals": _pos_signals(p.get("symbol", "")),
                 "score_history": peaks.get(p.get("symbol", ""), {}).get("score_history", []) if isinstance(peaks.get(p.get("symbol", "")), dict) else [],
+                "pnl_history":   peaks.get(p.get("symbol", ""), {}).get("pnl_history", []) if isinstance(peaks.get(p.get("symbol", "")), dict) else [],
             }
             for p in curr
         ]

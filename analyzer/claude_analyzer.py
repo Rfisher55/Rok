@@ -395,6 +395,15 @@ def build_prompt(
             if short_fl > 0.15: flags.append(f"HIGH_SHORT_{round(short_fl*100)}pct")
             if roc5 > 5:  flags.append(f"MOMENTUM_STRONG(+{roc5:.1f}%)")
             if roc5 < -4: flags.append(f"MOMENTUM_WEAK({roc5:.1f}%)")
+            cg = ls.get("consec_green", 0) or 0
+            cr = ls.get("consec_red", 0) or 0
+            if cg >= 3:   flags.append(f"GREEN_STREAK_{cg}d")
+            if cr >= 3:   flags.append(f"RED_STREAK_{cr}d")
+            if ls.get("hv_contracting"): flags.append("HV_COIL")
+            if ls.get("hv_expanding"):   flags.append("HV_EXPANDING")
+            fib_tgt = ls.get("fib_level_382") or 0
+            if fib_tgt and cur and abs(cur - fib_tgt) / max(cur, 0.01) < 0.015:
+                flags.append(f"AT_FIB38.2({fib_tgt:.2f})")
             flag_str = " | ".join(flags) if flags else "no_flags"
             pos_detail_lines.append(
                 f"  ${tk}: P&L {pnl:+.1f}% | cost ${cost:.2f} → ${cur:.2f} | val ${val:,.0f}"
@@ -466,6 +475,25 @@ def build_prompt(
         lmc_lines.append(f"  ⚠ Portfolio in drawdown: {lmc['drawdown_pct']:.1f}% — be selective with new entries")
     if lmc.get("portfolio_beta"):
         lmc_lines.append(f"  Portfolio beta: {lmc['portfolio_beta']:.2f}")
+    if lmc.get("market_quality") is not None:
+        mq = lmc["market_quality"]
+        mq_label = "STRONG" if mq >= 65 else "OK" if mq >= 45 else "WEAK" if mq >= 30 else "POOR"
+        lmc_lines.append(f"  Market quality: {mq}/100 ({mq_label})")
+    if lmc.get("scan_breadth_pct") is not None:
+        lmc_lines.append(f"  Scan breadth: {lmc['scan_breadth_pct']:.0f}% of scanned stocks advancing")
+    pc = lmc.get("portfolio_concentration") or {}
+    if pc.get("risk_level") == "HIGH":
+        dom = pc.get("dominant_sector", "unknown")
+        cnt = pc.get("max_sector_count", 0)
+        lmc_lines.append(f"  ⚠ HIGH CONCENTRATION RISK: {cnt} positions in {dom} sector — diversification needed")
+    elif pc.get("risk_level") == "MEDIUM":
+        dom = pc.get("dominant_sector", "unknown")
+        lmc_lines.append(f"  MEDIUM concentration: multiple {dom} positions — watch sector-wide risk")
+    # Sector ETF trends: highlight lagging sectors for exit context
+    etf_trends = lmc.get("sector_etf_trends") or {}
+    bearish_secs = [s for s, d in etf_trends.items() if d.get("chg5d", 0) < -3]
+    if bearish_secs:
+        lmc_lines.append(f"  Weakest sectors (5d decline): {', '.join(bearish_secs[:3])}")
     lmc_str = "\n".join(lmc_lines) if lmc_lines else "  No live context available"
 
     # Append live trading context so AI can give position-specific guidance
