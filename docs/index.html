@@ -53477,6 +53477,31 @@ function _renderIntelReport(el, intel) {
         </div>` : '';
         return `<div style="margin-bottom:.3rem">${rvHtml}${mqHtml}</div>`;
       })()}
+      ${(() => {
+        // ── Momentum Grade + Price Tier dual panel ─────────────────────────
+        const gp = lp.grade_perf || [];
+        const pt = lp.price_tier_perf || [];
+        if (!gp.length && !pt.length) return '';
+        const miniCell = (label, wr, avgPnl, n, hue) => {
+          const col = wr >= 60 ? '#00e676' : wr >= 50 ? '#ffd54f' : '#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.22rem .3rem;text-align:center;border-top:2px solid ${hue}33">
+            <div style="font-size:6px;font-weight:800;color:${hue}">${label}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${wr.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${avgPnl>=0?'#69f0ae':'#ef5350'}">${avgPnl>=0?'+':''}${avgPnl.toFixed(1)}% (${n}T)</div>
+          </div>`;
+        };
+        const gradeHues = {'A+':'#ffd700','A':'#00e676','B':'#82b1ff','C':'#ff9800','D':'#ef5350'};
+        const tierHues  = {micro:'#ab47bc',small:'#42a5f5',mid:'#26a69a',large:'#ff7043'};
+        const gpHtml = gp.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd700;font-weight:700;margin-bottom:.15rem">🎓 MOMENTUM GRADE PERFORMANCE</div>
+          <div style="display:grid;grid-template-columns:repeat(${Math.min(gp.length,5)},1fr);gap:.15rem">${gp.map(g=>miniCell(g.grade,g.win_rate,g.avg_pnl,g.total,gradeHues[g.grade]||'#888')).join('')}</div>
+        </div>` : '';
+        const ptHtml = pt.length ? `<div style="margin-top:.2rem">
+          <div style="font-size:5.5px;color:#ff7043;font-weight:700;margin-bottom:.15rem">💰 PRICE TIER PERFORMANCE</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${pt.map(t=>miniCell(t.tier.charAt(0).toUpperCase()+t.tier.slice(1),t.win_rate,t.avg_pnl,t.total,tierHues[t.tier]||'#888')).join('')}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem">${gpHtml}${ptHtml}</div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

@@ -309,6 +309,14 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["rvol_at_entry"]        = round(float(signals.get("rvol", 1.0) or 1.0), 2)
         e["earnings_days_at_entry"] = signals.get("earnings_days")  # None if unknown
         e["mkt_quality_at_entry"]  = int(tlog.get("market_quality", 50) or 50)
+        # Momentum grade at entry (A+/A/B/C/D) — compute here using score + signals
+        try:
+            e["grade_at_entry"] = momentum_grade(signals, score or 0)
+        except Exception:
+            e["grade_at_entry"] = "?"
+        # Price tier at entry
+        _p = float(price)
+        e["price_tier"] = ("micro" if _p < 10 else "small" if _p < 30 else "mid" if _p < 100 else "large")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -621,6 +629,49 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _mqp["total"] > 0:
                     _mqp["win_rate"] = round(_mqp["wins"] / _mqp["total"] * 100, 1)
                     _mqp["avg_pnl"]  = round(_mqp["total_pnl"] / _mqp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Momentum Grade Performance Neuron: does A+ really outperform? ─────────
+    # Tracks win rate by the momentum grade assigned at entry (A+/A/B/C/D).
+    # Validates: are higher-grade setups actually more profitable?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t7 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _grd = _buy_t7.get("grade_at_entry") if _buy_t7 else None
+            if _grd and _grd != "?":
+                _grd_perf = tlog.setdefault("grade_perf", {})
+                _gp = _grd_perf.setdefault(_grd, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _gp["total"] = _gp.get("total", 0) + 1
+                _gp["total_pnl"] = round(_gp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _gp["wins"] = _gp.get("wins", 0) + 1
+                else: _gp["losses"] = _gp.get("losses", 0) + 1
+                if _gp["total"] > 0:
+                    _gp["win_rate"] = round(_gp["wins"] / _gp["total"] * 100, 1)
+                    _gp["avg_pnl"]  = round(_gp["total_pnl"] / _gp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Price Tier Performance Neuron: micro/small/mid/large caps ─────────────
+    # Learns whether the bot does better with cheaper vs. expensive stocks.
+    # Some strategies work better with small caps (more volatile, bigger moves)
+    # while others need large cap liquidity.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t8 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ptier = _buy_t8.get("price_tier") if _buy_t8 else None
+            if not _ptier:
+                # Fall back to estimating from sell price
+                _ptier = ("micro" if float(price) < 10 else "small" if float(price) < 30 else "mid" if float(price) < 100 else "large")
+            _tier_perf = tlog.setdefault("price_tier_perf", {})
+            _tp = _tier_perf.setdefault(_ptier, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _tp["total"] = _tp.get("total", 0) + 1
+            _tp["total_pnl"] = round(_tp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _tp["wins"] = _tp.get("wins", 0) + 1
+            else: _tp["losses"] = _tp.get("losses", 0) + 1
+            if _tp["total"] > 0:
+                _tp["win_rate"] = round(_tp["wins"] / _tp["total"] * 100, 1)
+                _tp["avg_pnl"]  = round(_tp["total_pnl"] / _tp["total"], 2)
         except Exception:
             pass
 
@@ -9873,6 +9924,39 @@ def run():
             if _poor_mq and _poor_mq["win_rate"] < 40:
                 _learn_log.append(f"Poor market quality trades failing: {_poor_mq['win_rate']:.0f}% WR — threshold raised")
 
+        # ── 15. Momentum Grade Validation Neuron: is A+ actually best? ───────
+        _grd_data = tlog.get("grade_perf", {})
+        _grade_insights = []
+        for _grd_key in ("A+", "A", "B", "C", "D"):
+            _gd = _grd_data.get(_grd_key, {})
+            if _gd.get("total", 0) >= 3:
+                _grade_insights.append({"grade": _grd_key, "win_rate": _gd.get("win_rate", 50),
+                                        "avg_pnl": _gd.get("avg_pnl", 0), "total": _gd.get("total", 0)})
+        if _grade_insights:
+            _g_summary = " | ".join(f"{g['grade']}:{g['win_rate']:.0f}%WR" for g in _grade_insights)
+            _learn_log.append(f"Grade performance: {_g_summary}")
+            # Warn if A+ isn't outperforming (grade inflation)
+            _aplus = next((g for g in _grade_insights if g["grade"] == "A+"), None)
+            _agrade = next((g for g in _grade_insights if g["grade"] == "A"), None)
+            if _aplus and _agrade and _aplus["win_rate"] < _agrade["win_rate"] - 5:
+                _learn_log.append(f"Grade calibration: A grades outperforming A+ — grade thresholds may need adjustment")
+
+        # ── 16. Price Tier Intelligence Neuron: micro/small/mid/large ────────
+        _tier_data = tlog.get("price_tier_perf", {})
+        _tier_insights = []
+        for _tier_key in ("micro", "small", "mid", "large"):
+            _td_tier = _tier_data.get(_tier_key, {})
+            if _td_tier.get("total", 0) >= 3:
+                _tier_insights.append({"tier": _tier_key, "win_rate": _td_tier.get("win_rate", 50),
+                                       "avg_pnl": _td_tier.get("avg_pnl", 0), "total": _td_tier.get("total", 0)})
+        if _tier_insights:
+            _t_summary = " | ".join(f"{t['tier']}:{t['win_rate']:.0f}%WR" for t in _tier_insights)
+            _learn_log.append(f"Price tier WRs: {_t_summary}")
+            _best_tier = max(_tier_insights, key=lambda x: x["win_rate"])
+            _worst_tier = min(_tier_insights, key=lambda x: x["win_rate"])
+            if _best_tier["win_rate"] - _worst_tier["win_rate"] >= 15:
+                _learn_log.append(f"Clear tier edge: {_best_tier['tier']} stocks ({_best_tier['win_rate']:.0f}% WR) far outperform {_worst_tier['tier']} ({_worst_tier['win_rate']:.0f}%)")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -9894,11 +9978,13 @@ def run():
             "earnings_prox_perf":  _earn_insights,        # earnings timing outcomes
             "rvol_perf":           _rvol_insights,        # RVOL bracket outcomes
             "mkt_quality_perf":    _mq_insights,          # market quality outcomes
+            "grade_perf":          _grade_insights,        # momentum grade performance
+            "price_tier_perf":     _tier_insights,         # price tier performance
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
             "last_tuned":          now_utc.isoformat(),
-            "learn_log":           _learn_log[-18:],     # last 18 learning observations
+            "learn_log":           _learn_log[-20:],     # last 20 learning observations
         }
         if _learn_log:
             logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")
