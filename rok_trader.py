@@ -10289,6 +10289,8 @@ def run():
                 "nr7":               live.get(tk, {}).get("nr7_signal", False),
                 "above_avwap":       live.get(tk, {}).get("above_avwap_52wl", False),
                 "vol_dry_up":        live.get(tk, {}).get("vol_dry_up", False),
+                "news_headlines":    _NEWS_VEL_CACHE.get(tk, ({}, 0))[0].get("headlines", [])[:3]
+                                     if tk in _NEWS_VEL_CACHE else [],
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
