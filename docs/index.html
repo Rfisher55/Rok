@@ -55273,8 +55273,38 @@ window.renderSectorRotation = renderSectorRotation;
       } catch {}
     }
     if (!data) return;
-    const _prevLearned = _tradesData?.bot_learned_params?.last_tuned;
+    const _prevLearned  = _tradesData?.bot_learned_params?.last_tuned;
+    const _prevTradeTime = _tradesData?.last_trade_action?.time;
     _tradesData = data;  // store globally so _renderIntelReport can access trades.json fields
+
+    // ── Bot Trade Notification: alert user when a new order was placed ────
+    const _newTradeTime = data?.last_trade_action?.time;
+    if (_prevTradeTime && _newTradeTime && _prevTradeTime !== _newTradeTime) {
+      const _lta = data.last_trade_action;
+      const _act  = _lta.action || '';
+      const _tick = _lta.ticker || '';
+      const _pnl  = _lta.pnl_pct;
+      const _pnlStr = _pnl != null ? ` ${_pnl >= 0 ? '+' : ''}${_pnl.toFixed(1)}%` : '';
+      const _isBuy  = _act === 'BUY' || _act === 'DCA';
+      const _isSell = _act === 'SELL' || _act === 'COVER' || _act === 'SELL_HALF';
+      const _alertMsg = _isBuy  ? ` BOT BUY: $${_tick} entered — score ${_lta.score || '?'}` :
+                        _isSell ? ` BOT SELL: $${_tick}${_pnlStr} — ${(_lta.reason||'').slice(0,40)}` :
+                        ` BOT ${_act}: $${_tick}${_pnlStr}`;
+      const _alertType = _isBuy ? 'good' : (_pnl != null && _pnl < 0 ? 'warn' : 'info');
+      if (typeof showAppAlert === 'function') showAppAlert(_alertMsg, _alertType, 8000);
+      if (typeof playAlertSound === 'function') playAlertSound(_isBuy ? 'buy' : 'sell');
+      // OS push notification
+      if (Notification.permission === 'granted') {
+        try {
+          new Notification('ROK Auto-Trade' + (_isBuy ? ' ' : ' '), {
+            body: _alertMsg.replace(/[^\w\s$:+\-%.]/g, '').trim(),
+            icon: './icon-192.png',
+            tag: `bot_trade_${_newTradeTime}`,
+            silent: false,
+          });
+        } catch(e) {}
+      }
+    }
 
     // If bot learning state changed (new tuning cycle), re-render intel panel automatically
     const _newLearned = data?.bot_learned_params?.last_tuned;
