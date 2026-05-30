@@ -8760,6 +8760,71 @@ def run():
                 logger.info(f"Closed-market: refreshed {len(_new_positions)} live positions from Alpaca")
         except Exception as _pos_e:
             logger.debug(f"Closed-market position refresh: {_pos_e}")
+
+        # ── Weekend / Closed-Market Brain Enrichment ─────────────────────────
+        # Write extra context so the site shows something useful when market is closed
+        try:
+            _cm_positions = tlog.get("positions", [])
+            _sig_wr = tlog.get("signal_win_rates", {})
+            _learned = tlog.get("bot_learned_params", {})
+
+            # Top 8 learned signals by win-rate (min 2 trades)
+            _top_signals = sorted(
+                [(k, v) for k, v in _sig_wr.items() if v.get("total", 0) >= 2],
+                key=lambda x: -x[1].get("win_rate", 0)
+            )[:8]
+
+            # Count active neurons — preserve value from last market-hours run if available
+            _n_active = tlog.get("neurons_active") or sum(
+                1 for k, v in _learned.items()
+                if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
+            )
+            _n_total = tlog.get("neurons_total") or 60
+            tlog["neurons_active"] = _n_active
+            tlog["neurons_total"]  = _n_total
+
+            # Bot brain summary for the frontend
+            tlog["bot_brain_summary"] = {
+                "neurons_active": _n_active,
+                "neurons_total": _n_total,
+                "top_signals": [
+                    {"signal": k, "win_rate": round(v.get("win_rate", 0), 4), "total": v.get("total", 0)}
+                    for k, v in _top_signals
+                ],
+                "last_tuned": _learned.get("last_tuned", ""),
+            }
+
+            # Next market open timestamp
+            try:
+                import zoneinfo as _cm_zi
+                _cm_et_tz = _cm_zi.ZoneInfo("America/New_York")
+                _now_et_cm = datetime.now(timezone.utc).astimezone(_cm_et_tz)
+            except Exception:
+                _now_et_cm = datetime.now(timezone.utc)
+            _next_open = _now_et_cm.replace(hour=9, minute=30, second=0, microsecond=0)
+            if _next_open <= _now_et_cm:
+                _next_open += timedelta(days=1)
+            while _next_open.weekday() >= 5:  # skip weekends (5=Sat, 6=Sun)
+                _next_open += timedelta(days=1)
+            tlog["next_market_open"] = _next_open.isoformat()
+
+            # Week-ahead prep: positions to watch, key levels
+            if _cm_positions:
+                _week_prep = []
+                for _wp in _cm_positions:
+                    _sym = _wp.get("ticker", "")
+                    _cost = _wp.get("cost", 0)
+                    _pct  = _wp.get("pnl_pct", 0)
+                    _item = {"ticker": _sym, "cost": _cost, "pnl_pct": round(_pct, 2)}
+                    # Add stop_price and target if available
+                    if _wp.get("stop_price"): _item["stop_price"] = _wp["stop_price"]
+                    if _wp.get("target_price"): _item["target_price"] = _wp["target_price"]
+                    _week_prep.append(_item)
+                tlog["week_ahead_prep"] = _week_prep
+
+        except Exception as _cm_enrich_e:
+            logger.debug(f"Closed-market brain enrichment: {_cm_enrich_e}")
+
         if ENABLE_CRYPTO:
             peaks = _load(PEAK_FILE, {})
             made_ref = []

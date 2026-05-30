@@ -1435,6 +1435,12 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-relative-power" style="display:none;margin-bottom:.85rem"></div>
     <div id="sig-profit-calc" style="margin-bottom:.85rem"></div>
 
+    <!-- Weekend Brain / Market Closed Panel — shows when market is closed -->
+    <div id="weekend-brain-panel" style="margin-bottom:.75rem"></div>
+
+    <!-- Neural Brain Visualization — shows bot learning state -->
+    <div id="neural-brain-panel" style="margin-bottom:.75rem"></div>
+
     <!-- ROK market score and conditions — populated by JS from trades.json -->
     <div id="rok-market-snapshot" style="margin-bottom:.75rem"></div>
 
@@ -3695,6 +3701,8 @@ body.beginner-mode #beginner-banner { display:block }
     updateFearGreedFromVIX();
     renderLivePortStrip();
     updateTickerTape();
+    // Re-render weekend panel with fresh live prices
+    if (typeof renderWeekendPanel === 'function' && _tradesData) renderWeekendPanel(_tradesData);
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
     // Set next refresh time for countdown
@@ -7907,7 +7915,202 @@ body.beginner-mode #beginner-banner { display:block }
     </div>`;
   }
 
-  //  TODAY'S PERSONALIZED TASKS 
+  // ── Weekend Brain & Neural Visualization ──────────────────────────────────
+
+  function _getNextMarketOpenMs(now) {
+    // Returns milliseconds until next 9:30 AM ET market open
+    const m = now.getMonth(), d = now.getDate();
+    const isDST = (m > 2 && m < 10) || (m === 2 && d >= 8) || (m === 10 && d < 7);
+    const etOffsetMs = (isDST ? 4 : 5) * 3600000;
+    const etNow = new Date(now.getTime() - etOffsetMs);
+    let next = new Date(etNow);
+    next.setHours(9, 30, 0, 0);
+    if (next <= etNow) next.setDate(next.getDate() + 1);
+    while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
+    return new Date(next.getTime() + etOffsetMs) - now;
+  }
+
+  function renderWeekendPanel(data) {
+    const el = document.getElementById('weekend-brain-panel');
+    if (!el) return;
+    if (data.market_open) { el.innerHTML = ''; return; }
+
+    const now = new Date();
+    const msToOpen = _getNextMarketOpenMs(now);
+    const totalMins = Math.max(0, Math.round(msToOpen / 60000));
+    const hTo = Math.floor(totalMins / 60), mTo = totalMins % 60;
+    const countStr = hTo > 0 ? `${hTo}h ${mTo}m` : `${totalMins}m`;
+
+    const positions = data.positions || [];
+    const pv  = data.portfolio_value || 0;
+    const bp  = data.buying_power   || 0;
+    const invested = Math.max(0, pv - bp);
+    const overallPnlUsd = positions.reduce((s,p) => s + (p.pnl_usd||0), 0);
+    const overallPnlCol = overallPnlUsd >= 0 ? '#00ff88' : '#ef5350';
+    const status = data.status || 'closed';
+    const statusLabel = status === 'crypto-only' ? 'CRYPTO TRADING' : 'WEEKEND MODE';
+
+    const spy = (typeof liveprices !== 'undefined' ? liveprices['SPY']  : null) || {};
+    const qqq = (typeof liveprices !== 'undefined' ? liveprices['QQQ']  : null) || {};
+    const vix = (typeof liveprices !== 'undefined' ? liveprices['^VIX'] : null) || {};
+
+    const mkts = [];
+    if (spy.price) mkts.push({sym:'SPY',px:spy.price,chg:spy.change_pct,isVix:false});
+    if (qqq.price) mkts.push({sym:'QQQ',px:qqq.price,chg:qqq.change_pct,isVix:false});
+    if (vix.price) mkts.push({sym:'VIX',px:vix.price,chg:null,isVix:true});
+
+    const signalWR = data.signal_win_rates || {};
+    const topSignals = Object.entries(signalWR)
+      .filter(([,v]) => (v.total||0) >= 2)
+      .sort(([,a],[,b]) => (b.win_rate||0) - (a.win_rate||0))
+      .slice(0, 6);
+
+    const nA = data.neurons_active || 0;
+    const nT = data.neurons_total  || 100;
+    const nPct = nT > 0 ? Math.round(nA / nT * 100) : 0;
+    const nCol = nA >= 50 ? '#00e676' : nA >= 25 ? '#00e5ff' : nA >= 10 ? '#ffd54f' : '#546e7a';
+
+    // 10×10 neuron grid (displayed as 20 cols × 5 rows)
+    const neuronGrid = Array.from({length:100}, (_,i) => {
+      const active = i < nA;
+      const col = active ? (i < 20 ? '#00ff88' : i < 50 ? '#00e5ff' : '#82b1ff') : 'rgba(255,255,255,.06)';
+      const glow = active ? `box-shadow:0 0 4px ${col}55;` : '';
+      return `<div style="width:100%;aspect-ratio:1;border-radius:50%;background:${col};${glow}"></div>`;
+    }).join('');
+
+    const posRows = positions.length > 0
+      ? positions.slice(0,8).map(p => {
+          const lp = (typeof liveprices !== 'undefined' ? liveprices[p.ticker] : null) || {};
+          const livePx   = lp.price || p.price || p.cost || 0;
+          const isLive   = (lp.price||0) > 0 && (p.cost||0) > 0;
+          const pct      = isLive ? ((livePx - p.cost) / p.cost * 100) : (p.pnl_pct || 0);
+          const pnlUsd   = isLive ? ((livePx - p.cost) * (p.qty||0)) : (p.pnl_usd || 0);
+          const col      = pct >= 0 ? '#00e676' : '#ef5350';
+          const liveBadge = isLive ? `<span style="font-size:5px;color:#00e5ff;font-weight:800;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);border-radius:2px;padding:0 2px">LIVE</span>` : '';
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.25rem .4rem;border-radius:6px;background:rgba(255,255,255,.02);margin-bottom:2px;cursor:pointer" onclick="if(typeof openModal==='function')openModal('${p.ticker}')">
+            <div style="display:flex;align-items:center;gap:.4rem">
+              <span style="font-family:var(--disp);font-size:1.05rem;font-weight:700;color:var(--wh)">${p.ticker}</span>
+              ${liveBadge}
+              <span style="font-size:7.5px;color:#546e7a">${(p.qty||0).toFixed(0)}sh @ $${(p.cost||0).toFixed(2)}</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:11.5px;font-weight:800;color:${col}">${pct>=0?'+':''}${pct.toFixed(2)}%</div>
+              <div style="font-size:8px;color:${col};font-weight:600">${pnlUsd>=0?'+':'−'}$${Math.abs(pnlUsd).toFixed(0)}</div>
+            </div>
+          </div>`;
+        }).join('')
+      : `<div style="font-size:9.5px;color:#3a4a5a;padding:.4rem 0">No open positions — 100% cash. Bot will start scanning when market opens.</div>`;
+
+    el.innerHTML = `
+    <div style="background:linear-gradient(135deg,#05080f,#090e1a);border:1.5px solid rgba(0,229,255,.18);border-radius:14px;overflow:hidden">
+
+      <!-- HEADER -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:rgba(0,229,255,.04);border-bottom:1px solid rgba(255,255,255,.06)">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="width:7px;height:7px;border-radius:50%;background:#00e5ff;animation:livePulse 1.8s ease infinite;flex-shrink:0"></div>
+          <span style="font-size:9px;font-weight:800;letter-spacing:.12em;color:#00e5ff;text-transform:uppercase">ROK BRAIN — ${statusLabel}</span>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:8px;font-weight:700;color:#ffd54f">Market opens in ${countStr}</div>
+          <div style="font-size:7px;color:#3a4a5a">100-neuron AI · continuously learning</div>
+        </div>
+      </div>
+
+      <!-- PORTFOLIO STRIP -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="padding:.5rem .6rem;text-align:center;border-right:1px solid rgba(255,255,255,.04)">
+          <div style="font-size:6.5px;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Total Value</div>
+          <div style="font-size:13px;font-weight:900;color:#00ff88;font-family:var(--disp)">$${(pv).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+        </div>
+        <div style="padding:.5rem .6rem;text-align:center;border-right:1px solid rgba(255,255,255,.04)">
+          <div style="font-size:6.5px;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">In Stocks</div>
+          <div style="font-size:13px;font-weight:900;color:#82b1ff;font-family:var(--disp)">$${(invested).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+        </div>
+        <div style="padding:.5rem .6rem;text-align:center">
+          <div style="font-size:6.5px;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Cash Ready</div>
+          <div style="font-size:13px;font-weight:900;color:#ffd54f;font-family:var(--disp)">$${(bp).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+        </div>
+      </div>
+
+      <!-- LIVE MARKET INDICATORS -->
+      ${mkts.length > 0 ? `<div style="display:flex;align-items:center;gap:.85rem;padding:.4rem 1rem;border-bottom:1px solid rgba(255,255,255,.05);flex-wrap:wrap">
+        <span style="font-size:6.5px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;flex-shrink:0">Live Prices</span>
+        ${mkts.map(m => {
+          const chgCol = m.isVix ? (m.px > 25 ? '#ef5350' : m.px > 15 ? '#ffd54f' : '#00e676')
+                                  : ((m.chg||0) >= 0 ? '#00e676' : '#ef5350');
+          const pxStr = m.isVix ? m.px.toFixed(1) : `$${m.px.toFixed(0)}`;
+          const chgStr = m.isVix ? `${m.px > 25 ? 'FEAR' : m.px > 15 ? 'ELEV' : 'LOW'}`
+                                  : `${(m.chg||0)>=0?'+':''}${(m.chg||0).toFixed(2)}%`;
+          return `<div style="text-align:center">
+            <div style="font-size:6px;color:#3a4a5a">${m.sym}</div>
+            <div style="font-size:11px;font-weight:800;color:${chgCol}">${pxStr}</div>
+            <div style="font-size:7px;color:${chgCol};font-weight:700">${chgStr}</div>
+          </div>`;
+        }).join('<div style="width:1px;height:22px;background:rgba(255,255,255,.05)"></div>')}
+        <span style="font-size:6px;color:#2a3a4a;margin-left:auto">auto-refresh 30s</span>
+      </div>` : ''}
+
+      <!-- POSITIONS -->
+      <div style="padding:.55rem .85rem;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+          <span style="font-size:7.5px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Your Positions</span>
+          ${positions.length > 0 ? `<span style="font-size:8px;font-weight:800;color:${overallPnlCol}">Total P&amp;L: ${overallPnlUsd>=0?'+':'−'}$${Math.abs(overallPnlUsd).toFixed(0)}</span>` : ''}
+        </div>
+        ${posRows}
+      </div>
+
+      <!-- NEURAL BRAIN -->
+      <div style="padding:.55rem .85rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+          <span style="font-size:7.5px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Neural Brain — ${nA}/${nT} Neurons Active</span>
+          <span style="font-size:8px;font-weight:800;color:${nCol}">${nPct}% capacity</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(20,1fr);gap:2px;margin-bottom:.5rem">${neuronGrid}</div>
+        ${topSignals.length > 0 ? `
+        <div style="font-size:7px;color:#3a4a5a;margin-bottom:.3rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Top Learned Signals</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${topSignals.map(([sig, wr]) => {
+            const wrPct = Math.round((wr.win_rate||0) * 100);
+            const col = wrPct >= 70 ? '#00e676' : wrPct >= 55 ? '#ffd54f' : '#ff9800';
+            return `<div style="font-size:7px;padding:2px 5px;background:rgba(255,255,255,.04);border:1px solid ${col}44;border-radius:4px;color:${col}" title="${sig}: ${wrPct}% win on ${wr.total||0} trades">${sig.replace(/_/g,' ')}: ${wrPct}%</div>`;
+          }).join('')}
+        </div>` : `<div style="font-size:8.5px;color:#2a3a4a;line-height:1.5">Neurons activate as the bot completes trades — each trade teaches the brain which signals work best. Starts learning from trade #1.</div>`}
+      </div>
+
+    </div>`;
+  }
+  window.renderWeekendPanel = renderWeekendPanel;
+
+  function renderNeuralBrainPanel(data) {
+    const el = document.getElementById('neural-brain-panel');
+    if (!el) return;
+    // Only show during market hours or if there's meaningful learning data
+    const nA = data.neurons_active || 0;
+    if (!data.market_open && nA === 0) { el.innerHTML = ''; return; }
+    if (!data.market_open) { el.innerHTML = ''; return; } // weekend panel handles this
+    // During market hours — show compact brain status strip
+    const nT = data.neurons_total || 100;
+    const nCol = nA >= 50 ? '#00e676' : nA >= 25 ? '#00e5ff' : nA >= 10 ? '#ffd54f' : '#546e7a';
+    const conv = data.bot_conviction || data.strategy_conviction || 0;
+    const convCol = conv >= 75 ? '#00ff88' : conv >= 55 ? '#ffd54f' : conv >= 35 ? '#ff9800' : '#ef9a9a';
+    const signalWR = data.signal_win_rates || {};
+    const topSig = Object.entries(signalWR).filter(([,v]) => (v.total||0) >= 2).sort(([,a],[,b]) => (b.win_rate||0)-(a.win_rate||0)).slice(0,3);
+    const miniGrid = Array.from({length:50}, (_,i) => {
+      const active = i < Math.round(nA / 2);
+      const col = active ? (i < 10 ? '#00ff88' : i < 25 ? '#00e5ff' : '#82b1ff') : 'rgba(255,255,255,.05)';
+      return `<div style="width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0"></div>`;
+    }).join('');
+    el.innerHTML = `<div style="background:rgba(0,0,0,.25);border:1px solid rgba(0,229,255,.1);border-radius:10px;padding:.4rem .75rem;display:flex;align-items:center;gap:.65rem;flex-wrap:wrap">
+      <div style="width:6px;height:6px;border-radius:50%;background:${nCol};flex-shrink:0;animation:livePulse 1.8s ease infinite"></div>
+      <span style="font-size:7.5px;font-weight:800;letter-spacing:.08em;color:${nCol};text-transform:uppercase;flex-shrink:0">BRAIN ${nA}/${nT}</span>
+      <div style="display:flex;flex-wrap:wrap;gap:1.5px;align-items:center">${miniGrid}</div>
+      ${conv > 0 ? `<span style="font-size:7.5px;font-weight:700;color:${convCol};flex-shrink:0">conviction ${conv}/100</span>` : ''}
+      ${topSig.length > 0 ? `<div style="display:flex;gap:3px;flex-wrap:wrap">${topSig.map(([s,v]) => `<span style="font-size:6.5px;padding:1px 4px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.15);border-radius:3px;color:#82b1ff" title="${s}">${s.replace(/_/g,' ')}: ${Math.round((v.win_rate||0)*100)}%</span>`).join('')}</div>` : ''}
+    </div>`;
+  }
+  window.renderNeuralBrainPanel = renderNeuralBrainPanel;
+
+  //  TODAY'S PERSONALIZED TASKS
   function renderROKTrackRecord() {
     const el = document.getElementById('rok-track-record');
     if (!el) return;
@@ -57308,6 +57511,11 @@ window.renderSectorRotation = renderSectorRotation;
           ).join('');
         }
       } catch(e) {}
+
+      // Weekend Brain panel (shows when market is closed)
+      try { if (typeof renderWeekendPanel === 'function') renderWeekendPanel(data); } catch(e) {}
+      // Neural Brain strip (shows during market hours when learning is active)
+      try { if (typeof renderNeuralBrainPanel === 'function') renderNeuralBrainPanel(data); } catch(e) {}
     }
     // ── End bridge ───────────────────────────────────────────────────────────
 
