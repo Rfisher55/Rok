@@ -4034,7 +4034,8 @@ def _fetch_spy_perf() -> dict:
     try:
         spy = yf.download("SPY", period="2y", interval="1d",
                           auto_adjust=True, progress=False)
-        closes = list(spy["Close"].dropna())
+        _spy_valid = spy["Close"].dropna()
+        closes = list(_spy_valid)
         if len(closes) >= 2:
             _SPY_PERF_CACHE["d1"]     = (closes[-1] - closes[-2]) / closes[-2] * 100
             _SPY_PERF_CACHE["d5"]     = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
@@ -4044,9 +4045,11 @@ def _fetch_spy_perf() -> dict:
             _SPY_PERF_CACHE["d189"]   = (closes[-1] - closes[-189]) / closes[-189] * 100 if len(closes) >= 189 else 0
             _SPY_PERF_CACHE["d252"]   = (closes[-1] - closes[-252]) / closes[-252] * 100 if len(closes) >= 252 else 0
             _SPY_PERF_CACHE["closes"] = closes  # full close history for beta regression
+            # Sorted date list for RS-vs-SPY since-entry lookup
+            _SPY_PERF_CACHE["date_list"] = [str(d.date()) for d in _spy_valid.index]
     except Exception:
         _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0, "d63": 0.0,
-                           "d126": 0.0, "d189": 0.0, "d252": 0.0, "closes": []}
+                           "d126": 0.0, "d189": 0.0, "d252": 0.0, "closes": [], "date_list": []}
     return _SPY_PERF_CACHE
 
 
@@ -7873,6 +7876,8 @@ def run():
                     (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
                     max(0.01, max(0.5, min(5.0, _payoff_ratio))) * 50   # half-Kelly %
                 ) * (1 + (sc - 60) / 100))), 1) if win_rate > 0.4 and _payoff_ratio > 0.5 else 0.0,
+                "atr":               round(live.get(tk, {}).get("atr", 0.0) or 0.0, 3),
+                "effective_min_score": tlog.get("effective_min_score", 60),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -8502,6 +8507,28 @@ def run():
             except Exception:
                 pass
 
+            # RS vs SPY since entry — measures alpha generation vs market
+            _pos["spy_since_entry"] = 0.0
+            _pos["rs_alpha"]        = 0.0
+            try:
+                _rsa_pk = peaks.get(_pos["ticker"], {})
+                _rsa_ts = (_rsa_pk.get("time") or "") if isinstance(_rsa_pk, dict) else ""
+                if _rsa_ts:
+                    _rsa_entry_date = _rsa_ts[:10]  # YYYY-MM-DD
+                    _spy_cache = _fetch_spy_perf()
+                    _spy_dates  = _spy_cache.get("date_list", [])
+                    _spy_closes = _spy_cache.get("closes", [])
+                    if _spy_dates and _spy_closes and len(_spy_dates) == len(_spy_closes):
+                        _rsa_idx = next((i for i, d in enumerate(_spy_dates) if d >= _rsa_entry_date), None)
+                        if _rsa_idx is not None and _spy_closes[_rsa_idx] > 0:
+                            _spy_entry_p = _spy_closes[_rsa_idx]
+                            _spy_cur_p   = _spy_closes[-1]
+                            _spy_ret     = round((_spy_cur_p - _spy_entry_p) / _spy_entry_p * 100, 2)
+                            _pos["spy_since_entry"] = _spy_ret
+                            _pos["rs_alpha"] = round((_pos.get("pnl_pct", 0) or 0) - _spy_ret, 2)
+            except Exception:
+                pass
+
             # Active dynamic trailing stop: mirrors the live trading logic
             # Shows the trader exactly what stop % is currently protecting this position
             _pnl = _pos.get("pnl_pct", 0) or 0
@@ -8824,6 +8851,10 @@ def run():
     tlog["buying_power"]    = round(buying_power, 2)
     tlog["regime"]          = regime
     tlog["status"]          = "ok"
+    # Rolling regime history — last 48 snapshots for timeline sparkline display
+    _rh_list = tlog.get("regime_history", [])
+    _rh_list.append({"r": regime, "t": now_utc.isoformat()})
+    tlog["regime_history"] = _rh_list[-48:]
     tlog["macro_day"]       = macro_day
     tlog["open_positions"]  = len(tlog.get("positions", []))
     tlog["scan_universe"]   = len(candidates)

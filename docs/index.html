@@ -55027,7 +55027,23 @@ window.renderSectorRotation = renderSectorRotation;
             <div><div style="font-size:8px;color:var(--wh4)">P&amp;L</div><div style="font-size:13px;font-weight:800;color:${pnlColor}">${totalPnl >= 0 ? '+' : ''}${totalPnl}%</div></div>
           </div>
         </div>
-        ${regime.regime ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market</div><div style="font-size:13px;font-weight:800;color:${regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)'};">${regime.regime.toUpperCase()}</div><div style="font-size:8px;color:var(--wh3)">VIX ${(regime.vix||0).toFixed(1)} ${macroDay}</div></div>` : ''}
+        ${(() => {
+          if (!regime.regime) return '';
+          const rCol = regime.regime==='bull'?'var(--g)':regime.regime==='bear'?'var(--r)':'var(--au)';
+          const rBorder = regime.regime==='bull'?'rgba(0,255,136,.2)':regime.regime==='bear'?'rgba(239,83,80,.2)':'rgba(255,215,0,.15)';
+          // Regime history sparkline
+          const rHist = data.regime_history || [];
+          const rhDots = rHist.slice(-24).map(h => {
+            const c = h.r==='bull'?'#00e676':h.r==='bear'?'#ef5350':'#ffd54f';
+            return `<div title="${h.r} @ ${h.t?new Date(h.t).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}):''}" style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></div>`;
+          }).join('');
+          return `<div style="background:rgba(0,0,0,.2);border:1px solid ${rBorder};border-radius:12px;padding:.7rem 1rem">
+            <div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market Regime</div>
+            <div style="font-size:13px;font-weight:800;color:${rCol}">${regime.regime.toUpperCase()}</div>
+            <div style="font-size:7.5px;color:var(--wh4);margin-top:.1rem">VIX ${(regime.vix||0).toFixed(1)} ${macroDay}</div>
+            ${rhDots ? `<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:.35rem" title="Regime history — last 24 scans (newest right)">${rhDots}</div>` : ''}
+          </div>`;
+        })()}
         ${scanSize ? `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Scanner</div><div style="font-size:13px;font-weight:800;color:var(--wh)">${scanSize}</div><div style="font-size:8px;color:${statusColor}">${data.status||'—'}</div></div>` : ''}
         ${(() => {
           // Market timing quality tile
@@ -55232,6 +55248,90 @@ window.renderSectorRotation = renderSectorRotation;
             </div>`;
           });
           html += `</div>`;
+
+          // Trade Plan Quick Cards — top 3 candidates with full trade setup
+          const planCandidates = topScan.filter(s => !heldTickers.has(s.ticker)).slice(0, 3);
+          if (planCandidates.length > 0) {
+            html += `<div style="margin-top:.55rem">
+              <div style="font-size:7.5px;font-weight:700;color:#1e3050;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">📋 TRADE PLANS — Top Setups</div>
+              <div style="display:flex;flex-direction:column;gap:.35rem">`;
+            planCandidates.forEach((s, idx) => {
+              const pr    = s.price || 0;
+              const atr   = s.atr || 0;
+              const sc    = s.score || 0;
+              const scCol = sc >= 80 ? '#00ff88' : sc >= 65 ? '#69f0ae' : sc >= 50 ? '#ffd54f' : '#82b1ff';
+              // Entry trigger: use cup_pivot, pivot_r1, or slight above current
+              const entry = s.cup_pivot > pr * 0.98 && s.cup_pivot < pr * 1.05 ? s.cup_pivot
+                          : s.pivot_r1  > pr * 0.98 && s.pivot_r1  < pr * 1.05 ? s.pivot_r1
+                          : s.key_resist_1 > pr * 0.99 && s.key_resist_1 < pr * 1.03 ? s.key_resist_1
+                          : pr;
+              const entryLbl = s.cup_pivot > 0 && entry === s.cup_pivot ? 'Cup Pivot'
+                             : s.pivot_r1 > 0 && entry === s.pivot_r1 ? 'Pivot R1' : 'Current';
+              // Stop: supertrend_stop or ATR-based or -7%
+              const stopAtr = atr > 0 ? pr - atr * 2.0 : pr * (1 - 0.07);
+              const stopST  = (s.supertrend_stop || 0) > 0 && s.supertrend_stop < pr * 0.97 ? s.supertrend_stop : 0;
+              const stop    = stopST > 0 ? stopST : Math.max(stopAtr, pr * 0.9);
+              const stopPct = pr > 0 ? ((pr - stop) / pr * 100).toFixed(1) : 7;
+              // Targets: ATR multiples or % fallback
+              const t1 = atr > 0 ? entry + atr * 1.5 : entry * 1.08;
+              const t2 = atr > 0 ? entry + atr * 3.0 : entry * 1.15;
+              const t3 = atr > 0 ? entry + atr * 4.5 : entry * 1.22;
+              const rrRaw = stop < entry ? (t2 - entry) / (entry - stop) : 0;
+              const rr = rrRaw.toFixed(1);
+              const rrCol = rrRaw >= 3 ? '#00ff88' : rrRaw >= 2 ? '#69f0ae' : rrRaw >= 1.5 ? '#ffd54f' : '#ff9800';
+              // Position sizing: 1% portfolio risk (uses portfolio_value from data)
+              const portVal = data.portfolio_value || 0;
+              const riskPerShare = entry > stop ? (entry - stop) : entry * 0.07;
+              const sharesFor1pct = portVal > 0 && riskPerShare > 0 ? Math.floor(portVal * 0.01 / riskPerShare) : 0;
+              const kellySz = s.kelly_size_pct || 0;
+              // Grade & sector
+              const grade = s.grade || '?';
+              const gradeCol = grade === 'A+' || grade === 'A' ? '#00ff88' : grade === 'B+' || grade === 'B' ? '#69f0ae' : grade === 'C' ? '#ffd54f' : '#888';
+              html += `<div style="background:linear-gradient(135deg,rgba(6,13,26,.9),rgba(10,20,40,.9));border:1px solid rgba(${idx===0?'0,255,136':'130,177,255'},.15);border-radius:8px;padding:.5rem .7rem">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+                  <div style="display:flex;align-items:center;gap:.4rem">
+                    <span style="font-family:var(--disp);font-size:.95rem;color:#ffd54f;font-weight:900">\$${s.ticker}</span>
+                    <span style="font-size:6px;font-weight:900;color:${gradeCol};background:${gradeCol}22;padding:1px 4px;border-radius:3px">${grade}</span>
+                    <span style="font-size:6px;color:#4a6fa5">${(s.sector||'').substring(0,12)}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:.4rem">
+                    <span style="font-size:7px;font-weight:900;color:${scCol}">SC ${sc}</span>
+                    <span style="font-size:6.5px;font-weight:900;color:${rrCol};background:${rrCol}18;border:1px solid ${rrCol}44;border-radius:4px;padding:1px 5px">R:R ${rr}:1</span>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.3rem">
+                  <div style="background:rgba(0,229,255,.05);border-radius:5px;padding:.25rem .3rem;border:1px solid rgba(0,229,255,.1)">
+                    <div style="font-size:5.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.05em">Entry</div>
+                    <div style="font-size:8px;font-weight:900;color:#00e5ff">\$${entry.toFixed(2)}</div>
+                    <div style="font-size:5px;color:#2a5a8a">${entryLbl}</div>
+                  </div>
+                  <div style="background:rgba(239,83,80,.05);border-radius:5px;padding:.25rem .3rem;border:1px solid rgba(239,83,80,.1)">
+                    <div style="font-size:5.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.05em">Stop</div>
+                    <div style="font-size:8px;font-weight:900;color:#ef5350">\$${stop.toFixed(2)}</div>
+                    <div style="font-size:5px;color:#6a2a2a">−${stopPct}%${atr>0?' (2×ATR)':''}</div>
+                  </div>
+                  <div style="background:rgba(0,230,118,.05);border-radius:5px;padding:.25rem .3rem;border:1px solid rgba(0,230,118,.08)">
+                    <div style="font-size:5.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.05em">T1 (25%)</div>
+                    <div style="font-size:8px;font-weight:900;color:#69f0ae">\$${t1.toFixed(2)}</div>
+                    <div style="font-size:5px;color:#1a4a2a">+${entry>0?((t1-entry)/entry*100).toFixed(1):0}%</div>
+                  </div>
+                  <div style="background:rgba(0,255,136,.06);border-radius:5px;padding:.25rem .3rem;border:1px solid rgba(0,255,136,.1)">
+                    <div style="font-size:5.5px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.05em">T2 (Full)</div>
+                    <div style="font-size:8px;font-weight:900;color:#00ff88">\$${t2.toFixed(2)}</div>
+                    <div style="font-size:5px;color:#1a5a3a">+${entry>0?((t2-entry)/entry*100).toFixed(1):0}%</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                  ${sharesFor1pct > 0 ? `<span style="font-size:6.5px;color:#ffd54f;background:rgba(255,213,79,.08);border:1px solid rgba(255,213,79,.2);border-radius:4px;padding:1px 5px" title="Shares for 1% portfolio risk at this stop distance">📐 ${sharesFor1pct} sh (1%R)</span>` : ''}
+                  ${kellySz > 0 ? `<span style="font-size:6px;color:#82b1ff;background:rgba(130,177,255,.08);border-radius:3px;padding:1px 4px" title="Kelly formula position size">Kelly ${kellySz}%</span>` : ''}
+                  ${s.earnings_days != null && s.earnings_days <= 10 ? `<span style="font-size:6px;color:${s.earnings_days<=3?'#ef5350':'#ff9800'};font-weight:700">📅 Earn ${s.earnings_days}d</span>` : ''}
+                  ${(s.gamma_wall_up||0) > pr ? `<span style="font-size:6px;color:#ce93d8" title="Gamma wall resistance at \$${(s.gamma_wall_up||0).toFixed(2)}">γ↑\$${(s.gamma_wall_up||0).toFixed(0)}</span>` : ''}
+                  ${s.catalyst ? `<span style="font-size:6px;color:#64b5f6;flex:1;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">${s.catalyst.substring(0,40)}</span>` : ''}
+                </div>
+              </div>`;
+            });
+            html += `</div></div>`;
+          }
 
           if (rejected.length) {
             html += `<div style="margin-top:.4rem">
@@ -56794,6 +56894,25 @@ window.renderSectorRotation = renderSectorRotation;
           </div>`;
         }
         html += `<div style="font-size:8px;color:${totalUnrealCol};font-weight:700;margin-bottom:.4rem">Unrealized P&L: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</div>`;
+
+        // Position Performance Heatmap — quick-view grid sorted by P&L
+        {
+          const sorted = [...positions].sort((a,b) => (b.pnl_pct||0) - (a.pnl_pct||0));
+          const pmHtml = sorted.map(p => {
+            const pct = p.pnl_pct || 0;
+            const alpha = p.rs_alpha || 0;
+            const pnlC = pct >= 10 ? '#00e676' : pct >= 5 ? '#69f0ae' : pct >= 2 ? '#b9f6ca' : pct >= 0 ? '#4caf50' : pct >= -3 ? '#ff9800' : '#ef5350';
+            const bgC  = pct >= 5  ? 'rgba(0,230,118,.15)' : pct >= 0 ? 'rgba(0,200,83,.07)' : pct >= -3 ? 'rgba(255,152,0,.12)' : 'rgba(239,83,80,.15)';
+            const alphaStr = Math.abs(alpha) >= 0.5 ? `<div style="font-size:5px;color:${alpha>=0?'#69f0ae':'#ef9a9a'};margin-top:1px">${alpha>=0?'+':''}${alpha.toFixed(1)}α</div>` : '';
+            return `<div style="background:${bgC};border:1px solid ${pnlC}33;border-radius:5px;padding:.25rem .35rem;text-align:center;flex:1;min-width:44px" title="${p.ticker}: P&L ${pct>=0?'+':''}${pct.toFixed(1)}%, RS Alpha ${alpha>=0?'+':''}${alpha.toFixed(1)}%">
+              <div style="font-family:var(--disp);font-size:8px;color:#ffd54f;font-weight:900">${p.ticker}</div>
+              <div style="font-size:8px;font-weight:800;color:${pnlC}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>
+              ${alphaStr}
+            </div>`;
+          }).join('');
+          html += `<div style="display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.5rem" title="Position heatmap — sorted best to worst P&L">${pmHtml}</div>`;
+        }
+
         html += `<div style="display:flex;flex-direction:column;gap:.4rem">`;
         positions.forEach(p => {
           const pct = p.pnl_pct || 0;
@@ -56891,6 +57010,31 @@ window.renderSectorRotation = renderSectorRotation;
                   ${mae != null && mfe != null ? `<div style="display:flex;gap:.5rem;margin-top:1px"><span style="font-size:5px;color:#ef5350" title="Max Adverse Excursion — worst unrealized loss from entry">MAE ${mae}%</span><span style="font-size:5px;color:#00ff88" title="Max Favorable Excursion — best unrealized gain from entry">MFE +${mfe}%</span></div>` : ''}
                 </div>`;
               })()}
+              ${(() => {
+                // Score history mini-bars — conviction trend from entry to now
+                const sh = (p.score_history || []).filter(h => typeof h.s === 'number');
+                if (sh.length < 3) return '';
+                const scores = sh.slice(-16).map(h => h.s);
+                const minS = Math.min(...scores), maxS = Math.max(...scores);
+                const rangeS = Math.max(maxS - minS, 5);
+                const barH = 12, barW = 5, gap = 1;
+                const firstS = scores[0], lastS = scores[scores.length - 1];
+                const trend = lastS - firstS;
+                const trendCol = trend >= 5 ? '#00e676' : trend >= 0 ? '#ffd54f' : trend >= -5 ? '#ff9800' : '#ef5350';
+                const bars = scores.map((s, i) => {
+                  const h = Math.max(2, Math.round((s - minS) / rangeS * barH));
+                  const c = s >= 75 ? '#00e676' : s >= 60 ? '#69f0ae' : s >= 45 ? '#ffd54f' : '#ef5350';
+                  const x = i * (barW + gap);
+                  return `<rect x="${x}" y="${barH - h}" width="${barW}" height="${h}" fill="${c}" opacity=".8" rx="1"/>`;
+                }).join('');
+                const svgW = scores.length * (barW + gap) - gap;
+                return `<div style="margin-top:.3rem;display:flex;align-items:center;gap:.4rem" title="Score trend from entry (${firstS}) to now (${lastS}). Trend: ${trend>=0?'+':''}${trend.toFixed(0)}pts">
+                  <span style="font-size:5.5px;color:rgba(255,255,255,.25);white-space:nowrap">SC TREND</span>
+                  <svg width="${svgW}" height="${barH}" viewBox="0 0 ${svgW} ${barH}" style="flex-shrink:0">${bars}</svg>
+                  <span style="font-size:5.5px;font-weight:700;color:${trendCol}">${trend>=0?'+':''}${trend.toFixed(0)}</span>
+                  <span style="font-size:5.5px;color:rgba(255,255,255,.3)">${firstS}→${lastS}</span>
+                </div>`;
+              })()}
               ${p.live_signals ? (() => {
                 const ls = p.live_signals;
                 const parts = [];
@@ -56966,6 +57110,20 @@ window.renderSectorRotation = renderSectorRotation;
                 </div>`;
               })()}
               ${p.ai_commentary ? `<div style="margin-top:.3rem;font-size:7px;color:#90caf9;padding:.25rem .4rem;background:linear-gradient(135deg,rgba(33,150,243,.06),rgba(25,118,210,.04));border-left:2px solid rgba(33,150,243,.3);border-radius:0 4px 4px 0;line-height:1.4;font-style:italic" title="AI position assessment (Claude Haiku)">🤖 ${p.ai_commentary}</div>` : ''}
+              ${(() => {
+                // RS Alpha vs SPY since entry — key measure of alpha generation
+                const alpha = p.rs_alpha || 0;
+                const spy = p.spy_since_entry || 0;
+                if (Math.abs(alpha) < 0.1 && Math.abs(spy) < 0.1) return '';
+                const aCol = alpha >= 5 ? '#00e676' : alpha >= 2 ? '#69f0ae' : alpha >= 0 ? '#80cbc4' : alpha >= -3 ? '#ff9800' : '#ef5350';
+                const aIcon = alpha >= 0 ? '▲' : '▼';
+                const aTitle = `RS Alpha: your position +${(p.pnl_pct||0).toFixed(1)}% vs SPY ${spy>=0?'+':''}${spy.toFixed(1)}% since entry. Alpha = ${alpha>=0?'+':''}${alpha.toFixed(1)}%`;
+                return `<div style="margin-top:.25rem;display:inline-flex;align-items:center;gap:.3rem;background:${alpha>=0?'rgba(0,230,118,.05)':'rgba(239,83,80,.05)'};border:1px solid ${aCol}22;border-radius:4px;padding:2px 7px" title="${aTitle}">
+                  <span style="font-size:5.5px;color:rgba(255,255,255,.3)">vs SPY</span>
+                  <span style="font-size:7.5px;font-weight:900;color:${aCol}">${aIcon}${Math.abs(alpha).toFixed(1)}%α</span>
+                  <span style="font-size:5.5px;color:#3a5a8a">SPY${spy>=0?'+':''}${spy.toFixed(1)}%</span>
+                </div>`;
+              })()}
               ${p.entry_thesis ? `<div style="margin-top:.3rem;font-size:7px;color:#4a6fa5;font-style:italic;padding:.2rem .35rem;background:rgba(74,111,165,.06);border-left:2px solid rgba(74,111,165,.3);border-radius:0 3px 3px 0;line-height:1.35">${p.entry_thesis}</div>` : ''}
               ${(() => {
                 const rec = p.recommendation;
@@ -57026,6 +57184,36 @@ window.renderSectorRotation = renderSectorRotation;
           </div>`;
         });
         html += `</div>`;
+
+        // RS Alpha Leaderboard — positions ranked by alpha vs SPY since entry
+        const posWithAlpha = (data.positions||[]).filter(p => Math.abs(p.rs_alpha||0) > 0.1 || Math.abs(p.spy_since_entry||0) > 0.1);
+        if (posWithAlpha.length >= 2) {
+          const sorted = [...posWithAlpha].sort((a,b) => (b.rs_alpha||0) - (a.rs_alpha||0));
+          html += `<div style="margin-top:.5rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:.45rem .65rem">
+            <div style="font-size:7px;font-weight:900;color:#4a6fa5;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">📊 RS ALPHA LEADERBOARD</div>
+            <div style="display:flex;flex-direction:column;gap:.15rem">
+              ${sorted.map((p,i) => {
+                const alpha = p.rs_alpha || 0;
+                const spy = p.spy_since_entry || 0;
+                const pnl = p.pnl_pct || 0;
+                const aCol = alpha >= 5 ? '#00e676' : alpha >= 2 ? '#69f0ae' : alpha >= 0 ? '#80cbc4' : alpha >= -3 ? '#ff9800' : '#ef5350';
+                const pnlCol = pnl >= 0 ? '#00ff88' : '#ef5350';
+                const barPct = Math.min(100, Math.max(0, 50 + alpha * 2));
+                const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+                return `<div style="display:flex;align-items:center;gap:.4rem;padding:.15rem 0">
+                  <span style="font-size:7px;min-width:12px;color:#555">${rankIcon}</span>
+                  <span style="font-family:var(--disp);font-size:8px;color:#ffd54f;min-width:36px;font-weight:900">${p.ticker}</span>
+                  <div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+                    <div style="width:${barPct}%;height:100%;background:${aCol};border-radius:2px"></div>
+                  </div>
+                  <span style="font-size:7px;font-weight:800;color:${aCol};min-width:38px;text-align:right">${alpha>=0?'+':''}${alpha.toFixed(1)}%α</span>
+                  <span style="font-size:6px;color:${pnlCol};min-width:32px;text-align:right">${pnl>=0?'+':''}${pnl.toFixed(1)}%</span>
+                  <span style="font-size:5.5px;color:#3a5a8a;min-width:40px;text-align:right">SPY${spy>=0?'+':''}${spy.toFixed(1)}%</span>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }
       }
 
       // Earnings Risk Dashboard — consolidated upcoming earnings for held positions
