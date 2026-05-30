@@ -57416,6 +57416,14 @@ window.renderSectorRotation = renderSectorRotation;
         const conv = data.bot_conviction;
         const stratMode = data.strategy_mode || '';
         const stratDesc = data.strategy_desc || '';
+        const streak = data.trade_streak || {};
+        const streakBadge = (() => {
+          if (!streak.type || !streak.count) return '';
+          if (streak.mode === 'hot') return `<span style="font-size:7px;color:#ffd54f;font-weight:900;letter-spacing:.05em"> 🔥 ${streak.count}-WIN HOT STREAK</span>`;
+          if (streak.mode === 'warm') return `<span style="font-size:7px;color:#69f0ae;font-weight:700"> ↑ ${streak.count} wins</span>`;
+          if (streak.mode === 'cold') return `<span style="font-size:7px;color:#ef9a9a;font-weight:700"> ↓ ${streak.count} losses</span>`;
+          return '';
+        })();
         if (conv != null) {
           const convCol = conv >= 75 ? '#00e676' : conv >= 60 ? '#69f0ae' : conv >= 45 ? '#ffd54f' : conv >= 30 ? '#ff9800' : '#ef5350';
           const convBg  = conv >= 75 ? 'rgba(0,255,136,.06)' : conv >= 60 ? 'rgba(105,240,174,.05)' : conv >= 45 ? 'rgba(255,215,0,.05)' : conv >= 30 ? 'rgba(255,152,0,.06)' : 'rgba(255,34,85,.06)';
@@ -57424,9 +57432,10 @@ window.renderSectorRotation = renderSectorRotation;
           const barBg = conv >= 75 ? 'linear-gradient(90deg,#00c853,#00e676)' : conv >= 60 ? 'linear-gradient(90deg,#00c853,#69f0ae)' : conv >= 45 ? 'linear-gradient(90deg,#f9a825,#ffd54f)' : conv >= 30 ? 'linear-gradient(90deg,#e65100,#ff9800)' : 'linear-gradient(90deg,#b71c1c,#ef5350)';
           html += `<div style="margin-bottom:.55rem;padding:.55rem .75rem;background:${convBg};border:1px solid ${convBorder};border-radius:9px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
-              <div>
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.4rem">
                 <span style="font-size:7px;font-weight:800;color:${convCol};letter-spacing:.07em;text-transform:uppercase"> BOT CONVICTION</span>
-                ${stratMode ? `<span style="font-size:7.5px;font-weight:900;color:${convCol};margin-left:.5rem">${stratMode}</span>` : ''}
+                ${stratMode ? `<span style="font-size:7.5px;font-weight:900;color:${convCol}">${stratMode}</span>` : ''}
+                ${streakBadge}
               </div>
               <span style="font-size:11px;font-weight:900;color:${convCol}">${conv}/100</span>
             </div>

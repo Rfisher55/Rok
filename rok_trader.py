@@ -7618,9 +7618,16 @@ def run():
     _recent_trades = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
     _recent_trades.sort(key=lambda t: t.get("time", ""), reverse=True)
     _last3_pnl = [t["pnl_pct"] for t in _recent_trades[:3]]
+    _last5_pnl = [t["pnl_pct"] for t in _recent_trades[:5]]
     _consecutive_losses = len(_last3_pnl) >= 3 and all(p < 0 for p in _last3_pnl)
     if _consecutive_losses:
         logger.info(f"Consecutive loss guard: last 3 trades lost ({[round(p,1) for p in _last3_pnl]}) — skipping new buys this cycle")
+
+    # Win streak detection: 5+ consecutive wins → bot is in sync with market rhythm
+    _win_streak_5 = len(_last5_pnl) >= 5 and all(p > 0 for p in _last5_pnl)
+    _win_streak_3 = len(_last3_pnl) >= 3 and all(p > 0 for p in _last3_pnl)
+    if _win_streak_5:
+        logger.info(f"WIN STREAK: last 5 trades all won ({[round(p,1) for p in _last5_pnl]}) — bot in sync with market")
 
     # Portfolio beta estimation: estimate aggregate market exposure of open positions
     # Uses 63-day RS vs SPY as a beta proxy (positively correlated with actual beta)
@@ -7663,6 +7670,14 @@ def run():
     if _learned_score_adj != 0:
         _eff_min_score += _learned_score_adj
         logger.info(f"Learned threshold adj: {_learned_score_adj:+d} → effective min={_eff_min_score}")
+
+    # Win streak mode: 5 straight wins = bot is in sync; slightly lower bar (market is working)
+    if _win_streak_5:
+        _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)
+        logger.info(f"Win streak mode (5W): lowering threshold by 3 → {_eff_min_score}")
+    elif _win_streak_3:
+        _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 1)
+        logger.info(f"Win streak (3W): lowering threshold by 1 → {_eff_min_score}")
 
     # Internal scan breadth guard: if <30% of our universe is advancing, add +6 to threshold
     if _scan_breadth_poor:
@@ -9051,7 +9066,8 @@ def run():
                 _streak_len += 1
             else:
                 break
-        tlog["trade_streak"] = {"type": _streak_type, "count": _streak_len}
+        _streak_bonus = "hot" if _streak_type == "win" and _streak_len >= 5 else "warm" if _streak_type == "win" and _streak_len >= 3 else "cold" if _streak_type == "loss" and _streak_len >= 3 else "normal"
+        tlog["trade_streak"] = {"type": _streak_type, "count": _streak_len, "mode": _streak_bonus}
     except Exception:
         pass
     tlog["signal_analytics"] = _signal_analytics
