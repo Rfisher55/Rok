@@ -55317,19 +55317,27 @@ function _renderIntelReport(el, intel) {
       if (c.orb_breakout)   pats.push(['ORB','#00e676']);
       if (c.unusual_calls)  pats.push(['CALLS','#82b1ff']);
       if (c.rvol_surge)     pats.push(['RVOL','#ffd54f']);
-      const patHtml = pats.slice(0,4).map(([lbl,col]) =>
+      if (c.nr7)            pats.push(['NR7','#ea80fc']);
+      if (c.vol_dry_up)     pats.push(['DRY','#80cbc4']);
+      if (c.above_avwap)    pats.push(['AVWAP↑','#82b1ff']);
+      const patHtml = pats.slice(0,5).map(([lbl,col]) =>
         `<span style="font-size:5.5px;font-weight:800;color:${col};background:${col}18;border-radius:2px;padding:1px 3px">${lbl}</span>`
       ).join('');
       const gradeCol = c.grade==='A+'?'#00e676':c.grade==='A'?'#69f0ae':c.grade==='B+'?'#82b1ff':c.grade==='B'?'#ffd54f':'#888';
       const rs = c.rs_rating || 0;
       const rsCol = rs >= 90 ? '#00e676' : rs >= 80 ? '#69f0ae' : rs >= 70 ? '#ffd54f' : '#555';
-      return `<div style="display:grid;grid-template-columns:36px 28px 52px 42px 32px 40px 1fr;align-items:center;gap:.25rem;padding:.25rem .35rem;border-radius:5px;margin-bottom:2px;background:${i===0?'rgba(0,255,136,.04)':'rgba(255,255,255,.01)'}">
+      // Premium signal count (N100 master neuron)
+      const prem = c.premium_signal_count || 0;
+      const premCol = prem >= 6 ? '#00e676' : prem >= 4 ? '#ffd54f' : prem >= 2 ? '#ff9800' : '#444';
+      const premStars = prem >= 6 ? '⭐⭐⭐' : prem >= 4 ? '⭐⭐' : prem >= 2 ? '⭐' : '–';
+      return `<div style="display:grid;grid-template-columns:36px 22px 44px 36px 24px 32px 22px 1fr;align-items:center;gap:.2rem;padding:.25rem .35rem;border-radius:5px;margin-bottom:2px;background:${i===0?'rgba(0,255,136,.05)':prem>=6?'rgba(0,255,136,.02)':'rgba(255,255,255,.01)'}${prem>=6?';border:1px solid rgba(0,255,136,.12)':''}">
         <span style="font-size:9px;font-weight:800;color:${scCol}">${c.ticker}</span>
         <span style="font-size:7.5px;font-weight:800;color:${scCol}">${sc}</span>
-        <span style="font-size:7px;color:${chgCol}">${chg>=0?'+':''}${chg.toFixed(1)}% · ${vrStr}</span>
-        <span style="font-size:7px;color:${rsiCol}">RSI${rsi.toFixed(0)}</span>
+        <span style="font-size:6.5px;color:${chgCol}">${chg>=0?'+':''}${chg.toFixed(1)}% ${vrStr}</span>
+        <span style="font-size:6.5px;color:${rsiCol}">R${rsi.toFixed(0)}</span>
         <span style="font-size:7px;font-weight:800;color:${gradeCol}">${c.grade||'?'}</span>
-        <span style="font-size:6.5px;color:${rsCol}">RS${rs}</span>
+        <span style="font-size:6px;color:${rsCol}">RS${rs}</span>
+        <span style="font-size:6px;color:${premCol};font-weight:700" title="${prem}/10 premium signals">${premStars}</span>
         <div style="display:flex;gap:2px;flex-wrap:wrap">${patHtml}</div>
       </div>`;
     });
@@ -55339,17 +55347,18 @@ function _renderIntelReport(el, intel) {
     })() : '';
     return `<div style="margin-bottom:.75rem;background:rgba(0,0,0,.2);border:1px solid rgba(0,255,136,.1);border-radius:9px;padding:.55rem .7rem">
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
-        <span style="font-size:7.5px;font-weight:900;color:#00e676;letter-spacing:.1em;text-transform:uppercase"> LIVE SCAN WATCHLIST</span>
+        <span style="font-size:7.5px;font-weight:900;color:#00e676;letter-spacing:.1em;text-transform:uppercase"> LIVE SCAN · 100-NEURON AI</span>
         <span style="font-size:6.5px;color:#333">${scanTop.length} candidates · ${scanAge}</span>
       </div>
-      <div style="display:grid;grid-template-columns:36px 28px 52px 42px 32px 40px 1fr;gap:.25rem;padding:.15rem .35rem;margin-bottom:.15rem">
-        <span style="font-size:5.5px;color:#333">TICKER</span>
-        <span style="font-size:5.5px;color:#333">SCORE</span>
-        <span style="font-size:5.5px;color:#333">CHG · VOL</span>
-        <span style="font-size:5.5px;color:#333">RSI</span>
-        <span style="font-size:5.5px;color:#333">GRADE</span>
-        <span style="font-size:5.5px;color:#333">RS</span>
-        <span style="font-size:5.5px;color:#333">PATTERNS</span>
+      <div style="display:grid;grid-template-columns:36px 22px 44px 36px 24px 32px 22px 1fr;gap:.2rem;padding:.15rem .35rem;margin-bottom:.15rem">
+        <span style="font-size:5px;color:#333">TICKER</span>
+        <span style="font-size:5px;color:#333">SCORE</span>
+        <span style="font-size:5px;color:#333">CHG·VOL</span>
+        <span style="font-size:5px;color:#333">RSI</span>
+        <span style="font-size:5px;color:#333">GRD</span>
+        <span style="font-size:5px;color:#333">RS</span>
+        <span style="font-size:5px;color:#333">⭐</span>
+        <span style="font-size:5px;color:#333">PATTERNS</span>
       </div>
       ${rows.join('')}
     </div>`;
