@@ -5992,6 +5992,22 @@ def run():
             elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= -1.5 and age_days >= 1:
                 reason = f"winner-turned-loser exit ({pnl_pct:+.1f}%, was up 5%+ earlier)"
             else:
+                # Score degradation exit: sustained weakening = exit before full reversal
+                _score_hist = [h.get("s") for h in peaks.get(sym, {}).get("score_history", [])
+                               if isinstance(h.get("s"), (int, float))]
+                if len(_score_hist) >= 4:
+                    _score_drop = _score_hist[0] - _score_hist[-1]
+                    _consec_drop = all(_score_hist[i] > _score_hist[i+1] for i in range(min(3, len(_score_hist)-1)))
+                    if _score_drop >= 20 and _consec_drop and -2 <= pnl_pct <= 4 and age_days >= 2:
+                        reason = f"score degradation exit ({_score_hist[0]}→{_score_hist[-1]}, -{_score_drop}pts, {pnl_pct:+.1f}%)"
+                # Analyst downgrade exit: multiple recent downgrades + deteriorating momentum
+                if not reason:
+                    _live_sig_ar = live.get(sym, {})
+                    _ar_score = _live_sig_ar.get("analyst_rev_score", 0) or 0
+                    _ar_nr    = _live_sig_ar.get("analyst_net_rev", 0) or 0
+                    if _ar_score <= -1 and _ar_nr <= -2 and pnl_pct < 2 and age_days >= 3:
+                        reason = f"analyst downgrade wave ({_ar_nr} net downgrades, {pnl_pct:+.1f}%)"
+            if reason is None:
                 # Signal emergency exit: check live technical signal on held stock
                 live_sig = live.get(sym, {})
                 if live_sig:
