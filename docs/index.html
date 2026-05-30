@@ -54682,6 +54682,8 @@ window.renderSectorRotation = renderSectorRotation;
             if ((s.consec_green||0) >= 3) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,230,118,.1);color:#00e676;padding:1px 3px;border-radius:3px" title="${s.consec_green} consecutive green days">${s.consec_green}🟢</span>`);
             if ((s.trend_quality_score||0) >= 7) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,229,255,.1);color:#00e5ff;padding:1px 3px;border-radius:3px" title="Trend Quality Score ${(s.trend_quality_score||0).toFixed(1)}/10">TQ${(s.trend_quality_score||0).toFixed(0)}✓</span>`);
             if (s.near_key_support) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(255,215,0,.12);color:#ffd54f;padding:1px 3px;border-radius:3px" title="At swing support $${(s.key_support_1||0).toFixed(2)}">🎯S$${(s.key_support_1||0).toFixed(0)}</span>`);
+            if ((s.w52_range_pos||0) >= 88) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,230,118,.1);color:#00e676;padding:1px 3px;border-radius:3px" title="Near 52-week high: ${(s.w52_range_pos||0).toFixed(0)}% of range">52W⚡</span>`);
+            else if ((s.w52_range_pos||0) <= 12) signalTags.push(`<span style="font-size:5.5px;color:#ef9a9a;padding:1px 3px;border-radius:3px" title="Near 52-week low: ${(s.w52_range_pos||0).toFixed(0)}% of range">52W↓</span>`);
             html += `<div style="background:${bgGrad};border:${border};border-radius:9px;padding:.55rem .65rem;display:flex;flex-direction:column;gap:.2rem;position:relative">
               ${i===0 ? '<div style="position:absolute;top:-1px;right:-1px;background:#00ff88;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:0 9px 0 5px;letter-spacing:.05em">TOP</div>' : ''}
               ${isHeld ? '<div style="position:absolute;top:-1px;left:-1px;background:#ffd54f;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:9px 0 5px 0;letter-spacing:.05em">HELD</div>' : ''}
@@ -55038,6 +55040,25 @@ window.renderSectorRotation = renderSectorRotation;
           const lsMfi  = ls.mfi != null ? `<span style="font-size:6.5px;color:${ls.mfi<25?'#69f0ae':ls.mfi>80?'#ef5350':'#555'}" title="Money Flow Index">MFI${Math.round(ls.mfi)}</span>` : '';
           const lsST   = ls.supertrend_stop > 0 && p.price > 0 ? `<span style="font-size:6px;font-weight:800;color:${ls.supertrend_bull===false?'#ef5350':p.price<ls.supertrend_stop?'#ef5350':'#00e5ff'}" title="Supertrend stop">ST$${ls.supertrend_stop.toFixed(2)}</span>` : '';
           const lsPSAR = ls.psar > 0 ? `<span style="font-size:6px;font-weight:800;color:${ls.psar_bull===false?'#ef5350':'#4fc3f7'}" title="Parabolic SAR ${ls.psar_bull===false?'bearish — warning':'bullish — trailing floor'}">SAR${ls.psar_bull===false?'▼':'▲'}$${ls.psar.toFixed(2)}</span>` : '';
+          // 52-week range position badge: 0%=52w low, 100%=52w high
+          const lsW52 = (() => {
+            const pos = ls.w52_range_pos || 0;
+            if (!pos) return '';
+            const col = pos >= 85 ? '#00e676' : pos >= 60 ? '#ffd54f' : pos <= 15 ? '#ef5350' : '#888';
+            const label = pos >= 88 ? '⚡NEAR HIGH' : pos <= 12 ? '⚠NEAR LOW' : `${Math.round(pos)}%rng`;
+            return `<span style="font-size:6px;color:${col}" title="52-week range: ${pos.toFixed(0)}% from low — 0%=52w low, 100%=52w high">52W:${label}</span>`;
+          })();
+          // ATM Implied Volatility badge: shows IV vs HV comparison
+          const lsIV = (() => {
+            const iv = ls.atm_iv || 0;
+            if (!iv) return '';
+            const hv = ls.hv20 || 0;
+            const elevated = hv > 0 && iv > hv * 1.35;
+            const cheap = hv > 0 && iv < hv * 0.80;
+            const col = elevated ? '#ef5350' : cheap ? '#69f0ae' : '#9e9e9e';
+            const tag = elevated ? '⚠HIGH' : cheap ? '↓CHEAP' : '';
+            return `<span style="font-size:6px;color:${col}" title="ATM Implied Volatility ${iv.toFixed(0)}% vs HV20 ${hv.toFixed(0)}%${elevated?' — options expensive, IV crush risk after catalyst':''}${cheap?' — options cheap vs realized vol':''}">IV${iv.toFixed(0)}%${tag}</span>`;
+          })();
           const lsLR = ls.lr_r2 > 0 ? (() => {
             const col = ls.lr_below_channel ? '#80d8ff' : ls.lr_above_channel ? '#ffab40' : '#555';
             const pos = ls.lr_below_channel ? '↓BUY' : ls.lr_above_channel ? '↑EXT' : '';
@@ -55267,9 +55288,9 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
+                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
-                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}
+                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels||lsIV) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsIV}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
                   const il = intelSig.type === 'buy' ? 'AI BUY' : intelSig.type === 'sell' ? 'AI SELL' : 'AI WATCH';

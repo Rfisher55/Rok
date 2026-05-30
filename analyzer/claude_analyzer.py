@@ -404,6 +404,14 @@ def build_prompt(
             fib_tgt = ls.get("fib_level_382") or 0
             if fib_tgt and cur and abs(cur - fib_tgt) / max(cur, 0.01) < 0.015:
                 flags.append(f"AT_FIB38.2({fib_tgt:.2f})")
+            w52 = ls.get("w52_range_pos") or 0
+            if w52 >= 88:  flags.append(f"NEAR_52W_HIGH({w52:.0f}%)")
+            if w52 <= 12:  flags.append(f"NEAR_52W_LOW({w52:.0f}%)")
+            atm_iv = ls.get("atm_iv") or 0
+            hv20   = ls.get("hv20") or 0
+            if atm_iv > 0 and hv20 > 0:
+                if atm_iv > hv20 * 1.35: flags.append(f"IV_ELEVATED({atm_iv:.0f}%vsHV{hv20:.0f}%)")
+                elif atm_iv < hv20 * 0.8: flags.append(f"IV_CHEAP({atm_iv:.0f}%vsHV{hv20:.0f}%)")
             flag_str = " | ".join(flags) if flags else "no_flags"
             pos_detail_lines.append(
                 f"  ${tk}: P&L {pnl:+.1f}% | cost ${cost:.2f} → ${cur:.2f} | val ${val:,.0f}"
@@ -425,7 +433,10 @@ def build_prompt(
             mtf = "3TF✓" if s.get("mtf_triple") else ""
             acc = f"ACC{s.get('accum_score',0)}" if (s.get("accum_score") or 0) >= 6 else ""
             sqz = "γSQZ" if s.get("squeeze_potential") else ""
-            tags = " ".join(t for t in [mtf, acc, sqz] if t)
+            w52_s = s.get("w52_range_pos") or 0
+            w52_tag = f"52W:{w52_s:.0f}%" if w52_s else ""
+            hv_tag = "HV↓COIL" if s.get("hv_contracting") else ("HV↑EXP" if s.get("hv_expanding") else "")
+            tags = " ".join(t for t in [mtf, acc, sqz, w52_tag, hv_tag] if t)
             scan_lines.append(f"  ${tk} score={sc} grade={gr}{' ['+tags+']' if tags else ''} | {cat}")
         scan_str = "\n".join(scan_lines)
     else:

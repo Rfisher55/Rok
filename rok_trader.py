@@ -77,6 +77,8 @@ CRYPTO_TARGET_PCT= 0.25     # 25% profit target for crypto
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
 _SPY_PERF_CACHE: dict  = {}   # cached SPY returns for relative strength calc
+_ATM_IV_CACHE:  dict  = {}   # ATM implied volatility per symbol (30m TTL)
+_ATM_IV_TS:     dict  = {}   # timestamps for ATM IV cache
 _SIGNAL_WIN_RATES: dict = {}  # {signal_name: {win_rate: float, total: int}} loaded from tlog each cycle
 
 # ── Sector map ────────────────────────────────────────────────────────────────
@@ -3615,6 +3617,62 @@ def get_full_universe(held_symbols: set) -> tuple[list, set]:
 
 
 # ── Batch data fetch ──────────────────────────────────────────────────────────
+def _fetch_atm_iv(sym: str) -> float:
+    """ATM implied volatility (%) from nearest 14-45 day expiry options. Cached 30 min."""
+    global _ATM_IV_CACHE, _ATM_IV_TS
+    import time as _time
+    _now = _time.monotonic()
+    if sym in _ATM_IV_CACHE and _now - _ATM_IV_TS.get(sym, 0) < 1800:
+        return _ATM_IV_CACHE[sym]
+    try:
+        from datetime import datetime, date as _date
+        tk = yf.Ticker(sym)
+        exps = tk.options
+        if not exps:
+            _ATM_IV_CACHE[sym] = 0.0
+            _ATM_IV_TS[sym] = _now
+            return 0.0
+        today = _date.today()
+        best_exp, best_diff = None, 999
+        for exp_str in exps:
+            try:
+                exp = datetime.strptime(exp_str, '%Y-%m-%d').date()
+                days = (exp - today).days
+                if 7 <= days <= 60:
+                    diff = abs(days - 21)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_exp = exp_str
+            except Exception:
+                continue
+        if not best_exp:
+            best_exp = exps[0]
+        chain = tk.option_chain(best_exp)
+        calls = chain.calls
+        if calls is None or calls.empty or 'impliedVolatility' not in calls.columns:
+            _ATM_IV_CACHE[sym] = 0.0
+            _ATM_IV_TS[sym] = _now
+            return 0.0
+        cur = getattr(tk.fast_info, 'last_price', 0) or 0
+        calls = calls[calls['impliedVolatility'] > 0].copy()
+        if calls.empty:
+            _ATM_IV_CACHE[sym] = 0.0
+            _ATM_IV_TS[sym] = _now
+            return 0.0
+        if cur > 0:
+            idx = (calls['strike'] - cur).abs().idxmin()
+        else:
+            idx = calls.index[len(calls) // 2]
+        atm_iv = round(float(calls.loc[idx, 'impliedVolatility']) * 100, 1)
+        _ATM_IV_CACHE[sym] = atm_iv
+        _ATM_IV_TS[sym] = _now
+        return atm_iv
+    except Exception:
+        _ATM_IV_CACHE[sym] = 0.0
+        _ATM_IV_TS[sym] = _time.monotonic()
+        return 0.0
+
+
 def _fetch_spy_perf() -> dict:
     """
     Fetch SPY's 1-day and 5-day return once per run.
@@ -3664,6 +3722,15 @@ def _extract(daily, hourly):
     except Exception:
         pass
     near_52w_high = (price / high_52w) if high_52w > 0 else 1.0
+
+    # 52-week range position: 0% = at 52w low, 100% = at 52w high
+    w52_range_pos = 0.0
+    try:
+        if high_52w > low_52w > 0:
+            w52_range_pos = round((price - low_52w) / (high_52w - low_52w) * 100, 1)
+            w52_range_pos = max(0.0, min(100.0, w52_range_pos))
+    except Exception:
+        pass
 
     # Fibonacci retracement level detection — institutional support zones
     fib_support    = False   # price near 38.2% / 50% / 61.8% retracement and holding
@@ -4485,6 +4552,7 @@ def _extract(daily, hourly):
         "week_high":       round(week_high, 2),
         "week_low":        round(week_low, 2),
         "near_52w_high":   round(near_52w_high, 4),
+        "w52_range_pos":   w52_range_pos,
         "intraday":        round(intraday, 2),
         "rsi":             round(rsi_val, 1),
         "daily_rsi":       round(daily_rsi, 1),
@@ -4842,6 +4910,11 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                                 sig.setdefault("short_float", 0.0)
                                 sig.setdefault("short_ratio", 0.0)
                                 sig.setdefault("high_short", False)
+                            # ATM Implied Volatility: options chain (30m cache)
+                            try:
+                                sig["atm_iv"] = _fetch_atm_iv(tk)
+                            except Exception:
+                                sig.setdefault("atm_iv", 0.0)
                             # Analyst revisions: held positions only (4hr cache, ~15s call)
                             try:
                                 ar = _analyst_revisions(tk)
@@ -4868,6 +4941,7 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("analyst_net_rev", 0)
                             sig.setdefault("analyst_price_tgt", 0.0)
                             sig.setdefault("analyst_upside_pct", 0.0)
+                            sig.setdefault("atm_iv", 0.0)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -7120,6 +7194,8 @@ def run():
                 "short_float":        sig.get("short_float", 0.0),
                 "short_ratio":        sig.get("short_ratio", 0.0),
                 "high_short":         sig.get("high_short", False),
+                "atm_iv":             sig.get("atm_iv", 0.0),
+                "w52_range_pos":      sig.get("w52_range_pos", 0.0),
                 "analyst_upgrade":    sig.get("analyst_upgrade", False),
                 "analyst_rev_score":  sig.get("analyst_rev_score", 0),
                 "analyst_buy_pct":    sig.get("analyst_buy_pct", 0.5),
