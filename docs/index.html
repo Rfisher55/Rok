@@ -53311,6 +53311,67 @@ function _renderIntelReport(el, intel) {
     </div>`;
   })();
 
+  // ── Equity Curve Sparkline — cumulative P&L over last 60 trades ─────────────
+  const equityCurveHtml = (() => {
+    const _td = _tradesData || td;
+    const trades = (_td.trades || []).filter(t => t.pnl_pct != null && t.action !== 'DCA');
+    if (trades.length < 5) return '';
+    // Build cumulative P&L series (most recent first → reverse for chronological)
+    const recent = trades.slice(0, 60).reverse();
+    let cum = 0;
+    const pts = recent.map(t => { cum += (t.pnl_pct || 0); return cum; });
+    const minV = Math.min(...pts), maxV = Math.max(...pts);
+    const range = Math.max(maxV - minV, 0.5);
+    const W = 260, H = 36, pad = 4;
+    const x = i => pad + (i / Math.max(pts.length - 1, 1)) * (W - pad * 2);
+    const y = v => H - pad - ((v - minV) / range) * (H - pad * 2);
+    const pathD = pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    const areaD = pathD + ` L${x(pts.length-1).toFixed(1)},${H} L${x(0).toFixed(1)},${H} Z`;
+    const finalPnl = pts[pts.length - 1];
+    const finalCol = finalPnl >= 0 ? '#00e676' : '#ef5350';
+    const strokeCol = finalPnl >= 0 ? '#00e676' : '#ef5350';
+    const fillCol = finalPnl >= 0 ? 'rgba(0,230,118,.12)' : 'rgba(239,83,80,.12)';
+    // Win/loss dots on the line
+    const dots = recent.slice(-20).map((t, i) => {
+      const idx = pts.length - 20 + i;
+      if (idx < 0) return '';
+      const col = (t.pnl_pct||0) > 0 ? '#00e67688' : '#ef535088';
+      return `<circle cx="${x(idx).toFixed(1)}" cy="${y(pts[idx]).toFixed(1)}" r="1.5" fill="${col}" />`;
+    }).join('');
+    // Zero line
+    const zeroY = y(0).toFixed(1);
+    const zeroPct = ((0 - minV) / range * 100).toFixed(0);
+    const winsCount = recent.filter(t => (t.pnl_pct||0) > 0).length;
+    const totalN = recent.length;
+    const wr = Math.round(winsCount / totalN * 100);
+    return `<div style="margin-bottom:.5rem;padding:.4rem .6rem;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">
+        <div style="font-size:6px;font-weight:800;color:#82b1ff;letter-spacing:.08em">📈 EQUITY CURVE — LAST ${totalN} TRADES</div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <span style="font-size:6px;color:${finalCol};font-weight:800">${finalPnl>=0?'+':''}${finalPnl.toFixed(1)}% cumulative</span>
+          <span style="font-size:5.5px;color:#555">${wr}% WR</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="40" preserveAspectRatio="none" style="overflow:visible">
+        <defs>
+          <linearGradient id="eqfill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="${finalCol}" stop-opacity=".25"/>
+            <stop offset="100%" stop-color="${finalCol}" stop-opacity=".02"/>
+          </linearGradient>
+        </defs>
+        ${zeroY > 0 && zeroY < H ? `<line x1="${pad}" y1="${zeroY}" x2="${(W-pad).toFixed(1)}" y2="${zeroY}" stroke="rgba(255,255,255,.08)" stroke-width=".8" stroke-dasharray="3,3"/>` : ''}
+        <path d="${areaD}" fill="url(#eqfill)"/>
+        <path d="${pathD}" fill="none" stroke="${strokeCol}" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+        ${dots}
+        <circle cx="${x(pts.length-1).toFixed(1)}" cy="${y(pts[pts.length-1]).toFixed(1)}" r="2.5" fill="${finalCol}"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:.1rem">
+        <span style="font-size:5px;color:#2a3a5a">${recent[0]?.time?.slice(0,10)||''}</span>
+        <span style="font-size:5px;color:#2a3a5a">${recent[recent.length-1]?.time?.slice(0,10)||''}</span>
+      </div>
+    </div>`;
+  })();
+
   // ── Bot Learning Log panel — shows what the bot learned from its trades ────
   const botBrainHtml = (() => {
     const _td = _tradesData || td;  // prefer live trades.json data
@@ -53501,6 +53562,30 @@ function _renderIntelReport(el, intel) {
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${pt.map(t=>miniCell(t.tier.charAt(0).toUpperCase()+t.tier.slice(1),t.win_rate,t.avg_pnl,t.total,tierHues[t.tier]||'#888')).join('')}</div>
         </div>` : '';
         return `<div style="margin-bottom:.3rem">${gpHtml}${ptHtml}</div>`;
+      })()}
+      ${(() => {
+        // ── Catalyst Performance Neuron panel ─────────────────────────────
+        const cp = lp.catalyst_perf || [];
+        if (!cp.length) return '';
+        const catEmoji = {earnings_beat:'🏆',gap_up:'📈',vol_surge:'⚡',options_flow:'🎯',momentum:'🚀',
+                          squeeze:'🔥',breakout:'💥',pre_earnings:'📅',mean_reversion:'↩️',earnings_play:'📊',none:'⚙️'};
+        const bars = cp.slice(0,6).map(c => {
+          const col = c.win_rate >= 65 ? '#00e676' : c.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+          const barW = Math.min(c.win_rate, 100);
+          const emoji = catEmoji[c.catalyst] || '⚙️';
+          const label = c.catalyst.replace(/_/g,' ').replace(/\b\w/g,x=>x.toUpperCase()).slice(0,12);
+          return `<div style="display:grid;grid-template-columns:80px 1fr 32px 28px;align-items:center;gap:.25rem;padding:.15rem 0;border-bottom:1px solid rgba(255,255,255,.03)">
+            <span style="font-size:6px;color:var(--wh3);white-space:nowrap;overflow:hidden">${emoji} ${label}</span>
+            <div style="height:4px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${barW}%;background:${col}55;border-radius:2px"></div></div>
+            <span style="font-size:6.5px;font-weight:800;color:${col};text-align:right">${c.win_rate.toFixed(0)}%</span>
+            <span style="font-size:5.5px;color:#555;text-align:right">${c.total}T</span>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.35rem">
+          <div style="font-size:6px;color:#ff9800;font-weight:700;margin-bottom:.2rem">⚡ CATALYST PERFORMANCE (what triggers work best)</div>
+          ${bars}
+        </div>`;
       })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
@@ -53696,7 +53781,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${equityCurveHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 
   // Live position sizer calculator

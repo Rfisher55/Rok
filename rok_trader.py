@@ -8470,6 +8470,18 @@ def run():
                     if _learned_pos_size_adj != 1.0:
                         notional = round(notional * _learned_pos_size_adj, 2)
 
+                    # Regime-Aware Dynamic Sizing Neuron: adapt size to current market regime
+                    # Choppy/bear → smaller bets; strong_bull → allow slightly larger
+                    _cur_regime_str = regime.get("regime", "neutral")
+                    if _cur_regime_str in ("bear",):
+                        notional = round(notional * 0.75, 2)   # Bear: 25% smaller
+                        logger.debug(f"Bear regime sizing: {tk} notional reduced 25%")
+                    elif _cur_regime_str in ("choppy", "neutral"):
+                        notional = round(notional * 0.85, 2)   # Choppy: 15% smaller
+                    elif _cur_regime_str == "strong_bull" and _r20_wr >= 0.60:
+                        # Only size up in strong bull if recent win rate is solid
+                        notional = round(notional * 1.10, 2)   # Strong bull + winning: +10%
+
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
@@ -9957,6 +9969,24 @@ def run():
             if _best_tier["win_rate"] - _worst_tier["win_rate"] >= 15:
                 _learn_log.append(f"Clear tier edge: {_best_tier['tier']} stocks ({_best_tier['win_rate']:.0f}% WR) far outperform {_worst_tier['tier']} ({_worst_tier['win_rate']:.0f}%)")
 
+        # ── 17. Catalyst Performance Neuron: which triggers work best ────────
+        _cat_perf = tlog.get("catalyst_performance", {})
+        _cat_insights = sorted(
+            [{"catalyst": k, "win_rate": v.get("win_rate", 50),
+              "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+             for k, v in _cat_perf.items() if v.get("total", 0) >= 3],
+            key=lambda x: -x["win_rate"]
+        )
+        if _cat_insights:
+            _c_summary = " | ".join(f"{c['catalyst']}:{c['win_rate']:.0f}%WR" for c in _cat_insights[:5])
+            _learn_log.append(f"Catalyst WRs: {_c_summary}")
+            _top_cat = _cat_insights[0]
+            if _top_cat["win_rate"] >= 65:
+                _learn_log.append(f"Best catalyst: {_top_cat['catalyst']} ({_top_cat['win_rate']:.0f}% WR, avg {_top_cat['avg_pnl']:+.1f}%)")
+            _worst_cat = _cat_insights[-1] if len(_cat_insights) > 1 else None
+            if _worst_cat and _worst_cat["win_rate"] <= 40 and _worst_cat["total"] >= 5:
+                _learn_log.append(f"Weak catalyst: {_worst_cat['catalyst']} only {_worst_cat['win_rate']:.0f}% WR — deprioritizing")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -9980,6 +10010,7 @@ def run():
             "mkt_quality_perf":    _mq_insights,          # market quality outcomes
             "grade_perf":          _grade_insights,        # momentum grade performance
             "price_tier_perf":     _tier_insights,         # price tier performance
+            "catalyst_perf":       _cat_insights[:8],      # catalyst type performance
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
