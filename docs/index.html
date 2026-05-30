@@ -53365,9 +53365,77 @@ function _renderIntelReport(el, intel) {
         ${dots}
         <circle cx="${x(pts.length-1).toFixed(1)}" cy="${y(pts[pts.length-1]).toFixed(1)}" r="2.5" fill="${finalCol}"/>
       </svg>
-      <div style="display:flex;justify-content:space-between;margin-top:.1rem">
+      <div style="display:flex;justify-content:space-between;margin-top:.1rem;align-items:center">
         <span style="font-size:5px;color:#2a3a5a">${recent[0]?.time?.slice(0,10)||''}</span>
+        ${(() => {
+          const rwr = (_td.rolling_win_rates || {});
+          const chips = [];
+          if (rwr.wr10 != null) { const c=rwr.wr10>=60?'#00e676':rwr.wr10>=50?'#ffd54f':'#ef5350'; chips.push(`<span style="font-size:5.5px;color:${c};background:${c}18;border-radius:3px;padding:0 4px">WR10: ${rwr.wr10}%</span>`); }
+          if (rwr.wr20 != null) { const c=rwr.wr20>=60?'#00e676':rwr.wr20>=50?'#ffd54f':'#ef5350'; chips.push(`<span style="font-size:5.5px;color:${c};background:${c}18;border-radius:3px;padding:0 4px">WR20: ${rwr.wr20}%</span>`); }
+          if (rwr.wr50 != null) { const c=rwr.wr50>=60?'#00e676':rwr.wr50>=50?'#ffd54f':'#ef5350'; chips.push(`<span style="font-size:5.5px;color:${c};background:${c}18;border-radius:3px;padding:0 4px">WR50: ${rwr.wr50}%</span>`); }
+          return chips.length ? `<div style="display:flex;gap:3px">${chips.join('')}</div>` : '';
+        })()}
         <span style="font-size:5px;color:#2a3a5a">${recent[recent.length-1]?.time?.slice(0,10)||''}</span>
+      </div>
+    </div>`;
+  })();
+
+  // ── Upcoming Events Widget: macro events + position earnings this week ────────
+  const upcomingEventsHtml = (() => {
+    const _td = _tradesData || td;
+    const positions = _td.positions || [];
+    const now = new Date();
+    // Known macro events (from Python calendar — static for display)
+    const macroCalendar = [
+      {date:'2025-06-04',label:'NFP'},  {date:'2025-06-11',label:'CPI'},
+      {date:'2025-06-18',label:'FOMC'}, {date:'2025-07-03',label:'NFP'},
+      {date:'2025-07-15',label:'CPI'},  {date:'2025-07-30',label:'FOMC'},
+      {date:'2025-08-01',label:'NFP'},  {date:'2025-08-12',label:'CPI'},
+      {date:'2025-09-05',label:'NFP'},  {date:'2025-09-10',label:'CPI'},
+      {date:'2025-09-17',label:'FOMC'}, {date:'2025-10-03',label:'NFP'},
+      {date:'2025-10-15',label:'CPI'},  {date:'2025-10-29',label:'FOMC'},
+      {date:'2025-11-07',label:'NFP'},  {date:'2025-11-13',label:'CPI'},
+      {date:'2025-12-05',label:'NFP'},  {date:'2025-12-10',label:'FOMC+CPI'},
+    ];
+    // Next 7 days
+    const upcoming = [];
+    for (let i = 0; i < 8; i++) {
+      const d = new Date(now); d.setDate(d.getDate()+i);
+      const ds = d.toISOString().slice(0,10);
+      const ev = macroCalendar.find(e => e.date === ds);
+      if (ev) {
+        const dayLabel = i===0?'TODAY':i===1?'TOMORROW':d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+        upcoming.push({dayLabel, event: ev.label, isToday: i===0, isTomorrow: i===1, ds});
+      }
+    }
+    // Positions with earnings info from trade data
+    const earnAlerts = positions.filter(p => p.earnings_days != null && p.earnings_days >= 0 && p.earnings_days <= 7)
+      .sort((a,b) => a.earnings_days - b.earnings_days)
+      .slice(0,4);
+    if (!upcoming.length && !earnAlerts.length) return '';
+    const macroHtml = upcoming.map(u => {
+      const col = u.event.includes('FOMC') ? '#ef9a9a' : u.event.includes('CPI') ? '#ffd54f' : '#82b1ff';
+      const urgency = u.isToday ? '⚠️ ' : u.isTomorrow ? '📅 ' : '';
+      return `<div style="display:flex;align-items:center;gap:.3rem;padding:.12rem 0">
+        <span style="font-size:6.5px;font-weight:800;color:${col};background:${col}18;border-radius:3px;padding:0 4px">${u.event}</span>
+        <span style="font-size:6px;color:var(--wh3)">${urgency}${u.dayLabel}</span>
+      </div>`;
+    }).join('');
+    const earnHtml = earnAlerts.map(p => {
+      const d = p.earnings_days === 0 ? 'TODAY' : p.earnings_days === 1 ? 'TOMORROW' : `${p.earnings_days}d`;
+      const col = p.earnings_days <= 1 ? '#ef5350' : p.earnings_days <= 3 ? '#ffd54f' : '#82b1ff';
+      return `<div style="display:flex;align-items:center;gap:.3rem;padding:.1rem 0">
+        <span style="font-size:6.5px;font-weight:800;color:${col}">${p.symbol||p.ticker}</span>
+        <span style="font-size:6px;color:#555">earnings in</span>
+        <span style="font-size:6px;font-weight:800;color:${col}">${d}</span>
+        <span style="font-size:6px;color:${(p.unrealized_pct||0)>=0?'#69f0ae':'#ef5350'}">${(p.unrealized_pct||0)>=0?'+':''}${(p.unrealized_pct||0).toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:.5rem;padding:.4rem .6rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,152,0,.15);border-radius:8px">
+      <div style="font-size:6px;font-weight:800;color:#ff9800;letter-spacing:.08em;margin-bottom:.25rem">📅 UPCOMING EVENTS (next 7 days)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem">
+        <div>${macroHtml || '<div style="font-size:6px;color:#333">No macro events this week</div>'}</div>
+        <div>${earnHtml || '<div style="font-size:6px;color:#333">No position earnings</div>'}</div>
       </div>
     </div>`;
   })();
@@ -53833,7 +53901,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${equityCurveHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${equityCurveHtml}${upcomingEventsHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 
   // Live position sizer calculator

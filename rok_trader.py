@@ -6784,6 +6784,29 @@ def score(tk, d, sentiment=0, regime_adj=0):
     except Exception:
         pass
 
+    # ── COMPOUND RISK FILTER: when multiple negative factors align ────────────
+    # Like a neural network's inhibitory cascade — when many neurons fire "avoid",
+    # the compound signal is stronger than any individual factor.
+    # This is a key differentiator vs. simpler trading systems that treat each
+    # negative signal independently rather than recognizing their compound effect.
+    try:
+        _neg_factors = 0
+        _sector_key2 = SECTOR_MAP.get(tk, "other")
+        if _LEARNED_COLD_SECTORS and _sector_key2 in _LEARNED_COLD_SECTORS: _neg_factors += 1
+        if _LEARNED_TICKER_MEMORY and tk in _LEARNED_TICKER_MEMORY and _LEARNED_TICKER_MEMORY[tk] <= -3: _neg_factors += 1
+        _now_h2 = str(datetime.now(timezone.utc).hour)
+        if _LEARNED_WORST_HOURS and _now_h2 in _LEARNED_WORST_HOURS: _neg_factors += 1
+        _now_dt2 = datetime.now(timezone.utc)
+        _hw_key2 = f"{_now_dt2.hour:02d}{'30' if _now_dt2.minute >= 30 else '00'}"
+        if _LEARNED_WORST_HALFHOURS and _hw_key2 in _LEARNED_WORST_HALFHOURS: _neg_factors += 1
+        # Apply compounded penalty when 3+ independent risk factors align
+        if _neg_factors >= 3:
+            s -= 8   # triple-threat: strong compounded avoidance signal
+        elif _neg_factors == 2:
+            s -= 3   # double-negative: meaningful compound risk
+    except Exception:
+        pass
+
     # Market regime adjustment
     s += regime_adj
 
@@ -9699,6 +9722,20 @@ def run():
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
     tlog["market_breadth"]  = breadth
+    # Rolling win rate history (last 50 snapshots, taken each cycle)
+    try:
+        _closed_all = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","SELL_HALF","COVER") and t.get("pnl_pct") is not None]
+        _wr_rolling = {}
+        for _n in (10, 20, 50):
+            _n_slice = _closed_all[:_n]
+            _wr_rolling[f"wr{_n}"] = round(sum(1 for t in _n_slice if t["pnl_pct"] > 0) / max(len(_n_slice), 1) * 100, 1) if _n_slice else None
+        tlog["rolling_win_rates"] = _wr_rolling
+        # Append to rolling history for sparkline
+        _rwh = tlog.get("rolling_wr_history", [])
+        _rwh.append({"t": now_utc.isoformat(), "wr10": _wr_rolling.get("wr10"), "wr20": _wr_rolling.get("wr20")})
+        tlog["rolling_wr_history"] = _rwh[-48:]  # 48 cycles = 4h at 5min intervals
+    except Exception:
+        pass
     tlog["profit_factor"]   = _profit_factor
     tlog["avg_win_pct"]     = _avg_win
     tlog["avg_loss_pct"]    = _avg_loss
