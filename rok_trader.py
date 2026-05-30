@@ -7227,26 +7227,45 @@ def run():
                                       if sym in _NEWS_VEL_CACHE else [],
             }
 
-        tlog["positions"] = [
-            {
-                "ticker":     p.get("symbol"),
+        _pos_list_raw = []
+        for p in curr:
+            _sym      = p.get("symbol", "")
+            _entry    = float(p.get("avg_entry_price", 0))
+            _cur      = float(p.get("current_price", 0))
+            _pnl_pct  = float(p.get("unrealized_plpc", 0)) * 100
+            _stop     = round(_entry * (1 - STOP_LOSS_PCT), 2)
+            _tgt      = round(_entry * (1 + PROFIT_TARGET_PCT), 2)
+            _init_risk_pct = (_entry - _stop) / _entry * 100 if _entry > 0 else STOP_LOSS_PCT * 100
+            _r_multiple = round(_pnl_pct / _init_risk_pct, 2) if _init_risk_pct > 0 else 0.0
+            # Days held from peaks.json entry timestamp
+            _days_held = 0
+            try:
+                _pk = peaks.get(_sym, {})
+                if isinstance(_pk, dict) and _pk.get("time"):
+                    _et = datetime.fromisoformat(_pk["time"].replace("Z", "+00:00"))
+                    _days_held = max(0, int((now_utc - _et).total_seconds() / 86400))
+            except Exception:
+                pass
+            _pos_list_raw.append({
+                "ticker":     _sym,
                 "side":       "long" if float(p.get("qty", 0)) > 0 else "short",
                 "qty":        abs(float(p.get("qty", 0))),
-                "cost":       float(p.get("avg_entry_price", 0)),
-                "price":      float(p.get("current_price",  0)),
-                "pnl_pct":    float(p.get("unrealized_plpc", 0)) * 100,
+                "cost":       _entry,
+                "price":      _cur,
+                "pnl_pct":    _pnl_pct,
                 "pnl_usd":    float(p.get("unrealized_pl",  0)),
                 "market_val": float(p.get("market_value",   0)),
-                "stop_price": round(float(p.get("avg_entry_price", 0)) * (1 - STOP_LOSS_PCT), 2),
-                "target_price": round(float(p.get("avg_entry_price", 0)) * (1 + PROFIT_TARGET_PCT), 2),
-                "peak_price": peaks.get(p.get("symbol", ""), {}).get("peak", 0) if isinstance(peaks.get(p.get("symbol", "")), dict) else 0,
-                "earnings_days": get_earnings_days(p.get("symbol", "")),
-                "live_signals": _pos_signals(p.get("symbol", "")),
-                "score_history": peaks.get(p.get("symbol", ""), {}).get("score_history", []) if isinstance(peaks.get(p.get("symbol", "")), dict) else [],
-                "pnl_history":   peaks.get(p.get("symbol", ""), {}).get("pnl_history", []) if isinstance(peaks.get(p.get("symbol", "")), dict) else [],
-            }
-            for p in curr
-        ]
+                "stop_price": _stop,
+                "target_price": _tgt,
+                "peak_price": peaks.get(_sym, {}).get("peak", 0) if isinstance(peaks.get(_sym), dict) else 0,
+                "earnings_days": get_earnings_days(_sym),
+                "r_multiple":  _r_multiple,
+                "days_held":   _days_held,
+                "live_signals": _pos_signals(_sym),
+                "score_history": peaks.get(_sym, {}).get("score_history", []) if isinstance(peaks.get(_sym), dict) else [],
+                "pnl_history":   peaks.get(_sym, {}).get("pnl_history", []) if isinstance(peaks.get(_sym), dict) else [],
+            })
+        tlog["positions"] = _pos_list_raw
         # Post-process: refine expected move with ATM IV and add ATR-based position sizing
         import math as _math2
         for _pos in tlog.get("positions", []):

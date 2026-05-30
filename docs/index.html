@@ -52717,6 +52717,18 @@ function _renderIntelReport(el, intel) {
       if (ls.near_key_support) {
         items.push({ icon: '🎯', col: '#ffd54f', text: `$${p.ticker}: At swing support $${(ls.key_support_1||0).toFixed(2)} — strong hold zone` });
       }
+      // R-multiple milestone alerts
+      const rm = p.r_multiple || 0;
+      if (rm >= 2) {
+        items.push({ icon: '🏆', col: '#00e676', text: `$${p.ticker}: At ${rm.toFixed(1)}R — move stop to breakeven & let runner work` });
+      } else if (rm >= 1 && rm < 2) {
+        items.push({ icon: '🎯', col: '#ffd54f', text: `$${p.ticker}: At ${rm.toFixed(1)}R — consider selling 1/3 position to lock in gains` });
+      }
+      // Long hold with no progress
+      const dh = p.days_held || 0;
+      if (dh >= 7 && pnl < 1.5 && pnl > -2) {
+        items.push({ icon: '⏰', col: '#ff9800', text: `$${p.ticker}: Held ${dh} days with minimal gain — review thesis or set time stop` });
+      }
     });
 
     // 5. Top scan opportunity
@@ -55152,6 +55164,22 @@ window.renderSectorRotation = renderSectorRotation;
             if (pct >= 8) return `<span style="font-size:6px;color:#f48fb1" title="Short interest ${pct}% of float${sr>=1?' — '+sr.toFixed(1)+' days to cover':''}">SI${pct}%${dtc}</span>`;
             return '';
           })();
+          // R-Multiple badge — shows risk-adjusted return (1R = earned back what you risked)
+          const lsRMult = (() => {
+            const rm = p.r_multiple;
+            if (rm == null) return '';
+            const col = rm >= 3 ? '#00e676' : rm >= 2 ? '#69f0ae' : rm >= 1 ? '#ffd54f' : rm >= 0 ? '#888' : '#ef5350';
+            const icon = rm >= 3 ? '🏆' : rm >= 2 ? '✅' : rm >= 1 ? '🎯' : rm < -0.5 ? '⚠' : '';
+            const action = rm >= 2 ? ' TRAIL STOP' : rm >= 1 ? ' SCALE OUT 1/3' : '';
+            return `<span style="font-size:6.5px;font-weight:900;color:${col}" title="${rm.toFixed(1)}R — ${rm>=1?'in profit territory, consider scaling out':'below 1R risk multiple'}${action}">${rm.toFixed(1)}R${icon}${action}</span>`;
+          })();
+          // Days held badge — position age indicator
+          const lsDaysHeld = (() => {
+            const d = p.days_held || 0;
+            if (!d) return '';
+            const col = d >= 14 ? '#ffa726' : d >= 7 ? '#888' : '#555';
+            return `<span style="font-size:6px;color:${col}" title="Position held for ${d} days">${d}d</span>`;
+          })();
           // P&L sparkline — shows recent P&L trend as micro bar chart
           const lsPnlSpark = (() => {
             const hist = (p.pnl_history || []).filter(h => typeof h.p === 'number');
@@ -55312,6 +55340,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+                ${(lsRMult||lsDaysHeld) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;align-items:center">${lsRMult}${lsDaysHeld}</div>` : ''}
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels||lsIV) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsIV}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}
