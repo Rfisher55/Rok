@@ -52661,6 +52661,84 @@ function _renderIntelReport(el, intel) {
     return m < 2 ? 'just now' : m < 60 ? `${m}m ago` : `${Math.round(m/60)}h ago`;
   })() : '';
 
+  // Dynamic Trading Playbook — synthesizes live data into actionable priorities
+  const playbookHtml = (() => {
+    const td = ROK || {};
+    if (!td.last_updated) return '';
+    const items = [];
+    const dt = td.day_type || '';
+    const mq = td.market_quality || 50;
+    const mOpen = td.market_open;
+    const tq = td.timing_quality;
+    const positions = td.positions || [];
+    const topScan = td.last_scan_top || [];
+    const minsAgo = td.last_updated ? Math.round((Date.now() - new Date(td.last_updated)) / 60000) : null;
+
+    // 1. Market environment
+    if (dt === 'trend_up') items.push({ icon: '🚀', col: '#00e676', text: 'TREND UP DAY — breakout plays favored, let winners run, avoid early profit-taking' });
+    else if (dt === 'trend_down') items.push({ icon: '🔻', col: '#ef5350', text: 'TREND DOWN DAY — stay defensive, tighten stops, avoid new longs until reversal confirmed' });
+    else if (dt === 'choppy') items.push({ icon: '⚡', col: '#ffa726', text: 'CHOPPY MARKET — reduce size, tighter criteria, avoid chasing breakouts that reverse quickly' });
+    else if (dt === 'range') items.push({ icon: '↔', col: '#ffd54f', text: 'RANGE-BOUND DAY — buy dips to support, sell bounces to resistance, don\'t chase breakouts' });
+
+    // 2. Market quality
+    if (mq < 35) items.push({ icon: '⚠', col: '#ef5350', text: `Market quality POOR (${mq}/100) — only take the highest-conviction setups today` });
+    else if (mq >= 65) items.push({ icon: '✅', col: '#00e676', text: `Market quality STRONG (${mq}/100) — conditions favorable for adding exposure` });
+
+    // 3. Timing
+    if (mOpen && tq === 3) items.push({ icon: '⚡', col: '#00ff88', text: 'PRIME TRADING WINDOW — morning momentum or power hour; highest probability setups' });
+    else if (mOpen && tq === 1) items.push({ icon: '⏸', col: '#ff9800', text: 'LUNCH LULL — avoid new entries; watch for afternoon setup formation' });
+    else if (!mOpen) items.push({ icon: '🌙', col: '#888', text: 'Market closed — review watchlist and set price alerts for tomorrow\'s open' });
+
+    // 4. Position-specific alerts
+    positions.forEach(p => {
+      const ls = (p.live_signals || {});
+      const sh = (p.score_history || []).filter(h => typeof h.s === 'number').map(h => h.s);
+      const cr = ls.consec_red || 0;
+      const pnl = p.pnl_pct || 0;
+      const stopDist = p.stop_price && p.price ? ((p.price - p.stop_price) / p.price * 100) : null;
+      // Score degradation
+      if (sh.length >= 4 && sh[0] - sh[sh.length-1] >= 15) {
+        items.push({ icon: '📉', col: '#ffa726', text: `$${p.ticker}: Score degrading (${sh[0]}→${sh[sh.length-1]}) — review exit plan` });
+      }
+      // Near stop
+      if (stopDist != null && stopDist < 2) {
+        items.push({ icon: '🛑', col: '#ef5350', text: `$${p.ticker}: NEAR STOP — only ${stopDist.toFixed(1)}% from stop loss at $${p.stop_price}` });
+      }
+      // Near target
+      const tgt = p.target_price || 0;
+      if (tgt > 0 && p.price > 0 && (tgt - p.price) / p.price < 0.02 && pnl > 0) {
+        items.push({ icon: '🎯', col: '#69f0ae', text: `$${p.ticker}: AT PROFIT TARGET ($${tgt.toFixed(2)}) — consider scaling out or tightening stop` });
+      }
+      // Red streak
+      if (cr >= 3 && pnl < 0) {
+        items.push({ icon: '🔴', col: '#ef5350', text: `$${p.ticker}: ${cr} red days in a row and negative — review exit` });
+      }
+      // Near key support
+      if (ls.near_key_support) {
+        items.push({ icon: '🎯', col: '#ffd54f', text: `$${p.ticker}: At swing support $${(ls.key_support_1||0).toFixed(2)} — strong hold zone` });
+      }
+    });
+
+    // 5. Top scan opportunity
+    if (topScan.length > 0) {
+      const top = topScan[0];
+      const tqStr = top.trend_quality_score >= 7 ? ' · TQ' + top.trend_quality_score.toFixed(0) : '';
+      items.push({ icon: '🔍', col: '#82b1ff', text: `Top scan: $${top.ticker} score ${top.score}${tqStr}${top.catalyst ? ' — ' + top.catalyst.slice(0,50) : ''}` });
+    }
+
+    if (!items.length) return '';
+    const rows = items.slice(0, 8).map(it =>
+      `<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.2rem 0;border-top:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:11px;flex-shrink:0">${it.icon}</span>
+        <span style="font-size:9.5px;color:${it.col};line-height:1.5">${it.text}</span>
+      </div>`
+    ).join('');
+    return `<div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,215,0,.15);border-radius:10px;padding:.7rem;margin-bottom:.75rem">
+      <div style="font-size:9px;font-weight:900;letter-spacing:.1em;color:#ffd54f;margin-bottom:.35rem">📋 TODAY'S PLAYBOOK${minsAgo !== null ? ` · ${minsAgo}m ago` : ''}</div>
+      ${rows}
+    </div>`;
+  })();
+
   // Market mood / summary
   const summaryHtml = intel.week_summary ? `
     <div style="background:rgba(255,215,0,.04);border-left:2px solid rgba(255,215,0,.3);border-radius:6px;padding:.65rem .85rem;margin-bottom:.75rem;font-size:11px;color:var(--wh2);line-height:1.6">
@@ -52763,7 +52841,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${summaryHtml}${msgHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${playbookHtml}${summaryHtml}${msgHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 }
 window.fetchIntelReport = fetchIntelReport;
