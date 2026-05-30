@@ -7537,8 +7537,10 @@ def run():
     except Exception:
         pass
 
-    # Max drawdown from portfolio history
+    # Max drawdown, Calmar ratio, Sortino ratio from portfolio history
     _max_dd = 0.0
+    _calmar_ratio = None
+    _sortino_ratio = None
     try:
         _hist_v = [h["v"] for h in tlog.get("perf_history", []) if isinstance(h.get("v"), (int, float)) and h["v"] > 0]
         if len(_hist_v) >= 2:
@@ -7547,6 +7549,27 @@ def run():
                 _peak_running = max(_peak_running, v)
                 _dd = (_peak_running - v) / _peak_running * 100
                 _max_dd = max(_max_dd, _dd)
+            # Calmar = annualized return / max drawdown (risk-adjusted return quality)
+            _total_ret_pct = (_hist_v[-1] - _hist_v[0]) / _hist_v[0] * 100
+            _n_snapshots = len(_hist_v)
+            # Rough annualization: assume ~26 snapshots/day in market hours (5min intervals)
+            _days_approx = max(1, _n_snapshots / 26)
+            _ann_ret_pct = _total_ret_pct / _days_approx * 252
+            if _max_dd > 0.1:
+                _calmar_ratio = round(_ann_ret_pct / _max_dd, 2)
+    except Exception:
+        pass
+
+    # Sortino ratio: penalizes only downside volatility (superior to Sharpe for traders)
+    try:
+        if len(_closed) >= 5:
+            import statistics
+            _pnls = [t["pnl_pct"] for t in _closed]
+            _avg_pnl_s = statistics.mean(_pnls)
+            _downside = [p for p in _pnls if p < 0]
+            _downside_std = statistics.stdev(_downside) if len(_downside) >= 2 else 1.0
+            if _downside_std > 0:
+                _sortino_ratio = round(_avg_pnl_s / _downside_std, 2)
     except Exception:
         pass
 
@@ -7651,7 +7674,8 @@ def run():
                 "high_corr_pairs": sorted(_hcp, key=lambda x: -x["corr"]),
             }
             if _hcp:
-                logger.info(f"High-correlation pairs (>0.80): {' | '.join(p['pair']+f'={p[\"corr\"]:.2f}' for p in _hcp)}")
+                _hcp_str = " | ".join(p["pair"] + "=" + str(round(p["corr"], 2)) for p in _hcp)
+                logger.info(f"High-correlation pairs (>0.80): {_hcp_str}")
         else:
             tlog["portfolio_correlation"] = {}
     except Exception as _ce:

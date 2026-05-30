@@ -19040,7 +19040,7 @@ body.beginner-mode #beginner-banner { display:block }
     else if (putBias > callBias + 1) { positionBias = 'BEARISH POSITIONING'; biasColor = '#ef5350'; biasIcon = ''; biasDesc = 'Put buying elevated. Traders hedging or betting on downside. Be cautious.'; }
     else { positionBias = 'NEUTRAL POSITIONING'; biasColor = '#ffb74d'; biasIcon = ''; biasDesc = 'Balanced options activity. No strong directional bet from smart money.'; }
     const bullets = [];
-    if (pcRatio != null) bullets.push(`Put/Call ratio: <strong style="color:${pcRatio<0.8?'#66bb6a':pcRatio>1.1?'#ef9a9a':'#ffb74d'}">${pcRatio.toFixed(2)}</strong> (${pcRatio<0.8?'bullish — more calls':'pcRatio>1.1?'bearish — more puts':'neutral'})`);
+    if (pcRatio != null) { const pcLabel = pcRatio<0.8?'bullish — more calls':pcRatio>1.1?'bearish — more puts':'neutral'; bullets.push(`Put/Call ratio: <strong style="color:${pcRatio<0.8?'#66bb6a':pcRatio>1.1?'#ef9a9a':'#ffb74d'}">${pcRatio.toFixed(2)}</strong> (${pcLabel})`); }
     if (spyVol !== null) bullets.push(`SPY volume: <strong style="color:#90caf9">${spyVol.toFixed(1)}x</strong> normal ${spyVol>=2?'— elevated, confirms move':spyVol<0.8?'— quiet, move may not hold':'— near average'}`);
     if (unusualFlow.length) bullets.push(`Unusual options flow detected in ${unusualFlow.length} ticker(s)`);
     el.style.display = 'block';
