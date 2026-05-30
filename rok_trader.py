@@ -7058,6 +7058,15 @@ def run():
                 else:
                     dyn_trail = TRAILING_STOP_PCT * 100
 
+            # VIX-adjusted trail: widen in fear, tighten in calm markets
+            _vix_now = (tlog.get("regime") or {}).get("vix", 0) or 0
+            if _vix_now >= 30:
+                dyn_trail = min(dyn_trail * 1.30, dyn_trail + 1.5)   # high fear: +30% room
+            elif _vix_now >= 22:
+                dyn_trail = min(dyn_trail * 1.15, dyn_trail + 0.8)   # elevated fear: +15% room
+            elif _vix_now > 0 and _vix_now < 14:
+                dyn_trail = max(dyn_trail * 0.90, dyn_trail - 0.5)   # calm market: tighter stops
+
             # Pre-earnings stop tightening: 3-7 days before earnings,
             # tighten trailing stop by 50% to lock in pre-earnings drift gains.
             # Binary event risk justifies protecting whatever profit we have.
@@ -8619,6 +8628,14 @@ def run():
             else:
                 _atr_trail = _atr / _pr * 100 * 2.5 if (_atr > 0 and _pr > 0) else TRAILING_STOP_PCT * 100
                 _dyn_trail = max(4.0, min(9.0, _atr_trail))
+            # VIX adjustment: widen in high fear, tighten in calm
+            _vix_pos = (tlog.get("regime") or {}).get("vix", 0) or 0
+            if _vix_pos >= 30:
+                _dyn_trail = min(_dyn_trail * 1.30, _dyn_trail + 1.5)
+            elif _vix_pos >= 22:
+                _dyn_trail = min(_dyn_trail * 1.15, _dyn_trail + 0.8)
+            elif 0 < _vix_pos < 14:
+                _dyn_trail = max(_dyn_trail * 0.90, _dyn_trail - 0.5)
             _trail_stop_price = round(_peak_p * (1 - _dyn_trail / 100), 2) if _peak_p > 0 else 0
             _dist_from_trail  = round((_pr - _trail_stop_price) / _pr * 100, 2) if (_trail_stop_price > 0 and _pr > 0) else 0
             _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
@@ -9195,6 +9212,63 @@ def run():
         tlog["market_quality_history"] = _mqh[-48:]
     except Exception:
         pass
+
+    # Portfolio Health Score: 0-10 composite metric for the dashboard
+    # Combines position health, market conditions, risk metrics, and momentum
+    try:
+        _phs = 5.0  # neutral baseline
+        _phs_positions = tlog.get("positions", [])
+        if _phs_positions:
+            # Average position health
+            _ph_vals = [p.get("pos_health", 5) for p in _phs_positions if p.get("pos_health") is not None]
+            if _ph_vals:
+                _avg_ph = sum(_ph_vals) / len(_ph_vals)
+                _phs += (_avg_ph - 5) * 0.4   # max ±2 from average position health
+
+            # Exit urgency penalty
+            _eu_vals = [p.get("exit_urgency", 0) for p in _phs_positions]
+            _avg_eu = sum(_eu_vals) / len(_eu_vals) if _eu_vals else 0
+            _phs -= _avg_eu * 0.3   # up to -3 from high exit urgency
+
+            # Portfolio P&L contribution
+            _pos_pnls = [p.get("pnl_pct", 0) or 0 for p in _phs_positions]
+            _avg_pnl = sum(_pos_pnls) / len(_pos_pnls) if _pos_pnls else 0
+            if _avg_pnl >= 10: _phs += 1.0
+            elif _avg_pnl >= 5: _phs += 0.5
+            elif _avg_pnl < 0: _phs -= 0.5
+            elif _avg_pnl < -5: _phs -= 1.0
+
+        # Market quality contribution
+        _mq_val = tlog.get("market_quality", 50)
+        if _mq_val >= 70:   _phs += 1.0
+        elif _mq_val >= 55: _phs += 0.5
+        elif _mq_val < 35:  _phs -= 1.0
+        elif _mq_val < 45:  _phs -= 0.5
+
+        # VaR risk contribution
+        _vol_d = tlog.get("port_vol_daily_pct") or 0
+        if _vol_d > 3:   _phs -= 1.0
+        elif _vol_d > 2: _phs -= 0.5
+
+        # Win rate contribution
+        _wr_val = tlog.get("win_rate", 0.5) or 0.5
+        if _wr_val >= 0.65:  _phs += 0.5
+        elif _wr_val < 0.4:  _phs -= 0.5
+
+        # Regime bonus/penalty
+        _reg_reg = tlog.get("regime", {})
+        if isinstance(_reg_reg, dict):
+            if _reg_reg.get("regime") == "bull":  _phs += 0.5
+            elif _reg_reg.get("regime") == "bear": _phs -= 1.0
+
+        tlog["portfolio_health_score"] = round(max(0, min(10, _phs)), 1)
+        _phs_label = ("EXCELLENT" if _phs >= 8 else "GOOD" if _phs >= 6 else
+                      "FAIR" if _phs >= 4 else "WEAK" if _phs >= 2 else "POOR")
+        tlog["portfolio_health_label"] = _phs_label
+    except Exception as _phse:
+        logger.debug(f"Portfolio health score: {_phse}")
+        tlog["portfolio_health_score"] = 5.0
+        tlog["portfolio_health_label"] = "FAIR"
 
     # Internal scan breadth metrics
     try:

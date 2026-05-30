@@ -57027,6 +57027,13 @@ window.renderSectorRotation = renderSectorRotation;
             ${regime.regime ? `<span style="font-size:8px;font-weight:800;color:${regCol};border:1px solid;border-radius:20px;padding:2px 8px;border-color:${regCol}40">${regime.regime.toUpperCase()} · VIX ${(regime.vix||0).toFixed(1)}</span>` : ''}
             ${Math.abs(heat) > 0.5 ? `<span style="font-size:8px;font-weight:700;color:${heatCol};border:1px solid ${heatCol}44;border-radius:20px;padding:2px 8px">Heat ${heat>=0?'+':''}${heat.toFixed(1)}%</span>` : ''}
             <span style="font-size:8px;color:#64b5f6">Cash \$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+            ${(() => {
+              const phs = data.portfolio_health_score;
+              const phLbl = data.portfolio_health_label || '';
+              if (phs == null) return '';
+              const phC = phs >= 8 ? '#00e676' : phs >= 6 ? '#69f0ae' : phs >= 4 ? '#ffd54f' : phs >= 2 ? '#ff9800' : '#ef5350';
+              return `<span style="font-size:8px;font-weight:900;color:${phC};border:1px solid ${phC}44;border-radius:20px;padding:2px 9px;background:${phC}0f">♥ ${phs}/10 ${phLbl}</span>`;
+            })()}
           </div>
         </div>`;
 
