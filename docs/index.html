@@ -55728,6 +55728,37 @@ window.renderSectorRotation = renderSectorRotation;
       </div>`;
     }
 
+    // Portfolio Stress Test — show impact of market drops using portfolio beta
+    {
+      const positions = data.positions || [];
+      const pv = data.portfolio_value || 0;
+      const portBeta = data.portfolio_beta || 1.0;
+      const totalRisk = data.total_risk_usd || 0;
+      if (positions.length > 0 && pv > 0) {
+        const drops = [-5, -10, -15];
+        const stressRows = drops.map(d => {
+          const mktDrop = d / 100;
+          const estDrop = mktDrop * portBeta; // portfolio drops proportionally to beta
+          const dollarImpact = Math.round(pv * estDrop);
+          const newVal = pv + dollarImpact;
+          const col = d === -5 ? '#ffd54f' : d === -10 ? '#ff9800' : '#ef5350';
+          const bg  = d === -5 ? 'rgba(255,213,79,.05)' : d === -10 ? 'rgba(255,152,0,.05)' : 'rgba(239,83,80,.05)';
+          const trailProtects = Math.round(totalRisk);
+          return `<div style="display:flex;align-items:center;gap:.5rem;padding:.2rem .35rem;background:${bg};border-radius:4px">
+            <span style="font-size:7.5px;font-weight:800;color:${col};min-width:28px">SPY${d}%</span>
+            <span style="font-size:8px;font-weight:900;color:${col}">Port ${(estDrop*100).toFixed(1)}%</span>
+            <span style="font-size:7.5px;color:${col};flex:1">${dollarImpact >= 0 ? '+' : ''}$${Math.abs(dollarImpact).toLocaleString()}</span>
+            <span style="font-size:7px;color:#82b1ff">\$${newVal.toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+          </div>`;
+        }).join('');
+        healthEl.innerHTML += `<div style="margin-top:.5rem;padding:.4rem .55rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:6px">
+          <div style="font-size:7px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">📉 PORTFOLIO STRESS TEST (β=${portBeta.toFixed(2)})</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${stressRows}</div>
+          ${totalRisk > 0 ? `<div style="font-size:5.5px;color:#3a5a8a;margin-top:.2rem">Trail stops protect up to $${totalRisk.toLocaleString()} of downside</div>` : ''}
+        </div>`;
+      }
+    }
+
     // Populate Intel tab ROK trades section
     const intelEl = document.getElementById('intel-rok-trades');
     if (intelEl) {
