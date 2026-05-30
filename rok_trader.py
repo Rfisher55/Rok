@@ -7331,6 +7331,36 @@ def run():
                                 f"proactive exit ({pnl_pct:+.1f}%)"
                             )
 
+            # ── THESIS INVALIDATION: exit if original entry signals are gone ──
+            # The bot checks if the signals that caused the BUY entry are still present.
+            # If the key signals that justified entry have ALL disappeared AND the position is losing,
+            # exit now rather than waiting for the stop loss. This is smart early-exit logic.
+            if not reason and pnl_pct < -1.5 and age_days >= 0.5:
+                try:
+                    _entry_sigs_ti = []
+                    for _tt in tlog.get("trades", []):
+                        if _tt.get("action") == "BUY" and _tt.get("ticker") == sym:
+                            _entry_sigs_ti = _tt.get("entry_signals", [])
+                            break
+                    if _entry_sigs_ti:
+                        _live_ti = live.get(sym, {})
+                        # Check which entry signals are no longer present
+                        _key_sigs_ti = [s for s in _entry_sigs_ti
+                                        if s in ("cup_handle", "vcp", "at_breakout", "rvol_surge",
+                                                 "ttm_squeeze_fired", "donchian_up", "kc_breakout",
+                                                 "at_demand_zone", "three_white_soldiers",
+                                                 "ema_stacked_bull", "mtf_aligned",
+                                                 "supertrend_bull", "pocket_pivot", "high_tight_flag")]
+                        if len(_key_sigs_ti) >= 2:
+                            _still_active = [s for s in _key_sigs_ti if _live_ti.get(s)]
+                            _gone_pct = (len(_key_sigs_ti) - len(_still_active)) / len(_key_sigs_ti)
+                            if _gone_pct >= 0.8 and pnl_pct < -2:
+                                # 80%+ of key entry signals gone + losing = thesis broken
+                                reason = (f"thesis invalidated: {len(_key_sigs_ti)-len(_still_active)}/{len(_key_sigs_ti)} "
+                                          f"entry signals gone ({pnl_pct:+.1f}%)")
+                except Exception:
+                    pass
+
             # Pivot point resistance exit: price reached R2 level = institutional sell zone
             # R2 is where most short-sellers enter and longs take profits; high hit-rate exit
             if not reason:
@@ -9577,6 +9607,24 @@ def run():
         if _learned_adj != 0:
             tlog["effective_min_score"] = tlog.get("effective_min_score", MIN_BUY_SCORE) + _learned_adj
             logger.info(f"Learned score adj: {_learned_adj:+d} → effective_min_score={tlog['effective_min_score']}")
+    except Exception:
+        pass
+
+    # ── Last trade action summary (for dashboard) ──────────────────────
+    try:
+        _all_actions = [t for t in tlog.get("trades", [])
+                        if t.get("action") in ("BUY","DCA","SELL","SELL_HALF","COVER","SHORT")]
+        if _all_actions:
+            _latest = _all_actions[-1]
+            tlog["last_trade_action"] = {
+                "action":  _latest.get("action"),
+                "ticker":  _latest.get("ticker"),
+                "price":   _latest.get("price"),
+                "pnl_pct": _latest.get("pnl_pct"),
+                "time":    _latest.get("time"),
+                "reason":  (_latest.get("reason") or "")[:80],
+                "score":   _latest.get("score"),
+            }
     except Exception:
         pass
 

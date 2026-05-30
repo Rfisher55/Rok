@@ -57389,6 +57389,28 @@ window.renderSectorRotation = renderSectorRotation;
           </div>
         </div>`;
 
+      // ── Auto-Trade Last Order Banner ────────────────────────────────────────
+      const _lta = data.last_trade_action;
+      if (_lta && _lta.ticker) {
+        const _ltaAct   = _lta.action || '';
+        const _ltaTick  = _lta.ticker || '';
+        const _ltaPnl   = _lta.pnl_pct;
+        const _ltaTime  = _lta.time ? new Date(_lta.time) : null;
+        const _ltaAgo   = _ltaTime ? (() => { const m=Math.round((Date.now()-_ltaTime)/60000); return m<2?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago'; })() : '';
+        const _ltaScore = _lta.score;
+        const _ltaReason= (_lta.reason||'').replace(/\[[^\]]+\]/g,'').trim().slice(0,50);
+        const _ltaActCol = _ltaAct==='BUY'||_ltaAct==='DCA'?'#00e676':_ltaAct==='SELL'||_ltaAct==='COVER'?'#ef5350':'#ffd54f';
+        const _ltaPnlStr = _ltaPnl != null ? `<span style="font-size:9px;font-weight:800;color:${_ltaPnl>=0?'#00ff88':'#ef5350'};margin-left:.3rem">${_ltaPnl>=0?'+':''}${_ltaPnl.toFixed(1)}%</span>` : '';
+        html += `<div style="margin-bottom:.5rem;padding:.4rem .65rem;background:${_ltaActCol}0d;border:1px solid ${_ltaActCol}33;border-radius:8px;display:flex;align-items:center;gap:.55rem;flex-wrap:wrap">
+          <span style="font-size:7px;font-weight:900;color:${_ltaActCol};letter-spacing:.07em">${_ltaAct}</span>
+          <span style="font-family:var(--disp);color:#ffd54f;font-size:.9rem;font-weight:900">$${_ltaTick}</span>
+          ${_ltaScore ? `<span style="font-size:7px;color:#4a6fa5;background:rgba(74,111,165,.15);border-radius:3px;padding:1px 4px">score ${_ltaScore}</span>` : ''}
+          ${_ltaPnlStr}
+          <span style="font-size:7px;color:var(--wh4);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_ltaReason}</span>
+          <span style="font-size:7px;color:#3a5a8a;white-space:nowrap">ALPACA AUTO-TRADE ${_ltaAgo}</span>
+        </div>`;
+      }
+
       // ── Macro Context Strip ──────────────────────────────────────────────────
       {
         const reg = data.regime || {};
