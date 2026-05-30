@@ -9158,6 +9158,23 @@ def run():
                 dyn_trail = max(1.0, dyn_trail * 0.50)
                 logger.debug(f"Pre-earnings tighten {sym}: trail→{dyn_trail:.1f}% (earns in {_earn_d_close}d)")
 
+            # ── Neural continuation bonus: widen trail when strong patterns still active ──
+            # If the premium signals that got us in are STILL firing, give more room
+            # Learned from N100: when elite setups continue, they tend to run further
+            try:
+                _hold_sig = live.get(sym, {})
+                _hold_prem = sum([bool(_hold_sig.get(k)) for k in (
+                    "vcp","cup_handle","at_breakout","mtf_triple","gap_and_hold",
+                    "orb_breakout","rvol_surge","supertrend_bull","obv_rising","higher_lows")])
+                if _hold_prem >= 5 and pnl_pct > 3 and pnl_pct < 20:
+                    dyn_trail = min(dyn_trail * 1.20, dyn_trail + 1.5)  # +20% room: let winner run
+                    logger.debug(f"Neural continuation {sym}: {_hold_prem} premium sigs active → trail widened to {dyn_trail:.1f}%")
+                elif _hold_prem <= 1 and pnl_pct > 5:
+                    dyn_trail = max(dyn_trail * 0.85, dyn_trail - 1.0)  # signals fading: tighten
+                    logger.debug(f"Neural fade {sym}: signals dropping → trail tightened to {dyn_trail:.1f}%")
+            except Exception:
+                pass
+
             # ── Full exit conditions ──
             reason = None
             # ATR-adaptive stop loss: learned multiplier × ATR from entry, capped at STOP_LOSS_PCT
