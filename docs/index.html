@@ -53372,6 +53372,17 @@ function _renderIntelReport(el, intel) {
       ${coldSects.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#ff9800;font-weight:700">AVOID SECTORS: </span><span style="font-size:6.5px;color:var(--wh3)">${coldSects.join(', ')}</span></div>` : ''}
       ${bestHrs.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#ffd54f;font-weight:700">BEST ENTRY HOURS: </span><span style="font-size:6.5px;color:var(--wh3)">${bestHrs.map(etHr).join(', ')}</span></div>` : ''}
       ${worstHrs.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#888;font-weight:700">AVOID HOURS: </span><span style="font-size:6.5px;color:var(--wh3)">${worstHrs.map(etHr).join(', ')}</span></div>` : ''}
+      ${(() => {
+        const syns = lp.top_synapses || [];
+        if (!syns.length) return '';
+        const synHtml = syns.slice(0,3).map(s => {
+          const pairLabel = s.pair.replace(/\+/g,' + ').replace(/_/g,' ');
+          const col = s.wr >= 70 ? '#00e676' : s.wr >= 60 ? '#ffd54f' : '#888';
+          return `<span style="font-size:6px;background:rgba(130,177,255,.08);border:1px solid rgba(130,177,255,.15);border-radius:3px;padding:1px 4px;color:${col}" title="${pairLabel}: ${s.wr}% WR, n=${s.n}">${pairLabel.substring(0,22)} ${s.wr}%</span>`;
+        }).join('');
+        return `<div style="margin-bottom:.25rem"><span style="font-size:6px;color:#82b1ff;font-weight:700">🔗 TOP SIGNAL COMBOS: </span><span style="display:inline-flex;gap:3px;flex-wrap:wrap">${synHtml}</span></div>`;
+      })()}
+      ${lp.optimal_hold_period ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#ffa726;font-weight:700">OPTIMAL HOLD: </span><span style="font-size:6.5px;color:var(--wh3)">${lp.optimal_hold_period === 'short' ? 'Quick exits (< 1 day) working best' : lp.optimal_hold_period === 'medium' ? '1-3 day holds performing best' : 'Letting winners run (3+ days) working best'}</span></div>` : ''}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

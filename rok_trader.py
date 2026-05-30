@@ -336,7 +336,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         for t in tlog.get("trades", []):
             if t.get("action") in ("BUY", "SHORT") and t.get("ticker") == sym and t.get("entry_signals"):
                 perf = tlog.setdefault("signal_performance", {})
-                for sig in t["entry_signals"]:
+                _entry_sigs = t["entry_signals"]
+                for sig in _entry_sigs:
                     sp = perf.setdefault(sig, {"wins": 0, "losses": 0, "total": 0,
                                                "total_pnl": 0.0, "best": 0.0, "worst": 0.0})
                     sp["total"] = sp.get("total", 0) + 1
@@ -354,6 +355,34 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                     sp["payoff_ratio"] = round(
                         sp.get("best", 0) / max(abs(sp.get("worst", -0.01)), 0.01), 2
                     ) if sp.get("worst", 0) < 0 else sp.get("best", 0)
+
+                # ── Signal PAIR synergy tracking (neural synapse learning) ──
+                # Tracks performance of signal COMBINATIONS, not just single signals.
+                # When two signals fire together and a trade wins → that synapse strengthens.
+                # When they fire together and lose → the synapse weakens.
+                # Over time this finds the most powerful signal combinations in our system.
+                if len(_entry_sigs) >= 2:
+                    try:
+                        _syn_perf = tlog.setdefault("signal_synergy", {})
+                        _sorted_sigs = sorted(_entry_sigs[:6])  # limit pairs to top 6 signals
+                        for _i in range(len(_sorted_sigs)):
+                            for _j in range(_i + 1, len(_sorted_sigs)):
+                                _pair_key = f"{_sorted_sigs[_i]}+{_sorted_sigs[_j]}"
+                                _syn = _syn_perf.setdefault(_pair_key, {
+                                    "wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0
+                                })
+                                _syn["total"] += 1
+                                _syn["total_pnl"] = round(_syn["total_pnl"] + pnl, 2)
+                                if pnl > 0: _syn["wins"] += 1
+                                else:       _syn["losses"] += 1
+                                _syn["win_rate"] = round(_syn["wins"] / _syn["total"] * 100, 1)
+                                _syn["avg_pnl"]  = round(_syn["total_pnl"] / _syn["total"], 2)
+                        # Keep only top 50 pairs by frequency to avoid unbounded growth
+                        if len(_syn_perf) > 60:
+                            _syn_sorted = sorted(_syn_perf.items(), key=lambda x: -x[1]["total"])
+                            tlog["signal_synergy"] = dict(_syn_sorted[:50])
+                    except Exception:
+                        pass
                 break
 
         # Rebuild signal_win_rates summary for the score() adaptive loop
@@ -7195,12 +7224,18 @@ def run():
                 live_sig_age = live.get(sym, {})
                 m_slope_age = live_sig_age.get("macd_slope", 0) or 0
                 roc5_age    = live_sig_age.get("roc5", 0) or 0
-                # Strong uptrend: extend hold to 8 days
+                # Adaptive max hold: momentum-based, then refined by learned hold period preference
                 adaptive_max = MAX_HOLD_DAYS
                 if m_slope_age > 0 and roc5_age > 2:
-                    adaptive_max = 8
+                    adaptive_max = 8   # strong uptrend: let it run
                 elif m_slope_age < 0 and roc5_age < 0:
-                    adaptive_max = 3  # weak momentum: exit sooner
+                    adaptive_max = 3   # weak momentum: exit sooner
+                # Apply learned hold period preference: if history shows short holds work best, tighten
+                _opt_hold = _learned.get("optimal_hold_period") if _learned else None
+                if _opt_hold == "short" and adaptive_max > 2:
+                    adaptive_max = min(adaptive_max, 2)   # learned: quick exits work better
+                elif _opt_hold == "long" and adaptive_max < 7:
+                    adaptive_max = max(adaptive_max, 7)   # learned: let winners run longer
                 if age_days >= adaptive_max:
                     reason = f"stale position ({age_days:.0f}d, {pnl_pct:+.1f}%)"
             elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= 0.5:
@@ -9480,6 +9515,36 @@ def run():
                 _learn_log.append(f"Payoff ratio {_payoff:.1f}x, WR {_r20_wr:.0%} — reducing position size by 10% (adj={_pos_size_adj:.2f}x)")
         _pos_size_adj = max(0.6, min(1.4, _pos_size_adj))
 
+        # ── 7. Signal pair synergy — which combos work best ──────────────
+        _syn_all = tlog.get("signal_synergy", {})
+        _top_synapses = sorted(
+            [(k, v) for k, v in _syn_all.items() if v.get("total", 0) >= 3],
+            key=lambda x: (-x[1].get("win_rate", 0), -x[1].get("avg_pnl", 0))
+        )[:5]
+        _top_synapses_list = [{"pair": k, "wr": v["win_rate"], "avg_pnl": v["avg_pnl"], "n": v["total"]}
+                               for k, v in _top_synapses if v.get("win_rate", 0) >= 60]
+        if _top_synapses_list:
+            _learn_log.append(f"Top signal synergies: {' | '.join(s['pair']+'='+str(s['wr'])+'%' for s in _top_synapses_list[:3])}")
+
+        # ── 8. Hold period optimization from outcomes ─────────────────────
+        _hold_data = [(t.get("pnl_pct", 0), t.get("hold_hrs", 0)) for t in _closed
+                      if t.get("hold_hrs") is not None and t.get("hold_hrs", 0) > 0]
+        _optimal_hold_days = None
+        if len(_hold_data) >= 8:
+            _short_hold = [p for p, h in _hold_data if h < 24]    # <1 day
+            _med_hold   = [p for p, h in _hold_data if 24 <= h < 72]  # 1-3 days
+            _long_hold  = [p for p, h in _hold_data if h >= 72]   # 3+ days
+            _sh_avg = sum(_short_hold) / len(_short_hold) if _short_hold else None
+            _mh_avg = sum(_med_hold)   / len(_med_hold)   if _med_hold   else None
+            _lh_avg = sum(_long_hold)  / len(_long_hold)  if _long_hold  else None
+            _best_bucket = max([("short", _sh_avg, len(_short_hold)),
+                                ("1-3day", _mh_avg, len(_med_hold)),
+                                ("3+day", _lh_avg, len(_long_hold))],
+                               key=lambda x: x[1] if x[1] is not None else -999)
+            if _best_bucket[1] is not None:
+                _learn_log.append(f"Best hold period: {_best_bucket[0]} (avg P&L {_best_bucket[1]:+.1f}%, n={_best_bucket[2]})")
+                _optimal_hold_days = "short" if _best_bucket[0] == "short" else ("medium" if _best_bucket[0] == "1-3day" else "long")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -9492,11 +9557,13 @@ def run():
             "worst_hours_utc":     _worst_hours[:4],
             "positive_buckets":    _positive_buckets,
             "bucket_insights":     _bucket_insights,
+            "top_synapses":        _top_synapses_list,   # best signal combinations
+            "optimal_hold_period": _optimal_hold_days,   # short / medium / long
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
             "last_tuned":          now_utc.isoformat(),
-            "learn_log":           _learn_log[-10:],     # last 10 learning observations
+            "learn_log":           _learn_log[-12:],     # last 12 learning observations
         }
         if _learn_log:
             logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")
