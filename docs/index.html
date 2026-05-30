@@ -52622,6 +52622,7 @@ window.renderRelativePower = renderRelativePower;
 // ── ROK AI Market Intelligence (from intel_report.json) ──────────────────────
 let _intelCache = null;
 let _intelCacheTs = 0;
+let _tradesData = null;  // latest trades.json payload (set by loadTradesData)
 
 async function fetchIntelReport() {
   const el = document.getElementById('intel-ai-report');
@@ -53310,6 +53311,74 @@ function _renderIntelReport(el, intel) {
     </div>`;
   })();
 
+  // ── Bot Learning Log panel — shows what the bot learned from its trades ────
+  const botBrainHtml = (() => {
+    const _td = _tradesData || td;  // prefer live trades.json data
+    const lp = _td.bot_learned_params;
+    if (!lp || !lp.last_tuned) return '';
+    const ll = lp.learn_log || [];
+    const recentWr = (lp.recent_wr || 0) * 100;
+    const recentPnl = lp.recent_avg_pnl || 0;
+    const scoreAdj = lp.base_score_adj || 0;
+    const sizeAdj  = lp.pos_size_adj || 1.0;
+    const tradesCnt = lp.trades_analyzed || 0;
+    const eliteSigs = lp.elite_signals || [];
+    const weakSigs  = lp.weak_signals  || [];
+    const hotSects  = lp.hot_sectors   || [];
+    const coldSects = lp.cold_sectors  || [];
+    const bestHrs   = lp.best_hours_utc  || [];
+    const worstHrs  = lp.worst_hours_utc || [];
+    const tuned = lp.last_tuned ? (() => { const m = Math.round((Date.now()-new Date(lp.last_tuned))/60000); return m<2?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago'; })() : '';
+
+    const wrCol    = recentWr >= 65 ? '#00e676' : recentWr >= 50 ? '#ffd54f' : '#ef5350';
+    const pnlCol   = recentPnl >= 0 ? '#69f0ae' : '#ef5350';
+    const adjCol   = scoreAdj > 0 ? '#ef5350' : scoreAdj < 0 ? '#00e676' : '#888';
+    const sizeCol  = sizeAdj > 1.0 ? '#00e676' : sizeAdj < 1.0 ? '#ef5350' : '#888';
+    const adjLabel = scoreAdj > 0 ? `+${scoreAdj} (tightened — losses)` : scoreAdj < 0 ? `${scoreAdj} (relaxed — wins)` : 'no change (neutral)';
+    const sizeLabel = sizeAdj > 1.0 ? `${sizeAdj.toFixed(2)}× (sized up — good payoff)` : sizeAdj < 1.0 ? `${sizeAdj.toFixed(2)}× (sized down — protect capital)` : '1.00× (no change)';
+
+    const etHr = h => { const e = ((parseInt(h)-4+24)%24); return e+':00 ET'; };
+
+    const logRows = ll.slice(-5).reverse().map(msg =>
+      `<div style="font-size:7px;color:var(--wh3);padding:.15rem 0;border-bottom:1px solid rgba(255,255,255,.03);line-height:1.4">${msg}</div>`
+    ).join('');
+
+    return `<div style="margin-top:.5rem;padding:.55rem .7rem;background:linear-gradient(135deg,rgba(26,26,62,.6),rgba(0,0,0,.25));border:1px solid rgba(130,177,255,.18);border-radius:9px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+        <div style="font-size:7px;font-weight:800;color:#82b1ff;letter-spacing:.1em;text-transform:uppercase">🧠 BOT BRAIN — SELF-TUNING STATUS</div>
+        <div style="font-size:6px;color:#333">${tradesCnt} trades analyzed · tuned ${tuned}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.3rem;margin-bottom:.4rem">
+        <div style="background:rgba(0,0,0,.2);border-radius:5px;padding:.3rem .4rem">
+          <div style="font-size:6px;color:#333;text-transform:uppercase;letter-spacing:.06em">Recent WR</div>
+          <div style="font-size:11px;font-weight:800;color:${wrCol}">${recentWr.toFixed(0)}%</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:5px;padding:.3rem .4rem">
+          <div style="font-size:6px;color:#333;text-transform:uppercase;letter-spacing:.06em">Avg P&L</div>
+          <div style="font-size:11px;font-weight:800;color:${pnlCol}">${recentPnl>=0?'+':''}${recentPnl.toFixed(1)}%</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:5px;padding:.3rem .4rem">
+          <div style="font-size:6px;color:#333;text-transform:uppercase;letter-spacing:.06em">Score Adj</div>
+          <div style="font-size:8px;font-weight:800;color:${adjCol}">${adjLabel}</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:5px;padding:.3rem .4rem">
+          <div style="font-size:6px;color:#333;text-transform:uppercase;letter-spacing:.06em">Size Adj</div>
+          <div style="font-size:8px;font-weight:800;color:${sizeCol}">${sizeLabel}</div>
+        </div>
+      </div>
+      ${eliteSigs.length ? `<div style="margin-bottom:.25rem"><span style="font-size:6px;color:#00e676;font-weight:700">ELITE SIGNALS (≥65% WR): </span><span style="font-size:6.5px;color:var(--wh3)">${eliteSigs.slice(0,6).join(', ')}</span></div>` : ''}
+      ${weakSigs.length ? `<div style="margin-bottom:.25rem"><span style="font-size:6px;color:#ef5350;font-weight:700">WEAK SIGNALS (deprioritized): </span><span style="font-size:6.5px;color:var(--wh3)">${weakSigs.slice(0,4).join(', ')}</span></div>` : ''}
+      ${hotSects.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#69f0ae;font-weight:700">HOT SECTORS: </span><span style="font-size:6.5px;color:var(--wh3)">${hotSects.join(', ')}</span></div>` : ''}
+      ${coldSects.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#ff9800;font-weight:700">AVOID SECTORS: </span><span style="font-size:6.5px;color:var(--wh3)">${coldSects.join(', ')}</span></div>` : ''}
+      ${bestHrs.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#ffd54f;font-weight:700">BEST ENTRY HOURS: </span><span style="font-size:6.5px;color:var(--wh3)">${bestHrs.map(etHr).join(', ')}</span></div>` : ''}
+      ${worstHrs.length ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#888;font-weight:700">AVOID HOURS: </span><span style="font-size:6.5px;color:var(--wh3)">${worstHrs.map(etHr).join(', ')}</span></div>` : ''}
+      ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
+        <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
+        ${logRows}
+      </div>` : ''}
+    </div>`;
+  })();
+
   // ── Score Bucket Accuracy panel — is high score actually predictive? ──────
   const scoreBucketHtml = (() => {
     const sb = td.score_bucket_perf;
@@ -53497,7 +53566,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 
   // Live position sizer calculator
@@ -55193,10 +55262,35 @@ window.renderSectorRotation = renderSectorRotation;
       } catch {}
     }
     if (!data) return;
+    const _prevLearned = _tradesData?.bot_learned_params?.last_tuned;
+    _tradesData = data;  // store globally so _renderIntelReport can access trades.json fields
+
+    // If bot learning state changed (new tuning cycle), re-render intel panel automatically
+    const _newLearned = data?.bot_learned_params?.last_tuned;
+    if (_prevLearned && _newLearned && _prevLearned !== _newLearned) {
+      _intelCacheTs = 0;  // invalidate intel cache so next render picks up new learning
+      const intelEl = document.getElementById('intel-ai-report');
+      const intelPane = intelEl?.closest('.tab-content');
+      if (intelEl && intelPane && intelPane.style.display !== 'none') {
+        if (typeof fetchIntelReport === 'function') fetchIntelReport();
+      }
+    }
 
     // Update footer timestamp
     const ft = document.getElementById('ftr-time');
     if (ft && data.last_updated) ft.textContent = new Date(data.last_updated).toLocaleString();
+
+    // Update data-age pill in header
+    if (data.last_updated) {
+      const ageEl = document.getElementById('data-age-pill');
+      if (ageEl) {
+        const ageMins = Math.round((Date.now() - new Date(data.last_updated)) / 60000);
+        ageEl.style.display = '';
+        ageEl.textContent = ageMins < 2 ? '● LIVE' : `Data ${ageMins}m old`;
+        ageEl.style.color = ageMins < 6 ? '#00e676' : ageMins < 15 ? '#ffd54f' : '#ef5350';
+        ageEl.style.borderColor = ageMins < 6 ? 'rgba(0,255,136,.25)' : ageMins < 15 ? 'rgba(255,215,0,.2)' : 'rgba(255,34,85,.25)';
+      }
+    }
 
     // Update bot status header pill
     const botPill = document.getElementById('bot-status-pill');
@@ -58181,6 +58275,32 @@ window.renderSectorRotation = renderSectorRotation;
 
   loadTradesData();
   setInterval(loadTradesData, 30000); // refresh every 30 seconds
+
+  // Auto-refresh Intel tab data every 5 minutes (matches bot run interval during market hours)
+  // Silently invalidates the intel cache so the next tab visit re-fetches fresh data
+  setInterval(() => {
+    if (typeof _intelCacheTs !== 'undefined') {
+      _intelCacheTs = 0;  // force cache invalidation
+    }
+    // If Intel tab is currently visible, refresh it immediately
+    const intelEl = document.getElementById('intel-ai-report');
+    if (intelEl && intelEl.closest('.tab-content') && intelEl.closest('.tab-content').style.display !== 'none') {
+      if (typeof fetchIntelReport === 'function') fetchIntelReport();
+    }
+  }, 5 * 60 * 1000);
+
+  // Live "data age" indicator: show how stale the displayed data is
+  setInterval(() => {
+    if (!_tradesData || !_tradesData.last_updated) return;
+    const mins = Math.round((Date.now() - new Date(_tradesData.last_updated)) / 60000);
+    const el = document.getElementById('data-age-pill');
+    if (el) {
+      el.style.display = '';
+      el.textContent = mins < 2 ? '● LIVE' : `Data ${mins}m old`;
+      el.style.color = mins < 6 ? '#00e676' : mins < 15 ? '#ffd54f' : '#ef5350';
+      el.style.borderColor = mins < 6 ? 'rgba(0,255,136,.25)' : mins < 15 ? 'rgba(255,215,0,.2)' : 'rgba(255,34,85,.25)';
+    }
+  }, 30000);
 })();
 </script>
 

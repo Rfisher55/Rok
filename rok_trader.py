@@ -6896,6 +6896,19 @@ def run():
     global _SIGNAL_WIN_RATES
     _SIGNAL_WIN_RATES = tlog.get("signal_win_rates", {})
 
+    # Load self-tuned parameters from previous cycle
+    _learned = tlog.get("bot_learned_params", {})
+    _learned_pos_size_adj  = float(_learned.get("pos_size_adj", 1.0))
+    _learned_score_adj     = int(_learned.get("base_score_adj", 0))
+    _learned_elite_sigs    = set(_learned.get("elite_signals", []))
+    _learned_weak_sigs     = set(_learned.get("weak_signals", []))
+    _learned_cold_sectors  = set(_learned.get("cold_sectors", []))
+    _learned_best_hours    = set(str(h) for h in _learned.get("best_hours_utc", []))
+    _learned_worst_hours   = set(str(h) for h in _learned.get("worst_hours_utc", []))
+    if _learned:
+        logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
+                    f"elite_sigs={len(_learned_elite_sigs)}, weak_sigs={len(_learned_weak_sigs)}")
+
     # ── MANAGE EXISTING SHORTS ─────────────────────────────────────────────
     for sym, pos in list(shorts.items()):
         try:
@@ -7533,6 +7546,11 @@ def run():
     else:
         _eff_min_score = MIN_BUY_SCORE
 
+    # Apply self-learned score threshold adjustment from accumulated performance data
+    if _learned_score_adj != 0:
+        _eff_min_score += _learned_score_adj
+        logger.info(f"Learned threshold adj: {_learned_score_adj:+d} → effective min={_eff_min_score}")
+
     # Internal scan breadth guard: if <30% of our universe is advancing, add +6 to threshold
     if _scan_breadth_poor:
         _eff_min_score += 6
@@ -8087,6 +8105,10 @@ def run():
                         notional = min(notional * 1.4, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
                     elif tk in squeeze_cands or tk in vol_surge_cands:
                         notional = min(notional * 1.2, portfolio_val * MAX_POSITION_PCT, buying_power * 0.35)
+                    # Apply self-learned position size adjustment (from accumulated win/loss data)
+                    if _learned_pos_size_adj != 1.0:
+                        notional = round(notional * _learned_pos_size_adj, 2)
+
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
@@ -9317,6 +9339,131 @@ def run():
         tlog["loss_cooldown_tickers"] = sorted(_loss_cooldown)
     except NameError:
         tlog.setdefault("loss_cooldown_tickers", [])
+
+    # ── SELF-TUNING LEARNING ENGINE ──────────────────────────────────────────
+    # Analyzes own trade history to continuously improve decision thresholds,
+    # signal weights, and position sizing. Stored as tlog["bot_learned_params"]
+    # so the next cycle can load and apply them automatically.
+    try:
+        _prev_learned = tlog.get("bot_learned_params", {})
+        _learn_log    = []   # human-readable log of what the bot learned this cycle
+
+        # ── 1. Recent win rate → score threshold adjustment ──────────────
+        _recent_20 = [t for t in _closed[-20:]]  # last 20 closed trades
+        _r20_wr = sum(1 for t in _recent_20 if t.get("pnl_pct", 0) > 0) / max(len(_recent_20), 1)
+        _r20_avg_pnl = sum(t.get("pnl_pct", 0) for t in _recent_20) / max(len(_recent_20), 1)
+        _base_score_adj = _prev_learned.get("base_score_adj", 0)
+
+        if len(_recent_20) >= 10:
+            if _r20_wr >= 0.68 and _r20_avg_pnl >= 1.5:
+                # Winning consistently → be slightly more aggressive (lower bar by 1)
+                _base_score_adj = max(-5, _base_score_adj - 1)
+                _learn_log.append(f"Win rate {_r20_wr:.0%} on last {len(_recent_20)} trades — easing entry threshold by 1pt (adj={_base_score_adj:+d})")
+            elif _r20_wr <= 0.40 or _r20_avg_pnl <= -1.5:
+                # Losing streak → tighten up (raise bar by 2)
+                _base_score_adj = min(10, _base_score_adj + 2)
+                _learn_log.append(f"Win rate {_r20_wr:.0%} on last {len(_recent_20)} trades — raising entry threshold by 2pt (adj={_base_score_adj:+d})")
+            elif 0.50 <= _r20_wr <= 0.58 and _base_score_adj > 0:
+                # Recovering — slowly ease back toward default
+                _base_score_adj = max(0, _base_score_adj - 1)
+                _learn_log.append(f"Win rate improving {_r20_wr:.0%} — relaxing threshold by 1pt (adj={_base_score_adj:+d})")
+        _base_score_adj = max(-5, min(12, _base_score_adj))  # hard bounds
+
+        # ── 2. Score bucket analysis → optimal minimum score ────────────
+        _bucket_perf = tlog.get("score_bucket_perf", {})
+        _optimal_min = MIN_BUY_SCORE  # default
+        _positive_buckets = []
+        _bucket_insights = []
+        for _bkt, _bkd in sorted(_bucket_perf.items()):
+            if _bkd.get("trades", 0) >= 4:
+                _bkwr = _bkd.get("wr", 0)
+                _bkavg = _bkd.get("avg_pnl", 0)
+                if _bkwr >= 55 and _bkavg > 0:
+                    _positive_buckets.append(_bkt)
+                if _bkwr < 40 and _bkd.get("trades", 0) >= 5:
+                    _bucket_insights.append(f"Score {_bkt}: {_bkwr}% WR — underperforming, avoid")
+                elif _bkwr >= 65 and _bkd.get("trades", 0) >= 5:
+                    _bucket_insights.append(f"Score {_bkt}: {_bkwr}% WR — high accuracy zone")
+
+        # ── 3. Signal quality ranking ────────────────────────────────────
+        _sig_wr_data = tlog.get("signal_win_rates", {})
+        _elite_signals = [k for k, v in _sig_wr_data.items() if v.get("win_rate", 0) >= 65 and v.get("total", 0) >= 5]
+        _weak_signals  = [k for k, v in _sig_wr_data.items() if v.get("win_rate", 0) <= 38 and v.get("total", 0) >= 5]
+        if _elite_signals:
+            _learn_log.append(f"High-accuracy signals: {', '.join(_elite_signals[:5])}")
+        if _weak_signals:
+            _learn_log.append(f"Underperforming signals (deprioritized): {', '.join(_weak_signals[:5])}")
+
+        # ── 4. Best trading hours from win rate data ─────────────────────
+        _hwr = tlog.get("hour_win_rates", {})
+        _best_hours  = sorted([h for h, d in _hwr.items() if d.get("wr", 0) >= 60 and d.get("trades", 0) >= 4], key=lambda h: -_hwr[h]["wr"])
+        _worst_hours = sorted([h for h, d in _hwr.items() if d.get("wr", 0) <= 40 and d.get("trades", 0) >= 4], key=lambda h: _hwr[h]["wr"])
+        _best_hours_et  = [str((int(h) - 4) % 24) + ":00 ET" for h in _best_hours[:3]]
+        _worst_hours_et = [str((int(h) - 4) % 24) + ":00 ET" for h in _worst_hours[:3]]
+        if _best_hours_et:
+            _learn_log.append(f"Best entry hours: {', '.join(_best_hours_et)}")
+        if _worst_hours_et:
+            _learn_log.append(f"Avoid entries at: {', '.join(_worst_hours_et)}")
+
+        # ── 5. Sector performance adaptation ────────────────────────────
+        _sec_perf = tlog.get("sector_performance", {})
+        _hot_sectors_learned  = [s for s, d in _sec_perf.items() if d.get("win_rate", 0) >= 65 and d.get("total", 0) >= 4]
+        _cold_sectors_learned = [s for s, d in _sec_perf.items() if d.get("win_rate", 0) <= 38 and d.get("total", 0) >= 4]
+        if _hot_sectors_learned:
+            _learn_log.append(f"Hot sectors by win rate: {', '.join(_hot_sectors_learned[:3])}")
+        if _cold_sectors_learned:
+            _learn_log.append(f"Avoid sectors (poor win rate): {', '.join(_cold_sectors_learned[:3])}")
+
+        # ── 6. Position sizing tuning from P&L distribution ─────────────
+        _pos_size_adj = _prev_learned.get("pos_size_adj", 1.0)
+        if len(_closed) >= 15:
+            _all_wins = [t["pnl_pct"] for t in _closed if t.get("pnl_pct", 0) > 0]
+            _all_losses = [t["pnl_pct"] for t in _closed if t.get("pnl_pct", 0) < 0]
+            _avg_w = sum(_all_wins) / len(_all_wins) if _all_wins else 1
+            _avg_l = abs(sum(_all_losses) / len(_all_losses)) if _all_losses else 1
+            _payoff = _avg_w / max(_avg_l, 0.01)
+            if _payoff >= 2.5 and _r20_wr >= 0.55:
+                # Great payoff ratio and solid WR — can size slightly larger
+                _pos_size_adj = min(1.3, _pos_size_adj + 0.05)
+                _learn_log.append(f"Payoff ratio {_payoff:.1f}x — increasing position size by 5% (adj={_pos_size_adj:.2f}x)")
+            elif _payoff < 1.0 or _r20_wr < 0.40:
+                # Bad payoff or losing — reduce size
+                _pos_size_adj = max(0.6, _pos_size_adj - 0.10)
+                _learn_log.append(f"Payoff ratio {_payoff:.1f}x, WR {_r20_wr:.0%} — reducing position size by 10% (adj={_pos_size_adj:.2f}x)")
+        _pos_size_adj = max(0.6, min(1.4, _pos_size_adj))
+
+        # Store all learned parameters for next cycle
+        tlog["bot_learned_params"] = {
+            "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
+            "pos_size_adj":        round(_pos_size_adj, 3),
+            "elite_signals":       _elite_signals[:8],
+            "weak_signals":        _weak_signals[:8],
+            "hot_sectors":         _hot_sectors_learned[:5],
+            "cold_sectors":        _cold_sectors_learned[:5],
+            "best_hours_utc":      _best_hours[:4],
+            "worst_hours_utc":     _worst_hours[:4],
+            "positive_buckets":    _positive_buckets,
+            "bucket_insights":     _bucket_insights,
+            "recent_wr":           round(_r20_wr, 3),
+            "recent_avg_pnl":      round(_r20_avg_pnl, 2),
+            "trades_analyzed":     len(_closed),
+            "last_tuned":          now_utc.isoformat(),
+            "learn_log":           _learn_log[-10:],     # last 10 learning observations
+        }
+        if _learn_log:
+            logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")
+    except Exception as _ste:
+        logger.debug(f"Self-tune error: {_ste}")
+        tlog.setdefault("bot_learned_params", {})
+
+    # ── Apply learned score adjustment to effective_min_score ──────────
+    try:
+        _learned_adj = tlog.get("bot_learned_params", {}).get("base_score_adj", 0)
+        if _learned_adj != 0:
+            tlog["effective_min_score"] = tlog.get("effective_min_score", MIN_BUY_SCORE) + _learned_adj
+            logger.info(f"Learned score adj: {_learned_adj:+d} → effective_min_score={tlog['effective_min_score']}")
+    except Exception:
+        pass
 
     # Market quality score: 0-100, composite of VIX, breadth, regime, sector momentum
     try:
