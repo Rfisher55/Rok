@@ -56377,6 +56377,7 @@ window.renderSectorRotation = renderSectorRotation;
                 else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
               })() : ''}
+              ${p.entry_thesis ? `<div style="margin-top:.3rem;font-size:7px;color:#4a6fa5;font-style:italic;padding:.2rem .35rem;background:rgba(74,111,165,.06);border-left:2px solid rgba(74,111,165,.3);border-radius:0 3px 3px 0;line-height:1.35">${p.entry_thesis}</div>` : ''}
               ${(() => {
                 const rec = p.recommendation;
                 const reason = p.rec_reason || '';

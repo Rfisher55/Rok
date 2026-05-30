@@ -3185,6 +3185,53 @@ def get_market_breadth() -> dict:
                 "breadth_thrust": False, "mcl_osc": 0.0, "note": "unknown", "total": 0}
 
 
+def ai_trade_thesis(ticker: str, score: int, signals: dict, catalyst: str = "", sentiment: int = 0) -> str:
+    """
+    Generate a 1-sentence trade entry thesis using Claude Haiku.
+    Stored on the position card so the user understands the bot's reasoning.
+    Returns a concise string like: "Entering NVDA: TT8/8 + pocket pivot + 45% EPS growth on E21 pullback"
+    """
+    if not ANTHROPIC_KEY:
+        return ""
+    try:
+        # Build compact signal summary for the prompt
+        sig_parts = []
+        tt = signals.get("trend_template", 0) or 0
+        if tt >= 6: sig_parts.append(f"TT{tt}/8 SEPA")
+        if signals.get("htf"): sig_parts.append(f"HTF{signals.get('htf_consec',0)}d")
+        if signals.get("pocket_pivot"): sig_parts.append("pocket pivot")
+        if signals.get("ema21_pullback"): sig_parts.append("EMA21 pullback")
+        if signals.get("cup_handle"): sig_parts.append("cup&handle breakout")
+        if signals.get("vcp"): sig_parts.append("VCP")
+        if signals.get("mtf_triple"): sig_parts.append("3TF aligned")
+        if signals.get("rs_rating", 0) >= 80: sig_parts.append(f"RS{signals.get('rs_rating')}")
+        if (signals.get("earnings_growth") or 0) >= 0.20:
+            sig_parts.append(f"EPS+{round((signals['earnings_growth'])*100)}%")
+        if signals.get("rvol_surge"): sig_parts.append(f"RVOL{signals.get('rvol',1):.1f}x")
+        if signals.get("donchian_up"): sig_parts.append("20D breakout")
+        if signals.get("above_avwap_52wl"): sig_parts.append("above AVWAP")
+        sig_str = " + ".join(sig_parts[:6])
+        cat_str = f" | catalyst: {catalyst}" if catalyst else ""
+        prompt = (
+            f"Write a 1-sentence (<20 words) trade thesis for entering {ticker}.\n"
+            f"Score: {score}/100 | Signals: {sig_str}{cat_str}\n"
+            f"Format: 'Entering {ticker}: [key reason why]'\n"
+            f"Be specific, factual, no fluff. Return ONLY the sentence."
+        )
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 60,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=8,
+        )
+        thesis = r.json()["content"][0]["text"].strip().strip('"\'')
+        return thesis[:150]  # cap length
+    except Exception:
+        return ""
+
+
 def ai_market_context(regime, top_movers, sector_adjs: dict = None, extra_ctx: dict = None):
     """
     Ask Claude for a macro market read that adjusts our overall confidence.
@@ -7805,6 +7852,14 @@ def run():
                         reason += f" [SI{round((_d_buy.get('short_float',0) or 0)*100)}%]"
                     if tk in vol_surge_cands and tk in squeeze_cands:
                         reason += " [VOL+SQZ]"
+                    # Generate AI trade thesis for position card (non-blocking, best-effort)
+                    _entry_thesis = ""
+                    try:
+                        if ANTHROPIC_KEY and sc >= 65:  # only for decent-quality entries
+                            _entry_thesis = ai_trade_thesis(tk, sc, _d_buy, catalyst, sent)
+                    except Exception:
+                        pass
+
                     # Smart scale-in: highest-conviction setups enter at 60% to allow for pullback add
                     _tt_buy     = _d_buy.get("trend_template", 0) or 0
                     _htf_buy    = _d_buy.get("htf", False)
@@ -7822,7 +7877,10 @@ def run():
                                  "ever_hit_5pct": False, "atr_at_entry": atr or 0.0,
                                  "scale_in_pending": _is_scalein,
                                  "scale_in_notional": round(_full_notional * 0.40, 2) if _is_scalein else 0.0,
-                                 "scale_in_ema21": round(_d_buy.get("avwap_52wl", 0) or price * 0.97, 2)}
+                                 "scale_in_ema21": round(_d_buy.get("avwap_52wl", 0) or price * 0.97, 2),
+                                 "entry_thesis": _entry_thesis,
+                                 "entry_tt": _tt_buy,
+                                 "entry_score": sc}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
                     buying_power -= notional
@@ -8117,6 +8175,8 @@ def run():
                 "atr_at_entry":  peaks.get(_sym, {}).get("atr_at_entry", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "scale_in_pending": peaks.get(_sym, {}).get("scale_in_pending", False) if isinstance(peaks.get(_sym), dict) else False,
                 "scale_in_notional": peaks.get(_sym, {}).get("scale_in_notional", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
+                "entry_thesis":  peaks.get(_sym, {}).get("entry_thesis", "") if isinstance(peaks.get(_sym), dict) else "",
+                "entry_score":   peaks.get(_sym, {}).get("entry_score", 0) if isinstance(peaks.get(_sym), dict) else 0,
                 "grade":         momentum_grade(live.get(_sym, {}), score(_sym, live.get(_sym, {}))) if live.get(_sym) else "?",
                 "rs_rating":     live.get(_sym, {}).get("rs_rating", 50) if live.get(_sym) else 50,
                 "rs252":         round(live.get(_sym, {}).get("rs252", 0.0), 2) if live.get(_sym) else 0.0,
