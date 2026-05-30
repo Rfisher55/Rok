@@ -369,6 +369,14 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             e["sector_chg1d"] = round(_sec_chg1d, 2)
         except Exception:
             e["sector_etf_momentum"] = "neutral"
+        # Trend Template Neuron (33): O'Neil quality score at entry
+        _tt_score = int(signals.get("trend_template", 0) or 0)
+        e["tt_score_at_entry"] = _tt_score
+        e["tt_bucket"] = ("elite" if _tt_score >= 7 else "good" if _tt_score >= 5 else "fair" if _tt_score >= 3 else "weak")
+        # Consecutive Green Days Neuron (34): momentum confirmation days
+        _cg = int(signals.get("consec_green", 0) or 0)
+        e["consec_green_at_entry"] = _cg
+        e["consec_green_bucket"] = ("0d" if _cg == 0 else "1d" if _cg == 1 else "2-3d" if _cg <= 3 else "4d+")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -951,6 +959,44 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _psp["total"] > 0:
                 _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
                 _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Trend Template Neuron: O'Neil quality score at entry vs outcome ──────────
+    # Tracks whether high-quality (TT≥7) setups outperform fair (TT 3-4) entries.
+    # The O'Neil Trend Template is the institutional-grade entry quality benchmark.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_tt = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _tt_bkt = _buy_tt.get("tt_bucket", "fair") if _buy_tt else "fair"
+            _tt_perf = tlog.setdefault("tt_perf", {})
+            _ttp = _tt_perf.setdefault(_tt_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _tt_bkt})
+            _ttp["total"] = _ttp.get("total", 0) + 1
+            _ttp["total_pnl"] = round(_ttp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _ttp["wins"] = _ttp.get("wins", 0) + 1
+            else: _ttp["losses"] = _ttp.get("losses", 0) + 1
+            if _ttp["total"] > 0:
+                _ttp["win_rate"] = round(_ttp["wins"] / _ttp["total"] * 100, 1)
+                _ttp["avg_pnl"]  = round(_ttp["total_pnl"] / _ttp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Consecutive Green Days Neuron: momentum confirmation vs outcome ──────────
+    # Tracks performance by # of consecutive up-days before entry.
+    # Learns: is 2-3 green days the sweet spot, or does it signal exhaustion (4d+)?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_cg = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _cg_bkt = _buy_cg.get("consec_green_bucket", "0d") if _buy_cg else "0d"
+            _cg_perf = tlog.setdefault("consec_green_perf", {})
+            _cgp = _cg_perf.setdefault(_cg_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _cg_bkt})
+            _cgp["total"] = _cgp.get("total", 0) + 1
+            _cgp["total_pnl"] = round(_cgp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _cgp["wins"] = _cgp.get("wins", 0) + 1
+            else: _cgp["losses"] = _cgp.get("losses", 0) + 1
+            if _cgp["total"] > 0:
+                _cgp["win_rate"] = round(_cgp["wins"] / _cgp["total"] * 100, 1)
+                _cgp["avg_pnl"]  = round(_cgp["total_pnl"] / _cgp["total"], 2)
         except Exception:
             pass
 
@@ -7867,7 +7913,7 @@ def run():
                 atr_v = sig_for_atr.get("atr") if sig_for_atr else None
                 if atr_v and current > 0:
                     atr_pct = atr_v / current * 100
-                    dyn_trail = max(4.0, min(9.0, atr_pct * 2.5))
+                    dyn_trail = max(4.0, min(9.0, atr_pct * _LEARNED_ATR_MULTIPLIER))
                 else:
                     dyn_trail = TRAILING_STOP_PCT * 100
 
@@ -10670,6 +10716,40 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 33. Trend Template Neuron: O'Neil quality score vs outcome ───────────
+        _tt_raw = tlog.get("tt_perf", {})
+        _tt_insights = []
+        for _tbk, _td in _tt_raw.items():
+            if _td.get("total", 0) >= 3:
+                _tt_insights.append({"bucket": _tbk, "win_rate": _td.get("win_rate", 50),
+                                     "avg_pnl": _td.get("avg_pnl", 0), "total": _td.get("total", 0)})
+        if _tt_insights:
+            _tt_s = sorted(_tt_insights, key=lambda x: -x["win_rate"])
+            _tt_sum = " | ".join(f"TT_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _tt_s)
+            _learn_log.append(f"Trend template quality WRs: {_tt_sum}")
+            _tt_elite = next((s for s in _tt_insights if s["bucket"] == "elite"), None)
+            _tt_weak  = next((s for s in _tt_insights if s["bucket"] == "weak"), None)
+            if _tt_elite and _tt_weak and (_tt_elite["win_rate"] - _tt_weak["win_rate"]) >= 15:
+                _learn_log.append(f"Elite TT setups ({_tt_elite['win_rate']:.0f}% WR) far outperform weak ({_tt_weak['win_rate']:.0f}%) — quality filter confirmed")
+
+        # ── 34. Consecutive Green Days Neuron: momentum confirmation ──────────
+        _cg_raw = tlog.get("consec_green_perf", {})
+        _cg_insights = []
+        for _cgbk, _cgd in _cg_raw.items():
+            if _cgd.get("total", 0) >= 3:
+                _cg_insights.append({"bucket": _cgbk, "win_rate": _cgd.get("win_rate", 50),
+                                     "avg_pnl": _cgd.get("avg_pnl", 0), "total": _cgd.get("total", 0)})
+        if _cg_insights:
+            _cg_s = sorted(_cg_insights, key=lambda x: -x["win_rate"])
+            _cg_sum = " | ".join(f"{s['bucket']}green:{s['win_rate']:.0f}%WR" for s in _cg_s)
+            _learn_log.append(f"Consec green days WRs: {_cg_sum}")
+            _cg_best = _cg_s[0]
+            _cg_4d = next((s for s in _cg_insights if s["bucket"] == "4d+"), None)
+            if _cg_4d and _cg_4d["win_rate"] < 40:
+                _learn_log.append(f"4+ green days → exhaustion ({_cg_4d['win_rate']:.0f}% WR) — overbought extension confirmed")
+            if _cg_best["bucket"] == "2-3d" and _cg_best["win_rate"] >= 60:
+                _learn_log.append(f"2-3 green days is momentum sweet spot ({_cg_best['win_rate']:.0f}% WR)")
+
         # ── 32. Sector Momentum Neuron: sector ETF acceleration at entry ────────
         _sm_raw = tlog.get("sector_momentum_perf", {})
         _sm_insights = []
@@ -10850,6 +10930,8 @@ def run():
             "pm_gap_perf":         _pg_insights,            # pre-market gap size vs outcome
             "exit_hour_perf":      _eh_insights,            # exit timing (hour) vs P&L
             "sector_momentum_perf": _sm_insights,           # sector ETF acceleration at entry
+            "tt_perf":              _tt_insights,           # O'Neil trend template quality vs outcome
+            "consec_green_perf":    _cg_insights,           # consecutive green days vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

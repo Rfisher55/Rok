@@ -53995,6 +53995,51 @@ function _renderIntelReport(el, intel) {
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.25rem">${smCells}</div>
         </div>`;
       })()}
+      ${(() => {
+        // ── Trend Template + Consecutive Green Days dual panel ───────────────
+        const tt = lp.tt_perf || [];
+        const cg = lp.consec_green_perf || [];
+        if (!tt.length && !cg.length) return '';
+        const TT_ORDER = ['elite','good','fair','weak'];
+        const TT_COLS = {elite:'#ffd700',good:'#00e676',fair:'#82b1ff',weak:'#ef5350'};
+        const ttMap = {};
+        tt.forEach(s => ttMap[s.bucket] = s);
+        const ttCells = TT_ORDER.map(bkt => {
+          const s = ttMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:6px;color:#333">${bkt}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border:1px solid ${TT_COLS[bkt]||'#444'}22;border-radius:4px;padding:.2rem;text-align:center">
+            <div style="font-size:5.5px;color:${TT_COLS[bkt]||'#888'};font-weight:700">TT ${bkt.charAt(0).toUpperCase()+bkt.slice(1)}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% (${s.total}T)</div>
+          </div>`;
+        }).join('');
+        const CG_ORDER = ['0d','1d','2-3d','4d+'];
+        const CG_COLS = {0:'#888','1d':'#82b1ff','2-3d':'#00e676','4d+':'#ff9800'};
+        const cgMap = {};
+        cg.forEach(s => cgMap[s.bucket] = s);
+        const cgCells = CG_ORDER.map(bkt => {
+          const s = cgMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:6px;color:#333">${bkt}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.2rem;text-align:center">
+            <div style="font-size:5.5px;color:#69f0ae;font-weight:700">${bkt} green</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% (${s.total}T)</div>
+          </div>`;
+        }).join('');
+        const ttHtml = tt.length?`<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ffd700;font-weight:700;margin-bottom:.1rem">🏆 TREND TEMPLATE (O'NEIL): quality score at entry (0-8)</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${ttCells}</div>
+        </div>`:'';
+        const cgHtml = cg.length?`<div>
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🟢 CONSECUTIVE GREEN DAYS: momentum confirmation at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${cgCells}</div>
+        </div>`:'';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${ttHtml}${cgHtml}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}
