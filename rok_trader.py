@@ -3210,8 +3210,18 @@ def ai_market_context(regime, top_movers, sector_adjs: dict = None, extra_ctx: d
                 extra_str += f"\n- RS Rating leaders (≥80): {', '.join(extra_ctx['rs_leaders'][:6])}"
             if extra_ctx.get("ema21_setups"):
                 extra_str += f"\n- EMA21 pullback setups: {', '.join(extra_ctx['ema21_setups'][:5])}"
+            if extra_ctx.get("pocket_pivots"):
+                extra_str += f"\n- Pocket pivot signals: {', '.join(extra_ctx['pocket_pivots'][:4])}"
+            if extra_ctx.get("htf_stocks"):
+                extra_str += f"\n- High-Tight Flag stocks: {', '.join(extra_ctx['htf_stocks'][:4])}"
+            if extra_ctx.get("tt8_stocks"):
+                extra_str += f"\n- Trend Template 8/8 (SEPA elite): {', '.join(extra_ctx['tt8_stocks'][:4])}"
             if extra_ctx.get("scan_adv_pct") is not None:
                 extra_str += f"\n- Internal breadth: {extra_ctx['scan_adv_pct']}% of scanned stocks advancing"
+            if extra_ctx.get("breadth_trend") and extra_ctx["breadth_trend"] != "neutral":
+                extra_str += f"\n- Breadth trend: {extra_ctx['breadth_trend']}"
+            if extra_ctx.get("breadth_thrust"):
+                extra_str += "\n- BREADTH THRUST detected — rare, very bullish market condition"
             if extra_ctx.get("high_corr_pairs"):
                 extra_str += f"\n- Correlated position pairs: {', '.join(extra_ctx['high_corr_pairs'][:3])}"
         prompt = (
@@ -6505,12 +6515,20 @@ def run():
     _rs_leaders    = sorted([tk for tk, sig in live.items() if (sig.get("rs_rating", 50) or 50) >= 80],
                             key=lambda tk: -(live[tk].get("rs_rating", 50) or 50))[:8]
     _ema21_setups  = [tk for tk, sig in live.items() if sig.get("ema21_pullback", False)][:6]
+    _pocket_pivots = [tk for tk, sig in live.items() if sig.get("pocket_pivot", False)][:5]
+    _htf_stocks_ai = [tk for tk, sig in live.items() if sig.get("htf", False)][:4]
+    _tt8_stocks_ai = [tk for tk, sig in live.items() if sig.get("tt_full", False)][:4]
     _prior_hcp     = _prior_tlog.get("portfolio_correlation", {}).get("high_corr_pairs", [])
     _high_corr_strs = [p["pair"] for p in _prior_hcp if p.get("corr", 0) >= 0.85][:4]
     _extra_ctx = {
         "rs_leaders":    _rs_leaders,
         "ema21_setups":  _ema21_setups,
+        "pocket_pivots": _pocket_pivots,
+        "htf_stocks":    _htf_stocks_ai,
+        "tt8_stocks":    _tt8_stocks_ai,
         "scan_adv_pct":  _scan_adv_pct,
+        "breadth_trend": breadth.get("breadth_trend", "neutral"),
+        "breadth_thrust": breadth.get("breadth_thrust", False),
         "high_corr_pairs": _high_corr_strs,
     }
     regime_adj   = ai_market_context(regime, top_movers_for_ai, sector_adjs=sector_adjs,

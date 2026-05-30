@@ -439,9 +439,24 @@ def build_prompt(
             w52_s = s.get("w52_range_pos") or 0
             w52_tag = f"52W:{w52_s:.0f}%" if w52_s else ""
             hv_tag = "HV↓COIL" if s.get("hv_contracting") else ("HV↑EXP" if s.get("hv_expanding") else "")
-            tags = " ".join(t for t in [mtf, acc, sqz, w52_tag, hv_tag] if t)
+            # New advanced pattern tags
+            pp_tag  = "PP" if s.get("pocket_pivot") else ""
+            htf_tag = f"HTF{s.get('htf_consec',0)}d" if s.get("htf") else ""
+            tt_tag  = f"TT{s.get('trend_template',0)}" if (s.get("trend_template") or 0) >= 6 else ""
+            e21_tag = "E21↩" if s.get("ema21_pullback") else ""
+            fq_tag  = f"F+{s.get('fund_quality',0)}" if (s.get("fund_quality") or 0) >= 2 else ""
+            rs_tag  = f"RS{s.get('rs_rating',0)}" if (s.get("rs_rating") or 0) >= 80 else ""
+            avwap_tag = f"AVWAP+{(s.get('avwap_dist_pct') or 0):.0f}%" if s.get("above_avwap_52wl") else ""
+            tags = " ".join(t for t in [mtf, acc, sqz, w52_tag, hv_tag, pp_tag, htf_tag, tt_tag, e21_tag, fq_tag, rs_tag, avwap_tag] if t)
             scan_lines.append(f"  ${tk} score={sc} grade={gr}{' ['+tags+']' if tags else ''} | {cat}")
         scan_str = "\n".join(scan_lines)
+        # Append leaderboard summary
+        _pp_list  = [s["ticker"] for s in scan_top if s.get("pocket_pivot")][:4]
+        _htf_list = [s["ticker"] for s in scan_top if s.get("htf")][:4]
+        _tt8_list = [s["ticker"] for s in scan_top if s.get("tt_full")][:4]
+        if _pp_list:  scan_str += f"\n  Pocket Pivots: {', '.join(_pp_list)}"
+        if _htf_list: scan_str += f"\n  High-Tight Flags: {', '.join(_htf_list)}"
+        if _tt8_list: scan_str += f"\n  SEPA TT 8/8 (elite): {', '.join(_tt8_list)}"
     else:
         scan_str = "  No recent scan data"
 
@@ -503,6 +518,16 @@ def build_prompt(
     elif pc.get("risk_level") == "MEDIUM":
         dom = pc.get("dominant_sector", "unknown")
         lmc_lines.append(f"  MEDIUM concentration: multiple {dom} positions — watch sector-wide risk")
+    # New advanced pattern signals from live market context
+    if lmc.get("tt8_stocks"):
+        lmc_lines.append(f"  SEPA Trend Template 8/8 (elite quality): {', '.join(lmc['tt8_stocks'][:4])}")
+    if lmc.get("pocket_pivots"):
+        lmc_lines.append(f"  Pocket Pivot (O'Neil inst. buying): {', '.join(lmc['pocket_pivots'][:4])}")
+    if lmc.get("htf_stocks"):
+        htf_str = ", ".join(f"{e.get('ticker','')}({e.get('htf_consec',0)}d)" for e in lmc['htf_stocks'][:3])
+        lmc_lines.append(f"  High-Tight Flags (Minervini): {htf_str}")
+    if lmc.get("drawdown_halt"):
+        lmc_lines.append("  ⛔ DRAWDOWN HALT: portfolio ≥5% below peak — NO NEW BUYS until recovery")
     # Sector ETF trends: highlight lagging sectors for exit context
     etf_trends = lmc.get("sector_etf_trends") or {}
     bearish_secs = [s for s, d in etf_trends.items() if d.get("chg5d", 0) < -3]
