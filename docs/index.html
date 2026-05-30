@@ -57159,12 +57159,23 @@ window.renderSectorRotation = renderSectorRotation;
     if (botPill && data.last_updated) {
       const mins = Math.round((Date.now() - new Date(data.last_updated)) / 60000);
       const hasErr = !!data.error;
+      const isHalted = data.drawdown_halt || (data.bot_status_summary||'').includes('HALTED');
+      const statusSummary = data.bot_status_summary || '';
       if (hasErr) {
         botPill.style.borderColor = 'rgba(255,34,85,.4)';
         botPill.style.background  = 'rgba(255,34,85,.08)';
         botPill.style.color       = 'var(--r)';
         botDot.style.background   = 'var(--r)';
         botTxt.textContent        = 'BOT ERR';
+        botPill.title             = data.error || 'Bot error';
+      } else if (isHalted) {
+        botPill.style.borderColor = 'rgba(255,167,38,.4)';
+        botPill.style.background  = 'rgba(255,167,38,.08)';
+        botPill.style.color       = '#ffa726';
+        botDot.style.background   = '#ffa726';
+        botDot.style.animation    = '';
+        botTxt.textContent        = 'BOT HALTED';
+        botPill.title             = statusSummary || 'Drawdown protection active';
       } else if (mins < 10) {
         botPill.style.borderColor = 'rgba(0,255,136,.35)';
         botPill.style.background  = 'rgba(0,255,136,.08)';
@@ -57172,6 +57183,7 @@ window.renderSectorRotation = renderSectorRotation;
         botDot.style.background   = 'var(--g)';
         botDot.style.animation    = 'livePulse 1.8s ease infinite';
         botTxt.textContent        = `BOT ${mins}m ago`;
+        botPill.title             = statusSummary || `Last run ${mins}m ago`;
       } else if (mins < 30) {
         botPill.style.borderColor = 'rgba(255,215,0,.3)';
         botPill.style.background  = 'rgba(255,215,0,.06)';
@@ -57179,6 +57191,7 @@ window.renderSectorRotation = renderSectorRotation;
         botDot.style.background   = 'var(--au)';
         botDot.style.animation    = '';
         botTxt.textContent        = `BOT ${mins}m ago`;
+        botPill.title             = statusSummary || `Last run ${mins}m ago`;
       } else {
         botPill.style.borderColor = 'rgba(255,255,255,.1)';
         botPill.style.background  = 'rgba(255,255,255,.03)';
@@ -57186,6 +57199,7 @@ window.renderSectorRotation = renderSectorRotation;
         botDot.style.background   = 'var(--wh4)';
         botDot.style.animation    = '';
         botTxt.textContent        = `BOT ${mins < 60 ? mins+'m' : Math.floor(mins/60)+'h'} ago`;
+        botPill.title             = statusSummary || `Last run ${mins < 60 ? mins+'m' : Math.floor(mins/60)+'h'} ago — market may be closed`;
       }
       botPill.style.display = 'flex';
     }
@@ -58047,6 +58061,7 @@ window.renderSectorRotation = renderSectorRotation;
       {
         const pos = data.positions || [];
         const actions = [];
+        const PREM_KEYS_RT = ['vcp','cup_handle','at_breakout','mtf_triple','ttm_squeeze_fired','gap_and_hold','orb_breakout','rvol_surge','supertrend_bull','obv_rising'];
         // Check each position for urgent situations
         for (const p of pos) {
           const df = p.dist_from_trail || 0;
@@ -58060,6 +58075,25 @@ window.renderSectorRotation = renderSectorRotation;
             actions.push({pri:2, col:'#ff5252', icon:'⚡', msg:`<strong>$${p.ticker}</strong> overextended ${pnl.toFixed(1)}% — consider locking 25-50% profits`});
           if (p.live_signals && p.live_signals.macd_bear_div && p.live_signals.vol_bearish_div && pnl > 5)
             actions.push({pri:2, col:'#ef9a9a', icon:'📉', msg:`<strong>$${p.ticker}</strong> MACD + volume distribution divergence — distribution signal`});
+          // Neural thesis collapsed: entry signals gone
+          const ls = p.live_signals || {};
+          const entryCount = p.entry_premium_count || 0;
+          const curCount = PREM_KEYS_RT.filter(k => ls[k]).length;
+          const dropped = entryCount - curCount;
+          if (entryCount >= 3 && dropped >= 3 && pnl < 3) {
+            const goneNames = (p.entry_premium_signals || []).filter(k => !ls[k]).map(k => k.replace(/_/g,' ')).join(', ');
+            actions.push({pri:2, col:'#ef5350', icon:'🧠', msg:`<strong>$${p.ticker}</strong> neural thesis COLLAPSED — ${dropped} of ${entryCount} entry signals gone (${goneNames||'all'}) — bot may exit soon`});
+          } else if (entryCount >= 2 && dropped >= 2 && pnl < 1) {
+            actions.push({pri:3, col:'#ffa726', icon:'🧠', msg:`<strong>$${p.ticker}</strong> neural thesis DEGRADING — ${dropped} of ${entryCount} entry signals no longer active`});
+          }
+          // Score degradation alert
+          const scorehist = (p.score_history || []).map(h => h.s).filter(s => typeof s === 'number');
+          if (scorehist.length >= 3) {
+            const scoreDrop = scorehist[0] - scorehist[scorehist.length-1];
+            const consec = scorehist[0] > scorehist[1] && scorehist[1] > scorehist[2];
+            if (scoreDrop >= 15 && consec)
+              actions.push({pri:2, col:'#ff9800', icon:'📉', msg:`<strong>$${p.ticker}</strong> score degrading fast (${scorehist[0]}→${scorehist[scorehist.length-1]}, −${scoreDrop}pts) — momentum weakening`});
+          }
         }
         // Portfolio-level checks
         if (data.drawdown_halt)
