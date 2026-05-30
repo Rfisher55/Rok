@@ -3424,14 +3424,34 @@ body.beginner-mode #beginner-banner { display:block }
       const res = await fetch('./prices.json', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
       if (!res.ok) return false;
       const data = await res.json();
-      tickers.forEach(t => {
-        if (data[t] && data[t].price != null) {
-          liveprices[t] = { price: data[t].price, change_pct: data[t].change_pct || 0 };
+      // Load ALL tickers from prices.json (not just those in the request list)
+      // This ensures index ETFs and position prices are always in liveprices
+      Object.entries(data).forEach(([t, v]) => {
+        if (v && v.price != null) {
+          liveprices[t] = { price: v.price, change_pct: v.change_pct || 0, updated: v.updated || null };
         }
       });
-      return true;
+      return Object.keys(data).length > 0;
     } catch { return false; }
   }
+
+  // Load prices.json immediately on page load (before refreshLivePrices runs)
+  // This populates the index bar as fast as possible without waiting for Yahoo
+  (async () => {
+    try {
+      const res = await fetch('./prices.json', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const data = await res.json();
+        Object.entries(data).forEach(([t, v]) => {
+          if (v && v.price != null) {
+            liveprices[t] = { price: v.price, change_pct: v.change_pct || 0 };
+            updatePriceInDOM(t, v.price, v.change_pct || 0);
+          }
+        });
+        window._livePrices = liveprices;
+      }
+    } catch {}
+  })();
 
   async function refreshLivePrices() {
     const btn = document.getElementById('refresh-btn');
