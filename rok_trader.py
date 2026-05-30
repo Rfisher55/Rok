@@ -432,6 +432,13 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _adx_v = float(signals.get("adx", 0.0) or 0.0)
         e["adx_at_entry"] = round(_adx_v, 1)
         e["adx_bucket"] = ("strong" if _adx_v >= 25 else "developing" if _adx_v >= 15 else "weak")
+        # RVOL Tier Neuron (45): actual relative volume ratio at entry.
+        # 5x+ = explosive institutional interest, 2-5x = strong, 1-2x = normal, <1x = weak.
+        # More granular than the binary rvol_surge signal — learns the optimal RVOL tier.
+        _rvol_v = float(signals.get("rvol", 0.0) or 0.0)
+        e["rvol_at_entry"] = round(_rvol_v, 2)
+        e["rvol_tier"] = ("explosive" if _rvol_v >= 5.0 else "strong" if _rvol_v >= 2.0
+                          else "normal" if _rvol_v >= 1.0 else "weak")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1309,6 +1316,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── RVOL Tier Neuron (45): actual relative volume ratio at entry ─────────────
+    # Tracks performance by RVOL tier: explosive (5x+) vs strong (2-5x) vs normal vs weak.
+    # Learns if extreme RVOL entries produce better outcomes than moderate volume surges.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_rv = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _rv_tier = _buy_rv.get("rvol_tier", "normal") if _buy_rv else "normal"
+            _rv_perf = tlog.setdefault("rvol_tier_perf", {})
+            _rvp = _rv_perf.setdefault(_rv_tier, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "tier": _rv_tier})
+            _rvp["total"] = _rvp.get("total", 0) + 1
+            _rvp["total_pnl"] = round(_rvp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _rvp["wins"] = _rvp.get("wins", 0) + 1
+            else:        _rvp["losses"] = _rvp.get("losses", 0) + 1
+            if _rvp["total"] > 0:
+                _rvp["win_rate"] = round(_rvp["wins"] / _rvp["total"] * 100, 1)
+                _rvp["avg_pnl"]  = round(_rvp["total_pnl"] / _rvp["total"], 2)
         except Exception:
             pass
 
@@ -11377,6 +11403,20 @@ def run():
             if _ax_best["win_rate"] - _ax_worst["win_rate"] >= 15:
                 _learn_log.append(f"Strong ADX entries win rate {_ax_best['win_rate']:.0f}% vs weak {_ax_worst['win_rate']:.0f}% — trend conviction confirmed")
 
+        # ── 45. RVOL Tier Neuron: relative volume tier at entry ───────────────
+        _rv_raw = tlog.get("rvol_tier_perf", {})
+        _rv_insights = []
+        for _rvk, _rvd in _rv_raw.items():
+            if _rvd.get("total", 0) >= 3:
+                _rv_insights.append({
+                    "tier": _rvk, "win_rate": _rvd.get("win_rate", 50),
+                    "avg_pnl": _rvd.get("avg_pnl", 0), "total": _rvd.get("total", 0)
+                })
+        if _rv_insights:
+            _rv_best = max(_rv_insights, key=lambda x: x["win_rate"])
+            _rv_sum = " | ".join(f"RVOL_{s['tier']}:{s['win_rate']:.0f}%WR" for s in _rv_insights)
+            _learn_log.append(f"RVOL tier WRs: {_rv_sum}")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11431,6 +11471,7 @@ def run():
             "poc_dist_perf":        _pc_insights,            # POC distance at entry vs outcome
             "intraday_mom_perf":    _im_insights,            # intraday momentum (% from open) vs outcome
             "adx_perf":             _ax_insights,            # ADX trend strength at entry vs outcome
+            "rvol_tier_perf":       _rv_insights,            # RVOL tier (explosive/strong/normal/weak) vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
