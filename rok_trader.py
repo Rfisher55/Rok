@@ -9010,6 +9010,53 @@ def run():
     except Exception:
         pass
 
+    # Daily AI debrief: runs once after market close (3:55-4:15 PM ET window)
+    # Generates a concise post-market summary of the day's trades and key signals.
+    try:
+        _now_et_hr  = now_utc.hour - 5  # rough ET offset (no DST handling needed here)
+        _is_close   = 20 <= now_utc.hour <= 21  # approx 3-4 PM ET in UTC-5
+        _today_key  = now_utc.strftime("%Y-%m-%d")
+        _last_deb   = tlog.get("daily_debrief_date", "")
+        if _is_close and _today_key != _last_deb and ANTHROPIC_KEY:
+            _trades_today = [t for t in tlog.get("trades", []) if (t.get("time") or "")[:10] == _today_key]
+            _closed_today = [t for t in _trades_today if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+            _buys_today   = [t for t in _trades_today if t.get("action") in ("BUY", "DCA")]
+            _open_pos_today = tlog.get("positions", [])
+            _day_ret = 0.0
+            _dp = tlog.get("daily_pnl", [])
+            if _dp and _dp[-1]["date"] == _today_key:
+                _day_ret = _dp[-1]["ret_pct"]
+            _top_pat = list(tlog.get("pattern_accuracy", {}).keys())[:3]
+            _debrief_prompt = (
+                f"Write a 3-sentence post-market debrief for a stock trader.\n"
+                f"Today ({_today_key}): portfolio {_day_ret:+.2f}% | "
+                f"regime={regime.get('regime','?')} VIX={regime.get('vix',0):.1f} | "
+                f"breadth={breadth.get('adv_pct',50):.0f}% advancing | "
+                f"buys={len(_buys_today)} sells={len(_closed_today)}\n"
+                + (f"Closed trades: " + " | ".join(f"{t['ticker']} {'+'if t['pnl_pct']>=0 else ''}{t['pnl_pct']:.1f}%" for t in _closed_today[:5]) + "\n" if _closed_today else "")
+                + (f"Open positions: " + " | ".join(f"{p['ticker']} {p.get('pnl_pct',0):+.1f}%" for p in _open_pos_today[:5]) + "\n" if _open_pos_today else "")
+                + (f"Best patterns: {', '.join(_top_pat)}\n" if _top_pat else "")
+                + "Sentence 1: what happened today (regime, key moves). "
+                "Sentence 2: what worked/didn't. Sentence 3: 1 specific focus for tomorrow.\n"
+                "Be specific, practical, <80 words total. No fluff."
+            )
+            import requests as _req2
+            _dr = _req2.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                         "content-type": "application/json"},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 150,
+                      "messages": [{"role": "user", "content": _debrief_prompt}]},
+                timeout=12,
+            )
+            if _dr.status_code == 200:
+                _debrief_text = _dr.json()["content"][0]["text"].strip()
+                tlog["daily_debrief"]      = _debrief_text
+                tlog["daily_debrief_date"] = _today_key
+                logger.info(f"Daily debrief: {_debrief_text[:100]}...")
+    except Exception as _dd_e:
+        logger.debug(f"Daily debrief skipped: {_dd_e}")
+
     _save(TRADES_FILE, tlog)
     logger.info(
         f"Cycle done. Trades: {'yes' if made_trades else 'none'}. "
