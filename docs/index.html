@@ -56004,39 +56004,58 @@ window.renderSectorRotation = renderSectorRotation;
           const barCol = pct >= 0 ? 'rgba(0,255,136,.2)' : 'rgba(255,34,85,.2)';
           const sideLbl = p.side === 'short' ? 'SHORT' : 'LONG';
           const sideCol = p.side === 'short' ? '#ef5350' : '#00ff88';
-          // Progress between stop and target
+          // Progress between trail stop and target
           const cost = p.cost || 0;
-          const stop = p.stop_price || (cost * 0.93);
+          const stop = p.trail_stop_price || p.stop_price || (cost * 0.93);
           const target = p.target_price || (cost * 1.20);
           const cur = p.price || cost;
           const progPct = cost > 0 ? Math.max(0, Math.min(100, (cur - stop) / (target - stop) * 100)) : 0;
           const progCol = progPct > 60 ? '#00ff88' : progPct > 30 ? '#ffd54f' : '#ef5350';
-          html += `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:.6rem .75rem;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden">
+          const grade = p.grade || '?';
+          const gradeCol = grade==='A+'?'#00ff88':grade==='A'?'#69f0ae':grade==='B'?'#ffd54f':grade==='C'?'#ff9800':'#ef5350';
+          const daysHeld = p.days_held || 0;
+          const daysCol = daysHeld <= 2 ? '#82b1ff' : daysHeld <= 5 ? '#ffd54f' : '#ff9800';
+          const distTrail = p.dist_from_trail || 0;
+          const dynTrail = p.dyn_trail_pct || 5;
+          const trailWarning = distTrail > 0 && distTrail < 1.5;
+          const rMult = p.r_multiple || 0;
+          html += `<div style="background:rgba(255,255,255,.03);border-radius:9px;padding:.6rem .75rem;border:1px solid ${trailWarning?'rgba(255,152,0,.4)':'rgba(255,255,255,.06)'};position:relative;overflow:hidden">
             <div style="position:absolute;top:0;left:0;height:100%;width:${barW}%;background:${barCol};pointer-events:none"></div>
             <div style="position:relative">
               <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem">
                 <div style="font-family:var(--disp);font-size:1.1rem;color:#ffd54f;min-width:52px;font-weight:900">\$${p.ticker}</div>
                 <div style="font-size:7px;background:${sideCol};color:#000;padding:1px 5px;border-radius:3px;font-weight:900">${sideLbl}</div>
-                <div style="font-size:8px;color:#4a6fa5;flex:1">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · avg \$${(cost).toFixed(2)} → \$${cur.toFixed(2)}</div>
+                <div style="font-size:6.5px;background:${gradeCol}22;color:${gradeCol};border:1px solid ${gradeCol}55;padding:1px 4px;border-radius:3px;font-weight:800" title="Momentum grade">${grade}</div>
+                ${daysHeld > 0 ? `<div style="font-size:6px;color:${daysCol}" title="${daysHeld} days held">${daysHeld}d</div>` : ''}
+                <div style="font-size:8px;color:#4a6fa5;flex:1">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · \$${(cost).toFixed(2)}</div>
                 <div style="font-size:12px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
                 <div style="font-size:8.5px;color:${pnlColor};font-weight:700">${pnlUsd}</div>
               </div>
               <div style="display:flex;align-items:center;gap:.4rem">
-                <span style="font-size:6.5px;color:#ef5350;min-width:28px">✕ \$${stop.toFixed(2)}</span>
-                <div style="flex:1;height:3px;background:rgba(255,255,255,.08);border-radius:2px;position:relative">
+                <span style="font-size:6px;color:#ef5350;min-width:38px" title="Dynamic trail stop (${dynTrail.toFixed(1)}% from peak)">🔻\$${stop.toFixed(2)}</span>
+                <div style="flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px;position:relative">
                   <div style="position:absolute;left:0;top:0;height:100%;width:${progPct}%;background:${progCol};border-radius:2px;transition:width .5s ease"></div>
                 </div>
-                <span style="font-size:6.5px;color:#00ff88;min-width:30px;text-align:right">✓ \$${target.toFixed(2)}</span>
+                <span style="font-size:6px;color:#00ff88;min-width:38px;text-align:right" title="ATR-based profit target">🎯\$${target.toFixed(2)}</span>
               </div>
+              ${trailWarning ? `<div style="font-size:6px;color:#ff9800;margin-top:.2rem;font-weight:700">⚡ ${distTrail.toFixed(1)}% from trail stop — tightening</div>` : ''}
+              ${rMult !== 0 ? `<div style="font-size:6px;color:${rMult>=2?'#00ff88':rMult>=1?'#69f0ae':rMult>0?'#ffd54f':'#ef5350'};margin-top:.1rem">${rMult>=0?'+':''}${rMult.toFixed(1)}R ${rMult>=2?'· let it run':rMult>=1?'· solid':rMult>0?'· building':''}</div>` : ''}
               ${p.live_signals ? (() => {
                 const ls = p.live_signals;
                 const parts = [];
                 if (ls.vwap_reclaim) parts.push('<span style="font-size:6px;font-weight:800;color:#00ffc8;background:rgba(0,255,200,.15);padding:1px 4px;border-radius:3px">VWAP↑</span>');
-                if (ls.vwap_pos != null) parts.push(`<span style="font-size:6px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#666'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP ${Math.abs(ls.vwap_pos).toFixed(1)}%</span>`);
-                if (ls.rsi != null) parts.push(`<span style="font-size:6px;color:${ls.rsi>65?'#ef5350':ls.rsi<40?'#00ff88':'#666'}">RSI ${Math.round(ls.rsi)}</span>`);
+                if (ls.vwap_pos != null) parts.push(`<span style="font-size:6px;color:${ls.vwap_pos>0.3?'#00ff88':ls.vwap_pos<-0.3?'#ef5350':'#666'}">${ls.vwap_pos>=0?'▲':'▼'}VWAP${Math.abs(ls.vwap_pos).toFixed(1)}%</span>`);
+                if (ls.rsi != null) parts.push(`<span style="font-size:6px;color:${ls.rsi>70?'#ef9a9a':ls.rsi<35?'#69f0ae':'#666'}">RSI${Math.round(ls.rsi)}</span>`);
                 if (ls.roc5 != null) parts.push(`<span style="font-size:6px;color:${ls.roc5>2?'#00ff88':ls.roc5<-2?'#ef5350':'#666'}">${ls.roc5>=0?'+':''}${ls.roc5.toFixed(1)}%5d</span>`);
-                if (ls.vol_ratio && ls.vol_ratio > 1.5) parts.push(`<span style="font-size:6px;color:#ffd54f">${ls.vol_ratio.toFixed(1)}x vol</span>`);
-                return parts.length ? `<div style="display:flex;gap:.35rem;margin-top:.25rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
+                if (ls.rvol_surge) parts.push(`<span style="font-size:6px;font-weight:700;color:#ffd54f">RVOL${(ls.rvol||1).toFixed(1)}x</span>`);
+                else if (ls.vol_ratio && ls.vol_ratio > 1.5) parts.push(`<span style="font-size:6px;color:#ffd54f">${ls.vol_ratio.toFixed(1)}xvol</span>`);
+                if (ls.supertrend_bull === true) parts.push('<span style="font-size:6px;color:#00ff88">ST↑</span>');
+                else if (ls.supertrend_bull === false) parts.push('<span style="font-size:6px;color:#ef5350">ST↓</span>');
+                if (ls.donchian_up) parts.push('<span style="font-size:6px;font-weight:700;color:#82b1ff;background:rgba(130,177,255,.15);padding:1px 3px;border-radius:2px">20D↑</span>');
+                if (ls.ema_stacked_bull) parts.push('<span style="font-size:6px;color:#00ff88">EMA✓</span>');
+                else if (ls.ema_stacked_bear) parts.push('<span style="font-size:6px;color:#ef5350">EMA✗</span>');
+                if ((ls.macd_slope||0) > 0.02) parts.push('<span style="font-size:6px;color:#69f0ae">MACD↑</span>');
+                return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
               })() : ''}
             </div>
           </div>`;

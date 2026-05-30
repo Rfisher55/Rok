@@ -6305,8 +6305,17 @@ def run():
                 reason = f"chandelier exit (price ${price:.2f} < stop ${_chan_stop:.2f}, {pnl_pct:+.1f}%)"
             elif pnl_pct <= -_atr_stop_pct:
                 reason = f"stop loss ({pnl_pct:+.1f}% ≤ -{_atr_stop_pct:.1f}%)"
-            elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
-                # Let strong momentum runners extend to 30% before selling
+            elif (_atr_target_ent := peaks.get(sym, {}).get("atr_at_entry", 0)) and pnl_pct >= max(PROFIT_TARGET_PCT * 100, min(22.0, _atr_target_ent / cost * 100 * 4.5 if cost > 0 else PROFIT_TARGET_PCT * 100)):
+                # ATR-based take-profit: volatile stocks get wider target (4.5× ATR at entry)
+                _eff_tp = max(PROFIT_TARGET_PCT * 100, min(22.0, _atr_target_ent / cost * 100 * 4.5 if cost > 0 else PROFIT_TARGET_PCT * 100))
+                live_sig_ext = live.get(sym, {})
+                still_strong = (live_sig_ext.get("macd_slope", 0) or 0) > 0 and (live_sig_ext.get("roc5", 0) or 0) > 3
+                if still_strong and pnl_pct < 30:
+                    logger.info(f"HOLD {sym} — extending target to 30% (momentum strong, {pnl_pct:+.1f}%)")
+                else:
+                    reason = f"profit target ({pnl_pct:+.1f}% ≥ {_eff_tp:.1f}%)"
+            elif not peaks.get(sym, {}).get("atr_at_entry") and pnl_pct >= (PROFIT_TARGET_PCT * 100):
+                # Fallback for positions without stored ATR (entered before this feature)
                 live_sig_ext = live.get(sym, {})
                 still_strong = (live_sig_ext.get("macd_slope", 0) or 0) > 0 and (live_sig_ext.get("roc5", 0) or 0) > 3
                 if still_strong and pnl_pct < 30:
@@ -6500,7 +6509,21 @@ def run():
                     and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
                 )
 
-                if is_pullback_dca or is_winner_pyramid or is_vwap_oversold or at_pivot_support:
+                # Scenario E: Breakout continuation pyramid
+                # Price breaks to new 20-day Donchian high on high volume — institutions
+                # are buying at new highs. Classic CAN SLIM "buying strength" approach.
+                _rvol_e    = live_sig.get("rvol", 1.0) or 1.0
+                _st_bull_e = live_sig.get("supertrend_bull", True)
+                is_breakout_pyramid = (
+                    8.0 <= pnl_pct <= 25.0
+                    and live_sig.get("donchian_up", False)      # new 20-day high
+                    and _rvol_e >= 2.0                          # institutional volume
+                    and _st_bull_e                              # supertrend aligned
+                    and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
+                    and not peaks.get(sym, {}).get("half_out", False)
+                )
+
+                if is_pullback_dca or is_winner_pyramid or is_vwap_oversold or at_pivot_support or is_breakout_pyramid:
                     ema50_pos = live_sig.get("price_vs_ema50", 0) or 0
                     roc5_val  = live_sig.get("roc5", 0) or 0
 
@@ -6531,6 +6554,8 @@ def run():
                         min_score = 22   # oversold at key level = lower bar
                     elif is_winner_pyramid:
                         min_score = 25
+                    elif is_breakout_pyramid:
+                        min_score = 30   # breakout pyramid: high bar to confirm institutional move
                     else:
                         min_score = 28
 
@@ -6539,8 +6564,11 @@ def run():
                         mfi_dca = live_sig.get("mfi", 50) or 50
                         mfi_boost = 1.2 if mfi_dca < 25 else 1.0
 
-                        # Position size: pyramid=25%, VWAP/pivot bounce=35%, pullback=50%
-                        if is_winner_pyramid:
+                        # Position size: breakout pyramid=20%, winner pyramid=25%, VWAP/pivot=35%, pullback=50%
+                        if is_breakout_pyramid:
+                            size_pct = 0.20   # conservative — buying at new highs has more risk
+                            dca_type = f"breakout pyramid (Donchian+RVOL={_rvol_e:.1f}x)"
+                        elif is_winner_pyramid:
                             size_pct = 0.25
                             dca_type = "pyramid (VWAP reclaim)"
                         elif is_vwap_oversold:
@@ -7036,6 +7064,21 @@ def run():
                         notional = min(notional * 1.1, portfolio_val * MAX_POSITION_PCT * 1.2)
                     elif _portfolio_heat < -5:
                         notional = notional * 0.8
+                    # Signal win-rate boost: if historically reliable signals are active,
+                    # size up based on their tracked win rate (min 5 trades for significance)
+                    _sig_wr_map_buy = tlog.get("signal_win_rates", {})
+                    _wr_boost = 1.0
+                    for _sig_chk in ("at_breakout", "donchian_up", "rvol_surge",
+                                     "ttm_squeeze_fired", "cup_handle", "vcp",
+                                     "three_white_soldiers", "morning_star"):
+                        _sinfo = _sig_wr_map_buy.get(_sig_chk, {})
+                        _swr   = _sinfo.get("win_rate", 0)
+                        _sn    = _sinfo.get("n", 0)
+                        if _sn >= 5 and live.get(tk, {}).get(_sig_chk) and _swr >= 0.65:
+                            _wr_boost = min(1.35, 1.0 + (_swr - 0.50) * 1.4)
+                            break
+                    if _wr_boost > 1.0:
+                        notional = min(notional * _wr_boost, portfolio_val * MAX_POSITION_PCT, buying_power * 0.40)
                     # Size up further for strong catalysts or squeeze setups (on top of Kelly)
                     if catalyst and sent >= 5:
                         notional = min(notional * 1.4, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
@@ -7166,7 +7209,8 @@ def run():
                         reason += " [VOL+SQZ]"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=live.get(tk, {}))
-                    peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
+                    peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False,
+                                 "ever_hit_5pct": False, "atr_at_entry": atr or 0.0}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
                     buying_power -= notional
@@ -7398,7 +7442,13 @@ def run():
             _cur      = float(p.get("current_price", 0))
             _pnl_pct  = float(p.get("unrealized_plpc", 0)) * 100
             _stop     = round(_entry * (1 - STOP_LOSS_PCT), 2)
-            _tgt      = round(_entry * (1 + PROFIT_TARGET_PCT), 2)
+            # ATR-based dynamic target: 4.5× ATR from entry, falls back to fixed PROFIT_TARGET_PCT
+            _atr_entry_pk = peaks.get(_sym, {}).get("atr_at_entry", 0) if isinstance(peaks.get(_sym), dict) else 0
+            if _atr_entry_pk and _entry > 0:
+                _atr_tgt_pct = min(0.22, max(PROFIT_TARGET_PCT, _atr_entry_pk / _entry * 4.5))
+            else:
+                _atr_tgt_pct = PROFIT_TARGET_PCT
+            _tgt      = round(_entry * (1 + _atr_tgt_pct), 2)
             _init_risk_pct = (_entry - _stop) / _entry * 100 if _entry > 0 else STOP_LOSS_PCT * 100
             _r_multiple = round(_pnl_pct / _init_risk_pct, 2) if _init_risk_pct > 0 else 0.0
             # Days held from peaks.json entry timestamp
@@ -7430,6 +7480,8 @@ def run():
                 "pnl_history":   peaks.get(_sym, {}).get("pnl_history", []) if isinstance(peaks.get(_sym), dict) else [],
                 "mae":           peaks.get(_sym, {}).get("mae", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "mfe":           peaks.get(_sym, {}).get("mfe", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
+                "atr_at_entry":  peaks.get(_sym, {}).get("atr_at_entry", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
+                "grade":         momentum_grade(live.get(_sym, {}), score(_sym, live.get(_sym, {}))) if live.get(_sym) else "?",
             })
         tlog["positions"] = _pos_list_raw
         # Post-process: compute active trailing stop, refine EM with ATM IV, ATR position sizing
