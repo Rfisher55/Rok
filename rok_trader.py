@@ -8720,6 +8720,46 @@ def run():
         tlog["last_updated"]    = run_start.isoformat()
         tlog["portfolio_value"] = portfolio_val
         tlog["buying_power"]    = round(buying_power, 2)
+        # Always refresh LIVE positions from Alpaca so the dashboard shows
+        # what the user actually holds, even when market is closed.
+        try:
+            _live_pos = alpaca_get("/v2/positions") or []
+            if _live_pos:
+                _existing_pos_map = {p.get("ticker"): p for p in tlog.get("positions", [])}
+                _new_positions = []
+                for _lp_item in _live_pos:
+                    _sym = _lp_item.get("symbol", "")
+                    if not _sym:
+                        continue
+                    _qty   = float(_lp_item.get("qty", 0))
+                    _cost  = float(_lp_item.get("avg_entry_price", 0))
+                    _mktv  = float(_lp_item.get("market_value", 0))
+                    _unrl  = float(_lp_item.get("unrealized_pl", 0))
+                    _unrl_pct = float(_lp_item.get("unrealized_plpc", 0)) * 100
+                    _cur_px = float(_lp_item.get("current_price", _cost))
+                    _side   = "long" if _lp_item.get("side", "long") == "long" else "short"
+                    _prev   = _existing_pos_map.get(_sym, {})
+                    _entry_date = _prev.get("entry_date") or run_start.strftime("%Y-%m-%d")
+                    _entry_ts   = _prev.get("entry_ts")   or run_start.isoformat()
+                    _new_positions.append({
+                        "ticker":       _sym,
+                        "qty":          _qty,
+                        "cost":         _cost,
+                        "price":        _cur_px,
+                        "market_val":   _mktv,
+                        "pnl_usd":      round(_unrl, 2),
+                        "pnl_pct":      round(_unrl_pct, 4),
+                        "side":         _side,
+                        "entry_date":   _entry_date,
+                        "entry_ts":     _entry_ts,
+                        # Preserve any learned fields from previous positions entry
+                        **{k: v for k, v in _prev.items()
+                           if k not in ("ticker","qty","cost","price","market_val","pnl_usd","pnl_pct","side")},
+                    })
+                tlog["positions"] = _new_positions
+                logger.info(f"Closed-market: refreshed {len(_new_positions)} live positions from Alpaca")
+        except Exception as _pos_e:
+            logger.debug(f"Closed-market position refresh: {_pos_e}")
         if ENABLE_CRYPTO:
             peaks = _load(PEAK_FILE, {})
             made_ref = []
@@ -11893,6 +11933,13 @@ def run():
     tlog["buying_power"]    = round(buying_power, 2)
     tlog["regime"]          = regime
     tlog["status"]          = "ok"
+    # Next expected run: 5 minutes from now during market hours
+    try:
+        from datetime import timedelta
+        _next_run = now_utc + timedelta(minutes=5)
+        tlog["next_run_utc"] = _next_run.isoformat()
+    except Exception:
+        pass
     # Rolling regime history — last 48 snapshots for timeline sparkline display
     _rh_list = tlog.get("regime_history", [])
     _rh_list.append({"r": regime, "t": now_utc.isoformat()})

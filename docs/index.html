@@ -7670,16 +7670,26 @@ body.beginner-mode #beginner-banner { display:block }
     if (target) { showTab('screener'); setTimeout(() => target.focus(), 150); }
   });
 
-  //  LIVE TIMER → "Next: Xm Ys" countdown 
+  //  LIVE TIMER → "Next: Xm Ys" countdown (5-min during market hrs, 15-min off-hours)
   const ts = ROK.generated_timestamp;
   const timerEl = document.getElementById('update-timer');
   if (timerEl) {
     const tick = () => {
       const now = new Date();
-      const totalSecs = 15 * 60 - (now.getMinutes() % 15) * 60 - now.getSeconds();
+      const { state } = getMarketState ? getMarketState() : { state: 'closed' };
+      const _nextRun = _tradesData?.next_run_utc ? new Date(_tradesData.next_run_utc) : null;
+      let totalSecs;
+      if (_nextRun && _nextRun > now) {
+        totalSecs = Math.round((_nextRun - now) / 1000);
+      } else if (state === 'open') {
+        totalSecs = 5 * 60 - (now.getMinutes() % 5) * 60 - now.getSeconds();
+      } else {
+        totalSecs = 15 * 60 - (now.getMinutes() % 15) * 60 - now.getSeconds();
+      }
       const m = Math.floor(totalSecs / 60);
       const s = totalSecs % 60;
-      timerEl.textContent = totalSecs > 90 ? `Next: ${m}m` : `Next: ${m}m ${String(s).padStart(2,'0')}s`;
+      const label = state === 'open' ? 'Bot' : 'Next';
+      timerEl.textContent = totalSecs > 90 ? `${label}: ${m}m` : `${label}: ${m}m ${String(s).padStart(2,'0')}s`;
     };
     tick();
     setInterval(tick, 1000);
