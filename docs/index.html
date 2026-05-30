@@ -53168,6 +53168,37 @@ function _renderIntelReport(el, intel) {
     </div>`;
   })();
 
+  // Pattern accuracy tracker: win rates by chart pattern from historical trades
+  const patternAccHtml = (() => {
+    const pa = td.pattern_accuracy;
+    if (!pa || !Object.keys(pa).length) return '';
+    const sorted = Object.entries(pa).sort((a,b) => b[1].wr - a[1].wr).slice(0, 8);
+    const rows = sorted.map(([lbl, s]) => {
+      const wrCol = s.wr >= 65 ? '#00e676' : s.wr >= 50 ? '#ffd54f' : '#ef5350';
+      const pnlCol = s.avg_pnl >= 0 ? '#69f0ae' : '#ef5350';
+      const barW = Math.min(s.wr, 100);
+      const barBg = s.wr >= 60 ? 'rgba(0,255,136,.25)' : s.wr >= 45 ? 'rgba(255,215,0,.2)' : 'rgba(255,34,85,.18)';
+      return `<div style="display:grid;grid-template-columns:85px 1fr 40px 42px;align-items:center;gap:.4rem;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:7px;color:#aaa;font-weight:600;white-space:nowrap;overflow:hidden">${lbl}</span>
+        <div style="height:5px;background:rgba(255,255,255,.06);border-radius:2px">
+          <div style="height:100%;width:${barW}%;background:${barBg};border-radius:2px"></div>
+        </div>
+        <span style="font-size:7.5px;font-weight:800;color:${wrCol};text-align:right">${s.wr}%</span>
+        <span style="font-size:6.5px;color:${pnlCol};text-align:right">${s.avg_pnl>=0?'+':''}${s.avg_pnl}%</span>
+      </div>`;
+    }).join('');
+    return `<div style="margin-top:.5rem;padding:.5rem .65rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:9px">
+      <div style="font-size:7px;font-weight:800;color:#4a6fa5;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.35rem"> PATTERN ACCURACY (from your trades)</div>
+      <div style="display:grid;grid-template-columns:85px 1fr 40px 42px;gap:.4rem;padding:.1rem 0;margin-bottom:.2rem">
+        <span style="font-size:5.5px;color:#333">PATTERN</span>
+        <span style="font-size:5.5px;color:#333">WIN RATE BAR</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">WIN%</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">AVG P&L</span>
+      </div>
+      ${rows}
+    </div>`;
+  })();
+
   // Position Sizer Calculator — practical tool for determining share count and risk
   const posSizerHtml = `<div style="margin-top:.5rem;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-radius:9px;padding:.6rem .75rem">
     <div style="font-size:7px;font-weight:900;color:#00e5ff;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem"> POSITION SIZER</div>
@@ -53200,7 +53231,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${gapStatsHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 
   // Live position sizer calculator
@@ -55300,6 +55331,23 @@ window.renderSectorRotation = renderSectorRotation;
             ${data.scan_breadth_pct != null ? (() => { const bp = data.scan_breadth_pct; const bpCol = bp >= 60 ? '#00ff88' : bp >= 40 ? '#ffd54f' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scan A/D</div><div style="font-size:14px;font-weight:900;color:${bpCol}">${bp}%</div></div>`; })() : ''}
             ${data.effective_min_score != null && data.effective_min_score !== 18 ? `<div style="text-align:center"><div style="font-size:8px;color:#ff9800;font-weight:700;text-transform:uppercase">Min Score</div><div style="font-size:11px;font-weight:900;color:#ff9800">${data.effective_min_score}↑</div></div>` : ''}
             ${data.portfolio_beta != null ? (() => { const pb = data.portfolio_beta; const pbCol = pb > 1.5 ? '#ef5350' : pb > 1.2 ? '#ffab40' : pb > 0.8 ? '#ffd54f' : '#69f0ae'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Port β</div><div style="font-size:14px;font-weight:900;color:${pbCol}">${pb.toFixed(2)}</div></div>`; })() : ''}
+            ${(() => {
+              // TRIN proxy (Arms Index) — market buying/selling pressure
+              const tr = (data.market_breadth || {}).trin_proxy;
+              const ts = (data.market_breadth || {}).trin_signal || 'neutral';
+              if (tr == null) return '';
+              const trCol = ts === 'strong_buy' ? '#00ff88' : ts === 'buy' ? '#69f0ae' : ts === 'neutral' ? '#ffd54f' : ts === 'sell' ? '#ff9800' : '#ef5350';
+              const trLbl = ts === 'strong_buy' ? 'BUY↑↑' : ts === 'buy' ? 'BUY↑' : ts === 'neutral' ? 'NEUTRAL' : ts === 'sell' ? 'SELL↓' : 'SELL↓↓';
+              return `<div style="text-align:center" title="TRIN proxy (Arms Index): <0.8=strong buying, >1.2=selling pressure"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">TRIN~</div><div style="font-size:11px;font-weight:900;color:${trCol}">${tr.toFixed(2)}</div><div style="font-size:6.5px;color:${trCol}">${trLbl}</div></div>`;
+            })()}
+            ${(() => {
+              // New 52W Highs vs Lows
+              const nh = data.new_52wh; const nl = data.new_52wl;
+              if (nh == null) return '';
+              const ratio = data.nhl_ratio || 1;
+              const nhCol = ratio >= 3 ? '#00ff88' : ratio >= 2 ? '#69f0ae' : ratio >= 1 ? '#ffd54f' : '#ef5350';
+              return `<div style="text-align:center" title="New 52-week highs vs lows in scan universe — higher ratio = broad bull market leadership"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">52W H/L</div><div style="font-size:11px;font-weight:900;color:${nhCol}">${nh}/${nl}</div><div style="font-size:6.5px;color:${nhCol}">${ratio.toFixed(1)}x ratio</div></div>`;
+            })()}
           </div>
         </div>
         <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600;margin-bottom:.3rem">

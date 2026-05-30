@@ -3168,6 +3168,41 @@ def get_market_breadth() -> dict:
         mcl_osc  = round(mcl_fast - mcl_slow, 1)
         note = "broad advance" if adv_pct > 70 else "broad decline" if adv_pct < 30 else "mixed"
         total_counted = sum(1 for s in probe_syms)
+
+        # TRIN (Arms Index): (advancing issues / declining issues) / (advancing vol / declining vol)
+        # < 0.8 = strong buying, > 1.2 = selling pressure, > 2.0 = panic selling
+        # Proxy using our ETF basket: avg intraday vol ratio for advancing vs declining ETFs
+        trin_proxy = 1.0
+        trin_signal = "neutral"
+        try:
+            raw_1d = yf.download(" ".join(probe_syms), period="2d", interval="1d",
+                                  group_by="ticker", auto_adjust=True, progress=False)
+            _adv_vols = []; _dec_vols = []
+            for sym in probe_syms:
+                try:
+                    cl2 = list(raw_1d["Close"][sym].dropna())
+                    vl2 = list(raw_1d["Volume"][sym].dropna())
+                    if len(cl2) >= 2 and len(vl2) >= 2:
+                        if cl2[-1] > cl2[-2]:
+                            _adv_vols.append(vl2[-1])
+                        else:
+                            _dec_vols.append(vl2[-1])
+                except Exception:
+                    pass
+            if _adv_vols and _dec_vols:
+                _avg_adv_v = sum(_adv_vols) / len(_adv_vols)
+                _avg_dec_v = sum(_dec_vols) / len(_dec_vols)
+                _adv_ratio = len(_adv_vols) / max(len(_dec_vols), 1)
+                _vol_ratio = _avg_adv_v / max(_avg_dec_v, 1)
+                trin_proxy  = round(_adv_ratio / max(_vol_ratio, 0.01), 2)
+                if   trin_proxy < 0.75: trin_signal = "strong_buy"
+                elif trin_proxy < 0.90: trin_signal = "buy"
+                elif trin_proxy < 1.10: trin_signal = "neutral"
+                elif trin_proxy < 1.40: trin_signal = "sell"
+                else:                   trin_signal = "strong_sell"
+        except Exception:
+            pass
+
         _BREADTH_CACHE = {
             "adv_pct":       adv_pct,
             "adv_5d_avg":    adv_5d_avg,
@@ -3177,8 +3212,10 @@ def get_market_breadth() -> dict:
             "mcl_osc":       mcl_osc,
             "note":          note,
             "total":         total_counted,
+            "trin_proxy":    trin_proxy,
+            "trin_signal":   trin_signal,
         }
-        logger.info(f"Market breadth: today={adv_pct}% | 5d avg={adv_5d_avg}% | trend={breadth_trend} | MCL={mcl_osc:+.1f}")
+        logger.info(f"Market breadth: today={adv_pct}% | 5d avg={adv_5d_avg}% | trend={breadth_trend} | MCL={mcl_osc:+.1f} | TRIN~{trin_proxy:.2f}({trin_signal})")
         return _BREADTH_CACHE
     except Exception:
         return {"adv_pct": 50.0, "adv_5d_avg": 50.0, "adv_series": [], "breadth_trend": "neutral",
@@ -6658,6 +6695,13 @@ def run():
     # If very few stocks are advancing in our universe, be more cautious with new buys
     _scan_breadth_poor = _scan_adv_pct < 30 and _scan_total > 20
 
+    # New 52W Highs vs Lows (from our scan universe): a genuine market health gauge.
+    # High new_highs / low new_lows = healthy bull market with broad leadership.
+    _new_52wh = sum(1 for sig in live.values() if sig.get("w52_range_pos", 0) >= 95)
+    _new_52wl = sum(1 for sig in live.values() if sig.get("w52_range_pos", 0) <= 5)
+    _nhl_ratio = round(_new_52wh / max(_new_52wl, 1), 1)  # high/low ratio (>2 = healthy)
+    logger.info(f"New 52W Highs:{_new_52wh} Lows:{_new_52wl} ratio:{_nhl_ratio:.1f}")
+
     # Sector rotation (computed before AI context so it can be included in prompt)
     sector_adjs  = sector_rotation()   # {sector: -8..+8}
 
@@ -6687,6 +6731,9 @@ def run():
         "breadth_trend": breadth.get("breadth_trend", "neutral"),
         "breadth_thrust": breadth.get("breadth_thrust", False),
         "high_corr_pairs": _high_corr_strs,
+        "new_52wh":      _new_52wh,
+        "new_52wl":      _new_52wl,
+        "nhl_ratio":     _nhl_ratio,
     }
     regime_adj   = ai_market_context(regime, top_movers_for_ai, sector_adjs=sector_adjs,
                                      extra_ctx=_extra_ctx)
@@ -8518,6 +8565,42 @@ def run():
         pass
     tlog["signal_analytics"] = _signal_analytics
 
+    # Pattern accuracy tracker: which chart patterns have the best win rates in our system
+    # Uses closed trade 'reason' strings which contain pattern tags from the buy logic.
+    try:
+        _pat_tags = {
+            "BRKOUT":     "Breakout",
+            "SQZ":        "Squeeze",
+            "C&H":        "Cup&Handle",
+            "VCP":        "VCP",
+            "2-BTM":      "Double Bottom",
+            "EMA21":      "EMA21 Pullback",
+            "RVOL":       "Volume Surge",
+            "52W":        "52W Breakout",
+            "PP":         "Pocket Pivot",
+            "HTF":        "High-Tight Flag",
+            "TT":         "Trend Template",
+            "HAMMER":     "Hammer",
+            "BULL-ENG":   "Bull Engulf",
+            "MACD":       "MACD Signal",
+            "POC":        "POC Breakout",
+        }
+        _pat_acc: dict = {}
+        for _pat_key, _pat_lbl in _pat_tags.items():
+            _pat_trades = [t for t in _closed if _pat_key in (t.get("reason", "") or "")]
+            if len(_pat_trades) >= 2:
+                _pat_wins = [t for t in _pat_trades if t["pnl_pct"] > 0]
+                _pat_acc[_pat_lbl] = {
+                    "trades":  len(_pat_trades),
+                    "wins":    len(_pat_wins),
+                    "wr":      round(len(_pat_wins) / len(_pat_trades) * 100, 1),
+                    "avg_pnl": round(sum(t["pnl_pct"] for t in _pat_trades) / len(_pat_trades), 2),
+                }
+        # Sort by win rate descending
+        tlog["pattern_accuracy"] = dict(sorted(_pat_acc.items(), key=lambda x: -x[1]["wr"]))
+    except Exception:
+        tlog.setdefault("pattern_accuracy", {})
+
     # Gap statistics: track performance of gap-up entries vs. non-gap entries
     # Helps calibrate whether to buy gaps or wait for pullbacks.
     try:
@@ -8794,9 +8877,15 @@ def run():
     try:
         tlog["scan_breadth_pct"] = _scan_adv_pct
         tlog["scan_breadth_poor"] = _scan_breadth_poor
+        tlog["new_52wh"]   = _new_52wh
+        tlog["new_52wl"]   = _new_52wl
+        tlog["nhl_ratio"]  = _nhl_ratio
     except NameError:
         tlog["scan_breadth_pct"] = None
         tlog["scan_breadth_poor"] = False
+        tlog["new_52wh"]  = 0
+        tlog["new_52wl"]  = 0
+        tlog["nhl_ratio"] = 1.0
 
     # Plain-English summary of this cycle's decision for the dashboard
     try:
