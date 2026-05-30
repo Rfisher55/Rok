@@ -9852,6 +9852,42 @@ def run():
 
             # ── Full exit conditions ──
             reason = None
+            # ── N102: Dynamic Support Level Exit ─────────────────────────────────
+            # Exit when price violates key technical support rather than waiting for stop.
+            # Cutting at structure break saves money vs waiting for the full trailing stop.
+            if not reason and pnl_pct < -1.5 and age_days >= 0.25 and not half_out:
+                try:
+                    _sup_sig = live.get(sym, {}) or {}
+                    _sup_cost = cost if cost > 0 else current
+                    # Check pivot S1 break
+                    _s1_piv = float(_sup_sig.get("pivot_s1", 0) or 0)
+                    # Check demand zone break (lower bound of demand zone)
+                    _dz_low = float(_sup_sig.get("demand_zone_low", 0) or 0)
+                    # Check AVWAP (anchored from 52-week low) break
+                    _avwap  = float(_sup_sig.get("avwap_52wl", 0) or 0)
+                    # Check VWAP break (intraday)
+                    _vwap   = float(_sup_sig.get("vwap", 0) or 0)
+                    _supports_broken = 0
+                    if _s1_piv > 0 and current < _s1_piv * 0.998 and _s1_piv < _sup_cost:
+                        _supports_broken += 1
+                    if _dz_low > 0 and current < _dz_low * 0.998 and _dz_low < _sup_cost:
+                        _supports_broken += 1
+                    if _avwap > 0 and current < _avwap * 0.997 and _avwap < _sup_cost:
+                        _supports_broken += 1
+                    if _vwap > 0 and current < _vwap * 0.995 and _vwap < _sup_cost and pnl_pct < -3:
+                        _supports_broken += 1
+                    if _supports_broken >= 2:
+                        reason = (
+                            f"N102 support breach ({_supports_broken} levels broken: "
+                            + (f"S1=${_s1_piv:.2f} " if _s1_piv > 0 and current < _s1_piv else "")
+                            + (f"DZ=${_dz_low:.2f} " if _dz_low > 0 and current < _dz_low else "")
+                            + (f"AVWAP=${_avwap:.2f} " if _avwap > 0 and current < _avwap else "")
+                            + f"{pnl_pct:+.1f}%)"
+                        )
+                        logger.info(f"SUPPORT_BREACH {sym}: {_supports_broken} support levels broken, exiting at {pnl_pct:+.1f}%")
+                except Exception:
+                    pass
+
             # ATR-adaptive stop loss: learned multiplier × ATR from entry, capped at STOP_LOSS_PCT
             _atr_sig = live.get(sym, {})
             _atr_val = _atr_sig.get("atr") if _atr_sig else None
