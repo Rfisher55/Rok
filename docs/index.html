@@ -54922,6 +54922,26 @@ window.renderSectorRotation = renderSectorRotation;
           </div>
         </div>`;
       }
+      // Portfolio Correlation Matrix: high-correlation pairs = hidden concentration risk
+      const portCorr = data.portfolio_correlation || {};
+      const hcPairs = portCorr.high_corr_pairs || [];
+      if (hcPairs.length > 0) {
+        const corrHtml = hcPairs.map(p => {
+          const c = p.corr || 0;
+          const col = c >= 0.95 ? '#ef5350' : c >= 0.90 ? '#ffa726' : '#ffd54f';
+          const warn = c >= 0.95 ? '⚠ VERY HIGH' : c >= 0.90 ? '⚡ HIGH' : 'ELEVATED';
+          return `<div style="display:flex;align-items:center;gap:.5rem;padding:.15rem .3rem;background:rgba(255,255,255,.03);border-radius:4px">
+            <span style="font-size:7px;font-weight:700;color:#888">${p.pair}</span>
+            <span style="font-size:7.5px;font-weight:900;color:${col}">${c.toFixed(2)}</span>
+            <span style="font-size:6px;color:${col}">${warn}</span>
+          </div>`;
+        }).join('');
+        healthEl.innerHTML += `<div style="margin-top:.5rem;padding:.35rem .5rem;background:rgba(255,167,38,.05);border:1px solid rgba(255,167,38,.15);border-radius:6px">
+          <div style="font-size:7px;color:#ffa726;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">⚡ Correlated Positions (20d)</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${corrHtml}</div>
+          <div style="font-size:6px;color:#555;margin-top:.25rem">High correlation = positions move together = hidden risk. Consider reducing one.</div>
+        </div>`;
+      }
     }
 
     // Populate Intel tab ROK trades section
@@ -55215,6 +55235,17 @@ window.renderSectorRotation = renderSectorRotation;
             const col = d >= 14 ? '#ffa726' : d >= 7 ? '#888' : '#555';
             return `<span style="font-size:6px;color:${col}" title="Position held for ${d} days">${d}d</span>`;
           })();
+          // MAE/MFE — Maximum Adverse/Favorable Excursion (trade quality diagnostic)
+          const lsMAE = (() => {
+            const mae = p.mae || 0;
+            const mfe = p.mfe || 0;
+            if (!mae && !mfe) return '';
+            const maeParts = mae < -0.5 ? [`<span style="color:#ef5350;font-size:6px" title="Worst loss seen from entry (Maximum Adverse Excursion) — how deep this position has gone against you">▼${Math.abs(mae).toFixed(1)}%</span>`] : [];
+            const mfeParts = mfe > 0.5 ? [`<span style="color:#69f0ae;font-size:6px" title="Best gain seen from entry (Maximum Favorable Excursion) — peak profit this position has shown">▲${mfe.toFixed(1)}%</span>`] : [];
+            const parts = [...mfeParts, ...maeParts];
+            if (!parts.length) return '';
+            return `<span style="font-size:6px;color:#4a6fa5" title="MAE/MFE excursion range">MAE</span>${parts.join('')}`;
+          })();
           // P&L sparkline — shows recent P&L trend as micro bar chart
           const lsPnlSpark = (() => {
             const hist = (p.pnl_history || []).filter(h => typeof h.p === 'number');
@@ -55375,7 +55406,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-                ${(lsRMult||lsDaysHeld) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;align-items:center">${lsRMult}${lsDaysHeld}</div>` : ''}
+                ${(lsRMult||lsDaysHeld||lsMAE) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;align-items:center">${lsRMult}${lsDaysHeld}${lsMAE}</div>` : ''}
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsRsSec||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsRsSec}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels||lsIV) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsIV}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}

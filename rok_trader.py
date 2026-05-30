@@ -7186,6 +7186,13 @@ def run():
                 _ph = peaks[_h_sym].setdefault("pnl_history", [])
                 _ph.append({"p": _h_pnl, "t": now_utc.isoformat()})
                 peaks[_h_sym]["pnl_history"] = _ph[-24:]
+                # MAE (Maximum Adverse Excursion): worst loss from entry ever seen
+                # MFE (Maximum Favorable Excursion): best gain from entry ever seen
+                # Used to calibrate stops and size decisions — institutional standard
+                _mae = peaks[_h_sym].get("mae", 0.0)  # most negative pnl seen (stored as negative)
+                _mfe = peaks[_h_sym].get("mfe", 0.0)  # most positive pnl seen
+                peaks[_h_sym]["mae"] = min(_mae, _h_pnl)   # update if new low
+                peaks[_h_sym]["mfe"] = max(_mfe, _h_pnl)   # update if new high
     _save(PEAK_FILE, peaks)
 
     try:
@@ -7342,6 +7349,8 @@ def run():
                 "live_signals": _pos_signals(_sym),
                 "score_history": peaks.get(_sym, {}).get("score_history", []) if isinstance(peaks.get(_sym), dict) else [],
                 "pnl_history":   peaks.get(_sym, {}).get("pnl_history", []) if isinstance(peaks.get(_sym), dict) else [],
+                "mae":           peaks.get(_sym, {}).get("mae", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
+                "mfe":           peaks.get(_sym, {}).get("mfe", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
             })
         tlog["positions"] = _pos_list_raw
         # Post-process: refine expected move with ATM IV and add ATR-based position sizing
@@ -7488,6 +7497,55 @@ def run():
         }
     except Exception:
         tlog["portfolio_concentration"] = {}
+
+    # Portfolio correlation matrix: pairwise 20-day price correlations for held positions
+    # High correlation (>0.85) = positions move in lockstep = hidden concentration risk
+    try:
+        _held_tks = [p["ticker"] for p in tlog.get("positions", []) if p.get("ticker")]
+        if len(_held_tks) >= 2:
+            _cr_raw = yf.download(_held_tks, period="30d", interval="1d",
+                                   auto_adjust=True, progress=False,
+                                   group_by="ticker" if len(_held_tks) > 1 else "column")
+            _ret_map: dict = {}
+            for _ct in _held_tks:
+                try:
+                    if len(_held_tks) > 1:
+                        _cl = list(_cr_raw["Close"][_ct].dropna())
+                    else:
+                        _cl = list(_cr_raw["Close"].dropna())
+                    if len(_cl) >= 10:
+                        _ret_map[_ct] = [(_cl[i]-_cl[i-1])/_cl[i-1] for i in range(1, len(_cl))]
+                except Exception:
+                    pass
+            _cm: dict = {}
+            _hcp: list = []
+            _valid = list(_ret_map.keys())
+            for _ii in range(len(_valid)):
+                for _jj in range(_ii+1, len(_valid)):
+                    _t1, _t2 = _valid[_ii], _valid[_jj]
+                    _a, _b = _ret_map[_t1], _ret_map[_t2]
+                    _n = min(len(_a), len(_b))
+                    if _n < 8: continue
+                    _a, _b = _a[-_n:], _b[-_n:]
+                    _m1 = sum(_a) / _n;  _m2 = sum(_b) / _n
+                    _cv = sum((_a[k]-_m1)*(_b[k]-_m2) for k in range(_n))
+                    _s1 = (sum((_a[k]-_m1)**2 for k in range(_n))) ** 0.5
+                    _s2 = (sum((_b[k]-_m2)**2 for k in range(_n))) ** 0.5
+                    _r  = round(_cv / max(_s1 * _s2, 1e-12), 3)
+                    _cm[f"{_t1}/{_t2}"] = _r
+                    if _r > 0.80:
+                        _hcp.append({"pair": f"{_t1}/{_t2}", "corr": _r})
+            tlog["portfolio_correlation"] = {
+                "matrix":          _cm,
+                "high_corr_pairs": sorted(_hcp, key=lambda x: -x["corr"]),
+            }
+            if _hcp:
+                logger.info(f"High-correlation pairs (>0.80): {' | '.join(p['pair']+f'={p[\"corr\"]:.2f}' for p in _hcp)}")
+        else:
+            tlog["portfolio_correlation"] = {}
+    except Exception as _ce:
+        logger.debug(f"Portfolio correlation skipped: {_ce}")
+        tlog["portfolio_correlation"] = {}
 
     # Compute per-signal win rates from accumulated performance data
     try:
