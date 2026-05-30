@@ -56291,10 +56291,10 @@ async function renderPerfChart() {
     const totalRet  = startVal > 0 ? ((portVal - startVal) / startVal * 100) : 0;
     const retCol    = totalRet >= 0 ? '#00ff88' : '#ef5350';
 
-    // Alpha vs SPY (inception-to-date)
-    const alpha     = data.alpha_vs_spy;
-    const spyRet    = data.spy_since_inception;
-    const portRetI  = data.port_since_inception;
+    // Alpha vs SPY (inception-to-date) — from equity.json (bot-computed) or trades.json
+    const alpha     = equityData?.alpha_pct ?? data.alpha_vs_spy;
+    const spyRet    = equityData?.spy_return_pct ?? data.spy_since_inception;
+    const portRetI  = equityData?.total_return_pct ?? data.port_since_inception;
 
     // Win rate
     const wins = stats.wins || 0; const losses = stats.losses || 0;
@@ -56369,7 +56369,7 @@ async function renderPerfChart() {
             BOT ${botTxt}
           </div>
           ${regime.regime ? `<div style="font-size:7.5px;color:${regCol};font-weight:700">${regime.regime.toUpperCase()} · VIX ${(regime.vix||0).toFixed(1)}${macroDay?' · ⚠️':''}</div>` : ''}
-          ${alpha !== undefined ? `<div style="font-size:7px;color:${(alpha||0)>=0?'#00ff88':'#ef5350'};font-weight:700">Alpha vs SPY: ${(alpha||0)>=0?'+':''}${(alpha||0).toFixed(2)}%</div>` : ''}
+          ${alpha != null ? `<div style="font-size:7px;color:${alpha>=0?'#00ff88':'#ef5350'};font-weight:700;cursor:help" title="Alpha = your return minus SPY return since bot started. Positive = beating the market."> Alpha vs SPY: ${alpha>=0?'+':''}${alpha.toFixed(2)}%${spyRet!=null?' (SPY '+( spyRet>=0?'+':'')+spyRet.toFixed(1)+'%)':''}</div>` : ''}
         </div>
       </div>
 

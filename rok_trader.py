@@ -369,6 +369,24 @@ def _save_equity_snapshot(tlog: dict) -> None:
         if _daily_rets:
             _wins_d = sum(1 for r in _daily_rets if r > 0)
             eq["daily_win_rate"] = round(_wins_d / len(_daily_rets) * 100, 1)
+        # ── SPY benchmark: track SPY alongside portfolio for alpha/benchmark chart ──
+        try:
+            _spy_cls = _fetch_spy_perf().get("closes", [])
+            if _spy_cls:
+                _spy_now = float(_spy_cls[-1])
+                # Save spy_close on today's snapshot (used by equity chart)
+                if snaps:
+                    snaps[-1]["spy_close"] = round(_spy_now, 2)
+                # Record SPY start price when we first start tracking
+                if not eq.get("spy_start") and _spy_cls:
+                    eq["spy_start"] = round(_spy_now, 2)
+                    eq["spy_start_date"] = today
+                eq["spy_current"] = round(_spy_now, 2)
+                if eq.get("spy_start"):
+                    eq["spy_return_pct"] = round((_spy_now / eq["spy_start"] - 1) * 100, 2)
+                    eq["alpha_pct"] = round(eq.get("total_return_pct", 0) - eq.get("spy_return_pct", 0), 2)
+        except Exception:
+            pass
         _save(EQUITY_FILE, eq)
     except Exception:
         pass
@@ -9593,6 +9611,55 @@ def run():
                 except Exception as e:
                     logger.warning(f"Partial sell failed {sym}: {e}")
                 continue
+
+            # ── Catastrophic news exit: immediate full exit on fraud/SEC/bankruptcy ──
+            # These keywords indicate terminal risk — no stop-loss protects against halts.
+            try:
+                _cat_news = _news_velocity(sym, max_age_sec=600)  # 10-min cache
+                _cat_hl   = " ".join(h.get("t","").lower() for h in _cat_news.get("headlines",[]))
+                _cat_kws  = ("sec charges", "sec investigation", "securities fraud", "criminal charges",
+                             "criminal investigation", "bankruptcy", "chapter 11", "halted", "trading halt",
+                             "delisted", "class action fraud", "ponzi", "embezzlement")
+                _cat_hit  = next((kw for kw in _cat_kws if kw in _cat_hl), None)
+                if _cat_hit:
+                    logger.warning(f"CATASTROPHIC_NEWS {sym}: keyword '{_cat_hit}' — EMERGENCY EXIT")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                            "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty,
+                                  pnl=pnl_pct, reason=f"catastrophic news exit: '{_cat_hit}'")
+                        made_trades = True
+                    except Exception as _cat_e:
+                        logger.error(f"Catastrophic news sell FAILED {sym}: {_cat_e}")
+                    continue
+            except Exception:
+                pass
+
+            # ── Gap-up profit lock: if price surged 4%+ since last scan → take half ──
+            # Surprise moves (earnings whispers, analyst upgrades, M&A rumors) often
+            # retrace quickly. Locking in half on a sudden gap captures the spike.
+            if not half_out and pnl_pct >= 5:
+                _prev_scan_px = peaks.get(sym, {}).get("last_scan_price", 0) or 0
+                if _prev_scan_px > 0 and current > 0:
+                    _gap_pct = (current - _prev_scan_px) / _prev_scan_px * 100
+                    if _gap_pct >= 4.0:   # surged 4%+ in one 5-min scan cycle
+                        _gap_qty  = round(qty / 2, 4)
+                        _gap_val  = current * _gap_qty
+                        if _gap_val >= 50:
+                            logger.info(f"GAP_UP_LOCK {sym}: +{_gap_pct:.1f}% surge this scan, locking half at {pnl_pct:+.1f}%")
+                            try:
+                                alpaca_post("/v2/orders", {"symbol": sym, "qty": str(_gap_qty),
+                                    "side": "sell", "type": "market", "time_in_force": "day"})
+                                log_trade(tlog, "SELL_HALF", sym, current, _gap_qty,
+                                          pnl=pnl_pct, reason=f"gap-up lock +{_gap_pct:.1f}% this scan ({pnl_pct:+.1f}% total)")
+                                peaks[sym]["half_out"] = True; made_trades = True
+                            except Exception as _gu_e:
+                                logger.warning(f"Gap-up lock failed {sym}: {_gu_e}")
+                            continue
+            # Track price each scan so next cycle can detect a gap
+            if sym not in peaks:
+                peaks[sym] = {}
+            peaks[sym]["last_scan_price"] = current
 
             # ── RSI extreme overbought exit: sell half when RSI > 82 + good gain ──
             # RSI > 82 is statistically rare and typically precedes a pullback.
