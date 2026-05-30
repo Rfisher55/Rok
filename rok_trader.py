@@ -2199,6 +2199,92 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N103: VIX Regime Bracket Sizer — entry VIX level vs outcome ──────────────
+    # Tracks P&L outcomes by VIX bracket at time of entry.
+    # Bot learns: VIX 12-15 entries may be complacent (overvalued) or smooth sailing.
+    # VIX 20-25: elevated fear but not panic → historically good risk/reward.
+    # VIX 30+: panic → either great mean-reversion OR prolonged drawdown.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n103 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _vix_n103 = float(_buy_n103.get("vix_at_entry", 20) or 20) if _buy_n103 else 20.0
+            _vix_bkt = ("extreme_fear" if _vix_n103 >= 35 else
+                        "high_fear"   if _vix_n103 >= 25 else
+                        "elevated"    if _vix_n103 >= 20 else
+                        "normal"      if _vix_n103 >= 15 else "low")
+            _n103_perf = tlog.setdefault("vix_entry_perf", {})
+            _n103p = _n103_perf.setdefault(_vix_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_vix_bkt})
+            _n103p["total"] += 1; _n103p["total_pnl"] = round(_n103p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n103p["wins"] += 1
+            else:        _n103p["losses"] += 1
+            _n103p["win_rate"] = round(_n103p["wins"] / _n103p["total"] * 100, 1)
+            _n103p["avg_pnl"]  = round(_n103p["total_pnl"] / _n103p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N104: Entry Session Quality — morning/midday/power-hour vs outcome ────────
+    # Tracks which market session at entry produces the best outcomes.
+    # opening_rush (first 15 min): volatile, spreads wide, false signals common.
+    # morning_momentum (10am-11:30am): best confirmation window.
+    # lunch_lull (11:30am-1pm): low volume, choppy, high failure rate.
+    # afternoon (1pm-3pm): institutional rebalancing, more reliable.
+    # power_hour (3pm-3:45pm): strong closing momentum, high conviction.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n104 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sess_n104 = _buy_n104.get("entry_session", "unknown") if _buy_n104 else "unknown"
+            _n104_perf = tlog.setdefault("entry_session_perf", {})
+            _n104p = _n104_perf.setdefault(_sess_n104, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_sess_n104})
+            _n104p["total"] += 1; _n104p["total_pnl"] = round(_n104p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n104p["wins"] += 1
+            else:        _n104p["losses"] += 1
+            _n104p["win_rate"] = round(_n104p["wins"] / _n104p["total"] * 100, 1)
+            _n104p["avg_pnl"]  = round(_n104p["total_pnl"] / _n104p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N105: Market Breadth at Entry — breadth momentum vs outcome ──────────────
+    # Tracks P&L outcomes by market breadth (% sectors advancing) at time of entry.
+    # Strong breadth (>70%): rising tide lifts all boats — good for breakouts.
+    # Weak breadth (<40%): only strongest stocks survive — need higher conviction.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n105 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _breadth_n105 = float(_buy_n105.get("breadth_at_entry", 50) or 50) if _buy_n105 else 50.0
+            _bkt_n105 = ("strong" if _breadth_n105 >= 65 else
+                         "moderate" if _breadth_n105 >= 50 else
+                         "weak"   if _breadth_n105 >= 35 else "very_weak")
+            _n105_perf = tlog.setdefault("breadth_entry_perf", {})
+            _n105p = _n105_perf.setdefault(_bkt_n105, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_bkt_n105})
+            _n105p["total"] += 1; _n105p["total_pnl"] = round(_n105p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n105p["wins"] += 1
+            else:        _n105p["losses"] += 1
+            _n105p["win_rate"] = round(_n105p["wins"] / _n105p["total"] * 100, 1)
+            _n105p["avg_pnl"]  = round(_n105p["total_pnl"] / _n105p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N106: Portfolio Concentration vs Outcome ──────────────────────────────────
+    # How many open positions at time of entry? More concentrated → higher risk.
+    # Bot learns: 1-3 positions = concentrated (each matters a lot).
+    # 7-12 positions = diversified (smooth risk, but diluted gains).
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n106 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n_held = int(_buy_n106.get("n_open_at_entry", 5) or 5) if _buy_n106 else 5
+            _conc_bkt = ("concentrated" if _n_held <= 3 else
+                         "moderate"     if _n_held <= 6 else
+                         "diversified"  if _n_held <= 10 else "overdiversified")
+            _n106_perf = tlog.setdefault("portfolio_size_perf", {})
+            _n106p = _n106_perf.setdefault(_conc_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_conc_bkt})
+            _n106p["total"] += 1; _n106p["total_pnl"] = round(_n106p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n106p["wins"] += 1
+            else:        _n106p["losses"] += 1
+            _n106p["win_rate"] = round(_n106p["wins"] / _n106p["total"] * 100, 1)
+            _n106p["avg_pnl"]  = round(_n106p["total_pnl"] / _n106p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10771,6 +10857,23 @@ def run():
                     ])
                     if _prem_ct < 2:
                         _ng_strikes += 1; _ng_reasons.append(f"low premium sigs({_prem_ct}) learned fail({_pt_wr.get('weak',50):.0f}%WR)")
+                # Strike N104: learned worst entry session — avoid this time window
+                _n104_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("entry_session_perf",[])}
+                if len(_n104_ng) >= 3:
+                    _mins_now = _minutes_since_open if market_open else 0
+                    _sess_now = ("opening_rush" if _mins_now < 15 else
+                                 "morning_momentum" if _mins_now < 90 else
+                                 "lunch_lull" if _mins_now < 150 else
+                                 "afternoon" if _mins_now < 180 else "power_hour")
+                    if _n104_ng.get(_sess_now, 50) < 35:
+                        _ng_strikes += 1; _ng_reasons.append(f"bad entry session {_sess_now}({_n104_ng.get(_sess_now,50):.0f}%WR)")
+                # Strike N105: learned worst breadth bracket — skip if breadth historically fails here
+                _n105_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("breadth_entry_perf",[])}
+                if len(_n105_ng) >= 3:
+                    _brd_now = float(breadth.get("adv_pct", 50) or 50)
+                    _bkt_now = ("strong" if _brd_now >= 65 else "moderate" if _brd_now >= 50 else "weak" if _brd_now >= 35 else "very_weak")
+                    if _n105_ng.get(_bkt_now, 50) < 35:
+                        _ng_strikes += 1; _ng_reasons.append(f"weak breadth context({_brd_now:.0f}%) learned fail({_n105_ng.get(_bkt_now,50):.0f}%WR)")
                 # ── Neural Green Light: if 3+ learned patterns strongly confirm, BONUS ─
                 _ng_green_lights = 0
                 _pt_strong = _pt_wr.get("strong", 0)
@@ -10782,6 +10885,15 @@ def run():
                     _ng_green_lights += 1
                 if _ax_wr.get("strong", 0) >= 65 and float(_tk_sig.get("adx", 0) or 0) >= 25:
                     _ng_green_lights += 1
+                # N105 green: learned strong breadth historically works well AND breadth is strong now
+                if _n105_ng.get("strong", 0) >= 65 and float(breadth.get("adv_pct", 50) or 50) >= 65:
+                    _ng_green_lights += 1
+                # N104 green: learned morning_momentum is the best session AND we're in it now
+                _best_sess_wr = max(_n104_ng.values(), default=0)
+                if _n104_ng.get("morning_momentum", 0) == _best_sess_wr and _best_sess_wr >= 60:
+                    _mins_check = _minutes_since_open if market_open else 0
+                    if 15 <= _mins_check < 90:
+                        _ng_green_lights += 1
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -11349,6 +11461,34 @@ def run():
                         notional = round(notional * 0.84, 2)
                         logger.debug(f"Sector concentration ({sec}: 1 held) — notional -16% for {tk}")
 
+                    # ── N103: VIX Adaptive Sizer ──────────────────────────────────────
+                    # When VIX is elevated, reduce size (risk is higher, slippage wider).
+                    # When VIX is very low, reduce size slightly (complacency risk).
+                    # Learned: use vix_entry_perf to determine if current bracket is good/bad.
+                    _vix_size_adj = 1.0
+                    _vix_now_sz = float(vix or 20)
+                    if _vix_now_sz >= 30:
+                        _vix_size_adj = 0.60  # extreme fear: half position
+                        logger.info(f"N103 VIX sizer: VIX={_vix_now_sz:.0f} (extreme) → -40% size for {tk}")
+                    elif _vix_now_sz >= 25:
+                        _vix_size_adj = 0.75  # high fear: cut size 25%
+                        logger.debug(f"N103 VIX sizer: VIX={_vix_now_sz:.0f} (high) → -25% for {tk}")
+                    elif _vix_now_sz >= 22:
+                        _vix_size_adj = 0.88  # elevated: modest cut
+                    elif _vix_now_sz <= 12:
+                        _vix_size_adj = 0.90  # complacency: slightly smaller (risk of reversal)
+                    # Learned override: if this VIX bracket has historically been profitable, restore size
+                    _n103_lp = {s.get("state",""):s.get("win_rate",50)
+                                for s in tlog.get("bot_learned_params",{}).get("vix_entry_perf",[])}
+                    _vix_bkt_now = ("extreme_fear" if _vix_now_sz >= 35 else
+                                    "high_fear" if _vix_now_sz >= 25 else
+                                    "elevated" if _vix_now_sz >= 20 else
+                                    "normal" if _vix_now_sz >= 15 else "low")
+                    if _n103_lp.get(_vix_bkt_now, 50) >= 65:
+                        _vix_size_adj = min(1.0, _vix_size_adj * 1.15)  # learned profitable: restore some size
+                    if _vix_size_adj != 1.0:
+                        notional = round(notional * _vix_size_adj, 2)
+
                     # ── Recovery Mode Sizing Neuron ───────────────────────────────────
                     # Bot is losing AND in drawdown — protect remaining capital aggressively.
                     if _recovery_mode:
@@ -11501,6 +11641,22 @@ def run():
                     _buy_signals_merged = dict(live.get(tk, {}))
                     # N101: tag whether this entry was triggered during a sector rotation flip
                     _buy_signals_merged["rotation_flip_entry"] = sec in _rotation_flip_sectors
+                    # N103: VIX at entry (already saved as vix_at_entry via log_trade)
+                    _buy_signals_merged["vix_at_entry"] = round(float(vix or 20), 1)
+                    # N104: entry session label (which time-of-day window)
+                    _mins_n104 = _minutes_since_open if market_open else 0
+                    _buy_signals_merged["entry_session"] = (
+                        "opening_rush"      if _mins_n104 < 15 else
+                        "morning_momentum"  if _mins_n104 < 90 else
+                        "lunch_lull"        if _mins_n104 < 150 else
+                        "afternoon"         if _mins_n104 < 180 else
+                        "power_hour"        if _mins_n104 < 225 else
+                        "close_approach"
+                    )
+                    # N105: breadth at entry
+                    _buy_signals_merged["breadth_at_entry"] = float(breadth.get("adv_pct", 50) or 50)
+                    # N106: number of open positions at time of entry
+                    _buy_signals_merged["n_open_at_entry"] = len(longs)
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14158,6 +14314,51 @@ def run():
         _dbn_insights = _tune_binary("dbn_perf",           "neckline_break","below_neck", "N97 DB Neckline")
         _rf_insights  = _tune_binary("rotation_flip_perf", "flip",          "no_flip",   "N101 Sector Rot Flip")
 
+        # ── N103: VIX Entry Bracket (multi-tier) ─────────────────────────────────
+        _n103_raw = tlog.get("vix_entry_perf", {})
+        _n103_insights = []
+        for _n3k, _n3d in _n103_raw.items():
+            if _n3d.get("total", 0) >= 2:
+                _n103_insights.append({"state": _n3k, "win_rate": _n3d.get("win_rate", 50),
+                                       "avg_pnl": _n3d.get("avg_pnl", 0), "total": _n3d.get("total", 0)})
+        if _n103_insights:
+            _n3_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in sorted(_n103_insights, key=lambda x: -x["win_rate"]))
+            _learn_log.append(f"N103 VIX entry brackets: {_n3_sum}")
+
+        # ── N104: Entry Session (multi-tier) ─────────────────────────────────────
+        _n104_raw = tlog.get("entry_session_perf", {})
+        _n104_insights = []
+        for _n4k, _n4d in _n104_raw.items():
+            if _n4d.get("total", 0) >= 2:
+                _n104_insights.append({"state": _n4k, "win_rate": _n4d.get("win_rate", 50),
+                                       "avg_pnl": _n4d.get("avg_pnl", 0), "total": _n4d.get("total", 0)})
+        if _n104_insights:
+            _best_sess = max(_n104_insights, key=lambda x: x["win_rate"])["state"]
+            _worst_sess = min(_n104_insights, key=lambda x: x["win_rate"])["state"]
+            _learn_log.append(f"N104 best entry session: {_best_sess} | worst: {_worst_sess}")
+
+        # ── N105: Breadth at Entry (multi-tier) ──────────────────────────────────
+        _n105_raw = tlog.get("breadth_entry_perf", {})
+        _n105_insights = []
+        for _n5k, _n5d in _n105_raw.items():
+            if _n5d.get("total", 0) >= 2:
+                _n105_insights.append({"state": _n5k, "win_rate": _n5d.get("win_rate", 50),
+                                       "avg_pnl": _n5d.get("avg_pnl", 0), "total": _n5d.get("total", 0)})
+        if _n105_insights:
+            _n5_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in sorted(_n105_insights, key=lambda x: -x["win_rate"]))
+            _learn_log.append(f"N105 breadth at entry: {_n5_sum}")
+
+        # ── N106: Portfolio Size at Entry (multi-tier) ────────────────────────────
+        _n106_raw = tlog.get("portfolio_size_perf", {})
+        _n106_insights = []
+        for _n6k, _n6d in _n106_raw.items():
+            if _n6d.get("total", 0) >= 2:
+                _n106_insights.append({"state": _n6k, "win_rate": _n6d.get("win_rate", 50),
+                                       "avg_pnl": _n6d.get("avg_pnl", 0), "total": _n6d.get("total", 0)})
+        if _n106_insights:
+            _best_port_sz = max(_n106_insights, key=lambda x: x["win_rate"])["state"]
+            _learn_log.append(f"N106 best portfolio size at entry: {_best_port_sz}")
+
         # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
         _eg_raw = tlog.get("eg_tier_perf", {})
         _eg_insights = []
@@ -14307,6 +14508,10 @@ def run():
             "cup_handle_perf":      _ch_insights,            # cup+handle at pivot vs outcome
             "dbn_perf":             _dbn_insights,           # double bottom neckline break vs outcome
             "rotation_flip_perf":   _rf_insights,            # N101: sector rotation flip entry vs outcome
+            "vix_entry_perf":       _n103_insights,          # N103: VIX bracket at entry vs outcome
+            "entry_session_perf":   _n104_insights,          # N104: entry session (morning/midday/power) vs outcome
+            "breadth_entry_perf":   _n105_insights,          # N105: market breadth at entry vs outcome
+            "portfolio_size_perf":  _n106_insights,          # N106: portfolio concentration at entry vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -14410,6 +14615,7 @@ def run():
             "pivot_support_perf","vcp_perf","pocket_pivot_perf","morning_star_perf",
             "tws_perf","beng_perf","hammer_perf","cup_handle_perf","dbn_perf",
             "eg_tier_perf","st_gap_perf","premium_tier_perf","rotation_flip_perf",
+            "vix_entry_perf","entry_session_perf","breadth_entry_perf","portfolio_size_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -14417,9 +14623,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 61               # total tracked neuron dimensions (N101 added)
+        tlog["neurons_total"]     = 65               # total tracked neuron dimensions (N103-N106 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/60 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/65 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

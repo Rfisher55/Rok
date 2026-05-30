@@ -61144,6 +61144,99 @@ window.renderPositionNews = renderPositionNews;
         }
       }
 
+      // ── Bot Brain Status Card ────────────────────────────────────────────────
+      // Expandable deep-dive into the bot's current "thought process":
+      // what mode it's in, how many neurons have learned, what it's watching for.
+      {
+        const conv = data.bot_conviction;
+        const stratMode = data.strategy_mode || '';
+        const stratDesc = data.strategy_desc || '';
+        const nA = data.neurons_active || 0;
+        const nT = data.neurons_total || 65;
+        const recMode = data.recovery_mode || false;
+        const rotFlips = data.rotation_flip_sectors || [];
+        const effScore = data.effective_min_score || 0;
+        const tqNow = data.timing_quality;
+        const learnLog = (data.bot_learned_params || {}).learn_log || [];
+        const recentWR = (data.bot_learned_params || {}).recent_wr || 0;
+        const recentAvgPnl = (data.bot_learned_params || {}).recent_avg_pnl || 0;
+        const tradesAnalyzed = (data.bot_learned_params || {}).trades_analyzed || 0;
+        if (conv != null || nA > 0) {
+          const convCol = conv == null ? '#555' : conv >= 75 ? '#00e676' : conv >= 60 ? '#69f0ae' : conv >= 45 ? '#ffd54f' : conv >= 30 ? '#ff9800' : '#ef5350';
+          const nCol = nA >= 50 ? '#00e676' : nA >= 30 ? '#ffd54f' : '#ff9800';
+          const wrCol = recentWR >= 0.6 ? '#00e676' : recentWR >= 0.5 ? '#ffd54f' : recentWR >= 0.4 ? '#ff9800' : '#ef5350';
+          const modeIcon = stratMode.includes('AGGRESSIVE') ? '⚡' : stratMode.includes('MOMENTUM') ? '↑' : stratMode.includes('SELECTIVE') ? '~' : stratMode.includes('DEFENSIVE') ? '⬇' : '⏸';
+          // Learning observations from the last tuning run
+          const learnItems = learnLog.slice(0, 4).map(l =>
+            `<div style="font-size:6px;color:rgba(255,255,255,.4);padding:1px 0;border-left:2px solid rgba(0,229,255,.2);padding-left:.4rem;margin-bottom:1px">${l}</div>`
+          ).join('');
+          // Session quality indicator for N104
+          const sessPerf = (data.bot_learned_params || {}).entry_session_perf || [];
+          const bestSess = sessPerf.length > 0 ? sessPerf.reduce((a,b) => (a.win_rate||0)>(b.win_rate||0)?a:b, {}) : null;
+          // VIX bracket learned data for N103
+          const vixPerf = (data.bot_learned_params || {}).vix_entry_perf || [];
+          const bestVix = vixPerf.length > 0 ? vixPerf.reduce((a,b) => (a.win_rate||0)>(b.win_rate||0)?a:b, {}) : null;
+          html += `<details style="margin-bottom:.55rem;background:rgba(0,229,255,.03);border:1px solid rgba(0,229,255,.12);border-radius:10px;overflow:hidden">
+            <summary style="padding:.45rem .75rem;cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+              <div style="width:7px;height:7px;border-radius:50%;background:${nCol};animation:livePulse 2s ease infinite;flex-shrink:0"></div>
+              <span style="font-size:7.5px;font-weight:900;color:${nCol};letter-spacing:.07em;text-transform:uppercase;flex-shrink:0">AI BRAIN</span>
+              <span style="font-size:7px;font-weight:800;color:${convCol};flex-shrink:0">${modeIcon} ${stratMode}</span>
+              ${recMode ? `<span style="font-size:6px;font-weight:900;color:#ef5350;background:rgba(239,83,80,.15);border-radius:4px;padding:1px 5px;flex-shrink:0">RECOVERY</span>` : ''}
+              ${rotFlips.length > 0 ? `<span style="font-size:6px;font-weight:700;color:#00ff88;background:rgba(0,255,136,.12);border-radius:4px;padding:1px 5px;flex-shrink:0">↗ SECTOR FLIP</span>` : ''}
+              <span style="font-size:6.5px;color:rgba(255,255,255,.3);margin-left:auto">${nA}/${nT} neurons · tap for details</span>
+            </summary>
+            <div style="padding:.5rem .75rem .65rem">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;margin-bottom:.45rem">
+                <div style="text-align:center;padding:.35rem .3rem;background:rgba(0,0,0,.25);border-radius:7px">
+                  <div style="font-size:5.5px;color:rgba(255,255,255,.3)">CONVICTION</div>
+                  <div style="font-size:1.05rem;font-weight:900;color:${convCol}">${conv != null ? conv : '—'}</div>
+                  <div style="font-size:5px;color:${convCol}">/ 100</div>
+                </div>
+                <div style="text-align:center;padding:.35rem .3rem;background:rgba(0,0,0,.25);border-radius:7px">
+                  <div style="font-size:5.5px;color:rgba(255,255,255,.3)">NEURONS</div>
+                  <div style="font-size:1.05rem;font-weight:900;color:${nCol}">${nA}</div>
+                  <div style="font-size:5px;color:#555">of ${nT} active</div>
+                </div>
+                <div style="text-align:center;padding:.35rem .3rem;background:rgba(0,0,0,.25);border-radius:7px">
+                  <div style="font-size:5.5px;color:rgba(255,255,255,.3)">RECENT WR</div>
+                  <div style="font-size:1.05rem;font-weight:900;color:${wrCol}">${tradesAnalyzed > 0 ? Math.round(recentWR*100)+'%' : '—'}</div>
+                  <div style="font-size:5px;color:#555">${tradesAnalyzed > 0 ? 'last 20 trades' : 'no history yet'}</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem;margin-bottom:.4rem">
+                <div style="padding:.3rem .5rem;background:rgba(0,0,0,.2);border-radius:6px">
+                  <div style="font-size:5.5px;color:rgba(255,255,255,.3);margin-bottom:2px">STRATEGY</div>
+                  <div style="font-size:6.5px;font-weight:800;color:${convCol}">${stratMode || '—'}</div>
+                  <div style="font-size:6px;color:rgba(255,255,255,.35);line-height:1.35">${stratDesc || ''}</div>
+                </div>
+                <div style="padding:.3rem .5rem;background:rgba(0,0,0,.2);border-radius:6px">
+                  <div style="font-size:5.5px;color:rgba(255,255,255,.3);margin-bottom:2px">ENTRY THRESHOLD</div>
+                  <div style="font-size:6.5px;font-weight:800;color:#82b1ff">${effScore > 0 ? 'Min score: '+effScore : '—'}</div>
+                  <div style="font-size:6px;color:rgba(255,255,255,.35)">${recMode ? 'Recovery mode active — scoring tighter' : tqNow >= 3 ? 'Prime window — open to setups' : tqNow >= 2 ? 'Good window — scanning' : tqNow >= 1 ? 'Waiting for better setup' : 'Monitoring — no rush'}</div>
+                </div>
+              </div>
+              ${rotFlips.length > 0 ? `<div style="margin-bottom:.35rem;padding:.3rem .5rem;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:6px">
+                <div style="font-size:5.5px;color:#00ff88;font-weight:800;margin-bottom:2px">↗ SECTOR ROTATION FLIP DETECTED</div>
+                <div style="display:flex;gap:.3rem;flex-wrap:wrap">${rotFlips.map(s => `<span style="font-size:6.5px;font-weight:800;color:#00ff88;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);border-radius:4px;padding:1px 5px">${s}</span>`).join('')}</div>
+                <div style="font-size:5.5px;color:rgba(255,255,255,.3);margin-top:2px">These sectors flipped from lagging → leading this week. Bot gives +10 score to stocks in these sectors.</div>
+              </div>` : ''}
+              ${bestSess && bestSess.win_rate > 0 ? `<div style="margin-bottom:.3rem;display:flex;gap:.35rem;flex-wrap:wrap">
+                <span style="font-size:6px;color:#ffd54f">Best entry session learned: <strong style="color:#00e676">${bestSess.state||'—'}</strong> (${(bestSess.win_rate||0).toFixed(0)}% WR)</span>
+                ${bestVix ? `<span style="font-size:6px;color:#ffd54f"> · Best VIX bracket: <strong style="color:#00e676">${bestVix.state||'—'}</strong> (${(bestVix.win_rate||0).toFixed(0)}% WR)</span>` : ''}
+              </div>` : ''}
+              ${learnItems ? `<div style="margin-top:.3rem">
+                <div style="font-size:5.5px;font-weight:700;color:rgba(0,229,255,.5);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px">LAST LEARNING OBSERVATIONS</div>
+                ${learnItems}
+              </div>` : ''}
+              <div style="font-size:5.5px;color:rgba(255,255,255,.18);margin-top:.35rem">
+                ${recentAvgPnl !== 0 ? `Avg P&L last 20 trades: <span style="color:${recentAvgPnl>=0?'#69f0ae':'#ef9a9a'}">${recentAvgPnl>=0?'+':''}${recentAvgPnl.toFixed(1)}%</span> · ` : ''}
+                ${tradesAnalyzed > 0 ? `${tradesAnalyzed} closed trades analyzed` : 'Waiting for first closed trades to start learning'}
+              </div>
+            </div>
+          </details>`;
+        }
+      }
+
       // ── Macro Context Strip ──────────────────────────────────────────────────
       {
         const reg = data.regime || {};
