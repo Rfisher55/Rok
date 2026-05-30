@@ -57193,6 +57193,114 @@ window.renderSectorRotation = renderSectorRotation;
     const _prevTradeTime = _tradesData?.last_trade_action?.time;
     _tradesData = data;  // store globally so _renderIntelReport can access trades.json fields
 
+    // ── Bridge trades.json data into the static Signals tab HTML ─────────────
+    // The static HTML template has placeholder "k" values; we fill them from the bot.
+    {
+      const _topScan   = data.last_scan_top      || [];
+      const _positions = data.positions          || [];
+      const _regime    = data.regime             || {};
+      const _botStats  = data.stats              || {};
+
+      // Update the stats strip tiles (Reddit k, News k, Stocks, CEO Buys…)
+      try {
+        const _statBoxes = document.querySelectorAll('.stat-box');
+        const _statData  = [
+          data.reddit_posts_scanned  != null ? data.reddit_posts_scanned  : (_topScan.length ? '—' : 'k'),
+          data.news_articles_scanned != null ? data.news_articles_scanned : (_topScan.length ? '—' : 'k'),
+          data.scan_universe  || _topScan.length || '—',
+          data.insider_buys          != null ? data.insider_buys   : '—',
+          data.earnings_watch_count  != null ? data.earnings_watch_count : '—',
+          data.options_flow_count    != null ? data.options_flow_count   : '—',
+          data.congressional_count   != null ? data.congressional_count  : '—',
+          _topScan.filter(s => s.at_breakout || s.orb_breakout || s.vwap_reclaim || s.nr7 || s.inside_bar || s.ttm_squeeze || s.gap_and_hold).length || '—',
+        ];
+        _statBoxes.forEach((el, i) => {
+          const numEl = el.querySelector('.stat-num');
+          if (numEl && _statData[i] !== undefined) numEl.textContent = _statData[i];
+        });
+      } catch(e) {}
+
+      // Populate ROK.buy_signals from bot scan so Signals tab shows live picks
+      if (_topScan.length > 0) {
+        const _buys = _topScan.filter(s => (s.score || 0) >= 55);
+        if (_buys.length > 0) {
+          ROK.buy_signals = _buys.map(s => ({
+            ticker: s.ticker, signal_strength: Math.max(1, Math.min(10, Math.round(((s.score||50)-30)/7))),
+            current_price: s.price||0, price: s.price||0, sector: s.sector||'', catalyst: s.catalyst||'',
+            signal_type: 'BUY', chg_pct: s.chg_pct, vol_ratio: s.vol_ratio, rsi: s.rsi, score: s.score,
+            at_breakout: s.at_breakout, vwap_reclaim: s.vwap_reclaim, gap_and_hold: s.gap_and_hold,
+            orb_breakout: s.orb_breakout, ttm_squeeze: s.ttm_squeeze, nr7: s.nr7, inside_bar: s.inside_bar,
+            breakout_52w: s.breakout_52w, options_flow: s.options_flow, vol_surge: s.vol_surge,
+            earnings_beat: s.earnings_beat, persist_count: s.persist_count || 0,
+            stop_price: s.stop_price, stop_loss: s.stop_price,
+          }));
+        }
+        ROK.stock_universe = _topScan.map(s => ({
+          ticker: s.ticker, price: s.price||0, sector: s.sector||'', score: s.score,
+          change_pct: s.chg_pct, vol_ratio: s.vol_ratio,
+          rok_signal: (s.score||0)>=55 ? 'BUY' : (s.score||0)>=35 ? 'NEUTRAL' : 'SELL',
+        }));
+        // Re-render signals components that depend on ROK data
+        if (typeof renderTodaysBestSetup === 'function') renderTodaysBestSetup();
+        if (typeof renderScreener === 'function') renderScreener();
+        if (typeof updateSignalsPortfolioAlert === 'function') updateSignalsPortfolioAlert();
+      }
+
+      // Update the Top Pick banner (was "$" with empty ticker)
+      try {
+        const _bannerEl = document.querySelector('.top-pick-banner');
+        if (_bannerEl && _topScan.length > 0) {
+          const _best = _topScan[0];
+          const _tickEl = _bannerEl.querySelector('.tp-ticker');
+          const _whyEl  = _bannerEl.querySelector('.tp-why');
+          const _btnEl  = _bannerEl.querySelector('button');
+          if (_tickEl) _tickEl.textContent = '$' + _best.ticker;
+          if (_whyEl)  _whyEl.textContent  = ` — Score ${_best.score || 0}${_best.sector ? ' | '+_best.sector : ''}`;
+          if (_btnEl && _best.ticker) _btnEl.onclick = () => openModal(_best.ticker);
+        } else if (_bannerEl && !_topScan.length) {
+          const _whyEl = _bannerEl.querySelector('.tp-why');
+          if (_whyEl && data.status) _whyEl.textContent = ` — Bot ${data.status === 'starting' ? 'initializing' : data.status} · last run ${new Date(data.last_updated||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+        }
+      } catch(e) {}
+
+      // Update the ROK run history bar chart placeholder
+      try {
+        const _runEl = document.querySelector('.run-timeline');
+        const _trades = (data.trades || []).slice(0, 30);
+        if (_runEl && _trades.length > 0) {
+          const _bars = _trades.slice().reverse().map(t => {
+            const _isBuy  = t.action === 'BUY'  || t.action === 'DCA';
+            const _isSell = t.action === 'SELL' || t.action === 'COVER';
+            const _pnl    = t.pnl_pct || 0;
+            const _col    = _isBuy ? 'rgba(0,255,136,.5)' : _pnl >= 0 ? 'rgba(0,255,136,.5)' : 'rgba(255,34,85,.5)';
+            const _h      = _isBuy ? 60 : Math.min(100, Math.max(10, 50 + _pnl * 5));
+            const _tip    = `${t.ticker||''} ${t.action||''} · ${_pnl >= 0?'+':''}${_pnl.toFixed(1)}% · ${t.time ? new Date(t.time).toLocaleDateString() : ''}`;
+            return `<div class="run-bar" style="height:${_h}%;background:${_col};border-radius:2px;flex:1;cursor:default" title="${_tip}"></div>`;
+          }).join('');
+          _runEl.innerHTML = _bars || '<div style="color:#333;font-size:9px;padding:.3rem">No trades yet</div>';
+        }
+      } catch(e) {}
+
+      // Populate the Biggest Gainers / Losers tape-cards
+      try {
+        const _movers = [..._topScan].sort((a,b) => (b.chg_pct||0)-(a.chg_pct||0));
+        const _gainers = _movers.slice(0,3); const _losers = _movers.slice(-3).reverse();
+        const _gEl = document.querySelector('.tape-card .clbl[style*="--g"]')?.closest('.tape-card');
+        const _lEl = document.querySelector('.tape-card .clbl[style*="--r"]')?.closest('.tape-card');
+        if (_gEl && _gainers.length) {
+          _gEl.querySelector('div[style*="flex-direction:column"]').innerHTML = _gainers.map(s =>
+            `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(0,255,136,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(0,255,136,.1)" onclick="openModal('${s.ticker}')"><div><span style="font-family:var(--disp);font-size:1.1rem;color:var(--g)">\$${s.ticker}</span><span style="font-size:9px;color:var(--wh3);margin-left:.35rem">${s.sector||''}</span></div><span style="font-size:13px;font-weight:800;color:var(--g)">${(s.chg_pct||0)>=0?'+':''}${(s.chg_pct||0).toFixed(1)}%</span></div>`
+          ).join('');
+        }
+        if (_lEl && _losers.length) {
+          _lEl.querySelector('div[style*="flex-direction:column"]').innerHTML = _losers.map(s =>
+            `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;background:rgba(255,34,85,.05);border-radius:6px;cursor:pointer;border:1px solid rgba(255,34,85,.1)" onclick="openModal('${s.ticker}')"><div><span style="font-family:var(--disp);font-size:1.1rem;color:var(--r)">\$${s.ticker}</span><span style="font-size:9px;color:var(--wh3);margin-left:.35rem">${s.sector||''}</span></div><span style="font-size:13px;font-weight:800;color:var(--r)">${(s.chg_pct||0)>=0?'+':''}${(s.chg_pct||0).toFixed(1)}%</span></div>`
+          ).join('');
+        }
+      } catch(e) {}
+    }
+    // ── End bridge ───────────────────────────────────────────────────────────
+
     // ── Bot Trade Notification: alert user when a new order was placed ────
     const _newTradeTime = data?.last_trade_action?.time;
     if (_prevTradeTime && _newTradeTime && _prevTradeTime !== _newTradeTime) {

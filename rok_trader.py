@@ -8715,8 +8715,12 @@ def run():
 
     # If market closed, only run crypto — skip equity pipeline
     if not market_open:
+        tlog = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
+        tlog["status"]          = "closed"
+        tlog["last_updated"]    = run_start.isoformat()
+        tlog["portfolio_value"] = portfolio_val
+        tlog["buying_power"]    = round(buying_power, 2)
         if ENABLE_CRYPTO:
-            tlog = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
             peaks = _load(PEAK_FILE, {})
             made_ref = []
             buying_power = run_crypto_trades(
@@ -8726,8 +8730,9 @@ def run():
             tlog["last_updated"]    = datetime.now(timezone.utc).isoformat()
             tlog["portfolio_value"] = portfolio_val
             tlog["buying_power"]    = round(buying_power, 2)
-            _save(TRADES_FILE, tlog)
+            tlog["status"]          = "crypto-only"
             logger.info(f"Off-hours crypto-only run complete.")
+        _save(TRADES_FILE, tlog)
         return
 
     # Cancel stale open orders: limit orders from prior cycles that didn't fill,
