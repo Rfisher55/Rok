@@ -54184,6 +54184,34 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── Intraday Momentum Neuron (43): % from open at entry ───────────────
+        const im = lp.intraday_mom_perf || [];
+        if (!im.length) return '';
+        const IM_ORDER = ['extended','runner','early','pullback'];
+        const IM_ICONS = {extended:'🔥',runner:'⚡',early:'🌅',pullback:'🔄'};
+        const IM_LABELS = {extended:'>5% from open',runner:'2-5% from open',early:'0-2% from open',pullback:'below open'};
+        const IM_BG = {extended:'rgba(239,83,80,.07)',runner:'rgba(255,213,79,.07)',early:'rgba(0,230,118,.07)',pullback:'rgba(100,100,255,.07)'};
+        const imMap = {};
+        im.forEach(s => imMap[s.bucket] = s);
+        const imBest = im.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, im[0]);
+        const imCells = IM_ORDER.map(bkt => {
+          const s = imMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:8px">${IM_ICONS[bkt]}</div><div style="font-size:5px;color:#333">${IM_LABELS[bkt]}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = s.bucket === imBest.bucket ? ' ⭐' : '';
+          return `<div style="background:${IM_BG[bkt]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
+            <div style="font-size:8px">${IM_ICONS[bkt]}</div>
+            <div style="font-size:5.5px;color:#ccc;font-weight:700">${IM_LABELS[bkt]}${star}</div>
+            <div style="font-size:10px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.2rem">⚡ INTRADAY MOMENTUM (Neuron 43): % moved from open at entry — early bird vs chasing runners</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem">${imCells}</div>
+        </div>`;
+      })()}
+      ${(() => {
         // ── POC Distance Neuron (42): entry vs Volume Profile POC ─────────────
         const pc = lp.poc_dist_perf || [];
         if (!pc.length) return '';

@@ -414,6 +414,18 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         else:
             e["poc_dist_pct"] = 0.0
             e["poc_dist_bucket"] = "at_poc"
+        # Intraday Momentum Neuron (43): how far from today's open at entry?
+        # Stocks up 5%+ from open may be extended (chasing); flat to +2% = ideal momentum.
+        # Learns: does buying early (near open) outperform chasing intraday runners?
+        _d_open = float(signals.get("day_open", 0.0) or 0.0)
+        if _d_open > 0 and _entry_pr > 0:
+            _id_mom = round((_entry_pr - _d_open) / _d_open * 100, 2)
+            e["intraday_mom_pct"] = _id_mom
+            e["intraday_mom_bucket"] = ("extended" if _id_mom > 5.0 else "runner" if _id_mom > 2.0
+                                        else "early" if _id_mom >= 0.0 else "pullback")
+        else:
+            e["intraday_mom_pct"] = 0.0
+            e["intraday_mom_bucket"] = "early"
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1291,6 +1303,26 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Intraday Momentum Neuron (43): % from open at entry vs outcome ───────────
+    # Tracks performance by intraday momentum at entry time.
+    # Extended (>5% from open) = chasing; Runner (2-5%) = breakout; Early (~0%) = ideal.
+    # Learns: does early-day entry beat chasing afternoon runners?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_im = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _im_bkt = _buy_im.get("intraday_mom_bucket", "early") if _buy_im else "early"
+            _im_perf = tlog.setdefault("intraday_mom_perf", {})
+            _imp = _im_perf.setdefault(_im_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _im_bkt})
+            _imp["total"] = _imp.get("total", 0) + 1
+            _imp["total_pnl"] = round(_imp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _imp["wins"] = _imp.get("wins", 0) + 1
+            else:        _imp["losses"] = _imp.get("losses", 0) + 1
+            if _imp["total"] > 0:
+                _imp["win_rate"] = round(_imp["wins"] / _imp["total"] * 100, 1)
+                _imp["avg_pnl"]  = round(_imp["total_pnl"] / _imp["total"], 2)
         except Exception:
             pass
 
@@ -11286,6 +11318,23 @@ def run():
             if _pc_best["win_rate"] - _pc_worst["win_rate"] >= 15:
                 _learn_log.append(f"Best POC entry zone: {_pc_best['bucket']} ({_pc_best['win_rate']:.0f}% WR) — worst: {_pc_worst['bucket']} ({_pc_worst['win_rate']:.0f}%)")
 
+        # ── 43. Intraday Momentum Neuron: % from open at entry ────────────────
+        _im_raw = tlog.get("intraday_mom_perf", {})
+        _im_insights = []
+        for _imk, _imd in _im_raw.items():
+            if _imd.get("total", 0) >= 3:
+                _im_insights.append({
+                    "bucket": _imk, "win_rate": _imd.get("win_rate", 50),
+                    "avg_pnl": _imd.get("avg_pnl", 0), "total": _imd.get("total", 0)
+                })
+        if _im_insights:
+            _im_best = max(_im_insights, key=lambda x: x["win_rate"])
+            _im_worst = min(_im_insights, key=lambda x: x["win_rate"])
+            _im_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _im_insights)
+            _learn_log.append(f"Intraday momentum WRs: {_im_sum}")
+            if _im_best["win_rate"] - _im_worst["win_rate"] >= 15:
+                _learn_log.append(f"Best intraday timing: {_im_best['bucket']} ({_im_best['win_rate']:.0f}% WR avg {_im_best['avg_pnl']:+.1f}%) vs {_im_worst['bucket']} ({_im_worst['win_rate']:.0f}%)")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11338,6 +11387,7 @@ def run():
             "score_decay_perf":     _sd_insights,           # decay exit vs held outcomes
             "score_decay_threshold": _learned_decay_thresh,  # learned optimal decay trigger (pts)
             "poc_dist_perf":        _pc_insights,            # POC distance at entry vs outcome
+            "intraday_mom_perf":    _im_insights,            # intraday momentum (% from open) vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
