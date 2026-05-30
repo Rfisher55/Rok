@@ -57552,6 +57552,7 @@ window.renderSectorRotation = renderSectorRotation;
               const atr   = s.atr || 0;
               const sc    = s.score || 0;
               const scCol = sc >= 80 ? '#00ff88' : sc >= 65 ? '#69f0ae' : sc >= 50 ? '#ffd54f' : '#82b1ff';
+              const isElite = s.elite_setup;
               // Entry trigger: use cup_pivot, pivot_r1, or slight above current
               const entry = s.cup_pivot > pr * 0.98 && s.cup_pivot < pr * 1.05 ? s.cup_pivot
                           : s.pivot_r1  > pr * 0.98 && s.pivot_r1  < pr * 1.05 ? s.pivot_r1
@@ -57579,8 +57580,9 @@ window.renderSectorRotation = renderSectorRotation;
               // Grade & sector
               const grade = s.grade || '?';
               const gradeCol = grade === 'A+' || grade === 'A' ? '#00ff88' : grade === 'B+' || grade === 'B' ? '#69f0ae' : grade === 'C' ? '#ffd54f' : '#888';
-              html += `<div style="background:linear-gradient(135deg,rgba(6,13,26,.9),rgba(10,20,40,.9));border:1px solid rgba(${idx===0?'0,255,136':'130,177,255'},.15);border-radius:8px;padding:.5rem .7rem">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+              html += `<div style="background:linear-gradient(135deg,${isElite?'rgba(255,215,0,.06)':'rgba(6,13,26,.9)'},rgba(10,20,40,.9));border:${isElite?'2px solid rgba(255,215,0,.4)':'1px solid rgba('+(idx===0?'0,255,136':'130,177,255')+',.15)'};border-radius:8px;padding:.5rem .7rem;position:relative">
+                ${isElite ? `<div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:rgba(255,215,0,.9);color:#000;font-size:6.5px;font-weight:900;letter-spacing:.1em;padding:1px 8px;border-radius:10px">⭐ ELITE SETUP</div>` : ''}
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;${isElite?'margin-top:.3rem':''}">
                   <div style="display:flex;align-items:center;gap:.4rem">
                     <span style="font-family:var(--disp);font-size:.95rem;color:#ffd54f;font-weight:900">\$${s.ticker}</span>
                     <span style="font-size:6px;font-weight:900;color:${gradeCol};background:${gradeCol}22;padding:1px 4px;border-radius:3px">${grade}</span>

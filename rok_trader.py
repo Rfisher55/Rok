@@ -10291,6 +10291,16 @@ def run():
                 "vol_dry_up":        live.get(tk, {}).get("vol_dry_up", False),
                 "news_headlines":    _NEWS_VEL_CACHE.get(tk, ({}, 0))[0].get("headlines", [])[:3]
                                      if tk in _NEWS_VEL_CACHE else [],
+                # Elite setup flag: all top criteria met — highest conviction entry
+                "elite_setup": bool(
+                    sc >= 80
+                    and live.get(tk, {}).get("mtf_triple", False)
+                    and live.get(tk, {}).get("rs_rating", 0) >= 85
+                    and sum(bool(live.get(tk,{}).get(k)) for k in (
+                        "vcp","cup_handle","at_breakout","ttm_squeeze_fired",
+                        "gap_and_hold","rvol_surge")) >= 2
+                    and not (live.get(tk, {}).get("change_pct", 0) or 0) > 6  # not extended
+                ),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -11145,6 +11155,10 @@ def run():
                 _dyn_trail = min(_dyn_trail * 1.15, _dyn_trail + 0.8)
             elif 0 < _vix_pos < 14:
                 _dyn_trail = max(_dyn_trail * 0.90, _dyn_trail - 0.5)
+            # Market quality emergency tightening: when market is very weak, protect all gains
+            _mq_pos = tlog.get("market_quality", 50) or 50
+            if _mq_pos < 35 and _pnl > 2:
+                _dyn_trail = max(_dyn_trail * 0.80, _dyn_trail - 1.5)  # tighten 20% in bad market
             _trail_stop_price = round(_peak_p * (1 - _dyn_trail / 100), 2) if _peak_p > 0 else 0
             _dist_from_trail  = round((_pr - _trail_stop_price) / _pr * 100, 2) if (_trail_stop_price > 0 and _pr > 0) else 0
             _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
