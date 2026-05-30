@@ -52698,6 +52698,13 @@ function _renderIntelReport(el, intel) {
       items.push({ icon: '⚠', col: '#ffa726', text: `Drawdown ${Math.abs(drawdownPct).toFixed(1)}% — tighten stops and pause new entries until recovery` });
     }
 
+    // 3c. SPY 3-day consecutive decline tape warning
+    if (td.spy_consec_decline) {
+      items.push({ icon: '📉', col: '#ef5350', text: `TAPE FILTER: SPY down 3 consecutive days — buy threshold raised +${td.spy_tape_score_adj||8} pts; only elite setups qualify` });
+    } else if ((td.spy_tape_score_adj||0) >= 4) {
+      items.push({ icon: '⚠', col: '#ffa726', text: `Market tape caution: SPY weak 2 of last 3 days — buy threshold raised +${td.spy_tape_score_adj} pts` });
+    }
+
     // 3c. Hot / cold sectors from ETF trends
     if (Object.keys(sectorEtf).length > 0) {
       const sorted = Object.entries(sectorEtf).sort((a,b) => (b[1].chg5d||0) - (a[1].chg5d||0));

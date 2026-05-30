@@ -6084,6 +6084,26 @@ def run():
     except Exception:
         pass
 
+    # 3-day consecutive SPY decline tape filter
+    # Don't fight a market in a confirmed short-term downtrend — wait for at least one green day
+    _spy_consec_decline = False
+    _spy_tape_score_adj = 0    # score threshold adjustment for tape condition
+    try:
+        _spy_tap = yf.download("SPY", period="10d", interval="1d",
+                               auto_adjust=True, progress=False)
+        if not _spy_tap.empty and len(_spy_tap) >= 4:
+            _spy_cl = list(_spy_tap["Close"].dropna())
+            _last3_spy = [_spy_cl[i] < _spy_cl[i-1] for i in range(-3, 0)]
+            if all(_last3_spy):
+                _spy_consec_decline = True
+                _spy_tape_score_adj = 8   # raise bar by 8 points when market is in 3d decline
+                logger.warning(f"3-day SPY tape filter: SPY down 3 consecutive days — raising buy threshold by {_spy_tape_score_adj}")
+            elif sum(_last3_spy) >= 2:
+                _spy_tape_score_adj = 4
+                logger.info(f"2-of-3 SPY tape caution: raising buy threshold by {_spy_tape_score_adj}")
+    except Exception:
+        pass
+
     # Portfolio drawdown guard — compute current drawdown from historical peak
     _prior_tlog  = _load(TRADES_FILE, {})
     _perf_hist   = _prior_tlog.get("perf_history", [])
@@ -6884,7 +6904,7 @@ def run():
     elif _day_score_adj < 0 and market_open:
         _eff_min_score -= _day_score_adj  # choppy day: raise threshold (subtracting negative)
         logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
-    _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj)
+    _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj + _spy_tape_score_adj)
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses and not _drawdown_halt:
         # Sector counts for diversification
@@ -6991,6 +7011,12 @@ def run():
             if 0 < _avg_vol_pre < 100_000:
                 logger.debug(f"SKIP {tk} — avg volume {_avg_vol_pre:,} < 100k minimum")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"low liquidity ({_avg_vol_pre//1000}k avg vol)"})
+                continue
+            # Dollar volume filter: price × avg_volume must be ≥ $500K/day to ensure fills
+            _dollar_vol = _price_pre * _avg_vol_pre
+            if _avg_vol_pre > 0 and _dollar_vol < 500_000:
+                logger.debug(f"SKIP {tk} — dollar vol ${_dollar_vol/1e3:.0f}K < $500K minimum")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"thin dollar vol ${_dollar_vol/1e3:.0f}K"})
                 continue
             # Correlation guard: skip if >0.85 correlated with a held position
             _held_syms = [s for s in longs if s != tk]
@@ -7839,9 +7865,11 @@ def run():
     tlog["day_range_ratio"] = day_type_info.get("range_ratio", 1.0)
     tlog["day_opening_bias"]= day_type_info.get("opening_bias", "flat")
     tlog["strategy_hint"]   = day_type_info.get("strategy_hint", "neutral")
-    tlog["drawdown_pct"]    = round(drawdown_pct, 2)
-    tlog["drawdown_halt"]   = _drawdown_halt
-    tlog["regime_max_pos"]  = _regime_max
+    tlog["drawdown_pct"]      = round(drawdown_pct, 2)
+    tlog["drawdown_halt"]     = _drawdown_halt
+    tlog["regime_max_pos"]    = _regime_max
+    tlog["spy_consec_decline"]= _spy_consec_decline
+    tlog["spy_tape_score_adj"]= _spy_tape_score_adj
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
     tlog["market_breadth"]  = breadth
