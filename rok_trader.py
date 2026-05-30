@@ -7889,6 +7889,15 @@ def run():
             else:
                 sent, catalyst = 0, ""
             sec_adj        = sector_adjs.get(sec, 0)
+            # Learned sector overlay: if historical win rate in this sector is high/low,
+            # amplify or dampen the sector_rotation signal. This creates a self-reinforcing
+            # feedback loop: good sector → bot wins → further boosted, bad → further avoided.
+            _sec_win_rate = tlog.get("sector_performance", {}).get(sec, {}).get("win_rate", 50) or 50
+            _sec_trade_n  = tlog.get("sector_performance", {}).get(sec, {}).get("total", 0) or 0
+            if _sec_trade_n >= 4:
+                _sec_wr_adj = round((_sec_win_rate - 50) / 10)  # -5..+5 overlay on sector adj
+                sec_adj = max(-12, min(12, sec_adj + _sec_wr_adj))
+
             gap_adj        = 10 if tk in gap_ups else 0
             squeeze_adj    = 12 if tk in squeeze_cands else 0
             vol_surge_adj  = 11 if tk in vol_surge_cands else 0
