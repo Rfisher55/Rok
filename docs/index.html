@@ -53830,6 +53830,54 @@ function _renderIntelReport(el, intel) {
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem">${cells}</div>
         </div>`;
       })()}
+      ${(() => {
+        // ── Portfolio Concentration + Day-of-Week dual panel ─────────────────
+        const cp = lp.concentration_perf || [];
+        const dw = lp.dow_perf || [];
+        if (!cp.length && !dw.length) return '';
+        const cpMap = {};
+        cp.forEach(c => cpMap[c.bucket] = c);
+        const CONC_ORDER = ['1-2','3-4','5-7','8+'];
+        const concCells = CONC_ORDER.map(bkt => {
+          const c = cpMap[bkt];
+          if (!c) return `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:.2rem;text-align:center;opacity:.3">
+            <div style="font-size:6px;color:#333">${bkt}</div><div style="font-size:5px;color:#222">No data</div>
+          </div>`;
+          const col = c.win_rate>=60?'#00e676':c.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.2rem;text-align:center">
+            <div style="font-size:5.5px;color:#82b1ff;font-weight:700">${bkt} pos</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${c.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${c.avg_pnl>=0?'#69f0ae':'#ef5350'}">${c.avg_pnl>=0?'+':''}${c.avg_pnl.toFixed(1)}% (${c.total}T)</div>
+          </div>`;
+        }).join('');
+        const dwMap = {};
+        dw.forEach(d => dwMap[d.day] = d);
+        const DOW_ORDER = ['Mon','Tue','Wed','Thu','Fri'];
+        const dowCells = DOW_ORDER.map(day => {
+          const d = dwMap[day];
+          if (!d) return `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:.2rem;text-align:center;opacity:.3">
+            <div style="font-size:6px;color:#333">${day}</div><div style="font-size:5px;color:#222">No data</div>
+          </div>`;
+          const col = d.win_rate>=60?'#00e676':d.win_rate>=50?'#ffd54f':'#ef5350';
+          const isBest = dw.length>0 && d.win_rate===Math.max(...dw.map(x=>x.win_rate));
+          return `<div style="background:${isBest?'rgba(255,213,79,.08)':'rgba(0,0,0,.2)'};border:${isBest?'1px solid #ffd54f44':'1px solid transparent'};border-radius:4px;padding:.2rem;text-align:center">
+            <div style="font-size:5.5px;color:#ef9a9a;font-weight:700">${day}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${d.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${d.avg_pnl>=0?'#69f0ae':'#ef5350'}">${d.avg_pnl>=0?'+':''}${d.avg_pnl.toFixed(1)}%</div>
+          </div>`;
+        }).join('');
+        const cpHtml = cp.length?`<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#82b1ff;font-weight:700;margin-bottom:.1rem">📊 CONCENTRATION: # positions held at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${concCells}</div>
+        </div>`:'';
+        const dwHtml = dw.length?`<div>
+          <div style="font-size:5.5px;color:#ef9a9a;font-weight:700;margin-bottom:.1rem">📅 DAY OF WEEK: best entry days</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.15rem">${dowCells}</div>
+        </div>`:'';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${cpHtml}${dwHtml}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

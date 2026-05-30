@@ -313,6 +313,16 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["rvol_at_entry"]        = round(float(signals.get("rvol", 1.0) or 1.0), 2)
         e["earnings_days_at_entry"] = signals.get("earnings_days")  # None if unknown
         e["mkt_quality_at_entry"]  = int(tlog.get("market_quality", 50) or 50)
+        # Portfolio concentration at entry (# held positions when we bought)
+        _n_held = len([t for t in tlog.get("trades", []) if t.get("action") == "BUY"
+                       and not any(s.get("ticker") == t.get("ticker") and s.get("action") in ("SELL","SELL_HALF","COVER")
+                                   for s in tlog.get("trades", []) if s.get("time", "") > t.get("time", ""))])
+        e["positions_at_entry"] = max(0, _n_held)
+        e["concentration_bucket"] = ("1-2" if _n_held <= 2 else "3-4" if _n_held <= 4 else "5-7" if _n_held <= 7 else "8+")
+        # Day of week at entry (0=Mon, 6=Sun)
+        _dow = datetime.now(timezone.utc).weekday()
+        e["day_of_week"] = _dow
+        e["day_name"] = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][_dow]
         # Breadth at entry (% sectors/stocks advancing)
         _breadth_entry = tlog.get("market_breadth", {})
         e["breadth_at_entry"] = round(float(_breadth_entry.get("adv_pct", 50) or 50), 1)
@@ -841,6 +851,44 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _scp["total"] > 0:
                 _scp["win_rate"] = round(_scp["wins"] / _scp["total"] * 100, 1)
                 _scp["avg_pnl"]  = round(_scp["total_pnl"] / _scp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Portfolio Concentration Neuron: # positions held at entry vs outcome ────
+    # Learns whether the bot performs better when it's concentrated (1-2 bets)
+    # or diversified (5+ positions). This informs optimal portfolio sizing.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_cp = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _conc_bkt = _buy_cp.get("concentration_bucket", "3-4") if _buy_cp else "3-4"
+            _conc_perf = tlog.setdefault("concentration_perf", {})
+            _cpp = _conc_perf.setdefault(_conc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _conc_bkt})
+            _cpp["total"] = _cpp.get("total", 0) + 1
+            _cpp["total_pnl"] = round(_cpp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _cpp["wins"] = _cpp.get("wins", 0) + 1
+            else: _cpp["losses"] = _cpp.get("losses", 0) + 1
+            if _cpp["total"] > 0:
+                _cpp["win_rate"] = round(_cpp["wins"] / _cpp["total"] * 100, 1)
+                _cpp["avg_pnl"]  = round(_cpp["total_pnl"] / _cpp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Day-of-Week Neuron: learn which weekdays produce best outcomes ────────
+    # Mon morning = directional gaps from weekend news; Wed = mid-week trend confirmation;
+    # Fri = end-of-week position trimming by institutions can hurt longs.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_dw = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _day_nm = _buy_dw.get("day_name", "Mon") if _buy_dw else "Mon"
+            _dow_perf = tlog.setdefault("dow_perf", {})
+            _dwp = _dow_perf.setdefault(_day_nm, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "day": _day_nm})
+            _dwp["total"] = _dwp.get("total", 0) + 1
+            _dwp["total_pnl"] = round(_dwp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _dwp["wins"] = _dwp.get("wins", 0) + 1
+            else: _dwp["losses"] = _dwp.get("losses", 0) + 1
+            if _dwp["total"] > 0:
+                _dwp["win_rate"] = round(_dwp["wins"] / _dwp["total"] * 100, 1)
+                _dwp["avg_pnl"]  = round(_dwp["total_pnl"] / _dwp["total"], 2)
         except Exception:
             pass
 
@@ -10480,6 +10528,41 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 26. Portfolio Concentration Neuron: optimal # of held positions ───
+        _conc_raw = tlog.get("concentration_perf", {})
+        _conc_insights = []
+        for _cbk, _cd in _conc_raw.items():
+            if _cd.get("total", 0) >= 3:
+                _conc_insights.append({
+                    "bucket": _cbk, "win_rate": _cd.get("win_rate", 50),
+                    "avg_pnl": _cd.get("avg_pnl", 0), "total": _cd.get("total", 0)
+                })
+        if _conc_insights:
+            _conc_s = sorted(_conc_insights, key=lambda x: -x["win_rate"])
+            _conc_sum = " | ".join(f"{s['bucket']}pos:{s['win_rate']:.0f}%WR" for s in _conc_s)
+            _learn_log.append(f"Portfolio concentration WRs: {_conc_sum}")
+            if _conc_s[0]["win_rate"] - _conc_s[-1]["win_rate"] >= 15:
+                _learn_log.append(f"Optimal concentration: {_conc_s[0]['bucket']} positions ({_conc_s[0]['win_rate']:.0f}% WR)")
+
+        # ── 27. Day-of-Week Neuron: which weekday produces best entries ────────
+        _dow_raw = tlog.get("dow_perf", {})
+        _dow_insights = []
+        _dow_order = ["Mon","Tue","Wed","Thu","Fri"]
+        for _dk in _dow_order:
+            _dd = _dow_raw.get(_dk, {})
+            if _dd.get("total", 0) >= 3:
+                _dow_insights.append({
+                    "day": _dk, "win_rate": _dd.get("win_rate", 50),
+                    "avg_pnl": _dd.get("avg_pnl", 0), "total": _dd.get("total", 0)
+                })
+        if _dow_insights:
+            _dow_best  = max(_dow_insights, key=lambda x: x["win_rate"])
+            _dow_worst = min(_dow_insights, key=lambda x: x["win_rate"])
+            _dow_sum = " | ".join(f"{s['day']}:{s['win_rate']:.0f}%WR" for s in _dow_insights)
+            _learn_log.append(f"Day-of-week WRs: {_dow_sum}")
+            if _dow_best["win_rate"] - _dow_worst["win_rate"] >= 20:
+                _learn_log.append(f"Best entry day: {_dow_best['day']} ({_dow_best['win_rate']:.0f}% WR) vs worst {_dow_worst['day']} ({_dow_worst['win_rate']:.0f}%)")
+
         # ── 25. Score Trend Neuron: rising vs falling score at entry ──────────
         _st_raw = tlog.get("score_trend_perf", {})
         _st_insights = []
@@ -10530,6 +10613,8 @@ def run():
             "spy_day_perf":        _spy_day_insights,      # SPY up/flat/down day vs. outcome
             "reentry_perf":        _re_insights,           # winner vs loser re-entry outcomes
             "score_trend_perf":    _st_insights,           # rising/flat/falling score at entry
+            "concentration_perf":  _conc_insights,         # portfolio concentration vs outcome
+            "dow_perf":            _dow_insights,           # day-of-week entry performance
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
