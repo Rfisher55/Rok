@@ -53006,6 +53006,129 @@ function _renderIntelReport(el, intel) {
     </div>`;
   })();
 
+  // ── Priority Actions panel — highest-urgency items to act on NOW ──────────
+  const priorityActionsHtml = (() => {
+    const td2 = ROK || {};
+    const positions2 = td2.positions || [];
+    const topScan2   = td2.last_scan_top || [];
+    const alerts2 = [];
+
+    positions2.forEach(p => {
+      const ls2   = p.live_signals || {};
+      const pnl2  = p.pnl_pct || 0;
+      const price2 = p.price || 0;
+      const stopP  = p.stop_price || 0;
+      const tgtP   = p.target_price || 0;
+      const rm2    = p.r_multiple || 0;
+      const siAmt  = p.scale_in_notional || 0;
+      const earns  = p.earnings_days;
+
+      // Priority 1: Scale-in opportunity (EMA21 pullback on pending scale-in)
+      if (p.scale_in_pending && ls2.ema21_pullback && siAmt >= 25) {
+        alerts2.push({ pri:1, act:'SCALE IN', col:'#00e676',
+          ticker: p.ticker, price: price2,
+          detail: 'EMA21 pullback on pending scale-in — add $' + siAmt.toFixed(0) + ' to complete position.' });
+      }
+
+      // Priority 1: Near stop loss (< 1.5% above stop)
+      if (stopP > 0 && price2 > 0) {
+        const dist = (price2 - stopP) / price2 * 100;
+        if (dist >= 0 && dist < 1.5) {
+          alerts2.push({ pri:1, act:'NEAR STOP', col:'#ef5350',
+            ticker: p.ticker, price: price2,
+            detail: dist.toFixed(1) + '% above stop $' + stopP.toFixed(2) + ' — prepare to exit if breached.' });
+        }
+      }
+
+      // Priority 1: Earnings in ≤ 3 days (position at risk)
+      if (earns != null && earns >= 0 && earns <= 3) {
+        const earnsLabel = earns === 0 ? 'TODAY' : earns === 1 ? 'tomorrow' : 'in ' + earns + ' days';
+        alerts2.push({ pri:1, act:'EARNS ' + (earns === 0 ? 'TODAY' : earns + 'D'), col:'#ff9800',
+          ticker: p.ticker, price: price2,
+          detail: 'Earnings ' + earnsLabel + ' — decide: hold through or reduce before announcement.' });
+      }
+
+      // Priority 2: Bot recommends REDUCE
+      const rec2 = (p.recommendation || '').toUpperCase();
+      const recReason = p.rec_reason || '';
+      if (rec2 === 'REDUCE') {
+        alerts2.push({ pri:2, act:'REDUCE', col:'#ff7043',
+          ticker: p.ticker, price: price2,
+          detail: 'Bot flags: ' + (recReason || 'technicals weakening') + ' — trim to manage risk.' });
+      }
+
+      // Priority 2: At profit target (≥97% of target) with meaningful gain
+      if (tgtP > 0 && price2 >= tgtP * 0.97 && pnl2 >= 3) {
+        alerts2.push({ pri:2, act:'AT TARGET', col:'#ffd600',
+          ticker: p.ticker, price: price2,
+          detail: '+' + pnl2.toFixed(1) + '% — near target $' + tgtP.toFixed(2) + '. Consider scaling out.' });
+      }
+
+      // Priority 2: R-multiple ≥ 2 — milestone to lock in gains
+      if (rm2 >= 2 && pnl2 > 0) {
+        alerts2.push({ pri:2, act:rm2.toFixed(1) + 'R HIT', col:'#ffd600',
+          ticker: p.ticker, price: price2,
+          detail: 'Move stop to breakeven, trail the rest. ' + rm2.toFixed(1) + 'R = exceptional risk-reward.' });
+      }
+
+      // Priority 3: Bot recommends TIGHTEN
+      if (rec2 === 'TIGHTEN') {
+        alerts2.push({ pri:3, act:'TIGHTEN', col:'#ff9800',
+          ticker: p.ticker, price: price2,
+          detail: (recReason || 'Near trailing stop') + ' — bring stop up to protect gains.' });
+      }
+
+      // Priority 3: Bot recommends REVIEW (dead money or score degrading)
+      if (rec2 === 'REVIEW') {
+        alerts2.push({ pri:3, act:'REVIEW', col:'#888',
+          ticker: p.ticker, price: price2,
+          detail: (recReason || 'No progress') + ' — evaluate exit or set time stop.' });
+      }
+    });
+
+    // Priority 4: Elite new entry setup from scan
+    const eliteSetups = topScan2.filter(s =>
+      (s.score || 0) >= 75 || s.tt_full || (s.htf && s.pocket_pivot)
+    ).slice(0, 1);
+    if (eliteSetups.length) {
+      const t2 = eliteSetups[0];
+      const pats2 = [
+        t2.tt_full ? 'TT8' : ((t2.trend_template || 0) >= 6 ? 'TT' + t2.trend_template : ''),
+        t2.htf ? ('HTF' + (t2.htf_consec || 0) + 'd') : '',
+        t2.pocket_pivot ? 'PP' : '',
+        (t2.rs_rating || 0) >= 80 ? 'RS' + t2.rs_rating : '',
+      ].filter(Boolean).join('+');
+      alerts2.push({ pri:4, act:'NEW SETUP', col:'#82b1ff',
+        ticker: t2.ticker, price: t2.current_price || t2.price || 0,
+        detail: 'Score ' + (t2.score || 0) + (pats2 ? ' · ' + pats2 : '') + (t2.catalyst ? ' — ' + t2.catalyst.slice(0, 55) : ' — elite setup') });
+    }
+
+    if (!alerts2.length) return '';
+    alerts2.sort((a, b) => a.pri - b.pri);
+    const shown = alerts2.slice(0, 6);
+    const urgentCnt = shown.filter(a => a.pri <= 2).length;
+    const hdrCol    = urgentCnt > 0 ? '#ff4444' : '#ffd54f';
+    const hdrIcon   = urgentCnt > 0 ? '🚨' : '⚡';
+    const bdCol     = urgentCnt > 0 ? 'rgba(255,68,68,.28)' : 'rgba(255,213,79,.2)';
+    const bgCol     = urgentCnt > 0 ? 'rgba(255,68,68,.04)' : 'rgba(255,213,79,.03)';
+
+    const rows2 = shown.map(a => {
+      const prStr = a.price > 0 ? ('<span style="font-size:8.5px;color:#445;font-weight:400;margin-left:.3rem">$' + a.price.toFixed(2) + '</span>') : '';
+      return '<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.3rem 0;border-top:1px solid rgba(255,255,255,.05)">'
+        + '<span style="font-size:7px;font-weight:900;color:' + a.col + ';border:1px solid ' + a.col + '55;background:' + a.col + '18;padding:2px 5px;border-radius:3px;flex-shrink:0;min-width:62px;text-align:center;letter-spacing:.03em;line-height:1.5">' + a.act + '</span>'
+        + '<div style="flex:1;min-width:0">'
+        + '<span style="font-size:11px;font-weight:800;color:var(--wh)">$' + a.ticker + '</span>' + prStr
+        + '<div style="font-size:9px;color:var(--wh3);line-height:1.4;margin-top:.1rem">' + a.detail + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    return '<div style="background:' + bgCol + ';border:1px solid ' + bdCol + ';border-radius:10px;padding:.65rem .75rem;margin-bottom:.75rem">'
+      + '<div style="font-size:8.5px;font-weight:900;letter-spacing:.1em;color:' + hdrCol + ';margin-bottom:.25rem">' + hdrIcon + ' PRIORITY ACTIONS (' + shown.length + ')</div>'
+      + rows2
+      + '</div>';
+  })();
+
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.7rem;flex-wrap:wrap">
       <span style="font-size:13px;font-weight:800;color:${sentColor};text-shadow:0 0 12px ${sentColor}44">${sent}</span>
@@ -53014,7 +53137,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 }
 window.fetchIntelReport = fetchIntelReport;
@@ -56038,6 +56161,9 @@ window.renderSectorRotation = renderSectorRotation;
             s.above_avwap_52wl ? (() => { const d=s.avwap_dist_pct||0; const col=d>15?'#80cbc4':d>5?'#4db6ac':'#26a69a'; return `<span style="background:rgba(38,166,154,.15);color:${col};font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Price ${d.toFixed(1)}% above Anchored VWAP from 52W low ($${(s.avwap_52wl||0).toFixed(2)}) — institutional cost basis respected">AVWAP+${d.toFixed(0)}%</span>`; })() : '',
             // Fundamental quality badge (when we have data)
             (() => { const fq=s.fund_quality||0; const eg=s.earnings_growth; if(fq>=2) { const egStr=eg!=null?` EPS+${(eg*100).toFixed(0)}%`:''; const fqCol=fq>=3?'#00e676':'#69f0ae'; return `<span style="background:rgba(0,200,100,.12);color:${fqCol};font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Fundamental quality: ${fq}/3 — earnings/revenue growth + margins + ROE">F+${fq}${egStr}</span>`; } if(fq<=-2) return `<span style="color:#ef9a9a;font-size:6px;padding:1px 3px;border-radius:2px" title="Weak fundamentals">F${fq}</span>`; return ''; })(),
+            // Volume divergence signals
+            s.vol_bullish_div ? '<span style="background:rgba(0,229,255,.18);color:#00e5ff;font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volume bullish divergence: new low + shrinking sell volume = institutional accumulation">VOL↗ACC</span>' : '',
+            s.vol_bearish_div ? '<span style="background:rgba(239,83,80,.12);color:#ef9a9a;font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volume bearish divergence: new high + shrinking volume = distribution">VOL↘DIST</span>' : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
@@ -56365,6 +56491,8 @@ window.renderSectorRotation = renderSectorRotation;
                 if (ls.htf) parts.push('<span style="font-size:6px;font-weight:900;color:#ff6d00;background:rgba(255,109,0,.2);padding:1px 4px;border-radius:3px" title="High-Tight Flag — explosive setup">HTF🚀</span>');
                 if ((ls.trend_template||0) >= 7) parts.push(`<span style="font-size:6px;font-weight:800;color:#00e676;background:rgba(0,230,118,.15);padding:1px 4px;border-radius:3px" title="Minervini Trend Template ${ls.trend_template}/8">TT${ls.trend_template}</span>`);
                 if (ls.above_avwap_52wl) parts.push(`<span style="font-size:6px;color:#26a69a;background:rgba(38,166,154,.12);padding:1px 3px;border-radius:2px" title="Above Anchored VWAP from 52W low (+${(ls.avwap_dist_pct||0).toFixed(1)}%)">AVWAP✓</span>`);
+                if (ls.vol_bullish_div) parts.push('<span style="font-size:6px;font-weight:800;color:#00e5ff;background:rgba(0,229,255,.12);padding:1px 4px;border-radius:3px" title="Volume bullish divergence: new low + shrinking sell volume = quiet institutional accumulation">VOL↗ACC</span>');
+                if (ls.vol_bearish_div) parts.push('<span style="font-size:6px;font-weight:800;color:#ef9a9a;background:rgba(239,83,80,.1);padding:1px 4px;border-radius:3px" title="Volume bearish divergence: new high + shrinking volume = distribution signal">VOL↘DIST</span>');
                 if ((ls.fund_quality||0) >= 2) {
                   const eg = ls.earnings_growth != null ? `EPS ${(ls.earnings_growth*100).toFixed(0)}%` : '';
                   const rg = ls.revenue_growth != null ? `Rev ${(ls.revenue_growth*100).toFixed(0)}%` : '';
@@ -56375,6 +56503,14 @@ window.renderSectorRotation = renderSectorRotation;
                 }
                 if (ls.rsi_bull_divergence) parts.push('<span style="font-size:6px;color:#82b1ff;font-weight:700" title="RSI bullish divergence">RSI↗</span>');
                 else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
+                // Earnings countdown badge — critical for risk management
+                if (p.earnings_days != null && p.earnings_days >= 0 && p.earnings_days <= 10) {
+                  const ed = p.earnings_days;
+                  const eCol = ed === 0 ? '#ff1744' : ed <= 2 ? '#ef5350' : ed <= 5 ? '#ff9800' : '#ffd54f';
+                  const eBg  = ed === 0 ? 'rgba(255,23,68,.25)' : ed <= 2 ? 'rgba(239,83,80,.2)' : 'rgba(255,152,0,.15)';
+                  const eLbl = ed === 0 ? '📅EARNS TODAY' : ed === 1 ? '📅EARNS TMRW' : '📅EARNS ' + ed + 'D';
+                  parts.push(`<span style="font-size:6px;font-weight:900;color:${eCol};background:${eBg};border:1px solid ${eCol}55;padding:1px 5px;border-radius:3px" title="Earnings in ${ed} day${ed!==1?'s':''} — decide to hold/reduce before announcement">${eLbl}</span>`);
+                }
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
               })() : ''}
               ${p.entry_thesis ? `<div style="margin-top:.3rem;font-size:7px;color:#4a6fa5;font-style:italic;padding:.2rem .35rem;background:rgba(74,111,165,.06);border-left:2px solid rgba(74,111,165,.3);border-radius:0 3px 3px 0;line-height:1.35">${p.entry_thesis}</div>` : ''}

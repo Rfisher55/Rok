@@ -4320,6 +4320,39 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Volume Divergence: detect distribution/accumulation via price-volume relationship
+    # Bearish divergence: new 10-day high but falling volume → institutions distributing
+    # Bullish divergence: new 10-day low but rising volume on down days → quiet accumulation
+    vol_bearish_div = False   # new high + shrinking volume = distribution
+    vol_bullish_div = False   # new low + shrinking volume on sell days = quiet accumulation
+    try:
+        if "Close" in daily.columns and "Volume" in daily.columns and len(daily) >= 12:
+            _closes_vd = list(daily["Close"])
+            _vols_vd   = list(daily["Volume"])
+            _n = min(10, len(_closes_vd) - 2)
+            _recent_c  = _closes_vd[-_n:]
+            _prior_c   = _closes_vd[-_n*2:-_n] if len(_closes_vd) >= _n*2 else _closes_vd[:_n]
+            _recent_v  = _vols_vd[-_n:]
+            _prior_v   = _vols_vd[-_n*2:-_n] if len(_vols_vd) >= _n*2 else _vols_vd[:_n]
+            _avg_prior_v = sum(_prior_v) / len(_prior_v) if _prior_v else 1
+            _avg_recent_v = sum(_recent_v) / len(_recent_v) if _recent_v else 1
+            _new_high = max(_recent_c) > max(_prior_c)
+            _new_low  = min(_recent_c) < min(_prior_c)
+            _vol_shrinking = _avg_recent_v < _avg_prior_v * 0.75  # volume down 25%+
+            if _new_high and _vol_shrinking:
+                vol_bearish_div = True   # classic distribution signal
+            if _new_low and not _vol_shrinking:
+                # Bullish: price making new low but volume not picking up = no panic selling
+                _down_vols_r = [_vols_vd[i] for i in range(-_n, 0) if _closes_vd[i] < _closes_vd[i-1]]
+                _down_vols_p = [_vols_vd[i] for i in range(-_n*2, -_n) if _closes_vd[i] < _closes_vd[i-1]]
+                if _down_vols_r and _down_vols_p:
+                    _avg_down_r = sum(_down_vols_r) / len(_down_vols_r)
+                    _avg_down_p = sum(_down_vols_p) / len(_down_vols_p)
+                    if _avg_down_r < _avg_down_p * 0.80:  # sell-side volume shrinking = buyers absorbing
+                        vol_bullish_div = True
+    except Exception:
+        pass
+
     # Keltner Channel: price vs EMA±ATR envelope
     kc_pos      = 50.0   # position 0-100+ (>100 = above upper band)
     kc_breakout = False  # price above upper Keltner = strong momentum breakout
@@ -4756,6 +4789,12 @@ def _extract(daily, hourly):
 
     # Relative Volume (RVOL): today's volume vs 20-day average
     # RVOL > 2x = institutional participation confirmed; > 3x = strong institutional surge
+    # Time-of-day adjusted: U-shaped intraday volume profile — early RVOL is normalized
+    # by the expected fraction of daily volume at the current time of day.
+    # ET intraday volume fractions (empirical): open=0.13, 10am=0.25, 11am=0.38, 12pm=0.48,
+    #   1pm=0.55, 2pm=0.63, 3pm=0.75, close=1.0
+    _TOD_FRACTIONS = {0: 0.13, 30: 0.22, 60: 0.31, 90: 0.41, 120: 0.49,
+                      150: 0.56, 180: 0.65, 210: 0.77, 240: 0.88, 270: 1.0}
     rvol = 1.0
     rvol_surge = False   # RVOL > 2.5 with positive price action
     try:
@@ -4763,7 +4802,34 @@ def _extract(daily, hourly):
             avg_vol_20 = float(daily["Volume"].tail(21).iloc[:-1].mean())  # exclude today
             today_vol = float(daily["Volume"].iloc[-1])
             if avg_vol_20 > 0:
-                rvol = round(today_vol / avg_vol_20, 2)
+                raw_rvol = today_vol / avg_vol_20
+                # Time-of-day adjustment using hourly data to estimate minutes since open
+                _tod_adj = 1.0
+                try:
+                    if hourly is not None and not hourly.empty:
+                        _last_h_ts = hourly.index[-1]
+                        if hasattr(_last_h_ts, "tz_convert"):
+                            import pytz as _tz
+                            _et = _last_h_ts.tz_convert("America/New_York")
+                        elif hasattr(_last_h_ts, "tzinfo") and _last_h_ts.tzinfo:
+                            _et = _last_h_ts
+                        else:
+                            _et = None
+                        if _et is not None:
+                            _mso = (_et.hour - 9) * 60 + (_et.minute - 30)
+                            if 0 < _mso < 390:
+                                # Find the closest TOD fraction bucket
+                                _bucket = min(_TOD_FRACTIONS.keys(), key=lambda k: abs(k - _mso))
+                                _frac = _TOD_FRACTIONS[_bucket]
+                                if _frac > 0.05:  # avoid division by tiny fractions
+                                    _tod_adj = _frac  # normalize raw RVOL by expected fraction
+                except Exception:
+                    pass
+                # Annualized RVOL: projected full-day volume / 20d avg
+                if _tod_adj < 0.99:
+                    rvol = round(raw_rvol / _tod_adj, 2)  # time-adjusted RVOL
+                else:
+                    rvol = round(raw_rvol, 2)
                 rvol_surge = rvol >= 2.5 and chg_pct > 0
     except Exception:
         pass
@@ -5155,6 +5221,8 @@ def _extract(daily, hourly):
         "kc_oversold":         kc_oversold,
         "obv_rising":          obv_rising,
         "obv_slope_pct":       round(obv_slope_pct, 1),
+        "vol_bearish_div":     vol_bearish_div,
+        "vol_bullish_div":     vol_bullish_div,
         "vcp":                 vcp,
         "cup_handle":          cup_handle.get("breakout_ready", False),
         "cup_handle_pivot":    cup_handle.get("pivot_price", 0.0),
@@ -5872,6 +5940,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
 
     # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+7)
     if d.get("obv_rising", False): s += 7
+
+    # Volume Divergence: distribution vs accumulation based on price-volume relationship
+    # Bearish: new high + shrinking volume = institutions distributing into retail strength (-6)
+    # Bullish: new low + shrinking sell volume = institutions quietly absorbing supply (+6)
+    if d.get("vol_bearish_div", False): s -= 6
+    if d.get("vol_bullish_div", False): s += 6
 
     # Money Flow Index (MFI): volume-weighted RSI
     # MFI < 20 = oversold accumulation (smart money buying quietly): +8
@@ -6817,6 +6891,14 @@ def run():
                 else:
                     dyn_trail = TRAILING_STOP_PCT * 100
 
+            # Pre-earnings stop tightening: 3-7 days before earnings,
+            # tighten trailing stop by 50% to lock in pre-earnings drift gains.
+            # Binary event risk justifies protecting whatever profit we have.
+            _earn_d_close = get_earnings_days(sym)
+            if _earn_d_close is not None and 2 < _earn_d_close <= 7 and pnl_pct > 1.5:
+                dyn_trail = max(1.0, dyn_trail * 0.50)
+                logger.debug(f"Pre-earnings tighten {sym}: trail→{dyn_trail:.1f}% (earns in {_earn_d_close}d)")
+
             # ── Full exit conditions ──
             reason = None
             # ATR-adaptive stop loss: 2.5× ATR from entry, capped at STOP_LOSS_PCT
@@ -7280,6 +7362,26 @@ def run():
         _eff_min_score += 6
         logger.info(f"Scan breadth guard: only {_scan_adv_pct}% advancing — raising threshold to {_eff_min_score}")
 
+    # Enhanced breadth-driven threshold adjustment (McClellan Oscillator / Breadth Thrust)
+    # Breadth Thrust: very rare signal (Zweig) — broad buying surge from oversold → -10 pts
+    # (opens up the floodgates: take any setup with a valid score)
+    _breadth_mcl = breadth.get("mcl_osc", 0.0) or 0.0
+    _breadth_thrust = breadth.get("breadth_thrust", False)
+    _breadth_trend  = breadth.get("breadth_trend", "neutral")
+    if _breadth_thrust:
+        _eff_min_score -= 10  # rare thrust: lower bar significantly
+        logger.info(f"BREADTH THRUST — Zweig/McClellan signal fired! Lowering min score by 10 → {_eff_min_score}")
+    elif _breadth_trend == "improving" and _breadth_mcl > 5:
+        _eff_min_score -= 4   # improving breadth: more setups should work
+        logger.info(f"Breadth improving (MCL+{_breadth_mcl:.1f}) — lowering threshold by 4 → {_eff_min_score}")
+    elif _breadth_trend == "improving":
+        _eff_min_score -= 2
+    elif _breadth_trend == "deteriorating" and _breadth_mcl < -5:
+        _eff_min_score += 6   # deteriorating breadth: much higher bar
+        logger.info(f"Breadth deteriorating (MCL{_breadth_mcl:.1f}) — raising threshold by 6 → {_eff_min_score}")
+    elif _breadth_trend == "deteriorating":
+        _eff_min_score += 3
+
     # VIX spike guard: if VIX is spiking rapidly, add extra +8 to threshold
     if _vix_spike:
         _eff_min_score += 8
@@ -7660,6 +7762,8 @@ def run():
                 "above_avwap_52wl":  live.get(tk, {}).get("above_avwap_52wl", False),
                 "avwap_52wl":        live.get(tk, {}).get("avwap_52wl", 0.0),
                 "avwap_dist_pct":    live.get(tk, {}).get("avwap_dist_pct", 0.0),
+                "vol_bearish_div":   live.get(tk, {}).get("vol_bearish_div", False),
+                "vol_bullish_div":   live.get(tk, {}).get("vol_bullish_div", False),
                 # Kelly-suggested position size as % of portfolio (half-Kelly for safety)
                 "kelly_size_pct":    round(max(0, min(10.0, (
                     (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
@@ -7714,6 +7818,20 @@ def run():
                             break
                     if _wr_boost > 1.0:
                         notional = min(notional * _wr_boost, portfolio_val * MAX_POSITION_PCT, buying_power * 0.40)
+                    # Correlation-aware sizing: if new position is highly correlated to
+                    # held positions (same sector/theme), reduce size to limit concentration risk.
+                    # Correlation proxy: same SECTOR_MAP sector = reduce by 20-35%.
+                    _corr_adj = 1.0
+                    _tk_sector = SECTOR_MAP.get(tk, "other")
+                    _held_same_sector = [s for s in longs if SECTOR_MAP.get(s, "other") == _tk_sector]
+                    if len(_held_same_sector) >= 2:
+                        _corr_adj = 0.65  # strong concentration — reduce to 65%
+                        logger.info(f"CORR-ADJ {tk}: {len(_held_same_sector)} positions in {_tk_sector} → size×0.65")
+                    elif len(_held_same_sector) == 1:
+                        _corr_adj = 0.80  # some overlap — reduce to 80%
+                    if _corr_adj < 1.0:
+                        notional = round(notional * _corr_adj, 2)
+
                     # HIGH-CONVICTION size boost: when score, RS Rating, AND multi-timeframe all align,
                     # this is the rarest and most reliable setup — deserve a larger position.
                     # IBD research: stocks with RS≥90 + MTF triple alignment win 70%+ of the time.
@@ -8106,6 +8224,8 @@ def run():
                 "above_avwap_52wl":    sig.get("above_avwap_52wl", False),
                 "avwap_52wl":          sig.get("avwap_52wl", 0.0),
                 "avwap_dist_pct":      sig.get("avwap_dist_pct", 0.0),
+                "vol_bearish_div":     sig.get("vol_bearish_div", False),
+                "vol_bullish_div":     sig.get("vol_bullish_div", False),
                 "w52_range_pos":      sig.get("w52_range_pos", 0.0),
                 "expected_move_wk":   sig.get("expected_move_wk", 0.0),
                 "expected_move_mo":   sig.get("expected_move_mo", 0.0),
