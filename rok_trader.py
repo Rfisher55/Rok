@@ -439,6 +439,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["rvol_at_entry"] = round(_rvol_v, 2)
         e["rvol_tier"] = ("explosive" if _rvol_v >= 5.0 else "strong" if _rvol_v >= 2.0
                           else "normal" if _rvol_v >= 1.0 else "weak")
+        # Stochastic Zone Neuron (46): %K at entry — overbought/neutral/oversold zone.
+        # Overbought (>80) entries are late momentum chases; neutral (20-80) is the sweet spot;
+        # oversold (<20) = mean reversion entry — learns which zone produces best outcomes.
+        _stk_v = float(signals.get("stoch_k", 50.0) or 50.0)
+        e["stoch_k_at_entry"] = round(_stk_v, 1)
+        e["stoch_zone"] = ("overbought" if _stk_v > 80 else "oversold" if _stk_v < 20 else "neutral")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1316,6 +1322,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Stochastic Zone Neuron (46): %K at entry — overbought/neutral/oversold ──
+    # Tracks performance by Stochastic %K zone at entry time.
+    # Overbought (>80) = chasing; neutral (20-80) = momentum zone; oversold (<20) = reversal.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_sk = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sk_zone = _buy_sk.get("stoch_zone", "neutral") if _buy_sk else "neutral"
+            _sk_perf = tlog.setdefault("stoch_zone_perf", {})
+            _skp = _sk_perf.setdefault(_sk_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _sk_zone})
+            _skp["total"] = _skp.get("total", 0) + 1
+            _skp["total_pnl"] = round(_skp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _skp["wins"] = _skp.get("wins", 0) + 1
+            else:        _skp["losses"] = _skp.get("losses", 0) + 1
+            if _skp["total"] > 0:
+                _skp["win_rate"] = round(_skp["wins"] / _skp["total"] * 100, 1)
+                _skp["avg_pnl"]  = round(_skp["total_pnl"] / _skp["total"], 2)
         except Exception:
             pass
 
@@ -11417,6 +11442,24 @@ def run():
             _rv_sum = " | ".join(f"RVOL_{s['tier']}:{s['win_rate']:.0f}%WR" for s in _rv_insights)
             _learn_log.append(f"RVOL tier WRs: {_rv_sum}")
 
+        # ── 46. Stochastic Zone Neuron: %K overbought/neutral/oversold ────────
+        _sk_raw = tlog.get("stoch_zone_perf", {})
+        _sk_insights = []
+        for _skk, _skd in _sk_raw.items():
+            if _skd.get("total", 0) >= 3:
+                _sk_insights.append({
+                    "zone": _skk, "win_rate": _skd.get("win_rate", 50),
+                    "avg_pnl": _skd.get("avg_pnl", 0), "total": _skd.get("total", 0)
+                })
+        if _sk_insights:
+            _sk_best = max(_sk_insights, key=lambda x: x["win_rate"])
+            _sk_ob = next((s for s in _sk_insights if s["zone"] == "overbought"), None)
+            _sk_nt = next((s for s in _sk_insights if s["zone"] == "neutral"), None)
+            _sk_sum = " | ".join(f"stoch_{s['zone']}:{s['win_rate']:.0f}%WR" for s in _sk_insights)
+            _learn_log.append(f"Stoch zone WRs: {_sk_sum}")
+            if _sk_ob and _sk_nt and _sk_ob["win_rate"] < 40 and _sk_ob["total"] >= 5:
+                _learn_log.append(f"Overbought entries fail ({_sk_ob['win_rate']:.0f}% WR) — avoid stoch>80 buys")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11472,6 +11515,7 @@ def run():
             "intraday_mom_perf":    _im_insights,            # intraday momentum (% from open) vs outcome
             "adx_perf":             _ax_insights,            # ADX trend strength at entry vs outcome
             "rvol_tier_perf":       _rv_insights,            # RVOL tier (explosive/strong/normal/weak) vs outcome
+            "stoch_zone_perf":      _sk_insights,            # Stochastic %K zone at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
