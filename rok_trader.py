@@ -91,6 +91,7 @@ _LEARNED_MIN_BREADTH:     float = 0.0  # minimum breadth % that produces consist
 _LEARNED_SIGNAL_COUNT_SWEET: str  = ""   # "1-3"|"4-6"|"7-10"|"11+" — best-performing signal count bucket
 _LEARNED_SPY_DOWN_PENALTY:  bool = False  # True when red SPY days consistently hurt outcomes
 _LEARNED_FALLING_SCORE_PENALTY: bool = False  # True when falling-score entries consistently underperform
+_LEARNED_ATR_MULTIPLIER:        float = 2.5   # learned ATR stop multiplier (starts at default)
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -7667,6 +7668,11 @@ def run():
     _st_learned = _learned.get("score_trend_perf", [])
     _falling_learned = next((s for s in _st_learned if s.get("trend") == "falling"), None)
     _LEARNED_FALLING_SCORE_PENALTY = bool(_falling_learned and _falling_learned.get("win_rate", 50) < 40 and _falling_learned.get("total", 0) >= 5)
+    # ATR stop multiplier: learned from ATR bracket performance
+    global _LEARNED_ATR_MULTIPLIER
+    _LEARNED_ATR_MULTIPLIER = float(_learned.get("atr_mult_learned", 2.5) or 2.5)
+    # Clamp to safe range (1.5x to 4x ATR)
+    _LEARNED_ATR_MULTIPLIER = max(1.5, min(4.0, _LEARNED_ATR_MULTIPLIER))
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
@@ -7854,12 +7860,12 @@ def run():
 
             # ── Full exit conditions ──
             reason = None
-            # ATR-adaptive stop loss: 2.5× ATR from entry, capped at STOP_LOSS_PCT
+            # ATR-adaptive stop loss: learned multiplier × ATR from entry, capped at STOP_LOSS_PCT
             _atr_sig = live.get(sym, {})
             _atr_val = _atr_sig.get("atr") if _atr_sig else None
             if _atr_val and cost > 0:
                 _atr_pct = _atr_val / cost * 100
-                _atr_stop_pct = min(STOP_LOSS_PCT * 100, max(3.0, _atr_pct * 2.5))
+                _atr_stop_pct = min(STOP_LOSS_PCT * 100, max(3.0, _atr_pct * _LEARNED_ATR_MULTIPLIER))
             else:
                 _atr_stop_pct = STOP_LOSS_PCT * 100
             # Chandelier Exit: if price closes below highest_close - 3×ATR, trend has reversed
@@ -8959,9 +8965,9 @@ def run():
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
-                    # ATR-based stop: 2.5x ATR below entry, capped at STOP_LOSS_PCT
+                    # ATR-based stop: learned multiplier × ATR below entry, capped at STOP_LOSS_PCT
                     if atr and price > 0:
-                        _atr_stop_buy = min(STOP_LOSS_PCT, max(0.03, (atr / price) * 2.5))
+                        _atr_stop_buy = min(STOP_LOSS_PCT, max(0.03, (atr / price) * _LEARNED_ATR_MULTIPLIER))
                     else:
                         _atr_stop_buy = STOP_LOSS_PCT
                     stop_price = round(price * (1 - _atr_stop_buy), 2)
@@ -10690,6 +10696,8 @@ def run():
             if _ad.get("total", 0) >= 3:
                 _at_insights.append({"bucket": _abk, "win_rate": _ad.get("win_rate", 50),
                                      "avg_pnl": _ad.get("avg_pnl", 0), "total": _ad.get("total", 0)})
+        # Compute learned ATR multiplier: adjust stop width based on what's working
+        _learned_atr_mult = 2.5  # default
         if _at_insights:
             _at_s = sorted(_at_insights, key=lambda x: -x["win_rate"])
             _at_sum = " | ".join(f"ATR{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _at_s)
@@ -10697,6 +10705,11 @@ def run():
             _best_atr = _at_s[0]
             if _best_atr["win_rate"] >= 60:
                 _learn_log.append(f"Best ATR entry range: {_best_atr['bucket']} ({_best_atr['win_rate']:.0f}% WR, avg {_best_atr['avg_pnl']:+.1f}%)")
+                # Tune the ATR multiplier: high-ATR entries performing well → widen stop tolerance
+                if _best_atr["bucket"] in ("2-4%", "4%+") and _best_atr["win_rate"] >= 65:
+                    _learned_atr_mult = 3.0  # wider stop for volatile setups
+                elif _best_atr["bucket"] in ("<1%", "1-2%") and _best_atr["win_rate"] >= 65:
+                    _learned_atr_mult = 2.0  # tighter stop for calm setups
 
         # ── 26. Portfolio Concentration Neuron: optimal # of held positions ───
         _conc_raw = tlog.get("concentration_perf", {})
@@ -10787,6 +10800,7 @@ def run():
             "dow_perf":            _dow_insights,           # day-of-week entry performance
             "pos_size_perf":       _ps_insights,            # position size (% portfolio) vs outcome
             "atr_perf":            _at_insights,            # ATR bracket at entry vs outcome
+            "atr_mult_learned":    _learned_atr_mult,       # learned ATR stop multiplier
             "pm_gap_perf":         _pg_insights,            # pre-market gap size vs outcome
             "exit_hour_perf":      _eh_insights,            # exit timing (hour) vs P&L
             "recent_wr":           round(_r20_wr, 3),
