@@ -2801,6 +2801,7 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="port-crypto-feed" style="margin-bottom:.85rem"></div>
     <div id="port-sector-rotation" style="margin-bottom:.85rem"></div>
     <div id="port-scorecard-now" style="display:none;margin-bottom:.85rem"></div>
+    <div id="port-pnl-calendar"></div>
     <div id="port-trade-log" style="margin-bottom:.85rem"></div>
     <div id="port-diversify"></div>
     <div id="portfolio-grid"></div>
@@ -53006,6 +53007,59 @@ function renderTradeLog() {
 }
 window.renderTradeLog = renderTradeLog;
 
+// ── Daily P&L Calendar — green/red trading day blocks ─────────────────────────
+function renderDailyPnlCalendar() {
+  const el = document.getElementById('port-pnl-calendar');
+  if (!el) return;
+  // Source: equity.json snapshots (already loaded in _tradesData via global), OR trades.json daily_pnl
+  const dailyPnl = (_tradesData && _tradesData.daily_pnl) ? _tradesData.daily_pnl : [];
+  if (dailyPnl.length < 2) { el.innerHTML = ''; return; }
+
+  const recent = dailyPnl.slice(-30);  // last 30 trading days
+  const totalRet = recent.reduce((s, d) => s + (d.ret_pct || 0), 0);
+  const wins  = recent.filter(d => (d.ret_pct || 0) > 0).length;
+  const losses= recent.filter(d => (d.ret_pct || 0) < 0).length;
+  const wr    = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
+  const wrCol = wr >= 55 ? '#00e676' : wr >= 40 ? '#ffd54f' : '#ef5350';
+  const bestDay  = recent.reduce((b, d) => (d.ret_pct||0) > (b.ret_pct||0) ? d : b, recent[0]);
+  const worstDay = recent.reduce((w, d) => (d.ret_pct||0) < (w.ret_pct||0) ? d : w, recent[0]);
+  const maxAbs = Math.max(...recent.map(d => Math.abs(d.ret_pct || 0)), 0.5);
+
+  const blocks = recent.map(d => {
+    const ret = d.ret_pct || 0;
+    const intensity = Math.min(Math.abs(ret) / maxAbs, 1);
+    const bg = ret > 0
+      ? `rgba(0,${Math.round(150 + intensity*80)},${Math.round(80 + intensity*36)},${0.3 + intensity * 0.55})`
+      : ret < 0
+      ? `rgba(${Math.round(180 + intensity*75)},${Math.round(50 + intensity*30)},${Math.round(50 + intensity*30)},${0.3 + intensity * 0.55})`
+      : 'rgba(255,255,255,.07)';
+    const dt = d.date ? (() => { try { const dd=new Date(d.date+'T12:00:00'); return dd.toLocaleDateString('en-US',{month:'short',day:'numeric'}); } catch{return d.date;} })() : '';
+    const retStr = ret >= 0 ? `+${ret.toFixed(2)}%` : `${ret.toFixed(2)}%`;
+    return `<div title="${dt}: ${retStr}" style="flex:1;min-width:14px;max-width:28px;height:32px;background:${bg};border-radius:3px;cursor:default;position:relative;border:1px solid ${ret>0?'rgba(0,255,136,.15)':ret<0?'rgba(255,34,85,.15)':'rgba(255,255,255,.05)'}">
+      ${Math.abs(ret) >= 1 ? `<div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:4.5px;font-weight:900;color:${ret>0?'#69f0ae':'#ef9a9a'};white-space:nowrap">${Math.abs(ret).toFixed(1)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="background:#060d1a;border:1px solid #1a2a3a;border-radius:10px;padding:.75rem .85rem;margin-bottom:.85rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;flex-wrap:wrap;gap:.3rem">
+      <div style="font-size:8px;font-weight:800;letter-spacing:.12em;color:#4a6fa5;text-transform:uppercase">Daily P&L — Last ${recent.length} Days</div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <span style="font-size:7px;font-weight:800;color:${wrCol}">Win Rate ${wr}%</span>
+        <span style="font-size:7px;color:#00ff88">${wins}W</span>
+        <span style="font-size:7px;color:#ef5350">${losses}L</span>
+        <span style="font-size:7px;color:${totalRet>=0?'#00ff88':'#ef5350'};font-weight:800">Total ${totalRet>=0?'+':''}${totalRet.toFixed(2)}%</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:2px;align-items:stretch;flex-wrap:wrap">${blocks}</div>
+    <div style="display:flex;justify-content:space-between;margin-top:.35rem;font-size:6.5px;color:#3a5a8a">
+      <span>Best: <span style="color:#00ff88">${bestDay.date||''} +${(bestDay.ret_pct||0).toFixed(2)}%</span></span>
+      <span>Worst: <span style="color:#ef5350">${worstDay.date||''} ${(worstDay.ret_pct||0).toFixed(2)}%</span></span>
+    </div>
+  </div>`;
+}
+window.renderDailyPnlCalendar = renderDailyPnlCalendar;
+
+
 function renderRsiLiveScan() {
   const el = document.getElementById('sig-rsi-live-scan');
   if (!el) return;
@@ -58102,6 +58156,8 @@ window.renderPositionNews = renderPositionNews;
       try { if (typeof renderNeuralBrainPanel === 'function') renderNeuralBrainPanel(data); } catch(e) {}
       // Position news feed (always show when data available)
       try { if (typeof renderPositionNews === 'function') renderPositionNews(data); } catch(e) {}
+      // Daily P&L calendar (shows last 30 trading days)
+      try { if (typeof renderDailyPnlCalendar === 'function') renderDailyPnlCalendar(); } catch(e) {}
 
       // ── Bridge key trades.json fields into ROK global for Intel tab functions ──
       // Many Intel tab functions read from ROK.* which is populated by intel_report.json.

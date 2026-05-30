@@ -9467,19 +9467,19 @@ def run():
             # We lock in gains without fully exiting the position.
             if not half_out and pnl_pct >= 6:
                 _rsi_ext = (live.get(sym, {}) or {}).get("rsi", 50) or 50
-                _bb_pct  = (live.get(sym, {}) or {}).get("bb_pct", 0.5) or 0.5
-                if _rsi_ext >= 82 and _bb_pct >= 0.95:   # at upper Bollinger + extreme RSI
+                _bb_pos  = (live.get(sym, {}) or {}).get("bb_pos", 50) or 50  # 0-100 scale
+                if _rsi_ext >= 82 and _bb_pos >= 95:   # at upper Bollinger + extreme RSI
                     _rsi_half_qty = round(qty / 2, 4)
                     _rsi_half_val = current * _rsi_half_qty
                     if _rsi_half_val >= 50:
-                        logger.info(f"RSI_OVERBOUGHT {sym} — RSI={_rsi_ext:.0f}, BB={_bb_pct:.2f}, selling half at {pnl_pct:+.1f}%")
+                        logger.info(f"RSI_OVERBOUGHT {sym} — RSI={_rsi_ext:.0f}, BB%={_bb_pos:.0f}, selling half at {pnl_pct:+.1f}%")
                         try:
                             alpaca_post("/v2/orders", {
                                 "symbol": sym, "qty": str(_rsi_half_qty),
                                 "side": "sell", "type": "market", "time_in_force": "day",
                             })
                             log_trade(tlog, "SELL_HALF", sym, current, _rsi_half_qty,
-                                      pnl=pnl_pct, reason=f"RSI overbought exit — RSI={_rsi_ext:.0f} bb={_bb_pct:.2f} ({pnl_pct:+.1f}%)")
+                                      pnl=pnl_pct, reason=f"RSI overbought exit — RSI={_rsi_ext:.0f} BB%={_bb_pos:.0f} ({pnl_pct:+.1f}%)")
                             peaks[sym]["half_out"] = True
                             made_trades = True
                         except Exception as e:
