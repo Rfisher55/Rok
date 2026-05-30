@@ -60986,6 +60986,16 @@ window.renderPositionNews = renderPositionNews;
               <span style="font-size:6.5px;font-weight:900;color:${rtCol};letter-spacing:.05em">${rtMsg}</span>
             </div>`;
           }
+          // N110: Cross-asset risk-off alert
+          if (data.cross_asset_risk_off) {
+            html += `<div style="margin-bottom:.4rem;padding:.35rem .65rem;background:rgba(239,83,80,.12);border:2px solid rgba(239,83,80,.5);border-radius:8px;display:flex;align-items:center;gap:.5rem">
+              <span style="font-size:11px">⚠</span>
+              <div>
+                <div style="font-size:6.5px;font-weight:900;color:#ef5350;letter-spacing:.05em">N110 RISK-OFF DETECTED — Flight to Safety</div>
+                <div style="font-size:5.5px;color:rgba(255,255,255,.4)">Bonds + gold + VIX all surging simultaneously. Institutions rotating OUT of equities. Bot raising entry bar — no new buys until conditions normalize.</div>
+              </div>
+            </div>`;
+          }
           // Portfolio risk score
           const prs = data.portfolio_risk_score;
           const prl = data.portfolio_risk_label || '';

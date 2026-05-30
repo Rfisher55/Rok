@@ -2285,6 +2285,62 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N107: Catalyst Recency Neuron — how fresh was the catalyst at entry? ─────
+    # Same-day catalyst = highest conviction (market hasn't fully priced it yet).
+    # 1-2 day old: solid if momentum confirms. 3+ days: stale, drift may be exhausted.
+    # Bot learns: does it perform better buying same-day or next-day catalysts?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n107 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _cat_age = _buy_n107.get("catalyst_age_state", "no_catalyst") if _buy_n107 else "no_catalyst"
+            _n107_perf = tlog.setdefault("catalyst_age_perf", {})
+            _n107p = _n107_perf.setdefault(_cat_age, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_cat_age})
+            _n107p["total"] += 1; _n107p["total_pnl"] = round(_n107p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n107p["wins"] += 1
+            else:        _n107p["losses"] += 1
+            _n107p["win_rate"] = round(_n107p["wins"] / _n107p["total"] * 100, 1)
+            _n107p["avg_pnl"]  = round(_n107p["total_pnl"] / _n107p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N108: O'Neil Trend Template Score at Entry ─────────────────────────────
+    # Stan Weinstein / Mark Minervini trend template: 0-8 criteria met.
+    # 8/8 = textbook institutional setup. Learn if 7-8 outperform 5-6 significantly.
+    # This neuron optimizes which template quality the bot should require.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n108 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _tt_score = int(_buy_n108.get("trend_template", 0) or 0) if _buy_n108 else 0
+            _tt_bkt = ("elite" if _tt_score >= 7 else "strong" if _tt_score >= 5 else "moderate" if _tt_score >= 3 else "weak")
+            _n108_perf = tlog.setdefault("trend_template_tier_perf", {})
+            _n108p = _n108_perf.setdefault(_tt_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_tt_bkt})
+            _n108p["total"] += 1; _n108p["total_pnl"] = round(_n108p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n108p["wins"] += 1
+            else:        _n108p["losses"] += 1
+            _n108p["win_rate"] = round(_n108p["wins"] / _n108p["total"] * 100, 1)
+            _n108p["avg_pnl"]  = round(_n108p["total_pnl"] / _n108p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N109: Pre-Market Volume Surge at Entry ────────────────────────────────────
+    # Stocks with unusually high pre-market volume signal institutional attention.
+    # Learn: does pre-market volume surge (rvol_premarket > 2x) meaningfully predict
+    # better intraday follow-through vs normal pre-market activity?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n109 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _pm_vol = float(_buy_n109.get("rvol", 1.0) or 1.0) if _buy_n109 else 1.0
+            _pm_bkt = ("explosive" if _pm_vol >= 5.0 else "surge" if _pm_vol >= 2.5 else "elevated" if _pm_vol >= 1.5 else "normal")
+            _n109_perf = tlog.setdefault("rvol_entry_tier_perf", {})
+            _n109p = _n109_perf.setdefault(_pm_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_pm_bkt})
+            _n109p["total"] += 1; _n109p["total_pnl"] = round(_n109p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n109p["wins"] += 1
+            else:        _n109p["losses"] += 1
+            _n109p["win_rate"] = round(_n109p["wins"] / _n109p["total"] * 100, 1)
+            _n109p["avg_pnl"]  = round(_n109p["total_pnl"] / _n109p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10645,6 +10701,33 @@ def run():
         logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj + _spy_tape_score_adj)
 
+    # ── N110: Cross-Asset Risk-Off Guard ────────────────────────────────────────
+    # When multiple defensive assets are surging simultaneously (bonds ↑ + gold ↑ +
+    # VIX ↑), institutions are rotating OUT of equities. This is the clearest signal
+    # to halt all new longs regardless of individual stock scores.
+    # Detection: TLT/IEF 5d > +1%, GLD 5d > +1%, VIX > 22, and SPY in downtrend.
+    _risk_off_score = 0
+    try:
+        _reg_ro = regime or {}
+        _vix_ro = float(_reg_ro.get("vix", 20) or 20)
+        _tnx_5d_ro = float(_reg_ro.get("tnx_5d", 0) or 0)  # treasury yield dropping = bond prices rising
+        _spy_trend_ro = int(_reg_ro.get("spy_trend", 0) or 0)
+        # Declining yield = bond price surge (flight to safety)
+        if _tnx_5d_ro < -0.15: _risk_off_score += 2  # significant bond buying
+        elif _tnx_5d_ro < -0.05: _risk_off_score += 1
+        if _vix_ro >= 28: _risk_off_score += 2  # fear is elevated
+        elif _vix_ro >= 22: _risk_off_score += 1
+        if _spy_trend_ro <= -2: _risk_off_score += 2  # SPY confirmed downtrend
+        elif _spy_trend_ro < 0: _risk_off_score += 1
+    except Exception:
+        _risk_off_score = 0
+    _cross_asset_risk_off = _risk_off_score >= 4
+    if _cross_asset_risk_off:
+        _eff_min_score += 12
+        logger.warning(f"N110 RISK-OFF: cross-asset flight to safety detected (score={_risk_off_score}) — raising threshold by 12 → {_eff_min_score}")
+    tlog["cross_asset_risk_off"] = _cross_asset_risk_off
+    tlog["risk_off_score"] = _risk_off_score
+
     # ── Portfolio Risk Limit Guard ─────────────────────────────────────────────
     # If total stop-loss exposure > 9% of portfolio, halt new buys.
     # This prevents the bot from piling on risk when all positions are at risk simultaneously.
@@ -10857,6 +10940,15 @@ def run():
                     ])
                     if _prem_ct < 2:
                         _ng_strikes += 1; _ng_reasons.append(f"low premium sigs({_prem_ct}) learned fail({_pt_wr.get('weak',50):.0f}%WR)")
+                # Strike N108: weak trend template historically under-performs
+                _n108_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("trend_template_tier_perf",[])}
+                if _n108_ng.get("weak", 50) < 35 and len(_n108_ng) >= 3:
+                    _tt_now = int(_tk_sig.get("trend_template", 0) or 0)
+                    if _tt_now < 3:
+                        _ng_strikes += 1; _ng_reasons.append(f"weak TT({_tt_now}/8) learned fail({_n108_ng.get('weak',50):.0f}%WR)")
+                # N108 green: elite trend template AND historically excellent
+                if _n108_ng.get("elite", 0) >= 65 and int(_tk_sig.get("trend_template", 0) or 0) >= 7:
+                    _ng_green_lights = _ng_green_lights + 1 if '_ng_green_lights' in dir() else 1
                 # Strike N104: learned worst entry session — avoid this time window
                 _n104_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("entry_session_perf",[])}
                 if len(_n104_ng) >= 3:
@@ -11657,6 +11749,24 @@ def run():
                     _buy_signals_merged["breadth_at_entry"] = float(breadth.get("adv_pct", 50) or 50)
                     # N106: number of open positions at time of entry
                     _buy_signals_merged["n_open_at_entry"] = len(longs)
+                    # N107: catalyst age — how fresh is the most recent news catalyst?
+                    try:
+                        _cat_headlines = live.get(tk, {}).get("news_headlines", []) or []
+                        if _cat_headlines:
+                            _newest_age_hrs = min(
+                                (h.get("age_hours", 999) or 999) for h in _cat_headlines if h.get("age_hours") is not None
+                            ) if _cat_headlines else 999
+                            _buy_signals_merged["catalyst_age_state"] = (
+                                "same_day"   if _newest_age_hrs <= 8 else
+                                "day_1"      if _newest_age_hrs <= 24 else
+                                "day_2_3"    if _newest_age_hrs <= 72 else "stale")
+                        else:
+                            _buy_signals_merged["catalyst_age_state"] = "no_catalyst"
+                    except Exception:
+                        _buy_signals_merged["catalyst_age_state"] = "no_catalyst"
+                    # N108: O'Neil trend template score tier at entry
+                    _buy_signals_merged["trend_template"] = int(live.get(tk, {}).get("trend_template", 0) or 0)
+                    # N109: RVOL at entry (already in signal dict as rvol)
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14359,6 +14469,39 @@ def run():
             _best_port_sz = max(_n106_insights, key=lambda x: x["win_rate"])["state"]
             _learn_log.append(f"N106 best portfolio size at entry: {_best_port_sz}")
 
+        # ── N107: Catalyst Age (multi-tier) ──────────────────────────────────────
+        _n107_raw = tlog.get("catalyst_age_perf", {})
+        _n107_insights = []
+        for _n7k, _n7d in _n107_raw.items():
+            if _n7d.get("total", 0) >= 2:
+                _n107_insights.append({"state": _n7k, "win_rate": _n7d.get("win_rate", 50),
+                                       "avg_pnl": _n7d.get("avg_pnl", 0), "total": _n7d.get("total", 0)})
+        if _n107_insights:
+            _best_cat = max(_n107_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N107 best catalyst age: {_best_cat['state']} ({_best_cat['win_rate']:.0f}%WR)")
+
+        # ── N108: Trend Template Score Tier (multi-tier) ──────────────────────────
+        _n108_raw = tlog.get("trend_template_tier_perf", {})
+        _n108_insights = []
+        for _n8k, _n8d in _n108_raw.items():
+            if _n8d.get("total", 0) >= 2:
+                _n108_insights.append({"state": _n8k, "win_rate": _n8d.get("win_rate", 50),
+                                       "avg_pnl": _n8d.get("avg_pnl", 0), "total": _n8d.get("total", 0)})
+        if _n108_insights:
+            _best_tt = max(_n108_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N108 best trend template tier: {_best_tt['state']} ({_best_tt['win_rate']:.0f}%WR)")
+
+        # ── N109: RVOL at Entry Tier (multi-tier) ─────────────────────────────────
+        _n109_raw = tlog.get("rvol_entry_tier_perf", {})
+        _n109_insights = []
+        for _n9k, _n9d in _n109_raw.items():
+            if _n9d.get("total", 0) >= 2:
+                _n109_insights.append({"state": _n9k, "win_rate": _n9d.get("win_rate", 50),
+                                       "avg_pnl": _n9d.get("avg_pnl", 0), "total": _n9d.get("total", 0)})
+        if _n109_insights:
+            _best_rv = max(_n109_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N109 best RVOL at entry: {_best_rv['state']} ({_best_rv['win_rate']:.0f}%WR)")
+
         # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
         _eg_raw = tlog.get("eg_tier_perf", {})
         _eg_insights = []
@@ -14512,6 +14655,9 @@ def run():
             "entry_session_perf":   _n104_insights,          # N104: entry session (morning/midday/power) vs outcome
             "breadth_entry_perf":   _n105_insights,          # N105: market breadth at entry vs outcome
             "portfolio_size_perf":  _n106_insights,          # N106: portfolio concentration at entry vs outcome
+            "catalyst_age_perf":    _n107_insights,          # N107: catalyst recency at entry vs outcome
+            "trend_template_tier_perf": _n108_insights,      # N108: O'Neil trend template tier vs outcome
+            "rvol_entry_tier_perf": _n109_insights,          # N109: relative volume at entry tier vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -14616,6 +14762,7 @@ def run():
             "tws_perf","beng_perf","hammer_perf","cup_handle_perf","dbn_perf",
             "eg_tier_perf","st_gap_perf","premium_tier_perf","rotation_flip_perf",
             "vix_entry_perf","entry_session_perf","breadth_entry_perf","portfolio_size_perf",
+            "catalyst_age_perf","trend_template_tier_perf","rvol_entry_tier_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -14623,9 +14770,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 65               # total tracked neuron dimensions (N103-N106 added)
+        tlog["neurons_total"]     = 69               # total tracked neuron dimensions (N103-N110 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/65 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/69 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
