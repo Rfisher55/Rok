@@ -8822,6 +8822,71 @@ def run():
                     _week_prep.append(_item)
                 tlog["week_ahead_prep"] = _week_prep
 
+            # Weekend Watchlist: fast scan of top stocks for Monday prep
+            # Only run if we haven't scanned in the last 90 min to avoid repeated slow downloads
+            _last_wd_scan = tlog.get("weekend_watchlist_ts", "")
+            _now_ts = datetime.now(timezone.utc)
+            _should_scan = True
+            if _last_wd_scan:
+                try:
+                    _last_ts_dt = datetime.fromisoformat(_last_wd_scan)
+                    if (_now_ts - _last_ts_dt).total_seconds() < 5400:  # 90 min
+                        _should_scan = False
+                except Exception:
+                    pass
+            if _should_scan:
+                try:
+                    _wd_universe = [
+                        "SPY","QQQ","NVDA","TSLA","AAPL","MSFT","AMZN","META",
+                        "GOOGL","AMD","NFLX","AVGO","PLTR","CRM","ORCL",
+                        "SOFI","COIN","MSTR","SQ","SHOP",
+                    ]
+                    # Add held positions if any
+                    for _hp in _cm_positions:
+                        if _hp.get("ticker") and _hp["ticker"] not in _wd_universe:
+                            _wd_universe.insert(0, _hp["ticker"])
+
+                    _wd_data = yf.download(
+                        " ".join(_wd_universe[:25]),
+                        period="5d", interval="1d",
+                        auto_adjust=True, progress=False,
+                        threads=True,
+                    )
+                    _wd_watchlist = []
+                    for _sym in _wd_universe[:25]:
+                        try:
+                            if "Close" not in _wd_data.columns.get_level_values(0):
+                                break
+                            _sym_close = _wd_data["Close"][_sym].dropna()
+                            _sym_vol   = _wd_data["Volume"][_sym].dropna()
+                            if len(_sym_close) < 2:
+                                continue
+                            _cur_px   = float(_sym_close.iloc[-1])
+                            _wk_start = float(_sym_close.iloc[0])
+                            _prev_px  = float(_sym_close.iloc[-2])
+                            _day_chg  = (_cur_px - _prev_px) / _prev_px * 100 if _prev_px > 0 else 0
+                            _wk_chg   = (_cur_px - _wk_start) / _wk_start * 100 if _wk_start > 0 else 0
+                            _avg_vol  = float(_sym_vol.mean()) if not _sym_vol.empty else 0
+                            _last_vol = float(_sym_vol.iloc[-1]) if not _sym_vol.empty else 0
+                            _vol_rat  = _last_vol / _avg_vol if _avg_vol > 0 else 1
+                            _is_held  = any(p.get("ticker") == _sym for p in _cm_positions)
+                            _wd_watchlist.append({
+                                "ticker": _sym,
+                                "price": round(_cur_px, 2),
+                                "day_chg": round(_day_chg, 2),
+                                "week_chg": round(_wk_chg, 2),
+                                "vol_ratio": round(_vol_rat, 2),
+                                "held": _is_held,
+                            })
+                        except Exception:
+                            continue
+                    _wd_watchlist.sort(key=lambda x: -abs(x.get("week_chg", 0)))
+                    tlog["weekend_watchlist"] = _wd_watchlist
+                    tlog["weekend_watchlist_ts"] = _now_ts.isoformat()
+                    logger.info(f"Weekend watchlist: {len(_wd_watchlist)} stocks analyzed")
+                except Exception as _wd_e:
+                    logger.debug(f"Weekend watchlist scan: {_wd_e}")
+
         except Exception as _cm_enrich_e:
             logger.debug(f"Closed-market brain enrichment: {_cm_enrich_e}")
 

@@ -8063,6 +8063,48 @@ body.beginner-mode #beginner-banner { display:block }
         ${posRows}
       </div>
 
+      <!-- WEEKEND WATCHLIST -->
+      ${(() => {
+        const wl = data.weekend_watchlist || [];
+        if (!wl.length) return '';
+        const wlTs = data.weekend_watchlist_ts ? new Date(data.weekend_watchlist_ts) : null;
+        const wlAgo = wlTs ? Math.round((Date.now() - wlTs) / 60000) : null;
+        const wlAgoStr = wlAgo != null ? (wlAgo < 60 ? `${wlAgo}m ago` : `${Math.floor(wlAgo/60)}h ago`) : '';
+        const sorted = [...wl].sort((a,b) => (b.week_chg||0) - (a.week_chg||0));
+        const top8 = sorted.slice(0, 8);
+        const bottom4 = sorted.slice(-4).reverse();
+        return `<div style="padding:.55rem .85rem;border-top:1px solid rgba(255,255,255,.05)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
+            <span style="font-size:7.5px;font-weight:700;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Week's Top Movers — Monday Watchlist</span>
+            ${wlAgoStr ? `<span style="font-size:6.5px;color:#3a4a5a">scanned ${wlAgoStr}</span>` : ''}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:.3rem">
+            ${top8.map(s => {
+              const lp3 = (typeof liveprices !== 'undefined' ? liveprices[s.ticker] : null) || {};
+              const wc = s.week_chg || 0;
+              const dc = s.day_chg || 0;
+              const col3 = wc >= 5 ? '#00ff88' : wc >= 2 ? '#69f0ae' : wc >= 0 ? '#ffd54f' : wc >= -2 ? '#ff9800' : '#ef5350';
+              const heldBadge = s.held ? `<span style="font-size:5px;color:#ffd54f;font-weight:800"> ★</span>` : '';
+              const livePx3 = lp3.price ? `$${lp3.price.toFixed(0)}` : `$${(s.price||0).toFixed(0)}`;
+              return `<div style="display:flex;align-items:center;gap:3px;padding:3px 6px;background:rgba(255,255,255,.03);border:1px solid ${col3}22;border-radius:6px;cursor:pointer" onclick="if(typeof openModal==='function')openModal('${s.ticker}')" title="${s.ticker} — Week: ${wc>=0?'+':''}${wc.toFixed(1)}% | Day: ${dc>=0?'+':''}${dc.toFixed(1)}%">
+                <span style="font-family:var(--disp);font-size:.9rem;font-weight:700;color:#ccc">${s.ticker}${heldBadge}</span>
+                <div style="text-align:right">
+                  <div style="font-size:8.5px;font-weight:800;color:${col3}">${wc>=0?'+':''}${wc.toFixed(1)}%</div>
+                  <div style="font-size:6.5px;color:#3a4a5a">${livePx3}</div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          ${bottom4.length > 0 ? `<div style="font-size:6.5px;color:#3a4a5a;margin-bottom:.2rem">Week's Losers (avoid Monday open):</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px">
+            ${bottom4.map(s => {
+              const wc4 = s.week_chg || 0;
+              return `<span style="font-size:7.5px;font-weight:700;padding:2px 5px;background:rgba(239,83,80,.06);border:1px solid rgba(239,83,80,.2);border-radius:4px;color:#ef9a9a;cursor:pointer" onclick="if(typeof openModal==='function')openModal('${s.ticker}')">${s.ticker} ${wc4.toFixed(1)}%</span>`;
+            }).join('')}
+          </div>` : ''}
+        </div>`;
+      })()}
+
       <!-- NEURAL BRAIN -->
       <div style="padding:.55rem .85rem">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem">
