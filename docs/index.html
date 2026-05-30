@@ -3442,6 +3442,10 @@ body.beginner-mode #beginner-banner { display:block }
     (ROK.stock_universe || []).slice(0, 20).forEach(s => tickers.add(s.ticker));
     getAlerts().filter(a => !a.triggered).forEach(a => tickers.add(a.ticker));
     Object.keys(getPortfolio()).forEach(t => tickers.add(t));
+    // Always include Alpaca positions from trades.json (critical for weekend P&L)
+    if (_tradesData && _tradesData.positions) {
+      _tradesData.positions.forEach(p => { if (p.ticker) tickers.add(p.ticker); });
+    }
     // Also fetch live prices for starred stocks not already in the list
     starred.forEach(t => tickers.add(t));
     const tickerList = [...tickers].filter(Boolean);
@@ -57810,8 +57814,51 @@ window.renderSectorRotation = renderSectorRotation;
       const drawdown   = data.drawdown_pct || 0;
       const wr         = data.win_rate != null ? Math.round(data.win_rate * 100) : null;
 
-      if (!topScan.length && !rejected.length && minsAgo === null) {
-        botPicksEl.innerHTML = '';
+      // When market is closed and we have no fresh scan, show a "waiting for market" state
+      if (!topScan.length && !rejected.length && !data.market_open) {
+        const weekPrep = data.week_ahead_prep || [];
+        const lu2 = data.last_updated ? new Date(data.last_updated) : null;
+        const mAgo2 = lu2 ? Math.round((Date.now()-lu2)/60000) : null;
+        const nxtOpen = data.next_market_open ? new Date(data.next_market_open) : null;
+        const minsToNxt = nxtOpen ? Math.max(0, Math.round((nxtOpen - Date.now()) / 60000)) : null;
+        const hNxt = minsToNxt != null ? Math.floor(minsToNxt / 60) : null;
+        const mNxt = minsToNxt != null ? minsToNxt % 60 : null;
+        const cntStr = hNxt != null ? (hNxt > 0 ? `${hNxt}h ${mNxt}m` : `${minsToNxt}m`) : null;
+        botPicksEl.innerHTML = `<div style="background:linear-gradient(135deg,#060d1a,#090e1a);border:1px solid #1e3050;border-radius:12px;padding:.85rem">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.55rem">
+            <div style="width:6px;height:6px;border-radius:50%;background:#546e7a;flex-shrink:0"></div>
+            <span style="font-size:9px;font-weight:800;letter-spacing:.1em;color:#546e7a;text-transform:uppercase">BOT SCANNER — MARKET CLOSED</span>
+            ${mAgo2 != null ? `<span style="font-size:7px;color:#3a4a5a;margin-left:auto">Updated ${mAgo2<60?mAgo2+'m':Math.floor(mAgo2/60)+'h'} ago</span>` : ''}
+          </div>
+          ${cntStr ? `<div style="background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.12);border-radius:8px;padding:.4rem .65rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem">
+            <span style="font-size:1rem">⏰</span>
+            <div>
+              <div style="font-size:9px;font-weight:800;color:#ffd54f">Market opens in ${cntStr}</div>
+              <div style="font-size:7.5px;color:#546e7a">Bot will start scanning automatically at 9:30 AM ET</div>
+            </div>
+          </div>` : ''}
+          ${weekPrep.length > 0 ? `<div style="margin-bottom:.4rem">
+            <div style="font-size:7.5px;font-weight:700;color:#3a4a5a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem">Positions to watch Monday</div>
+            ${weekPrep.slice(0,6).map(p => {
+              const lp2 = (typeof liveprices !== 'undefined' ? liveprices[p.ticker] : null) || {};
+              const livePx2 = lp2.price || 0;
+              const isLv = livePx2 > 0 && (p.cost||0) > 0;
+              const pct2 = isLv ? ((livePx2 - p.cost) / p.cost * 100) : (p.pnl_pct || 0);
+              const col2 = pct2 >= 0 ? '#00e676' : '#ef5350';
+              return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.25rem .4rem;background:rgba(255,255,255,.02);border-radius:6px;margin-bottom:2px;cursor:pointer" onclick="if(typeof openModal==='function')openModal('${p.ticker}')">
+                <div style="display:flex;align-items:center;gap:.5rem">
+                  <span style="font-family:var(--disp);font-size:1rem;color:var(--wh)">${p.ticker}</span>
+                  ${p.stop_price ? `<span style="font-size:7px;color:#ef9a9a">stop $${p.stop_price.toFixed(2)}</span>` : ''}
+                  ${p.target_price ? `<span style="font-size:7px;color:#00e676">target $${p.target_price.toFixed(2)}</span>` : ''}
+                </div>
+                <span style="font-size:11px;font-weight:800;color:${col2}">${pct2>=0?'+':''}${pct2.toFixed(2)}%</span>
+              </div>`;
+            }).join('')}
+          </div>` : `<div style="font-size:9px;color:#2a3a4a;line-height:1.6;padding:.3rem 0">
+            Bot is ready to scan ${data.scan_universe || 'the market'} when market opens.<br>
+            First scan runs at 9:40 AM ET (after the open volatility settles).
+          </div>`}
+        </div>`;
       } else {
         const headerTime = minsAgo !== null
           ? `<span style="font-size:7.5px;font-weight:600;color:${minsAgo<10?'#00ff88':minsAgo<35?'#ffd54f':'#555'};margin-left:.4rem">${minsAgo<60?minsAgo+'m':Math.floor(minsAgo/60)+'h'} ago</span>`
