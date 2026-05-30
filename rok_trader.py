@@ -287,33 +287,75 @@ def _save(path, data):
 
 
 def _save_equity_snapshot(tlog: dict) -> None:
-    """Append a daily portfolio-value snapshot to docs/equity.json for equity curve charts."""
+    """Append daily portfolio snapshot to equity.json with Sharpe, drawdown, and daily P&L stats."""
     try:
+        import math as _emath
         pv = float(tlog.get("portfolio_value", 0))
         if pv <= 0:
             return
         eq = _load(EQUITY_FILE, {"snapshots": [], "start_value": 0})
         snaps = eq.get("snapshots", [])
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        # Compute daily P&L vs prior snapshot
+        _prior_val = snaps[-1]["value"] if snaps else pv
+        _daily_pnl_usd = round(pv - _prior_val, 2)
+        _daily_pnl_pct = round((_daily_pnl_usd / _prior_val * 100) if _prior_val else 0, 3)
+        # Current open P&L from positions
+        _open_pnl_usd = sum(float(p.get("pnl_usd", 0)) for p in tlog.get("positions", []))
         # Update today's entry or append
         if snaps and snaps[-1].get("date") == today:
             snaps[-1]["value"] = round(pv, 2)
             snaps[-1]["ts"] = datetime.now(timezone.utc).isoformat()
+            snaps[-1]["open_pnl"] = round(_open_pnl_usd, 2)
+            snaps[-1]["positions"] = len(tlog.get("positions", []))
         else:
-            snaps.append({"date": today, "value": round(pv, 2), "ts": datetime.now(timezone.utc).isoformat()})
+            snaps.append({
+                "date": today, "value": round(pv, 2),
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "daily_pnl_usd": _daily_pnl_usd,
+                "daily_pnl_pct": _daily_pnl_pct,
+                "open_pnl": round(_open_pnl_usd, 2),
+                "positions": len(tlog.get("positions", [])),
+            })
         # Record start value on first snapshot
         if not eq.get("start_value"):
             eq["start_value"] = round(pv, 2)
             eq["start_date"]  = today
         # Keep 365 days
         eq["snapshots"] = snaps[-365:]
-        # Compute peak value and max drawdown
         values = [s["value"] for s in eq["snapshots"]]
-        eq["peak_value"] = max(values)
-        eq["current_value"] = round(pv, 2)
+        eq["peak_value"]       = max(values)
+        eq["current_value"]    = round(pv, 2)
         eq["total_return_pct"] = round((pv / eq["start_value"] - 1) * 100, 2) if eq["start_value"] else 0
+        # Max drawdown from peak
+        _running_max = values[0]
+        _max_dd = 0.0
+        for v in values:
+            _running_max = max(_running_max, v)
+            _dd = (_running_max - v) / _running_max * 100 if _running_max > 0 else 0
+            _max_dd = max(_max_dd, _dd)
+        eq["max_drawdown_pct"] = round(_max_dd, 2)
+        # Sharpe ratio (annualised, risk-free=4.5%)
+        if len(snaps) >= 5:
+            _rets = []
+            for i in range(1, len(snaps)):
+                _pv_i   = snaps[i]["value"]
+                _pv_im1 = snaps[i-1]["value"]
+                if _pv_im1 > 0:
+                    _rets.append((_pv_i - _pv_im1) / _pv_im1)
+            if len(_rets) >= 2:
+                _rf_daily = 0.045 / 252
+                _excess = [r - _rf_daily for r in _rets]
+                _mean_ex = sum(_excess) / len(_excess)
+                _std_ex  = (_emath.sqrt(sum((r - _mean_ex)**2 for r in _excess) / max(1, len(_excess) - 1))) if len(_excess) > 1 else 1e-6
+                eq["sharpe_ratio"] = round((_mean_ex / max(_std_ex, 1e-6)) * _emath.sqrt(252), 2)
+        # Win rate from daily returns
+        _daily_rets = [s.get("daily_pnl_pct", 0) for s in snaps if s.get("daily_pnl_pct") is not None]
+        if _daily_rets:
+            _wins_d = sum(1 for r in _daily_rets if r > 0)
+            eq["daily_win_rate"] = round(_wins_d / len(_daily_rets) * 100, 1)
         _save(EQUITY_FILE, eq)
-    except Exception as _eq_e:
+    except Exception:
         pass
 
 def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=None, signals=None):
@@ -9419,6 +9461,30 @@ def run():
                 except Exception as e:
                     logger.warning(f"Partial sell failed {sym}: {e}")
                 continue
+
+            # ── RSI extreme overbought exit: sell half when RSI > 82 + good gain ──
+            # RSI > 82 is statistically rare and typically precedes a pullback.
+            # We lock in gains without fully exiting the position.
+            if not half_out and pnl_pct >= 6:
+                _rsi_ext = (live.get(sym, {}) or {}).get("rsi", 50) or 50
+                _bb_pct  = (live.get(sym, {}) or {}).get("bb_pct", 0.5) or 0.5
+                if _rsi_ext >= 82 and _bb_pct >= 0.95:   # at upper Bollinger + extreme RSI
+                    _rsi_half_qty = round(qty / 2, 4)
+                    _rsi_half_val = current * _rsi_half_qty
+                    if _rsi_half_val >= 50:
+                        logger.info(f"RSI_OVERBOUGHT {sym} — RSI={_rsi_ext:.0f}, BB={_bb_pct:.2f}, selling half at {pnl_pct:+.1f}%")
+                        try:
+                            alpaca_post("/v2/orders", {
+                                "symbol": sym, "qty": str(_rsi_half_qty),
+                                "side": "sell", "type": "market", "time_in_force": "day",
+                            })
+                            log_trade(tlog, "SELL_HALF", sym, current, _rsi_half_qty,
+                                      pnl=pnl_pct, reason=f"RSI overbought exit — RSI={_rsi_ext:.0f} bb={_bb_pct:.2f} ({pnl_pct:+.1f}%)")
+                            peaks[sym]["half_out"] = True
+                            made_trades = True
+                        except Exception as e:
+                            logger.warning(f"RSI overbought sell failed {sym}: {e}")
+                        continue
 
             # ── Profit lock at +8%: if momentum reverses with solid gain, sell 75% ──
             # This locks in most of the profit while keeping a runner going

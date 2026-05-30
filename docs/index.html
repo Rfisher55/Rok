@@ -41106,57 +41106,76 @@ body.beginner-mode #beginner-banner { display:block }
   function renderSectorAlloc() {
     const el = document.getElementById('port-sector-allocation');
     if (!el) return;
+    // Prefer live Alpaca positions from trades.json (have real market values + bot sector labels)
+    const alpacaPos = (_tradesData && _tradesData.positions) ? _tradesData.positions : [];
     let port;
     try { port = JSON.parse(localStorage.getItem('rok_portfolio_v2') || '{}'); } catch { port = {}; }
-    const tickers = Object.keys(port);
-    if (!tickers.length) {
+    const useAlpaca = alpacaPos.length > 0;
+    if (!useAlpaca && !Object.keys(port).length) {
       el.style.display = '';
       el.innerHTML = `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:.85rem">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#c0a060;margin-bottom:.5rem">SECTOR SPLIT</div>
-        <div style="font-size:12px;color:#555">Add stocks to see how your portfolio is spread across sectors.</div></div>`;
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#c0a060;margin-bottom:.5rem">SECTOR ALLOCATION</div>
+        <div style="font-size:12px;color:#555">No positions — bot will show live sector breakdown when holding stocks.</div></div>`;
       return;
     }
-    // Sector map for common tickers
-    const sectorMap = {
-      AAPL:'Tech',MSFT:'Tech',GOOGL:'Tech',GOOG:'Tech',META:'Tech',NVDA:'Tech',AMD:'Tech',INTC:'Tech',TSM:'Tech',ORCL:'Tech',CRM:'Tech',ADBE:'Tech',QCOM:'Tech',AVGO:'Tech',TXN:'Tech',
-      AMZN:'Consumer',TSLA:'Consumer',HD:'Consumer',WMT:'Consumer',MCD:'Consumer',SBUX:'Consumer',NKE:'Consumer',LOW:'Consumer',TGT:'Consumer',COST:'Consumer',
-      JPM:'Finance',BAC:'Finance',WFC:'Finance',GS:'Finance',MS:'Finance',BRK:'Finance',V:'Finance',MA:'Finance',AXP:'Finance',BLK:'Finance',C:'Finance',
-      JNJ:'Healthcare',UNH:'Healthcare',PFE:'Healthcare',ABBV:'Healthcare',MRK:'Healthcare',LLY:'Healthcare',TMO:'Healthcare',ABT:'Healthcare',BMY:'Healthcare',AMGN:'Healthcare',
-      XOM:'Energy',CVX:'Energy',SLB:'Energy',COP:'Energy',EOG:'Energy',
-      DIS:'Media',NFLX:'Media',CMCSA:'Media',T:'Telecom',VZ:'Telecom',
-      BA:'Industrial',CAT:'Industrial',GE:'Industrial',HON:'Industrial',MMM:'Industrial',LMT:'Industrial',RTX:'Industrial',
-      BTC:'Crypto',ETH:'Crypto',
-    };
-    const sectorCount = {};
-    tickers.forEach(t => {
-      const sector = sectorMap[t] || sectorMap[t.replace('-','').replace('.','').toUpperCase()] || 'Other';
-      sectorCount[sector] = (sectorCount[sector] || 0) + 1;
-    });
-    const totalPos = tickers.length;
-    const sectors = Object.entries(sectorCount).sort((a, b) => b[1] - a[1]);
-    const topSector = sectors[0];
-    const topPct = topSector ? (topSector[1] / totalPos * 100) : 0;
-    const isConcentrated = topPct > 40;
-    const colors = ['#3498db','#27ae60','#e67e22','#9b59b6','#e74c3c','#f39c12','#1abc9c','#95a5a6'];
+    const sectorData = {};  // sector -> { value, pnl, count }
+    if (useAlpaca) {
+      alpacaPos.forEach(p => {
+        const sec = (p.sector || 'other').replace(/_/g,' ');
+        const secKey = sec.charAt(0).toUpperCase() + sec.slice(1);
+        if (!sectorData[secKey]) sectorData[secKey] = { value: 0, pnl: 0, count: 0 };
+        sectorData[secKey].value += p.market_val || 0;
+        sectorData[secKey].pnl   += p.pnl_usd    || 0;
+        sectorData[secKey].count++;
+      });
+    } else {
+      const _sMap = { AAPL:'Technology',MSFT:'Technology',GOOGL:'Technology',META:'Technology',NVDA:'Technology',AMD:'Technology',AVGO:'Technology',
+        AMZN:'Consumer Disc',TSLA:'Consumer Disc',HD:'Consumer Disc',COST:'Consumer Staples',WMT:'Consumer Staples',
+        JPM:'Financials',GS:'Financials',V:'Financials',MA:'Financials',BAC:'Financials',
+        JNJ:'Healthcare',UNH:'Healthcare',LLY:'Healthcare',MRK:'Healthcare',PFE:'Healthcare',
+        XOM:'Energy',CVX:'Energy',COP:'Energy', BA:'Industrials',CAT:'Industrials',GE:'Industrials',
+        DIS:'Comm Svcs',NFLX:'Comm Svcs',META:'Comm Svcs', BTC:'Crypto',ETH:'Crypto' };
+      Object.entries(port).forEach(([t, e]) => {
+        const sec = e.sector || _sMap[t] || 'Other';
+        const val = (e.shares || 1) * (liveprices[t]?.price || e.cost || e.price || 0);
+        if (!sectorData[sec]) sectorData[sec] = { value: 0, pnl: 0, count: 0 };
+        sectorData[sec].value += val;
+        sectorData[sec].count++;
+      });
+    }
+    const totalVal = Object.values(sectorData).reduce((s, d) => s + d.value, 0) || 1;
+    const sectors  = Object.entries(sectorData).sort((a, b) => b[1].value - a[1].value);
+    const topSec   = sectors[0];
+    const topPct   = topSec ? (topSec[1].value / totalVal * 100) : 0;
+    const isConc   = topPct > 50 && sectors.length >= 2;
+    const colors   = ['#00e676','#82b1ff','#ffd54f','#ef5350','#00e5ff','#f06292','#aed581','#ffb74d','#4dd0e1','#ce93d8'];
     el.style.display = '';
-    el.innerHTML = `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:.85rem">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;color:#c0a060;margin-bottom:.5rem">SECTOR SPLIT</div>
-      ${isConcentrated
-        ? `<div style="font-size:12px;color:#e67e22;background:#1a0e00;border-radius:6px;padding:.4rem .5rem;margin-bottom:.5rem">Heavy in ${topSector[0]} (${topPct.toFixed(0)}%). Consider adding stocks from other sectors to reduce risk.</div>`
-        : `<div style="font-size:12px;color:#27ae60;background:#0a2010;border-radius:6px;padding:.4rem .5rem;margin-bottom:.5rem">Good spread across ${sectors.length} sectors. Well diversified.</div>`}
+    el.innerHTML = `<div style="background:#0a1220;border:1px solid #1a2a40;border-radius:9px;padding:.8rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <div style="font-size:8px;font-weight:800;letter-spacing:.1em;color:#4a6fa5;text-transform:uppercase">Sector Allocation${useAlpaca?' — Live Alpaca':''}</div>
+        ${isConc ? `<span style="font-size:7px;color:#ff9800;font-weight:700">⚠ ${topSec[0]} heavy</span>` : `<span style="font-size:7px;color:#00e676;font-weight:700">✓ Diversified</span>`}
+      </div>
       ${sectors.map((s, i) => {
-        const pct = (s[1] / totalPos * 100);
+        const pct = (s[1].value / totalVal * 100);
         const col = colors[i % colors.length];
-        return `<div style="margin-bottom:.35rem">
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:.2rem">
-            <span style="color:#ccc">${s[0]}</span>
-            <span style="color:${col}">${s[1]} stock${s[1] > 1 ? 's' : ''} (${pct.toFixed(0)}%)</span>
+        const pnlUsd = s[1].pnl;
+        const pnlStr = pnlUsd !== 0 ? `<span style="color:${pnlUsd>=0?'#00ff88':'#ef5350'};font-size:7px;font-weight:700;margin-left:auto">${pnlUsd>=0?'+':''}$${Math.round(Math.abs(pnlUsd))}</span>` : '';
+        return `<div style="margin-bottom:.3rem">
+          <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.15rem">
+            <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0"></span>
+            <span style="color:#ccc;font-size:7.5px;font-weight:700">${s[0]}</span>
+            <span style="color:#4a6fa5;font-size:7px">(${s[1].count})</span>
+            <span style="color:${col};font-size:7.5px;font-weight:800;margin-left:auto">${pct.toFixed(0)}%</span>
+            ${pnlStr}
           </div>
-          <div style="background:#0d0d0d;border-radius:3px;height:5px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${col};border-radius:3px"></div>
+          <div style="background:rgba(255,255,255,.05);border-radius:3px;height:4px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width .5s"></div>
           </div>
         </div>`;
       }).join('')}
+      <div style="font-size:6.5px;color:#2a4060;margin-top:.35rem;text-align:right">
+        $${totalVal.toLocaleString('en-US',{maximumFractionDigits:0})} total · ${useAlpaca?'bot-synced':'estimated'}
+      </div>
     </div>`;
   }
   window.renderSectorAlloc = renderSectorAlloc;
@@ -56306,6 +56325,9 @@ async function renderPerfChart() {
         ${wr !== null ? `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Win Rate</div><div style="font-size:12px;font-weight:800;color:${wr>=55?'#00ff88':wr>=40?'#ffd54f':'#ef5350'}">${wr}%</div></div>` : ''}
         <div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">W/L</div><div style="font-size:12px;font-weight:800;color:#ccc">${wins}/${losses}</div></div>
         ${totalPnL !== 0 ? `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Open P&L</div><div style="font-size:12px;font-weight:800;color:${pnlCol}">${totalPnL>=0?'+':''}$${Math.round(Math.abs(totalPnL)).toLocaleString()}</div></div>` : ''}
+        ${equityData?.sharpe_ratio != null ? (() => { const sr=equityData.sharpe_ratio; const src=sr>=1.5?'#00ff88':sr>=0.5?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Sharpe</div><div style="font-size:12px;font-weight:800;color:${src}">${sr.toFixed(2)}</div></div>`; })() : ''}
+        ${equityData?.max_drawdown_pct > 0.5 ? (() => { const dd=equityData.max_drawdown_pct; const ddc=dd<5?'#69f0ae':dd<10?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Max DD</div><div style="font-size:12px;font-weight:800;color:${ddc}">-${dd.toFixed(1)}%</div></div>`; })() : ''}
+        ${equityData?.daily_win_rate != null ? (() => { const dwr=equityData.daily_win_rate; const dwrc=dwr>=55?'#00ff88':dwr>=40?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Day Win%</div><div style="font-size:12px;font-weight:800;color:${dwrc}">${dwr}%</div></div>`; })() : ''}
         ${data.scan_universe ? `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:12px;font-weight:800;color:#ccc">${data.scan_universe}</div></div>` : ''}
       </div>
 
@@ -56320,6 +56342,7 @@ async function renderPerfChart() {
       </div>` : ''}
 
       ${newsHtml}
+      <div id="perf-sector-donut"></div>
     </div>`;
 
     // Render Chart.js equity curve
@@ -56329,49 +56352,63 @@ async function renderPerfChart() {
       const existingChart = Chart.getChart(canvas);
       if (existingChart) existingChart.destroy();
 
-      let labels, vals;
+      let labels, vals, dailyPnlPcts;
       if (useDaily) {
         labels = dailySnaps.map(s => {
           const d = new Date(s.date + 'T12:00:00');
           return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
         });
         vals = dailySnaps.map(s => s.value);
+        dailyPnlPcts = dailySnaps.map(s => s.daily_pnl_pct ?? null);
       } else {
         labels = intradayHist.map(h => {
           const d = new Date(h.t);
           return d.toLocaleString('en-US',{hour:'2-digit',minute:'2-digit'});
         });
         vals = intradayHist.map(h => h.v);
+        dailyPnlPcts = null;
       }
 
-      const isUp   = vals[vals.length-1] >= vals[0];
+      const isUp    = vals[vals.length-1] >= vals[0];
       const lineCol = isUp ? '#00c96b' : '#ef5350';
-
-      const ctx  = canvas.getContext('2d');
-      const grad = ctx.createLinearGradient(0, 0, 0, 115);
-      grad.addColorStop(0, isUp ? 'rgba(0,201,107,.3)' : 'rgba(239,83,80,.25)');
+      const ctx     = canvas.getContext('2d');
+      const grad    = ctx.createLinearGradient(0, 0, 0, 115);
+      grad.addColorStop(0, isUp ? 'rgba(0,201,107,.28)' : 'rgba(239,83,80,.22)');
       grad.addColorStop(1, 'rgba(0,0,0,0)');
 
-      // Mark trade events on chart (BUY/SELL points)
-      const tradePoints = vals.map(() => null);
+      const datasets = [{
+        type: 'line',
+        label: 'Portfolio',
+        data: vals,
+        borderColor: lineCol,
+        borderWidth: 2,
+        backgroundColor: grad,
+        fill: true,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: lineCol,
+        tension: 0.4,
+        yAxisID: 'y',
+        order: 1,
+      }];
+
+      // Add daily P&L bar dataset when daily data available
+      if (dailyPnlPcts && dailyPnlPcts.some(v => v != null)) {
+        datasets.push({
+          type: 'bar',
+          label: 'Daily P&L %',
+          data: dailyPnlPcts,
+          backgroundColor: dailyPnlPcts.map(v => v == null ? 'transparent' : v >= 0 ? 'rgba(0,201,107,.55)' : 'rgba(239,83,80,.50)'),
+          borderColor: dailyPnlPcts.map(v => v == null ? 'transparent' : v >= 0 ? 'rgba(0,201,107,.9)' : 'rgba(239,83,80,.9)'),
+          borderWidth: 1,
+          borderRadius: 2,
+          yAxisID: 'y2',
+          order: 2,
+        });
+      }
 
       new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Portfolio',
-            data: vals,
-            borderColor: lineCol,
-            borderWidth: 2,
-            backgroundColor: grad,
-            fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: lineCol,
-            tension: 0.4,
-          }]
-        },
+        data: { labels, datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -56383,13 +56420,17 @@ async function renderPerfChart() {
               displayColors: false,
               callbacks: {
                 title: items => items[0].label,
-                label: item => `$${Number(item.raw).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}`
+                label: item => {
+                  if (item.datasetIndex === 0) return `Portfolio: $${Number(item.raw).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+                  if (item.datasetIndex === 1 && item.raw != null) return `Day P&L: ${item.raw >= 0 ? '+' : ''}${Number(item.raw).toFixed(2)}%`;
+                  return '';
+                }
               },
               backgroundColor: 'rgba(4,10,22,.97)',
               borderColor: 'rgba(130,177,255,.25)',
               borderWidth: 1,
               titleColor: '#64b5f6',
-              bodyColor: lineCol,
+              bodyColor: '#aaa',
               padding: 10,
             }
           },
@@ -56401,11 +56442,57 @@ async function renderPerfChart() {
               grid: { color: 'rgba(255,255,255,.035)' },
               ticks: { color: '#3a5a8a', font:{size:8}, maxTicksLimit:5,
                 callback: v => '$'+Number(v).toLocaleString('en-US',{notation:'compact',maximumFractionDigits:1}) }
+            },
+            y2: {
+              display: false,
+              position: 'left',
+              grid: { display: false },
             }
           }
         }
       });
     }
+
+    // Render sector allocation mini-donut for held positions
+    const _sectEl = document.getElementById('perf-sector-donut');
+    if (_sectEl && positions.length > 0) {
+      const _sectMap = {};
+      positions.forEach(p => {
+        const s = p.sector || 'Other';
+        _sectMap[s] = (_sectMap[s] || 0) + (p.market_val || 0);
+      });
+      const _sectTotal = Object.values(_sectMap).reduce((a, b) => a + b, 0) || 1;
+      const _sectColors = ['#00e676','#82b1ff','#ffd54f','#ef5350','#00e5ff','#f06292','#aed581','#ffb74d','#4dd0e1','#ce93d8','#80cbc4'];
+      const _sectKeys   = Object.keys(_sectMap).sort((a,b) => _sectMap[b] - _sectMap[a]);
+      let _donutSvg = `<svg viewBox="0 0 60 60" style="width:60px;height:60px;transform:rotate(-90deg)">`;
+      let _startAngle = 0;
+      _sectKeys.forEach((s, i) => {
+        const _pct = _sectMap[s] / _sectTotal;
+        const _angle = _pct * 360;
+        const _startRad = _startAngle * Math.PI / 180;
+        const _endRad   = (_startAngle + _angle) * Math.PI / 180;
+        const _x1 = 30 + 25 * Math.cos(_startRad);
+        const _y1 = 30 + 25 * Math.sin(_startRad);
+        const _x2 = 30 + 25 * Math.cos(_endRad);
+        const _y2 = 30 + 25 * Math.sin(_endRad);
+        const _laf = _angle > 180 ? 1 : 0;
+        _donutSvg += `<path d="M30,30 L${_x1.toFixed(1)},${_y1.toFixed(1)} A25,25 0 ${_laf},1 ${_x2.toFixed(1)},${_y2.toFixed(1)} Z" fill="${_sectColors[i % _sectColors.length]}" opacity=".85"/>`;
+        _startAngle += _angle;
+      });
+      _donutSvg += `<circle cx="30" cy="30" r="12" fill="#060d1a"/></svg>`;
+      const _legend = _sectKeys.slice(0, 5).map((s, i) => {
+        const _pct = (_sectMap[s] / _sectTotal * 100).toFixed(0);
+        return `<div style="display:flex;align-items:center;gap:3px;margin-bottom:1px"><span style="width:7px;height:7px;border-radius:50%;background:${_sectColors[i % _sectColors.length]};flex-shrink:0"></span><span style="font-size:6.5px;color:#aaa">${s}</span><span style="font-size:6.5px;color:#555;margin-left:auto">${_pct}%</span></div>`;
+      }).join('');
+      _sectEl.innerHTML = `<div style="margin-top:.55rem;padding:.5rem .65rem;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:9px">
+        <div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase;margin-bottom:.4rem;letter-spacing:.08em">Sector Allocation</div>
+        <div style="display:flex;align-items:center;gap:.7rem">
+          ${_donutSvg}
+          <div style="flex:1">${_legend}</div>
+        </div>
+      </div>`;
+    }
+
   } catch(e) { el.innerHTML = ''; }
 }
 window.renderPerfChart = renderPerfChart;
@@ -57858,6 +57945,50 @@ window.renderPositionNews = renderPositionNews;
     const _prevLearned  = _tradesData?.bot_learned_params?.last_tuned;
     const _prevTradeTime = _tradesData?.last_trade_action?.time;
     _tradesData = data;  // store globally so _renderIntelReport can access trades.json fields
+
+    // ── Auto-sync Alpaca positions → localStorage portfolio ───────────────────
+    // Keeps the portfolio tracker in perfect lockstep with what the bot is holding.
+    // Runs every time trades.json refreshes. Preserves user-added entries not in Alpaca.
+    try {
+      const _alpacaPos = data.positions || [];
+      if (_alpacaPos.length > 0) {
+        const _localPort = getPortfolio();
+        const _alpacaTickers = new Set(_alpacaPos.map(p => p.ticker).filter(Boolean));
+        // Add/update positions from Alpaca
+        _alpacaPos.forEach(p => {
+          if (!p.ticker || !p.cost || !p.qty) return;
+          const _existing = _localPort[p.ticker] || {};
+          _localPort[p.ticker] = {
+            price:     _existing.price || p.cost,   // entry price (cost basis)
+            shares:    p.qty,
+            cost:      p.cost,
+            note:      _existing.note || '',
+            addedAt:   _existing.addedAt || new Date().toISOString(),
+            alpacaSync: true,   // flag: this came from Alpaca
+            side:      p.side || 'long',
+            stopPrice: p.trail_stop_price || p.stop_price || 0,
+            targetPrice: p.target_price || 0,
+            sector:    p.sector || '',
+            grade:     p.grade || '',
+            thesis:    p.entry_thesis || _existing.thesis || '',
+            pnlPct:    p.pnl_pct || 0,
+            pnlUsd:    p.pnl_usd || 0,
+            marketVal: p.market_val || 0,
+            thesisStatus: p.thesis_status || '',
+            daysHeld:  p.days_held || 0,
+            rsRating:  p.rs_rating || 50,
+          };
+        });
+        // Remove positions the bot has already exited (only alpaca-synced ones)
+        Object.keys(_localPort).forEach(tk => {
+          if (_localPort[tk].alpacaSync && !_alpacaTickers.has(tk)) {
+            delete _localPort[tk];
+          }
+        });
+        savePortfolio(_localPort);
+      }
+    } catch(e) {}
+    // ── End auto-sync ─────────────────────────────────────────────────────────
 
     // ── Bridge trades.json data into the static Signals tab HTML ─────────────
     // The static HTML template has placeholder "k" values; we fill them from the bot.
