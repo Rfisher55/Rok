@@ -84,6 +84,9 @@ _LEARNED_COLD_SECTORS: set = set()   # sectors to avoid (from accumulated loss d
 _LEARNED_HOT_SECTORS:  set = set()   # sectors that are working (from accumulated wins)
 _LEARNED_WORST_HOURS:  set = set()   # UTC hours with poor historical win rates
 _LEARNED_BEST_HOURS:   set = set()   # UTC hours with high historical win rates
+_LEARNED_TICKER_MEMORY: dict = {}   # {ticker: score_adj} — per-ticker score modifier from history
+_LEARNED_WORST_HALFHOURS: set = set()  # "HHMM" strings of 30-min windows to avoid
+_LEARNED_BEST_HALFHOURS:  set = set()  # "HHMM" strings of 30-min windows that outperform
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -298,6 +301,10 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         # Store current regime at entry so we can analyze regime-based performance later
         _cur_regime = tlog.get("regime", {})
         e["regime"] = _cur_regime.get("regime", "unknown") if isinstance(_cur_regime, dict) else str(_cur_regime)[:20]
+        # Store VIX at entry for VIX-bracket performance tracking
+        _vix_entry = None
+        if isinstance(_cur_regime, dict): _vix_entry = _cur_regime.get("vix")
+        if _vix_entry is not None: e["vix_at_entry"] = round(float(_vix_entry), 1)
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -477,6 +484,70 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _htp["total"] > 0:
                     _htp["win_rate"] = round(_htp["wins"] / _htp["total"] * 100, 1)
                     _htp["avg_pnl"]  = round(_htp["total_pnl"] / _htp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Ticker Memory Neuron: per-ticker win/loss history ────────────────────
+    # The bot remembers which tickers it's historically good or bad at.
+    # A ticker with 70%+ WR gets a score boost next time; <35% WR gets a penalty.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _tk_mem = tlog.setdefault("ticker_memory", {})
+            _tm = _tk_mem.setdefault(sym, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _tm["total"] = _tm.get("total", 0) + 1
+            _tm["total_pnl"] = round(_tm.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _tm["wins"] = _tm.get("wins", 0) + 1
+            else: _tm["losses"] = _tm.get("losses", 0) + 1
+            if _tm["total"] > 0:
+                _tm["win_rate"] = round(_tm["wins"] / _tm["total"] * 100, 1)
+                _tm["avg_pnl"]  = round(_tm["total_pnl"] / _tm["total"], 2)
+            # Trim to top 100 tickers by trade count
+            if len(_tk_mem) > 120:
+                tlog["ticker_memory"] = dict(sorted(_tk_mem.items(), key=lambda x: -x[1].get("total", 0))[:100])
+        except Exception:
+            pass
+
+    # ── VIX Bracket Neuron: performance by volatility regime ────────────────
+    # Tracks win rate in low/normal/elevated/high VIX environments.
+    # The bot learns whether it should be more/less aggressive at each VIX level.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t2 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _vix_ent = _buy_t2.get("vix_at_entry") if _buy_t2 else None
+            if _vix_ent is not None:
+                _vbkt = ("low" if float(_vix_ent) < 14 else
+                         "normal" if float(_vix_ent) < 20 else
+                         "elevated" if float(_vix_ent) < 28 else "high")
+                _vix_perf = tlog.setdefault("vix_bracket_performance", {})
+                _vp = _vix_perf.setdefault(_vbkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _vp["total"] = _vp.get("total", 0) + 1
+                _vp["total_pnl"] = round(_vp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _vp["wins"] = _vp.get("wins", 0) + 1
+                else: _vp["losses"] = _vp.get("losses", 0) + 1
+                if _vp["total"] > 0:
+                    _vp["win_rate"] = round(_vp["wins"] / _vp["total"] * 100, 1)
+                    _vp["avg_pnl"]  = round(_vp["total_pnl"] / _vp["total"], 2)
+        except Exception:
+            pass
+
+    # ── 30-Minute Window Neuron: fine-grained time-of-day scoring ───────────
+    # More precise than hour-level: learns "9:30 AM ET is great, 9:00 AM is rough"
+    # Key "HHMM" is the UTC 30-min window when the BUY was entered.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t3 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _buy_t3 and _buy_t3.get("time"):
+                _entry_dt3 = datetime.fromisoformat(_buy_t3["time"].replace("Z", "+00:00"))
+                _hw_key = f"{_entry_dt3.hour:02d}{'30' if _entry_dt3.minute >= 30 else '00'}"
+                _hw_perf = tlog.setdefault("halfhour_performance", {})
+                _hwp = _hw_perf.setdefault(_hw_key, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _hwp["total"] = _hwp.get("total", 0) + 1
+                _hwp["total_pnl"] = round(_hwp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _hwp["wins"] = _hwp.get("wins", 0) + 1
+                else: _hwp["losses"] = _hwp.get("losses", 0) + 1
+                if _hwp["total"] > 0:
+                    _hwp["win_rate"] = round(_hwp["wins"] / _hwp["total"] * 100, 1)
+                    _hwp["avg_pnl"]  = round(_hwp["total_pnl"] / _hwp["total"], 2)
         except Exception:
             pass
 
@@ -6438,6 +6509,28 @@ def score(tk, d, sentiment=0, regime_adj=0):
     except Exception:
         pass
 
+    # ── 30-MIN WINDOW LAYER: fine-grained time scoring (half-hour precision) ─
+    try:
+        _now_dt = datetime.now(timezone.utc)
+        _hw_key = f"{_now_dt.hour:02d}{'30' if _now_dt.minute >= 30 else '00'}"
+        if _LEARNED_WORST_HALFHOURS and _hw_key in _LEARNED_WORST_HALFHOURS:
+            s -= 3   # this 30-min window historically bad
+        elif _LEARNED_BEST_HALFHOURS and _hw_key in _LEARNED_BEST_HALFHOURS:
+            s += 2   # this 30-min window historically great
+    except Exception:
+        pass
+
+    # ── TICKER MEMORY LAYER: per-ticker historical performance ───────────────
+    # The bot remembers individual tickers — great track record = boost,
+    # repeated losses on this ticker = caution signal.
+    try:
+        if _LEARNED_TICKER_MEMORY and tk in _LEARNED_TICKER_MEMORY:
+            _tk_adj = _LEARNED_TICKER_MEMORY[tk]
+            if _tk_adj != 0:
+                s += max(-5, min(4, _tk_adj))  # cap: ±5 for ticker memory
+    except Exception:
+        pass
+
     # Market regime adjustment
     s += regime_adj
 
@@ -6977,14 +7070,21 @@ def run():
 
     # Publish to module-level globals so score() can use them without parameters
     global _LEARNED_COLD_SECTORS, _LEARNED_HOT_SECTORS, _LEARNED_WORST_HOURS, _LEARNED_BEST_HOURS
+    global _LEARNED_TICKER_MEMORY, _LEARNED_WORST_HALFHOURS, _LEARNED_BEST_HALFHOURS
     _LEARNED_COLD_SECTORS = _learned_cold_sectors
     _LEARNED_HOT_SECTORS  = set(_learned.get("hot_sectors", []))
     _LEARNED_WORST_HOURS  = _learned_worst_hours
     _LEARNED_BEST_HOURS   = _learned_best_hours
+    # Ticker memory: {ticker: score_adj} from learned_params
+    _LEARNED_TICKER_MEMORY = _learned.get("ticker_score_adjs", {})
+    # Half-hour window awareness
+    _LEARNED_WORST_HALFHOURS = set(str(h) for h in _learned.get("worst_halfhours_utc", []))
+    _LEARNED_BEST_HALFHOURS  = set(str(h) for h in _learned.get("best_halfhours_utc", []))
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
-                    f"elite_sigs={len(_learned_elite_sigs)}, cold_sectors={sorted(_learned_cold_sectors)[:3]}")
+                    f"elite_sigs={len(_learned_elite_sigs)}, cold_sectors={sorted(_learned_cold_sectors)[:3]}, "
+                    f"ticker_memory={len(_LEARNED_TICKER_MEMORY)} tickers")
 
     # ── MANAGE EXISTING SHORTS ─────────────────────────────────────────────
     for sym, pos in list(shorts.items()):
@@ -9600,6 +9700,59 @@ def run():
                 _learn_log.append(f"Best hold period: {_best_bucket[0]} (avg P&L {_best_bucket[1]:+.1f}%, n={_best_bucket[2]})")
                 _optimal_hold_days = "short" if _best_bucket[0] == "short" else ("medium" if _best_bucket[0] == "1-3day" else "long")
 
+        # ── 9. Ticker Memory Neuron: per-ticker score adjustments ────────────
+        # Tickers with great history get a small score boost; repeat losers get penalized.
+        _tk_mem_raw = tlog.get("ticker_memory", {})
+        _ticker_score_adjs = {}
+        for _tk, _td in _tk_mem_raw.items():
+            _tk_total = _td.get("total", 0)
+            _tk_wr    = _td.get("win_rate", 50)
+            _tk_avg   = _td.get("avg_pnl", 0)
+            if _tk_total >= 3:
+                if _tk_wr >= 70 and _tk_avg >= 1.5:
+                    _ticker_score_adjs[_tk] = 3   # great history: boost
+                elif _tk_wr >= 60 and _tk_avg >= 0.5:
+                    _ticker_score_adjs[_tk] = 1   # decent history: small boost
+                elif _tk_wr <= 30 and _tk_avg <= -1.0:
+                    _ticker_score_adjs[_tk] = -5  # terrible history: avoid
+                elif _tk_wr <= 40 and _tk_avg <= -0.5:
+                    _ticker_score_adjs[_tk] = -3  # poor history: penalize
+        _ticker_stars = sorted(_ticker_score_adjs.items(), key=lambda x: -x[1])
+        if _ticker_stars:
+            _best_tickers  = [f"{t}(+{adj})" for t, adj in _ticker_stars[:3] if adj > 0]
+            _worst_tickers = [f"{t}({adj})" for t, adj in reversed(_ticker_stars) if adj < 0][:3]
+            if _best_tickers:
+                _learn_log.append(f"Ticker stars (score boost): {', '.join(_best_tickers)}")
+            if _worst_tickers:
+                _learn_log.append(f"Ticker avoid (score penalty): {', '.join(_worst_tickers)}")
+
+        # ── 10. 30-Minute Window Neuron: sub-hour time accuracy ──────────────
+        _hw_perf_raw = tlog.get("halfhour_performance", {})
+        _best_halfhours  = sorted([hw for hw, hd in _hw_perf_raw.items()
+                                   if hd.get("win_rate", 0) >= 65 and hd.get("total", 0) >= 4],
+                                  key=lambda h: -_hw_perf_raw[h]["win_rate"])
+        _worst_halfhours = sorted([hw for hw, hd in _hw_perf_raw.items()
+                                   if hd.get("win_rate", 0) <= 38 and hd.get("total", 0) >= 4],
+                                  key=lambda h: _hw_perf_raw[h]["win_rate"])
+        if _best_halfhours:
+            _learn_log.append(f"Best 30-min entry windows (UTC): {', '.join(_best_halfhours[:3])}")
+        if _worst_halfhours:
+            _learn_log.append(f"Worst 30-min entry windows (UTC): {', '.join(_worst_halfhours[:3])}")
+
+        # ── 11. VIX Bracket Neuron: volatility regime performance ────────────
+        _vix_bp = tlog.get("vix_bracket_performance", {})
+        _vix_bracket_insights = []
+        for _vbkt, _vbd in _vix_bp.items():
+            if _vbd.get("total", 0) >= 4:
+                _vix_bracket_insights.append({
+                    "bracket": _vbkt, "win_rate": _vbd.get("win_rate", 50),
+                    "avg_pnl": _vbd.get("avg_pnl", 0), "total": _vbd.get("total", 0)
+                })
+        _vix_bracket_insights.sort(key=lambda x: -x["win_rate"])
+        if _vix_bracket_insights:
+            _vix_summary = " | ".join(f"{v['bracket']}:{v['win_rate']:.0f}%WR" for v in _vix_bracket_insights[:4])
+            _learn_log.append(f"VIX bracket WRs: {_vix_summary}")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -9614,11 +9767,15 @@ def run():
             "bucket_insights":     _bucket_insights,
             "top_synapses":        _top_synapses_list,   # best signal combinations
             "optimal_hold_period": _optimal_hold_days,   # short / medium / long
+            "ticker_score_adjs":   _ticker_score_adjs,   # per-ticker score modifiers
+            "best_halfhours_utc":  _best_halfhours[:4],  # top 30-min entry windows
+            "worst_halfhours_utc": _worst_halfhours[:4], # worst 30-min entry windows
+            "vix_bracket_perf":    _vix_bracket_insights,# VIX bracket outcomes
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
             "last_tuned":          now_utc.isoformat(),
-            "learn_log":           _learn_log[-12:],     # last 12 learning observations
+            "learn_log":           _learn_log[-15:],     # last 15 learning observations
         }
         if _learn_log:
             logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")

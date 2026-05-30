@@ -53383,6 +53383,57 @@ function _renderIntelReport(el, intel) {
         return `<div style="margin-bottom:.25rem"><span style="font-size:6px;color:#82b1ff;font-weight:700">🔗 TOP SIGNAL COMBOS: </span><span style="display:inline-flex;gap:3px;flex-wrap:wrap">${synHtml}</span></div>`;
       })()}
       ${lp.optimal_hold_period ? `<div style="margin-bottom:.2rem"><span style="font-size:6px;color:#ffa726;font-weight:700">OPTIMAL HOLD: </span><span style="font-size:6.5px;color:var(--wh3)">${lp.optimal_hold_period === 'short' ? 'Quick exits (< 1 day) working best' : lp.optimal_hold_period === 'medium' ? '1-3 day holds performing best' : 'Letting winners run (3+ days) working best'}</span></div>` : ''}
+      ${(() => {
+        // ── Ticker Memory Neuron: which tickers the bot has learned ─────────
+        const tkAdjs = lp.ticker_score_adjs || {};
+        const tkEntries = Object.entries(tkAdjs).sort((a,b) => b[1]-a[1]);
+        if (!tkEntries.length) return '';
+        const favs = tkEntries.filter(([,v]) => v > 0).slice(0,4);
+        const avoids = tkEntries.filter(([,v]) => v < 0).slice(0,4);
+        const chip = (tk, adj) => {
+          const col = adj >= 3 ? '#00e676' : adj > 0 ? '#69f0ae' : adj <= -5 ? '#ef5350' : '#ff9800';
+          const bg  = adj > 0 ? 'rgba(0,230,118,.08)' : 'rgba(239,83,80,.08)';
+          return `<span style="font-size:6px;background:${bg};border:1px solid ${col}33;border-radius:3px;padding:1px 5px;color:${col}">${tk} ${adj>0?'+':''}${adj}</span>`;
+        };
+        return `<div style="margin-bottom:.3rem">
+          <div style="font-size:6px;color:#82b1ff;font-weight:700;margin-bottom:.15rem">🧬 TICKER MEMORY (score modifiers from history)</div>
+          ${favs.length ? `<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:.1rem">${favs.map(([t,v])=>chip(t,v)).join('')}</div>` : ''}
+          ${avoids.length ? `<div style="display:flex;gap:3px;flex-wrap:wrap">${avoids.map(([t,v])=>chip(t,v)).join('')}</div>` : ''}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── VIX Bracket Performance Neuron ─────────────────────────────────
+        const vbp = lp.vix_bracket_perf || [];
+        if (!vbp.length) return '';
+        const order = {low:0, normal:1, elevated:2, high:3};
+        const sorted = [...vbp].sort((a,b) => (order[a.bracket]||0) - (order[b.bracket]||0));
+        const cells = sorted.map(v => {
+          const col = v.win_rate >= 60 ? '#00e676' : v.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+          const label = {low:'VIX<14',normal:'VIX 14-20',elevated:'VIX 20-28',high:'VIX 28+'}[v.bracket] || v.bracket;
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.25rem .35rem;text-align:center">
+            <div style="font-size:5.5px;color:#555">${label}</div>
+            <div style="font-size:9px;font-weight:800;color:${col}">${v.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5.5px;color:${v.avg_pnl>=0?'#69f0ae':'#ef5350'}">${v.avg_pnl>=0?'+':''}${v.avg_pnl.toFixed(1)}% (${v.total}T)</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem">
+          <div style="font-size:6px;color:#ffa726;font-weight:700;margin-bottom:.2rem">📊 VIX BRACKET PERFORMANCE (volatility regime learning)</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem">${cells}</div>
+        </div>`;
+      })()}
+      ${(() => {
+        // ── 30-Min Window Neuron ────────────────────────────────────────────
+        const bestHW  = lp.best_halfhours_utc  || [];
+        const worstHW = lp.worst_halfhours_utc || [];
+        if (!bestHW.length && !worstHW.length) return '';
+        const hwLabel = hw => { const h=parseInt(hw.slice(0,2)), m=hw.slice(2); const et=(h-4+24)%24; return `${et}:${m} ET`; };
+        const hwChip = (hw, good) => `<span style="font-size:6px;background:${good?'rgba(0,230,118,.1)':'rgba(255,82,82,.08)'};border:1px solid ${good?'#00e67633':'#ef535033'};border-radius:3px;padding:1px 5px;color:${good?'#69f0ae':'#ef5350'}">${hwLabel(hw)}</span>`;
+        return `<div style="margin-bottom:.3rem">
+          <div style="font-size:6px;color:#ffd54f;font-weight:700;margin-bottom:.2rem">⏱ 30-MIN WINDOW MEMORY (fine-grained entry timing)</div>
+          ${bestHW.length ? `<div style="margin-bottom:.1rem"><span style="font-size:5.5px;color:#444">BEST: </span><span style="display:inline-flex;gap:3px;flex-wrap:wrap">${bestHW.map(h=>hwChip(h,true)).join('')}</span></div>` : ''}
+          ${worstHW.length ? `<div><span style="font-size:5.5px;color:#444">AVOID: </span><span style="display:inline-flex;gap:3px;flex-wrap:wrap">${worstHW.map(h=>hwChip(h,false)).join('')}</span></div>` : ''}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}
