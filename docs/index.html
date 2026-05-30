@@ -54503,6 +54503,58 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── Force Index (N57) + Price Acceleration (N58) dual panel ──────────
+        const fi = lp.force_index_perf || [];
+        const pa = lp.price_accel_perf || [];
+        if (!fi.length && !pa.length) return '';
+        const FI_ORDER = ['bull_div','rising','weak'];
+        const FI_ICONS = {bull_div:'⚡🔥',rising:'📈',weak:'😶'};
+        const FI_BG = {bull_div:'rgba(0,230,118,.09)',rising:'rgba(255,213,79,.06)',weak:'rgba(255,255,255,.03)'};
+        const fiMap = {}; fi.forEach(s => fiMap[s.state] = s);
+        const fiBest = fi.length ? fi.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, fi[0]) : null;
+        const fiCells = FI_ORDER.map(st => {
+          const s = fiMap[st];
+          const lbl = st==='bull_div'?'Bull Div':st==='rising'?'Rising':'Weak';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${FI_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = fiBest && s.state === fiBest.state ? '⭐' : '';
+          return `<div style="background:${FI_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${FI_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const PA_ORDER = ['accelerating','decelerating'];
+        const PA_ICONS = {accelerating:'🚀',decelerating:'🐢'};
+        const PA_BG = {accelerating:'rgba(0,230,118,.08)',decelerating:'rgba(239,83,80,.06)'};
+        const paMap = {}; pa.forEach(s => paMap[s.state] = s);
+        const paBest = pa.length ? pa.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, pa[0]) : null;
+        const paCells = PA_ORDER.map(st => {
+          const s = paMap[st];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${PA_ICONS[st]}</div><div style="font-size:5px;color:#333">${st}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = paBest && s.state === paBest.state ? '⭐' : '';
+          return `<div style="background:${PA_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${PA_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${st.charAt(0).toUpperCase()+st.slice(1)}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const fiHtml = fi.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">⚡ FORCE INDEX (N57): Elder's price×volume force at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${fiCells}</div>
+        </div>` : '';
+        const paHtml = pa.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">🚀 PRICE ACCEL (N58): is momentum building or stalling at entry?</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">${paCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${fiHtml}${paHtml}
+        </div>`;
+      })()}
+      ${(() => {
         // ── Keltner Channel (N55) + OBV Trend (N56) dual panel ───────────────
         const kc = lp.kc_zone_perf || [];
         const ov = lp.obv_trend_perf || [];

@@ -518,6 +518,20 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _obv_rise = bool(signals.get("obv_rising", False))
         e["obv_rising_at_entry"] = _obv_rise
         e["obv_trend"] = ("rising" if _obv_rise else "falling")
+        # Force Index Neuron (57): Elder's Force Index at entry.
+        # fi_rising + fi_bull_div = price moving with increasing force (acceleration confirmed).
+        # fi_div (divergence) = price going up but force weakening = distribution warning.
+        _fi_rising = bool(signals.get("force_index_rising", False))
+        _fi_div = bool(signals.get("force_index_div", False))
+        _fi_score = int(_fi_rising) + int(_fi_div) * 2  # div is more bullish than just rising
+        e["force_index_score"] = _fi_score
+        e["force_index_state"] = ("bull_div" if _fi_div else "rising" if _fi_rising else "weak")
+        # Price Acceleration Neuron (58): is price momentum accelerating upward at entry?
+        # price_accel_pos = price moving faster than its recent rate (breakout momentum).
+        # Learns: do acceleration-confirmed entries produce bigger wins?
+        _pa = bool(signals.get("price_accel_pos", False))
+        e["price_accel_at_entry"] = _pa
+        e["price_accel_state"] = ("accelerating" if _pa else "decelerating")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1395,6 +1409,43 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
+    # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_pa = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _pa_state = _buy_pa.get("price_accel_state", "decelerating") if _buy_pa else "decelerating"
+            _pa_perf = tlog.setdefault("price_accel_perf", {})
+            _pap = _pa_perf.setdefault(_pa_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _pa_state})
+            _pap["total"] = _pap.get("total", 0) + 1
+            _pap["total_pnl"] = round(_pap.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _pap["wins"] = _pap.get("wins", 0) + 1
+            else:        _pap["losses"] = _pap.get("losses", 0) + 1
+            if _pap["total"] > 0:
+                _pap["win_rate"] = round(_pap["wins"] / _pap["total"] * 100, 1)
+                _pap["avg_pnl"]  = round(_pap["total_pnl"] / _pap["total"], 2)
+        except Exception:
+            pass
+
+    # ── Force Index Neuron (57): Elder's Force Index state at entry ───────────────
+    # bull_div = price + volume momentum both confirming (highest conviction).
+    # rising = force increasing; weak = low conviction.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_fi = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _fi_state = _buy_fi.get("force_index_state", "weak") if _buy_fi else "weak"
+            _fi_perf = tlog.setdefault("force_index_perf", {})
+            _fip = _fi_perf.setdefault(_fi_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _fi_state})
+            _fip["total"] = _fip.get("total", 0) + 1
+            _fip["total_pnl"] = round(_fip.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _fip["wins"] = _fip.get("wins", 0) + 1
+            else:        _fip["losses"] = _fip.get("losses", 0) + 1
+            if _fip["total"] > 0:
+                _fip["win_rate"] = round(_fip["wins"] / _fip["total"] * 100, 1)
+                _fip["avg_pnl"]  = round(_fip["total_pnl"] / _fip["total"], 2)
         except Exception:
             pass
 
@@ -11886,6 +11937,36 @@ def run():
             if _ov_r and _ov_f and _ov_r["win_rate"] > _ov_f["win_rate"] + 15:
                 _learn_log.append(f"Rising OBV entries win {_ov_r['win_rate']:.0f}% vs falling {_ov_f['win_rate']:.0f}% — volume leads price confirmed")
 
+        # ── 57. Force Index Neuron ────────────────────────────────────────────
+        _fi_raw = tlog.get("force_index_perf", {})
+        _fi_insights = []
+        for _fik, _fid in _fi_raw.items():
+            if _fid.get("total", 0) >= 3:
+                _fi_insights.append({
+                    "state": _fik, "win_rate": _fid.get("win_rate", 50),
+                    "avg_pnl": _fid.get("avg_pnl", 0), "total": _fid.get("total", 0)
+                })
+        if _fi_insights:
+            _fi_sum = " | ".join(f"FI_{s['state']}:{s['win_rate']:.0f}%WR" for s in _fi_insights)
+            _learn_log.append(f"Force index WRs: {_fi_sum}")
+
+        # ── 58. Price Acceleration Neuron ─────────────────────────────────────
+        _pa_raw = tlog.get("price_accel_perf", {})
+        _pa_insights = []
+        for _pak, _pad in _pa_raw.items():
+            if _pad.get("total", 0) >= 3:
+                _pa_insights.append({
+                    "state": _pak, "win_rate": _pad.get("win_rate", 50),
+                    "avg_pnl": _pad.get("avg_pnl", 0), "total": _pad.get("total", 0)
+                })
+        if _pa_insights:
+            _pa_accel = next((s for s in _pa_insights if s["state"] == "accelerating"), None)
+            _pa_decel = next((s for s in _pa_insights if s["state"] == "decelerating"), None)
+            _pa_sum = " | ".join(f"accel_{s['state']}:{s['win_rate']:.0f}%WR" for s in _pa_insights)
+            _learn_log.append(f"Price accel WRs: {_pa_sum}")
+            if _pa_accel and _pa_decel and _pa_accel["win_rate"] > _pa_decel["win_rate"] + 15:
+                _learn_log.append(f"Accelerating entries win {_pa_accel['win_rate']:.0f}% vs decelerating {_pa_decel['win_rate']:.0f}%")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11952,6 +12033,8 @@ def run():
             "ha_trend_perf":        _ha_insights,            # Heikin Ashi trend at entry vs outcome
             "kc_zone_perf":         _kc_insights,            # Keltner channel zone at entry vs outcome
             "obv_trend_perf":       _ov_insights,            # OBV trend (volume confirms price) vs outcome
+            "force_index_perf":     _fi_insights,            # Force Index state at entry vs outcome
+            "price_accel_perf":     _pa_insights,            # price acceleration state vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
