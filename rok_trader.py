@@ -4274,6 +4274,7 @@ def _extract(daily, hourly):
     bb_pos            = 50.0
     intraday          = 0.0
     vwap_pos          = 0.0
+    vwap_price        = 0.0
     vwap_z            = 0.0
     vwap_reclaim      = False
     vwap_b1u = vwap_b2u = vwap_b1d = vwap_b2d = 0.0
@@ -4305,7 +4306,7 @@ def _extract(daily, hourly):
         if len(hc) >= 20:
             bb_pos = _bollinger(hc)
 
-        _, vwap_pos, vwap_z, vwap_reclaim, vwap_b1u, vwap_b2u, vwap_b1d, vwap_b2d = _vwap(h)
+        vwap_price, vwap_pos, vwap_z, vwap_reclaim, vwap_b1u, vwap_b2u, vwap_b1d, vwap_b2d = _vwap(h)
 
         if "High" in h.columns and "Low" in h.columns:
             hh = list(h["High"])
@@ -5235,6 +5236,7 @@ def _extract(daily, hourly):
         "macd":            round(macd_val, 3),
         "bb_pos":          round(bb_pos, 1),
         "vwap_pos":        round(vwap_pos, 2),
+        "vwap_price":      round(vwap_price, 2),
         "vwap_b1u":        vwap_b1u,   # VWAP + 1σ (resistance)
         "vwap_b2u":        vwap_b2u,   # VWAP + 2σ (strong resistance / overbought)
         "vwap_b1d":        vwap_b1d,   # VWAP - 1σ (support)
@@ -8320,6 +8322,7 @@ def run():
             return {
                 "rsi":            round(sig.get("daily_rsi", 50), 1),
                 "vwap_pos":       round(sig.get("vwap_pos", 0), 2),
+                "vwap_price":     round(sig.get("vwap_price", 0), 2),
                 "roc5":           round(sig.get("roc5", 0), 2),
                 "macd_slope":     round(sig.get("macd_slope", 0), 4),
                 "vol_ratio":      round(sig.get("vol_ratio", 1), 2),
@@ -8520,6 +8523,8 @@ def run():
                 "grade":         momentum_grade(live.get(_sym, {}), score(_sym, live.get(_sym, {}))) if live.get(_sym) else "?",
                 "rs_rating":     live.get(_sym, {}).get("rs_rating", 50) if live.get(_sym) else 50,
                 "rs252":         round(live.get(_sym, {}).get("rs252", 0.0), 2) if live.get(_sym) else 0.0,
+                "sector":        SECTOR_MAP.get(_sym, "other"),
+                "rs_sector":     round(live.get(_sym, {}).get("rs_sector", 0.0), 2) if live.get(_sym) else 0.0,
             })
         tlog["positions"] = _pos_list_raw
         # Post-process: compute active trailing stop, refine EM with ATM IV, ATR position sizing

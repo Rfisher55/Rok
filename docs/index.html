@@ -57002,6 +57002,18 @@ window.renderSectorRotation = renderSectorRotation;
 
       const heat = data.portfolio_heat || 0;
       const heatCol = heat > 3 ? '#00ff88' : heat < -3 ? '#ef5350' : '#aaa';
+      // Market session status
+      const _mktSt = getMarketState();
+      const _mktState = _mktSt.state;
+      const _mktStateLabel = _mktState === 'open' ? '🟢 MARKET OPEN' : _mktState === 'pre' ? '🌅 PRE-MARKET' : _mktState === 'post' ? '🌙 AFTER HOURS' : '🔴 CLOSED';
+      const _mktStateCol = _mktState === 'open' ? '#00e676' : _mktState === 'pre' ? '#ffd54f' : _mktState === 'post' ? '#82b1ff' : '#555';
+      const _mktStateTimer = (() => {
+        const tot = _mktSt.totalMin;
+        if (_mktState === 'open') { const rem = (_mktSt.closeMin||960) - tot; return rem > 0 ? ` ${Math.floor(rem/60)}h${rem%60}m left` : ''; }
+        if (_mktState === 'pre')  { const rem = (_mktSt.openMin||570) - tot; return rem > 0 ? ` opens in ${rem}m` : ''; }
+        if (_mktState === 'closed') { const to = (_mktSt.openMin||570); const rem = to + 1440 - tot; const r2 = rem >= 1440 ? rem - 1440 : rem; if(r2 < 960 && r2 > 0) return ` opens in ${Math.floor(r2/60)}h${r2%60}m`; }
+        return '';
+      })();
 
       let html = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:12px;padding:.85rem">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;flex-wrap:wrap;gap:.4rem">
@@ -57010,6 +57022,7 @@ window.renderSectorRotation = renderSectorRotation;
             <div style="font-family:var(--disp);font-size:1.4rem;color:#82b1ff">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
           </div>
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <span style="font-size:8px;font-weight:900;color:${_mktStateCol};border:1px solid ${_mktStateCol}55;border-radius:20px;padding:2px 9px;background:${_mktStateCol}11">${_mktStateLabel}${_mktStateTimer}</span>
             ${minsAgo !== null ? `<span style="font-size:8px;font-weight:700;color:${minsAgo<10?'#00ff88':minsAgo<30?'#ffd54f':'#555'};border:1px solid;border-color:${minsAgo<10?'rgba(0,255,136,.3)':minsAgo<30?'rgba(255,215,0,.25)':'rgba(255,255,255,.1)'};border-radius:20px;padding:2px 8px">BOT ${minsAgo<60?minsAgo+'m':Math.floor(minsAgo/60)+'h'} ago</span>` : ''}
             ${regime.regime ? `<span style="font-size:8px;font-weight:800;color:${regCol};border:1px solid;border-radius:20px;padding:2px 8px;border-color:${regCol}40">${regime.regime.toUpperCase()} · VIX ${(regime.vix||0).toFixed(1)}</span>` : ''}
             ${Math.abs(heat) > 0.5 ? `<span style="font-size:8px;font-weight:700;color:${heatCol};border:1px solid ${heatCol}44;border-radius:20px;padding:2px 8px">Heat ${heat>=0?'+':''}${heat.toFixed(1)}%</span>` : ''}
@@ -57109,6 +57122,62 @@ window.renderSectorRotation = renderSectorRotation;
           html += `<div style="display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.5rem" title="Position heatmap — sorted best to worst P&L">${pmHtml}</div>`;
         }
 
+        // Pre-market movers (visible in pre/after-hours)
+        {
+          const pmMovers = positions.filter(p => {
+            const ls = p.live_signals || {};
+            return Math.abs(ls.pm_gap_pct || 0) >= 0.5;
+          }).sort((a,b) => Math.abs((b.live_signals||{}).pm_gap_pct||0) - Math.abs((a.live_signals||{}).pm_gap_pct||0));
+          if (pmMovers.length > 0) {
+            const moverHtml = pmMovers.map(p => {
+              const ls = p.live_signals || {};
+              const gap = ls.pm_gap_pct || 0;
+              const pmPr = ls.pm_price || 0;
+              const gapCol = gap > 2 ? '#00e676' : gap > 0.5 ? '#69f0ae' : gap < -2 ? '#ef5350' : '#ff9800';
+              const gapBg  = gap > 0 ? 'rgba(0,230,118,.08)' : 'rgba(239,83,80,.08)';
+              const gapIcon = gap > 0 ? '▲' : '▼';
+              return `<div style="display:flex;align-items:center;gap:.3rem;padding:2px 6px;background:${gapBg};border-radius:4px;border:1px solid ${gapCol}33">
+                <span style="font-family:var(--disp);font-size:8px;color:#ffd54f;font-weight:900">${p.ticker}</span>
+                <span style="font-size:8px;font-weight:800;color:${gapCol}">${gapIcon}${Math.abs(gap).toFixed(1)}%</span>
+                ${pmPr > 0 ? `<span style="font-size:6.5px;color:rgba(255,255,255,.4)">$${pmPr.toFixed(2)}</span>` : ''}
+              </div>`;
+            }).join('');
+            html += `<div style="margin-bottom:.5rem;padding:.3rem .4rem;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.15);border-radius:6px">
+              <div style="font-size:6.5px;color:#ffd54f;font-weight:700;letter-spacing:.08em;margin-bottom:.25rem">🌅 PRE/POST-MARKET MOVERS</div>
+              <div style="display:flex;gap:.35rem;flex-wrap:wrap">${moverHtml}</div>
+            </div>`;
+          }
+        }
+
+        // Optimal Exit Priority Queue (positions ranked by urgency to exit)
+        {
+          const exitCands = positions.filter(p => (p.exit_urgency || 0) >= 3 || (p.dist_from_trail || 10) < 2.0);
+          if (exitCands.length > 0) {
+            exitCands.sort((a,b) => {
+              const scoreA = (a.exit_urgency||0) * 2 + ((a.market_val||0)/(pv||1)*10) - (a.rs_alpha||0) * 0.2;
+              const scoreB = (b.exit_urgency||0) * 2 + ((b.market_val||0)/(pv||1)*10) - (b.rs_alpha||0) * 0.2;
+              return scoreB - scoreA;
+            });
+            const exitHtml = exitCands.map((p, i) => {
+              const eu = p.exit_urgency || 0;
+              const dist = p.dist_from_trail || 0;
+              const euCol = eu >= 7 ? '#ef5350' : eu >= 5 ? '#ffa726' : '#ffd54f';
+              const reason = eu >= 7 ? 'EXIT NOW' : eu >= 5 ? 'EXIT SOON' : dist < 1.5 ? 'NEAR STOP' : 'WATCH';
+              const icon = eu >= 7 ? '🔴' : eu >= 5 ? '🟠' : '🟡';
+              return `<div style="display:flex;align-items:center;gap:.35rem;padding:2px 5px;background:rgba(255,255,255,.02);border-radius:3px">
+                <span style="font-size:6.5px;color:rgba(255,255,255,.3)">#${i+1}</span>
+                <span style="font-family:var(--disp);font-size:8px;color:#ffd54f;font-weight:900">${p.ticker}</span>
+                <span style="font-size:6.5px;font-weight:900;color:${euCol}">${icon} ${reason}</span>
+                ${dist > 0 && dist < 3 ? `<span style="font-size:6px;color:#ff9800">${dist.toFixed(1)}% trail</span>` : ''}
+              </div>`;
+            }).join('');
+            html += `<div style="margin-bottom:.5rem;padding:.3rem .4rem;background:rgba(239,83,80,.04);border:1px solid rgba(239,83,80,.15);border-radius:6px">
+              <div style="font-size:6.5px;color:#ef9a9a;font-weight:700;letter-spacing:.08em;margin-bottom:.25rem">⚡ EXIT PRIORITY QUEUE</div>
+              <div style="display:flex;flex-direction:column;gap:2px">${exitHtml}</div>
+            </div>`;
+          }
+        }
+
         html += `<div style="display:flex;flex-direction:column;gap:.4rem">`;
         // Build today's P&L lookup by ticker from daily_pnl_attribution
         const _todayPnlMap = {};
@@ -57148,6 +57217,7 @@ window.renderSectorRotation = renderSectorRotation;
                 ${p.rs_rating && p.rs_rating != 50 ? (() => { const rr=p.rs_rating; const rrCol=rr>=90?'#00e676':rr>=80?'#69f0ae':rr>=70?'#ffd54f':rr<=30?'#ef5350':rr<=40?'#ff9800':'#888'; return `<div style="font-size:6px;color:${rrCol};font-weight:800;border:1px solid ${rrCol}55;padding:1px 4px;border-radius:3px" title="IBD RS Rating: ${rr}/99 — 12-month relative strength vs market">RS${rr}</div>`; })() : ''}
                 ${p.overextended ? `<div style="font-size:6px;font-weight:900;color:#ff1744;background:rgba(255,23,68,.2);border:1px solid rgba(255,23,68,.4);padding:1px 4px;border-radius:3px;animation:pulse-red 1.5s infinite" title="OVEREXTENDED >40% above pivot — O'Neil rule: reduce here, very high reversal risk">⚡OVER</div>` : p.extended ? `<div style="font-size:6px;font-weight:800;color:#ff9800;background:rgba(255,152,0,.15);border:1px solid rgba(255,152,0,.3);padding:1px 4px;border-radius:3px" title="Extended >25% above proper buy point — consider locking 25-50% gains (IBD rule)">⚠EXTD</div>` : ''}
                 ${daysHeld > 0 ? `<div style="font-size:6px;color:${daysCol}" title="${daysHeld} days held">${daysHeld}d</div>` : ''}
+                ${p.pos_health != null ? (() => { const ph=p.pos_health; const phC=ph>=8?'#00e676':ph>=6?'#69f0ae':ph>=4?'#ffd54f':ph>=2?'#ff9800':'#ef5350'; return `<div style="font-size:6px;font-weight:800;color:${phC};border:1px solid ${phC}44;padding:1px 4px;border-radius:3px" title="Position health ${ph}/10">${ph}♥</div>`; })() : ''}
                 ${p.exit_urgency >= 5 ? `<div style="font-size:6px;font-weight:900;color:${p.exit_urgency>=7?'#ef5350':'#ffa726'};background:${p.exit_urgency>=7?'rgba(239,83,80,.15)':'rgba(255,167,38,.12)'};border-radius:3px;padding:1px 4px" title="Exit urgency ${p.exit_urgency}/10">${p.exit_urgency>=7?'🔴 EXIT':'🟠 WATCH'}</div>` : ''}
                 <div style="font-size:8px;color:#4a6fa5;flex:1">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · \$${(cost).toFixed(2)}${pv > 0 ? ` · <span style="color:${(p.market_val||0)/pv*100>20?'#ffa726':(p.market_val||0)/pv*100>15?'#ffd54f':'#4a6fa5'}" title="Position size as % of portfolio">${((p.market_val||0)/pv*100).toFixed(1)}%</span>` : ''}</div>
                 <div style="font-size:12px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
@@ -57442,6 +57512,96 @@ window.renderSectorRotation = renderSectorRotation;
                     </div>
                   </div>
                 </div>`;
+              })()}
+              ${(() => {
+                // Key Levels Panel: VWAP bands + key support/resistance + fib
+                const ls = p.live_signals || {};
+                const cur = p.price || 0;
+                const vp = ls.vwap_price || 0;
+                const vb1u = ls.vwap_b1u || 0; const vb2u = ls.vwap_b2u || 0;
+                const vb1d = ls.vwap_b1d || 0; const vb2d = ls.vwap_b2d || 0;
+                const ks1 = ls.key_support_1 || 0; const ks2 = ls.key_support_2 || 0;
+                const kr1 = ls.key_resist_1 || 0; const kr2 = ls.key_resist_2 || 0;
+                const f382 = ls.fib_level_382 || 0; const f618 = ls.fib_level_618 || 0;
+                const hasLevels = (vp > 0) || (ks1 > 0) || (kr1 > 0);
+                if (!hasLevels || !cur) return '';
+                const vwapDist = vp > 0 ? ((cur - vp) / vp * 100) : 0;
+                const vwapCol = vwapDist > 2 ? '#00e676' : vwapDist > 0 ? '#69f0ae' : vwapDist > -2 ? '#ff9800' : '#ef5350';
+                const vwapZone = vb2u > 0 && cur >= vb2u ? 'OB-2σ' : vb1u > 0 && cur >= vb1u ? 'OB-1σ' : vb2d > 0 && cur <= vb2d ? 'OS-2σ' : vb1d > 0 && cur <= vb1d ? 'OS-1σ' : vp > 0 && cur > vp ? 'above' : 'below';
+                const levels = [];
+                if (vp > 0) levels.push({label:'VWAP', price:vp, col:vwapCol, hint:`VWAP $${vp.toFixed(2)} (${vwapDist>=0?'+':''}${vwapDist.toFixed(1)}%) zone: ${vwapZone}`});
+                if (kr1 > 0 && kr1 > cur * 0.97) levels.push({label:'R1', price:kr1, col:'#ef9a9a', hint:`Key resistance $${kr1.toFixed(2)}`});
+                if (kr2 > 0 && kr2 > cur * 0.97 && kr2 !== kr1) levels.push({label:'R2', price:kr2, col:'#e57373', hint:`Key resistance 2 $${kr2.toFixed(2)}`});
+                if (ks1 > 0 && ks1 < cur * 1.03) levels.push({label:'S1', price:ks1, col:'#82b1ff', hint:`Key support $${ks1.toFixed(2)}`});
+                if (ks2 > 0 && ks2 < cur * 1.03 && ks2 !== ks1) levels.push({label:'S2', price:ks2, col:'#5c97de', hint:`Key support 2 $${ks2.toFixed(2)}`});
+                if (f618 > 0) levels.push({label:'F61.8', price:f618, col:'#ffd54f', hint:`Fib 61.8% $${f618.toFixed(2)}`});
+                if (f382 > 0 && f382 !== f618) levels.push({label:'F38.2', price:f382, col:'#ffe082', hint:`Fib 38.2% $${f382.toFixed(2)}`});
+                if (vb1u > 0) levels.push({label:'V+1σ', price:vb1u, col:'rgba(239,154,154,.7)', hint:`VWAP +1σ band $${vb1u.toFixed(2)} — resistance zone`});
+                if (vb1d > 0) levels.push({label:'V-1σ', price:vb1d, col:'rgba(130,177,255,.7)', hint:`VWAP -1σ band $${vb1d.toFixed(2)} — support zone`});
+                levels.sort((a,b) => b.price - a.price);
+                const chips = levels.map(l => {
+                  const dist = ((l.price - cur) / cur * 100);
+                  const distStr = dist >= 0 ? `+${dist.toFixed(1)}%` : `${dist.toFixed(1)}%`;
+                  const isCur = Math.abs(dist) < 0.4;
+                  return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:2px 5px;border-radius:3px;background:${isCur?`${l.col}22`:'rgba(255,255,255,.02)'};border:1px solid ${isCur?l.col+'66':'rgba(255,255,255,.06)'}" title="${l.hint}">
+                    <span style="font-size:4.5px;color:rgba(255,255,255,.3);font-weight:700">${l.label}</span>
+                    <span style="font-size:6.5px;font-weight:800;color:${l.col}">$${l.price.toFixed(2)}</span>
+                    <span style="font-size:4.5px;color:${dist>=0?'#82b1ff':'#ef9a9a'}">${distStr}</span>
+                  </div>`;
+                }).join('');
+                return `<div style="margin-top:.35rem;padding:.25rem .35rem;background:rgba(0,0,0,.15);border-radius:5px;border:1px solid rgba(255,255,255,.05)">
+                  <div style="font-size:5.5px;color:rgba(255,255,255,.2);font-weight:700;letter-spacing:.06em;margin-bottom:.25rem">KEY LEVELS</div>
+                  <div style="display:flex;gap:.3rem;flex-wrap:wrap">${chips}</div>
+                </div>`;
+              })()}
+              ${(() => {
+                // Sector ETF context + expected move + analyst target
+                const ls = p.live_signals || {};
+                const sec = p.sector || '';
+                const secEtf = sec ? ((data.sector_etf_trends || {})[sec] || null) : null;
+                const emWk = ls.expected_move_wk || 0;
+                const emPctWk = ls.expected_move_pct_wk || 0;
+                const emMo = ls.expected_move_mo || 0;
+                const atgt = ls.analyst_price_tgt || 0;
+                const aUp = ls.analyst_upside_pct || 0;
+                const aBuy = ls.analyst_buy_pct || 0;
+                const cur = p.price || 0;
+                const parts = [];
+                if (secEtf) {
+                  const etfMap = {tech:'XLK',finance:'XLF',health:'XLV',energy:'XLE',consumer:'XLP',consumer_tech:'XLY',industrial:'XLI',utilities:'XLU',materials:'XLB',real_estate:'XLRE',comm_services:'XLC',crypto:'IBIT'};
+                  const etfSym = etfMap[sec] || sec.toUpperCase();
+                  const c1d = secEtf.chg1d || 0; const c5d = secEtf.chg5d || 0;
+                  const bull = secEtf.bullish !== false;
+                  const sCol = bull ? (c1d > 0 ? '#00e676' : '#69f0ae') : (c1d < 0 ? '#ef5350' : '#ff9800');
+                  const sBg  = bull ? 'rgba(0,230,118,.06)' : 'rgba(239,83,80,.06)';
+                  const rsSec = p.rs_sector || 0;
+                  const rsSecCol = rsSec > 5 ? '#00e676' : rsSec > 0 ? '#69f0ae' : rsSec > -5 ? '#ff9800' : '#ef5350';
+                  parts.push(`<div style="display:flex;align-items:center;gap:.25rem;background:${sBg};border:1px solid ${sCol}33;border-radius:4px;padding:2px 6px" title="Sector: ${sec} | ETF: ${etfSym} | 1d: ${c1d>=0?'+':''}${c1d.toFixed(1)}% | 5d: ${c5d>=0?'+':''}${c5d.toFixed(1)}% | RS vs sector: ${(p.rs_sector||0)>=0?'+':''}${(p.rs_sector||0).toFixed(1)}%">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.3)">${etfSym}</span>
+                    <span style="font-size:6.5px;font-weight:800;color:${sCol}">${c1d>=0?'+':''}${c1d.toFixed(1)}%</span>
+                    <span style="font-size:5px;color:rgba(255,255,255,.25)">5d${c5d>=0?'+':''}${c5d.toFixed(1)}%</span>
+                    ${Math.abs(p.rs_sector||0) > 1 ? `<span style="font-size:5.5px;font-weight:700;color:${rsSecCol}">RS${(p.rs_sector||0)>=0?'+':''}${(p.rs_sector||0).toFixed(0)}</span>` : ''}
+                  </div>`);
+                }
+                if (emWk > 0 && cur > 0) {
+                  const emCol = emPctWk > 6 ? '#ef9a9a' : emPctWk > 3 ? '#ffd54f' : '#69f0ae';
+                  parts.push(`<div style="display:flex;align-items:center;gap:.25rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:4px;padding:2px 6px" title="Expected move this week: ±$${emWk.toFixed(2)} (±${emPctWk.toFixed(1)}%). Monthly: ±$${emMo.toFixed(2)}. Based on ATM IV.">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.3)">EM/wk</span>
+                    <span style="font-size:6.5px;font-weight:800;color:${emCol}">±${emPctWk.toFixed(1)}%</span>
+                    <span style="font-size:5px;color:rgba(255,255,255,.2)">±$${emWk.toFixed(2)}</span>
+                  </div>`);
+                }
+                if (atgt > 0 && cur > 0 && Math.abs(aUp) > 1) {
+                  const tCol = aUp >= 15 ? '#00e676' : aUp >= 5 ? '#69f0ae' : aUp >= 0 ? '#ffd54f' : '#ef5350';
+                  const buyStr = aBuy >= 0.7 ? `${Math.round(aBuy*100)}%BUY` : '';
+                  parts.push(`<div style="display:flex;align-items:center;gap:.25rem;background:rgba(255,255,255,.03);border:1px solid ${tCol}33;border-radius:4px;padding:2px 6px" title="Analyst consensus target $${atgt.toFixed(2)} (${aUp>=0?'+':''}${aUp.toFixed(1)}% upside). ${Math.round(aBuy*100)}% buy ratings.">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.3)">CONS</span>
+                    <span style="font-size:6.5px;font-weight:800;color:${tCol}">$${atgt.toFixed(0)}</span>
+                    <span style="font-size:5.5px;color:${tCol}">${aUp>=0?'+':''}${aUp.toFixed(0)}%</span>
+                    ${buyStr ? `<span style="font-size:5px;color:rgba(255,255,255,.3)">${buyStr}</span>` : ''}
+                  </div>`);
+                }
+                return parts.length ? `<div style="margin-top:.3rem;display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">${parts.join('')}</div>` : '';
               })()}
             </div>
           </div>`;
