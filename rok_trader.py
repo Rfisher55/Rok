@@ -469,6 +469,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _mfi_v = float(signals.get("mfi", 50.0) or 50.0)
         e["mfi_at_entry"] = round(_mfi_v, 1)
         e["mfi_zone"] = ("distribution" if _mfi_v > 80 else "accumulation" if _mfi_v < 30 else "neutral")
+        # Williams %R Neuron (50): momentum oscillator confirming trend strength.
+        # W%R > -20 = overbought (danger: rally may be exhausted); < -80 = oversold.
+        # -80 to -20 = trending zone (ideal for momentum entries).
+        _wr_v = float(signals.get("williams_r", -50.0) or -50.0)
+        e["williams_r_at_entry"] = round(_wr_v, 1)
+        e["wr_zone"] = ("overbought" if _wr_v > -20 else "oversold" if _wr_v < -80 else "trending")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1346,6 +1352,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Williams %R Neuron (50): momentum overbought/trending/oversold at entry ───
+    # Tracks performance by Williams %R zone: overbought (>-20) vs trending (-80 to -20)
+    # vs oversold (<-80). Learns: is trending zone the sweet spot for momentum entries?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_wr = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _wr_zone = _buy_wr.get("wr_zone", "trending") if _buy_wr else "trending"
+            _wr_perf = tlog.setdefault("wr_zone_perf", {})
+            _wrp = _wr_perf.setdefault(_wr_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _wr_zone})
+            _wrp["total"] = _wrp.get("total", 0) + 1
+            _wrp["total_pnl"] = round(_wrp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _wrp["wins"] = _wrp.get("wins", 0) + 1
+            else:        _wrp["losses"] = _wrp.get("losses", 0) + 1
+            if _wrp["total"] > 0:
+                _wrp["win_rate"] = round(_wrp["wins"] / _wrp["total"] * 100, 1)
+                _wrp["avg_pnl"]  = round(_wrp["total_pnl"] / _wrp["total"], 2)
         except Exception:
             pass
 
@@ -11592,6 +11617,23 @@ def run():
             if _mi_dist and _mi_nt and _mi_dist["win_rate"] < 40 and _mi_dist["total"] >= 5:
                 _learn_log.append(f"MFI distribution entries fail ({_mi_dist['win_rate']:.0f}% WR) — avoid overbought volume buying")
 
+        # ── 50. Williams %R Neuron: momentum zone at entry ────────────────────
+        _wr_raw = tlog.get("wr_zone_perf", {})
+        _wr_insights = []
+        for _wrk, _wrd in _wr_raw.items():
+            if _wrd.get("total", 0) >= 3:
+                _wr_insights.append({
+                    "zone": _wrk, "win_rate": _wrd.get("win_rate", 50),
+                    "avg_pnl": _wrd.get("avg_pnl", 0), "total": _wrd.get("total", 0)
+                })
+        if _wr_insights:
+            _wr_ob = next((s for s in _wr_insights if s["zone"] == "overbought"), None)
+            _wr_tr = next((s for s in _wr_insights if s["zone"] == "trending"), None)
+            _wr_sum = " | ".join(f"WR_{s['zone']}:{s['win_rate']:.0f}%WR" for s in _wr_insights)
+            _learn_log.append(f"Williams %R zone WRs: {_wr_sum}")
+            if _wr_ob and _wr_tr and _wr_ob["win_rate"] < 40 and _wr_ob["total"] >= 5:
+                _learn_log.append(f"W%R overbought entries fail ({_wr_ob['win_rate']:.0f}% WR) — trend is exhausting")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11651,6 +11693,7 @@ def run():
             "mtf_align_perf":       _mf_insights,            # multi-timeframe alignment at entry vs outcome
             "options_flow_perf":    _of_insights,            # options flow confirmation at entry vs outcome
             "mfi_zone_perf":        _mi_insights,            # MFI zone (volume-weighted RSI) at entry vs outcome
+            "wr_zone_perf":         _wr_insights,            # Williams %R zone at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
