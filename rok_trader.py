@@ -55,8 +55,9 @@ ENABLE_SHORTS      = True    # enable short selling in bear/neutral regime
 VIX_HIGH_THRESH    = 30      # reduce position sizes when VIX above this
 VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
 
-TRADES_FILE = Path("docs/trades.json")
-PEAK_FILE   = Path("docs/peaks.json")
+TRADES_FILE  = Path("docs/trades.json")
+PEAK_FILE    = Path("docs/peaks.json")
+EQUITY_FILE  = Path("docs/equity.json")
 
 # ── Crypto config ─────────────────────────────────────────────────────────────
 ENABLE_CRYPTO    = True
@@ -283,6 +284,37 @@ def _load(path, default):
 def _save(path, data):
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(data, indent=2))
+
+
+def _save_equity_snapshot(tlog: dict) -> None:
+    """Append a daily portfolio-value snapshot to docs/equity.json for equity curve charts."""
+    try:
+        pv = float(tlog.get("portfolio_value", 0))
+        if pv <= 0:
+            return
+        eq = _load(EQUITY_FILE, {"snapshots": [], "start_value": 0})
+        snaps = eq.get("snapshots", [])
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        # Update today's entry or append
+        if snaps and snaps[-1].get("date") == today:
+            snaps[-1]["value"] = round(pv, 2)
+            snaps[-1]["ts"] = datetime.now(timezone.utc).isoformat()
+        else:
+            snaps.append({"date": today, "value": round(pv, 2), "ts": datetime.now(timezone.utc).isoformat()})
+        # Record start value on first snapshot
+        if not eq.get("start_value"):
+            eq["start_value"] = round(pv, 2)
+            eq["start_date"]  = today
+        # Keep 365 days
+        eq["snapshots"] = snaps[-365:]
+        # Compute peak value and max drawdown
+        values = [s["value"] for s in eq["snapshots"]]
+        eq["peak_value"] = max(values)
+        eq["current_value"] = round(pv, 2)
+        eq["total_return_pct"] = round((pv / eq["start_value"] - 1) * 100, 2) if eq["start_value"] else 0
+        _save(EQUITY_FILE, eq)
+    except Exception as _eq_e:
+        pass
 
 def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=None, signals=None):
     e = {
@@ -8887,6 +8919,45 @@ def run():
                 except Exception as _wd_e:
                     logger.debug(f"Weekend watchlist scan: {_wd_e}")
 
+            # ── News headlines for held positions ─────────────────────────
+            # Fetch recent headlines via yfinance and store in tlog for the dashboard
+            try:
+                _news_last = tlog.get("position_news_ts", "")
+                _news_fresh = True
+                if _news_last:
+                    try:
+                        if (_now_ts - datetime.fromisoformat(_news_last)).total_seconds() < 3600:
+                            _news_fresh = False
+                    except Exception:
+                        pass
+                if _news_fresh and _cm_positions:
+                    _pos_news = {}
+                    for _pn in _cm_positions[:6]:
+                        _pn_sym = _pn.get("ticker", "")
+                        if not _pn_sym:
+                            continue
+                        try:
+                            _yft = yf.Ticker(_pn_sym)
+                            _raw_news = _yft.news or []
+                            _filtered = []
+                            for _art in _raw_news[:5]:
+                                _ct = _art.get("content", {})
+                                _title = _ct.get("title","") or _art.get("title","")
+                                _pub   = _ct.get("pubDate","") or _art.get("providerPublishTime","")
+                                _src   = (_ct.get("provider",{}) or {}).get("displayName","") or _art.get("publisher","")
+                                if _title:
+                                    _filtered.append({"title": _title[:120], "pub": str(_pub)[:20], "src": _src[:30]})
+                            if _filtered:
+                                _pos_news[_pn_sym] = _filtered
+                        except Exception:
+                            continue
+                    if _pos_news:
+                        tlog["position_news"] = _pos_news
+                        tlog["position_news_ts"] = _now_ts.isoformat()
+                        logger.info(f"News fetched for {len(_pos_news)} positions")
+            except Exception as _news_e:
+                logger.debug(f"Position news fetch: {_news_e}")
+
         except Exception as _cm_enrich_e:
             logger.debug(f"Closed-market brain enrichment: {_cm_enrich_e}")
 
@@ -8915,6 +8986,7 @@ def run():
             tlog["bot_activity_log"] = [_cm_entry] + _cm_act[:29]
         except Exception:
             pass
+        _save_equity_snapshot(tlog)
         _save(TRADES_FILE, tlog)
         return
 
@@ -14397,6 +14469,46 @@ def run():
     except Exception as _act_e:
         logger.debug(f"Activity log: {_act_e}")
 
+    # ── Market-hours position news (refresh every 2 hours) ───────────────────
+    try:
+        _mh_positions = tlog.get("positions", [])
+        _mh_news_last = tlog.get("position_news_ts", "")
+        _mh_now_ts    = datetime.now(timezone.utc)
+        _mh_news_fresh = True
+        if _mh_news_last:
+            try:
+                if (_mh_now_ts - datetime.fromisoformat(_mh_news_last)).total_seconds() < 7200:
+                    _mh_news_fresh = False
+            except Exception:
+                pass
+        if _mh_news_fresh and _mh_positions:
+            _mh_pos_news = {}
+            for _mh_p in _mh_positions[:8]:
+                _mh_sym = _mh_p.get("ticker", "")
+                if not _mh_sym:
+                    continue
+                try:
+                    _mh_yft  = yf.Ticker(_mh_sym)
+                    _mh_arts = _mh_yft.news or []
+                    _mh_filt = []
+                    for _art in _mh_arts[:5]:
+                        _ct    = _art.get("content", {})
+                        _title = _ct.get("title","") or _art.get("title","")
+                        _pub   = _ct.get("pubDate","") or _art.get("providerPublishTime","")
+                        _src   = (_ct.get("provider",{}) or {}).get("displayName","") or _art.get("publisher","")
+                        if _title:
+                            _mh_filt.append({"title": _title[:120], "pub": str(_pub)[:20], "src": _src[:30]})
+                    if _mh_filt:
+                        _mh_pos_news[_mh_sym] = _mh_filt
+                except Exception:
+                    continue
+            if _mh_pos_news:
+                tlog["position_news"]    = _mh_pos_news
+                tlog["position_news_ts"] = _mh_now_ts.isoformat()
+    except Exception as _mh_news_e:
+        logger.debug(f"Market-hours news: {_mh_news_e}")
+
+    _save_equity_snapshot(tlog)
     _save(TRADES_FILE, tlog)
     logger.info(
         f"Cycle done. Trades: {'yes' if made_trades else 'none'}. "

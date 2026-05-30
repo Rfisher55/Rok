@@ -50,7 +50,7 @@ jobs:
         run: |
           git config user.name "ROK Trader Bot"
           git config user.email "rok-trader@users.noreply.github.com"
-          for f in docs/trades.json docs/peaks.json; do [ -f "$f" ] && git add "$f" || true; done
+          for f in docs/trades.json docs/peaks.json docs/equity.json; do [ -f "$f" ] && git add "$f" || true; done
           git diff --staged --quiet || git commit -m "Trade log — $(date -u +'%b %d %H:%M UTC')"
           git fetch origin main
           git rebase origin/main || git rebase --abort || true
