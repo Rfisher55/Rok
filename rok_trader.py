@@ -445,6 +445,15 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _stk_v = float(signals.get("stoch_k", 50.0) or 50.0)
         e["stoch_k_at_entry"] = round(_stk_v, 1)
         e["stoch_zone"] = ("overbought" if _stk_v > 80 else "oversold" if _stk_v < 20 else "neutral")
+        # Multi-Timeframe Alignment Neuron (47): are short/medium/long timeframes all aligned?
+        # full = mtf_aligned + ema_stacked_bull + ROC20>0 (all three agree = highest conviction).
+        # partial = at least one confirmed. none = mixed or bearish signals.
+        _mtf_ok = bool(signals.get("mtf_aligned", False))
+        _ema_bull = bool(signals.get("ema_stacked_bull", False))
+        _roc20_v = float(signals.get("roc20", 0.0) or 0.0)
+        _mtf_score = int(_mtf_ok) + int(_ema_bull) + int(_roc20_v > 0)
+        e["mtf_score_at_entry"] = _mtf_score
+        e["mtf_alignment"] = ("full" if _mtf_score >= 3 else "partial" if _mtf_score >= 1 else "none")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1322,6 +1331,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Multi-Timeframe Alignment Neuron (47): all TFs aligned at entry? ────────
+    # Tracks win rates when short/medium/long timeframes are all bullish (full alignment)
+    # vs partially aligned vs mixed/none. Highest conviction trade = all agree.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_mf = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _mf_align = _buy_mf.get("mtf_alignment", "none") if _buy_mf else "none"
+            _mf_perf = tlog.setdefault("mtf_align_perf", {})
+            _mfp = _mf_perf.setdefault(_mf_align, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "alignment": _mf_align})
+            _mfp["total"] = _mfp.get("total", 0) + 1
+            _mfp["total_pnl"] = round(_mfp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _mfp["wins"] = _mfp.get("wins", 0) + 1
+            else:        _mfp["losses"] = _mfp.get("losses", 0) + 1
+            if _mfp["total"] > 0:
+                _mfp["win_rate"] = round(_mfp["wins"] / _mfp["total"] * 100, 1)
+                _mfp["avg_pnl"]  = round(_mfp["total_pnl"] / _mfp["total"], 2)
         except Exception:
             pass
 
@@ -11460,6 +11488,23 @@ def run():
             if _sk_ob and _sk_nt and _sk_ob["win_rate"] < 40 and _sk_ob["total"] >= 5:
                 _learn_log.append(f"Overbought entries fail ({_sk_ob['win_rate']:.0f}% WR) — avoid stoch>80 buys")
 
+        # ── 47. Multi-Timeframe Alignment Neuron ──────────────────────────────
+        _mf_raw = tlog.get("mtf_align_perf", {})
+        _mf_insights = []
+        for _mfk, _mfd in _mf_raw.items():
+            if _mfd.get("total", 0) >= 3:
+                _mf_insights.append({
+                    "alignment": _mfk, "win_rate": _mfd.get("win_rate", 50),
+                    "avg_pnl": _mfd.get("avg_pnl", 0), "total": _mfd.get("total", 0)
+                })
+        if _mf_insights:
+            _mf_full = next((s for s in _mf_insights if s["alignment"] == "full"), None)
+            _mf_none = next((s for s in _mf_insights if s["alignment"] == "none"), None)
+            _mf_sum = " | ".join(f"MTF_{s['alignment']}:{s['win_rate']:.0f}%WR" for s in _mf_insights)
+            _learn_log.append(f"MTF alignment WRs: {_mf_sum}")
+            if _mf_full and _mf_none and _mf_full["win_rate"] > _mf_none["win_rate"] + 15:
+                _learn_log.append(f"Full MTF alignment wins {_mf_full['win_rate']:.0f}% vs none {_mf_none['win_rate']:.0f}% — high-conviction trades dominate")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11516,6 +11561,7 @@ def run():
             "adx_perf":             _ax_insights,            # ADX trend strength at entry vs outcome
             "rvol_tier_perf":       _rv_insights,            # RVOL tier (explosive/strong/normal/weak) vs outcome
             "stoch_zone_perf":      _sk_insights,            # Stochastic %K zone at entry vs outcome
+            "mtf_align_perf":       _mf_insights,            # multi-timeframe alignment at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
