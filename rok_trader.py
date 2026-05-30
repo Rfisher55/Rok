@@ -493,6 +493,18 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["lr_r2_at_entry"] = round(_lr_r2, 3)
         e["lr_slope_at_entry"] = round(_lr_slope, 4)
         e["lr_quality"] = ("strong" if _lr_r2 >= 0.85 else "moderate" if _lr_r2 >= 0.6 else "weak")
+        # Donchian Channel Position Neuron (53): is price at a 20-day high (breakout)?
+        # donchian_pct = price position within 20-day range (0=low, 100=high).
+        # Upper quartile (>75%) = breakout territory; lower (<25%) = weakness.
+        _dc_pct = float(signals.get("donchian_pct", 50.0) or 50.0)
+        e["donchian_pct_at_entry"] = round(_dc_pct, 1)
+        e["donchian_zone"] = ("breakout" if _dc_pct >= 75 else "middle" if _dc_pct >= 25 else "weakness")
+        # Heikin Ashi Trend Neuron (54): HA candles smooth noise and show trend clarity.
+        # HA bull = smoothed uptrend (high quality momentum signal); HA bear = distribution.
+        # Learns: do HA-confirmed bullish entries produce better outcomes?
+        _ha_bull = bool(signals.get("ha_bull", False))
+        e["ha_bull_at_entry"] = _ha_bull
+        e["ha_trend"] = ("bull" if _ha_bull else "bear")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1370,6 +1382,42 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Heikin Ashi Trend Neuron (54): HA smoothed candle direction at entry ──────
+    # Tracks win rates when HA candles confirm bullish trend vs HA bearish at entry.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ha = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ha_trend = _buy_ha.get("ha_trend", "bull") if _buy_ha else "bull"
+            _ha_perf = tlog.setdefault("ha_trend_perf", {})
+            _hap = _ha_perf.setdefault(_ha_trend, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "trend": _ha_trend})
+            _hap["total"] = _hap.get("total", 0) + 1
+            _hap["total_pnl"] = round(_hap.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _hap["wins"] = _hap.get("wins", 0) + 1
+            else:        _hap["losses"] = _hap.get("losses", 0) + 1
+            if _hap["total"] > 0:
+                _hap["win_rate"] = round(_hap["wins"] / _hap["total"] * 100, 1)
+                _hap["avg_pnl"]  = round(_hap["total_pnl"] / _hap["total"], 2)
+        except Exception:
+            pass
+
+    # ── Donchian Channel Position Neuron (53): 20-day range position at entry ────
+    # Tracks whether entry was at channel breakout (>75%), middle, or weakness (<25%).
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_dc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _dc_zone = _buy_dc.get("donchian_zone", "middle") if _buy_dc else "middle"
+            _dc_perf = tlog.setdefault("donchian_perf", {})
+            _dcp = _dc_perf.setdefault(_dc_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _dc_zone})
+            _dcp["total"] = _dcp.get("total", 0) + 1
+            _dcp["total_pnl"] = round(_dcp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _dcp["wins"] = _dcp.get("wins", 0) + 1
+            else:        _dcp["losses"] = _dcp.get("losses", 0) + 1
+            if _dcp["total"] > 0:
+                _dcp["win_rate"] = round(_dcp["wins"] / _dcp["total"] * 100, 1)
+                _dcp["avg_pnl"]  = round(_dcp["total_pnl"] / _dcp["total"], 2)
         except Exception:
             pass
 
@@ -11724,6 +11772,40 @@ def run():
             if _lr_strong and _lr_weak and _lr_strong["win_rate"] > _lr_weak["win_rate"] + 15:
                 _learn_log.append(f"Clean trend entries (R²≥0.85) win {_lr_strong['win_rate']:.0f}% vs choppy {_lr_weak['win_rate']:.0f}% — trend quality matters")
 
+        # ── 53. Donchian Channel Position Neuron ──────────────────────────────
+        _dc_raw = tlog.get("donchian_perf", {})
+        _dc_insights = []
+        for _dck, _dcd in _dc_raw.items():
+            if _dcd.get("total", 0) >= 3:
+                _dc_insights.append({
+                    "zone": _dck, "win_rate": _dcd.get("win_rate", 50),
+                    "avg_pnl": _dcd.get("avg_pnl", 0), "total": _dcd.get("total", 0)
+                })
+        if _dc_insights:
+            _dc_brk = next((s for s in _dc_insights if s["zone"] == "breakout"), None)
+            _dc_wk  = next((s for s in _dc_insights if s["zone"] == "weakness"), None)
+            _dc_sum = " | ".join(f"DC_{s['zone']}:{s['win_rate']:.0f}%WR" for s in _dc_insights)
+            _learn_log.append(f"Donchian zone WRs: {_dc_sum}")
+            if _dc_brk and _dc_wk and _dc_brk["win_rate"] > _dc_wk["win_rate"] + 15:
+                _learn_log.append(f"Donchian breakout entries win {_dc_brk['win_rate']:.0f}% vs weakness {_dc_wk['win_rate']:.0f}%")
+
+        # ── 54. Heikin Ashi Trend Neuron ──────────────────────────────────────
+        _ha_raw = tlog.get("ha_trend_perf", {})
+        _ha_insights = []
+        for _hak, _had in _ha_raw.items():
+            if _had.get("total", 0) >= 3:
+                _ha_insights.append({
+                    "trend": _hak, "win_rate": _had.get("win_rate", 50),
+                    "avg_pnl": _had.get("avg_pnl", 0), "total": _had.get("total", 0)
+                })
+        if _ha_insights:
+            _ha_bull_s = next((s for s in _ha_insights if s["trend"] == "bull"), None)
+            _ha_bear_s = next((s for s in _ha_insights if s["trend"] == "bear"), None)
+            _ha_sum = " | ".join(f"HA_{s['trend']}:{s['win_rate']:.0f}%WR" for s in _ha_insights)
+            _learn_log.append(f"Heikin Ashi WRs: {_ha_sum}")
+            if _ha_bull_s and _ha_bear_s and _ha_bull_s["win_rate"] > _ha_bear_s["win_rate"] + 15:
+                _learn_log.append(f"HA-bullish entries win {_ha_bull_s['win_rate']:.0f}% vs HA-bearish {_ha_bear_s['win_rate']:.0f}% — smoothed trend works")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11786,6 +11868,8 @@ def run():
             "wr_zone_perf":         _wr_insights,            # Williams %R zone at entry vs outcome
             "ichimoku_perf":        _ic_insights,            # Ichimoku cloud position at entry vs outcome
             "lr_quality_perf":      _lr_insights,            # Linear Regression R² trend quality vs outcome
+            "donchian_perf":        _dc_insights,            # Donchian channel zone at entry vs outcome
+            "ha_trend_perf":        _ha_insights,            # Heikin Ashi trend at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

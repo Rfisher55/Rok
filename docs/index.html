@@ -54502,6 +54502,58 @@ function _renderIntelReport(el, intel) {
           ${icHtml}${lrHtml}
         </div>`;
       })()}
+      ${(() => {
+        // ── Donchian (N53) + Heikin Ashi (N54) dual panel ────────────────────
+        const dc = lp.donchian_perf || [];
+        const ha = lp.ha_trend_perf || [];
+        if (!dc.length && !ha.length) return '';
+        const DC_ORDER = ['breakout','middle','weakness'];
+        const DC_ICONS = {breakout:'🏆',middle:'📊',weakness:'📉'};
+        const DC_BG = {breakout:'rgba(0,230,118,.08)',middle:'rgba(255,255,255,.04)',weakness:'rgba(239,83,80,.07)'};
+        const dcMap = {}; dc.forEach(s => dcMap[s.zone] = s);
+        const dcBest = dc.length ? dc.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, dc[0]) : null;
+        const dcCells = DC_ORDER.map(z => {
+          const s = dcMap[z];
+          const lbl = z==='breakout'?'Brk (>75%)':z==='weakness'?'Weak (<25%)':'Middle';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${DC_ICONS[z]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = dcBest && s.zone === dcBest.zone ? '⭐' : '';
+          return `<div style="background:${DC_BG[z]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${DC_ICONS[z]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const HA_ORDER = ['bull','bear'];
+        const HA_ICONS = {bull:'🟢',bear:'🔴'};
+        const HA_BG = {bull:'rgba(0,230,118,.08)',bear:'rgba(239,83,80,.07)'};
+        const haMap = {}; ha.forEach(s => haMap[s.trend] = s);
+        const haBest = ha.length ? ha.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, ha[0]) : null;
+        const haCells = HA_ORDER.map(t => {
+          const s = haMap[t];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${HA_ICONS[t]}</div><div style="font-size:5px;color:#333">HA ${t}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = haBest && s.trend === haBest.trend ? '⭐' : '';
+          return `<div style="background:${HA_BG[t]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${HA_ICONS[t]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">HA ${t.charAt(0).toUpperCase()+t.slice(1)}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const dcHtml = dc.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">🏆 DONCHIAN POSITION (N53): 20-day channel — breakout vs middle vs weakness</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${dcCells}</div>
+        </div>` : '';
+        const haHtml = ha.length ? `<div>
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🕯️ HEIKIN ASHI TREND (N54): noise-filtered trend direction at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">${haCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${dcHtml}${haHtml}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}
