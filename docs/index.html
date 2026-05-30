@@ -52673,6 +52673,8 @@ function _renderIntelReport(el, intel) {
     const positions = td.positions || [];
     const topScan = td.last_scan_top || [];
     const minsAgo = td.last_updated ? Math.round((Date.now() - new Date(td.last_updated)) / 60000) : null;
+    const sectorEtf = td.sector_etf_trends || {};
+    const drawdownPct = td.drawdown_pct || 0;
 
     // 1. Market environment
     if (dt === 'trend_up') items.push({ icon: '🚀', col: '#00e676', text: 'TREND UP DAY — breakout plays favored, let winners run, avoid early profit-taking' });
@@ -52688,6 +52690,22 @@ function _renderIntelReport(el, intel) {
     if (mOpen && tq === 3) items.push({ icon: '⚡', col: '#00ff88', text: 'PRIME TRADING WINDOW — morning momentum or power hour; highest probability setups' });
     else if (mOpen && tq === 1) items.push({ icon: '⏸', col: '#ff9800', text: 'LUNCH LULL — avoid new entries; watch for afternoon setup formation' });
     else if (!mOpen) items.push({ icon: '🌙', col: '#888', text: 'Market closed — review watchlist and set price alerts for tomorrow\'s open' });
+
+    // 3b. Drawdown budget warning
+    if (drawdownPct <= -2.5) {
+      items.push({ icon: '🛑', col: '#ef5350', text: `DRAWDOWN ALERT: Portfolio down ${Math.abs(drawdownPct).toFixed(1)}% from peak — consider reducing exposure` });
+    } else if (drawdownPct <= -1.5) {
+      items.push({ icon: '⚠', col: '#ffa726', text: `Drawdown ${Math.abs(drawdownPct).toFixed(1)}% — tighten stops and pause new entries until recovery` });
+    }
+
+    // 3c. Hot / cold sectors from ETF trends
+    if (Object.keys(sectorEtf).length > 0) {
+      const sorted = Object.entries(sectorEtf).sort((a,b) => (b[1].chg5d||0) - (a[1].chg5d||0));
+      const hot = sorted.filter(([,e]) => (e.chg5d||0) >= 2).map(([s,e]) => `${s}(+${e.chg5d.toFixed(1)}%)`).slice(0, 2);
+      const cold = sorted.filter(([,e]) => (e.chg5d||0) <= -2).map(([s,e]) => `${s}(${e.chg5d.toFixed(1)}%)`).slice(-2).reverse();
+      if (hot.length > 0) items.push({ icon: '🔥', col: '#00e676', text: `HOT sectors 5d: ${hot.join(' · ')} — focus entries here` });
+      if (cold.length > 0) items.push({ icon: '❄️', col: '#ef5350', text: `COLD sectors 5d: ${cold.join(' · ')} — avoid new longs, watch for bounce setups only` });
+    }
 
     // 4. Position-specific alerts
     positions.forEach(p => {
@@ -54805,6 +54823,16 @@ window.renderSectorRotation = renderSectorRotation;
               return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">VIX Term</div><div style="font-size:9.5px;font-weight:900;color:${vtc}" title="VIX term structure: 9d=${regime.vix9d||'?'} 30d=${(regime.vix||0).toFixed(1)} 3m=${regime.vix3m||'?'}">${vtl}</div><div style="font-size:7px;color:#555">${regime.vix9d||''}·${(regime.vix||0).toFixed(0)}·${regime.vix3m||''}</div></div>`;
             })() : ''}
             ${regime.score != null ? (() => { const rs = regime.score; const rsc = rs >= 4 ? '#00ff88' : rs >= 1 ? '#ffd54f' : rs >= -1 ? '#ff9800' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Regime Score</div><div style="font-size:14px;font-weight:900;color:${rsc}">${rs>0?'+':''}${rs}</div></div>`; })() : ''}
+            ${regime.dxy_level > 0 ? (() => {
+              const dc = regime.dxy_5d >= 1.5 ? '#ef5350' : regime.dxy_5d <= -1.5 ? '#69f0ae' : '#b0bec5';
+              const da = regime.dxy_5d >= 1.5 ? '↑$' : regime.dxy_5d <= -1.5 ? '↓$' : '';
+              return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">DXY</div><div style="font-size:11px;font-weight:900;color:${dc}" title="Dollar Index 5d change: ${(regime.dxy_5d||0)>=0?'+':''}${(regime.dxy_5d||0).toFixed(2)}%">${regime.dxy_level.toFixed(1)}${da}</div><div style="font-size:7px;color:#555">${(regime.dxy_5d||0)>=0?'+':''}${(regime.dxy_5d||0).toFixed(2)}%5d</div></div>`;
+            })() : ''}
+            ${regime.tnx_level > 0 ? (() => {
+              const re = regime.rate_environment || 'neutral';
+              const rc = re === 'restrictive' ? '#ef5350' : re === 'elevated' ? '#ffa726' : re === 'accommodative' ? '#69f0ae' : '#b0bec5';
+              return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">10Y</div><div style="font-size:11px;font-weight:900;color:${rc}" title="10-Year Treasury yield — rate environment: ${re}">${regime.tnx_level.toFixed(2)}%</div><div style="font-size:7px;color:#555">${re}</div></div>`;
+            })() : ''}
             ${drawdownPct > 1 ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Drawdown</div><div style="font-size:14px;font-weight:900;color:#ef5350">-${drawdownPct.toFixed(1)}%</div></div>` : ''}
             ${bAdvPct !== undefined ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Breadth</div><div style="font-size:14px;font-weight:900;color:${bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#ffd54f'}">${bAdvPct}%</div></div>` : ''}
             ${data.market_quality != null ? (() => { const mq = data.market_quality; const mqCol = mq >= 65 ? '#00ff88' : mq >= 50 ? '#ffd54f' : mq >= 35 ? '#ff9800' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Mkt Quality</div><div style="font-size:14px;font-weight:900;color:${mqCol}">${mq}/100</div></div>`; })() : ''}

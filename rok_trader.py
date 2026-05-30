@@ -1984,6 +1984,44 @@ def market_regime():
         except Exception:
             pass
 
+        # Cross-asset: DXY (Dollar Index) and TNX (10-Year Treasury Yield)
+        # Dollar strength hurts multinationals; rising rates hurt growth valuations
+        dxy_level = 0.0
+        dxy_5d    = 0.0
+        tnx_level = 0.0
+        tnx_5d    = 0.0
+        rate_environment = "neutral"
+        try:
+            ca_raw = yf.download("DX-Y.NYB ^TNX", period="15d", interval="1d",
+                                  progress=False, auto_adjust=True, group_by="ticker")
+            def _ca_c(sym):
+                try:
+                    return list(ca_raw["Close"][sym].dropna())
+                except Exception:
+                    return []
+            dxy_c = _ca_c("DX-Y.NYB")
+            tnx_c = _ca_c("^TNX")
+            if len(dxy_c) >= 5:
+                dxy_level = round(float(dxy_c[-1]), 2)
+                dxy_5d    = round((dxy_c[-1] - dxy_c[-5]) / dxy_c[-5] * 100, 2)
+                # Rapidly strengthening dollar = headwind for risk assets & commodities
+                if   dxy_5d >  1.5: score -= 1
+                elif dxy_5d < -1.5: score += 1   # dollar weakness = tailwind for global risk-on
+            if len(tnx_c) >= 5:
+                tnx_level = round(float(tnx_c[-1]), 2)
+                tnx_5d    = round((tnx_c[-1] - tnx_c[-5]) / tnx_c[-5] * 100, 2)
+                # High & rising rates compress growth valuations
+                if   tnx_level > 5.0 and tnx_5d > 3:  score -= 2
+                elif tnx_level > 4.5 and tnx_5d > 2:  score -= 1
+                elif tnx_level < 4.0 and tnx_5d < -2: score += 1  # falling rates = supportive
+            if tnx_level > 0:
+                if   tnx_level > 5.0: rate_environment = "restrictive"
+                elif tnx_level > 4.5: rate_environment = "elevated"
+                elif tnx_level > 3.5: rate_environment = "neutral"
+                else:                 rate_environment = "accommodative"
+        except Exception:
+            pass
+
         if score >= 2:    regime = "bull"
         elif score <= -2: regime = "bear"
         else:             regime = "neutral"
@@ -1991,12 +2029,16 @@ def market_regime():
         logger.info(
             f"Market regime: {regime} | SPY trend: {spy_trend:+.1f}% | "
             f"VIX: {vix:.1f} (9d:{vix9d:.1f} 3m:{vix3m:.1f} {vts_regime}) | "
+            f"DXY: {dxy_level:.1f} ({dxy_5d:+.2f}%5d) | TNX: {tnx_level:.2f}% ({rate_environment}) | "
             f"Above 200d: {above_200} | score: {score}"
         )
         return {"regime": regime, "vix": vix, "spy_trend": spy_trend,
                 "score": score, "above_200": above_200,
                 "vix9d": round(vix9d, 1), "vix3m": round(vix3m, 1),
-                "vts_regime": vts_regime}
+                "vts_regime": vts_regime,
+                "dxy_level": dxy_level, "dxy_5d": dxy_5d,
+                "tnx_level": tnx_level, "tnx_5d": tnx_5d,
+                "rate_environment": rate_environment}
 
     except Exception as e:
         logger.warning(f"Regime check failed: {e}")

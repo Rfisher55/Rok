@@ -39,8 +39,8 @@ jobs:
         run: |
           git config user.name "ROK Intelligence Bot"
           git config user.email "rok-bot@users.noreply.github.com"
-          # --ignore-missing: don't fail if a file wasn't written (e.g. generate crashed)
-          git add --ignore-missing docs/intel_report.json docs/history.json docs/prices.json
+          # Add only files that actually exist (--ignore-missing requires --dry-run in newer git)
+          for f in docs/intel_report.json docs/history.json docs/prices.json; do [ -f "$f" ] && git add "$f" || true; done
           git diff --staged --quiet || git commit -m "Intel update — $(date -u +'%b %d %H:%M UTC')"
           git fetch origin main
           git rebase origin/main || git rebase --abort || true

@@ -505,6 +505,20 @@ def build_prompt(
     bearish_secs = [s for s, d in etf_trends.items() if d.get("chg5d", 0) < -3]
     if bearish_secs:
         lmc_lines.append(f"  Weakest sectors (5d decline): {', '.join(bearish_secs[:3])}")
+    # Cross-asset: DXY and 10-year yield context
+    dxy = lmc.get("dxy_level") or 0
+    dxy_5d = lmc.get("dxy_5d") or 0
+    tnx = lmc.get("tnx_level") or 0
+    rate_env = lmc.get("rate_environment") or ""
+    if dxy > 0:
+        dxy_signal = "strengthening (bearish for multinationals & commodities)" if dxy_5d > 1.5 else \
+                     "weakening (tailwind for global risk-on)" if dxy_5d < -1.5 else "stable"
+        lmc_lines.append(f"  Dollar (DXY): {dxy:.1f} ({dxy_5d:+.2f}%/5d) — {dxy_signal}")
+    if tnx > 0:
+        tnx_signal = "high & rising (growth/tech headwind — compresses valuations)" if rate_env == "restrictive" else \
+                     "elevated (watch rate-sensitive growth names)" if rate_env == "elevated" else \
+                     "low (rate tailwind for growth stocks)" if rate_env == "accommodative" else "neutral"
+        lmc_lines.append(f"  10-Year Yield (TNX): {tnx:.2f}% — {tnx_signal}")
     lmc_str = "\n".join(lmc_lines) if lmc_lines else "  No live context available"
 
     # Append live trading context so AI can give position-specific guidance
