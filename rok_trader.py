@@ -8500,7 +8500,7 @@ def bearish_score(tk, d):
 # ── Position sizing ───────────────────────────────────────────────────────────
 def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
                   score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5,
-                  true_beta=1.0, hv_ratio=1.0):
+                  true_beta=1.0, hv_ratio=1.0, premium_count=0):
     """
     ATR-based risk sizing with full Kelly criterion, beta-adjusted, and HV-regime-adaptive sizing.
     Full Kelly: f* = (W*B - L) / B  where W=win%, L=loss%, B=avg_win/avg_loss (payoff)
@@ -8557,6 +8557,12 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
             score_boost = (score_val - 75) / 25   # 0→1 as score goes 75→100
             kelly_scale = 1 + kelly_f * score_boost
             notional = min(notional * kelly_scale, portfolio_val * MAX_POSITION_PCT * 1.5)
+
+    # Neural quality multiplier: premium_count is the count of elite signals (N100 master neuron)
+    # 6+ premium signals = elite setup → 1.15x size; 4-5 = strong → 1.08x; <2 = weak → 0.85x
+    if premium_count >= 6:   notional *= 1.15   # elite setup: confident, size up
+    elif premium_count >= 4: notional *= 1.08   # strong setup: slightly larger
+    elif premium_count <= 1: notional *= 0.85   # weak signal count: smaller position
 
     cap = min(portfolio_val * MAX_POSITION_PCT, buying_power * 0.95)
     return round(min(notional, cap), 2)
@@ -10329,11 +10335,14 @@ def run():
                     _tk_hv5  = d.get("hv5",  0.0) or 0.0
                     _tk_hv20 = d.get("hv20", 0.0) or 0.0
                     _tk_hv_ratio = (_tk_hv5 / _tk_hv20) if _tk_hv20 > 0 else 1.0
+                    _tk_prem_ct = sum([bool(d.get(k)) for k in (
+                        "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
+                        "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising")])
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct,
                                              payoff_ratio=_payoff_ratio, true_beta=_tk_beta,
-                                             hv_ratio=_tk_hv_ratio)
+                                             hv_ratio=_tk_hv_ratio, premium_count=_tk_prem_ct)
                     # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
                     # allow slightly larger positions; if deeply underwater, shrink further
                     if _portfolio_heat > 5:
