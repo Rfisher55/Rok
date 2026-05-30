@@ -55595,18 +55595,24 @@ window.renderSectorRotation = renderSectorRotation;
       const avgL = data.avg_loss_pct;
       const sharpe = data.sharpe_ratio;
       const maxDd = data.max_drawdown;
+      const sortino = data.sortino_ratio;
+      const calmar  = data.calmar_ratio;
       const totTrades = (stats2.wins||0) + (stats2.losses||0);
       if (totTrades > 0) {
         const wr2 = Math.round((stats2.wins||0)/totTrades*100);
         const pfCol = pf >= 2 ? '#00ff88' : pf >= 1 ? '#ffd54f' : '#ef5350';
         const sharpeCol = sharpe >= 1 ? '#00ff88' : sharpe >= 0.5 ? '#ffd54f' : sharpe != null ? '#ef5350' : '#aaa';
+        const sortinoCol = sortino >= 1.5 ? '#00ff88' : sortino >= 0.8 ? '#ffd54f' : sortino != null ? '#ef5350' : '#aaa';
+        const calmarCol  = calmar  >= 1   ? '#00ff88' : calmar  >= 0.5 ? '#ffd54f' : calmar  != null ? '#ef5350' : '#aaa';
         html += `<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.65rem;padding:.5rem .65rem;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid rgba(255,255,255,.07)">
           <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Trades</div><div style="font-size:13px;font-weight:900;color:#aaa">${totTrades}</div></div>
           <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Win%</div><div style="font-size:13px;font-weight:900;color:#ffd54f">${wr2}%</div></div>
-          ${pf != null ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">P.Factor</div><div style="font-size:13px;font-weight:900;color:${pfCol}">${pf}x</div></div>` : ''}
+          ${pf != null ? `<div style="text-align:center;min-width:38px" title="Profit Factor: gross wins / gross losses. >2 = excellent, >1 = profitable"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">P.Factor</div><div style="font-size:13px;font-weight:900;color:${pfCol}">${pf}x</div></div>` : ''}
           ${avgW != null ? `<div style="text-align:center;min-width:44px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Avg Win</div><div style="font-size:13px;font-weight:900;color:#00ff88">+${avgW}%</div></div>` : ''}
           ${avgL != null ? `<div style="text-align:center;min-width:44px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Avg Loss</div><div style="font-size:13px;font-weight:900;color:#ef5350">-${avgL}%</div></div>` : ''}
-          ${sharpe != null ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Sharpe</div><div style="font-size:13px;font-weight:900;color:${sharpeCol}">${sharpe}</div></div>` : ''}
+          ${sharpe != null ? `<div style="text-align:center;min-width:38px" title="Sharpe Ratio: avg return / volatility. >1 = strong risk-adjusted return"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Sharpe</div><div style="font-size:13px;font-weight:900;color:${sharpeCol}">${sharpe}</div></div>` : ''}
+          ${sortino != null ? `<div style="text-align:center;min-width:38px" title="Sortino Ratio: like Sharpe but only penalizes downside volatility — better for traders. >1.5 = elite"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Sortino</div><div style="font-size:13px;font-weight:900;color:${sortinoCol}">${sortino}</div></div>` : ''}
+          ${calmar != null ? `<div style="text-align:center;min-width:38px" title="Calmar Ratio: annualized return / max drawdown. >1 = excellent capital efficiency"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Calmar</div><div style="font-size:13px;font-weight:900;color:${calmarCol}">${calmar}</div></div>` : ''}
           ${maxDd > 0 ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Max DD</div><div style="font-size:13px;font-weight:900;color:#ef5350">-${maxDd.toFixed(1)}%</div></div>` : ''}
           <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Peak</div><div style="font-size:11px;font-weight:800;color:#82b1ff">\$${(data.portfolio_peak||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
         </div>`;

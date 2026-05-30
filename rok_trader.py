@@ -7704,6 +7704,8 @@ def run():
     except Exception:
         pass
     tlog["sharpe_ratio"]       = _sharpe_ratio
+    tlog["sortino_ratio"]      = _sortino_ratio
+    tlog["calmar_ratio"]       = _calmar_ratio
     tlog["max_drawdown"]       = round(_max_dd, 2)
     try:
         tlog["effective_min_score"] = _eff_min_score
