@@ -55270,6 +55270,30 @@ window.renderSectorRotation = renderSectorRotation;
               </div>
             </div>`;
           })();
+          // Expected Move + Trade Sizing block
+          const emBlock = (() => {
+            const em  = ls.expected_move_wk || 0;
+            const pct = ls.expected_move_pct_wk || 0;
+            const pr  = p.price || 0;
+            const s1  = p.atr_size_1pct || 0;
+            const s2  = p.atr_size_2pct || 0;
+            if (!em || !pr) return '';
+            const upside = pr + em;
+            const downside = pr - em;
+            const tgt = p.target_price || ls.analyst_price_tgt || 0;
+            const stop = stopLevel || 0;
+            const emWithinStop = stop > 0 && downside < stop;
+            const emHitsTarget = tgt > 0 && upside >= tgt * 0.97;
+            const ivSrc = (ls.atm_iv || 0) > 0 ? 'IV' : 'HV';
+            return `<div style="margin-top:.3rem;background:rgba(0,0,0,.2);border-radius:4px;padding:.2rem .35rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+              <span style="font-size:6px;font-weight:800;color:#b0bec5;letter-spacing:.06em">EM(${ivSrc})</span>
+              <span style="font-size:6.5px;color:#ffd54f;font-weight:700" title="Expected 1-week ±move: price×IV×√(5/252)">±$${em.toFixed(2)} (${pct.toFixed(1)}%)</span>
+              <span style="font-size:6px;color:#555">→$${upside.toFixed(2)}/$${downside.toFixed(2)}</span>
+              ${emHitsTarget ? `<span style="font-size:6px;font-weight:900;color:#00e676">📍TGT IN RANGE</span>` : ''}
+              ${emWithinStop ? `<span style="font-size:6px;font-weight:900;color:#ef5350">⚠STOP IN RANGE</span>` : ''}
+              ${s1 > 0 ? `<span style="font-size:6px;color:#80b0e0" title="ATR-based position size for 1% portfolio risk">1%R:${s1}sh · 2%R:${s2}sh</span>` : ''}
+            </div>`;
+          })();
           const peakPctStr = p.peak_price > 0 && p.price > 0 ? (() => {
             const dd = (p.price - p.peak_price) / p.peak_price * 100;
             return dd < -1 ? `<span style="font-size:6.5px;color:#ef5350" title="Drawdown from peak">▼${Math.abs(dd).toFixed(1)}%peak</span>` : '';
@@ -55335,6 +55359,7 @@ window.renderSectorRotation = renderSectorRotation;
                   </div>`;
                 })()}
                 ${rrBarHtml}
+                ${emBlock}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>

@@ -4544,6 +4544,20 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Expected Move: weekly and monthly (using HV20 as IV proxy until ATM IV is fetched)
+    # Formula: price × (IV/100) × sqrt(DTE/252)
+    expected_move_wk = 0.0   # ±$ expected over 5 trading days
+    expected_move_mo = 0.0   # ±$ expected over 21 trading days
+    expected_move_pct_wk = 0.0
+    try:
+        if hv20 > 0 and price > 0:
+            import math as _math
+            expected_move_wk     = round(price * (hv20 / 100) * _math.sqrt(5 / 252), 2)
+            expected_move_mo     = round(price * (hv20 / 100) * _math.sqrt(21 / 252), 2)
+            expected_move_pct_wk = round(expected_move_wk / price * 100, 2)
+    except Exception:
+        pass
+
     return {
         "price":           round(price, 2),
         "change_pct":      round(chg_pct, 2),
@@ -4697,6 +4711,9 @@ def _extract(daily, hourly):
         "double_bottom":          double_bottom,
         "double_bottom_neckline": double_bottom_neckline,
         "double_top":             double_top,
+        "expected_move_wk":       expected_move_wk,
+        "expected_move_mo":       expected_move_mo,
+        "expected_move_pct_wk":   expected_move_pct_wk,
     }
 
 
@@ -7196,6 +7213,9 @@ def run():
                 "high_short":         sig.get("high_short", False),
                 "atm_iv":             sig.get("atm_iv", 0.0),
                 "w52_range_pos":      sig.get("w52_range_pos", 0.0),
+                "expected_move_wk":   sig.get("expected_move_wk", 0.0),
+                "expected_move_mo":   sig.get("expected_move_mo", 0.0),
+                "expected_move_pct_wk": sig.get("expected_move_pct_wk", 0.0),
                 "analyst_upgrade":    sig.get("analyst_upgrade", False),
                 "analyst_rev_score":  sig.get("analyst_rev_score", 0),
                 "analyst_buy_pct":    sig.get("analyst_buy_pct", 0.5),
@@ -7227,6 +7247,30 @@ def run():
             }
             for p in curr
         ]
+        # Post-process: refine expected move with ATM IV and add ATR-based position sizing
+        import math as _math2
+        for _pos in tlog.get("positions", []):
+            _ls = _pos.get("live_signals", {})
+            _pr = _pos.get("price", 0) or 0
+            _atr = _ls.get("atr") or 0
+            # ATR-based position sizing: shares for 1% and 2% account risk
+            if _atr > 0 and portfolio_val > 0:
+                _pos["atr_size_1pct"] = max(1, int(portfolio_val * 0.01 / _atr))
+                _pos["atr_size_2pct"] = max(1, int(portfolio_val * 0.02 / _atr))
+            else:
+                _pos["atr_size_1pct"] = 0
+                _pos["atr_size_2pct"] = 0
+            # Override expected move with ATM IV if available (more accurate than HV20)
+            _atm_iv = _ls.get("atm_iv") or 0
+            if _atm_iv > 0 and _pr > 0:
+                try:
+                    _em_wk = round(_pr * (_atm_iv / 100) * _math2.sqrt(5 / 252), 2)
+                    _em_mo = round(_pr * (_atm_iv / 100) * _math2.sqrt(21 / 252), 2)
+                    _ls["expected_move_wk"]     = _em_wk
+                    _ls["expected_move_mo"]     = _em_mo
+                    _ls["expected_move_pct_wk"] = round(_em_wk / _pr * 100, 2)
+                except Exception:
+                    pass
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
 
