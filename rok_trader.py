@@ -10609,6 +10609,10 @@ def run():
                         _buy_signals_merged["atr_bucket"] = "1-2%"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
+                    _entry_prem_sigs = [k for k in (
+                        "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
+                        "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising"
+                    ) if _d_buy.get(k)]
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False,
                                  "ever_hit_5pct": False, "atr_at_entry": atr or 0.0,
                                  "scale_in_pending": _is_scalein,
@@ -10616,7 +10620,9 @@ def run():
                                  "scale_in_ema21": round(_d_buy.get("avwap_52wl", 0) or price * 0.97, 2),
                                  "entry_thesis": _entry_thesis,
                                  "entry_tt": _tt_buy,
-                                 "entry_score": sc}
+                                 "entry_score": sc,
+                                 "entry_premium_count": _tk_prem_ct,
+                                 "entry_premium_signals": _entry_prem_sigs}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
                     buying_power -= notional
@@ -10926,6 +10932,8 @@ def run():
                 "scale_in_notional": peaks.get(_sym, {}).get("scale_in_notional", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "entry_thesis":  peaks.get(_sym, {}).get("entry_thesis", "") if isinstance(peaks.get(_sym), dict) else "",
                 "entry_score":   peaks.get(_sym, {}).get("entry_score", 0) if isinstance(peaks.get(_sym), dict) else 0,
+                "entry_premium_count": peaks.get(_sym, {}).get("entry_premium_count", 0) if isinstance(peaks.get(_sym), dict) else 0,
+                "entry_premium_signals": peaks.get(_sym, {}).get("entry_premium_signals", []) if isinstance(peaks.get(_sym), dict) else [],
                 "grade":         momentum_grade(live.get(_sym, {}), score(_sym, live.get(_sym, {}))) if live.get(_sym) else "?",
                 "rs_rating":     live.get(_sym, {}).get("rs_rating", 50) if live.get(_sym) else 50,
                 "rs252":         round(live.get(_sym, {}).get("rs252", 0.0), 2) if live.get(_sym) else 0.0,

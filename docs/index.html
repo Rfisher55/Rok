@@ -2933,7 +2933,7 @@ body.beginner-mode #beginner-banner { display:block }
   <span class="ftr-brand">ROK</span>
   <div>
     <div class="ftr-txt">Reddit · News · StockTwits · SEC EDGAR · Yahoo Finance · CNN Fear/Greed · CBOE Put/Call · Congressional STOCK Act · Technical momentum signals. Updated every 5 minutes via GitHub Actions. 75-Neuron AI Brain.</div>
-    <div class="disclaimer">Not financial advice. AI-generated signals for educational purposes only. Do your own due diligence. Build: 2026-05-30 v75n</div>
+    <div class="disclaimer">Not financial advice. AI-generated signals for educational purposes only. Do your own due diligence. Build: 2026-05-30 v100n-neural-thesis</div>
   </div>
   <span class="ftr-time" id="ftr-time">—</span>
 </footer>
@@ -58616,6 +58616,57 @@ window.renderSectorRotation = renderSectorRotation;
                 })()}
                 ${rrBarHtml}
                 ${emBlock}
+                ${(() => {
+                  // ── Neural Thesis Status: 10 premium signals live vs at-entry ──────
+                  const PREM_KEYS = [
+                    {k:'vcp',          l:'VCP'},
+                    {k:'cup_handle',   l:'C+H'},
+                    {k:'at_breakout',  l:'BRK'},
+                    {k:'mtf_triple',   l:'3TF'},
+                    {k:'ttm_squeeze_fired', l:'SQZ'},
+                    {k:'gap_and_hold', l:'GAP'},
+                    {k:'orb_breakout', l:'ORB'},
+                    {k:'rvol_surge',   l:'RVOL'},
+                    {k:'supertrend_bull', l:'ST'},
+                    {k:'obv_rising',   l:'OBV'},
+                  ];
+                  const entrySigs  = p.entry_premium_signals || [];
+                  const entryCount = p.entry_premium_count || 0;
+                  const curCount   = PREM_KEYS.filter(pk => ls[pk.k]).length;
+                  // Only render if we have at least one premium signal active currently or at entry
+                  if (curCount === 0 && entryCount === 0) return '';
+                  // Thesis state: intact if still have ≥ entryCount-1, degrading if dropped ≥2, collapsed if ≤1
+                  const dropped = entryCount - curCount;
+                  const thesisState = dropped <= 1 ? 'INTACT' : dropped <= 3 ? 'DEGRADING' : 'COLLAPSED';
+                  const thesisCol  = thesisState === 'INTACT' ? '#00e676' : thesisState === 'DEGRADING' ? '#ffa726' : '#ef5350';
+                  const thesisBg   = thesisState === 'INTACT' ? 'rgba(0,230,118,.07)' : thesisState === 'DEGRADING' ? 'rgba(255,167,38,.08)' : 'rgba(239,83,80,.12)';
+                  const thesisIcon = thesisState === 'INTACT' ? '✓' : thesisState === 'DEGRADING' ? '↓' : '✗';
+                  // Build signal chips — green=still active, red=was active at entry but gone, grey=never active
+                  const chips = PREM_KEYS.map(pk => {
+                    const now  = !!ls[pk.k];
+                    const atEntry = entrySigs.includes(pk.k);
+                    if (!now && !atEntry) return ''; // never relevant — skip
+                    const col  = now ? '#00e676' : '#ef5350';
+                    const bg   = now ? 'rgba(0,230,118,.12)' : 'rgba(239,83,80,.12)';
+                    const dim  = !now ? 'opacity:.45;text-decoration:line-through' : '';
+                    const tip  = now ? `${pk.l}: active now` : `${pk.l}: fired at entry, no longer active`;
+                    return `<span style="font-size:5.5px;font-weight:800;color:${col};background:${bg};border-radius:2px;padding:1px 3px;${dim}" title="${tip}">${pk.l}</span>`;
+                  }).filter(Boolean).join('');
+                  // New signals not in entry (emerging)
+                  const emerging = PREM_KEYS.filter(pk => ls[pk.k] && !entrySigs.includes(pk.k));
+                  const emrgChips = emerging.map(pk =>
+                    `<span style="font-size:5.5px;font-weight:800;color:#00e5ff;background:rgba(0,229,255,.12);border-radius:2px;padding:1px 3px" title="${pk.l}: new signal since entry">+${pk.l}</span>`
+                  ).join('');
+                  return `<div style="margin-top:.3rem;background:rgba(0,0,0,.25);border:1px solid ${thesisCol}22;border-radius:4px;padding:.2rem .4rem">
+                    <div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.2rem">
+                      <span style="font-size:5.5px;font-weight:900;color:#4a6fa5;letter-spacing:.08em;text-transform:uppercase">Neural Thesis</span>
+                      <span style="font-size:6px;font-weight:900;color:${thesisCol};background:${thesisBg};border-radius:3px;padding:1px 4px;letter-spacing:.05em">${thesisIcon} ${thesisState}</span>
+                      <span style="font-size:5.5px;color:#555">${entryCount}→${curCount} signals${dropped > 0 ? ` (−${dropped})` : ''}</span>
+                      ${emerging.length > 0 ? `<span style="font-size:5.5px;color:#00e5ff">${emerging.length} new</span>` : ''}
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:2px">${chips}${emrgChips}</div>
+                  </div>`;
+                })()}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
