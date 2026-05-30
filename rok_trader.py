@@ -352,6 +352,11 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["pos_size_bucket"] = signals.get("pos_size_bucket", "2-5%")
         e["atr_pct_at_entry"] = float(signals.get("atr_pct_at_entry", 0.0) or 0.0)
         e["atr_bucket"]      = signals.get("atr_bucket", "1-2%")
+        # Pre-market gap at entry (Neuron 30)
+        _pm_gap = float(signals.get("pm_gap_pct", 0.0) or 0.0)
+        e["pm_gap_pct"] = round(_pm_gap, 1)
+        e["pm_gap_bucket"] = ("big_up" if _pm_gap > 3 else "small_up" if _pm_gap > 0.5 else
+                              "big_down" if _pm_gap < -3 else "small_down" if _pm_gap < -0.5 else "flat")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -934,6 +939,44 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _psp["total"] > 0:
                 _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
                 _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Pre-Market Gap Neuron: learn if gap-up entries outperform gap-down ──────
+    # Tracks performance when stock had big pre-market gap (>3%), small gap, or flat open.
+    # Helps the bot avoid gap-and-fail traps while confirming gap-and-hold strength.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_pg = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _pg_bkt = _buy_pg.get("pm_gap_bucket", "flat") if _buy_pg else "flat"
+            _pg_perf = tlog.setdefault("pm_gap_perf", {})
+            _pgp = _pg_perf.setdefault(_pg_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _pg_bkt})
+            _pgp["total"] = _pgp.get("total", 0) + 1
+            _pgp["total_pnl"] = round(_pgp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _pgp["wins"] = _pgp.get("wins", 0) + 1
+            else: _pgp["losses"] = _pgp.get("losses", 0) + 1
+            if _pgp["total"] > 0:
+                _pgp["win_rate"] = round(_pgp["wins"] / _pgp["total"] * 100, 1)
+                _pgp["avg_pnl"]  = round(_pgp["total_pnl"] / _pgp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Exit Timing Neuron: learn which hour of day produces best exits ────────
+    # Tracks P&L by exit hour (UTC). The bot learns: do early exits (9-10am ET)
+    # outperform vs holding to power hour (3pm ET)?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _exit_h = datetime.now(timezone.utc).hour
+            _exit_h_str = str(_exit_h)
+            _exit_perf = tlog.setdefault("exit_hour_perf", {})
+            _ehp = _exit_perf.setdefault(_exit_h_str, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "hour_utc": _exit_h})
+            _ehp["total"] = _ehp.get("total", 0) + 1
+            _ehp["total_pnl"] = round(_ehp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _ehp["wins"] = _ehp.get("wins", 0) + 1
+            else: _ehp["losses"] = _ehp.get("losses", 0) + 1
+            if _ehp["total"] > 0:
+                _ehp["win_rate"] = round(_ehp["wins"] / _ehp["total"] * 100, 1)
+                _ehp["avg_pnl"]  = round(_ehp["total_pnl"] / _ehp["total"], 2)
         except Exception:
             pass
 
@@ -10591,6 +10634,41 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 30. Pre-Market Gap Neuron: gap-up/down entries vs outcome ─────────
+        _pg_raw = tlog.get("pm_gap_perf", {})
+        _pg_insights = []
+        for _pgbk, _pgd in _pg_raw.items():
+            if _pgd.get("total", 0) >= 3:
+                _pg_insights.append({"bucket": _pgbk, "win_rate": _pgd.get("win_rate", 50),
+                                     "avg_pnl": _pgd.get("avg_pnl", 0), "total": _pgd.get("total", 0)})
+        if _pg_insights:
+            _pg_s = sorted(_pg_insights, key=lambda x: -x["win_rate"])
+            _pg_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _pg_s)
+            _learn_log.append(f"Pre-market gap WRs: {_pg_sum}")
+            _big_up = next((s for s in _pg_insights if s["bucket"] == "big_up"), None)
+            _big_dn = next((s for s in _pg_insights if s["bucket"] == "big_down"), None)
+            if _big_up and _big_up["win_rate"] >= 65:
+                _learn_log.append(f"Big pre-market gaps working ({_big_up['win_rate']:.0f}% WR) — gap-and-hold confirmed")
+            if _big_dn and _big_dn["win_rate"] < 40:
+                _learn_log.append(f"Big gap-downs at entry failing ({_big_dn['win_rate']:.0f}% WR) — avoid buying big gap-downs")
+
+        # ── 31. Exit Timing Neuron: which exit hour produces best P&L ─────────
+        _eh_raw = tlog.get("exit_hour_perf", {})
+        _eh_insights = []
+        for _ehk, _ehd in _eh_raw.items():
+            if _ehd.get("total", 0) >= 3:
+                _et = int(_ehk)
+                _et_label = f"{(_et - 4 + 24) % 24:02d}:00ET"  # convert UTC to ET approx
+                _eh_insights.append({"hour_utc": _et, "hour_label": _et_label,
+                                     "win_rate": _ehd.get("win_rate", 50),
+                                     "avg_pnl": _ehd.get("avg_pnl", 0), "total": _ehd.get("total", 0)})
+        if _eh_insights:
+            _eh_s = sorted(_eh_insights, key=lambda x: -x["win_rate"])
+            _eh_sum = " | ".join(f"{s['hour_label']}:{s['win_rate']:.0f}%WR" for s in _eh_s[:5])
+            _learn_log.append(f"Exit hour WRs: {_eh_sum}")
+            _best_exit = _eh_s[0]
+            _learn_log.append(f"Best exit window: {_best_exit['hour_label']} ({_best_exit['win_rate']:.0f}% WR, avg {_best_exit['avg_pnl']:+.1f}%)")
+
         # ── 28. Position Size Neuron: optimal bet size ────────────────────────
         _ps_raw = tlog.get("pos_size_perf", {})
         _ps_insights = []
@@ -10709,6 +10787,8 @@ def run():
             "dow_perf":            _dow_insights,           # day-of-week entry performance
             "pos_size_perf":       _ps_insights,            # position size (% portfolio) vs outcome
             "atr_perf":            _at_insights,            # ATR bracket at entry vs outcome
+            "pm_gap_perf":         _pg_insights,            # pre-market gap size vs outcome
+            "exit_hour_perf":      _eh_insights,            # exit timing (hour) vs P&L
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

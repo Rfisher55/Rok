@@ -53921,6 +53921,52 @@ function _renderIntelReport(el, intel) {
           ${psHtml}${atHtml}
         </div>`;
       })()}
+      ${(() => {
+        // ── Pre-Market Gap + Exit Timing dual panel ───────────────────────────
+        const pg = lp.pm_gap_perf || [];
+        const eh = lp.exit_hour_perf || [];
+        if (!pg.length && !eh.length) return '';
+        const PG_ORDER = ['big_up','small_up','flat','small_down','big_down'];
+        const pgIcons = {big_up:'🚀',small_up:'📈',flat:'➡️',small_down:'📉',big_down:'💥'};
+        const pgMap = {};
+        pg.forEach(s => pgMap[s.bucket] = s);
+        const pgCells = PG_ORDER.map(bkt => {
+          const s = pgMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:4px;padding:.15rem;text-align:center;opacity:.3">
+            <div style="font-size:7px">${pgIcons[bkt]||''}</div>
+            <div style="font-size:5px;color:#333">${bkt.replace('_',' ')}</div>
+          </div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.15rem;text-align:center">
+            <div style="font-size:7px">${pgIcons[bkt]||''}</div>
+            <div style="font-size:5px;color:#aaa">${bkt.replace('_',' ')}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%(${s.total}T)</div>
+          </div>`;
+        }).join('');
+        const ehSorted = [...eh].sort((a,b)=>a.hour_utc-b.hour_utc);
+        const ehBest = eh.length?eh.reduce((a,b)=>a.win_rate>b.win_rate?a:b,eh[0]):null;
+        const ehCells = ehSorted.map(e => {
+          const col = e.win_rate>=60?'#00e676':e.win_rate>=50?'#ffd54f':'#ef5350';
+          const isBest = ehBest && e.hour_utc===ehBest.hour_utc;
+          return `<div style="background:${isBest?'rgba(255,213,79,.08)':'rgba(0,0,0,.15)'};border:${isBest?'1px solid #ffd54f44':'none'};border-radius:3px;padding:.15rem;text-align:center">
+            <div style="font-size:5px;color:#888">${e.hour_label}</div>
+            <div style="font-size:7px;font-weight:800;color:${col}">${e.win_rate.toFixed(0)}%</div>
+            <div style="font-size:4.5px;color:${e.avg_pnl>=0?'#69f0ae':'#ef5350'}">${e.avg_pnl>=0?'+':''}${e.avg_pnl.toFixed(1)}%</div>
+          </div>`;
+        }).join('');
+        const pgHtml = pg.length?`<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🌅 PRE-MARKET GAP: gap size at entry vs outcome</div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.1rem">${pgCells}</div>
+        </div>`:'';
+        const ehHtml = eh.length?`<div>
+          <div style="font-size:5.5px;color:#ff9800;font-weight:700;margin-bottom:.1rem">⏰ EXIT TIMING: which exit hour produces best outcomes?</div>
+          <div style="display:grid;grid-template-columns:repeat(${Math.min(ehSorted.length,8)},1fr);gap:.1rem">${ehCells}</div>
+        </div>`:'';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${pgHtml}${ehHtml}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}
