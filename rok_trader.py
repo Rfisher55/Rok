@@ -361,6 +361,22 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             e["spy_day_return"] = 0.0
             e["spy_day_bucket"] = "flat"
+        # Re-entry detection: was this ticker sold within the last 48h?
+        try:
+            _re_cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+            _prior_sell = next((t for t in tlog.get("trades", [])
+                               if t.get("ticker") == sym
+                               and t.get("action") in ("SELL", "SELL_HALF", "COVER")
+                               and t.get("pnl_pct") is not None
+                               and datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > _re_cutoff), None)
+            if _prior_sell:
+                e["is_reentry"] = True
+                e["reentry_prior_pnl"] = _prior_sell.get("pnl_pct", 0.0)
+                e["reentry_type"] = "winner" if _prior_sell.get("pnl_pct", 0) > 0 else "loser"
+            else:
+                e["is_reentry"] = False
+        except Exception:
+            e["is_reentry"] = False
 
     tlog.setdefault("trades", []).insert(0, e)
     tlog["trades"] = tlog["trades"][:500]
@@ -821,6 +837,27 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _scp["total"] > 0:
                 _scp["win_rate"] = round(_scp["wins"] / _scp["total"] * 100, 1)
                 _scp["avg_pnl"]  = round(_scp["total_pnl"] / _scp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Re-Entry Success Neuron: track outcomes of buying back recent sells ───────
+    # Splits re-entry outcomes by type: winner re-entry (sold for profit, bought back)
+    # vs loser re-entry (sold for loss, bought back). Helps distinguish "adding to
+    # a working theme" from "falling knife" behavior.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_re = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _buy_re and _buy_re.get("is_reentry"):
+                _re_type = _buy_re.get("reentry_type", "unknown")
+                _re_perf = tlog.setdefault("reentry_perf", {})
+                _rep = _re_perf.setdefault(_re_type, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "type": _re_type})
+                _rep["total"] = _rep.get("total", 0) + 1
+                _rep["total_pnl"] = round(_rep.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _rep["wins"] = _rep.get("wins", 0) + 1
+                else: _rep["losses"] = _rep.get("losses", 0) + 1
+                if _rep["total"] > 0:
+                    _rep["win_rate"] = round(_rep["wins"] / _rep["total"] * 100, 1)
+                    _rep["avg_pnl"]  = round(_rep["total_pnl"] / _rep["total"], 2)
         except Exception:
             pass
 
@@ -10371,6 +10408,25 @@ def run():
             if _spy_up and _spy_up["win_rate"] >= 65:
                 _learn_log.append(f"Green SPY days boost win rate to {_spy_up['win_rate']:.0f}% — ideal entry condition confirmed")
 
+        # ── 24. Re-Entry Success Neuron: winner vs loser re-entries ──────────
+        _re_raw = tlog.get("reentry_perf", {})
+        _re_insights = []
+        for _retype, _red in _re_raw.items():
+            if _red.get("total", 0) >= 2:
+                _re_insights.append({
+                    "type": _retype, "win_rate": _red.get("win_rate", 50),
+                    "avg_pnl": _red.get("avg_pnl", 0), "total": _red.get("total", 0)
+                })
+        if _re_insights:
+            _re_sum = " | ".join(f"re-entry_{s['type']}:{s['win_rate']:.0f}%WR" for s in _re_insights)
+            _learn_log.append(f"Re-entry outcomes: {_re_sum}")
+            _winner_re = next((r for r in _re_insights if r["type"] == "winner"), None)
+            _loser_re  = next((r for r in _re_insights if r["type"] == "loser"), None)
+            if _winner_re and _winner_re["win_rate"] >= 60:
+                _learn_log.append(f"Winner re-entries working ({_winner_re['win_rate']:.0f}% WR) — momentum follow-through confirmed")
+            if _loser_re and _loser_re["win_rate"] < 40:
+                _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -10402,6 +10458,7 @@ def run():
             "macro_event_perf":    _macro_insights,        # FOMC/CPI/NFP trade outcomes
             "signal_count_perf":   _sc_insights,           # optimal signal count sweet spot
             "spy_day_perf":        _spy_day_insights,      # SPY up/flat/down day vs. outcome
+            "reentry_perf":        _re_insights,           # winner vs loser re-entry outcomes
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
