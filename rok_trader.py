@@ -545,6 +545,111 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["orb_at_entry"] = _orb
         e["orb_state"] = ("breakout" if _orb else "consolidating")
 
+        # Supertrend + PSAR Neuron (61): trend-following confirmation layer
+        _st_bull = bool(signals.get("supertrend_bull", False))
+        _ps_bull = bool(signals.get("psar_bull", False))
+        _trend_conf_score = int(_st_bull) + int(_ps_bull)
+        e["supertrend_at_entry"] = _st_bull
+        e["psar_at_entry"] = _ps_bull
+        e["trend_conf_score"] = _trend_conf_score
+        e["trend_conf_state"] = ("both" if _trend_conf_score == 2 else "one" if _trend_conf_score == 1 else "neither")
+
+        # Bollinger Band Position Neuron (62): where is price within the bands?
+        _bb_pos_v = float(signals.get("bb_pos", 50.0) or 50.0)
+        e["bb_pos_at_entry"] = round(_bb_pos_v, 1)
+        e["bb_zone"] = ("upper" if _bb_pos_v >= 80 else "lower" if _bb_pos_v <= 20 else "mid")
+
+        # Candle Pattern Score Neuron (63): bullish candle patterns at entry
+        _hammer = bool(signals.get("hammer", False))
+        _mstar  = bool(signals.get("morning_star", False))
+        _tws    = bool(signals.get("three_white_soldiers", False))
+        _beng   = bool(signals.get("bullish_engulfing", False))
+        _candle_score = int(_hammer) + int(_mstar) + int(_tws) + int(_beng)
+        e["candle_score_at_entry"] = _candle_score
+        e["candle_state"] = ("strong" if _candle_score >= 2 else "present" if _candle_score == 1 else "none")
+
+        # Volume Dry-Up Neuron (64): low-vol consolidation before breakout
+        _vdu = bool(signals.get("vol_dry_up", False))
+        e["vol_dry_up_at_entry"] = _vdu
+        e["vol_dry_state"] = ("dry_up" if _vdu else "normal_vol")
+
+        # Chart Pattern Score Neuron (65): classic breakout chart patterns
+        _bf  = bool(signals.get("bull_flag", False))
+        _ch  = bool(signals.get("cup_handle", False))
+        _vcp = bool(signals.get("vcp", False))
+        _pp  = bool(signals.get("pocket_pivot", False))
+        _chart_score = int(_bf) + int(_ch) + int(_vcp) + int(_pp)
+        e["chart_pattern_score"] = _chart_score
+        e["chart_pattern_state"] = ("multi" if _chart_score >= 2 else "single" if _chart_score == 1 else "none")
+
+        # ROC Momentum Neuron (66): rate of change on 5-day and 20-day windows
+        _roc5_v  = float(signals.get("roc5", 0.0) or 0.0)
+        _roc20_v = float(signals.get("roc20", 0.0) or 0.0)
+        e["roc5_at_entry"]  = round(_roc5_v, 2)
+        e["roc20_at_entry"] = round(_roc20_v, 2)
+        _roc_state = ("accelerating" if _roc5_v > 0 and _roc20_v > 0 and _roc5_v > _roc20_v
+                      else "positive" if _roc5_v > 0 or _roc20_v > 0
+                      else "negative")
+        e["roc_state"] = _roc_state
+
+        # Relative Strength Momentum Neuron (67): RS5 vs RS63 (short vs long)
+        _rs5_v  = float(signals.get("rs5", 0.0) or 0.0)
+        _rs63_v = float(signals.get("rs63", 0.0) or 0.0)
+        e["rs5_at_entry"]  = round(_rs5_v, 2)
+        e["rs63_at_entry"] = round(_rs63_v, 2)
+        _rs_mom_state = ("leading" if _rs5_v > 1.0 and _rs63_v > 1.0
+                         else "improving" if _rs5_v > _rs63_v
+                         else "lagging")
+        e["rs_mom_state"] = _rs_mom_state
+
+        # Demand Zone Proximity Neuron (68): at/near institutional demand
+        _at_dz  = bool(signals.get("at_demand_zone", False))
+        _near_s = bool(signals.get("near_support", False))
+        _fib_s  = bool(signals.get("fib_support", False))
+        _dz_score = int(_at_dz) + int(_near_s) + int(_fib_s)
+        e["demand_zone_score"] = _dz_score
+        e["demand_zone_state"] = ("at_zone" if _at_dz else "near_zone" if _dz_score >= 1 else "no_zone")
+
+        # Higher Lows Pattern Neuron (69): ascending support = institutional accumulation
+        _hl = bool(signals.get("higher_lows", False))
+        e["higher_lows_at_entry"] = _hl
+        e["higher_lows_state"] = ("confirmed" if _hl else "not_confirmed")
+
+        # HA Consecutive Bull Neuron (70): how many consecutive green Heikin Ashi candles
+        _ha_consec = int(signals.get("ha_consec_bull", 0) or 0)
+        e["ha_consec_at_entry"] = _ha_consec
+        e["ha_consec_state"] = ("strong" if _ha_consec >= 4 else "building" if _ha_consec >= 2 else "early")
+
+        # NR7 Signal Neuron (71): narrowest range in 7 days = volatility compression before explosion
+        _nr7 = bool(signals.get("nr7_signal", False))
+        e["nr7_at_entry"] = _nr7
+        e["nr7_state"] = ("compressed" if _nr7 else "normal_range")
+
+        # EMA Structure Neuron (72): price vs EMA50 and EMA200 = trend health
+        _above_ema50  = bool(signals.get("price_vs_ema50", False))
+        _above_ema200 = bool(signals.get("price_vs_ema200", False))
+        _ema_struct_score = int(_above_ema50) + int(_above_ema200)
+        e["ema_struct_score"] = _ema_struct_score
+        e["ema_struct_state"] = ("both" if _ema_struct_score == 2 else "ema50_only" if _above_ema50 else "below_both")
+
+        # MACD Divergence Neuron (73): bullish divergence = hidden accumulation
+        _macd_div = bool(signals.get("macd_bull_div", False))
+        e["macd_div_at_entry"] = _macd_div
+        e["macd_div_state"] = ("diverging" if _macd_div else "no_div")
+
+        # MFI Divergence Neuron (74): MFI bull div = money flowing in against price drop
+        _mfi_div = bool(signals.get("mfi_bull_div", False))
+        e["mfi_div_at_entry"] = _mfi_div
+        e["mfi_div_state"] = ("diverging" if _mfi_div else "no_div")
+
+        # Vol Ratio + Momentum Combo Neuron (75): volume ratio confirms momentum acceleration
+        _vol_ratio_v = float(signals.get("vol_ratio", 1.0) or 1.0)
+        _mom_acc = bool(signals.get("mom_accel", False))
+        e["vol_ratio_at_entry"] = round(_vol_ratio_v, 2)
+        e["vol_ratio_mom_state"] = ("confirmed" if _vol_ratio_v >= 1.5 and _mom_acc
+                                    else "partial" if _vol_ratio_v >= 1.2 or _mom_acc
+                                    else "weak")
+
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
         _SIGNAL_KEYS = [
@@ -1457,6 +1562,261 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _ghp["total"] > 0:
                 _ghp["win_rate"] = round(_ghp["wins"] / _ghp["total"] * 100, 1)
                 _ghp["avg_pnl"]  = round(_ghp["total_pnl"] / _ghp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Supertrend+PSAR Neuron (61): trend confirmation layer ─────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n61 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n61_state = _buy_n61.get("trend_conf_state", "neither") if _buy_n61 else "neither"
+            _n61_perf = tlog.setdefault("trend_conf_perf", {})
+            _n61p = _n61_perf.setdefault(_n61_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n61_state})
+            _n61p["total"] = _n61p.get("total", 0) + 1
+            _n61p["total_pnl"] = round(_n61p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n61p["wins"] = _n61p.get("wins", 0) + 1
+            else:        _n61p["losses"] = _n61p.get("losses", 0) + 1
+            if _n61p["total"] > 0:
+                _n61p["win_rate"] = round(_n61p["wins"] / _n61p["total"] * 100, 1)
+                _n61p["avg_pnl"]  = round(_n61p["total_pnl"] / _n61p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Bollinger Band Position Neuron (62): band zone at entry ─────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n62 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n62_zone = _buy_n62.get("bb_zone", "mid") if _buy_n62 else "mid"
+            _n62_perf = tlog.setdefault("bb_zone_perf", {})
+            _n62p = _n62_perf.setdefault(_n62_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _n62_zone})
+            _n62p["total"] = _n62p.get("total", 0) + 1
+            _n62p["total_pnl"] = round(_n62p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n62p["wins"] = _n62p.get("wins", 0) + 1
+            else:        _n62p["losses"] = _n62p.get("losses", 0) + 1
+            if _n62p["total"] > 0:
+                _n62p["win_rate"] = round(_n62p["wins"] / _n62p["total"] * 100, 1)
+                _n62p["avg_pnl"]  = round(_n62p["total_pnl"] / _n62p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Candle Pattern Score Neuron (63): bullish candles at entry ──────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n63 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n63_state = _buy_n63.get("candle_state", "none") if _buy_n63 else "none"
+            _n63_perf = tlog.setdefault("candle_pattern_perf", {})
+            _n63p = _n63_perf.setdefault(_n63_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n63_state})
+            _n63p["total"] = _n63p.get("total", 0) + 1
+            _n63p["total_pnl"] = round(_n63p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n63p["wins"] = _n63p.get("wins", 0) + 1
+            else:        _n63p["losses"] = _n63p.get("losses", 0) + 1
+            if _n63p["total"] > 0:
+                _n63p["win_rate"] = round(_n63p["wins"] / _n63p["total"] * 100, 1)
+                _n63p["avg_pnl"]  = round(_n63p["total_pnl"] / _n63p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Volume Dry-Up Neuron (64): tight consolidation before breakout ──────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n64 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n64_state = _buy_n64.get("vol_dry_state", "normal_vol") if _buy_n64 else "normal_vol"
+            _n64_perf = tlog.setdefault("vol_dry_perf", {})
+            _n64p = _n64_perf.setdefault(_n64_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n64_state})
+            _n64p["total"] = _n64p.get("total", 0) + 1
+            _n64p["total_pnl"] = round(_n64p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n64p["wins"] = _n64p.get("wins", 0) + 1
+            else:        _n64p["losses"] = _n64p.get("losses", 0) + 1
+            if _n64p["total"] > 0:
+                _n64p["win_rate"] = round(_n64p["wins"] / _n64p["total"] * 100, 1)
+                _n64p["avg_pnl"]  = round(_n64p["total_pnl"] / _n64p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Chart Pattern Score Neuron (65): bull_flag, cup_handle, vcp, pocket_pivot ─
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n65 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n65_state = _buy_n65.get("chart_pattern_state", "none") if _buy_n65 else "none"
+            _n65_perf = tlog.setdefault("chart_pattern_perf", {})
+            _n65p = _n65_perf.setdefault(_n65_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n65_state})
+            _n65p["total"] = _n65p.get("total", 0) + 1
+            _n65p["total_pnl"] = round(_n65p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n65p["wins"] = _n65p.get("wins", 0) + 1
+            else:        _n65p["losses"] = _n65p.get("losses", 0) + 1
+            if _n65p["total"] > 0:
+                _n65p["win_rate"] = round(_n65p["wins"] / _n65p["total"] * 100, 1)
+                _n65p["avg_pnl"]  = round(_n65p["total_pnl"] / _n65p["total"], 2)
+        except Exception:
+            pass
+
+    # ── ROC Momentum Neuron (66): rate-of-change alignment at entry ─────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n66 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n66_state = _buy_n66.get("roc_state", "negative") if _buy_n66 else "negative"
+            _n66_perf = tlog.setdefault("roc_perf", {})
+            _n66p = _n66_perf.setdefault(_n66_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n66_state})
+            _n66p["total"] = _n66p.get("total", 0) + 1
+            _n66p["total_pnl"] = round(_n66p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n66p["wins"] = _n66p.get("wins", 0) + 1
+            else:        _n66p["losses"] = _n66p.get("losses", 0) + 1
+            if _n66p["total"] > 0:
+                _n66p["win_rate"] = round(_n66p["wins"] / _n66p["total"] * 100, 1)
+                _n66p["avg_pnl"]  = round(_n66p["total_pnl"] / _n66p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Relative Strength Momentum Neuron (67): RS5 vs RS63 ─────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n67 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n67_state = _buy_n67.get("rs_mom_state", "lagging") if _buy_n67 else "lagging"
+            _n67_perf = tlog.setdefault("rs_mom_perf", {})
+            _n67p = _n67_perf.setdefault(_n67_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n67_state})
+            _n67p["total"] = _n67p.get("total", 0) + 1
+            _n67p["total_pnl"] = round(_n67p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n67p["wins"] = _n67p.get("wins", 0) + 1
+            else:        _n67p["losses"] = _n67p.get("losses", 0) + 1
+            if _n67p["total"] > 0:
+                _n67p["win_rate"] = round(_n67p["wins"] / _n67p["total"] * 100, 1)
+                _n67p["avg_pnl"]  = round(_n67p["total_pnl"] / _n67p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Demand Zone Proximity Neuron (68): at/near institutional demand ──────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n68 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n68_state = _buy_n68.get("demand_zone_state", "no_zone") if _buy_n68 else "no_zone"
+            _n68_perf = tlog.setdefault("demand_zone_perf", {})
+            _n68p = _n68_perf.setdefault(_n68_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n68_state})
+            _n68p["total"] = _n68p.get("total", 0) + 1
+            _n68p["total_pnl"] = round(_n68p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n68p["wins"] = _n68p.get("wins", 0) + 1
+            else:        _n68p["losses"] = _n68p.get("losses", 0) + 1
+            if _n68p["total"] > 0:
+                _n68p["win_rate"] = round(_n68p["wins"] / _n68p["total"] * 100, 1)
+                _n68p["avg_pnl"]  = round(_n68p["total_pnl"] / _n68p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Higher Lows Pattern Neuron (69): ascending support confirmation ──────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n69 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n69_state = _buy_n69.get("higher_lows_state", "not_confirmed") if _buy_n69 else "not_confirmed"
+            _n69_perf = tlog.setdefault("higher_lows_perf", {})
+            _n69p = _n69_perf.setdefault(_n69_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n69_state})
+            _n69p["total"] = _n69p.get("total", 0) + 1
+            _n69p["total_pnl"] = round(_n69p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n69p["wins"] = _n69p.get("wins", 0) + 1
+            else:        _n69p["losses"] = _n69p.get("losses", 0) + 1
+            if _n69p["total"] > 0:
+                _n69p["win_rate"] = round(_n69p["wins"] / _n69p["total"] * 100, 1)
+                _n69p["avg_pnl"]  = round(_n69p["total_pnl"] / _n69p["total"], 2)
+        except Exception:
+            pass
+
+    # ── HA Consecutive Bull Neuron (70): streak of green Heikin Ashi candles ─────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n70 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n70_state = _buy_n70.get("ha_consec_state", "early") if _buy_n70 else "early"
+            _n70_perf = tlog.setdefault("ha_consec_perf", {})
+            _n70p = _n70_perf.setdefault(_n70_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n70_state})
+            _n70p["total"] = _n70p.get("total", 0) + 1
+            _n70p["total_pnl"] = round(_n70p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n70p["wins"] = _n70p.get("wins", 0) + 1
+            else:        _n70p["losses"] = _n70p.get("losses", 0) + 1
+            if _n70p["total"] > 0:
+                _n70p["win_rate"] = round(_n70p["wins"] / _n70p["total"] * 100, 1)
+                _n70p["avg_pnl"]  = round(_n70p["total_pnl"] / _n70p["total"], 2)
+        except Exception:
+            pass
+
+    # ── NR7 Signal Neuron (71): narrowest range in 7 days = coiled spring ────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n71 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n71_state = _buy_n71.get("nr7_state", "normal_range") if _buy_n71 else "normal_range"
+            _n71_perf = tlog.setdefault("nr7_perf", {})
+            _n71p = _n71_perf.setdefault(_n71_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n71_state})
+            _n71p["total"] = _n71p.get("total", 0) + 1
+            _n71p["total_pnl"] = round(_n71p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n71p["wins"] = _n71p.get("wins", 0) + 1
+            else:        _n71p["losses"] = _n71p.get("losses", 0) + 1
+            if _n71p["total"] > 0:
+                _n71p["win_rate"] = round(_n71p["wins"] / _n71p["total"] * 100, 1)
+                _n71p["avg_pnl"]  = round(_n71p["total_pnl"] / _n71p["total"], 2)
+        except Exception:
+            pass
+
+    # ── EMA Structure Neuron (72): price vs EMA50 + EMA200 trend health ──────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n72 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n72_state = _buy_n72.get("ema_struct_state", "below_both") if _buy_n72 else "below_both"
+            _n72_perf = tlog.setdefault("ema_struct_perf", {})
+            _n72p = _n72_perf.setdefault(_n72_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n72_state})
+            _n72p["total"] = _n72p.get("total", 0) + 1
+            _n72p["total_pnl"] = round(_n72p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n72p["wins"] = _n72p.get("wins", 0) + 1
+            else:        _n72p["losses"] = _n72p.get("losses", 0) + 1
+            if _n72p["total"] > 0:
+                _n72p["win_rate"] = round(_n72p["wins"] / _n72p["total"] * 100, 1)
+                _n72p["avg_pnl"]  = round(_n72p["total_pnl"] / _n72p["total"], 2)
+        except Exception:
+            pass
+
+    # ── MACD Divergence Neuron (73): bullish div = hidden accumulation ────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n73 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n73_state = _buy_n73.get("macd_div_state", "no_div") if _buy_n73 else "no_div"
+            _n73_perf = tlog.setdefault("macd_div_perf", {})
+            _n73p = _n73_perf.setdefault(_n73_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n73_state})
+            _n73p["total"] = _n73p.get("total", 0) + 1
+            _n73p["total_pnl"] = round(_n73p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n73p["wins"] = _n73p.get("wins", 0) + 1
+            else:        _n73p["losses"] = _n73p.get("losses", 0) + 1
+            if _n73p["total"] > 0:
+                _n73p["win_rate"] = round(_n73p["wins"] / _n73p["total"] * 100, 1)
+                _n73p["avg_pnl"]  = round(_n73p["total_pnl"] / _n73p["total"], 2)
+        except Exception:
+            pass
+
+    # ── MFI Divergence Neuron (74): MFI bull div = money in vs price down ────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n74 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n74_state = _buy_n74.get("mfi_div_state", "no_div") if _buy_n74 else "no_div"
+            _n74_perf = tlog.setdefault("mfi_div_perf", {})
+            _n74p = _n74_perf.setdefault(_n74_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n74_state})
+            _n74p["total"] = _n74p.get("total", 0) + 1
+            _n74p["total_pnl"] = round(_n74p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n74p["wins"] = _n74p.get("wins", 0) + 1
+            else:        _n74p["losses"] = _n74p.get("losses", 0) + 1
+            if _n74p["total"] > 0:
+                _n74p["win_rate"] = round(_n74p["wins"] / _n74p["total"] * 100, 1)
+                _n74p["avg_pnl"]  = round(_n74p["total_pnl"] / _n74p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Vol Ratio + Momentum Combo Neuron (75): volume confirms momentum ──────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n75 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n75_state = _buy_n75.get("vol_ratio_mom_state", "weak") if _buy_n75 else "weak"
+            _n75_perf = tlog.setdefault("vol_ratio_mom_perf", {})
+            _n75p = _n75_perf.setdefault(_n75_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n75_state})
+            _n75p["total"] = _n75p.get("total", 0) + 1
+            _n75p["total_pnl"] = round(_n75p.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _n75p["wins"] = _n75p.get("wins", 0) + 1
+            else:        _n75p["losses"] = _n75p.get("losses", 0) + 1
+            if _n75p["total"] > 0:
+                _n75p["win_rate"] = round(_n75p["wins"] / _n75p["total"] * 100, 1)
+                _n75p["avg_pnl"]  = round(_n75p["total_pnl"] / _n75p["total"], 2)
         except Exception:
             pass
 
@@ -12049,6 +12409,199 @@ def run():
             if _ob_brk and _ob_cons and _ob_brk["win_rate"] > _ob_cons["win_rate"] + 12:
                 _learn_log.append(f"ORB breakout entries win {_ob_brk['win_rate']:.0f}% vs consolidating {_ob_cons['win_rate']:.0f}%")
 
+        # ── 61. Supertrend + PSAR Confirmation ─────────────────────────────────
+        _tc_raw = tlog.get("trend_conf_perf", {})
+        _tc_insights = []
+        for _tck, _tcd in _tc_raw.items():
+            if _tcd.get("total", 0) >= 3:
+                _tc_insights.append({"state": _tck, "win_rate": _tcd.get("win_rate", 50),
+                                     "avg_pnl": _tcd.get("avg_pnl", 0), "total": _tcd.get("total", 0)})
+        if _tc_insights:
+            _tc_both = next((s for s in _tc_insights if s["state"] == "both"), None)
+            _tc_none = next((s for s in _tc_insights if s["state"] == "neither"), None)
+            _tc_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _tc_insights)
+            _learn_log.append(f"Trend conf WRs: {_tc_sum}")
+            if _tc_both and _tc_none and _tc_both["win_rate"] > _tc_none["win_rate"] + 12:
+                _learn_log.append(f"Both Supertrend+PSAR wins {_tc_both['win_rate']:.0f}% vs neither {_tc_none['win_rate']:.0f}%")
+
+        # ── 62. Bollinger Band Position ─────────────────────────────────────────
+        _bb_raw = tlog.get("bb_zone_perf", {})
+        _bb_insights = []
+        for _bbk, _bbd in _bb_raw.items():
+            if _bbd.get("total", 0) >= 3:
+                _bb_insights.append({"zone": _bbk, "win_rate": _bbd.get("win_rate", 50),
+                                     "avg_pnl": _bbd.get("avg_pnl", 0), "total": _bbd.get("total", 0)})
+        if _bb_insights:
+            _bb_sum = " | ".join(f"{s['zone']}:{s['win_rate']:.0f}%WR" for s in _bb_insights)
+            _learn_log.append(f"BB zone WRs: {_bb_sum}")
+
+        # ── 63. Candle Pattern Score ─────────────────────────────────────────────
+        _cp_raw = tlog.get("candle_pattern_perf", {})
+        _cp_insights = []
+        for _cpk, _cpd in _cp_raw.items():
+            if _cpd.get("total", 0) >= 3:
+                _cp_insights.append({"state": _cpk, "win_rate": _cpd.get("win_rate", 50),
+                                     "avg_pnl": _cpd.get("avg_pnl", 0), "total": _cpd.get("total", 0)})
+        if _cp_insights:
+            _cp_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _cp_insights)
+            _learn_log.append(f"Candle pattern WRs: {_cp_sum}")
+
+        # ── 64. Volume Dry-Up ────────────────────────────────────────────────────
+        _vd_raw = tlog.get("vol_dry_perf", {})
+        _vd_insights = []
+        for _vdk, _vdd in _vd_raw.items():
+            if _vdd.get("total", 0) >= 3:
+                _vd_insights.append({"state": _vdk, "win_rate": _vdd.get("win_rate", 50),
+                                     "avg_pnl": _vdd.get("avg_pnl", 0), "total": _vdd.get("total", 0)})
+        if _vd_insights:
+            _vd_dry = next((s for s in _vd_insights if s["state"] == "dry_up"), None)
+            _vd_norm = next((s for s in _vd_insights if s["state"] == "normal_vol"), None)
+            _vd_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _vd_insights)
+            _learn_log.append(f"Vol dry-up WRs: {_vd_sum}")
+            if _vd_dry and _vd_norm and _vd_dry["win_rate"] > _vd_norm["win_rate"] + 12:
+                _learn_log.append(f"Vol dry-up entries win {_vd_dry['win_rate']:.0f}% vs normal {_vd_norm['win_rate']:.0f}%")
+
+        # ── 65. Chart Pattern Score ──────────────────────────────────────────────
+        _cps_raw = tlog.get("chart_pattern_perf", {})
+        _cps_insights = []
+        for _cpsk, _cpsd in _cps_raw.items():
+            if _cpsd.get("total", 0) >= 3:
+                _cps_insights.append({"state": _cpsk, "win_rate": _cpsd.get("win_rate", 50),
+                                      "avg_pnl": _cpsd.get("avg_pnl", 0), "total": _cpsd.get("total", 0)})
+        if _cps_insights:
+            _cps_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _cps_insights)
+            _learn_log.append(f"Chart pattern WRs: {_cps_sum}")
+
+        # ── 66. ROC Momentum ─────────────────────────────────────────────────────
+        _roc_raw = tlog.get("roc_perf", {})
+        _roc_insights = []
+        for _rock, _rocd in _roc_raw.items():
+            if _rocd.get("total", 0) >= 3:
+                _roc_insights.append({"state": _rock, "win_rate": _rocd.get("win_rate", 50),
+                                      "avg_pnl": _rocd.get("avg_pnl", 0), "total": _rocd.get("total", 0)})
+        if _roc_insights:
+            _roc_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _roc_insights)
+            _learn_log.append(f"ROC momentum WRs: {_roc_sum}")
+
+        # ── 67. Relative Strength Momentum ───────────────────────────────────────
+        _rsm_raw = tlog.get("rs_mom_perf", {})
+        _rsm_insights = []
+        for _rsmk, _rsmd in _rsm_raw.items():
+            if _rsmd.get("total", 0) >= 3:
+                _rsm_insights.append({"state": _rsmk, "win_rate": _rsmd.get("win_rate", 50),
+                                      "avg_pnl": _rsmd.get("avg_pnl", 0), "total": _rsmd.get("total", 0)})
+        if _rsm_insights:
+            _rsm_lead = next((s for s in _rsm_insights if s["state"] == "leading"), None)
+            _rsm_lag  = next((s for s in _rsm_insights if s["state"] == "lagging"), None)
+            _rsm_sum  = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _rsm_insights)
+            _learn_log.append(f"RS momentum WRs: {_rsm_sum}")
+            if _rsm_lead and _rsm_lag and _rsm_lead["win_rate"] > _rsm_lag["win_rate"] + 12:
+                _learn_log.append(f"RS-leading entries win {_rsm_lead['win_rate']:.0f}% vs lagging {_rsm_lag['win_rate']:.0f}%")
+
+        # ── 68. Demand Zone Proximity ────────────────────────────────────────────
+        _dz_raw = tlog.get("demand_zone_perf", {})
+        _dz_insights = []
+        for _dzk, _dzd in _dz_raw.items():
+            if _dzd.get("total", 0) >= 3:
+                _dz_insights.append({"state": _dzk, "win_rate": _dzd.get("win_rate", 50),
+                                     "avg_pnl": _dzd.get("avg_pnl", 0), "total": _dzd.get("total", 0)})
+        if _dz_insights:
+            _dz_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _dz_insights)
+            _learn_log.append(f"Demand zone WRs: {_dz_sum}")
+
+        # ── 69. Higher Lows Pattern ──────────────────────────────────────────────
+        _hl_raw = tlog.get("higher_lows_perf", {})
+        _hl_insights = []
+        for _hlk, _hld in _hl_raw.items():
+            if _hld.get("total", 0) >= 3:
+                _hl_insights.append({"state": _hlk, "win_rate": _hld.get("win_rate", 50),
+                                     "avg_pnl": _hld.get("avg_pnl", 0), "total": _hld.get("total", 0)})
+        if _hl_insights:
+            _hl_conf = next((s for s in _hl_insights if s["state"] == "confirmed"), None)
+            _hl_not  = next((s for s in _hl_insights if s["state"] == "not_confirmed"), None)
+            _hl_sum  = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _hl_insights)
+            _learn_log.append(f"Higher lows WRs: {_hl_sum}")
+            if _hl_conf and _hl_not and _hl_conf["win_rate"] > _hl_not["win_rate"] + 10:
+                _learn_log.append(f"Higher lows confirmed wins {_hl_conf['win_rate']:.0f}% vs {_hl_not['win_rate']:.0f}%")
+
+        # ── 70. HA Consecutive Bull ──────────────────────────────────────────────
+        _hc_raw = tlog.get("ha_consec_perf", {})
+        _hc_insights = []
+        for _hck, _hcd in _hc_raw.items():
+            if _hcd.get("total", 0) >= 3:
+                _hc_insights.append({"state": _hck, "win_rate": _hcd.get("win_rate", 50),
+                                     "avg_pnl": _hcd.get("avg_pnl", 0), "total": _hcd.get("total", 0)})
+        if _hc_insights:
+            _hc_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _hc_insights)
+            _learn_log.append(f"HA consec WRs: {_hc_sum}")
+
+        # ── 71. NR7 Volatility Compression ──────────────────────────────────────
+        _n7_raw = tlog.get("nr7_perf", {})
+        _n7_insights = []
+        for _n7k, _n7d in _n7_raw.items():
+            if _n7d.get("total", 0) >= 3:
+                _n7_insights.append({"state": _n7k, "win_rate": _n7d.get("win_rate", 50),
+                                     "avg_pnl": _n7d.get("avg_pnl", 0), "total": _n7d.get("total", 0)})
+        if _n7_insights:
+            _n7_comp = next((s for s in _n7_insights if s["state"] == "compressed"), None)
+            _n7_norm = next((s for s in _n7_insights if s["state"] == "normal_range"), None)
+            _n7_sum  = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _n7_insights)
+            _learn_log.append(f"NR7 WRs: {_n7_sum}")
+            if _n7_comp and _n7_norm and _n7_comp["win_rate"] > _n7_norm["win_rate"] + 12:
+                _learn_log.append(f"NR7 compressed wins {_n7_comp['win_rate']:.0f}% vs normal {_n7_norm['win_rate']:.0f}%")
+
+        # ── 72. EMA Structure ────────────────────────────────────────────────────
+        _es_raw = tlog.get("ema_struct_perf", {})
+        _es_insights = []
+        for _esk, _esd in _es_raw.items():
+            if _esd.get("total", 0) >= 3:
+                _es_insights.append({"state": _esk, "win_rate": _esd.get("win_rate", 50),
+                                     "avg_pnl": _esd.get("avg_pnl", 0), "total": _esd.get("total", 0)})
+        if _es_insights:
+            _es_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _es_insights)
+            _learn_log.append(f"EMA struct WRs: {_es_sum}")
+
+        # ── 73. MACD Divergence ──────────────────────────────────────────────────
+        _md_raw = tlog.get("macd_div_perf", {})
+        _md_insights = []
+        for _mdk, _mdd in _md_raw.items():
+            if _mdd.get("total", 0) >= 3:
+                _md_insights.append({"state": _mdk, "win_rate": _mdd.get("win_rate", 50),
+                                     "avg_pnl": _mdd.get("avg_pnl", 0), "total": _mdd.get("total", 0)})
+        if _md_insights:
+            _md_div  = next((s for s in _md_insights if s["state"] == "diverging"), None)
+            _md_none = next((s for s in _md_insights if s["state"] == "no_div"), None)
+            _md_sum  = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _md_insights)
+            _learn_log.append(f"MACD div WRs: {_md_sum}")
+            if _md_div and _md_none and _md_div["win_rate"] > _md_none["win_rate"] + 10:
+                _learn_log.append(f"MACD divergence wins {_md_div['win_rate']:.0f}% vs no-div {_md_none['win_rate']:.0f}%")
+
+        # ── 74. MFI Divergence ───────────────────────────────────────────────────
+        _mfd_raw = tlog.get("mfi_div_perf", {})
+        _mfd_insights = []
+        for _mfdk, _mfdd in _mfd_raw.items():
+            if _mfdd.get("total", 0) >= 3:
+                _mfd_insights.append({"state": _mfdk, "win_rate": _mfdd.get("win_rate", 50),
+                                      "avg_pnl": _mfdd.get("avg_pnl", 0), "total": _mfdd.get("total", 0)})
+        if _mfd_insights:
+            _mfd_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _mfd_insights)
+            _learn_log.append(f"MFI div WRs: {_mfd_sum}")
+
+        # ── 75. Vol Ratio + Momentum Combo ───────────────────────────────────────
+        _vrm_raw = tlog.get("vol_ratio_mom_perf", {})
+        _vrm_insights = []
+        for _vrmk, _vrmd in _vrm_raw.items():
+            if _vrmd.get("total", 0) >= 3:
+                _vrm_insights.append({"state": _vrmk, "win_rate": _vrmd.get("win_rate", 50),
+                                      "avg_pnl": _vrmd.get("avg_pnl", 0), "total": _vrmd.get("total", 0)})
+        if _vrm_insights:
+            _vrm_conf = next((s for s in _vrm_insights if s["state"] == "confirmed"), None)
+            _vrm_weak = next((s for s in _vrm_insights if s["state"] == "weak"), None)
+            _vrm_sum  = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _vrm_insights)
+            _learn_log.append(f"Vol-ratio+mom WRs: {_vrm_sum}")
+            if _vrm_conf and _vrm_weak and _vrm_conf["win_rate"] > _vrm_weak["win_rate"] + 12:
+                _learn_log.append(f"Vol-confirmed momentum wins {_vrm_conf['win_rate']:.0f}% vs weak {_vrm_weak['win_rate']:.0f}%")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -12119,6 +12672,21 @@ def run():
             "price_accel_perf":     _pa_insights,            # price acceleration state vs outcome
             "gap_hold_perf":        _gh_insights,            # gap-and-hold vs normal entry vs outcome
             "orb_perf":             _ob_insights,            # opening range breakout vs consolidating vs outcome
+            "trend_conf_perf":      _tc_insights,            # Supertrend+PSAR dual confirmation vs outcome
+            "bb_zone_perf":         _bb_insights,            # Bollinger Band zone at entry vs outcome
+            "candle_pattern_perf":  _cp_insights,            # candle pattern strength at entry vs outcome
+            "vol_dry_perf":         _vd_insights,            # volume dry-up (compression) vs outcome
+            "chart_pattern_perf":   _cps_insights,           # chart pattern score (flag/cup/vcp/pp) vs outcome
+            "roc_perf":             _roc_insights,           # rate-of-change momentum state vs outcome
+            "rs_mom_perf":          _rsm_insights,           # relative strength momentum (rs5 vs rs63) vs outcome
+            "demand_zone_perf":     _dz_insights,            # demand zone proximity at entry vs outcome
+            "higher_lows_perf":     _hl_insights,            # higher lows pattern vs outcome
+            "ha_consec_perf":       _hc_insights,            # consecutive HA bull candles vs outcome
+            "nr7_perf":             _n7_insights,            # NR7 volatility compression vs outcome
+            "ema_struct_perf":      _es_insights,            # EMA50+EMA200 structure vs outcome
+            "macd_div_perf":        _md_insights,            # MACD bull divergence vs outcome
+            "mfi_div_perf":         _mfd_insights,           # MFI bull divergence vs outcome
+            "vol_ratio_mom_perf":   _vrm_insights,           # volume ratio + momentum confirmed vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

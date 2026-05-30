@@ -54503,6 +54503,306 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── Supertrend+PSAR (N61) + BB Zone (N62) dual panel ─────────────────
+        const tc = lp.trend_conf_perf || [];
+        const bb = lp.bb_zone_perf || [];
+        if (!tc.length && !bb.length) return '';
+        const TC_ORDER = ['both','one','neither'];
+        const TC_ICONS = {both:'🎯🎯',one:'🎯',neither:'❌'};
+        const TC_BG = {both:'rgba(0,230,118,.09)',one:'rgba(255,213,79,.06)',neither:'rgba(255,255,255,.03)'};
+        const tcMap = {}; tc.forEach(s => tcMap[s.state] = s);
+        const tcBest = tc.length ? tc.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,tc[0]) : null;
+        const tcCells = TC_ORDER.map(st => {
+          const s = tcMap[st];
+          const lbl = st==='both'?'Both Conf':st==='one'?'One Conf':'Neither';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${TC_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = tcBest&&s.state===tcBest.state?'⭐':'';
+          return `<div style="background:${TC_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${TC_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const BB_ORDER = ['lower','mid','upper'];
+        const BB_ICONS = {lower:'🎣',mid:'📊',upper:'🚀'};
+        const BB_BG = {lower:'rgba(100,100,255,.07)',mid:'rgba(255,255,255,.04)',upper:'rgba(255,100,100,.07)'};
+        const bbMap = {}; bb.forEach(s => bbMap[s.zone] = s);
+        const bbBest = bb.length ? bb.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,bb[0]) : null;
+        const bbCells = BB_ORDER.map(z => {
+          const s = bbMap[z];
+          const lbl = z==='lower'?'BB Lower':z==='upper'?'BB Upper':'BB Mid';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${BB_ICONS[z]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = bbBest&&s.zone===bbBest.zone?'⭐':'';
+          return `<div style="background:${BB_BG[z]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${BB_ICONS[z]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const tcHtml = tc.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🎯 TREND CONF (N61): Supertrend + PSAR dual confirmation</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${tcCells}</div>
+        </div>` : '';
+        const bbHtml = bb.length ? `<div>
+          <div style="font-size:5.5px;color:#80d8ff;font-weight:700;margin-bottom:.1rem">📊 BB ZONE (N62): Bollinger Band position at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${bbCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${tcHtml}${bbHtml}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── Candle Pattern (N63) + Vol Dry-Up (N64) dual panel ───────────────
+        const cp = lp.candle_pattern_perf || [];
+        const vd = lp.vol_dry_perf || [];
+        if (!cp.length && !vd.length) return '';
+        const CP_ORDER = ['strong','present','none'];
+        const CP_ICONS = {strong:'🕯️🕯️',present:'🕯️',none:'—'};
+        const CP_BG = {strong:'rgba(0,230,118,.09)',present:'rgba(255,213,79,.06)',none:'rgba(255,255,255,.03)'};
+        const cpMap = {}; cp.forEach(s => cpMap[s.state] = s);
+        const cpBest = cp.length ? cp.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,cp[0]) : null;
+        const cpCells = CP_ORDER.map(st => {
+          const s = cpMap[st];
+          const lbl = st==='strong'?'Multi Pat':st==='present'?'One Pat':'No Pat';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${CP_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = cpBest&&s.state===cpBest.state?'⭐':'';
+          return `<div style="background:${CP_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${CP_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const VD_ORDER = ['dry_up','normal_vol'];
+        const VD_ICONS = {dry_up:'🧲',normal_vol:'💧'};
+        const VD_BG = {dry_up:'rgba(0,230,118,.09)',normal_vol:'rgba(255,255,255,.04)'};
+        const vdMap = {}; vd.forEach(s => vdMap[s.state] = s);
+        const vdBest = vd.length ? vd.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,vd[0]) : null;
+        const vdCells = VD_ORDER.map(st => {
+          const s = vdMap[st];
+          const lbl = st==='dry_up'?'Vol Dry-Up':'Normal Vol';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${VD_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = vdBest&&s.state===vdBest.state?'⭐':'';
+          return `<div style="background:${VD_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${VD_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const cpHtml = cp.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ffab40;font-weight:700;margin-bottom:.1rem">🕯️ CANDLE (N63): bullish candle pattern count at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${cpCells}</div>
+        </div>` : '';
+        const vdHtml = vd.length ? `<div>
+          <div style="font-size:5.5px;color:#b9f6ca;font-weight:700;margin-bottom:.1rem">🧲 VOL DRY-UP (N64): volume compression before breakout</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">${vdCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${cpHtml}${vdHtml}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── Chart Pattern (N65) + ROC Momentum (N66) dual panel ─────────────
+        const cps = lp.chart_pattern_perf || [];
+        const roc = lp.roc_perf || [];
+        if (!cps.length && !roc.length) return '';
+        const CPS_ORDER = ['multi','single','none'];
+        const CPS_ICONS = {multi:'🏆🏆',single:'🏆',none:'—'};
+        const CPS_BG = {multi:'rgba(0,230,118,.09)',single:'rgba(255,213,79,.06)',none:'rgba(255,255,255,.03)'};
+        const cpsMap = {}; cps.forEach(s => cpsMap[s.state] = s);
+        const cpsBest = cps.length ? cps.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,cps[0]) : null;
+        const cpsCells = CPS_ORDER.map(st => {
+          const s = cpsMap[st];
+          const lbl = st==='multi'?'Multi Pat':st==='single'?'One Pat':'No Pat';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${CPS_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = cpsBest&&s.state===cpsBest.state?'⭐':'';
+          return `<div style="background:${CPS_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${CPS_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const ROC_ORDER = ['accelerating','positive','negative'];
+        const ROC_ICONS = {accelerating:'🚀',positive:'📈',negative:'📉'};
+        const ROC_BG = {accelerating:'rgba(0,230,118,.09)',positive:'rgba(255,213,79,.06)',negative:'rgba(239,83,80,.06)'};
+        const rocMap = {}; roc.forEach(s => rocMap[s.state] = s);
+        const rocBest = roc.length ? roc.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,roc[0]) : null;
+        const rocCells = ROC_ORDER.map(st => {
+          const s = rocMap[st];
+          const lbl = st==='accelerating'?'Accel':st==='positive'?'Positive':'Negative';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${ROC_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = rocBest&&s.state===rocBest.state?'⭐':'';
+          return `<div style="background:${ROC_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${ROC_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const cpsHtml = cps.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">🏆 CHART PAT (N65): flag/cup/VCP/pocket pivot score</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${cpsCells}</div>
+        </div>` : '';
+        const rocHtml = roc.length ? `<div>
+          <div style="font-size:5.5px;color:#80deea;font-weight:700;margin-bottom:.1rem">📈 ROC (N66): rate-of-change momentum state</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${rocCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${cpsHtml}${rocHtml}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── RS Momentum (N67) + Demand Zone (N68) dual panel ─────────────────
+        const rsm = lp.rs_mom_perf || [];
+        const dz  = lp.demand_zone_perf || [];
+        if (!rsm.length && !dz.length) return '';
+        const RSM_ORDER = ['leading','improving','lagging'];
+        const RSM_ICONS = {leading:'🦅',improving:'📈',lagging:'🐌'};
+        const RSM_BG = {leading:'rgba(0,230,118,.09)',improving:'rgba(255,213,79,.06)',lagging:'rgba(239,83,80,.06)'};
+        const rsmMap = {}; rsm.forEach(s => rsmMap[s.state] = s);
+        const rsmBest = rsm.length ? rsm.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,rsm[0]) : null;
+        const rsmCells = RSM_ORDER.map(st => {
+          const s = rsmMap[st];
+          const lbl = st==='leading'?'Leading':st==='improving'?'Improving':'Lagging';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${RSM_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = rsmBest&&s.state===rsmBest.state?'⭐':'';
+          return `<div style="background:${RSM_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${RSM_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const DZ_ORDER = ['at_zone','near_zone','no_zone'];
+        const DZ_ICONS = {at_zone:'🎯',near_zone:'📍',no_zone:'—'};
+        const DZ_BG = {at_zone:'rgba(0,230,118,.09)',near_zone:'rgba(255,213,79,.06)',no_zone:'rgba(255,255,255,.03)'};
+        const dzMap = {}; dz.forEach(s => dzMap[s.state] = s);
+        const dzBest = dz.length ? dz.reduce((a,b)=>a.win_rate>=b.win_rate?a:b,dz[0]) : null;
+        const dzCells = DZ_ORDER.map(st => {
+          const s = dzMap[st];
+          const lbl = st==='at_zone'?'At Zone':st==='near_zone'?'Near Zone':'No Zone';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${DZ_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = dzBest&&s.state===dzBest.state?'⭐':'';
+          return `<div style="background:${DZ_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${DZ_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const rsmHtml = rsm.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🦅 RS MOMENTUM (N67): RS5 vs RS63 — leading sector movers</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${rsmCells}</div>
+        </div>` : '';
+        const dzHtml = dz.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">🎯 DEMAND ZONE (N68): at/near institutional demand zone</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${dzCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${rsmHtml}${dzHtml}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── Higher Lows (N69) + HA Consec Bull (N70) + NR7 (N71) triple panel ─
+        const hl  = lp.higher_lows_perf || [];
+        const hc  = lp.ha_consec_perf || [];
+        const n7  = lp.nr7_perf || [];
+        if (!hl.length && !hc.length && !n7.length) return '';
+        const mkCell = (s, icons, bgs) => {
+          if (!s) return '';
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${bgs};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${icons}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%·${s.total}T</div>
+          </div>`;
+        };
+        const hlConf = hl.find(s=>s.state==='confirmed'); const hlNot = hl.find(s=>s.state==='not_confirmed');
+        const hcStr  = hc.find(s=>s.state==='strong');  const hcBld = hc.find(s=>s.state==='building'); const hcEar = hc.find(s=>s.state==='early');
+        const n7Comp = n7.find(s=>s.state==='compressed'); const n7Norm = n7.find(s=>s.state==='normal_range');
+        const hlSection = (hl.length) ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#b9f6ca;font-weight:700;margin-bottom:.1rem">📈 HIGHER LOWS (N69): ascending support pattern</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">
+            ${mkCell(hlConf,'✅','rgba(0,230,118,.09)')}${mkCell(hlNot,'❌','rgba(255,255,255,.03)')}
+          </div>
+        </div>` : '';
+        const hcSection = (hc.length) ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ffcc80;font-weight:700;margin-bottom:.1rem">🟢 HA STREAK (N70): consecutive Heikin Ashi bull candles</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">
+            ${mkCell(hcStr,'💪','rgba(0,230,118,.09)')}${mkCell(hcBld,'📈','rgba(255,213,79,.06)')}${mkCell(hcEar,'🌱','rgba(255,255,255,.03)')}
+          </div>
+        </div>` : '';
+        const n7Section = (n7.length) ? `<div>
+          <div style="font-size:5.5px;color:#ea80fc;font-weight:700;margin-bottom:.1rem">🌀 NR7 (N71): narrowest range in 7 days = coiled spring</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">
+            ${mkCell(n7Comp,'🌀','rgba(234,128,252,.08)')}${mkCell(n7Norm,'📋','rgba(255,255,255,.03)')}
+          </div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${hlSection}${hcSection}${n7Section}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── EMA Structure (N72) + MACD Div (N73) + MFI Div (N74) + Vol/Mom (N75) ─
+        const es  = lp.ema_struct_perf || [];
+        const md  = lp.macd_div_perf || [];
+        const mfd = lp.mfi_div_perf || [];
+        const vrm = lp.vol_ratio_mom_perf || [];
+        if (!es.length && !md.length && !mfd.length && !vrm.length) return '';
+        const mkC = (s, icon, bg) => {
+          if (!s) return '';
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${bg};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${icon}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%·${s.total}T</div>
+          </div>`;
+        };
+        const esBoth = es.find(s=>s.state==='both'); const esOne = es.find(s=>s.state==='ema50_only'); const esNone = es.find(s=>s.state==='below_both');
+        const mdDiv  = md.find(s=>s.state==='diverging'); const mdNone = md.find(s=>s.state==='no_div');
+        const mfdDiv = mfd.find(s=>s.state==='diverging'); const mfdNone = mfd.find(s=>s.state==='no_div');
+        const vrmConf = vrm.find(s=>s.state==='confirmed'); const vrmPart = vrm.find(s=>s.state==='partial'); const vrmWeak = vrm.find(s=>s.state==='weak');
+        const esSection = (es.length) ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#80d8ff;font-weight:700;margin-bottom:.1rem">📊 EMA STRUCT (N72): above EMA50+EMA200 = strong trend</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">
+            ${mkC(esBoth,'✅✅','rgba(0,230,118,.09)')}${mkC(esOne,'✅','rgba(255,213,79,.06)')}${mkC(esNone,'❌','rgba(239,83,80,.06)')}
+          </div>
+        </div>` : '';
+        const mdSection = (md.length) ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ce93d8;font-weight:700;margin-bottom:.1rem">〽️ MACD DIV (N73): hidden accumulation signal</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">
+            ${mkC(mdDiv,'〽️','rgba(206,147,216,.09)')}${mkC(mdNone,'—','rgba(255,255,255,.03)')}
+          </div>
+        </div>` : '';
+        const mfdSection = (mfd.length) ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#f48fb1;font-weight:700;margin-bottom:.1rem">💎 MFI DIV (N74): money flowing in vs price down</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">
+            ${mkC(mfdDiv,'💎','rgba(244,143,177,.08)')}${mkC(mfdNone,'—','rgba(255,255,255,.03)')}
+          </div>
+        </div>` : '';
+        const vrmSection = (vrm.length) ? `<div>
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🔊 VOL+MOM (N75): volume ratio confirms momentum acceleration</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">
+            ${mkC(vrmConf,'🔊🚀','rgba(0,230,118,.09)')}${mkC(vrmPart,'🔊','rgba(255,213,79,.06)')}${mkC(vrmWeak,'😶','rgba(255,255,255,.03)')}
+          </div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${esSection}${mdSection}${mfdSection}${vrmSection}
+        </div>`;
+      })()}
+      ${(() => {
         // ── Gap-and-Hold (N59) + Opening Range Breakout (N60) dual panel ─────
         const gh = lp.gap_hold_perf || [];
         const ob = lp.orb_perf || [];
