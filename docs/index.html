@@ -57491,28 +57491,32 @@ window.renderPositionNews = renderPositionNews;
   });
 
   //  INIT 
+  // Safe call wrapper — one failing function can't block the others
+  function _safe(fn, name) {
+    try { fn(); } catch(e) { console.warn('[ROK init] ' + (name||fn.name||'?') + ' failed:', e); }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    initSignalSparks();
-    buildSectorChips();
-    renderAlertStrip();
-    renderScreener();
-    screenerBuilt = true;
-    syncBoughtButtons();
-    renderPortfolioSummary();
-    updateSignalsPortfolioAlert();
-    initPortfolioHowTo();
-    updateMarketStatus();
+    _safe(initSignalSparks, 'initSignalSparks');
+    _safe(buildSectorChips, 'buildSectorChips');
+    _safe(renderAlertStrip, 'renderAlertStrip');
+    try { renderScreener(); screenerBuilt = true; } catch(e) { screenerBuilt = true; console.warn('[ROK] renderScreener failed:', e); }
+    _safe(syncBoughtButtons, 'syncBoughtButtons');
+    _safe(renderPortfolioSummary, 'renderPortfolioSummary');
+    _safe(updateSignalsPortfolioAlert, 'updateSignalsPortfolioAlert');
+    _safe(initPortfolioHowTo, 'initPortfolioHowTo');
+    _safe(updateMarketStatus, 'updateMarketStatus');
     setInterval(updateMarketStatus, 60000);
-    renderTodaysTasks();
-    renderROKTrackRecord();
-    renderMorningBriefing();
-    renderTodaysBestSetup();
+    _safe(renderTodaysTasks, 'renderTodaysTasks');
+    _safe(renderROKTrackRecord, 'renderROKTrackRecord');
+    _safe(renderMorningBriefing, 'renderMorningBriefing');
+    _safe(renderTodaysBestSetup, 'renderTodaysBestSetup');
     setTimeout(fetchSignalsLiveNews, 3000); // slight delay on load
-    renderLivePortStrip();
-    updateTickerTape();
-    updateMarketLiveBrief();
-    fetchLiveFearGreed();
-    initTipRotator();
+    _safe(renderLivePortStrip, 'renderLivePortStrip');
+    _safe(updateTickerTape, 'updateTickerTape');
+    _safe(updateMarketLiveBrief, 'updateMarketLiveBrief');
+    _safe(fetchLiveFearGreed, 'fetchLiveFearGreed');
+    _safe(initTipRotator, 'initTipRotator');
 
     // Count-up for each stat-num
     document.querySelectorAll('.stat-num').forEach(el => {
