@@ -55637,6 +55637,57 @@ window.renderSectorRotation = renderSectorRotation;
           </div>`;
         }
       }
+      // ═══ RIGHT NOW action panel — tells trader exactly what needs attention ═══
+      {
+        const pos = data.positions || [];
+        const actions = [];
+        // Check each position for urgent situations
+        for (const p of pos) {
+          const df = p.dist_from_trail || 0;
+          const pnl = p.pnl_pct || 0;
+          const ed = p.earnings_days;
+          if (df > 0 && df < 1.5)
+            actions.push({pri:1, col:'#ff9800', icon:'⚠️', msg:`<strong>$${p.ticker}</strong> only ${df.toFixed(1)}% from trail stop — watch closely`});
+          if (ed != null && ed <= 1 && pnl > 2)
+            actions.push({pri:1, col:'#ef5350', icon:'📅', msg:`<strong>$${p.ticker}</strong> earnings ${ed===0?'TODAY':'TOMORROW'} (${pnl>=0?'+':''}${pnl.toFixed(1)}% gain) — decide hold/reduce NOW`});
+          if (p.overextended && pnl > 20)
+            actions.push({pri:2, col:'#ff5252', icon:'⚡', msg:`<strong>$${p.ticker}</strong> overextended ${pnl.toFixed(1)}% — consider locking 25-50% profits`});
+          if (p.live_signals && p.live_signals.macd_bear_div && p.live_signals.vol_bearish_div && pnl > 5)
+            actions.push({pri:2, col:'#ef9a9a', icon:'📉', msg:`<strong>$${p.ticker}</strong> MACD + volume distribution divergence — distribution signal`});
+        }
+        // Portfolio-level checks
+        if (data.drawdown_halt)
+          actions.push({pri:1, col:'#ef5350', icon:'⛔', msg:`Drawdown halt active (${(data.drawdown_pct||0).toFixed(1)}% from peak) — no new buys until recovery`});
+        const rot = data.rotation_suggestion;
+        if (rot && rot.buy && rot.gap >= 22)
+          actions.push({pri:3, col:'#ff9800', icon:'🔄', msg:`Rotation opportunity: swap <strong>$${rot.sell}</strong> (sc${rot.sell_score}) → <strong>$${rot.buy}</strong> (sc${rot.buy_score}, +${rot.gap.toFixed(0)}pts)`});
+        if (data.premarket_brief)
+          actions.push({pri:3, col:'#82b1ff', icon:'🌅', msg:data.premarket_brief});
+        // Sort by priority
+        actions.sort((a,b) => a.pri - b.pri);
+        if (actions.length > 0) {
+          const maxShow = 4;
+          const shown = actions.slice(0, maxShow);
+          html += `<div style="margin-bottom:.6rem;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:.45rem .65rem">
+            <div style="font-size:7px;font-weight:900;color:rgba(255,255,255,.3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">⚡ RIGHT NOW</div>
+            <div style="display:flex;flex-direction:column;gap:.25rem">
+              ${shown.map(a => `<div style="display:flex;align-items:flex-start;gap:.4rem;padding:.2rem .3rem;background:${a.col}11;border-left:2px solid ${a.col}66;border-radius:0 4px 4px 0">
+                <span style="font-size:10px;flex-shrink:0;margin-top:1px">${a.icon}</span>
+                <span style="font-size:7.5px;color:${a.col};line-height:1.4">${a.msg}</span>
+              </div>`).join('')}
+              ${actions.length > maxShow ? `<div style="font-size:6px;color:rgba(255,255,255,.3);padding-left:.3rem">+${actions.length-maxShow} more items</div>` : ''}
+            </div>
+          </div>`;
+        } else if (pos.length > 0) {
+          const mq = data.market_quality || 50;
+          const mqCol = mq >= 70 ? '#00ff88' : mq >= 50 ? '#ffd54f' : '#ff9800';
+          html += `<div style="margin-bottom:.5rem;padding:.35rem .6rem;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.15);border-radius:7px;display:flex;align-items:center;gap:.5rem">
+            <span style="font-size:12px">✅</span>
+            <span style="font-size:8px;color:#69f0ae">All positions healthy — continue holding. Market quality <strong style="color:${mqCol}">${mq}/100</strong>.</span>
+          </div>`;
+        }
+      }
+
       // Last bot decision — plain English summary of what happened last cycle
       if (data.last_decision) {
         html += `<div style="background:rgba(130,177,255,.06);border:1px solid rgba(130,177,255,.15);border-radius:8px;padding:.5rem .75rem;margin-bottom:.65rem;display:flex;align-items:flex-start;gap:.5rem">
@@ -56448,10 +56499,19 @@ window.renderSectorRotation = renderSectorRotation;
             s.rs_line_new_high ? '<span style="background:rgba(255,215,0,.25);color:#ffd600;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px;border:1px solid rgba(255,215,0,.4)" title="RS Line at 52-week high: stock is outperforming S&P 500 at a new high — IBD\'s #1 institutional buy confirmation">RS★NEW</span>' : (s.rs_line_trending ? '<span style="background:rgba(255,213,79,.12);color:#ffd54f;font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="RS Line trending upward — stock strengthening vs market">RS↗</span>' : ''),
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
-          html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
+          const effThresh = data.effective_min_score || 60;
+          const scoreFill = Math.min(100, Math.round(s.score / 100 * 100));
+          const ptsToTrig = Math.max(0, effThresh - s.score);
+          const trigCol = ptsToTrig === 0 ? '#00ff88' : ptsToTrig <= 5 ? '#ffd54f' : ptsToTrig <= 15 ? '#ff9800' : '#555';
+          const trigLabel = ptsToTrig === 0 ? '✓ TRIGGERED' : `${ptsToTrig}pts to buy`;
+          html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid ${trigCol}55">
             <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
               <span style="font-family:var(--disp);color:var(--au);min-width:42px;font-size:.95rem">\$${s.ticker}</span>
-              <span style="font-size:10px;font-weight:900;color:#00ff88;min-width:22px">${s.score}</span>
+              <div style="display:flex;flex-direction:column;min-width:42px">
+                <span style="font-size:10px;font-weight:900;color:${trigCol}">${s.score}</span>
+                <div style="height:2px;background:rgba(255,255,255,.08);border-radius:1px;width:36px"><div style="width:${scoreFill}%;height:100%;background:${trigCol};border-radius:1px"></div></div>
+                <span style="font-size:5px;color:${trigCol};margin-top:1px">${trigLabel}</span>
+              </div>
               ${s.grade ? `<span style="font-size:7px;font-weight:900;color:#000;background:${gradeCol};padding:1px 5px;border-radius:3px;letter-spacing:.05em">${s.grade}</span>` : ''}
               ${s.price ? `<span style="font-size:8px;color:#aaa">\$${s.price}</span>` : ''}
               <span style="font-size:8px;font-weight:700;color:${chgCol}">${(s.chg_pct||0)>=0?'+':''}${(s.chg_pct||0).toFixed(2)}%</span>

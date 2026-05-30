@@ -9130,6 +9130,45 @@ def run():
     except Exception:
         pass
 
+    # Pre-market AI brief: runs once in the morning (7:30-9 AM ET = 12:30-14 UTC)
+    # Gives trader a concise briefing on what to watch before market opens
+    try:
+        _pm_hour = now_utc.hour
+        _is_premarket = 12 <= _pm_hour <= 14  # 7:30-9 AM ET approx
+        _pm_date_key  = now_utc.strftime("%Y-%m-%d") + "_pm"
+        _last_pm = tlog.get("premarket_brief_date", "")
+        if _is_premarket and _pm_date_key != _last_pm and ANTHROPIC_KEY:
+            import requests as _req4
+            _pm_positions = tlog.get("positions", [])
+            _pm_gaps = tlog.get("premarket_gaps", [])
+            _pm_top  = tlog.get("last_scan_top", [])[:3]
+            _spy_pm  = next((g for g in _pm_gaps if g.get("ticker") == "SPY"), {})
+            _held_gaps = [g for g in _pm_gaps if g.get("ticker") in [p["ticker"] for p in _pm_positions]]
+            _regime_desc = regime.get("regime", "neutral").upper()
+            _vix_now = regime.get("vix", 0)
+            _pm_prompt = (
+                f"Pre-market briefing (2 sentences, ≤50 words total) for a momentum trader.\n"
+                f"SPY PM: {_spy_pm.get('pm_gap_pct',0):+.1f}% | VIX {_vix_now:.1f} | Regime: {_regime_desc}\n"
+                + (f"Held positions PM gaps: " + " | ".join(f"{g['ticker']} {g.get('pm_gap_pct',0):+.1f}%" for g in _held_gaps[:4]) + "\n" if _held_gaps else "")
+                + (f"Top candidates today: " + " | ".join(f"{s['ticker']} sc{s['score']}" for s in _pm_top) + "\n" if _pm_top else "")
+                + "Sentence 1: market tone + key PM gaps. Sentence 2: #1 priority action at open. Be direct."
+            )
+            _pmr = _req4.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                         "content-type": "application/json"},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 80,
+                      "messages": [{"role": "user", "content": _pm_prompt}]},
+                timeout=10,
+            )
+            if _pmr.status_code == 200:
+                _pm_text = _pmr.json()["content"][0]["text"].strip()
+                tlog["premarket_brief"]      = _pm_text
+                tlog["premarket_brief_date"] = _pm_date_key
+                logger.info(f"Pre-market brief: {_pm_text[:80]}...")
+    except Exception as _pm_e:
+        logger.debug(f"Pre-market brief skipped: {_pm_e}")
+
     # Daily AI debrief: runs once after market close (3:55-4:15 PM ET window)
     # Generates a concise post-market summary of the day's trades and key signals.
     try:
