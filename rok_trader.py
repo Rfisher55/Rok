@@ -11737,6 +11737,63 @@ def run():
     _rh_list = tlog.get("regime_history", [])
     _rh_list.append({"r": regime, "t": now_utc.isoformat()})
     tlog["regime_history"] = _rh_list[-48:]
+    # Regime transition detection: flag when market flips bull↔bear/neutral
+    try:
+        _rt_old = _rh_list[-5]["r"]["regime"] if len(_rh_list) >= 5 else None
+        _rt_now = regime.get("regime", "neutral")
+        _rt_flip = (_rt_old is not None and _rt_old != _rt_now and
+                    ((_rt_old == "bull" and _rt_now in ("bear", "neutral")) or
+                     (_rt_old == "bear" and _rt_now in ("bull", "neutral")) or
+                     (_rt_old == "neutral" and _rt_now == "bear")))
+        if _rt_flip:
+            tlog["regime_transition"] = {
+                "from": _rt_old, "to": _rt_now,
+                "time": now_utc.isoformat(),
+                "direction": "bull_to_bear" if _rt_now in ("bear","neutral") and _rt_old == "bull" else "bear_to_bull",
+            }
+        elif tlog.get("regime_transition", {}).get("time"):
+            _tr_age_min = (now_utc - datetime.fromisoformat(
+                tlog["regime_transition"]["time"])).total_seconds() / 60
+            if _tr_age_min > 120:  # clear after 2 hours
+                tlog["regime_transition"] = None
+    except Exception:
+        pass
+    # Portfolio risk score (1-10): composite of VIX, market quality, drawdown, position count
+    try:
+        _vix_v = regime.get("vix", 20) or 20
+        _mq_v  = tlog.get("market_quality", 50) or 50
+        _dd_v  = drawdown_pct or 0
+        _pos_near_stop = sum(1 for _px in tlog.get("positions", []) if (_px.get("dist_from_trail") or 5) < 1.5)
+        _risk_score = 0.0
+        # VIX contribution (0-3 pts)
+        _risk_score += 3.0 if _vix_v >= 30 else 2.0 if _vix_v >= 22 else 1.0 if _vix_v >= 16 else 0.0
+        # Market quality inverse (0-2 pts)
+        _risk_score += 0.0 if _mq_v >= 65 else 0.5 if _mq_v >= 50 else 1.0 if _mq_v >= 35 else 2.0
+        # Drawdown (0-2 pts)
+        _risk_score += 2.0 if _dd_v >= 10 else 1.0 if _dd_v >= 5 else 0.5 if _dd_v >= 2 else 0.0
+        # Positions near trail stop (0-2 pts)
+        _risk_score += min(2.0, _pos_near_stop * 0.7)
+        # Bear regime (0-1 pt)
+        _risk_score += 1.0 if regime.get("regime") == "bear" else 0.5 if regime.get("regime") == "neutral" else 0.0
+        tlog["portfolio_risk_score"] = round(min(10.0, _risk_score), 1)
+        tlog["portfolio_risk_label"] = ("CRITICAL" if _risk_score >= 8 else "HIGH" if _risk_score >= 6
+                                        else "MODERATE" if _risk_score >= 4 else "LOW" if _risk_score >= 2 else "MINIMAL")
+    except Exception:
+        pass
+    # Sector concentration warning: flag if 3+ held positions are in same sector
+    try:
+        _held_sectors: dict = {}
+        for _hpos in tlog.get("positions", []):
+            _hsec = SECTOR_MAP.get(_hpos.get("ticker", ""), "other")
+            _held_sectors[_hsec] = _held_sectors.get(_hsec, 0) + 1
+        _conc_warning = {k: v for k, v in _held_sectors.items() if v >= 3}
+        tlog["sector_concentration"] = {
+            "breakdown": _held_sectors,
+            "warnings": _conc_warning,
+            "overweight": list(_conc_warning.keys()),
+        } if _held_sectors else {}
+    except Exception:
+        pass
     tlog["macro_day"]       = macro_day
     tlog["open_positions"]  = len(tlog.get("positions", []))
     tlog["scan_universe"]   = len(candidates)

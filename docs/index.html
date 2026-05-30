@@ -53110,6 +53110,22 @@ function _renderIntelReport(el, intel) {
           ticker: p.ticker, price: price2,
           detail: (recReason || 'No progress') + ' — evaluate exit or set time stop.' });
       }
+
+      // Priority 1: Thesis COLLAPSED — key signals all gone, position losing
+      const ts2 = p.thesis_status;
+      if (ts2 === 'COLLAPSED' && pnl2 < -1) {
+        const gone2 = p.thesis_gone || 0;
+        const tot2  = p.thesis_total || 0;
+        alerts2.push({ pri:1, act:'THESIS ✗', col:'#ef5350',
+          ticker: p.ticker, price: price2,
+          detail: `${gone2}/${tot2} entry signals gone + in loss territory — reason to buy is gone, consider exit.` });
+      }
+      // Priority 2: Thesis DEGRADING — signals fading
+      if (ts2 === 'DEGRADING' && pnl2 < 0) {
+        alerts2.push({ pri:2, act:'THESIS ⚠', col:'#ffa726',
+          ticker: p.ticker, price: price2,
+          detail: `Entry thesis degrading (${p.thesis_gone || 0}/${p.thesis_total || 0} signals gone) — tighten stop, don't add.` });
+      }
     });
 
     // Priority 4: Elite new entry setup from scan
@@ -53129,9 +53145,36 @@ function _renderIntelReport(el, intel) {
         detail: 'Score ' + (t2.score || 0) + (pats2 ? ' · ' + pats2 : '') + (t2.catalyst ? ' — ' + t2.catalyst.slice(0, 55) : ' — elite setup') });
     }
 
+    // Priority 3: Momentum burst from scan — trade-ready exploders
+    const burst2 = (td2.momentum_burst_list || []).filter(b => b.above_threshold && b.score >= 70).slice(0, 1);
+    if (burst2.length) {
+      const b2 = burst2[0];
+      const bDir2 = b2.chg_pct >= 0 ? '▲' : '▼';
+      alerts2.push({ pri:3, act:'⚡ BURST', col:'#00e676',
+        ticker: b2.ticker, price: b2.price || 0,
+        detail: `${bDir2}${b2.chg_pct >= 0 ? '+' : ''}${b2.chg_pct.toFixed(1)}% on ${b2.rvol.toFixed(1)}×vol · sc${b2.score} — momentum explosion, check entry` });
+    }
+    // Portfolio risk score alert
+    const prs2 = td2.portfolio_risk_score;
+    if (prs2 >= 7) {
+      alerts2.push({ pri:2, act:'⚠ RISK', col:'#ff9800',
+        ticker: '', price: 0,
+        detail: `Portfolio risk score ${prs2.toFixed(1)}/10 (${td2.portfolio_risk_label||''}) — VIX elevated or positions near stops. Trade smaller, tighten stops.` });
+    }
+    // Regime transition alert
+    const rt2 = td2.regime_transition;
+    if (rt2 && rt2.direction) {
+      const rtPri = rt2.direction === 'bull_to_bear' ? 1 : 3;
+      const rtTxt = rt2.direction === 'bull_to_bear'
+        ? `Market flipped ${rt2.from}→${rt2.to} — REDUCE exposure, tighten all stops NOW`
+        : `Market turned ${rt2.from}→${rt2.to} — improve conditions, watch for entry signals`;
+      alerts2.push({ pri:rtPri, act:rt2.direction === 'bull_to_bear' ? '🔴 REGIME' : '🟢 REGIME', col:rt2.direction==='bull_to_bear'?'#ef5350':'#00e676',
+        ticker:'', price:0, detail: rtTxt });
+    }
+
     if (!alerts2.length) return '';
     alerts2.sort((a, b) => a.pri - b.pri);
-    const shown = alerts2.slice(0, 6);
+    const shown = alerts2.slice(0, 7);
     const urgentCnt = shown.filter(a => a.pri <= 2).length;
     const hdrCol    = urgentCnt > 0 ? '#ff4444' : '#ffd54f';
     const hdrIcon   = urgentCnt > 0 ? '🚨' : '⚡';
@@ -59622,6 +59665,24 @@ window.renderSectorRotation = renderSectorRotation;
           const tqCol = tq == null ? '#555' : tq >= 3 ? '#00e676' : tq >= 2 ? '#69f0ae' : tq >= 1 ? '#ffd54f' : '#ef5350';
           const vix = reg.vix || 0;
           const vixCol = vix >= 30 ? '#ef5350' : vix >= 22 ? '#ff9800' : vix >= 16 ? '#ffd54f' : '#00e676';
+          // Regime transition alert
+          const regTransition = data.regime_transition;
+          if (regTransition && regTransition.from && regTransition.to) {
+            const rtDir = regTransition.direction || '';
+            const rtCol = rtDir === 'bull_to_bear' ? '#ef5350' : '#00e676';
+            const rtIcon = rtDir === 'bull_to_bear' ? '⚠' : '⚡';
+            const rtMsg = rtDir === 'bull_to_bear'
+              ? `REGIME FLIP: Market shifted ${regTransition.from.toUpperCase()} → ${regTransition.to.toUpperCase()} — tighten stops, reduce new buys`
+              : `REGIME FLIP: Market shifted ${regTransition.from.toUpperCase()} → ${regTransition.to.toUpperCase()} — conditions improving, watch for entries`;
+            html += `<div style="margin-bottom:.4rem;padding:.35rem .65rem;background:${rtCol}15;border:2px solid ${rtCol}66;border-radius:8px;display:flex;align-items:center;gap:.5rem;animation:pulse-${rtDir==='bull_to_bear'?'red':'green'} 2s infinite">
+              <span style="font-size:12px">${rtIcon}</span>
+              <span style="font-size:6.5px;font-weight:900;color:${rtCol};letter-spacing:.05em">${rtMsg}</span>
+            </div>`;
+          }
+          // Portfolio risk score
+          const prs = data.portfolio_risk_score;
+          const prl = data.portfolio_risk_label || '';
+          const prsCol = prs >= 8 ? '#ef5350' : prs >= 6 ? '#ff9800' : prs >= 4 ? '#ffd54f' : prs >= 2 ? '#69f0ae' : '#00e676';
           html += `<div style="margin-bottom:.45rem;display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem">
             <div style="text-align:center;padding:.3rem .2rem;background:${regCol}0f;border:1px solid ${regCol}33;border-radius:7px">
               <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">Market</div>
@@ -59638,10 +59699,10 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="font-size:9px;font-weight:900;color:${convCol}">${convLabel}</div>
               <div style="font-size:5px;color:#555">${conv != null ? conv+'/100' : '—'}</div>
             </div>
-            <div style="text-align:center;padding:.3rem .2rem;background:${vixCol}0f;border:1px solid ${vixCol}33;border-radius:7px">
-              <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">VIX</div>
-              <div style="font-size:9px;font-weight:900;color:${vixCol}">${vix.toFixed(1)}</div>
-              <div style="font-size:5px;color:${vixCol}">${vix>=30?'FEAR':vix>=22?'CAUTION':vix>=16?'CALM':'LOW'}</div>
+            <div style="text-align:center;padding:.3rem .2rem;background:${prs!=null?prsCol+'0f':'rgba(255,255,255,.03)'};border:1px solid ${prs!=null?prsCol+'44':'rgba(255,255,255,.07)'};border-radius:7px">
+              <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">Risk</div>
+              <div style="font-size:9px;font-weight:900;color:${prsCol}">${prs != null ? prs.toFixed(1) : '—'}</div>
+              <div style="font-size:4.5px;color:${prsCol}">${prl || '—'}</div>
             </div>
           </div>`;
         }
@@ -59660,6 +59721,25 @@ window.renderSectorRotation = renderSectorRotation;
                 ${tqBadge}${wrBadge}${closeStr}
               </div>
               <div style="font-size:6px;color:rgba(255,255,255,.35);margin-top:1px">${si.note}</div>
+            </div>
+          </div>`;
+        }
+      }
+
+      // ── Sector Concentration Warning ─────────────────────────────────────────
+      {
+        const sc2 = data.sector_concentration || {};
+        const scWarn = sc2.overweight || [];
+        const scBrk  = sc2.breakdown || {};
+        if (scWarn.length > 0 && positions.length >= 3) {
+          html += `<div style="margin-bottom:.5rem;padding:.35rem .65rem;background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.35);border-radius:8px">
+            <div style="font-size:6.5px;font-weight:900;color:#ffa726;letter-spacing:.07em;margin-bottom:.2rem">⚠ SECTOR CONCENTRATION RISK</div>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+              ${scWarn.map(sec => {
+                const cnt = scBrk[sec] || 0;
+                return `<span style="font-size:6px;font-weight:800;color:#ffa726;background:rgba(255,152,0,.15);border:1px solid rgba(255,152,0,.3);border-radius:4px;padding:1px 5px">${sec.toUpperCase()} ×${cnt}</span>`;
+              }).join('')}
+              <span style="font-size:6px;color:rgba(255,255,255,.35);align-self:center">— 3+ positions in same sector → higher correlated loss risk. Consider diversifying.</span>
             </div>
           </div>`;
         }
