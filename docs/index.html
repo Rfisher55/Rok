@@ -54450,30 +54450,56 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
-        // ── Ichimoku Cloud Neuron (51): institutional trend position ─────────
+        // ── Ichimoku Cloud (N51) + LR Quality (N52) dual panel ───────────────
         const ic = lp.ichimoku_perf || [];
-        if (!ic.length) return '';
+        const lr = lp.lr_quality_perf || [];
+        if (!ic.length && !lr.length) return '';
         const IC_ORDER = ['above','inside','below'];
         const IC_ICONS = {above:'☁️✅',inside:'☁️⚡',below:'☁️❌'};
         const IC_LABELS = {above:'Above Cloud',inside:'In Cloud',below:'Below Cloud'};
         const IC_BG = {above:'rgba(0,230,118,.08)',inside:'rgba(255,213,79,.06)',below:'rgba(239,83,80,.07)'};
         const icMap = {}; ic.forEach(s => icMap[s.position] = s);
-        const icBest = ic.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, ic[0]);
+        const icBest = ic.length ? ic.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, ic[0]) : null;
         const icCells = IC_ORDER.map(pos => {
           const s = icMap[pos];
-          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:9px">${IC_ICONS[pos]}</div><div style="font-size:5px;color:#333">${IC_LABELS[pos]}</div></div>`;
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${IC_ICONS[pos]}</div><div style="font-size:5px;color:#333">${IC_LABELS[pos]}</div></div>`;
           const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
-          const star = s.position === icBest.position ? ' ⭐' : '';
-          return `<div style="background:${IC_BG[pos]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
-            <div style="font-size:8px">${IC_ICONS[pos]}</div>
-            <div style="font-size:5.5px;color:#ccc;font-weight:700">${IC_LABELS[pos]}${star}</div>
-            <div style="font-size:11px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+          const star = icBest && s.position === icBest.position ? '⭐' : '';
+          return `<div style="background:${IC_BG[pos]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${IC_ICONS[pos]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${IC_LABELS[pos]}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
             <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
           </div>`;
         }).join('');
+        const LR_ORDER = ['strong','moderate','weak'];
+        const LR_ICONS = {strong:'📐',moderate:'📏',weak:'〰️'};
+        const LR_BG = {strong:'rgba(0,230,118,.08)',moderate:'rgba(255,213,79,.06)',weak:'rgba(239,83,80,.07)'};
+        const lrMap = {}; lr.forEach(s => lrMap[s.quality] = s);
+        const lrBest = lr.length ? lr.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, lr[0]) : null;
+        const lrCells = LR_ORDER.map(q => {
+          const s = lrMap[q];
+          const lbl = q==='strong'?'R²≥0.85':q==='moderate'?'R² 0.6-0.85':'R²<0.6 Choppy';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${LR_ICONS[q]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = lrBest && s.quality === lrBest.quality ? '⭐' : '';
+          return `<div style="background:${LR_BG[q]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${LR_ICONS[q]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const icHtml = ic.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">☁️ ICHIMOKU CLOUD (N51): institutional trend filter — above/inside/below cloud</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${icCells}</div>
+        </div>` : '';
+        const lrHtml = lr.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">📐 LR TREND QUALITY (N52): R² fit — clean trend vs choppy noise at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${lrCells}</div>
+        </div>` : '';
         return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
-          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.2rem">☁️ ICHIMOKU CLOUD (Neuron 51): institutional trend filter — above/inside/below cloud at entry</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem">${icCells}</div>
+          ${icHtml}${lrHtml}
         </div>`;
       })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">

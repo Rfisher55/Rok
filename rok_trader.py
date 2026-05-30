@@ -485,6 +485,14 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _ichi_score = int(_ichi_above) + int(_ichi_bull) + int(_ichi_tk)
         e["ichimoku_score_at_entry"] = _ichi_score
         e["ichimoku_position"] = ("above" if _ichi_above else "inside" if _ichi_bull else "below")
+        # Linear Regression Quality Neuron (52): R² measures how well price fits a trend line.
+        # R² > 0.85 = very clean trend (high conviction setup); 0.6-0.85 = moderate;
+        # < 0.6 = choppy/noisy (unreliable trend — high failure risk for directional plays).
+        _lr_r2 = float(signals.get("lr_r2", 0.0) or 0.0)
+        _lr_slope = float(signals.get("lr_slope", 0.0) or 0.0)
+        e["lr_r2_at_entry"] = round(_lr_r2, 3)
+        e["lr_slope_at_entry"] = round(_lr_slope, 4)
+        e["lr_quality"] = ("strong" if _lr_r2 >= 0.85 else "moderate" if _lr_r2 >= 0.6 else "weak")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1362,6 +1370,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Linear Regression Quality Neuron (52): R² trend fit at entry ────────────
+    # Tracks performance by how cleanly price fits a linear trend (R² score).
+    # Strong R² (≥0.85) = clean trend with low noise; weak (<0.6) = choppy/sideways.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_lr = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _lr_q = _buy_lr.get("lr_quality", "moderate") if _buy_lr else "moderate"
+            _lr_perf = tlog.setdefault("lr_quality_perf", {})
+            _lrp = _lr_perf.setdefault(_lr_q, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "quality": _lr_q})
+            _lrp["total"] = _lrp.get("total", 0) + 1
+            _lrp["total_pnl"] = round(_lrp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _lrp["wins"] = _lrp.get("wins", 0) + 1
+            else:        _lrp["losses"] = _lrp.get("losses", 0) + 1
+            if _lrp["total"] > 0:
+                _lrp["win_rate"] = round(_lrp["wins"] / _lrp["total"] * 100, 1)
+                _lrp["avg_pnl"]  = round(_lrp["total_pnl"] / _lrp["total"], 2)
         except Exception:
             pass
 
@@ -11680,6 +11707,23 @@ def run():
             if _ic_above and _ic_below and _ic_above["win_rate"] > _ic_below["win_rate"] + 15:
                 _learn_log.append(f"Above cloud entries win {_ic_above['win_rate']:.0f}% vs below {_ic_below['win_rate']:.0f}% — cloud acts as institutional filter")
 
+        # ── 52. Linear Regression Quality Neuron: R² trend fit at entry ───────
+        _lr_raw = tlog.get("lr_quality_perf", {})
+        _lr_insights = []
+        for _lrk, _lrd in _lr_raw.items():
+            if _lrd.get("total", 0) >= 3:
+                _lr_insights.append({
+                    "quality": _lrk, "win_rate": _lrd.get("win_rate", 50),
+                    "avg_pnl": _lrd.get("avg_pnl", 0), "total": _lrd.get("total", 0)
+                })
+        if _lr_insights:
+            _lr_strong = next((s for s in _lr_insights if s["quality"] == "strong"), None)
+            _lr_weak   = next((s for s in _lr_insights if s["quality"] == "weak"), None)
+            _lr_sum = " | ".join(f"LR_{s['quality']}:{s['win_rate']:.0f}%WR" for s in _lr_insights)
+            _learn_log.append(f"LR quality WRs: {_lr_sum}")
+            if _lr_strong and _lr_weak and _lr_strong["win_rate"] > _lr_weak["win_rate"] + 15:
+                _learn_log.append(f"Clean trend entries (R²≥0.85) win {_lr_strong['win_rate']:.0f}% vs choppy {_lr_weak['win_rate']:.0f}% — trend quality matters")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11741,6 +11785,7 @@ def run():
             "mfi_zone_perf":        _mi_insights,            # MFI zone (volume-weighted RSI) at entry vs outcome
             "wr_zone_perf":         _wr_insights,            # Williams %R zone at entry vs outcome
             "ichimoku_perf":        _ic_insights,            # Ichimoku cloud position at entry vs outcome
+            "lr_quality_perf":      _lr_insights,            # Linear Regression R² trend quality vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
