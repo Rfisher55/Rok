@@ -2400,6 +2400,66 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N114: Hold Duration Neuron — hours held vs outcome ────────────────────────
+    # Tracks how long positions were held (in hours) categorized by session count.
+    # Bot learns: are scalp exits (same day) better than swing holds (2-5 days)?
+    # Informs adaptive exit timing — when the bot should be impatient vs patient.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n114 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _hold_d = float(age_days) if age_days is not None else 0.0
+            _hold_bkt = ("scalp" if _hold_d < 0.5 else
+                         "intraday"  if _hold_d < 1.0 else
+                         "overnight" if _hold_d < 2.0 else
+                         "swing"     if _hold_d < 5.0 else "position")
+            _n114_perf = tlog.setdefault("hold_duration_perf", {})
+            _n114p = _n114_perf.setdefault(_hold_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_hold_bkt})
+            _n114p["total"] += 1; _n114p["total_pnl"] = round(_n114p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n114p["wins"] += 1
+            else:        _n114p["losses"] += 1
+            _n114p["win_rate"] = round(_n114p["wins"] / _n114p["total"] * 100, 1)
+            _n114p["avg_pnl"]  = round(_n114p["total_pnl"] / _n114p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N115: Market Cap Tier at Entry ────────────────────────────────────────────
+    # Does the bot trade megacap (SPY components) better than small-cap growth stocks?
+    # Regime-dependent: bear markets favor large caps; bull markets favor small/mid.
+    # Bot learns actual performance split by market cap tier.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n115 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _mktcap = float((_buy_n115 or {}).get("market_cap_b", 0) or 0)
+            _mc_bkt = ("mega" if _mktcap >= 100 else "large" if _mktcap >= 10 else "mid" if _mktcap >= 2 else "small")
+            _n115_perf = tlog.setdefault("mktcap_tier_perf", {})
+            _n115p = _n115_perf.setdefault(_mc_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_mc_bkt})
+            _n115p["total"] += 1; _n115p["total_pnl"] = round(_n115p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n115p["wins"] += 1
+            else:        _n115p["losses"] += 1
+            _n115p["win_rate"] = round(_n115p["wins"] / _n115p["total"] * 100, 1)
+            _n115p["avg_pnl"]  = round(_n115p["total_pnl"] / _n115p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N116: Float Size Neuron ────────────────────────────────────────────────────
+    # Low-float stocks (small share count) can move violently on volume surges.
+    # Bot learns: low-float with RVOL surge → massive win OR massive loss.
+    # Tracks float tier at entry: thin (<50M), normal (50-500M), large (500M+).
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n116 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _float_m = float((_buy_n116 or {}).get("float_shares_m", 200) or 200)
+            _float_bkt = ("thin" if _float_m < 50 else "normal" if _float_m < 500 else "large")
+            _n116_perf = tlog.setdefault("float_tier_perf", {})
+            _n116p = _n116_perf.setdefault(_float_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_float_bkt})
+            _n116p["total"] += 1; _n116p["total_pnl"] = round(_n116p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n116p["wins"] += 1
+            else:        _n116p["losses"] += 1
+            _n116p["win_rate"] = round(_n116p["wins"] / _n116p["total"] * 100, 1)
+            _n116p["avg_pnl"]  = round(_n116p["total_pnl"] / _n116p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11872,6 +11932,10 @@ def run():
                         _buy_signals_merged["signal_count_at_entry"] = 0
                     # N113: AI sentiment at entry (written after ai_sentiment() call above)
                     _buy_signals_merged["ai_sentiment"] = sent  # already computed
+                    # N115: market cap tier at entry (in billions)
+                    _buy_signals_merged["market_cap_b"] = float(live.get(tk, {}).get("market_cap_b", 0) or 0)
+                    # N116: float shares at entry (in millions)
+                    _buy_signals_merged["float_shares_m"] = float(live.get(tk, {}).get("float_shares_m", 200) or 200)
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14641,6 +14705,40 @@ def run():
             _best_ai = max(_n113_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N113 best AI sentiment tier: {_best_ai['state']} ({_best_ai['win_rate']:.0f}%WR)")
 
+        # ── N114: Hold Duration (multi-tier) ──────────────────────────────────────
+        _n114_raw = tlog.get("hold_duration_perf", {})
+        _n114_insights = []
+        for _n14k, _n14d in _n114_raw.items():
+            if _n14d.get("total", 0) >= 2:
+                _n114_insights.append({"state": _n14k, "win_rate": _n14d.get("win_rate", 50),
+                                       "avg_pnl": _n14d.get("avg_pnl", 0), "total": _n14d.get("total", 0)})
+        if _n114_insights:
+            _best_hold = max(_n114_insights, key=lambda x: x["avg_pnl"])
+            _worst_hold = min(_n114_insights, key=lambda x: x["avg_pnl"])
+            _learn_log.append(f"N114 best hold: {_best_hold['state']}(avg {_best_hold['avg_pnl']:+.1f}%) worst: {_worst_hold['state']}(avg {_worst_hold['avg_pnl']:+.1f}%)")
+
+        # ── N115: Market Cap Tier (multi-tier) ─────────────────────────────────────
+        _n115_raw = tlog.get("mktcap_tier_perf", {})
+        _n115_insights = []
+        for _n15k, _n15d in _n115_raw.items():
+            if _n15d.get("total", 0) >= 2:
+                _n115_insights.append({"state": _n15k, "win_rate": _n15d.get("win_rate", 50),
+                                       "avg_pnl": _n15d.get("avg_pnl", 0), "total": _n15d.get("total", 0)})
+        if _n115_insights:
+            _best_mc = max(_n115_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N115 best market cap tier: {_best_mc['state']} ({_best_mc['win_rate']:.0f}%WR)")
+
+        # ── N116: Float Tier (multi-tier) ──────────────────────────────────────────
+        _n116_raw = tlog.get("float_tier_perf", {})
+        _n116_insights = []
+        for _n16k, _n16d in _n116_raw.items():
+            if _n16d.get("total", 0) >= 2:
+                _n116_insights.append({"state": _n16k, "win_rate": _n16d.get("win_rate", 50),
+                                       "avg_pnl": _n16d.get("avg_pnl", 0), "total": _n16d.get("total", 0)})
+        if _n116_insights:
+            _best_fl = max(_n116_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N116 best float tier: {_best_fl['state']} ({_best_fl['win_rate']:.0f}%WR)")
+
         # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
         _eg_raw = tlog.get("eg_tier_perf", {})
         _eg_insights = []
@@ -14800,6 +14898,9 @@ def run():
             "spy_vwap_entry_perf":  _n111_insights,          # N111: SPY VWAP position at entry vs outcome
             "signal_density_perf":  _n112_insights,          # N112: signal density (count) at entry vs outcome
             "ai_sentiment_tier_perf": _n113_insights,        # N113: AI sentiment bracket at entry vs outcome
+            "hold_duration_perf":   _n114_insights,          # N114: hold duration (scalp/intraday/swing/pos) vs outcome
+            "mktcap_tier_perf":     _n115_insights,          # N115: market cap tier vs outcome
+            "float_tier_perf":      _n116_insights,          # N116: float size tier vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -14906,6 +15007,7 @@ def run():
             "vix_entry_perf","entry_session_perf","breadth_entry_perf","portfolio_size_perf",
             "catalyst_age_perf","trend_template_tier_perf","rvol_entry_tier_perf",
             "spy_vwap_entry_perf","signal_density_perf","ai_sentiment_tier_perf",
+            "hold_duration_perf","mktcap_tier_perf","float_tier_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -14913,9 +15015,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 72               # total tracked neuron dimensions (N103-N113 added)
+        tlog["neurons_total"]     = 75               # total tracked neuron dimensions (N103-N116 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/72 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/75 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
