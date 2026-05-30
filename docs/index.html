@@ -57411,6 +57411,33 @@ window.renderSectorRotation = renderSectorRotation;
         </div>`;
       }
 
+      // ── Bot Conviction Meter ─────────────────────────────────────────────────
+      {
+        const conv = data.bot_conviction;
+        const stratMode = data.strategy_mode || '';
+        const stratDesc = data.strategy_desc || '';
+        if (conv != null) {
+          const convCol = conv >= 75 ? '#00e676' : conv >= 60 ? '#69f0ae' : conv >= 45 ? '#ffd54f' : conv >= 30 ? '#ff9800' : '#ef5350';
+          const convBg  = conv >= 75 ? 'rgba(0,255,136,.06)' : conv >= 60 ? 'rgba(105,240,174,.05)' : conv >= 45 ? 'rgba(255,215,0,.05)' : conv >= 30 ? 'rgba(255,152,0,.06)' : 'rgba(255,34,85,.06)';
+          const convBorder = conv >= 75 ? 'rgba(0,255,136,.2)' : conv >= 60 ? 'rgba(105,240,174,.15)' : conv >= 45 ? 'rgba(255,215,0,.15)' : conv >= 30 ? 'rgba(255,152,0,.2)' : 'rgba(255,34,85,.2)';
+          const barW = Math.min(conv, 100);
+          const barBg = conv >= 75 ? 'linear-gradient(90deg,#00c853,#00e676)' : conv >= 60 ? 'linear-gradient(90deg,#00c853,#69f0ae)' : conv >= 45 ? 'linear-gradient(90deg,#f9a825,#ffd54f)' : conv >= 30 ? 'linear-gradient(90deg,#e65100,#ff9800)' : 'linear-gradient(90deg,#b71c1c,#ef5350)';
+          html += `<div style="margin-bottom:.55rem;padding:.55rem .75rem;background:${convBg};border:1px solid ${convBorder};border-radius:9px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem">
+              <div>
+                <span style="font-size:7px;font-weight:800;color:${convCol};letter-spacing:.07em;text-transform:uppercase"> BOT CONVICTION</span>
+                ${stratMode ? `<span style="font-size:7.5px;font-weight:900;color:${convCol};margin-left:.5rem">${stratMode}</span>` : ''}
+              </div>
+              <span style="font-size:11px;font-weight:900;color:${convCol}">${conv}/100</span>
+            </div>
+            <div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:.25rem">
+              <div style="height:100%;width:${barW}%;background:${barBg};border-radius:3px;transition:width 0.6s ease"></div>
+            </div>
+            ${stratDesc ? `<div style="font-size:7px;color:var(--wh4)">${stratDesc}</div>` : ''}
+          </div>`;
+        }
+      }
+
       // ── Macro Context Strip ──────────────────────────────────────────────────
       {
         const reg = data.regime || {};

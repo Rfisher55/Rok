@@ -9610,6 +9610,74 @@ def run():
     except Exception:
         pass
 
+    # ── Bot Conviction Meter + Strategy Mode ─────────────────────────────
+    # Composite 0-100 gauge: how confident the bot is in current conditions.
+    # Displayed on dashboard as a live gauge — tells the user how aggressive
+    # the bot is being right now and what strategy it's running.
+    try:
+        _conv = 50  # neutral baseline
+        _reg_name = regime.get("regime", "neutral")
+        _vix_c    = regime.get("vix", 20.0) or 20.0
+
+        # Regime layer
+        if   _reg_name == "bull":    _conv += 18
+        elif _reg_name == "bear":    _conv -= 22
+        # VIX layer
+        if   _vix_c < 15:   _conv += 12
+        elif _vix_c < 18:   _conv += 6
+        elif _vix_c < 22:   _conv += 0
+        elif _vix_c < 28:   _conv -= 8
+        elif _vix_c < 35:   _conv -= 18
+        else:                _conv -= 28
+        # Breadth layer
+        _adv = breadth.get("adv_pct", 50) or 50
+        if   _adv > 70: _conv += 10
+        elif _adv > 60: _conv += 5
+        elif _adv < 35: _conv -= 12
+        elif _adv < 45: _conv -= 6
+        # Recent win rate layer (learned)
+        _lp_c = tlog.get("bot_learned_params", {})
+        _rwr_c = _lp_c.get("recent_wr", 0.5) or 0.5
+        if   _rwr_c >= 0.65: _conv += 8
+        elif _rwr_c >= 0.55: _conv += 3
+        elif _rwr_c < 0.40:  _conv -= 10
+        elif _rwr_c < 0.50:  _conv -= 4
+        # Drawdown penalty
+        if   drawdown_pct >= 5: _conv -= 15
+        elif drawdown_pct >= 3: _conv -= 8
+        elif drawdown_pct >= 1.5: _conv -= 4
+        # Market quality contribution
+        _mq_c = tlog.get("market_quality", 50) or 50
+        _conv += round((_mq_c - 50) / 10)
+
+        _conv_final = max(5, min(98, round(_conv)))
+
+        # Determine strategy mode from conviction + regime
+        if   _conv_final >= 78 and _reg_name == "bull":
+            _strat_mode = "AGGRESSIVE MOMENTUM"
+            _strat_desc = "Strong conditions — taking higher-conviction breakouts with full sizing"
+        elif _conv_final >= 62:
+            _strat_mode = "MOMENTUM"
+            _strat_desc = "Favorable market — running normal breakout playbook"
+        elif _conv_final >= 48:
+            _strat_mode = "SELECTIVE"
+            _strat_desc = "Mixed signals — only taking highest-quality setups, reducing size"
+        elif _conv_final >= 32:
+            _strat_mode = "DEFENSIVE"
+            _strat_desc = "Difficult environment — very selective, smaller positions, protecting capital"
+        else:
+            _strat_mode = "CASH CONSERVATION"
+            _strat_desc = "Poor conditions — holding cash, waiting for market to stabilize"
+
+        tlog["bot_conviction"] = _conv_final
+        tlog["strategy_mode"]  = _strat_mode
+        tlog["strategy_desc"]  = _strat_desc
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode}")
+    except Exception as _ce:
+        tlog["bot_conviction"] = 50
+        tlog["strategy_mode"]  = "SELECTIVE"
+        tlog["strategy_desc"]  = "Normal conditions"
+
     # ── Last trade action summary (for dashboard) ──────────────────────
     try:
         _all_actions = [t for t in tlog.get("trades", [])
