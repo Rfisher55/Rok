@@ -54237,30 +54237,56 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
-        // ── Multi-Timeframe Alignment Neuron (47) ────────────────────────────
+        // ── Multi-Timeframe Alignment (N47) + Options Flow (N48) dual panel ──
         const mf = lp.mtf_align_perf || [];
-        if (!mf.length) return '';
+        const of = lp.options_flow_perf || [];
+        if (!mf.length && !of.length) return '';
         const MF_ORDER = ['full','partial','none'];
         const MF_ICONS = {full:'🎯',partial:'⚡',none:'❌'};
         const MF_LABELS = {full:'Full (3/3)',partial:'Partial',none:'Diverged'};
         const MF_BG = {full:'rgba(0,230,118,.08)',partial:'rgba(255,213,79,.06)',none:'rgba(239,83,80,.07)'};
         const mfMap = {}; mf.forEach(s => mfMap[s.alignment] = s);
-        const mfBest = mf.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, mf[0]);
+        const mfBest = mf.length ? mf.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, mf[0]) : null;
         const mfCells = MF_ORDER.map(key => {
           const s = mfMap[key];
-          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:9px">${MF_ICONS[key]}</div><div style="font-size:5px;color:#333">${MF_LABELS[key]}</div></div>`;
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${MF_ICONS[key]}</div><div style="font-size:5px;color:#333">${MF_LABELS[key]}</div></div>`;
           const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
-          const star = s.alignment === mfBest.alignment ? ' ⭐' : '';
-          return `<div style="background:${MF_BG[key]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
-            <div style="font-size:9px">${MF_ICONS[key]}</div>
-            <div style="font-size:5.5px;color:#ccc;font-weight:700">${MF_LABELS[key]}${star}</div>
-            <div style="font-size:11px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+          const star = mfBest && s.alignment === mfBest.alignment ? '⭐' : '';
+          return `<div style="background:${MF_BG[key]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${MF_ICONS[key]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${MF_LABELS[key]}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
             <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
           </div>`;
         }).join('');
+        const OF_ORDER = ['confirmed','slight','neutral'];
+        const OF_ICONS = {confirmed:'🦅',slight:'🐦',neutral:'🐤'};
+        const OF_LABELS = {confirmed:'Smart $$',slight:'Slight',neutral:'None'};
+        const OF_BG = {confirmed:'rgba(0,230,118,.08)',slight:'rgba(255,213,79,.06)',neutral:'rgba(255,255,255,.04)'};
+        const ofMap = {}; of.forEach(s => ofMap[s.tier] = s);
+        const ofBest = of.length ? of.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, of[0]) : null;
+        const ofCells = OF_ORDER.map(key => {
+          const s = ofMap[key];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${OF_ICONS[key]}</div><div style="font-size:5px;color:#333">${OF_LABELS[key]}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = ofBest && s.tier === ofBest.tier ? '⭐' : '';
+          return `<div style="background:${OF_BG[key]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${OF_ICONS[key]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${OF_LABELS[key]}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const mfHtml = mf.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🎯 MTF ALIGNMENT (N47): all timeframes agree = highest conviction</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${mfCells}</div>
+        </div>` : '';
+        const ofHtml = of.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">🦅 OPTIONS FLOW (N48): smart money call buying vs no institutional positioning</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${ofCells}</div>
+        </div>` : '';
         return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
-          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.2rem">🎯 MULTI-TIMEFRAME ALIGNMENT (Neuron 47): MTF+EMA stack+ROC20 all agree = highest conviction</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem">${mfCells}</div>
+          ${mfHtml}${ofHtml}
         </div>`;
       })()}
       ${(() => {

@@ -454,6 +454,15 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _mtf_score = int(_mtf_ok) + int(_ema_bull) + int(_roc20_v > 0)
         e["mtf_score_at_entry"] = _mtf_score
         e["mtf_alignment"] = ("full" if _mtf_score >= 3 else "partial" if _mtf_score >= 1 else "none")
+        # Options Flow Neuron (48): smart money positioning at entry.
+        # unusual_calls + options_bull + low PCR (<0.7) = institutional call buying.
+        # Learns: do entries confirmed by options flow outperform unconfirmed entries?
+        _uc = bool(signals.get("unusual_calls", False))
+        _ob = bool(signals.get("options_bull", False))
+        _pcr = float(signals.get("options_pcr", 1.0) or 1.0)
+        _opt_score = int(_uc) + int(_ob) + int(_pcr < 0.7)
+        e["options_flow_score"] = _opt_score
+        e["options_flow_tier"] = ("confirmed" if _opt_score >= 2 else "slight" if _opt_score >= 1 else "neutral")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1331,6 +1340,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Options Flow Neuron (48): institutional options positioning at entry ──────
+    # Tracks win rates when unusual call buying / bullish options flow confirmed the trade.
+    # Learns: do flow-confirmed entries (smart money) outperform unconfirmed?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_of = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _of_tier = _buy_of.get("options_flow_tier", "neutral") if _buy_of else "neutral"
+            _of_perf = tlog.setdefault("options_flow_perf", {})
+            _ofp = _of_perf.setdefault(_of_tier, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "tier": _of_tier})
+            _ofp["total"] = _ofp.get("total", 0) + 1
+            _ofp["total_pnl"] = round(_ofp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _ofp["wins"] = _ofp.get("wins", 0) + 1
+            else:        _ofp["losses"] = _ofp.get("losses", 0) + 1
+            if _ofp["total"] > 0:
+                _ofp["win_rate"] = round(_ofp["wins"] / _ofp["total"] * 100, 1)
+                _ofp["avg_pnl"]  = round(_ofp["total_pnl"] / _ofp["total"], 2)
         except Exception:
             pass
 
@@ -11505,6 +11533,23 @@ def run():
             if _mf_full and _mf_none and _mf_full["win_rate"] > _mf_none["win_rate"] + 15:
                 _learn_log.append(f"Full MTF alignment wins {_mf_full['win_rate']:.0f}% vs none {_mf_none['win_rate']:.0f}% — high-conviction trades dominate")
 
+        # ── 48. Options Flow Neuron ────────────────────────────────────────────
+        _of_raw = tlog.get("options_flow_perf", {})
+        _of_insights = []
+        for _ofk, _ofd in _of_raw.items():
+            if _ofd.get("total", 0) >= 3:
+                _of_insights.append({
+                    "tier": _ofk, "win_rate": _ofd.get("win_rate", 50),
+                    "avg_pnl": _ofd.get("avg_pnl", 0), "total": _ofd.get("total", 0)
+                })
+        if _of_insights:
+            _of_confirmed = next((s for s in _of_insights if s["tier"] == "confirmed"), None)
+            _of_neutral   = next((s for s in _of_insights if s["tier"] == "neutral"), None)
+            _of_sum = " | ".join(f"flow_{s['tier']}:{s['win_rate']:.0f}%WR" for s in _of_insights)
+            _learn_log.append(f"Options flow WRs: {_of_sum}")
+            if _of_confirmed and _of_neutral and _of_confirmed["win_rate"] > _of_neutral["win_rate"] + 15:
+                _learn_log.append(f"Flow-confirmed trades win {_of_confirmed['win_rate']:.0f}% vs unconfirmed {_of_neutral['win_rate']:.0f}% — smart money signal works")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11562,6 +11607,7 @@ def run():
             "rvol_tier_perf":       _rv_insights,            # RVOL tier (explosive/strong/normal/weak) vs outcome
             "stoch_zone_perf":      _sk_insights,            # Stochastic %K zone at entry vs outcome
             "mtf_align_perf":       _mf_insights,            # multi-timeframe alignment at entry vs outcome
+            "options_flow_perf":    _of_insights,            # options flow confirmation at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
