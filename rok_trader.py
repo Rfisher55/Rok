@@ -730,6 +730,67 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["vcp_at_entry"] = _vcp_v
         e["vcp_state"] = ("vcp" if _vcp_v else "no_vcp")
 
+        # Pocket Pivot Neuron (91): O'Neil pocket pivot = institutional buying surge
+        _pocket_piv = bool(signals.get("pocket_pivot", False))
+        e["pocket_pivot_at_entry"] = _pocket_piv
+        e["pocket_pivot_state"] = ("pivot" if _pocket_piv else "no_pivot")
+
+        # Morning Star Neuron (92): 3-candle bottom reversal pattern
+        _morn_star = bool(signals.get("morning_star", False))
+        e["morning_star_at_entry"] = _morn_star
+        e["morning_star_state"] = ("morning_star" if _morn_star else "none")
+
+        # Three White Soldiers Neuron (93): three consecutive strong bull candles
+        _tws_v = bool(signals.get("three_white_soldiers", False))
+        e["tws_at_entry"] = _tws_v
+        e["tws_state"] = ("three_soldiers" if _tws_v else "none")
+
+        # Bullish Engulfing Neuron (94): engulfing candle at support = reversal
+        _beng_v = bool(signals.get("bullish_engulfing", False))
+        e["beng_at_entry"] = _beng_v
+        e["beng_state"] = ("engulfing" if _beng_v else "none")
+
+        # Hammer Candle Neuron (95): hammer at support = strong rejection of lower prices
+        _hammer_v = bool(signals.get("hammer", False))
+        e["hammer_at_entry"] = _hammer_v
+        e["hammer_state"] = ("hammer" if _hammer_v else "none")
+
+        # Cup-and-Handle Pivot Neuron (96): classic O'Neil cup-and-handle
+        _ch_pivot = float(signals.get("cup_handle_pivot", 0.0) or 0.0)
+        _ch_v = bool(signals.get("cup_handle", False))
+        _ch_at_pivot = _ch_v and _ch_pivot > 0 and abs(_entry_pr - _ch_pivot) / _ch_pivot < 0.02 if _ch_pivot > 0 else _ch_v
+        e["cup_handle_at_entry"] = _ch_v
+        e["ch_pivot_proximity"] = "at_pivot" if _ch_at_pivot else ("cup_no_pivot" if _ch_v else "none")
+
+        # Double Bottom Neckline Neuron (97): entering at double bottom neckline breakout
+        _dbn = bool(signals.get("double_bottom_neckline", False))
+        e["dbn_at_entry"] = _dbn
+        e["dbn_state"] = ("neckline_break" if _dbn else "below_neck")
+
+        # Earnings Growth Signal Neuron (98): strong EPS growth = fundamental momentum
+        _earn_gr = float(signals.get("earnings_growth", 0.0) or 0.0)
+        e["earnings_growth_at_entry"] = round(_earn_gr, 1)
+        e["eg_tier"] = ("accelerating" if _earn_gr >= 50 else "strong" if _earn_gr >= 25 else "positive" if _earn_gr > 0 else "negative")
+
+        # Supertrend Stop Proximity Neuron (99): how tight is the Supertrend stop?
+        _st_stop = float(signals.get("supertrend_stop", 0.0) or 0.0)
+        _st_gap_pct = round((_entry_pr - _st_stop) / _entry_pr * 100, 2) if _st_stop > 0 and _entry_pr > 0 else 0.0
+        e["st_stop_gap_pct"] = _st_gap_pct
+        e["st_gap_tier"] = ("tight" if 0 < _st_gap_pct <= 2.0 else "normal" if _st_gap_pct <= 5.0 else "wide" if _st_gap_pct > 5.0 else "no_st")
+
+        # Signal Combination Score Neuron (100): count of premium signals confirming — the master neuron
+        _premium_sigs = [
+            bool(signals.get("vcp", False)), bool(signals.get("cup_handle", False)),
+            bool(signals.get("at_breakout", False)), bool(signals.get("mtf_triple", False)),
+            bool(signals.get("ttm_squeeze_fired", False)), bool(signals.get("gap_and_hold", False)),
+            bool(signals.get("orb_breakout", False)), bool(signals.get("rvol_surge", False)),
+            bool(signals.get("supertrend_bull", False)), bool(signals.get("obv_rising", False)),
+        ]
+        _premium_count = sum(_premium_sigs)
+        e["premium_signal_count"] = _premium_count
+        e["premium_tier"] = ("elite" if _premium_count >= 6 else "strong" if _premium_count >= 4
+                              else "normal" if _premium_count >= 2 else "weak")
+
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
         _SIGNAL_KEYS = [
@@ -1930,6 +1991,16 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             _track("true_alpha_perf",     "true_alpha_tier",      "negative")     # N88
             _track("pivot_support_perf",  "pivot_state",          "between")      # N89
             _track("vcp_perf",            "vcp_state",            "no_vcp")       # N90
+            _track("pocket_pivot_perf",   "pocket_pivot_state",   "no_pivot")     # N91
+            _track("morning_star_perf",   "morning_star_state",   "none")         # N92
+            _track("tws_perf",            "tws_state",            "none")         # N93
+            _track("beng_perf",           "beng_state",           "none")         # N94
+            _track("hammer_perf",         "hammer_state",         "none")         # N95
+            _track("cup_handle_perf",     "ch_pivot_proximity",   "none")         # N96
+            _track("dbn_perf",            "dbn_state",            "below_neck")   # N97
+            _track("eg_tier_perf",        "eg_tier",              "negative")     # N98
+            _track("st_gap_perf",         "st_gap_tier",          "no_st")        # N99
+            _track("premium_tier_perf",   "premium_tier",         "weak")         # N100
         except Exception:
             pass
 
@@ -12745,6 +12816,54 @@ def run():
         _ta_insights  = _tune_binary("true_alpha_perf",     "high",        "negative",     "N88 True Alpha")
         _pvt_insights = _tune_binary("pivot_support_perf",  "at_support",  "between",      "N89 Pivot Supp")
         _vcp_insights = _tune_binary("vcp_perf",            "vcp",         "no_vcp",       "N90 VCP Pattern")
+        _pp_insights  = _tune_binary("pocket_pivot_perf",  "pivot",       "no_pivot",     "N91 Pocket Pivot")
+        _ms_insights  = _tune_binary("morning_star_perf",  "morning_star","none",         "N92 Morning Star")
+        _tw_insights  = _tune_binary("tws_perf",           "three_soldiers","none",       "N93 Three Soldiers")
+        _be_insights  = _tune_binary("beng_perf",          "engulfing",   "none",         "N94 Bull Engulfing")
+        _hm_insights  = _tune_binary("hammer_perf",        "hammer",      "none",         "N95 Hammer Candle")
+        _ch_insights  = _tune_binary("cup_handle_perf",    "at_pivot",    "none",         "N96 Cup+Handle")
+        _dbn_insights = _tune_binary("dbn_perf",           "neckline_break","below_neck", "N97 DB Neckline")
+
+        # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
+        _eg_raw = tlog.get("eg_tier_perf", {})
+        _eg_insights = []
+        for _egk, _egd in _eg_raw.items():
+            if _egd.get("total", 0) >= 3:
+                _eg_insights.append({"state": _egk, "win_rate": _egd.get("win_rate", 50),
+                                     "avg_pnl": _egd.get("avg_pnl", 0), "total": _egd.get("total", 0)})
+        if _eg_insights:
+            _eg_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _eg_insights)
+            _learn_log.append(f"Earnings growth tiers: {_eg_sum}")
+
+        # ── 99. Supertrend Stop Gap (tight vs wide stop) ─────────────────────────
+        _stg_raw = tlog.get("st_gap_perf", {})
+        _stg_insights = []
+        for _stgk, _stgd in _stg_raw.items():
+            if _stgd.get("total", 0) >= 3:
+                _stg_insights.append({"state": _stgk, "win_rate": _stgd.get("win_rate", 50),
+                                      "avg_pnl": _stgd.get("avg_pnl", 0), "total": _stgd.get("total", 0)})
+        if _stg_insights:
+            _stg_tight = next((s for s in _stg_insights if s["state"] == "tight"), None)
+            _stg_wide  = next((s for s in _stg_insights if s["state"] == "wide"), None)
+            _stg_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _stg_insights)
+            _learn_log.append(f"ST stop gap tiers: {_stg_sum}")
+            if _stg_tight and _stg_wide and _stg_tight["win_rate"] > _stg_wide["win_rate"] + 10:
+                _learn_log.append(f"Tight ST stop wins {_stg_tight['win_rate']:.0f}% vs wide {_stg_wide['win_rate']:.0f}%")
+
+        # ── 100. Premium Signal Count (Master Neuron) ─────────────────────────────
+        _pt_raw = tlog.get("premium_tier_perf", {})
+        _pt_insights = []
+        for _ptk, _ptd in _pt_raw.items():
+            if _ptd.get("total", 0) >= 3:
+                _pt_insights.append({"state": _ptk, "win_rate": _ptd.get("win_rate", 50),
+                                     "avg_pnl": _ptd.get("avg_pnl", 0), "total": _ptd.get("total", 0)})
+        if _pt_insights:
+            _pt_elite = next((s for s in _pt_insights if s["state"] == "elite"), None)
+            _pt_weak  = next((s for s in _pt_insights if s["state"] == "weak"), None)
+            _pt_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _pt_insights)
+            _learn_log.append(f"Premium signal tiers: {_pt_sum}")
+            if _pt_elite and _pt_weak and _pt_elite["win_rate"] > _pt_weak["win_rate"] + 15:
+                _learn_log.append(f"MASTER NEURON: Elite signals wins {_pt_elite['win_rate']:.0f}% vs weak {_pt_weak['win_rate']:.0f}%")
 
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
@@ -12846,6 +12965,16 @@ def run():
             "true_alpha_perf":      _ta_insights,            # true stock alpha vs market vs outcome
             "pivot_support_perf":   _pvt_insights,           # at pivot S1/S2 support level vs outcome
             "vcp_perf":             _vcp_insights,           # VCP (O'Neil volatility contraction) vs outcome
+            "pocket_pivot_perf":    _pp_insights,            # O'Neil pocket pivot surge vs outcome
+            "morning_star_perf":    _ms_insights,            # morning star 3-candle reversal vs outcome
+            "tws_perf":             _tw_insights,            # three white soldiers vs outcome
+            "beng_perf":            _be_insights,            # bullish engulfing candle vs outcome
+            "hammer_perf":          _hm_insights,            # hammer at support vs outcome
+            "cup_handle_perf":      _ch_insights,            # cup+handle at pivot vs outcome
+            "dbn_perf":             _dbn_insights,           # double bottom neckline break vs outcome
+            "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
+            "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
+            "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

@@ -54503,6 +54503,77 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── N91-N100 MASTER NEURONS panel ────────────────────────────────────
+        const ppP  = lp.pocket_pivot_perf  || [];
+        const msP  = lp.morning_star_perf  || [];
+        const twsP = lp.tws_perf           || [];
+        const beP  = lp.beng_perf          || [];
+        const hmP  = lp.hammer_perf        || [];
+        const chP  = lp.cup_handle_perf    || [];
+        const dbnP = lp.dbn_perf           || [];
+        const egP  = lp.eg_tier_perf       || [];
+        const stgP = lp.st_gap_perf        || [];
+        const ptP  = lp.premium_tier_perf  || [];
+        if (!ppP.length && !msP.length && !twsP.length && !beP.length &&
+            !hmP.length && !chP.length && !dbnP.length && !egP.length &&
+            !stgP.length && !ptP.length) return '';
+        const mkS = (s, icon, bg) => {
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.12rem;text-align:center;opacity:.25"><div style="font-size:6px">${icon}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${bg};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.12rem;text-align:center">
+            <div style="font-size:6px">${icon}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:4px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%·${s.total}T</div>
+          </div>`;
+        };
+        // 5-candle pattern mini-row
+        const candlePats = [
+          { arr:ppP,  icon:'🎯',  posK:'pivot',         bg:'rgba(0,230,118,.09)', lbl:'PP' },
+          { arr:msP,  icon:'🌅',  posK:'morning_star',  bg:'rgba(255,213,79,.08)',lbl:'MS' },
+          { arr:twsP, icon:'💪',  posK:'three_soldiers',bg:'rgba(0,230,118,.08)',lbl:'3WS' },
+          { arr:beP,  icon:'🍃',  posK:'engulfing',     bg:'rgba(0,230,118,.07)',lbl:'ENG' },
+          { arr:hmP,  icon:'🔨',  posK:'hammer',        bg:'rgba(100,149,237,.08)',lbl:'HMR'},
+          { arr:chP,  icon:'☕',  posK:'at_pivot',      bg:'rgba(255,235,59,.07)',lbl:'C&H'},
+          { arr:dbnP, icon:'🔻🔻',posK:'neckline_break',bg:'rgba(100,200,255,.07)',lbl:'DBN'},
+        ].filter(r => r.arr.length > 0);
+        const candleHtml = candlePats.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5px;color:#ffcc80;font-weight:700;margin-bottom:.07rem">🕯️ CANDLE/PATTERN NEURONS (N91-N97)</div>
+          <div style="display:grid;grid-template-columns:repeat(${Math.min(candlePats.length,7)},1fr);gap:.1rem">
+            ${candlePats.map(r => { const pos = r.arr.find(s=>s.state===r.posK); return mkS(pos, r.icon+' '+r.lbl, r.bg); }).join('')}
+          </div>
+        </div>` : '';
+        // EG tier (4 cells)
+        const egElite = egP.find(s=>s.state==='accelerating'), egStr = egP.find(s=>s.state==='strong');
+        const egPos = egP.find(s=>s.state==='positive'), egNeg = egP.find(s=>s.state==='negative');
+        const egHtml = egP.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5px;color:#69f0ae;font-weight:700;margin-bottom:.07rem">📊 EARNINGS GROWTH (N98): EPS growth rate at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.1rem">
+            ${mkS(egElite,'🚀Accel','rgba(0,230,118,.1)')}${mkS(egStr,'💪Strg','rgba(0,230,118,.07)')}${mkS(egPos,'📈Pos','rgba(255,213,79,.06)')}${mkS(egNeg,'📉Neg','rgba(239,83,80,.06)')}
+          </div>
+        </div>` : '';
+        // ST gap tier (3 cells)
+        const stgTight = stgP.find(s=>s.state==='tight'), stgNorm = stgP.find(s=>s.state==='normal'), stgWide = stgP.find(s=>s.state==='wide');
+        const stgHtml = stgP.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5px;color:#80d8ff;font-weight:700;margin-bottom:.07rem">🛡️ ST STOP GAP (N99): Supertrend stop proximity</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.1rem">
+            ${mkS(stgTight,'🛡️Tight','rgba(0,230,118,.09)')}${mkS(stgNorm,'📊Norm','rgba(255,213,79,.06)')}${mkS(stgWide,'⚠️Wide','rgba(239,83,80,.06)')}
+          </div>
+        </div>` : '';
+        // Premium tier (4 cells) — MASTER NEURON
+        const ptElite = ptP.find(s=>s.state==='elite'), ptStrong = ptP.find(s=>s.state==='strong');
+        const ptNorm = ptP.find(s=>s.state==='normal'), ptWeak = ptP.find(s=>s.state==='weak');
+        const ptHtml = ptP.length ? `<div>
+          <div style="font-size:5.5px;color:#ff9eb5;font-weight:900;margin-bottom:.07rem">⭐ MASTER NEURON (N100): premium signal count tier</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.1rem">
+            ${mkS(ptElite,'⭐×6','rgba(0,230,118,.12)')}${mkS(ptStrong,'⭐×4','rgba(0,230,118,.08)')}${mkS(ptNorm,'⭐×2','rgba(255,213,79,.06)')}${mkS(ptWeak,'–','rgba(239,83,80,.05)')}
+          </div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:linear-gradient(135deg,rgba(255,158,181,.03),rgba(0,0,0,.15));border-radius:6px;border:1px solid rgba(255,158,181,.15)">
+          <div style="font-size:5.5px;color:#ff9eb5;font-weight:900;margin-bottom:.25rem">🧠 MASTER NEURONS (N91-N100) — 100-Neuron AI Brain Complete</div>
+          ${candleHtml}${egHtml}${stgHtml}${ptHtml}
+        </div>`;
+      })()}
+      ${(() => {
         // ── N76-N83 Pattern Confirmation Neurons ─────────────────────────────
         const dbP   = lp.double_bottom_perf  || [];
         const atbP  = lp.at_breakout_perf    || [];
