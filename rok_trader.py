@@ -7367,9 +7367,15 @@ def run():
                 "analyst_net_rev":    sig.get("analyst_net_rev", 0),
                 "analyst_price_tgt":  sig.get("analyst_price_tgt", 0.0),
                 "analyst_upside_pct": sig.get("analyst_upside_pct", 0.0),
-                # News headlines for position card (from _news_velocity cache)
+                # News headlines and catalyst info for position card
                 "news_headlines":     _NEWS_VEL_CACHE.get(sym, ({}, 0))[0].get("headlines", [])
                                       if sym in _NEWS_VEL_CACHE else [],
+                "catalyst_type":      _NEWS_VEL_CACHE.get(sym, ({}, 0))[0].get("catalyst_type", "none")
+                                      if sym in _NEWS_VEL_CACHE else "none",
+                "catalyst_urg":       _NEWS_VEL_CACHE.get(sym, ({}, 0))[0].get("catalyst_urg", 0)
+                                      if sym in _NEWS_VEL_CACHE else 0,
+                "catalyst_dir":       _NEWS_VEL_CACHE.get(sym, ({}, 0))[0].get("catalyst_dir", "none")
+                                      if sym in _NEWS_VEL_CACHE else "none",
             }
 
         _pos_list_raw = []
@@ -7413,7 +7419,7 @@ def run():
                 "mfe":           peaks.get(_sym, {}).get("mfe", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
             })
         tlog["positions"] = _pos_list_raw
-        # Post-process: refine expected move with ATM IV and add ATR-based position sizing
+        # Post-process: compute active trailing stop, refine EM with ATM IV, ATR position sizing
         import math as _math2
         for _pos in tlog.get("positions", []):
             _ls = _pos.get("live_signals", {})
@@ -7437,6 +7443,23 @@ def run():
                     _ls["expected_move_pct_wk"] = round(_em_wk / _pr * 100, 2)
                 except Exception:
                     pass
+            # Active dynamic trailing stop: mirrors the live trading logic
+            # Shows the trader exactly what stop % is currently protecting this position
+            _pnl = _pos.get("pnl_pct", 0) or 0
+            _peak_p = _pos.get("peak_price", 0) or _pr
+            if   _pnl >= 25: _dyn_trail = 1.5
+            elif _pnl >= 20: _dyn_trail = 1.8
+            elif _pnl >= 15: _dyn_trail = 2.0
+            elif _pnl >= 10: _dyn_trail = 3.0
+            elif _pnl >=  5: _dyn_trail = TRAILING_STOP_PCT * 100
+            else:
+                _atr_trail = _atr / _pr * 100 * 2.5 if (_atr > 0 and _pr > 0) else TRAILING_STOP_PCT * 100
+                _dyn_trail = max(4.0, min(9.0, _atr_trail))
+            _trail_stop_price = round(_peak_p * (1 - _dyn_trail / 100), 2) if _peak_p > 0 else 0
+            _dist_from_trail  = round((_pr - _trail_stop_price) / _pr * 100, 2) if (_trail_stop_price > 0 and _pr > 0) else 0
+            _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
+            _pos["trail_stop_price"] = _trail_stop_price
+            _pos["dist_from_trail"]  = _dist_from_trail
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
 

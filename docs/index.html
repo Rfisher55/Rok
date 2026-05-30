@@ -52747,6 +52747,24 @@ function _renderIntelReport(el, intel) {
       if (dh >= 7 && pnl < 1.5 && pnl > -2) {
         items.push({ icon: '⏰', col: '#ff9800', text: `$${p.ticker}: Held ${dh} days with minimal gain — review thesis or set time stop` });
       }
+      // High-urgency catalyst alert for held positions
+      const catType = p.catalyst_type || (p.live_signals || {}).catalyst_type || 'none';
+      const catUrg  = p.catalyst_urg  || (p.live_signals || {}).catalyst_urg  || 0;
+      const catDir  = p.catalyst_dir  || (p.live_signals || {}).catalyst_dir  || 'none';
+      if (catUrg >= 4 && catType !== 'none') {
+        const urgIcon  = catUrg >= 5 ? '🚨' : '⚡';
+        const typeLabels = {earnings:'Earnings catalyst', fda:'FDA catalyst', ma:'M&A catalyst',
+                            insider:'Insider buying', legal:'Legal/regulatory risk'};
+        const typeLabel = typeLabels[catType] || `${catType} catalyst`;
+        const dirNote  = catDir === 'bull' ? ' (BULLISH)' : catDir === 'bear' ? ' (BEARISH — consider reducing)' : '';
+        items.push({ icon: urgIcon, col: catDir === 'bear' ? '#ef5350' : '#ffd54f', text: `$${p.ticker}: ${typeLabel}${dirNote} — high urgency, review position` });
+      }
+      // Near trailing stop warning
+      const df = p.dist_from_trail || 0;
+      const tp = p.trail_stop_price || 0;
+      if (df > 0 && df < 3 && tp > 0) {
+        items.push({ icon: '⚠', col: '#ef5350', text: `$${p.ticker}: NEAR TRAILING STOP — only ${df.toFixed(1)}% above bot's trail at $${tp.toFixed(2)}. Price must hold here.` });
+      }
     });
 
     // 5. Top scan opportunity
@@ -55334,6 +55352,16 @@ window.renderSectorRotation = renderSectorRotation;
             const icon = distToStop < 2 ? '⚠' : distToStop < 4 ? '⚡' : '';
             return `<span style="font-size:7px;font-weight:800;color:${col}" title="Distance to stop loss">STOP${icon} ${distToStop.toFixed(1)}%@$${stopLevel.toFixed(2)}</span>`;
           })() : '';
+          // Active dynamic trailing stop: shows bot's current trailing stop level
+          const lsTrail = (() => {
+            const tp = p.trail_stop_price || 0;
+            const dt = p.dyn_trail_pct || 0;
+            const df = p.dist_from_trail || 0;
+            if (!tp || !dt) return '';
+            const tCol = df < 2 ? '#ef5350' : df < 4 ? '#ffa726' : df < 6 ? '#ffd54f' : '#69b0a0';
+            const icon = df < 2 ? '⚠' : df < 4 ? '⚡' : '';
+            return `<span style="font-size:6.5px;font-weight:800;color:${tCol}" title="Dynamic trailing stop: ${dt}% from peak = $${tp.toFixed(2)} — bot will sell if price falls here">${icon}TRAIL${dt}%@$${tp.toFixed(2)}</span>`;
+          })();
           // R:R progress bar — visual strip from stop → entry → current → target
           const rrBarHtml = (() => {
             const stop   = stopLevel || 0;
@@ -55408,7 +55436,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRMult||lsDaysHeld||lsMAE) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;align-items:center">${lsRMult}${lsDaysHeld}${lsMAE}</div>` : ''}
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsRsSec||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsRsSec}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
-                ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
+                ${(distStopHtml||lsTrail||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${lsTrail}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels||lsIV) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsIV}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
