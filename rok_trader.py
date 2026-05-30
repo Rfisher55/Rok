@@ -3067,10 +3067,11 @@ def get_market_breadth() -> dict:
         return {"adv_pct": 50.0, "note": "unknown", "adv": 0, "total": 0}
 
 
-def ai_market_context(regime, top_movers, sector_adjs: dict = None):
+def ai_market_context(regime, top_movers, sector_adjs: dict = None, extra_ctx: dict = None):
     """
     Ask Claude for a macro market read that adjusts our overall confidence.
     Returns an adjustment score -5 to +5.
+    extra_ctx: optional dict with rs_leaders, ema21_setups, scan_adv_pct, high_corr_pairs.
     """
     if not ANTHROPIC_KEY:
         return 0
@@ -3084,16 +3085,27 @@ def ai_market_context(regime, top_movers, sector_adjs: dict = None):
             sec_str = (f"\n- Hot sectors: {', '.join(f'{s}({v:+d})' for s,v in hot)}"
                        f"\n- Cold sectors: {', '.join(f'{s}({v:+d})' for s,v in cold)}")
         breadth = get_market_breadth()
+        # Extra context: RS Rating leaders, EMA21 setups, breadth
+        extra_str = ""
+        if extra_ctx:
+            if extra_ctx.get("rs_leaders"):
+                extra_str += f"\n- RS Rating leaders (≥80): {', '.join(extra_ctx['rs_leaders'][:6])}"
+            if extra_ctx.get("ema21_setups"):
+                extra_str += f"\n- EMA21 pullback setups: {', '.join(extra_ctx['ema21_setups'][:5])}"
+            if extra_ctx.get("scan_adv_pct") is not None:
+                extra_str += f"\n- Internal breadth: {extra_ctx['scan_adv_pct']}% of scanned stocks advancing"
+            if extra_ctx.get("high_corr_pairs"):
+                extra_str += f"\n- Correlated position pairs: {', '.join(extra_ctx['high_corr_pairs'][:3])}"
         prompt = (
             f"Automated US equity trader decision for today:\n"
             f"- Regime: {regime['regime']} (VIX={regime['vix']:.0f}, SPY 5d={regime['spy_trend']:+.1f}%)\n"
             f"- Market breadth: {breadth['adv_pct']}% sectors advancing ({breadth['note']})\n"
             f"- FOMC/macro event {'TODAY — be defensive' if on_macro else 'not imminent'}\n"
-            f"- Top movers: {movers_str}{sec_str}\n\n"
+            f"- Top movers: {movers_str}{sec_str}{extra_str}\n\n"
             f"Should the bot be aggressive (+3 to +5 = higher scores unlock more buys) "
             f"or cautious (-3 to -5 = raise the bar, fewer buys) today?\n"
-            f"Consider: VIX level, breadth, macro risk, sector leadership.\n"
-            f"Return ONLY JSON: {{\"adj\":<-5 to 5>, \"note\":\"<8 words max>\"}}"
+            f"Consider: VIX level, breadth, macro risk, sector leadership, RS leaders.\n"
+            f"Return ONLY JSON: {{\"adj\":<-5 to 5>, \"note\":\"<10 words max>\"}}"
         )
         r = requests.post(
             "https://api.anthropic.com/v1/messages",
@@ -6143,7 +6155,19 @@ def run():
 
     # AI market context adjustment (use top movers from screeners)
     top_movers_for_ai = [s for s in candidates if s not in BASE_UNIVERSE][:12]
-    regime_adj   = ai_market_context(regime, top_movers_for_ai, sector_adjs=sector_adjs)
+    _rs_leaders    = sorted([tk for tk, sig in live.items() if (sig.get("rs_rating", 50) or 50) >= 80],
+                            key=lambda tk: -(live[tk].get("rs_rating", 50) or 50))[:8]
+    _ema21_setups  = [tk for tk, sig in live.items() if sig.get("ema21_pullback", False)][:6]
+    _prior_hcp     = _prior_tlog.get("portfolio_correlation", {}).get("high_corr_pairs", [])
+    _high_corr_strs = [p["pair"] for p in _prior_hcp if p.get("corr", 0) >= 0.85][:4]
+    _extra_ctx = {
+        "rs_leaders":    _rs_leaders,
+        "ema21_setups":  _ema21_setups,
+        "scan_adv_pct":  _scan_adv_pct,
+        "high_corr_pairs": _high_corr_strs,
+    }
+    regime_adj   = ai_market_context(regime, top_movers_for_ai, sector_adjs=sector_adjs,
+                                     extra_ctx=_extra_ctx)
 
     # Pre-market gap scan (bonus score for strong gap-up stocks)
     gap_ups = set()
