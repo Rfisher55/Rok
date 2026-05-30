@@ -3768,14 +3768,14 @@ def _fetch_atm_iv(sym: str) -> float:
 
 def _fetch_spy_perf() -> dict:
     """
-    Fetch SPY's 1-day and 5-day return once per run.
-    Stored in _SPY_PERF_CACHE so individual stocks can compute relative strength and beta.
+    Fetch SPY performance over multiple timeframes once per run.
+    Stored in _SPY_PERF_CACHE so individual stocks can compute relative strength, beta, and RS Rating.
     """
     global _SPY_PERF_CACHE
     if _SPY_PERF_CACHE:
         return _SPY_PERF_CACHE
     try:
-        spy = yf.download("SPY", period="90d", interval="1d",
+        spy = yf.download("SPY", period="2y", interval="1d",
                           auto_adjust=True, progress=False)
         closes = list(spy["Close"].dropna())
         if len(closes) >= 2:
@@ -3783,9 +3783,13 @@ def _fetch_spy_perf() -> dict:
             _SPY_PERF_CACHE["d5"]     = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5 else 0
             _SPY_PERF_CACHE["d10"]    = (closes[-1] - closes[-10]) / closes[-10] * 100 if len(closes) >= 10 else 0
             _SPY_PERF_CACHE["d63"]    = (closes[-1] - closes[-63]) / closes[-63] * 100 if len(closes) >= 63 else 0
+            _SPY_PERF_CACHE["d126"]   = (closes[-1] - closes[-126]) / closes[-126] * 100 if len(closes) >= 126 else 0
+            _SPY_PERF_CACHE["d189"]   = (closes[-1] - closes[-189]) / closes[-189] * 100 if len(closes) >= 189 else 0
+            _SPY_PERF_CACHE["d252"]   = (closes[-1] - closes[-252]) / closes[-252] * 100 if len(closes) >= 252 else 0
             _SPY_PERF_CACHE["closes"] = closes  # full close history for beta regression
     except Exception:
-        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0, "d63": 0.0, "closes": []}
+        _SPY_PERF_CACHE = {"d1": 0.0, "d5": 0.0, "d10": 0.0, "d63": 0.0,
+                           "d126": 0.0, "d189": 0.0, "d252": 0.0, "closes": []}
     return _SPY_PERF_CACHE
 
 
@@ -4547,11 +4551,13 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
-    # Relative strength vs SPY (1-day, 5-day, 63-day quarterly)
+    # Relative strength vs SPY (1-day, 5-day, 63-day quarterly, 252-day annual)
     spy  = _fetch_spy_perf()
     rs1  = round(chg_pct - spy.get("d1", 0), 2)   # outperformance vs SPY today
     rs5  = 0.0
     rs63 = 0.0
+    rs252 = 0.0
+    rs_rating = 50   # IBD-style 1-99 scale (50 = average vs market)
     try:
         dc = list(daily["Close"])
         if len(dc) >= 5:
@@ -4560,6 +4566,24 @@ def _extract(daily, hourly):
         if len(dc) >= 63:
             ret63 = (dc[-1] - dc[-63]) / dc[-63] * 100
             rs63  = round(ret63 - spy.get("d63", 0), 2)
+        # 12-month relative strength: annual trend vs SPY — IBD RS Rating backbone
+        if len(dc) >= 252:
+            ret252 = (dc[-1] - dc[-252]) / dc[-252] * 100
+            rs252  = round(ret252 - spy.get("d252", 0), 2)
+        elif len(dc) >= 126:
+            # Proxy: extrapolate from 6-month data
+            ret126 = (dc[-1] - dc[-126]) / dc[-126] * 100
+            rs252  = round((ret126 - spy.get("d126", 0)) * 0.8, 2)
+        elif len(dc) >= 63:
+            rs252  = round(rs63 * 0.6, 2)   # rough proxy if only 63d available
+
+        # IBD-style RS Rating (1-99): IBD weights recent quarter 40%, prior quarters 20% each
+        # Without a full universe to rank, we map vs a calibrated range: -60 to +60
+        _q1 = rs63 * 0.40           # most recent quarter (40% weight)
+        _q_rest = rs252 * 0.60      # rest of 12-month (60% weight)
+        _rs_composite = _q1 + _q_rest
+        # Map composite to 1-99: center=50, typical range ±50
+        rs_rating = max(1, min(99, round(50 + _rs_composite)))
     except Exception:
         pass
 
@@ -4675,6 +4699,8 @@ def _extract(daily, hourly):
         "rs1":             rs1,
         "rs5":             rs5,
         "rs63":            rs63,
+        "rs252":           rs252,
+        "rs_rating":       rs_rating,
         "mtf_aligned":       mtf_aligned,
         "mtf_triple":        mtf_triple,
         "mtf_score":         mtf_score,
@@ -5141,6 +5167,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     rs5        = d.get("rs5",          0) or 0   # relative strength vs SPY (5-day)
     rs63       = d.get("rs63",         0) or 0   # 63-day RS vs SPY (quarterly — O'Neil style)
     rs_sector  = d.get("rs_sector",    0) or 0   # 63-day RS vs own sector ETF (sector leadership)
+    rs_rating  = d.get("rs_rating",   50) or 50  # IBD-style 1-99 composite RS Rating
 
     # Relative strength vs SPY (+14/-12)
     # Strong relative strength = institutional buying even when SPY flat
@@ -5168,6 +5195,15 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif rs_sector >  2: s +=  2
     elif rs_sector < -10: s -= 6   # laggard even vs weak sector — avoid
     elif rs_sector <  -5: s -= 3
+
+    # IBD RS Rating (1-99): 12-month composite rank vs market (+12/-8)
+    # Stocks with RS≥90 have historically led the market; RS<40 = chronic underperformers
+    if   rs_rating >= 90: s += 12   # IBD elite: top 10% RS stocks produce the biggest winners
+    elif rs_rating >= 80: s +=  8   # strong leader — institutional focus
+    elif rs_rating >= 70: s +=  4   # above average — worth watching
+    elif rs_rating >= 60: s +=  2   # mild edge
+    elif rs_rating <= 30: s -=  8   # chronic underperformer — avoid longs
+    elif rs_rating <= 40: s -=  4   # below-average RS — weak relative performance
 
     # Multi-timeframe trend filter: daily EMA5/10 alignment (+8/-10)
     if   daily_tr > 0.5:  s +=  8
@@ -5753,11 +5789,12 @@ def bearish_score(tk, d):
 # ── Position sizing ───────────────────────────────────────────────────────────
 def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
                   score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5,
-                  true_beta=1.0):
+                  true_beta=1.0, hv_ratio=1.0):
     """
-    ATR-based risk sizing with full Kelly criterion and beta-adjusted position sizing.
+    ATR-based risk sizing with full Kelly criterion, beta-adjusted, and HV-regime-adaptive sizing.
     Full Kelly: f* = (W*B - L) / B  where W=win%, L=loss%, B=avg_win/avg_loss (payoff)
     Beta adjustment: high-beta stocks get smaller positions (equal-risk sizing).
+    HV ratio: hv5/hv20 — expanding vol shrinks size, contracting vol allows slightly larger.
     """
     vix_scale = 1.0
     if vix > VIX_EXTREME_THRESH:   vix_scale = 0.4
@@ -5772,6 +5809,16 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
     if drawdown_pct > 10:    vix_scale *= 0.4   # -10%+ drawdown: very conservative
     elif drawdown_pct > 5:   vix_scale *= 0.65  # -5%+ drawdown: defensive
     elif drawdown_pct > 2:   vix_scale *= 0.85  # -2%+ drawdown: slightly cautious
+
+    # HV regime adjustment: use individual stock's short-term vs medium-term volatility
+    # hv_ratio = hv5 / hv20: >1.5 = vol surging (risky/choppy), <0.65 = vol compressed (coil)
+    if hv_ratio and hv_ratio > 0:
+        if   hv_ratio >= 2.5: vix_scale *= 0.65   # vol erupting: chop/blowoff, reduce hard
+        elif hv_ratio >= 1.8: vix_scale *= 0.78   # vol spiking: be careful
+        elif hv_ratio >= 1.4: vix_scale *= 0.88   # slightly above norm: mild caution
+        elif hv_ratio <= 0.55: vix_scale *= 1.08  # vol extremely compressed: spring-loaded setup
+        elif hv_ratio <= 0.70: vix_scale *= 1.04  # vol contracting: slightly favor
+    vix_scale = min(1.5, max(0.2, vix_scale))
 
     # Beta-adjusted position sizing: equal-risk allocation across different beta stocks
     # A 2.0-beta stock moves 2× the market — size it at 1/2 of a 1.0-beta position
@@ -7044,6 +7091,8 @@ def run():
                 "fib_level_618":     live.get(tk, {}).get("fib_level_618", 0.0),
                 "w52_range_pos":     live.get(tk, {}).get("w52_range_pos", 0.0),
                 "rs_sector":         round(live.get(tk, {}).get("rs_sector", 0.0), 2),
+                "rs252":             round(live.get(tk, {}).get("rs252", 0.0), 2),
+                "rs_rating":         live.get(tk, {}).get("rs_rating", 50),
                 # Kelly-suggested position size as % of portfolio (half-Kelly for safety)
                 "kelly_size_pct":    round(max(0, min(10.0, (
                     (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
@@ -7069,10 +7118,14 @@ def run():
                     price    = d["price"]
                     atr      = d.get("atr")
                     _tk_beta = d.get("true_beta", 1.0) or 1.0
+                    _tk_hv5  = d.get("hv5",  0.0) or 0.0
+                    _tk_hv20 = d.get("hv20", 0.0) or 0.0
+                    _tk_hv_ratio = (_tk_hv5 / _tk_hv20) if _tk_hv20 > 0 else 1.0
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct,
-                                             payoff_ratio=_payoff_ratio, true_beta=_tk_beta)
+                                             payoff_ratio=_payoff_ratio, true_beta=_tk_beta,
+                                             hv_ratio=_tk_hv_ratio)
                     # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
                     # allow slightly larger positions; if deeply underwater, shrink further
                     if _portfolio_heat > 5:
@@ -7497,6 +7550,8 @@ def run():
                 "mfe":           peaks.get(_sym, {}).get("mfe", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "atr_at_entry":  peaks.get(_sym, {}).get("atr_at_entry", 0.0) if isinstance(peaks.get(_sym), dict) else 0.0,
                 "grade":         momentum_grade(live.get(_sym, {}), score(_sym, live.get(_sym, {}))) if live.get(_sym) else "?",
+                "rs_rating":     live.get(_sym, {}).get("rs_rating", 50) if live.get(_sym) else 50,
+                "rs252":         round(live.get(_sym, {}).get("rs252", 0.0), 2) if live.get(_sym) else 0.0,
             })
         tlog["positions"] = _pos_list_raw
         # Post-process: compute active trailing stop, refine EM with ATM IV, ATR position sizing

@@ -54960,10 +54960,64 @@ window.renderSectorRotation = renderSectorRotation;
           </div>
         </div>`;
       }
-      // Portfolio Correlation Matrix: high-correlation pairs = hidden concentration risk
+      // Portfolio Correlation Heatmap: full pairwise matrix (20d) — color-coded grid
       const portCorr = data.portfolio_correlation || {};
+      const corrMatrix = portCorr.matrix || {};
       const hcPairs = portCorr.high_corr_pairs || [];
-      if (hcPairs.length > 0) {
+      if (Object.keys(corrMatrix).length > 0) {
+        // Extract unique tickers from the matrix keys
+        const _corrTickers = [...new Set(Object.keys(corrMatrix).flatMap(k => k.split('/')))].sort();
+        const _cellW = Math.max(28, Math.floor(250 / Math.max(1, _corrTickers.length + 1)));
+        // Build grid: header row + data rows
+        const _corrColor = (r) => {
+          if (r >= 0.95) return '#ef5350';
+          if (r >= 0.85) return '#ffa726';
+          if (r >= 0.70) return '#ffd54f';
+          if (r <= -0.50) return '#82b1ff';
+          if (r <= -0.30) return '#b3e5fc';
+          return '#444';
+        };
+        const _corrBg = (r) => {
+          if (r >= 0.95) return 'rgba(239,83,80,.25)';
+          if (r >= 0.85) return 'rgba(255,167,38,.18)';
+          if (r >= 0.70) return 'rgba(255,213,79,.12)';
+          if (r <= -0.50) return 'rgba(130,177,255,.15)';
+          return 'transparent';
+        };
+        let _heatRows = `<div style="display:flex;gap:1px;margin-bottom:1px">
+          <div style="width:${_cellW}px;font-size:5.5px;color:#333"> </div>
+          ${_corrTickers.map(t => `<div style="width:${_cellW}px;font-size:5.5px;color:#4a6fa5;text-align:center;overflow:hidden;white-space:nowrap">${t}</div>`).join('')}
+        </div>`;
+        _corrTickers.forEach(t1 => {
+          _heatRows += `<div style="display:flex;gap:1px;margin-bottom:1px">
+            <div style="width:${_cellW}px;font-size:5.5px;color:#4a6fa5;white-space:nowrap;overflow:hidden">${t1}</div>
+            ${_corrTickers.map(t2 => {
+              if (t1 === t2) return `<div style="width:${_cellW}px;height:14px;background:rgba(255,255,255,.08);border-radius:2px;display:flex;align-items:center;justify-content:center"><span style="font-size:5px;color:#666">1.0</span></div>`;
+              const key = [t1,t2].sort().join('/');
+              const r = corrMatrix[key];
+              if (r == null) return `<div style="width:${_cellW}px;height:14px;background:rgba(255,255,255,.03);border-radius:2px"></div>`;
+              return `<div style="width:${_cellW}px;height:14px;background:${_corrBg(r)};border-radius:2px;display:flex;align-items:center;justify-content:center" title="${t1}/${t2}: ${r.toFixed(2)}"><span style="font-size:5px;color:${_corrColor(r)};font-weight:${r>=0.70||r<=-0.30?'700':'400'}">${r.toFixed(2)}</span></div>`;
+            }).join('')}
+          </div>`;
+        });
+        const _worstCorr = hcPairs.length > 0 ? hcPairs[0] : null;
+        const _hdrCol = hcPairs.length > 0 ? '#ffa726' : '#69f0ae';
+        const _riskMsg = hcPairs.length > 0 ? `${hcPairs.length} high-corr pair${hcPairs.length>1?'s':''} — hidden concentration` : 'Diversified — no high-corr pairs';
+        healthEl.innerHTML += `<div style="margin-top:.5rem;padding:.4rem .5rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+            <span style="font-size:7px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Correlation Matrix (20d)</span>
+            <span style="font-size:6.5px;color:${_hdrCol};font-weight:700">${_riskMsg}</span>
+          </div>
+          <div style="overflow-x:auto">${_heatRows}</div>
+          <div style="display:flex;gap:.6rem;margin-top:.3rem;align-items:center">
+            <span style="font-size:5.5px;background:rgba(239,83,80,.25);color:#ef5350;padding:0 4px;border-radius:2px">≥0.95 VERY HIGH</span>
+            <span style="font-size:5.5px;background:rgba(255,167,38,.18);color:#ffa726;padding:0 4px;border-radius:2px">≥0.85 HIGH</span>
+            <span style="font-size:5.5px;background:rgba(255,213,79,.12);color:#ffd54f;padding:0 4px;border-radius:2px">≥0.70 ELEV</span>
+            <span style="font-size:5.5px;background:rgba(130,177,255,.15);color:#82b1ff;padding:0 4px;border-radius:2px">NEG CORR</span>
+          </div>
+        </div>`;
+      } else if (hcPairs.length > 0) {
+        // Fallback: no full matrix but have high-corr pairs
         const corrHtml = hcPairs.map(p => {
           const c = p.corr || 0;
           const col = c >= 0.95 ? '#ef5350' : c >= 0.90 ? '#ffa726' : '#ffd54f';
@@ -55789,6 +55843,7 @@ window.renderSectorRotation = renderSectorRotation;
               ${s.rsi ? `<span style="font-size:7.5px;color:#888">RSI ${s.rsi}</span>` : ''}
               ${s.rs5 != null ? `<span style="font-size:7.5px;color:${s.rs5>=0?'#00b87a':'#ef5350'}">RS5 ${s.rs5>=0?'+':''}${s.rs5}%</span>` : ''}
               ${s.rs_sector != null && Math.abs(s.rs_sector) >= 3 ? `<span style="font-size:7px;font-weight:800;color:${s.rs_sector>=10?'#00e676':s.rs_sector>=5?'#69f0ae':s.rs_sector<=-8?'#ef5350':'#888'}" title="Sector leadership: ${s.rs_sector>=0?'+':''}${s.rs_sector.toFixed(1)}% vs sector ETF">${s.rs_sector>=10?'★':''}SEC${s.rs_sector>=0?'+':''}${s.rs_sector.toFixed(0)}%</span>` : ''}
+              ${s.rs_rating != null ? (() => { const rr=s.rs_rating; const rrCol=rr>=90?'#00e676':rr>=80?'#69f0ae':rr>=70?'#ffd54f':rr<=30?'#ef5350':rr<=40?'#ff9800':'#555'; const rrBg=rr>=90?'rgba(0,230,118,.15)':rr>=80?'rgba(105,240,174,.1)':rr<=30?'rgba(239,83,80,.1)':'rgba(255,255,255,.04)'; return rr>=70||rr<=40 ? `<span style="font-size:7px;font-weight:900;color:${rrCol};background:${rrBg};padding:1px 5px;border-radius:3px;letter-spacing:.04em" title="IBD-style RS Rating (1-99): ${rr} — 12-month relative strength vs S&P 500. ≥80=leader, ≤40=laggard">RS${rr}</span>` : ''; })() : ''}
               ${s.kelly_size_pct > 0 ? `<span style="font-size:6.5px;font-weight:800;color:#ffd54f;background:rgba(255,215,0,.12);padding:1px 4px;border-radius:3px" title="Kelly-suggested position size: ${s.kelly_size_pct.toFixed(1)}% of portfolio based on historical win rate">K:${s.kelly_size_pct.toFixed(1)}%</span>` : ''}
               ${s.sent ? `<span style="font-size:7.5px;color:${s.sent>=3?'var(--g)':s.sent<=-3?'var(--r)':'var(--wh4)'};margin-left:auto">AI ${s.sent>=0?'+':''}${s.sent}</span>` : ''}
             </div>
@@ -56063,6 +56118,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-family:var(--disp);font-size:1.1rem;color:#ffd54f;min-width:52px;font-weight:900">\$${p.ticker}</div>
                 <div style="font-size:7px;background:${sideCol};color:#000;padding:1px 5px;border-radius:3px;font-weight:900">${sideLbl}</div>
                 <div style="font-size:6.5px;background:${gradeCol}22;color:${gradeCol};border:1px solid ${gradeCol}55;padding:1px 4px;border-radius:3px;font-weight:800" title="Momentum grade">${grade}</div>
+                ${p.rs_rating && p.rs_rating != 50 ? (() => { const rr=p.rs_rating; const rrCol=rr>=90?'#00e676':rr>=80?'#69f0ae':rr>=70?'#ffd54f':rr<=30?'#ef5350':rr<=40?'#ff9800':'#888'; return `<div style="font-size:6px;color:${rrCol};font-weight:800;border:1px solid ${rrCol}55;padding:1px 4px;border-radius:3px" title="IBD RS Rating: ${rr}/99 — 12-month relative strength vs market">RS${rr}</div>`; })() : ''}
                 ${daysHeld > 0 ? `<div style="font-size:6px;color:${daysCol}" title="${daysHeld} days held">${daysHeld}d</div>` : ''}
                 <div style="font-size:8px;color:#4a6fa5;flex:1">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · \$${(cost).toFixed(2)}</div>
                 <div style="font-size:12px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
