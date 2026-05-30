@@ -11580,6 +11580,55 @@ def run():
         pass
     tlog["signal_analytics"] = _signal_analytics
 
+    # Daily AI position commentary: generate 1-sentence review for each held position
+    # Runs once per position per day, stored in peaks.json to avoid repeated API calls
+    try:
+        _today_key2 = now_utc.strftime("%Y-%m-%d")
+        if ANTHROPIC_KEY and market_open and _time_ok(340):
+            for _cpx in tlog.get("positions", [])[:6]:  # limit to first 6 positions
+                _csym = _cpx.get("ticker", "")
+                if not _csym:
+                    continue
+                _cpk = peaks.get(_csym, {}) if isinstance(peaks.get(_csym), dict) else {}
+                _c_comment_date = _cpk.get("ai_comment_date", "")
+                if _c_comment_date == _today_key2:
+                    # Already have a comment for today; put it on the position
+                    _cpx["ai_comment"] = _cpk.get("ai_comment", "")
+                    continue
+                _c_pnl  = _cpx.get("pnl_pct", 0)
+                _c_hrs  = _cpx.get("hours_held", 0)
+                _c_ts   = _cpx.get("thesis_status", "unknown")
+                _c_sc   = _cpx.get("entry_score", 0) or _cpx.get("live_score", 0)
+                _c_grade = _cpx.get("grade", "?")
+                _c_rvol = _cpx.get("vol_pace", 1.0)
+                _c_sess = _mkt_sess
+                _c_prompt = (
+                    f"1-sentence (<25 words) position update for {_csym}:\n"
+                    f"P&L: {_c_pnl:+.1f}% | Held: {_c_hrs:.0f}h | Grade: {_c_grade} | "
+                    f"Thesis: {_c_ts} | Score: {_c_sc} | RVOL: {_c_rvol:.1f}x | Session: {_c_sess}\n"
+                    f"Be direct. Say what matters: hold, tighten, or exit. No fluff. Return ONLY the sentence."
+                )
+                try:
+                    import requests as _req5
+                    _cr = _req5.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={"x-api-key": ANTHROPIC_KEY,
+                                 "anthropic-version": "2023-06-01",
+                                 "content-type": "application/json"},
+                        json={"model": "claude-haiku-4-5-20251001", "max_tokens": 50,
+                              "messages": [{"role": "user", "content": _c_prompt}]},
+                        timeout=6,
+                    )
+                    _c_text = _cr.json()["content"][0]["text"].strip().strip('"\'')[:120]
+                    if isinstance(_cpk, dict):
+                        peaks[_csym] = {**_cpk, "ai_comment": _c_text, "ai_comment_date": _today_key2}
+                    _cpx["ai_comment"] = _c_text
+                    logger.info(f"AI comment {_csym}: {_c_text[:60]}...")
+                except Exception:
+                    pass
+    except Exception as _cai_e:
+        logger.debug(f"AI position commentary: {_cai_e}")
+
     # Build a BUY lookup index for O(1) lookups per SELL trade
     # Maps ticker → list of (time, score, entry_hour, entry_signals) sorted by time desc
     _buy_idx: dict = {}
