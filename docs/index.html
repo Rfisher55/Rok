@@ -56185,6 +56185,10 @@ window.renderSectorRotation = renderSectorRotation;
                 if (ls.ema_stacked_bull) parts.push('<span style="font-size:6px;color:#00ff88">EMA✓</span>');
                 else if (ls.ema_stacked_bear) parts.push('<span style="font-size:6px;color:#ef5350">EMA✗</span>');
                 if ((ls.macd_slope||0) > 0.02) parts.push('<span style="font-size:6px;color:#69f0ae">MACD↑</span>');
+                else if ((ls.macd_slope||0) < -0.02 && (ls.macd_bear_div||false)) parts.push('<span style="font-size:6px;color:#ef5350;font-weight:700">MACD⚠</span>');
+                if (ls.ema21_pullback) parts.push('<span style="font-size:6px;font-weight:800;color:#b9f6ca;background:rgba(185,246,202,.2);padding:1px 4px;border-radius:3px" title="EMA21 pullback — Minervini highest-prob entry">E21↩</span>');
+                if (ls.rsi_bull_divergence) parts.push('<span style="font-size:6px;color:#82b1ff;font-weight:700" title="RSI bullish divergence">RSI↗</span>');
+                else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
               })() : ''}
             </div>

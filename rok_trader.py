@@ -3984,6 +3984,23 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # EMA21 pullback signal: first pullback to 21-day EMA in uptrend = Minervini's highest-prob entry
+    # Criteria: above 200 EMA (uptrend) + above 50 EMA + price within -3% to +0.5% of EMA21
+    # + today is green (reversal) = institutional support confirmed at key moving average
+    ema21_pullback = False
+    ema21_touch    = False   # touching EMA21 even if no confirmed reversal yet
+    try:
+        if len(dc) >= 21:
+            e21 = _ema(dc, 21)
+            if e21 and e21 > 0 and price_vs_ema200 > 0 and price_vs_ema50 > 0:
+                _dist_e21 = (dc[-1] - e21) / e21 * 100   # % above/below EMA21
+                ema21_touch = -3.0 <= _dist_e21 <= 0.8    # within the pullback zone
+                # Confirmed pullback: in zone AND today closed up (reversal bar)
+                if ema21_touch and chg_pct > 0:
+                    ema21_pullback = True
+    except Exception:
+        pass
+
     # ADX — trend strength (0-100): >25 = strong trend, <20 = choppy/ranging
     adx_val = 0.0
     try:
@@ -4738,6 +4755,8 @@ def _extract(daily, hourly):
         "vwap_z":             round(vwap_z, 2),
         "rsi_divergence":      rsi_divergence,
         "rsi_bull_divergence": rsi_bull_divergence,
+        "ema21_pullback":      ema21_pullback,
+        "ema21_touch":         ema21_touch,
         "consec_green":        consec_green,
         "consec_red":          consec_red,
         # Trend Quality composite: 0-10 = how clean + strong the trend is
@@ -5147,6 +5166,7 @@ def momentum_grade(d, final_score=0):
     if d.get("double_bottom", False):         criteria += 1  # W-pattern bullish reversal
     if d.get("ema_stacked_bull", False):      criteria += 2  # EMA stack aligned (high quality trend)
     if d.get("vcp", False):                   criteria += 2  # VCP: spring-loaded contraction base
+    if d.get("ema21_pullback", False):        criteria += 2  # EMA21 pullback in uptrend (Minervini)
 
     # Score contribution
     if   final_score >= 80: criteria += 2
@@ -5606,6 +5626,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
         s += 4
     elif _lr_r2 > 0.70 and _lr_slope > 10:  # >10% annualized, fairly linear
         s += 2
+
+    # EMA21 pullback (Minervini's highest-probability entry): pullback to 21-day EMA in uptrend
+    # First touch of EMA21 after a breakout run = institutions are buying the dip at this level
+    # Confirmed version (green day + in zone) = +14; touching the zone = +7
+    if d.get("ema21_pullback", False):   s += 14   # confirmed pullback: trend intact, reversal showing
+    elif d.get("ema21_touch", False):    s +=  7   # touching EMA21 in uptrend — watch for entry
 
     # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
     if d.get("higher_lows", False): s += 6
@@ -6469,6 +6495,10 @@ def run():
                     elif rsi_div_live and pnl_pct > 4:
                         # Bearish RSI divergence while in profit = early exit to lock gains
                         reason = f"RSI bearish divergence ({pnl_pct:+.1f}%)"
+                    elif live_sig.get("macd_bear_div", False) and pnl_pct > 5 and age_days >= 2:
+                        # MACD bearish divergence: price made new high but MACD lower = smart money selling
+                        # Very reliable exit signal when confirmed by meaningful profit cushion
+                        reason = f"MACD bearish divergence (price↑ but momentum↓, {pnl_pct:+.1f}%)"
                     elif (live_sig.get("vwap_pos", 0) or 0) < -1.0 and pnl_pct > 1 and age_days > 0.5:
                         # VWAP breakdown while in profit: institutional distribution signal
                         # Price dropped >1% below VWAP after being profitable = exit
