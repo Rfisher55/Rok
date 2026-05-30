@@ -2341,6 +2341,65 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N111: SPY VWAP Position at Entry ─────────────────────────────────────────
+    # Institutional traders use SPY's VWAP as a macro tape filter.
+    # When SPY is below its VWAP, risk-off bias dominates — most longs fail.
+    # When SPY is above VWAP: risk-on; breakouts are more likely to follow through.
+    # Bot learns: what's the actual edge of buying above vs below SPY VWAP?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n111 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _spy_vwap_state = _buy_n111.get("spy_vwap_state", "unknown") if _buy_n111 else "unknown"
+            _n111_perf = tlog.setdefault("spy_vwap_entry_perf", {})
+            _n111p = _n111_perf.setdefault(_spy_vwap_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_spy_vwap_state})
+            _n111p["total"] += 1; _n111p["total_pnl"] = round(_n111p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n111p["wins"] += 1
+            else:        _n111p["losses"] += 1
+            _n111p["win_rate"] = round(_n111p["wins"] / _n111p["total"] * 100, 1)
+            _n111p["avg_pnl"]  = round(_n111p["total_pnl"] / _n111p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N112: Signal Count at Entry ────────────────────────────────────────────────
+    # How many bullish signal flags were active at time of entry?
+    # Bot already has signal_count_perf but this tracks the raw count in a different
+    # way: learns the "signal density" sweet spot (enough signals = conviction but too
+    # many = crowded/overextended trade).
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n112 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n112_sig_ct = int(_buy_n112.get("signal_count_at_entry", 0) or 0) if _buy_n112 else 0
+            _sig_bkt = ("strong" if _n112_sig_ct >= 8 else "good" if _n112_sig_ct >= 5 else "moderate" if _n112_sig_ct >= 3 else "weak")
+            _n112_perf = tlog.setdefault("signal_density_perf", {})
+            _n112p = _n112_perf.setdefault(_sig_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_sig_bkt})
+            _n112p["total"] += 1; _n112p["total_pnl"] = round(_n112p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n112p["wins"] += 1
+            else:        _n112p["losses"] += 1
+            _n112p["win_rate"] = round(_n112p["wins"] / _n112p["total"] * 100, 1)
+            _n112p["avg_pnl"]  = round(_n112p["total_pnl"] / _n112p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N113: AI Sentiment at Entry ────────────────────────────────────────────────
+    # Claude AI rates news sentiment -100 to +100 at time of entry.
+    # Bot learns: what sentiment score threshold actually predicts good outcomes?
+    # Strong positive AI sentiment (>40) might mean analyst consensus, which
+    # is already priced in vs. a raw +10 with unusual options activity.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n113 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ai_sent = float(_buy_n113.get("ai_sentiment", 0) or 0) if _buy_n113 else 0.0
+            _sent_bkt = ("very_pos" if _ai_sent >= 50 else "pos" if _ai_sent >= 20 else "neutral" if _ai_sent >= -10 else "neg")
+            _n113_perf = tlog.setdefault("ai_sentiment_tier_perf", {})
+            _n113p = _n113_perf.setdefault(_sent_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_sent_bkt})
+            _n113p["total"] += 1; _n113p["total_pnl"] = round(_n113p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n113p["wins"] += 1
+            else:        _n113p["losses"] += 1
+            _n113p["win_rate"] = round(_n113p["wins"] / _n113p["total"] * 100, 1)
+            _n113p["avg_pnl"]  = round(_n113p["total_pnl"] / _n113p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10959,6 +11018,20 @@ def run():
                                  "afternoon" if _mins_now < 180 else "power_hour")
                     if _n104_ng.get(_sess_now, 50) < 35:
                         _ng_strikes += 1; _ng_reasons.append(f"bad entry session {_sess_now}({_n104_ng.get(_sess_now,50):.0f}%WR)")
+                # Strike N111: SPY well below VWAP AND historically terrible in that context
+                _n111_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("spy_vwap_entry_perf",[])}
+                if _n111_ng.get("well_below", 50) < 35 and len(_n111_ng) >= 3:
+                    _spy_lp_ng = liveprices.get("SPY", {}) if isinstance(liveprices, dict) else {}
+                    _spy_px_ng = float(_spy_lp_ng.get("price", 0) or 0)
+                    _spy_vwap_ng = float(_spy_lp_ng.get("vwap", 0) or 0)
+                    if _spy_px_ng > 0 and _spy_vwap_ng > 0 and (_spy_px_ng - _spy_vwap_ng) / _spy_vwap_ng * 100 < -0.5:
+                        _ng_strikes += 1; _ng_reasons.append(f"SPY well below VWAP learned fail({_n111_ng.get('well_below',50):.0f}%WR)")
+                # Strike N112: weak signal density historically very bad
+                _n112_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("signal_density_perf",[])}
+                if _n112_ng.get("weak", 50) < 35 and len(_n112_ng) >= 3:
+                    _sig_ct_ng = _buy_signals_merged.get("signal_count_at_entry", 5) if '_buy_signals_merged' in dir() else 5
+                    if _sig_ct_ng < 3:
+                        _ng_strikes += 1; _ng_reasons.append(f"weak signal density({_sig_ct_ng} flags) learned fail({_n112_ng.get('weak',50):.0f}%WR)")
                 # Strike N105: learned worst breadth bracket — skip if breadth historically fails here
                 _n105_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("breadth_entry_perf",[])}
                 if len(_n105_ng) >= 3:
@@ -11767,6 +11840,38 @@ def run():
                     # N108: O'Neil trend template score tier at entry
                     _buy_signals_merged["trend_template"] = int(live.get(tk, {}).get("trend_template", 0) or 0)
                     # N109: RVOL at entry (already in signal dict as rvol)
+                    # N111: SPY VWAP position at time of entry (macro tape filter)
+                    try:
+                        _spy_lp = liveprices.get("SPY", {}) if isinstance(liveprices, dict) else {}
+                        _spy_px = float(_spy_lp.get("price", 0) or 0)
+                        _spy_vwap = float(_spy_lp.get("vwap", 0) or 0)
+                        if _spy_px > 0 and _spy_vwap > 0:
+                            _spy_above = _spy_px >= _spy_vwap
+                            _spy_pct = (_spy_px - _spy_vwap) / _spy_vwap * 100
+                            _buy_signals_merged["spy_vwap_state"] = (
+                                "well_above" if _spy_pct > 0.5 else
+                                "above"      if _spy_above else
+                                "below"      if _spy_pct > -0.5 else "well_below"
+                            )
+                        else:
+                            _buy_signals_merged["spy_vwap_state"] = "unknown"
+                    except Exception:
+                        _buy_signals_merged["spy_vwap_state"] = "unknown"
+                    # N112: count of bullish signal flags active at entry
+                    try:
+                        _sig_flags = [
+                            "supertrend_bull","psar_bull","obv_rising","macd_bull","rsi_ok",
+                            "vcp","cup_handle","orb_breakout","ttm_squeeze_fired","at_breakout",
+                            "gap_and_hold","rvol_surge","options_bull","price_accel_pos",
+                            "htf","mtf_triple","pocket_pivot","morning_star","bullish_engulfing",
+                            "higher_lows","breakout_52w","above_poc","at_demand_zone","nr7",
+                        ]
+                        _sig_ct = sum(1 for f in _sig_flags if live.get(tk, {}).get(f))
+                        _buy_signals_merged["signal_count_at_entry"] = _sig_ct
+                    except Exception:
+                        _buy_signals_merged["signal_count_at_entry"] = 0
+                    # N113: AI sentiment at entry (written after ai_sentiment() call above)
+                    _buy_signals_merged["ai_sentiment"] = sent  # already computed
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14502,6 +14607,40 @@ def run():
             _best_rv = max(_n109_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N109 best RVOL at entry: {_best_rv['state']} ({_best_rv['win_rate']:.0f}%WR)")
 
+        # ── N111: SPY VWAP Entry State (multi-tier) ────────────────────────────────
+        _n111_raw = tlog.get("spy_vwap_entry_perf", {})
+        _n111_insights = []
+        for _n11k, _n11d in _n111_raw.items():
+            if _n11d.get("total", 0) >= 2:
+                _n111_insights.append({"state": _n11k, "win_rate": _n11d.get("win_rate", 50),
+                                       "avg_pnl": _n11d.get("avg_pnl", 0), "total": _n11d.get("total", 0)})
+        if _n111_insights:
+            _best_sv = max(_n111_insights, key=lambda x: x["win_rate"])
+            _worst_sv = min(_n111_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N111 SPY VWAP: best entry={_best_sv['state']}({_best_sv['win_rate']:.0f}%WR) worst={_worst_sv['state']}({_worst_sv['win_rate']:.0f}%WR)")
+
+        # ── N112: Signal Density (multi-tier) ─────────────────────────────────────
+        _n112_raw = tlog.get("signal_density_perf", {})
+        _n112_insights = []
+        for _n12k, _n12d in _n112_raw.items():
+            if _n12d.get("total", 0) >= 2:
+                _n112_insights.append({"state": _n12k, "win_rate": _n12d.get("win_rate", 50),
+                                       "avg_pnl": _n12d.get("avg_pnl", 0), "total": _n12d.get("total", 0)})
+        if _n112_insights:
+            _best_sd = max(_n112_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N112 best signal density at entry: {_best_sd['state']} ({_best_sd['win_rate']:.0f}%WR)")
+
+        # ── N113: AI Sentiment Tier (multi-tier) ──────────────────────────────────
+        _n113_raw = tlog.get("ai_sentiment_tier_perf", {})
+        _n113_insights = []
+        for _n13k, _n13d in _n113_raw.items():
+            if _n13d.get("total", 0) >= 2:
+                _n113_insights.append({"state": _n13k, "win_rate": _n13d.get("win_rate", 50),
+                                       "avg_pnl": _n13d.get("avg_pnl", 0), "total": _n13d.get("total", 0)})
+        if _n113_insights:
+            _best_ai = max(_n113_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N113 best AI sentiment tier: {_best_ai['state']} ({_best_ai['win_rate']:.0f}%WR)")
+
         # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
         _eg_raw = tlog.get("eg_tier_perf", {})
         _eg_insights = []
@@ -14658,6 +14797,9 @@ def run():
             "catalyst_age_perf":    _n107_insights,          # N107: catalyst recency at entry vs outcome
             "trend_template_tier_perf": _n108_insights,      # N108: O'Neil trend template tier vs outcome
             "rvol_entry_tier_perf": _n109_insights,          # N109: relative volume at entry tier vs outcome
+            "spy_vwap_entry_perf":  _n111_insights,          # N111: SPY VWAP position at entry vs outcome
+            "signal_density_perf":  _n112_insights,          # N112: signal density (count) at entry vs outcome
+            "ai_sentiment_tier_perf": _n113_insights,        # N113: AI sentiment bracket at entry vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -14763,6 +14905,7 @@ def run():
             "eg_tier_perf","st_gap_perf","premium_tier_perf","rotation_flip_perf",
             "vix_entry_perf","entry_session_perf","breadth_entry_perf","portfolio_size_perf",
             "catalyst_age_perf","trend_template_tier_perf","rvol_entry_tier_perf",
+            "spy_vwap_entry_perf","signal_density_perf","ai_sentiment_tier_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -14770,9 +14913,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 69               # total tracked neuron dimensions (N103-N110 added)
+        tlog["neurons_total"]     = 72               # total tracked neuron dimensions (N103-N113 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/69 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/72 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
