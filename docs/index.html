@@ -59693,6 +59693,30 @@ window.renderSectorRotation = renderSectorRotation;
             <span style="font-size:8px;color:${totalUnrealCol};font-weight:700">Total Unrealized: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</span>
             ${Math.abs(todayTotal) >= 1 ? `<span style="font-size:8px;font-weight:800;color:${todayCol};background:${todayCol}18;border:1px solid ${todayCol}33;border-radius:10px;padding:1px 7px">Today: ${todayTotal>=0?'+':''}$${Math.abs(todayTotal).toFixed(0)} (${todayPctAvg>=0?'+':''}${todayPctAvg.toFixed(1)}% avg)</span>` : ''}
           </div>`;
+          // ── Portfolio Heat Map: visual tile per position colored by today's move ──
+          if (positions.length > 1) {
+            const _heatPnlMap = {};
+            (data.daily_pnl_attribution || []).forEach(a => { if (a.ticker) _heatPnlMap[a.ticker] = a; });
+            const _heatTiles = positions.map(p => {
+              const todayA = _heatPnlMap[p.ticker];
+              const idChg  = todayA ? (todayA.day_chg_pct||0) : (p.intraday_chg_pct||0);
+              const pnlAll = p.pnl_pct || 0;
+              const eu = p.exit_urgency || 0;
+              const tileCol = idChg >= 2 ? '#00e676' : idChg >= 0.5 ? '#4caf50' : idChg >= -0.5 ? '#888' : idChg >= -2 ? '#e57373' : '#ef5350';
+              const tileBg  = idChg >= 2 ? 'rgba(0,230,118,.18)' : idChg >= 0.5 ? 'rgba(76,175,80,.12)' : idChg >= -0.5 ? 'rgba(255,255,255,.05)' : idChg >= -2 ? 'rgba(229,115,115,.15)' : 'rgba(239,83,80,.2)';
+              const urgRing = eu >= 7 ? '2px solid #ef5350' : eu >= 5 ? '2px solid #ffa726' : '1px solid rgba(255,255,255,.08)';
+              const overallCol = pnlAll >= 5 ? '#00ff88' : pnlAll >= 1 ? '#69f0ae' : pnlAll >= 0 ? '#ffd54f' : '#ef9a9a';
+              return `<div style="flex:1;min-width:52px;padding:.35rem .4rem;background:${tileBg};border:${urgRing};border-radius:7px;text-align:center;cursor:pointer" title="${p.ticker} — Today: ${idChg>=0?'+':''}${idChg.toFixed(1)}% | Total: ${pnlAll>=0?'+':''}${pnlAll.toFixed(1)}%${eu>=5?' | EXIT URGENCY '+eu:''}">
+                <div style="font-family:var(--disp);font-size:.75rem;font-weight:900;color:#ffd54f">${p.ticker}</div>
+                <div style="font-size:7.5px;font-weight:800;color:${tileCol}">${idChg>=0?'+':''}${idChg.toFixed(1)}%</div>
+                <div style="font-size:5.5px;color:${overallCol}">${pnlAll>=0?'+':''}${pnlAll.toFixed(1)}% total</div>
+              </div>`;
+            }).join('');
+            html += `<div style="margin-bottom:.45rem">
+              <div style="font-size:6px;font-weight:700;color:#333;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.25rem">PORTFOLIO HEAT — Today's Performance</div>
+              <div style="display:flex;gap:.25rem;flex-wrap:wrap">${_heatTiles}</div>
+            </div>`;
+          }
         }
 
         // Daily Action Plan — urgent items and today's top opportunity
