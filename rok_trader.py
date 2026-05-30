@@ -8574,8 +8574,40 @@ def run():
                 _pos["live_rr"] = _rr
             else:
                 _pos["live_rr"] = 0.0
+            # Extended/Overextended detection (O'Neil rule: >25% above ideal pivot = extended)
+            # Uses cup_pivot or pivot_r1 from live signals as the "proper buy point"
+            _ls_ext = _pos.get("live_signals", {})
+            _cup_piv = _ls_ext.get("cup_pivot") or 0
+            _piv_r1  = _ls_ext.get("pivot_r1") or 0
+            _base_piv = _cup_piv if _cup_piv > 0 else (_piv_r1 if _piv_r1 > 0 else 0)
+            if _base_piv > 0 and _pr2 > 0:
+                _ext_pct = round((_pr2 - _base_piv) / _base_piv * 100, 1)
+                _pos["pivot_pct"] = _ext_pct
+                _pos["extended"]  = _ext_pct > 25
+                _pos["overextended"] = _ext_pct > 40
+            else:
+                # Fallback: use pnl_pct as proxy — >25% gain often means extended
+                _pos["pivot_pct"] = _pnl
+                _pos["extended"]  = _pnl > 25
+                _pos["overextended"] = _pnl > 40
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
+
+    # Portfolio total $ risk (sum of max loss per position at current trail stop)
+    try:
+        _total_risk_usd = 0.0
+        for _prp in tlog.get("positions", []):
+            _prp_price = _prp.get("price", 0) or 0
+            _prp_stop  = _prp.get("trail_stop_price", 0) or _prp.get("stop_price", 0) or 0
+            _prp_mval  = _prp.get("market_val", 0) or 0
+            if _prp_price > 0 and _prp_stop > 0 and _prp_mval > 0:
+                _risk_pct = max(0, (_prp_price - _prp_stop) / _prp_price)
+                _total_risk_usd += _prp_mval * _risk_pct
+        tlog["total_risk_usd"] = round(_total_risk_usd, 2)
+        tlog["total_risk_pct"] = round(_total_risk_usd / max(portfolio_val, 1) * 100, 2)
+    except Exception:
+        tlog["total_risk_usd"] = 0.0
+        tlog["total_risk_pct"] = 0.0
 
     # Rolling 20-trade win rate and portfolio correlation heuristic
     try:
