@@ -1165,6 +1165,52 @@ def _analyst_revisions(sym: str, max_age_sec: int = 14400) -> dict:
     return result
 
 
+_FUNDAMENTAL_CACHE: dict = {}
+
+def _get_fundamentals(sym: str, max_age_sec: int = 21600) -> dict:
+    """
+    Fetch fundamental quality metrics via yfinance .info (6hr cache to avoid rate limits).
+    Returns earnings_growth, revenue_growth, forward_pe, profit_margin, roe, debt_equity.
+    """
+    import time as _ft
+    _null = {"earnings_growth": None, "revenue_growth": None, "forward_pe": None,
+             "profit_margin": None, "roe": None, "debt_equity": None,
+             "fund_quality": 0}   # fund_quality: -2 to +3 score
+    now_f = _ft.time()
+    if sym in _FUNDAMENTAL_CACHE:
+        cached, ts = _FUNDAMENTAL_CACHE[sym]
+        if now_f - ts < max_age_sec:
+            return cached
+    try:
+        info = yf.Ticker(sym).info
+        eg = info.get("earningsGrowth")      # YoY EPS growth (decimal, e.g. 0.35 = 35%)
+        rg = info.get("revenueGrowth")       # YoY revenue growth
+        fpe= info.get("forwardPE")           # Forward P/E
+        pm = info.get("profitMargins")       # Net profit margin
+        roe= info.get("returnOnEquity")      # Return on equity
+        de = info.get("debtToEquity")        # Debt/equity ratio
+
+        # Composite fundamental quality score: -2 to +3
+        fq = 0
+        if eg is not None:
+            if eg >= 0.25:  fq += 1   # strong earnings growth ≥25%
+            elif eg <= 0:   fq -= 1   # earnings declining — avoid
+        if rg is not None:
+            if rg >= 0.15:  fq += 1   # strong revenue growth ≥15%
+            elif rg <= -0.05: fq -= 1 # revenue shrinking
+        if pm is not None and pm >= 0.15:  fq += 1  # high margin business (competitive moat)
+        if roe is not None and roe >= 0.20: fq += 1 # excellent ROE ≥20% (capital efficiency)
+        if de is not None and de > 2.0:   fq -= 1   # high debt = fragile in rising rate environment
+
+        result = {"earnings_growth": eg, "revenue_growth": rg, "forward_pe": fpe,
+                  "profit_margin": pm, "roe": roe, "debt_equity": de, "fund_quality": fq}
+        _FUNDAMENTAL_CACHE[sym] = (result, now_f)
+        return result
+    except Exception:
+        _FUNDAMENTAL_CACHE[sym] = (_null, now_f)
+        return _null
+
+
 _NEWS_VEL_CACHE: dict = {}
 
 def _news_velocity(sym: str, max_age_sec: int = 1800) -> dict:
@@ -5330,6 +5376,22 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("analyst_price_tgt", 0.0)
                             sig.setdefault("analyst_upside_pct", 0.0)
                             sig.setdefault("atm_iv", 0.0)
+                        # Fundamental quality: earnings growth, revenue growth, margins (6hr cache)
+                        try:
+                            fq = _get_fundamentals(tk)
+                            sig["earnings_growth"]  = fq.get("earnings_growth")
+                            sig["revenue_growth"]   = fq.get("revenue_growth")
+                            sig["forward_pe"]       = fq.get("forward_pe")
+                            sig["profit_margin"]    = fq.get("profit_margin")
+                            sig["roe"]              = fq.get("roe")
+                            sig["fund_quality"]     = fq.get("fund_quality", 0)
+                        except Exception:
+                            sig.setdefault("earnings_growth", None)
+                            sig.setdefault("revenue_growth", None)
+                            sig.setdefault("forward_pe", None)
+                            sig.setdefault("profit_margin", None)
+                            sig.setdefault("roe", None)
+                            sig.setdefault("fund_quality", 0)
                         # Earnings calendar: pre-earnings drift window (5-20d) is a reliable alpha factor
                         try:
                             sig["earnings_days"] = get_earnings_days(tk)
@@ -5936,6 +5998,27 @@ def score(tk, d, sentiment=0, regime_adj=0):
         elif 2 <= _earn_days < 5:
             # Very close to earnings: binary risk zone — slightly penalize new entries
             s -= 4  # too close — gap risk exceeds expected drift
+
+    # Fundamental Quality Score: earnings/revenue growth + margins + ROE
+    # Minervini: "only trade quality companies with accelerating earnings" — avoids value traps
+    _fq = d.get("fund_quality", 0) or 0
+    if _fq >= 3:   s += 10  # exceptional fundamentals: high growth + margins + ROE
+    elif _fq >= 2: s +=  6  # strong fundamentals
+    elif _fq >= 1: s +=  3  # decent fundamentals
+    elif _fq <= -2: s -= 8  # poor fundamentals — technical patterns fail faster here
+    elif _fq <= -1: s -= 3  # weak fundamentals — caution
+    # Earnings acceleration: ≥25% YoY EPS growth = IBD CAN SLIM "A" criterion
+    _eg = d.get("earnings_growth")
+    if _eg is not None:
+        if _eg >= 0.50:   s +=  6  # exceptional earnings growth
+        elif _eg >= 0.25: s +=  3  # strong — CAN SLIM threshold
+        elif _eg <= -0.10: s -= 5  # declining earnings = avoid
+    # Revenue growth confirms earnings quality
+    _rg = d.get("revenue_growth")
+    if _rg is not None:
+        if _rg >= 0.30:   s +=  4  # hypergrowth revenue
+        elif _rg >= 0.15: s +=  2  # healthy revenue growth
+        elif _rg <= -0.05: s -= 3  # shrinking revenue
 
     # Pocket Pivot (O'Neil/Kacher-Morales): up day volume > every down-day volume in prior 10 sessions
     # Identifies institutional buying pressure before the big move begins (+12)
@@ -7501,6 +7584,9 @@ def run():
                 "rs_rating":         live.get(tk, {}).get("rs_rating", 50),
                 "ema21_pullback":    live.get(tk, {}).get("ema21_pullback", False),
                 "ema21_touch":       live.get(tk, {}).get("ema21_touch", False),
+                "fund_quality":      live.get(tk, {}).get("fund_quality", 0),
+                "earnings_growth":   live.get(tk, {}).get("earnings_growth"),
+                "revenue_growth":    live.get(tk, {}).get("revenue_growth"),
                 "pocket_pivot":      live.get(tk, {}).get("pocket_pivot", False),
                 "htf":               live.get(tk, {}).get("htf", False),
                 "htf_consec":        live.get(tk, {}).get("htf_consec", 0),
@@ -7930,6 +8016,12 @@ def run():
                 "macd_bull_div":      sig.get("macd_bull_div", False),
                 "rsi_divergence":     sig.get("rsi_divergence", False),
                 "rsi_bull_divergence": sig.get("rsi_bull_divergence", False),
+                "fund_quality":        sig.get("fund_quality", 0),
+                "earnings_growth":     sig.get("earnings_growth"),
+                "revenue_growth":      sig.get("revenue_growth"),
+                "forward_pe":          sig.get("forward_pe"),
+                "profit_margin":       sig.get("profit_margin"),
+                "roe":                 sig.get("roe"),
                 "pocket_pivot":        sig.get("pocket_pivot", False),
                 "htf":                 sig.get("htf", False),
                 "htf_consec":          sig.get("htf_consec", 0),

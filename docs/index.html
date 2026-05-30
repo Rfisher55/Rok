@@ -56036,6 +56036,8 @@ window.renderSectorRotation = renderSectorRotation;
             (() => { const tt=s.trend_template||0; if(tt===8) return '<span style="background:rgba(0,230,118,.3);color:#00e676;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Minervini Trend Template 8/8 — all 8 SEPA criteria met: perfect institutional uptrend">TT8✓</span>'; if(tt>=6) return `<span style="background:rgba(0,200,100,.15);color:#69f0ae;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Trend Template ${tt}/8 — strong SEPA structure">TT${tt}</span>`; return ''; })(),
             // Anchored VWAP — institutional support level
             s.above_avwap_52wl ? (() => { const d=s.avwap_dist_pct||0; const col=d>15?'#80cbc4':d>5?'#4db6ac':'#26a69a'; return `<span style="background:rgba(38,166,154,.15);color:${col};font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Price ${d.toFixed(1)}% above Anchored VWAP from 52W low ($${(s.avwap_52wl||0).toFixed(2)}) — institutional cost basis respected">AVWAP+${d.toFixed(0)}%</span>`; })() : '',
+            // Fundamental quality badge (when we have data)
+            (() => { const fq=s.fund_quality||0; const eg=s.earnings_growth; if(fq>=2) { const egStr=eg!=null?` EPS+${(eg*100).toFixed(0)}%`:''; const fqCol=fq>=3?'#00e676':'#69f0ae'; return `<span style="background:rgba(0,200,100,.12);color:${fqCol};font-size:6px;font-weight:800;padding:1px 4px;border-radius:3px" title="Fundamental quality: ${fq}/3 — earnings/revenue growth + margins + ROE">F+${fq}${egStr}</span>`; } if(fq<=-2) return `<span style="color:#ef9a9a;font-size:6px;padding:1px 3px;border-radius:2px" title="Weak fundamentals">F${fq}</span>`; return ''; })(),
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
@@ -56363,6 +56365,14 @@ window.renderSectorRotation = renderSectorRotation;
                 if (ls.htf) parts.push('<span style="font-size:6px;font-weight:900;color:#ff6d00;background:rgba(255,109,0,.2);padding:1px 4px;border-radius:3px" title="High-Tight Flag — explosive setup">HTF🚀</span>');
                 if ((ls.trend_template||0) >= 7) parts.push(`<span style="font-size:6px;font-weight:800;color:#00e676;background:rgba(0,230,118,.15);padding:1px 4px;border-radius:3px" title="Minervini Trend Template ${ls.trend_template}/8">TT${ls.trend_template}</span>`);
                 if (ls.above_avwap_52wl) parts.push(`<span style="font-size:6px;color:#26a69a;background:rgba(38,166,154,.12);padding:1px 3px;border-radius:2px" title="Above Anchored VWAP from 52W low (+${(ls.avwap_dist_pct||0).toFixed(1)}%)">AVWAP✓</span>`);
+                if ((ls.fund_quality||0) >= 2) {
+                  const eg = ls.earnings_growth != null ? `EPS ${(ls.earnings_growth*100).toFixed(0)}%` : '';
+                  const rg = ls.revenue_growth != null ? `Rev ${(ls.revenue_growth*100).toFixed(0)}%` : '';
+                  const fqCol = (ls.fund_quality||0) >= 3 ? '#00e676' : '#69f0ae';
+                  parts.push(`<span style="font-size:6px;font-weight:800;color:${fqCol};background:rgba(0,200,100,.1);padding:1px 4px;border-radius:2px" title="Fundamental quality ${ls.fund_quality}/3: ${eg} ${rg} | ROE ${ls.roe!=null?((ls.roe*100).toFixed(0)+'%'):'?'} | Margin ${ls.profit_margin!=null?((ls.profit_margin*100).toFixed(0)+'%'):'?'}">F+${ls.fund_quality} ${eg}</span>`);
+                } else if ((ls.fund_quality||0) <= -2) {
+                  parts.push(`<span style="font-size:6px;color:#ef9a9a;background:rgba(239,154,154,.08);padding:1px 3px;border-radius:2px" title="Weak fundamentals">F${ls.fund_quality}</span>`);
+                }
                 if (ls.rsi_bull_divergence) parts.push('<span style="font-size:6px;color:#82b1ff;font-weight:700" title="RSI bullish divergence">RSI↗</span>');
                 else if (ls.rsi_divergence) parts.push('<span style="font-size:6px;color:#ef9a9a" title="RSI bearish divergence">RSI↘</span>');
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
