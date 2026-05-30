@@ -9618,6 +9618,24 @@ def run():
                             reason = f"score decay exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
                 except Exception:
                     pass
+            # ── Volume decay exit: setup failed if rvol has collapsed for 2+ consecutive scans ──
+            # A momentum stock losing volume is the textbook "distribution" signal.
+            # Only exit when: we have decent profit AND volume has been dead for multiple scans.
+            if not reason and pnl_pct >= 0.5 and age_days >= 1:
+                try:
+                    _vol_sig = live.get(sym, {}) or {}
+                    _rvol_live = _vol_sig.get("rvol", 1.0) or 1.0
+                    _pnl_hist = peaks.get(sym, {}).get("pnl_history", [])
+                    if _rvol_live < 0.4 and len(_pnl_hist) >= 3:
+                        # Check if volume has been dead across recent scans (setup has stalled)
+                        _vol_dead_scans = sum(1 for h in _pnl_hist[-4:] if (h.get("v", 1.0) or 1.0) < 0.45)
+                        if _vol_dead_scans >= 2:
+                            # Only exit if no catalysts upcoming (don't kill pre-earnings drift)
+                            if not has_earnings_soon(sym, days=4):
+                                reason = f"volume decay exit — rvol={_rvol_live:.2f} dead for {_vol_dead_scans} scans ({pnl_pct:+.1f}%)"
+                                logger.info(f"VOL_DECAY {sym}: rvol={_rvol_live:.2f}, dead {_vol_dead_scans}/4 scans")
+                except Exception:
+                    pass
             elif (_atr_target_ent := peaks.get(sym, {}).get("atr_at_entry", 0)) and pnl_pct >= max(PROFIT_TARGET_PCT * 100, min(22.0, _atr_target_ent / cost * 100 * 4.5 if cost > 0 else PROFIT_TARGET_PCT * 100)):
                 # ATR-based take-profit: volatile stocks get wider target (4.5× ATR at entry)
                 _eff_tp = max(PROFIT_TARGET_PCT * 100, min(22.0, _atr_target_ent / cost * 100 * 4.5 if cost > 0 else PROFIT_TARGET_PCT * 100))
