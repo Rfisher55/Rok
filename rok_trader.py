@@ -11408,6 +11408,31 @@ def run():
                 break
         _streak_bonus = "hot" if _streak_type == "win" and _streak_len >= 5 else "warm" if _streak_type == "win" and _streak_len >= 3 else "cold" if _streak_type == "loss" and _streak_len >= 3 else "normal"
         tlog["trade_streak"] = {"type": _streak_type, "count": _streak_len, "mode": _streak_bonus}
+        # Time-of-day win rate — group closed trades by market session at entry
+        try:
+            _tod_buckets: dict = {"prime-morning": [], "mid-morning": [], "midday-lull": [], "afternoon": [], "power-hour": []}
+            def _hour_to_session(h: int) -> str:
+                if h is None: return ""
+                if h < 10:   return "prime-morning"  # 9:30-10
+                if h < 11:   return "mid-morning"     # 10-11
+                if h < 13:   return "midday-lull"     # 11-1
+                if h < 15:   return "afternoon"       # 1-3
+                return "power-hour"                   # 3-4
+            for _ec in _enriched_closed:
+                _sec = _hour_to_session(_ec.get("entry_hour"))
+                if _sec in _tod_buckets:
+                    _tod_buckets[_sec].append(_ec["pnl_pct"])
+            _tod_stats = {}
+            for _sess, _pnls in _tod_buckets.items():
+                if len(_pnls) >= 2:
+                    _tod_stats[_sess] = {
+                        "trades":   len(_pnls),
+                        "win_rate": round(sum(1 for p in _pnls if p > 0) / len(_pnls) * 100, 1),
+                        "avg_pnl":  round(sum(_pnls) / len(_pnls), 2),
+                    }
+            tlog["tod_win_rates"] = _tod_stats
+        except Exception:
+            pass
     except Exception:
         pass
     tlog["signal_analytics"] = _signal_analytics
@@ -11635,6 +11660,35 @@ def run():
     tlog["market_open"]     = market_open
     tlog["minutes_since_open"]  = _minutes_since_open if market_open else None
     tlog["minutes_to_close"]    = _minutes_to_close   if market_open else None
+    # Market session label for the pocket guide
+    try:
+        if not market_open:
+            _mkt_sess_hr = _et_hour * 60 + _et_min
+            if _mkt_sess_hr < 9 * 60 + 30:
+                _mkt_sess = "pre-market"
+            elif _mkt_sess_hr < 10 * 60:
+                _mkt_sess = "early-premarket"
+            else:
+                _mkt_sess = "after-hours"
+        elif _open_guard:
+            _mkt_sess = "opening-volatility"
+        elif _minutes_since_open < 60:
+            _mkt_sess = "prime-morning"
+        elif _minutes_since_open < 150:
+            _mkt_sess = "mid-morning"
+        elif _minutes_since_open < 240:
+            _mkt_sess = "midday-lull"
+        elif _minutes_to_close > 60:
+            _mkt_sess = "afternoon"
+        elif _minutes_to_close > 20:
+            _mkt_sess = "power-hour"
+        elif _close_guard:
+            _mkt_sess = "close-guard"
+        else:
+            _mkt_sess = "open"
+        tlog["market_session"] = _mkt_sess
+    except Exception:
+        tlog.setdefault("market_session", "unknown")
     # Market timing quality: 0=avoid, 1=neutral, 2=good, 3=prime
     _timing_q = 0
     if market_open and not _open_guard and not _close_guard:

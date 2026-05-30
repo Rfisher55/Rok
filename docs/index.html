@@ -55288,6 +55288,43 @@ function _renderIntelReport(el, intel) {
     </div>`;
   })();
 
+  // Session-level win rate table from tod_win_rates (prime-morning, mid-morning, etc.)
+  const todWinRatesHtml = (() => {
+    const twr = td.tod_win_rates;
+    if (!twr || !Object.keys(twr).length) return '';
+    const ORDER = ['prime-morning','mid-morning','midday-lull','afternoon','power-hour'];
+    const LABELS = {'prime-morning':'Prime Morning 9:40-10:30','mid-morning':'Mid-Morning 10:30-11','midday-lull':'Midday Lull 11-1pm','afternoon':'Afternoon 1-3pm','power-hour':'Power Hour 3-4pm'};
+    const filtered = ORDER.filter(s => twr[s] && (twr[s].trades||0) >= 2);
+    if (!filtered.length) return '';
+    const sessRows = filtered.map(s => {
+      const v = twr[s];
+      const wrCol  = v.win_rate >= 65 ? '#00e676' : v.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+      const pnlCol = v.avg_pnl >= 0 ? '#69f0ae' : '#ef5350';
+      const barW   = Math.min(v.win_rate, 100);
+      const isPrime = s === 'prime-morning' || s === 'power-hour';
+      return `<div style="display:grid;grid-template-columns:130px 1fr 40px 44px 24px;align-items:center;gap:.3rem;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:6.5px;font-weight:${isPrime?'800':'600'};color:${isPrime?'#ffd54f':'#888'}">${LABELS[s]}</span>
+        <div style="height:5px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${wrCol}55;border-radius:2px"></div>
+        </div>
+        <span style="font-size:7.5px;font-weight:800;color:${wrCol};text-align:right">${v.win_rate.toFixed(0)}%</span>
+        <span style="font-size:6.5px;color:${pnlCol};text-align:right">${v.avg_pnl>=0?'+':''}${v.avg_pnl.toFixed(1)}%</span>
+        <span style="font-size:6px;color:#444;text-align:right">${v.trades}T</span>
+      </div>`;
+    });
+    return `<div style="margin-top:.5rem;padding:.5rem .65rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,213,79,.12);border-radius:9px">
+      <div style="font-size:7px;font-weight:800;color:#ffd54f;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">⏰ SESSION WIN RATES — When Does Bot Perform Best?</div>
+      <div style="display:grid;grid-template-columns:130px 1fr 40px 44px 24px;gap:.3rem;padding:.1rem 0;margin-bottom:.1rem">
+        <span style="font-size:5.5px;color:#333">SESSION</span>
+        <span style="font-size:5.5px;color:#333">WIN RATE</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">WIN%</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">AVG P&L</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">N</span>
+      </div>
+      ${sessRows.join('')}
+    </div>`;
+  })();
+
   // ── Live Scan Candidates table ─────────────────────────────────────────────
   const scanCandidatesHtml = (() => {
     const scanTop = td.last_scan_top || [];
@@ -55396,7 +55433,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${equityCurveHtml}${upcomingEventsHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${equityCurveHtml}${upcomingEventsHtml}${botBrainHtml}${scoreBucketHtml}${hourWinRateHtml}${todWinRatesHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 
   // Live position sizer calculator
@@ -59489,6 +59526,47 @@ window.renderSectorRotation = renderSectorRotation;
           <span style="font-size:7px;color:var(--wh4);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_ltaReason}</span>
           <span style="font-size:7px;color:#3a5a8a;white-space:nowrap">ALPACA AUTO-TRADE ${_ltaAgo}</span>
         </div>`;
+      }
+
+      // ── Market Session & Time-of-Day Intelligence Strip ─────────────────────
+      {
+        const sess = data.market_session || '';
+        const mOpen = data.market_open;
+        const tq = data.timing_quality;
+        const minsOpen = data.minutes_since_open;
+        const minsClose = data.minutes_to_close;
+        const todWR = data.tod_win_rates || {};
+        const sessLabels = {
+          'opening-volatility': {lbl:'OPENING VOLATILITY', note:'Wild swings — bot skips buys, watch for direction', col:'#ffa726', icon:'🌅'},
+          'prime-morning':      {lbl:'PRIME MORNING', note:'Best edge window (9:40–10:30) — bot most aggressive', col:'#00e676', icon:'⚡'},
+          'mid-morning':        {lbl:'MID-MORNING', note:'Good conditions — momentum plays work well', col:'#69f0ae', icon:'📈'},
+          'midday-lull':        {lbl:'MIDDAY LULL', note:'Lower edge — wider criteria, fewer trades expected', col:'#ffd54f', icon:'😴'},
+          'afternoon':          {lbl:'AFTERNOON SESSION', note:'Recovery window — watch for sector rotations', col:'#82b1ff', icon:'🔄'},
+          'power-hour':         {lbl:'POWER HOUR', note:'Second best window — institutions closing/opening positions', col:'#00e5ff', icon:'⚡'},
+          'close-guard':        {lbl:'CLOSE GUARD', note:'Last 20 min — bot stops new buys, manages exits', col:'#ffa726', icon:'🔒'},
+          'pre-market':         {lbl:'PRE-MARKET', note:'Market opens at 9:30 ET — bot on standby', col:'#555', icon:'🌙'},
+          'after-hours':        {lbl:'AFTER HOURS', note:'Market closed — bot monitors crypto', col:'#555', icon:'🌙'},
+          'early-premarket':    {lbl:'PRE-MARKET', note:'Market opens at 9:30 ET — review plan', col:'#555', icon:'🌙'},
+        };
+        const si = sessLabels[sess];
+        if (si) {
+          const sessWR = todWR[sess];
+          const wrBadge = sessWR && sessWR.trades >= 3
+            ? `<span style="font-size:6px;font-weight:800;color:${sessWR.win_rate>=60?'#00e676':sessWR.win_rate>=45?'#ffd54f':'#ef5350'};background:rgba(255,255,255,.07);border-radius:3px;padding:1px 4px" title="${sessWR.trades} trades in this session">WR ${sessWR.win_rate}%</span>`
+            : '';
+          const closeStr = mOpen && minsClose != null && minsClose < 120 ? `<span style="font-size:6px;color:#555">${minsClose}m to close</span>` : '';
+          const tqBadge = tq != null && mOpen ? `<span style="font-size:6px;font-weight:800;padding:1px 5px;border-radius:3px;background:${tq>=3?'rgba(0,230,118,.15)':tq>=2?'rgba(105,240,174,.12)':tq>=1?'rgba(255,213,79,.1)':'rgba(255,34,85,.1)'};color:${tq>=3?'#00e676':tq>=2?'#69f0ae':tq>=1?'#ffd54f':'#ef5350'}">${tq>=3?'PRIME ⚡':tq>=2?'GOOD':tq>=1?'CAUTION':'WAIT'}</span>` : '';
+          html += `<div style="margin-bottom:.5rem;padding:.35rem .6rem;background:${si.col}0d;border:1px solid ${si.col}33;border-radius:8px;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <span style="font-size:10px;flex-shrink:0">${si.icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+                <span style="font-size:7px;font-weight:900;color:${si.col};letter-spacing:.07em">${si.lbl}</span>
+                ${tqBadge}${wrBadge}${closeStr}
+              </div>
+              <div style="font-size:6px;color:rgba(255,255,255,.35);margin-top:1px">${si.note}</div>
+            </div>
+          </div>`;
+        }
       }
 
       // ── Bot Conviction Meter ─────────────────────────────────────────────────
