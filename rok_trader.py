@@ -90,6 +90,7 @@ _LEARNED_BEST_HALFHOURS:  set = set()  # "HHMM" strings of 30-min windows that o
 _LEARNED_MIN_BREADTH:     float = 0.0  # minimum breadth % that produces consistent wins (learned)
 _LEARNED_SIGNAL_COUNT_SWEET: str  = ""   # "1-3"|"4-6"|"7-10"|"11+" — best-performing signal count bucket
 _LEARNED_SPY_DOWN_PENALTY:  bool = False  # True when red SPY days consistently hurt outcomes
+_LEARNED_FALLING_SCORE_PENALTY: bool = False  # True when falling-score entries consistently underperform
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -333,6 +334,9 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             e["macro_label"] = "normal"
         # RSI at entry (daily RSI for swing entry quality tracking)
         e["rsi_at_entry"] = round(float(signals.get("daily_rsi", 50) or 50), 1)
+        # Score trend at entry: was score rising/flat/falling across recent scans?
+        e["score_trend"] = signals.get("score_trend", "flat")
+        e["score_trend_delta"] = float(signals.get("score_trend_delta", 0.0) or 0.0)
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -858,6 +862,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _rep["total"] > 0:
                     _rep["win_rate"] = round(_rep["wins"] / _rep["total"] * 100, 1)
                     _rep["avg_pnl"]  = round(_rep["total_pnl"] / _rep["total"], 2)
+        except Exception:
+            pass
+
+    # ── Score Trend Neuron: was the score rising or falling at entry? ────────────
+    # Rising score = momentum building, flat = waiting for a move, falling = late entry.
+    # The bot learns whether entries during rising score phases produce better outcomes.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_st = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _st_trend = _buy_st.get("score_trend", "flat") if _buy_st else "flat"
+            _st_perf = tlog.setdefault("score_trend_perf", {})
+            _stp = _st_perf.setdefault(_st_trend, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "trend": _st_trend})
+            _stp["total"] = _stp.get("total", 0) + 1
+            _stp["total_pnl"] = round(_stp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _stp["wins"] = _stp.get("wins", 0) + 1
+            else: _stp["losses"] = _stp.get("losses", 0) + 1
+            if _stp["total"] > 0:
+                _stp["win_rate"] = round(_stp["wins"] / _stp["total"] * 100, 1)
+                _stp["avg_pnl"]  = round(_stp["total_pnl"] / _stp["total"], 2)
         except Exception:
             pass
 
@@ -6933,6 +6956,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     except Exception:
         pass
 
+    # ── SCORE TREND LAYER: penalize entries when score has been declining ─────
+    # The bot has learned that falling-score entries fail more often.
+    # The score_trend is injected by the buy loop via score_history analysis.
+    # Since score() itself doesn't receive this, the penalty is applied at the
+    # buy-loop level via the _LEARNED_FALLING_SCORE_PENALTY flag check.
+    # (Score trend is captured in signals dict and recorded at trade time.)
+
     # Market regime adjustment
     s += regime_adj
 
@@ -7498,6 +7528,11 @@ def run():
     _spy_day_learned = _learned.get("spy_day_perf", [])
     _spy_down_learned = next((s for s in _spy_day_learned if s.get("bucket") == "down"), None)
     _LEARNED_SPY_DOWN_PENALTY = bool(_spy_down_learned and _spy_down_learned.get("win_rate", 50) < 40 and _spy_down_learned.get("total", 0) >= 5)
+    # Score trend penalty: True when falling-score entries consistently underperform
+    global _LEARNED_FALLING_SCORE_PENALTY
+    _st_learned = _learned.get("score_trend_perf", [])
+    _falling_learned = next((s for s in _st_learned if s.get("trend") == "falling"), None)
+    _LEARNED_FALLING_SCORE_PENALTY = bool(_falling_learned and _falling_learned.get("win_rate", 50) < 40 and _falling_learned.get("total", 0) >= 5)
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
@@ -8440,6 +8475,11 @@ def run():
             # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
             _grade_thresh = _eff_min_score - 5 if _grade_now == "A+" else _eff_min_score
+            # Score trend guard: if history shows falling-score entries fail, require +4 for them
+            if _LEARNED_FALLING_SCORE_PENALTY:
+                _sh_now = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                if len(_sh_now) >= 2 and (_sh_now[-1] - _sh_now[0]) <= -5:
+                    _grade_thresh += 4  # falling score = require stronger signal
 
             if final_sc >= _grade_thresh:
                 final_scores.append((tk, final_sc, sent, sec, catalyst))
@@ -8924,8 +8964,21 @@ def run():
                         reason += f" [SCALE-IN 60% TT{_tt_buy}]"
                     else:
                         _full_notional = notional
+                    # Inject score trend into signals for the Score Trend Neuron
+                    _buy_signals_merged = dict(live.get(tk, {}))
+                    try:
+                        _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                        if len(_sh_hist) >= 2:
+                            _sh_delta = _sh_hist[-1] - _sh_hist[0]
+                            _buy_signals_merged["score_trend"] = "rising" if _sh_delta >= 5 else ("falling" if _sh_delta <= -5 else "flat")
+                            _buy_signals_merged["score_trend_delta"] = round(_sh_delta, 1)
+                        else:
+                            _buy_signals_merged["score_trend"] = "flat"
+                            _buy_signals_merged["score_trend_delta"] = 0.0
+                    except Exception:
+                        _buy_signals_merged["score_trend"] = "flat"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
-                              signals=live.get(tk, {}))
+                              signals=_buy_signals_merged)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False,
                                  "ever_hit_5pct": False, "atr_at_entry": atr or 0.0,
                                  "scale_in_pending": _is_scalein,
@@ -10427,6 +10480,23 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 25. Score Trend Neuron: rising vs falling score at entry ──────────
+        _st_raw = tlog.get("score_trend_perf", {})
+        _st_insights = []
+        for _stk, _std in _st_raw.items():
+            if _std.get("total", 0) >= 3:
+                _st_insights.append({
+                    "trend": _stk, "win_rate": _std.get("win_rate", 50),
+                    "avg_pnl": _std.get("avg_pnl", 0), "total": _std.get("total", 0)
+                })
+        if _st_insights:
+            _st_sum = " | ".join(f"score_{s['trend']}:{s['win_rate']:.0f}%WR" for s in _st_insights)
+            _learn_log.append(f"Score trend at entry: {_st_sum}")
+            _rising = next((s for s in _st_insights if s["trend"] == "rising"), None)
+            _falling = next((s for s in _st_insights if s["trend"] == "falling"), None)
+            if _rising and _falling and (_rising["win_rate"] - _falling["win_rate"]) >= 15:
+                _learn_log.append(f"Rising score entries ({_rising['win_rate']:.0f}% WR) outperform falling ({_falling['win_rate']:.0f}%) by {_rising['win_rate']-_falling['win_rate']:.0f}pts — momentum timing confirmed")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -10459,6 +10529,7 @@ def run():
             "signal_count_perf":   _sc_insights,           # optimal signal count sweet spot
             "spy_day_perf":        _spy_day_insights,      # SPY up/flat/down day vs. outcome
             "reentry_perf":        _re_insights,           # winner vs loser re-entry outcomes
+            "score_trend_perf":    _st_insights,           # rising/flat/falling score at entry
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
