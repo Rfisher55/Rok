@@ -1,8 +1,89 @@
 {
   "trades": [],
-  "positions": [],
-  "last_updated": "2026-05-30T15:37:45.099762+00:00",
+  "positions": [
+    {
+      "ticker": "COIN",
+      "qty": 63.317855635,
+      "cost": 189.52,
+      "price": 189.03,
+      "market_val": 11968.974251,
+      "pnl_usd": -31.03,
+      "pnl_pct": -0.259,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "MSFT",
+      "qty": 27.025200999,
+      "cost": 444.03,
+      "price": 450.24,
+      "market_val": 12167.826498,
+      "pnl_usd": 167.83,
+      "pnl_pct": 1.399,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "MSTR",
+      "qty": 74.957836217,
+      "cost": 160.09,
+      "price": 159.09,
+      "market_val": 11925.042164,
+      "pnl_usd": -74.96,
+      "pnl_pct": -0.625,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "PLTR",
+      "qty": 76.737723785,
+      "cost": 156.376804,
+      "price": 156.54,
+      "market_val": 12012.523281,
+      "pnl_usd": 12.52,
+      "pnl_pct": 0.104,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "SOFI",
+      "qty": 651.697611292,
+      "cost": 18.413448,
+      "price": 18.22,
+      "market_val": 11873.930478,
+      "pnl_usd": -126.07,
+      "pnl_pct": -1.051,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    },
+    {
+      "ticker": "TSLA",
+      "qty": 27.401639531,
+      "cost": 437.93,
+      "price": 435.79,
+      "market_val": 11941.360491,
+      "pnl_usd": -58.64,
+      "pnl_pct": -0.489,
+      "side": "long",
+      "entry_date": "2026-05-30",
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+    }
+  ],
+  "last_updated": "2026-05-30T16:44:59.118821+00:00",
   "portfolio_value": 99889.66,
   "buying_power": 127889.66,
-  "status": "starting"
+  "status": "crypto-only",
+  "neurons_active": 0,
+  "neurons_total": 60,
+  "bot_brain_summary": {
+    "neurons_active": 0,
+    "neurons_total": 60,
+    "top_signals": [],
+    "last_tuned": ""
+  }
 }
