@@ -11724,6 +11724,37 @@ def run():
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
     tlog["market_breadth"]  = breadth
+    # SPY/QQQ today's returns — live market context for dashboard
+    try:
+        _spy_perf = _fetch_spy_perf()
+        tlog["spy_d1"]  = round(_spy_perf.get("d1", 0.0) or 0.0, 2)
+        tlog["spy_d5"]  = round(_spy_perf.get("d5", 0.0) or 0.0, 2)
+        tlog["spy_d20"] = round(_spy_perf.get("d20", 0.0) or 0.0, 2)
+    except Exception:
+        tlog.setdefault("spy_d1", 0.0)
+    # Sector breakout signal: when 3+ stocks score above threshold in the same sector
+    try:
+        _sec_breakout_counts: dict = {}
+        for _bk, _bsc in tech_scores.items():
+            if _bsc >= _eff_min_score:
+                _bsec = SECTOR_MAP.get(_bk, "other")
+                _sec_breakout_counts[_bsec] = _sec_breakout_counts.get(_bsec, 0) + 1
+        _sector_breakout = {k: v for k, v in _sec_breakout_counts.items() if v >= 3}
+        tlog["sector_breakout"] = _sector_breakout   # {sector: count} when 3+ stocks qualify
+    except Exception:
+        tlog.setdefault("sector_breakout", {})
+    # Aggregate options flow: count unusual calls vs unusual puts across scan universe
+    try:
+        _agg_calls = sum(1 for _d in live.values() if _d.get("unusual_calls"))
+        _agg_puts  = sum(1 for _d in live.values() if _d.get("unusual_puts"))
+        tlog["options_flow_agg"] = {
+            "unusual_calls": _agg_calls,
+            "unusual_puts":  _agg_puts,
+            "net_bull": _agg_calls - _agg_puts,
+            "bullish": _agg_calls > _agg_puts and _agg_calls >= 3,
+        }
+    except Exception:
+        tlog.setdefault("options_flow_agg", {})
     # Rolling win rate history (last 50 snapshots, taken each cycle)
     try:
         _closed_all = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","SELL_HALF","COVER") and t.get("pnl_pct") is not None]

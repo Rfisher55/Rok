@@ -57717,6 +57717,23 @@ window.renderSectorRotation = renderSectorRotation;
             });
             html += `</div></div>`;
           }
+
+          // ── Sector Breakout Alert: when 3+ stocks in same sector qualify ──
+          const sectorBreakout = data.sector_breakout || {};
+          const sbEntries = Object.entries(sectorBreakout).filter(([,n]) => n >= 3).sort((a,b) => b[1]-a[1]);
+          if (sbEntries.length > 0) {
+            const sbItems = sbEntries.map(([sec, n]) =>
+              `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);border-radius:5px;padding:2px 8px">
+                <span style="font-size:8px;font-weight:900;color:#00e5ff">${sec.toUpperCase()}</span>
+                <span style="font-size:7px;color:#00e5ff;opacity:.8">${n} stocks ready</span>
+              </span>`
+            ).join('');
+            html += `<div style="margin-top:.45rem;padding:.35rem .5rem;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);border-radius:7px">
+              <div style="font-size:7px;font-weight:800;color:#00e5ff;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">🔥 SECTOR BREAKOUT ALERT</div>
+              <div style="display:flex;flex-wrap:wrap;gap:.3rem">${sbItems}</div>
+              <div style="font-size:6px;color:#2a4a5a;margin-top:.25rem">3+ stocks in same sector above threshold = institutional sector rotation in progress</div>
+            </div>`;
+          }
         }
 
         html += `</div>`;
