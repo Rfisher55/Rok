@@ -57645,6 +57645,39 @@ window.renderSectorRotation = renderSectorRotation;
             });
             html += `</div></div>`;
           }
+
+          // ── Momentum Burst: stocks making explosive moves RIGHT NOW ──
+          const burstList = data.momentum_burst_list || [];
+          if (burstList.length > 0) {
+            html += `<div style="margin-top:.55rem;border-top:1px solid rgba(255,255,255,.04);padding-top:.45rem">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+                <span style="font-size:7.5px;font-weight:800;color:#ffa726;letter-spacing:.08em;text-transform:uppercase">⚡ MOMENTUM BURST — Moving Right Now</span>
+                <span style="font-size:6.5px;color:#333">2%+ move · 2× vol</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px">`;
+            burstList.slice(0, 6).forEach(b => {
+              const bDir = b.chg_pct >= 0 ? '▲' : '▼';
+              const bCol = b.chg_pct >= 2 ? '#00ff88' : b.chg_pct >= 0 ? '#69f0ae' : b.chg_pct > -2 ? '#ff9800' : '#ef5350';
+              const rvolCol = b.rvol >= 4 ? '#ffd54f' : b.rvol >= 2.5 ? '#ffa726' : '#888';
+              const threshBadge = b.above_threshold
+                ? `<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.2);color:#00ff88;padding:1px 4px;border-radius:3px">TRADE-READY</span>`
+                : `<span style="font-size:5.5px;color:#546e7a;border:1px solid #222;border-radius:3px;padding:1px 3px">sc${b.score}</span>`;
+              const sigBadges = [];
+              if (b.at_breakout) sigBadges.push('<span style="font-size:5px;color:#00ff88">BRK</span>');
+              if (b.vcp) sigBadges.push('<span style="font-size:5px;color:#ffd54f">VCP</span>');
+              if (b.rvol_surge) sigBadges.push('<span style="font-size:5px;color:#ffa726">RVOL</span>');
+              html += `<div style="display:flex;align-items:center;gap:.5rem;padding:.25rem .3rem;background:rgba(255,167,38,.04);border:1px solid rgba(255,167,38,.1);border-radius:6px">
+                <span style="font-family:var(--disp);font-size:.8rem;color:#ffd54f;font-weight:900;min-width:40px">\$${b.ticker}</span>
+                <span style="font-size:7.5px;font-weight:900;color:${bCol}">${bDir}${b.chg_pct>=0?'+':''}${b.chg_pct.toFixed(1)}%</span>
+                <span style="font-size:6px;font-weight:700;color:${rvolCol}">📊${b.rvol.toFixed(1)}×</span>
+                <span style="font-size:6px;color:#4a6fa5">\$${b.price.toFixed(2)}</span>
+                ${sigBadges.length ? `<div style="display:flex;gap:2px">${sigBadges.join('')}</div>` : ''}
+                <span style="font-size:5.5px;color:#444;flex:1">${(b.sector||'').substring(0,10)}</span>
+                ${threshBadge}
+              </div>`;
+            });
+            html += `</div></div>`;
+          }
         }
 
         html += `</div>`;
@@ -58113,6 +58146,15 @@ window.renderSectorRotation = renderSectorRotation;
           actions.push({pri:3, col:'#ff9800', icon:'🔄', msg:`Rotation opportunity: swap <strong>$${rot.sell}</strong> (sc${rot.sell_score}) → <strong>$${rot.buy}</strong> (sc${rot.buy_score}, +${rot.gap.toFixed(0)}pts)`});
         if (data.premarket_brief)
           actions.push({pri:3, col:'#82b1ff', icon:'🌅', msg:data.premarket_brief});
+        // Momentum burst alerts — stocks making explosive moves RIGHT NOW
+        const bursts = (data.momentum_burst_list || []).slice(0, 2);
+        for (const b of bursts) {
+          const bDir = b.chg_pct >= 0 ? '▲' : '▼';
+          const bCol = b.above_threshold ? '#00ff88' : '#ffd54f';
+          const bQual = b.above_threshold ? '🔥 TRADE-READY' : '👀 watch';
+          actions.push({pri: b.above_threshold ? 2 : 4, col: bCol, icon:'⚡',
+            msg:`<strong>$${b.ticker}</strong> ${bDir}${b.chg_pct>=0?'+':''}${b.chg_pct.toFixed(1)}% · ${b.rvol.toFixed(1)}× vol · sc${b.score} · ${bQual}${b.at_breakout?' · BRK':b.vcp?' · VCP':''}`});
+        }
         // Sort by priority
         actions.sort((a,b) => a.pri - b.pri);
         if (actions.length > 0) {
@@ -59718,7 +59760,13 @@ window.renderSectorRotation = renderSectorRotation;
           const grade = p.grade || '?';
           const gradeCol = grade==='A+'?'#00ff88':grade==='A'?'#69f0ae':grade==='B'?'#ffd54f':grade==='C'?'#ff9800':'#ef5350';
           const daysHeld = p.days_held || 0;
+          const hoursHeld = p.hours_held || 0;
+          const holdLabel = hoursHeld < 24 ? `${hoursHeld.toFixed(0)}h` : `${daysHeld}d`;
           const daysCol = daysHeld <= 2 ? '#82b1ff' : daysHeld <= 5 ? '#ffd54f' : '#ff9800';
+          const idChg = p.intraday_chg_pct != null ? p.intraday_chg_pct : null;
+          const idChgCol = idChg == null ? '#888' : idChg > 1.5 ? '#00ff88' : idChg > 0.3 ? '#69f0ae' : idChg > -0.3 ? '#ffd54f' : idChg > -1.5 ? '#ff9800' : '#ef5350';
+          const idArrow = idChg == null ? '→' : idChg > 0.5 ? '▲' : idChg < -0.5 ? '▼' : '→';
+          const volPace = p.vol_pace || 1.0;
           const distTrail = p.dist_from_trail || 0;
           const dynTrail = p.dyn_trail_pct || 5;
           const trailWarning = distTrail > 0 && distTrail < 1.5;
@@ -59732,7 +59780,9 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:6.5px;background:${gradeCol}22;color:${gradeCol};border:1px solid ${gradeCol}55;padding:1px 4px;border-radius:3px;font-weight:800" title="Momentum grade">${grade}</div>
                 ${p.rs_rating && p.rs_rating != 50 ? (() => { const rr=p.rs_rating; const rrCol=rr>=90?'#00e676':rr>=80?'#69f0ae':rr>=70?'#ffd54f':rr<=30?'#ef5350':rr<=40?'#ff9800':'#888'; return `<div style="font-size:6px;color:${rrCol};font-weight:800;border:1px solid ${rrCol}55;padding:1px 4px;border-radius:3px" title="IBD RS Rating: ${rr}/99 — 12-month relative strength vs market">RS${rr}</div>`; })() : ''}
                 ${p.overextended ? `<div style="font-size:6px;font-weight:900;color:#ff1744;background:rgba(255,23,68,.2);border:1px solid rgba(255,23,68,.4);padding:1px 4px;border-radius:3px;animation:pulse-red 1.5s infinite" title="OVEREXTENDED >40% above pivot — O'Neil rule: reduce here, very high reversal risk">⚡OVER</div>` : p.extended ? `<div style="font-size:6px;font-weight:800;color:#ff9800;background:rgba(255,152,0,.15);border:1px solid rgba(255,152,0,.3);padding:1px 4px;border-radius:3px" title="Extended >25% above proper buy point — consider locking 25-50% gains (IBD rule)">⚠EXTD</div>` : ''}
-                ${daysHeld > 0 ? `<div style="font-size:6px;color:${daysCol}" title="${daysHeld} days held">${daysHeld}d</div>` : ''}
+                ${hoursHeld > 0 ? `<div style="font-size:6px;color:${daysCol}" title="${hoursHeld.toFixed(1)} hours held">${holdLabel}</div>` : ''}
+                ${idChg != null ? `<div style="font-size:6px;font-weight:800;color:${idChgCol}" title="Today's price change ${idChg>=0?'+':''}${idChg.toFixed(2)}% — intraday momentum">${idArrow}${idChg>=0?'+':''}${idChg.toFixed(1)}%</div>` : ''}
+                ${volPace >= 1.8 ? `<div style="font-size:6px;color:#ffd54f;font-weight:700" title="Volume ${volPace.toFixed(1)}x normal — unusual activity">📊${volPace.toFixed(1)}x</div>` : ''}
                 ${p.pos_health != null ? (() => { const ph=p.pos_health; const phC=ph>=8?'#00e676':ph>=6?'#69f0ae':ph>=4?'#ffd54f':ph>=2?'#ff9800':'#ef5350'; return `<div style="font-size:6px;font-weight:800;color:${phC};border:1px solid ${phC}44;padding:1px 4px;border-radius:3px" title="Position health ${ph}/10">${ph}♥</div>`; })() : ''}
                 ${p.exit_urgency >= 5 ? `<div style="font-size:6px;font-weight:900;color:${p.exit_urgency>=7?'#ef5350':'#ffa726'};background:${p.exit_urgency>=7?'rgba(239,83,80,.15)':'rgba(255,167,38,.12)'};border-radius:3px;padding:1px 4px" title="Exit urgency ${p.exit_urgency}/10">${p.exit_urgency>=7?'🔴 EXIT':'🟠 WATCH'}</div>` : ''}
                 <div style="font-size:8px;color:#4a6fa5;flex:1">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · \$${(cost).toFixed(2)}${pv > 0 ? ` · <span style="color:${(p.market_val||0)/pv*100>20?'#ffa726':(p.market_val||0)/pv*100>15?'#ffd54f':'#4a6fa5'}" title="Position size as % of portfolio">${((p.market_val||0)/pv*100).toFixed(1)}%</span>` : ''}</div>

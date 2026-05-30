@@ -10398,6 +10398,39 @@ def run():
         except Exception as _rot_e:
             logger.debug(f"Rotation check: {_rot_e}")
 
+        # Momentum Burst List: stocks making explosive moves RIGHT NOW
+        # Criteria: >2% move today + RVOL >2x + not already held — sorted by score
+        try:
+            _burst = []
+            for _bk, _bd in live.items():
+                if _bk in held:
+                    continue
+                _b_chg  = abs(_bd.get("change_pct", 0) or 0)
+                _b_rvol = _bd.get("rvol", 1.0) or 1.0
+                _b_chg_dir = _bd.get("change_pct", 0) or 0
+                if _b_chg >= 2.0 and _b_rvol >= 2.0:
+                    _b_sc   = tech_scores.get(_bk, 0)
+                    _b_prem = sum(bool(_bd.get(k)) for k in (
+                        "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
+                        "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising"))
+                    _burst.append({
+                        "ticker": _bk,
+                        "chg_pct": round(_b_chg_dir, 2),
+                        "rvol": round(_b_rvol, 2),
+                        "score": _b_sc,
+                        "price": round(_bd.get("price", 0), 2),
+                        "premium_signals": _b_prem,
+                        "at_breakout": bool(_bd.get("at_breakout")),
+                        "rvol_surge": bool(_bd.get("rvol_surge")),
+                        "vcp": bool(_bd.get("vcp")),
+                        "sector": SECTOR_MAP.get(_bk, "other"),
+                        "rsi": round(_bd.get("daily_rsi", 50), 1),
+                        "above_threshold": _b_sc >= _eff_min_score,
+                    })
+            tlog["momentum_burst_list"] = sorted(_burst, key=lambda x: -x["score"])[:8]
+        except Exception:
+            tlog.setdefault("momentum_burst_list", [])
+
         if not final_scores:
             logger.info(f"No longs passed threshold {_eff_min_score} (base={MIN_BUY_SCORE}).")
             if candidates_buy:
@@ -10961,15 +10994,20 @@ def run():
             _tgt      = round(_entry * (1 + _atr_tgt_pct), 2)
             _init_risk_pct = (_entry - _stop) / _entry * 100 if _entry > 0 else STOP_LOSS_PCT * 100
             _r_multiple = round(_pnl_pct / _init_risk_pct, 2) if _init_risk_pct > 0 else 0.0
-            # Days held from peaks.json entry timestamp
+            # Days and hours held from peaks.json entry timestamp
             _days_held = 0
+            _hours_held = 0.0
             try:
                 _pk = peaks.get(_sym, {})
                 if isinstance(_pk, dict) and _pk.get("time"):
                     _et = datetime.fromisoformat(_pk["time"].replace("Z", "+00:00"))
-                    _days_held = max(0, int((now_utc - _et).total_seconds() / 86400))
+                    _total_secs = (now_utc - _et).total_seconds()
+                    _days_held  = max(0, int(_total_secs / 86400))
+                    _hours_held = max(0.0, round(_total_secs / 3600, 1))
             except Exception:
                 pass
+            _intraday_chg_pct = round(live.get(_sym, {}).get("change_pct", 0), 2)
+            _vol_pace          = round(live.get(_sym, {}).get("rvol", 1.0), 2)
             _pos_list_raw.append({
                 "ticker":     _sym,
                 "side":       "long" if float(p.get("qty", 0)) > 0 else "short",
@@ -10985,6 +11023,9 @@ def run():
                 "earnings_days": get_earnings_days(_sym),
                 "r_multiple":  _r_multiple,
                 "days_held":   _days_held,
+                "hours_held":  _hours_held,
+                "intraday_chg_pct": _intraday_chg_pct,
+                "vol_pace":    _vol_pace,
                 "live_signals": _pos_signals(_sym),
                 "score_history": peaks.get(_sym, {}).get("score_history", []) if isinstance(peaks.get(_sym), dict) else [],
                 "pnl_history":   peaks.get(_sym, {}).get("pnl_history", []) if isinstance(peaks.get(_sym), dict) else [],
