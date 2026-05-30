@@ -54396,6 +54396,33 @@ function _renderIntelReport(el, intel) {
       })()}
       ${''/* POC Distance N42 rendered in RVOL dual panel above */}
       ${''/* Score Decay N41 rendered in Stoch Zone dual panel above */}
+      ${(() => {
+        // ── MFI Zone Neuron (49): volume-weighted RSI zone at entry ──────────
+        const mi = lp.mfi_zone_perf || [];
+        if (!mi.length) return '';
+        const MI_ORDER = ['distribution','neutral','accumulation'];
+        const MI_ICONS = {distribution:'🩸',neutral:'💧',accumulation:'💎'};
+        const MI_LABELS = {distribution:'MFI>80 Dist.',neutral:'MFI 30-80',accumulation:'MFI<30 Accum.'};
+        const MI_BG = {distribution:'rgba(239,83,80,.07)',neutral:'rgba(255,255,255,.04)',accumulation:'rgba(0,230,118,.08)'};
+        const miMap = {}; mi.forEach(s => miMap[s.zone] = s);
+        const miBest = mi.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, mi[0]);
+        const miCells = MI_ORDER.map(zone => {
+          const s = miMap[zone];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:9px">${MI_ICONS[zone]}</div><div style="font-size:5px;color:#333">${MI_LABELS[zone]}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = s.zone === miBest.zone ? ' ⭐' : '';
+          return `<div style="background:${MI_BG[zone]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
+            <div style="font-size:9px">${MI_ICONS[zone]}</div>
+            <div style="font-size:5.5px;color:#ccc;font-weight:700">${MI_LABELS[zone]}${star}</div>
+            <div style="font-size:11px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.2rem">💎 MFI ZONE (Neuron 49): volume-weighted RSI at entry — accumulation vs distribution (harder to fake than RSI)</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem">${miCells}</div>
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

@@ -463,6 +463,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _opt_score = int(_uc) + int(_ob) + int(_pcr < 0.7)
         e["options_flow_score"] = _opt_score
         e["options_flow_tier"] = ("confirmed" if _opt_score >= 2 else "slight" if _opt_score >= 1 else "neutral")
+        # MFI Zone Neuron (49): Money Flow Index at entry (volume-weighted RSI).
+        # MFI >80 = heavy distribution (overbought + volume selling); <20 = accumulation.
+        # More reliable than RSI because it incorporates volume — harder to fake.
+        _mfi_v = float(signals.get("mfi", 50.0) or 50.0)
+        e["mfi_at_entry"] = round(_mfi_v, 1)
+        e["mfi_zone"] = ("distribution" if _mfi_v > 80 else "accumulation" if _mfi_v < 30 else "neutral")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1340,6 +1346,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── MFI Zone Neuron (49): Money Flow Index (volume-weighted RSI) at entry ─────
+    # Tracks performance by MFI zone at entry: distribution (>80) vs neutral vs accumulation (<30).
+    # MFI combines price + volume — harder to fake, more reliable than pure RSI.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_mi = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _mi_zone = _buy_mi.get("mfi_zone", "neutral") if _buy_mi else "neutral"
+            _mi_perf = tlog.setdefault("mfi_zone_perf", {})
+            _mip = _mi_perf.setdefault(_mi_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _mi_zone})
+            _mip["total"] = _mip.get("total", 0) + 1
+            _mip["total_pnl"] = round(_mip.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _mip["wins"] = _mip.get("wins", 0) + 1
+            else:        _mip["losses"] = _mip.get("losses", 0) + 1
+            if _mip["total"] > 0:
+                _mip["win_rate"] = round(_mip["wins"] / _mip["total"] * 100, 1)
+                _mip["avg_pnl"]  = round(_mip["total_pnl"] / _mip["total"], 2)
         except Exception:
             pass
 
@@ -11550,6 +11575,23 @@ def run():
             if _of_confirmed and _of_neutral and _of_confirmed["win_rate"] > _of_neutral["win_rate"] + 15:
                 _learn_log.append(f"Flow-confirmed trades win {_of_confirmed['win_rate']:.0f}% vs unconfirmed {_of_neutral['win_rate']:.0f}% — smart money signal works")
 
+        # ── 49. MFI Zone Neuron: volume-weighted RSI zone at entry ────────────
+        _mi_raw = tlog.get("mfi_zone_perf", {})
+        _mi_insights = []
+        for _mik, _mid in _mi_raw.items():
+            if _mid.get("total", 0) >= 3:
+                _mi_insights.append({
+                    "zone": _mik, "win_rate": _mid.get("win_rate", 50),
+                    "avg_pnl": _mid.get("avg_pnl", 0), "total": _mid.get("total", 0)
+                })
+        if _mi_insights:
+            _mi_dist = next((s for s in _mi_insights if s["zone"] == "distribution"), None)
+            _mi_nt   = next((s for s in _mi_insights if s["zone"] == "neutral"), None)
+            _mi_sum = " | ".join(f"MFI_{s['zone']}:{s['win_rate']:.0f}%WR" for s in _mi_insights)
+            _learn_log.append(f"MFI zone WRs: {_mi_sum}")
+            if _mi_dist and _mi_nt and _mi_dist["win_rate"] < 40 and _mi_dist["total"] >= 5:
+                _learn_log.append(f"MFI distribution entries fail ({_mi_dist['win_rate']:.0f}% WR) — avoid overbought volume buying")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11608,6 +11650,7 @@ def run():
             "stoch_zone_perf":      _sk_insights,            # Stochastic %K zone at entry vs outcome
             "mtf_align_perf":       _mf_insights,            # multi-timeframe alignment at entry vs outcome
             "options_flow_perf":    _of_insights,            # options flow confirmation at entry vs outcome
+            "mfi_zone_perf":        _mi_insights,            # MFI zone (volume-weighted RSI) at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
