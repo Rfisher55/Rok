@@ -377,6 +377,14 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _cg = int(signals.get("consec_green", 0) or 0)
         e["consec_green_at_entry"] = _cg
         e["consec_green_bucket"] = ("0d" if _cg == 0 else "1d" if _cg == 1 else "2-3d" if _cg <= 3 else "4d+")
+        # Institutional Accumulation Neuron (35): smart money accumulation score
+        _ac = int(signals.get("accum_score", 0) or 0)
+        e["accum_score_at_entry"] = _ac
+        e["accum_bucket"] = ("heavy" if _ac >= 8 else "moderate" if _ac >= 5 else "light" if _ac >= 2 else "none")
+        # RS Rating Neuron (36): IBD-style Relative Strength Rating at entry
+        _rs_r = int(signals.get("rs_rating", 50) or 50)
+        e["rs_rating_at_entry"] = _rs_r
+        e["rs_bucket"] = ("elite" if _rs_r >= 90 else "strong" if _rs_r >= 75 else "average" if _rs_r >= 50 else "weak")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -959,6 +967,44 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _psp["total"] > 0:
                 _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
                 _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Institutional Accumulation Neuron: smart money buying vs outcome ────────
+    # Tracks whether heavy institutional accumulation at entry predicts better outcomes.
+    # High accum_score = OBV rising + MFI bullish + demand zone + options flow all agree.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ac = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ac_bkt = _buy_ac.get("accum_bucket", "light") if _buy_ac else "light"
+            _ac_perf = tlog.setdefault("accum_perf", {})
+            _acp = _ac_perf.setdefault(_ac_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _ac_bkt})
+            _acp["total"] = _acp.get("total", 0) + 1
+            _acp["total_pnl"] = round(_acp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _acp["wins"] = _acp.get("wins", 0) + 1
+            else: _acp["losses"] = _acp.get("losses", 0) + 1
+            if _acp["total"] > 0:
+                _acp["win_rate"] = round(_acp["wins"] / _acp["total"] * 100, 1)
+                _acp["avg_pnl"]  = round(_acp["total_pnl"] / _acp["total"], 2)
+        except Exception:
+            pass
+
+    # ── RS Rating Neuron: IBD-style Relative Strength at entry vs outcome ────────
+    # Tracks win rates for elite RS stocks (90+) vs average (50-75) vs weak (<50).
+    # IBD data shows RS90+ stocks outperform the market 4:1 — let's verify with live data.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_rs = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _rs_bkt = _buy_rs.get("rs_bucket", "average") if _buy_rs else "average"
+            _rs_perf = tlog.setdefault("rs_rating_perf", {})
+            _rsp = _rs_perf.setdefault(_rs_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _rs_bkt})
+            _rsp["total"] = _rsp.get("total", 0) + 1
+            _rsp["total_pnl"] = round(_rsp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _rsp["wins"] = _rsp.get("wins", 0) + 1
+            else: _rsp["losses"] = _rsp.get("losses", 0) + 1
+            if _rsp["total"] > 0:
+                _rsp["win_rate"] = round(_rsp["wins"] / _rsp["total"] * 100, 1)
+                _rsp["avg_pnl"]  = round(_rsp["total_pnl"] / _rsp["total"], 2)
         except Exception:
             pass
 
@@ -10716,6 +10762,38 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 35. Institutional Accumulation Neuron: accum score vs outcome ────────
+        _ac_raw = tlog.get("accum_perf", {})
+        _ac_insights = []
+        for _acbk, _acd in _ac_raw.items():
+            if _acd.get("total", 0) >= 3:
+                _ac_insights.append({"bucket": _acbk, "win_rate": _acd.get("win_rate", 50),
+                                     "avg_pnl": _acd.get("avg_pnl", 0), "total": _acd.get("total", 0)})
+        if _ac_insights:
+            _ac_s = sorted(_ac_insights, key=lambda x: -x["win_rate"])
+            _ac_sum = " | ".join(f"accum_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _ac_s)
+            _learn_log.append(f"Accumulation score WRs: {_ac_sum}")
+            _heavy = next((s for s in _ac_insights if s["bucket"] == "heavy"), None)
+            _none  = next((s for s in _ac_insights if s["bucket"] == "none"), None)
+            if _heavy and _heavy["win_rate"] >= 65:
+                _learn_log.append(f"Heavy institutional accumulation works: {_heavy['win_rate']:.0f}% WR (avg {_heavy['avg_pnl']:+.1f}%) — smart money confirmed")
+
+        # ── 36. RS Rating Neuron: IBD-style RS Rating at entry vs outcome ────────
+        _rs_raw = tlog.get("rs_rating_perf", {})
+        _rs_insights = []
+        for _rsbk, _rsd in _rs_raw.items():
+            if _rsd.get("total", 0) >= 3:
+                _rs_insights.append({"bucket": _rsbk, "win_rate": _rsd.get("win_rate", 50),
+                                     "avg_pnl": _rsd.get("avg_pnl", 0), "total": _rsd.get("total", 0)})
+        if _rs_insights:
+            _rs_s = sorted(_rs_insights, key=lambda x: -x["win_rate"])
+            _rs_sum = " | ".join(f"RS_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _rs_s)
+            _learn_log.append(f"RS rating WRs: {_rs_sum}")
+            _rs_elite = next((s for s in _rs_insights if s["bucket"] == "elite"), None)
+            _rs_weak  = next((s for s in _rs_insights if s["bucket"] == "weak"), None)
+            if _rs_elite and _rs_weak and (_rs_elite["win_rate"] - _rs_weak["win_rate"]) >= 15:
+                _learn_log.append(f"RS90+ stocks outperforming weak RS ({_rs_elite['win_rate']:.0f}% vs {_rs_weak['win_rate']:.0f}%) — IBD quality thesis validated")
+
         # ── 33. Trend Template Neuron: O'Neil quality score vs outcome ───────────
         _tt_raw = tlog.get("tt_perf", {})
         _tt_insights = []
@@ -10932,6 +11010,8 @@ def run():
             "sector_momentum_perf": _sm_insights,           # sector ETF acceleration at entry
             "tt_perf":              _tt_insights,           # O'Neil trend template quality vs outcome
             "consec_green_perf":    _cg_insights,           # consecutive green days vs outcome
+            "accum_perf":           _ac_insights,           # institutional accumulation score vs outcome
+            "rs_rating_perf":       _rs_insights,           # IBD RS Rating bracket vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
