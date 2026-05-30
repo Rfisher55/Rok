@@ -1480,8 +1480,8 @@ body.beginner-mode #beginner-banner { display:block }
 
     <!-- Stats strip -->
     <div class="stats-row">
-      <div class="stat-box" title="Reddit posts analyzed"><div class="stat-num" data-final="k">k</div><div class="stat-lbl"> Reddit</div></div>
-      <div class="stat-box" title="News articles scanned"><div class="stat-num" data-final="k">k</div><div class="stat-lbl"> News</div></div>
+      <div class="stat-box" title="Reddit posts analyzed"><div class="stat-num" data-final="—">—</div><div class="stat-lbl"> Reddit</div></div>
+      <div class="stat-box" title="News articles scanned"><div class="stat-num" data-final="—">—</div><div class="stat-lbl"> News</div></div>
       <div class="stat-box" title="Stocks scanned with live data"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Stocks</div></div>
       <div class="stat-box" title="CEO/executive insider purchases (Form 4)"><div class="stat-num" data-final=""></div><div class="stat-lbl"> CEO Buys</div></div>
       <div class="stat-box" title="Companies reporting earnings soon"><div class="stat-num" data-final=""></div><div class="stat-lbl"> Earnings</div></div>
@@ -3453,16 +3453,17 @@ body.beginner-mode #beginner-banner { display:block }
     starred.forEach(t => tickers.add(t));
     const tickerList = [...tickers].filter(Boolean);
 
-    // Fetch in batches of 10
-    let anySuccess = false;
+    // ── Step 1: Load prices.json FIRST (bot-side, no CORS issues) ────────────
+    // The trading bot commits prices.json every 5 min — this is always available
+    const pricesLoaded = await fetchFallbackPrices(tickerList);
+
+    // ── Step 2: Try Yahoo Finance to freshen any missing tickers ─────────────
+    // Yahoo's CORS policy blocks most browser requests; this works as a bonus only
+    let anySuccess = pricesLoaded;
     for (let i = 0; i < tickerList.length; i += 10) {
       const batch = tickerList.slice(i, i + 10);
       const ok = await fetchYahooPrices(batch);
       if (ok) anySuccess = true;
-    }
-    // Fallback if Yahoo failed
-    if (!anySuccess) {
-      await fetchFallbackPrices(tickerList);
     }
 
     // Sync window._livePrices so all newer render functions (B158+) see live data
@@ -58086,8 +58087,8 @@ window.renderPositionNews = renderPositionNews;
       try {
         const _statBoxes = document.querySelectorAll('.stat-box');
         const _statData  = [
-          data.reddit_posts_scanned  != null ? data.reddit_posts_scanned  : (_topScan.length ? '—' : 'k'),
-          data.news_articles_scanned != null ? data.news_articles_scanned : (_topScan.length ? '—' : 'k'),
+          data.reddit_posts_scanned  != null ? data.reddit_posts_scanned  : '—',
+          data.news_articles_scanned != null ? data.news_articles_scanned : '—',
           data.scan_universe  || _topScan.length || '—',
           data.insider_buys          != null ? data.insider_buys   : '—',
           data.earnings_watch_count  != null ? data.earnings_watch_count : '—',
@@ -58127,20 +58128,48 @@ window.renderPositionNews = renderPositionNews;
         if (typeof updateSignalsPortfolioAlert === 'function') updateSignalsPortfolioAlert();
       }
 
-      // Update the Top Pick banner (was "$" with empty ticker)
+      // Update the Top Pick banner — show best scan pick or best current position
       try {
         const _bannerEl = document.querySelector('.top-pick-banner');
-        if (_bannerEl && _topScan.length > 0) {
-          const _best = _topScan[0];
+        if (_bannerEl) {
           const _tickEl = _bannerEl.querySelector('.tp-ticker');
           const _whyEl  = _bannerEl.querySelector('.tp-why');
           const _btnEl  = _bannerEl.querySelector('button');
-          if (_tickEl) _tickEl.textContent = '$' + _best.ticker;
-          if (_whyEl)  _whyEl.textContent  = ` — Score ${_best.score || 0}${_best.sector ? ' | '+_best.sector : ''}`;
-          if (_btnEl && _best.ticker) _btnEl.onclick = () => openModal(_best.ticker);
-        } else if (_bannerEl && !_topScan.length) {
-          const _whyEl = _bannerEl.querySelector('.tp-why');
-          if (_whyEl && data.status) _whyEl.textContent = ` — Bot ${data.status === 'starting' ? 'initializing' : data.status} · last run ${new Date(data.last_updated||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+
+          if (_topScan.length > 0) {
+            // Bot has fresh scan data — show highest-scored pick
+            const _best = _topScan[0];
+            if (_tickEl) _tickEl.textContent = '$' + _best.ticker;
+            let _why = ` — Score ${_best.score || 0}`;
+            if (_best.catalyst) _why += ' | ' + _best.catalyst;
+            else if (_best.sector) _why += ' | ' + _best.sector;
+            if (_best.target_price && _best.price) {
+              const _ups = Math.round((_best.target_price - _best.price) / _best.price * 100);
+              _why += ` · ${_ups > 0 ? '+' : ''}${_ups}% to target`;
+            }
+            if (_whyEl) _whyEl.textContent = _why;
+            if (_btnEl && _best.ticker) {
+              _btnEl.textContent = 'SEE WHY →';
+              _btnEl.onclick = () => openModal(_best.ticker);
+            }
+          } else if (_positions.length > 0) {
+            // No scan data — show best open position by P&L%
+            const _bestPos = [..._positions].sort((a,b) => (b.pnl_pct||0) - (a.pnl_pct||0))[0];
+            if (_tickEl) _tickEl.textContent = '$' + _bestPos.ticker;
+            const _pnl = _bestPos.pnl_pct || 0;
+            const _pnlStr = `${_pnl >= 0 ? '+' : ''}${_pnl.toFixed(2)}%`;
+            if (_whyEl) _whyEl.textContent = ` — Bot holding · ${_pnlStr} · $${(_bestPos.market_val||0).toFixed(0)} value`;
+            if (_btnEl && _bestPos.ticker) {
+              _btnEl.textContent = 'VIEW →';
+              _btnEl.onclick = () => openModal(_bestPos.ticker);
+            }
+          } else {
+            // Nothing — show when bot last ran
+            if (_tickEl) _tickEl.textContent = 'ROK';
+            const _lastRun = data.last_updated ? new Date(data.last_updated).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
+            if (_whyEl) _whyEl.textContent = ` — Market closed · last scan ${_lastRun}`;
+            if (_btnEl) { _btnEl.textContent = 'LEARN →'; _btnEl.onclick = () => showTab('market'); }
+          }
         }
       } catch(e) {}
 

@@ -58,6 +58,7 @@ VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
 TRADES_FILE  = Path("docs/trades.json")
 PEAK_FILE    = Path("docs/peaks.json")
 EQUITY_FILE  = Path("docs/equity.json")
+PRICES_FILE  = Path("docs/prices.json")
 
 # ── Crypto config ─────────────────────────────────────────────────────────────
 ENABLE_CRYPTO    = True
@@ -371,6 +372,85 @@ def _save_equity_snapshot(tlog: dict) -> None:
         _save(EQUITY_FILE, eq)
     except Exception:
         pass
+
+
+def _save_prices_json(tlog: dict, live: dict | None = None) -> None:
+    """Write docs/prices.json with live prices for every position + major indices.
+    This is the primary price source for the GitHub Pages site — replaces CORS-blocked
+    Yahoo Finance browser calls with bot-side fetches committed every 5 minutes.
+    """
+    try:
+        existing = _load(PRICES_FILE, {})
+        now_iso  = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # ── Index ETFs — always include from SPY perf cache ──────────────────
+        _spy_cache = _fetch_spy_perf()
+        _spy_closes = _spy_cache.get("closes", [])
+        if _spy_closes:
+            # Fetch live ETF prices via yfinance for indices
+            try:
+                import yfinance as _yf_px
+                _idx_tickers = ["SPY", "QQQ", "DIA", "IWM"]
+                _idx_df = _yf_px.download(
+                    " ".join(_idx_tickers), period="2d", interval="1d",
+                    auto_adjust=True, progress=False, group_by="ticker"
+                )
+                for _tk in _idx_tickers:
+                    try:
+                        if len(_idx_tickers) > 1:
+                            _closes_s = _idx_df[_tk]["Close"].dropna()
+                        else:
+                            _closes_s = _idx_df["Close"].dropna()
+                        if len(_closes_s) >= 2:
+                            _px = float(_closes_s.iloc[-1])
+                            _prev = float(_closes_s.iloc[-2])
+                            _chg = round((_px - _prev) / _prev * 100, 2) if _prev else 0
+                            existing[_tk] = {"price": round(_px, 2), "change_pct": _chg, "updated": now_iso}
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        # ── VIX from yfinance ─────────────────────────────────────────────────
+        try:
+            import yfinance as _yf_vix
+            _vix_df = _yf_vix.download("^VIX", period="2d", interval="1d", progress=False)
+            _vix_cls = _vix_df["Close"].dropna()
+            if len(_vix_cls) >= 1:
+                _vix_val = float(_vix_cls.iloc[-1])
+                _vix_prev = float(_vix_cls.iloc[-2]) if len(_vix_cls) >= 2 else _vix_val
+                _vix_chg = round((_vix_val - _vix_prev) / _vix_prev * 100, 2) if _vix_prev else 0
+                existing["^VIX"] = {"price": round(_vix_val, 2), "change_pct": _vix_chg, "updated": now_iso}
+                existing["VIX"]  = existing["^VIX"]   # alias
+        except Exception:
+            pass
+
+        # ── Current positions from Alpaca (real-time prices) ─────────────────
+        for pos in tlog.get("positions", []):
+            tk = pos.get("ticker")
+            if not tk:
+                continue
+            existing[tk] = {
+                "price":      round(float(pos.get("price", 0)), 2),
+                "change_pct": round(float(pos.get("pnl_pct", 0)), 2),
+                "updated":    now_iso,
+            }
+
+        # ── Live signal data (scan universe) ─────────────────────────────────
+        if live:
+            for tk, sig in live.items():
+                if not tk or not sig:
+                    continue
+                _p = sig.get("price", 0) or 0
+                _c = sig.get("chg_pct", 0) or 0
+                if _p > 0 and tk not in existing:
+                    existing[tk] = {"price": round(float(_p), 2), "change_pct": round(float(_c), 2), "updated": now_iso}
+
+        _save(PRICES_FILE, existing)
+        logger.info(f"prices.json updated — {len(existing)} tickers including indices")
+    except Exception as _pe:
+        logger.debug(f"prices.json save failed: {_pe}")
+
 
 def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=None, signals=None):
     e = {
@@ -14664,6 +14744,7 @@ def run():
         logger.debug(f"Market-hours news: {_mh_news_e}")
 
     _save_equity_snapshot(tlog)
+    _save_prices_json(tlog, live if 'live' in dir() else None)
     _save(TRADES_FILE, tlog)
     logger.info(
         f"Cycle done. Trades: {'yes' if made_trades else 'none'}. "
