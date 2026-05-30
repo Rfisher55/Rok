@@ -79,7 +79,11 @@ _EARNINGS_CACHE: dict  = {}   # sym -> bool
 _SPY_PERF_CACHE: dict  = {}   # cached SPY returns for relative strength calc
 _ATM_IV_CACHE:  dict  = {}   # ATM implied volatility per symbol (30m TTL)
 _ATM_IV_TS:     dict  = {}   # timestamps for ATM IV cache
-_SIGNAL_WIN_RATES: dict = {}  # {signal_name: {win_rate: float, total: int}} loaded from tlog each cycle
+_SIGNAL_WIN_RATES: dict = {}   # {signal_name: {win_rate, total, avg_pnl}} loaded from tlog each cycle
+_LEARNED_COLD_SECTORS: set = set()   # sectors to avoid (from accumulated loss data)
+_LEARNED_HOT_SECTORS:  set = set()   # sectors that are working (from accumulated wins)
+_LEARNED_WORST_HOURS:  set = set()   # UTC hours with poor historical win rates
+_LEARNED_BEST_HOURS:   set = set()   # UTC hours with high historical win rates
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -6339,10 +6343,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
         s -= 4  # below institutional cost basis — bearish anchor
 
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
-    # Uses accumulated signal_performance data to learn which signals actually work
-    # Combines win_rate + avg_pnl for expected-value-based adjustment
+    # ── ADAPTIVE NEURAL LAYER: learn from accumulated trade outcomes ─────────
+    # Each signal is a neuron. Win/loss feedback strengthens or weakens each connection.
+    # Synergy detection: multiple elite signals firing together = extra conviction boost.
+    # Sector + hour-of-day context = situational awareness layer.
     if _SIGNAL_WIN_RATES:
         _adaptive_adj = 0.0
+        _elite_count  = 0   # count of elite signals (≥65% WR) active right now
+        _weak_count   = 0   # count of weak signals (≤38% WR) active right now
         _all_sig_keys = [
             "cup_handle", "vcp", "at_demand_zone", "mom_accel", "obv_rising",
             "kc_breakout", "higher_lows", "double_bottom", "poc_breakout",
@@ -6350,7 +6358,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
             "fib_support", "macd_bull_div", "rvol_surge", "mfi_bull_div",
             "supertrend_bull", "ha_bull", "donchian_up", "three_white_soldiers",
             "morning_star", "bullish_engulfing", "psar_bull", "price_accel_pos",
-            "unusual_calls", "lr_below_channel",
+            "unusual_calls", "lr_below_channel", "ttm_squeeze_fired",
+            "at_breakout", "pocket_pivot", "high_tight_flag",
         ]
         for sig_key in _all_sig_keys:
             if d.get(sig_key) and sig_key in _SIGNAL_WIN_RATES:
@@ -6359,15 +6368,46 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 n   = sdata.get("total", 0)
                 avg = sdata.get("avg_pnl", 0.0)
                 if n >= 3:  # trust with ≥3 samples
-                    # wr is 0-100; normalize to 0-1 then center: (wr/100 - 0.5) * 10 → -5 to +5
-                    wr_norm = wr / 100.0 if wr > 1.0 else wr  # handle both formats safely
+                    wr_norm = wr / 100.0 if wr > 1.0 else wr
                     wr_adj = (wr_norm - 0.5) * 10
-                    # Avg PnL contribution: expected value per trade / 2
                     ev_adj = avg / 2.0
-                    # Combined, weighted by sample size (more data = more trust)
-                    weight = min(1.0, n / 20.0)  # full weight at 20 samples
-                    _adaptive_adj += (wr_adj * 0.6 + ev_adj * 0.4) * weight
-        s += max(-10, min(10, round(_adaptive_adj)))  # cap total adaptive boost at ±10
+                    weight = min(1.0, n / 20.0)
+                    contrib = (wr_adj * 0.6 + ev_adj * 0.4) * weight
+                    _adaptive_adj += contrib
+                    if wr_norm >= 0.65: _elite_count += 1
+                    if wr_norm <= 0.38: _weak_count  += 1
+
+        # Signal synergy boost: when 2+ elite signals fire simultaneously,
+        # the combined conviction is exponentially higher than any single signal.
+        # This is like multiple neurons firing in sync — a network effect.
+        if _elite_count >= 3:
+            _adaptive_adj += 5.0   # 3 elite signals together = very high conviction
+        elif _elite_count == 2:
+            _adaptive_adj += 2.5   # 2 elite signals = meaningful confirmation
+        # Weak signal drag: too many weak signals dragging the score down = avoid
+        if _weak_count >= 3:
+            _adaptive_adj -= 4.0   # multiple weak signals = noisy/unreliable setup
+        s += max(-12, min(12, round(_adaptive_adj)))  # cap total adaptive boost at ±12
+
+    # ── SECTOR CONTEXT LAYER: sectors with poor historical win rates penalized ─
+    try:
+        _sector_key = SECTOR_MAP.get(tk, "other")
+        if _LEARNED_COLD_SECTORS and _sector_key in _LEARNED_COLD_SECTORS:
+            s -= 5   # this sector has been losing: raise the bar
+        elif _LEARNED_HOT_SECTORS and _sector_key in _LEARNED_HOT_SECTORS:
+            s += 3   # this sector has been winning: slight boost
+    except Exception:
+        pass
+
+    # ── HOUR-OF-DAY CONTEXT LAYER: time-aware scoring from history ──────────
+    try:
+        _now_h_str = str(datetime.now(timezone.utc).hour)
+        if _LEARNED_WORST_HOURS and _now_h_str in _LEARNED_WORST_HOURS:
+            s -= 4   # historically bad entry window: reduce conviction
+        elif _LEARNED_BEST_HOURS and _now_h_str in _LEARNED_BEST_HOURS:
+            s += 3   # historically good entry window: boost conviction
+    except Exception:
+        pass
 
     # Market regime adjustment
     s += regime_adj
@@ -6905,9 +6945,17 @@ def run():
     _learned_cold_sectors  = set(_learned.get("cold_sectors", []))
     _learned_best_hours    = set(str(h) for h in _learned.get("best_hours_utc", []))
     _learned_worst_hours   = set(str(h) for h in _learned.get("worst_hours_utc", []))
+
+    # Publish to module-level globals so score() can use them without parameters
+    global _LEARNED_COLD_SECTORS, _LEARNED_HOT_SECTORS, _LEARNED_WORST_HOURS, _LEARNED_BEST_HOURS
+    _LEARNED_COLD_SECTORS = _learned_cold_sectors
+    _LEARNED_HOT_SECTORS  = set(_learned.get("hot_sectors", []))
+    _LEARNED_WORST_HOURS  = _learned_worst_hours
+    _LEARNED_BEST_HOURS   = _learned_best_hours
+
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
-                    f"elite_sigs={len(_learned_elite_sigs)}, weak_sigs={len(_learned_weak_sigs)}")
+                    f"elite_sigs={len(_learned_elite_sigs)}, cold_sectors={sorted(_learned_cold_sectors)[:3]}")
 
     # ── MANAGE EXISTING SHORTS ─────────────────────────────────────────────
     for sym, pos in list(shorts.items()):
