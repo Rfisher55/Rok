@@ -347,6 +347,11 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         # Score trend at entry: was score rising/flat/falling across recent scans?
         e["score_trend"] = signals.get("score_trend", "flat")
         e["score_trend_delta"] = float(signals.get("score_trend_delta", 0.0) or 0.0)
+        # Position size and ATR distance at entry (for Neurons 28 and 29)
+        e["pos_size_pct"]    = float(signals.get("pos_size_pct", 0.0) or 0.0)
+        e["pos_size_bucket"] = signals.get("pos_size_bucket", "2-5%")
+        e["atr_pct_at_entry"] = float(signals.get("atr_pct_at_entry", 0.0) or 0.0)
+        e["atr_bucket"]      = signals.get("atr_bucket", "1-2%")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -910,6 +915,44 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _rep["total"] > 0:
                     _rep["win_rate"] = round(_rep["wins"] / _rep["total"] * 100, 1)
                     _rep["avg_pnl"]  = round(_rep["total_pnl"] / _rep["total"], 2)
+        except Exception:
+            pass
+
+    # ── Position Size Neuron: does bet size correlate with outcome? ──────────────
+    # Tracks whether small (<2%), medium (2-5%), large (5-10%), or outsized (10%+)
+    # positions produce different risk-adjusted returns. The bot learns its optimal bet.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ps = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ps_bkt = _buy_ps.get("pos_size_bucket", "2-5%") if _buy_ps else "2-5%"
+            _ps_perf = tlog.setdefault("pos_size_perf", {})
+            _psp = _ps_perf.setdefault(_ps_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _ps_bkt})
+            _psp["total"] = _psp.get("total", 0) + 1
+            _psp["total_pnl"] = round(_psp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _psp["wins"] = _psp.get("wins", 0) + 1
+            else: _psp["losses"] = _psp.get("losses", 0) + 1
+            if _psp["total"] > 0:
+                _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
+                _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── ATR Stop Distance Neuron: learn optimal volatility at entry ───────────
+    # Tracks whether high-ATR (volatile) or low-ATR (calm) entries produce better outcomes.
+    # The bot learns if it should prefer tight or wide stop distances.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_at = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _at_bkt = _buy_at.get("atr_bucket", "1-2%") if _buy_at else "1-2%"
+            _at_perf = tlog.setdefault("atr_perf", {})
+            _atp = _at_perf.setdefault(_at_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _at_bkt})
+            _atp["total"] = _atp.get("total", 0) + 1
+            _atp["total_pnl"] = round(_atp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _atp["wins"] = _atp.get("wins", 0) + 1
+            else: _atp["losses"] = _atp.get("losses", 0) + 1
+            if _atp["total"] > 0:
+                _atp["win_rate"] = round(_atp["wins"] / _atp["total"] * 100, 1)
+                _atp["avg_pnl"]  = round(_atp["total_pnl"] / _atp["total"], 2)
         except Exception:
             pass
 
@@ -9012,8 +9055,9 @@ def run():
                         reason += f" [SCALE-IN 60% TT{_tt_buy}]"
                     else:
                         _full_notional = notional
-                    # Inject score trend into signals for the Score Trend Neuron
+                    # Inject extra context into signals for learning neurons
                     _buy_signals_merged = dict(live.get(tk, {}))
+                    # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
                         if len(_sh_hist) >= 2:
@@ -9025,6 +9069,25 @@ def run():
                             _buy_signals_merged["score_trend_delta"] = 0.0
                     except Exception:
                         _buy_signals_merged["score_trend"] = "flat"
+                    # Position Size Neuron (Neuron 28): % of portfolio
+                    try:
+                        _pv_buy = float(portfolio_val) if portfolio_val > 0 else 10000.0
+                        _pos_pct = round(notional / _pv_buy * 100, 1)
+                        _buy_signals_merged["pos_size_pct"] = _pos_pct
+                        _buy_signals_merged["pos_size_bucket"] = ("<2%" if _pos_pct < 2 else "2-5%" if _pos_pct < 5 else "5-10%" if _pos_pct < 10 else "10%+")
+                    except Exception:
+                        _buy_signals_merged["pos_size_pct"] = 0.0
+                        _buy_signals_merged["pos_size_bucket"] = "2-5%"
+                    # ATR Stop Distance Neuron (Neuron 29): ATR as % of price
+                    try:
+                        _atr_buy = float(atr) if atr else 0.0
+                        _price_buy = float(price) if price > 0 else 1.0
+                        _atr_pct = round(_atr_buy / _price_buy * 100, 1) if _atr_buy > 0 else 0.0
+                        _buy_signals_merged["atr_pct_at_entry"] = _atr_pct
+                        _buy_signals_merged["atr_bucket"] = ("<1%" if _atr_pct < 1 else "1-2%" if _atr_pct < 2 else "2-4%" if _atr_pct < 4 else "4%+")
+                    except Exception:
+                        _buy_signals_merged["atr_pct_at_entry"] = 0.0
+                        _buy_signals_merged["atr_bucket"] = "1-2%"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     peaks[tk] = {"peak": price, "time": now_utc.isoformat(), "half_out": False,
@@ -10528,6 +10591,35 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 28. Position Size Neuron: optimal bet size ────────────────────────
+        _ps_raw = tlog.get("pos_size_perf", {})
+        _ps_insights = []
+        for _pbk, _pd in _ps_raw.items():
+            if _pd.get("total", 0) >= 3:
+                _ps_insights.append({"bucket": _pbk, "win_rate": _pd.get("win_rate", 50),
+                                     "avg_pnl": _pd.get("avg_pnl", 0), "total": _pd.get("total", 0)})
+        if _ps_insights:
+            _ps_s = sorted(_ps_insights, key=lambda x: -x["win_rate"])
+            _ps_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _ps_s)
+            _learn_log.append(f"Position size WRs: {_ps_sum}")
+            if _ps_s[0]["win_rate"] - _ps_s[-1]["win_rate"] >= 15:
+                _learn_log.append(f"Optimal position size: {_ps_s[0]['bucket']} ({_ps_s[0]['win_rate']:.0f}% WR) vs worst {_ps_s[-1]['bucket']} ({_ps_s[-1]['win_rate']:.0f}%)")
+
+        # ── 29. ATR Stop Distance Neuron: optimal volatility at entry ─────────
+        _at_raw = tlog.get("atr_perf", {})
+        _at_insights = []
+        for _abk, _ad in _at_raw.items():
+            if _ad.get("total", 0) >= 3:
+                _at_insights.append({"bucket": _abk, "win_rate": _ad.get("win_rate", 50),
+                                     "avg_pnl": _ad.get("avg_pnl", 0), "total": _ad.get("total", 0)})
+        if _at_insights:
+            _at_s = sorted(_at_insights, key=lambda x: -x["win_rate"])
+            _at_sum = " | ".join(f"ATR{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _at_s)
+            _learn_log.append(f"ATR bracket WRs: {_at_sum}")
+            _best_atr = _at_s[0]
+            if _best_atr["win_rate"] >= 60:
+                _learn_log.append(f"Best ATR entry range: {_best_atr['bucket']} ({_best_atr['win_rate']:.0f}% WR, avg {_best_atr['avg_pnl']:+.1f}%)")
+
         # ── 26. Portfolio Concentration Neuron: optimal # of held positions ───
         _conc_raw = tlog.get("concentration_perf", {})
         _conc_insights = []
@@ -10615,6 +10707,8 @@ def run():
             "score_trend_perf":    _st_insights,           # rising/flat/falling score at entry
             "concentration_perf":  _conc_insights,         # portfolio concentration vs outcome
             "dow_perf":            _dow_insights,           # day-of-week entry performance
+            "pos_size_perf":       _ps_insights,            # position size (% portfolio) vs outcome
+            "atr_perf":            _at_insights,            # ATR bracket at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
