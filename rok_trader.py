@@ -4952,6 +4952,9 @@ def _extract(daily, hourly):
     mtf_conflict = False   # daily down but hourly up = false signal risk
     mtf_triple   = False   # all three timeframes (weekly+daily+hourly) aligned
     mtf_score    = 0       # 0-3: how many of three timeframes are bullish
+    _weekly_bull = False   # initialized before try so always defined
+    _daily_up    = False
+    _hourly_up   = False
     try:
         _daily_up   = daily_trend > 0.2 and daily_rsi > 45
         _hourly_up  = ema_cross > 0.1 and rsi_val > 45
@@ -5195,6 +5198,9 @@ def _extract(daily, hourly):
         "mtf_triple":        mtf_triple,
         "mtf_score":         mtf_score,
         "mtf_conflict":      mtf_conflict,
+        "weekly_bull":       bool(_weekly_bull),
+        "daily_up":          bool(_daily_up),
+        "hourly_up":         bool(_hourly_up),
         "price_vs_ema200":   round(price_vs_ema200, 2),
         "trend_reversal":    trend_reversal,
         "bull_flag":         bull_flag,
@@ -8279,6 +8285,10 @@ def run():
                 "mtf_aligned":     sig.get("mtf_aligned", False),
                 "mtf_triple":      sig.get("mtf_triple", False),
                 "mtf_score":       sig.get("mtf_score", 0),
+                "mtf_conflict":    sig.get("mtf_conflict", False),
+                "weekly_bull":     sig.get("weekly_bull", False),
+                "daily_up":        sig.get("daily_up", False),
+                "hourly_up":       sig.get("hourly_up", False),
                 "price_vs_ema200": round(sig.get("price_vs_ema200", 0), 2),
                 "mfi":             round(sig.get("mfi", 50), 1),
                 "mfi_overbought":  sig.get("mfi_overbought", False),
@@ -8625,6 +8635,59 @@ def run():
                 _pos["pivot_pct"] = _pnl
                 _pos["extended"]  = _pnl > 25
                 _pos["overextended"] = _pnl > 40
+            # Exit Urgency Score (0-10): composite measure of how close to an exit trigger
+            try:
+                _eu = 0
+                _eu_ls = _pos.get("live_signals", {})
+                # Distance to trail stop (biggest factor)
+                _eu_dist = _pos.get("dist_from_trail", 999) or 999
+                if _eu_dist < 1.0:   _eu += 4
+                elif _eu_dist < 2.5: _eu += 3
+                elif _eu_dist < 4.0: _eu += 2
+                elif _eu_dist < 6.0: _eu += 1
+                # Score degradation
+                _eu_sh = [h["s"] for h in _pos.get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                if len(_eu_sh) >= 3:
+                    _eu_drop = _eu_sh[0] - _eu_sh[-1]
+                    if _eu_drop >= 20: _eu += 3
+                    elif _eu_drop >= 12: _eu += 2
+                    elif _eu_drop >= 6: _eu += 1
+                # Bearish technical signals
+                if _eu_ls.get("macd_bear_div") and _eu_ls.get("vol_bearish_div"): _eu += 2
+                elif _eu_ls.get("macd_bear_div"): _eu += 1
+                elif _eu_ls.get("vol_bearish_div") and _pnl >= 10: _eu += 1
+                # Earnings proximity
+                _eu_earn = _pos.get("earnings_days")
+                if _eu_earn is not None and _eu_earn <= 2 and _pnl > 3: _eu += 2
+                elif _eu_earn is not None and _eu_earn <= 5 and _pnl > 5: _eu += 1
+                # Consecutive red days
+                if (_eu_ls.get("consec_red") or 0) >= 3: _eu += 1
+                # Negative RS alpha vs SPY
+                if (_pos.get("rs_alpha") or 0) < -3: _eu += 1
+                # Overextended
+                if _pos.get("overextended") and _pnl > 30: _eu += 1
+                _pos["exit_urgency"] = min(10, _eu)
+            except Exception:
+                _pos["exit_urgency"] = 0
+            # Position Health Score (0-10): composite momentum + safety measure
+            try:
+                _ph = 5  # start neutral
+                _ph_ls = _pos.get("live_signals", {})
+                # Momentum signals (positive)
+                if _ph_ls.get("mtf_triple"):    _ph += 2
+                elif _ph_ls.get("mtf_aligned"): _ph += 1
+                if _ph_ls.get("supertrend_bull", True): _ph += 1
+                if (_ph_ls.get("accum_score") or 0) >= 7: _ph += 1
+                if (_pos.get("rs_alpha") or 0) > 3: _ph += 1
+                # Degrade score
+                if _pos["exit_urgency"] >= 6:   _ph -= 3
+                elif _pos["exit_urgency"] >= 4: _ph -= 2
+                elif _pos["exit_urgency"] >= 2: _ph -= 1
+                if not _ph_ls.get("supertrend_bull", True): _ph -= 1
+                if _ph_ls.get("mtf_conflict"): _ph -= 1
+                _pos["pos_health"] = max(0, min(10, _ph))
+            except Exception:
+                _pos["pos_health"] = 5
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
 
@@ -9001,6 +9064,37 @@ def run():
     tlog["calmar_ratio"]       = _calmar_ratio
     tlog["max_drawdown"]       = round(_max_dd, 2)
     tlog["risk_of_ruin"]       = _risk_of_ruin
+    # Portfolio VaR and daily volatility (parametric from perf_history returns)
+    try:
+        _ph_vals = [h["v"] for h in tlog.get("perf_history", []) if isinstance(h.get("v"), (int, float)) and h["v"] > 0]
+        if len(_ph_vals) >= 20:
+            # Daily returns from 26-snapshot (~1 day) windows — use last 60 days = 1560 snapshots
+            _snap_per_day = 26
+            _ph_rets = []
+            for _pi in range(_snap_per_day, len(_ph_vals), _snap_per_day):
+                _pr_start = _ph_vals[_pi - _snap_per_day]
+                _pr_end   = _ph_vals[_pi]
+                if _pr_start > 0:
+                    _ph_rets.append((_pr_end - _pr_start) / _pr_start)
+            if len(_ph_rets) >= 5:
+                import statistics as _pf_stat
+                _port_vol_daily = _pf_stat.stdev(_ph_rets) if len(_ph_rets) >= 2 else abs(_ph_rets[0])
+                # Parametric VaR at 95% confidence (1-day horizon)
+                _var_95 = round(portfolio_val * _port_vol_daily * 1.645, 2)
+                # Expected Shortfall (CVaR): expected loss beyond VaR
+                _sorted_rets = sorted(_ph_rets)
+                _tail_cutoff = max(1, int(len(_sorted_rets) * 0.05))
+                _cvar_ret = abs(sum(_sorted_rets[:_tail_cutoff]) / _tail_cutoff) if _tail_cutoff > 0 else _port_vol_daily * 2.0
+                _cvar_95  = round(portfolio_val * _cvar_ret, 2)
+                tlog["port_vol_daily_pct"]  = round(_port_vol_daily * 100, 2)
+                tlog["var_95_usd"]          = _var_95
+                tlog["cvar_95_usd"]         = _cvar_95
+            else:
+                tlog.setdefault("port_vol_daily_pct", None)
+        else:
+            tlog.setdefault("port_vol_daily_pct", None)
+    except Exception:
+        tlog.setdefault("port_vol_daily_pct", None)
     try:
         tlog["effective_min_score"] = _eff_min_score
     except NameError:

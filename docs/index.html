@@ -812,6 +812,7 @@ body.beginner-mode #beginner-banner { display:block }
 .port-alert-item.target{background:rgba(0,255,136,.1);color:var(--g);border:1px solid rgba(0,255,136,.25)}
 @keyframes alertPulse{0%,100%{opacity:1}50%{opacity:.7}}
 @keyframes pulse-red{0%,100%{border-color:rgba(255,34,85,.4)}50%{border-color:rgba(255,34,85,.85)}}
+@keyframes glow-red{0%,100%{box-shadow:0 0 4px rgba(239,83,80,.4)}50%{box-shadow:0 0 10px rgba(239,83,80,.9),0 0 20px rgba(239,83,80,.4)}}
 .port-grid{display:flex;flex-direction:column;gap:.65rem}
 .port-card{
   background:rgba(12,24,37,.9);border-radius:var(--r16);padding:1rem;
@@ -55465,6 +55466,7 @@ window.renderSectorRotation = renderSectorRotation;
             ${data.effective_min_score != null && data.effective_min_score !== 18 ? `<div style="text-align:center"><div style="font-size:8px;color:#ff9800;font-weight:700;text-transform:uppercase">Min Score</div><div style="font-size:11px;font-weight:900;color:#ff9800">${data.effective_min_score}↑</div></div>` : ''}
             ${data.portfolio_beta != null ? (() => { const pb = data.portfolio_beta; const pbCol = pb > 1.5 ? '#ef5350' : pb > 1.2 ? '#ffab40' : pb > 0.8 ? '#ffd54f' : '#69f0ae'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Port β</div><div style="font-size:14px;font-weight:900;color:${pbCol}">${pb.toFixed(2)}</div></div>`; })() : ''}
             ${data.total_risk_usd > 0 ? (() => { const tr = data.total_risk_usd; const tp = data.total_risk_pct || 0; const trCol = tp > 8 ? '#ef5350' : tp > 5 ? '#ff9800' : '#ffd54f'; return `<div style="text-align:center" title="Total $ at risk if all trail stops hit simultaneously"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">$ At Risk</div><div style="font-size:11px;font-weight:900;color:${trCol}">$${tr.toLocaleString('en-US',{maximumFractionDigits:0})}</div><div style="font-size:6.5px;color:${trCol}">${tp.toFixed(1)}%</div></div>`; })() : ''}
+            ${data.var_95_usd > 0 ? (() => { const v95 = data.var_95_usd; const cv95 = data.cvar_95_usd || 0; const vPct = data.port_vol_daily_pct || 0; const vCol = vPct > 3 ? '#ef5350' : vPct > 1.5 ? '#ff9800' : '#ffd54f'; return `<div style="text-align:center" title="1-day Value at Risk (95% confidence) from historical portfolio returns. CVaR = expected loss in worst 5% scenarios"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">VaR 95%</div><div style="font-size:11px;font-weight:900;color:${vCol}">$${v95.toLocaleString('en-US',{maximumFractionDigits:0})}</div><div style="font-size:6.5px;color:#3a5a8a">CVaR $${cv95.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>`; })() : ''}
             ${(() => {
               // TRIN proxy (Arms Index) — market buying/selling pressure
               const tr = (data.market_breadth || {}).trin_proxy;
@@ -56055,8 +56057,36 @@ window.renderSectorRotation = renderSectorRotation;
           const lsNewsVel = ls.news_accelerating ? `<span style="font-size:6px;font-weight:800;color:#ffd600" title="News accelerating — ${ls.news_count_24h||0} articles in 24h">📰NEWS↑</span>` : '';
           const lsPmGap = ls.pm_big_gap_up ? `<span style="font-size:6px;font-weight:900;color:#00ff88" title="Pre-market gap up ${(ls.pm_gap_pct||0).toFixed(1)}%">PM+${(ls.pm_gap_pct||0).toFixed(1)}%🚀</span>` : (ls.pm_big_gap_down ? `<span style="font-size:6px;font-weight:900;color:#ff5252" title="Pre-market gap down ${(ls.pm_gap_pct||0).toFixed(1)}%">PM${(ls.pm_gap_pct||0).toFixed(1)}%⬇</span>` : ((ls.pm_gap_up||ls.pm_gap_down) ? `<span style="font-size:6px;color:${(ls.pm_gap_pct||0)>=0?'#69f0ae':'#ef9a9a'}" title="Pre-market ${(ls.pm_gap_pct||0).toFixed(1)}%">PM${(ls.pm_gap_pct||0)>=0?'+':''}${(ls.pm_gap_pct||0).toFixed(1)}%</span>` : ''));
           const lsMtfTriple = ls.mtf_triple ? `<span style="font-size:6px;font-weight:900;color:#00e676" title="Triple timeframe aligned: weekly+daily+hourly bullish">3TF✓</span>` : '';
+          // MTF Detail Row — W/D/H individual timeframe status dots
+          const lsMtfDetail = (() => {
+            const sc = ls.mtf_score || 0;
+            if (sc === 0 && !ls.weekly_bull && !ls.daily_up && !ls.hourly_up) return '';
+            const dot = (on, label) => {
+              const col = on ? '#00e676' : '#ef5350';
+              const bg  = on ? 'rgba(0,230,118,.12)' : 'rgba(239,83,80,.1)';
+              return `<span style="font-size:5.5px;font-weight:800;color:${col};background:${bg};border-radius:3px;padding:1px 4px">${label}${on?'✓':'✗'}</span>`;
+            };
+            const conflict = ls.mtf_conflict ? `<span style="font-size:5.5px;font-weight:900;color:#ffa726;background:rgba(255,167,38,.12);border-radius:3px;padding:1px 4px">⚡CONFLICT</span>` : '';
+            return `<div style="display:flex;align-items:center;gap:3px;margin-top:.15rem">${dot(ls.weekly_bull,'W')}${dot(ls.daily_up,'D')}${dot(ls.hourly_up,'H')}${conflict}<span style="font-size:5.5px;color:rgba(255,255,255,.3)">${sc}/3 TF</span></div>`;
+          })();
           const lsGex = ls.squeeze_potential ? `<span style="font-size:6px;font-weight:900;color:#e040fb" title="Gamma squeeze potential">γSQZ🎯</span>` : (ls.gex_sign === -1 ? `<span style="font-size:6px;color:#ce93d8" title="Negative GEX — trending conditions">γ−</span>` : '');
-          const lsGammaWall = ls.gamma_wall_up > 0 && p.price > 0 && ls.gamma_wall_up > p.price ? `<span style="font-size:6px;color:#82b1ff" title="Gamma wall at $${(ls.gamma_wall_up||0).toFixed(0)}">γ↑$${(ls.gamma_wall_up||0).toFixed(0)}</span>` : '';
+          // Gamma Wall Ladder — visual showing where price sits between options walls
+          const lsGammaWall = (() => {
+            const gUp   = ls.gamma_wall_up   || 0;
+            const gDown = ls.gamma_wall_down || 0;
+            const pr    = p.price || 0;
+            if (!pr) return '';
+            const parts = [];
+            if (gDown > 0 && gDown < pr) {
+              const distPct = ((pr - gDown) / pr * 100).toFixed(1);
+              parts.push(`<span style="font-size:6px;color:#ef9a9a" title="Gamma wall support at $${gDown.toFixed(2)} (${distPct}% below — dealer hedging creates floor)">γ↓$${gDown.toFixed(1)}</span>`);
+            }
+            if (gUp > 0 && gUp > pr) {
+              const distPct = ((gUp - pr) / pr * 100).toFixed(1);
+              parts.push(`<span style="font-size:6px;color:#82b1ff" title="Gamma wall resistance at $${gUp.toFixed(2)} (${distPct}% above — dealer hedging creates ceiling)">γ↑$${gUp.toFixed(1)}</span>`);
+            }
+            return parts.join('');
+          })();
           // HV regime badge — volatility expansion/contraction
           const lsHV = (() => {
             if (ls.hv_expanding) return `<span style="font-size:6px;font-weight:800;color:#ff9100;background:rgba(255,145,0,.1);border-radius:3px;padding:0 3px" title="Volatility expanding: 5d HV ${(ls.hv5||0).toFixed(0)}% vs 20d HV ${(ls.hv20||0).toFixed(0)}% — momentum move">HV↑EXP</span>`;
@@ -56339,6 +56369,7 @@ window.renderSectorRotation = renderSectorRotation;
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsRsSec||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsRsSec}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
                 ${(distStopHtml||lsTrail||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${lsTrail}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels||lsIV) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsIV}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}
+                ${lsMtfDetail || ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
                   const il = intelSig.type === 'buy' ? 'AI BUY' : intelSig.type === 'sell' ? 'AI SELL' : 'AI WATCH';
@@ -56389,6 +56420,25 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
                 <div style="font-size:8px;color:var(--wh3)">${pnlUsd}</div>
                 <div style="margin-top:.2rem;font-size:7px;font-weight:900;color:${posAct.col};border:1px solid ${posAct.col}55;border-radius:4px;padding:1px 5px;letter-spacing:.05em;white-space:nowrap" title="${posAct.reasons.join(' · ')}">${posAct.action}</div>
+                ${(() => {
+                  // Position Health Score badge (0-10)
+                  const ph = p.pos_health != null ? p.pos_health : null;
+                  if (ph == null) return '';
+                  const phCol = ph >= 8 ? '#00e676' : ph >= 6 ? '#69f0ae' : ph >= 4 ? '#ffd54f' : ph >= 2 ? '#ff9800' : '#ef5350';
+                  const phBg  = ph >= 8 ? 'rgba(0,230,118,.12)' : ph >= 6 ? 'rgba(105,240,174,.08)' : ph >= 4 ? 'rgba(255,213,79,.08)' : 'rgba(239,83,80,.08)';
+                  const phLabel = ph >= 8 ? 'HEALTHY' : ph >= 6 ? 'GOOD' : ph >= 4 ? 'FAIR' : ph >= 2 ? 'WEAK' : 'POOR';
+                  return `<div style="margin-top:.2rem;font-size:6px;font-weight:900;color:${phCol};background:${phBg};border:1px solid ${phCol}33;border-radius:4px;padding:1px 5px;letter-spacing:.04em" title="Position Health ${ph}/10: composite momentum+safety score">${ph}/10 ${phLabel}</div>`;
+                })()}
+                ${(() => {
+                  // Exit Urgency Traffic Light
+                  const eu = p.exit_urgency || 0;
+                  if (eu < 3) return '';
+                  const euCol = eu >= 7 ? '#ef5350' : eu >= 5 ? '#ffa726' : '#ffd54f';
+                  const euBg  = eu >= 7 ? 'rgba(239,83,80,.15)' : eu >= 5 ? 'rgba(255,167,38,.12)' : 'rgba(255,213,79,.08)';
+                  const euLabel = eu >= 7 ? 'EXIT NOW' : eu >= 5 ? 'EXIT SOON' : 'WATCH';
+                  const euIcon  = eu >= 7 ? '🔴' : eu >= 5 ? '🟠' : '🟡';
+                  return `<div style="margin-top:.2rem;font-size:7px;font-weight:900;color:${euCol};background:${euBg};border:1px solid ${euCol}55;border-radius:4px;padding:2px 5px;letter-spacing:.05em;animation:${eu>=7?'glow-red 1.5s ease-in-out infinite':''}" title="Exit Urgency ${eu}/10: multiple exit triggers converging">${euIcon} ${euLabel} ${eu}/10</div>`;
+                })()}
               </div>
               <div style="background:${sideCol};color:#000;font-size:7px;font-weight:900;padding:2px 5px;border-radius:4px;letter-spacing:.05em">${sideLbl}</div>
             </div>
@@ -56942,19 +56992,64 @@ window.renderSectorRotation = renderSectorRotation;
         }
         html += `<div style="font-size:8px;color:${totalUnrealCol};font-weight:700;margin-bottom:.4rem">Unrealized P&L: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</div>`;
 
+        // Daily Action Plan — urgent items and today's top opportunity
+        {
+          const actionItems = [];
+          // URGENT: Exit signals
+          const urgentExits = positions.filter(p => (p.exit_urgency||0) >= 6);
+          urgentExits.forEach(p => {
+            const eu = p.exit_urgency;
+            actionItems.push({ icon:'🔴', col:'#ef5350', bg:'rgba(239,83,80,.12)', text:`$${p.ticker}: EXIT URGENCY ${eu}/10 — immediate action required`, priority: 10 });
+          });
+          // WARNING: Near trail stop
+          const nearTrail = positions.filter(p => (p.dist_from_trail||99) < 2 && !(p.exit_urgency >= 6));
+          nearTrail.forEach(p => {
+            actionItems.push({ icon:'⚠', col:'#ffa726', bg:'rgba(255,167,38,.1)', text:`$${p.ticker}: Only ${(p.dist_from_trail||0).toFixed(1)}% from trail stop at $${(p.trail_stop_price||0).toFixed(2)}`, priority: 8 });
+          });
+          // Scale-in opportunities
+          const scaleIns = positions.filter(p => p.scale_in_pending && (p.pnl_pct||0) > 0);
+          scaleIns.forEach(p => {
+            actionItems.push({ icon:'⚡', col:'#00e5ff', bg:'rgba(0,229,255,.08)', text:`$${p.ticker}: Scale-in pending — add $${(p.scale_in_notional||0).toFixed(0)} on EMA21 pullback`, priority: 5 });
+          });
+          // Top buy setup from scan
+          const topBuy = (data.last_scan_top || []).filter(s => !heldTickers.has(s.ticker)).slice(0,1)[0];
+          if (topBuy && (topBuy.score||0) >= 70) {
+            const tq = data.timing_quality || 0;
+            const tqLabel = tq >= 3 ? '⚡ PRIME TIME' : tq >= 2 ? 'GOOD TIME' : tq >= 1 ? 'NEUTRAL' : 'AVOID NOW';
+            const tqCol   = tq >= 3 ? '#00e676' : tq >= 2 ? '#ffd54f' : tq >= 1 ? '#888' : '#ef5350';
+            actionItems.push({ icon:'🎯', col:'#00ff88', bg:'rgba(0,255,136,.06)', text:`Best setup: $${topBuy.ticker} score ${topBuy.score} — timing: ${tqLabel}`, priority: 4, timingCol: tqCol });
+          }
+          if (actionItems.length > 0) {
+            actionItems.sort((a,b) => b.priority - a.priority);
+            const planHtml = actionItems.slice(0,4).map(item => `
+              <div style="display:flex;align-items:center;gap:.4rem;padding:.2rem .4rem;background:${item.bg};border-radius:5px">
+                <span style="font-size:9px">${item.icon}</span>
+                <span style="font-size:7px;color:${item.col};font-weight:700;line-height:1.3">${item.text}</span>
+              </div>`).join('');
+            html += `<div style="margin-bottom:.5rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:.4rem .55rem">
+              <div style="font-size:7px;color:#4a6fa5;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.25rem">TODAY'S ACTION PLAN</div>
+              <div style="display:flex;flex-direction:column;gap:3px">${planHtml}</div>
+            </div>`;
+          }
+        }
+
         // Position Performance Heatmap — quick-view grid sorted by P&L
         {
           const sorted = [...positions].sort((a,b) => (b.pnl_pct||0) - (a.pnl_pct||0));
           const pmHtml = sorted.map(p => {
             const pct = p.pnl_pct || 0;
             const alpha = p.rs_alpha || 0;
+            const eu = p.exit_urgency || 0;
+            const ph = p.pos_health;
             const pnlC = pct >= 10 ? '#00e676' : pct >= 5 ? '#69f0ae' : pct >= 2 ? '#b9f6ca' : pct >= 0 ? '#4caf50' : pct >= -3 ? '#ff9800' : '#ef5350';
             const bgC  = pct >= 5  ? 'rgba(0,230,118,.15)' : pct >= 0 ? 'rgba(0,200,83,.07)' : pct >= -3 ? 'rgba(255,152,0,.12)' : 'rgba(239,83,80,.15)';
+            const borderC = eu >= 7 ? 'rgba(239,83,80,.7)' : eu >= 5 ? 'rgba(255,167,38,.5)' : `${pnlC}33`;
             const alphaStr = Math.abs(alpha) >= 0.5 ? `<div style="font-size:5px;color:${alpha>=0?'#69f0ae':'#ef9a9a'};margin-top:1px">${alpha>=0?'+':''}${alpha.toFixed(1)}α</div>` : '';
-            return `<div style="background:${bgC};border:1px solid ${pnlC}33;border-radius:5px;padding:.25rem .35rem;text-align:center;flex:1;min-width:44px" title="${p.ticker}: P&L ${pct>=0?'+':''}${pct.toFixed(1)}%, RS Alpha ${alpha>=0?'+':''}${alpha.toFixed(1)}%">
+            const phStr = ph != null ? `<div style="font-size:5px;color:${ph>=7?'#00e676':ph>=4?'#ffd54f':'#ef5350'};margin-top:1px">${ph}/10${eu>=5?' 🚨':''}</div>` : '';
+            return `<div style="background:${bgC};border:1px solid ${borderC};border-radius:5px;padding:.25rem .35rem;text-align:center;flex:1;min-width:44px;${eu>=7?'animation:pulse-red 1.5s ease-in-out infinite':''}" title="${p.ticker}: P&L ${pct>=0?'+':''}${pct.toFixed(1)}%, Health ${ph}/10, Exit urgency ${eu}/10">
               <div style="font-family:var(--disp);font-size:8px;color:#ffd54f;font-weight:900">${p.ticker}</div>
               <div style="font-size:8px;font-weight:800;color:${pnlC}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>
-              ${alphaStr}
+              ${alphaStr}${phStr}
             </div>`;
           }).join('');
           html += `<div style="display:flex;gap:.25rem;flex-wrap:wrap;margin-bottom:.5rem" title="Position heatmap — sorted best to worst P&L">${pmHtml}</div>`;
@@ -57108,6 +57203,38 @@ window.renderSectorRotation = renderSectorRotation;
                   <div style="display:flex;justify-content:space-between;margin-top:2px">
                     <span style="font-size:5px;color:rgba(255,255,255,.2)">L \$${dLow.toFixed(2)}</span>
                     <span style="font-size:5px;color:rgba(255,255,255,.2)">H \$${dHigh.toFixed(2)}</span>
+                  </div>
+                </div>`;
+              })()}
+              ${(() => {
+                // Gamma Wall Price Position — shows where price sits between options walls
+                const ls = p.live_signals || {};
+                const gUp   = ls.gamma_wall_up   || 0;
+                const gDown = ls.gamma_wall_down || 0;
+                const cur   = p.price || 0;
+                if (!cur || (!gUp && !gDown)) return '';
+                const wallLow  = gDown > 0 ? gDown : cur * 0.92;
+                const wallHigh = gUp   > 0 ? gUp   : cur * 1.08;
+                const range    = wallHigh - wallLow;
+                if (range <= 0) return '';
+                const curPct = Math.min(100, Math.max(0, (cur - wallLow) / range * 100));
+                const posCol = curPct >= 70 ? '#ef9a9a' : curPct >= 30 ? '#69f0ae' : '#82b1ff';
+                const posMsg = curPct >= 80 ? 'Near resistance wall' : curPct <= 20 ? 'Near support wall' : 'Mid-range';
+                const sqzMsg = ls.squeeze_potential ? ' ⚡SQUEEZE' : '';
+                return `<div style="margin-top:.3rem" title="Gamma wall floor: $${wallLow.toFixed(2)} · ceiling: $${wallHigh.toFixed(2)} · ${posMsg}">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.25)">γ WALLS</span>
+                    <span style="font-size:5.5px;color:${posCol};font-weight:700">${posMsg}${sqzMsg}</span>
+                  </div>
+                  <div style="position:relative;height:5px;background:rgba(255,255,255,.04);border-radius:3px;overflow:visible">
+                    <div style="position:absolute;left:0;top:0;height:100%;width:${curPct.toFixed(0)}%;background:${posCol};border-radius:3px;opacity:.5"></div>
+                    <div style="position:absolute;left:0;top:0;height:100%;width:2px;background:#82b1ff;border-radius:1px" title="Gamma floor $${wallLow.toFixed(2)}"></div>
+                    <div style="position:absolute;right:0;top:0;height:100%;width:2px;background:#ef9a9a;border-radius:1px" title="Gamma ceiling $${wallHigh.toFixed(2)}"></div>
+                    <div style="position:absolute;left:calc(${curPct.toFixed(0)}% - 2px);top:-3px;height:11px;width:3px;background:${posCol};border-radius:1px" title="Current $${cur.toFixed(2)}"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-top:2px">
+                    <span style="font-size:5px;color:#82b1ff">${gDown>0?`γ↓\$${gDown.toFixed(1)}`:'(est)'}</span>
+                    <span style="font-size:5px;color:#ef9a9a">${gUp>0?`γ↑\$${gUp.toFixed(1)}`:'(est)'}</span>
                   </div>
                 </div>`;
               })()}
