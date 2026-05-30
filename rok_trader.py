@@ -6437,6 +6437,21 @@ def run():
                 elif _piv_r1_exit > 0 and price >= _piv_r1_exit * 0.998 and pnl_pct > 6 and _live_rsi_exit > 72:
                     reason = f"pivot R1 + overbought (price ${price:.2f} ≥ R1 ${_piv_r1_exit:.2f}, RSI={_live_rsi_exit:.0f}, {pnl_pct:+.1f}%)"
 
+            # P&L velocity reversal: if a winner is reversing RAPIDLY before trail stop hits
+            # Detects early momentum exhaustion — don't wait for the full trailing stop
+            if not reason and pnl_pct > 2 and not half_out:
+                try:
+                    _ph_vel = [h["p"] for h in peaks.get(sym, {}).get("pnl_history", [])
+                               if isinstance(h.get("p"), (int, float))]
+                    if len(_ph_vel) >= 5:
+                        _recent_pnls = _ph_vel[-5:]
+                        _pnl_drop_5  = _recent_pnls[0] - _recent_pnls[-1]  # drop over last 5 scans (~25 min)
+                        _all_falling  = all(_recent_pnls[i] > _recent_pnls[i+1] for i in range(4))
+                        if _pnl_drop_5 >= 3.5 and _all_falling and pnl_pct < _recent_pnls[0] - 2:
+                            reason = f"P&L velocity reversal ({_recent_pnls[0]:+.1f}%→{pnl_pct:+.1f}%, -{_pnl_drop_5:.1f}% in 5 scans)"
+                except Exception:
+                    pass
+
             # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
             if not reason and _close_cleanup and pnl_pct < -3:
                 reason = f"close cleanup — avoid overnight loss ({pnl_pct:+.1f}%)"
