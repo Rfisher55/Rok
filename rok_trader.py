@@ -11855,35 +11855,8 @@ def run():
     tlog["market_open"]     = market_open
     tlog["minutes_since_open"]  = _minutes_since_open if market_open else None
     tlog["minutes_to_close"]    = _minutes_to_close   if market_open else None
-    # Market session label for the pocket guide
-    try:
-        if not market_open:
-            _mkt_sess_hr = _et_hour * 60 + _et_min
-            if _mkt_sess_hr < 9 * 60 + 30:
-                _mkt_sess = "pre-market"
-            elif _mkt_sess_hr < 10 * 60:
-                _mkt_sess = "early-premarket"
-            else:
-                _mkt_sess = "after-hours"
-        elif _open_guard:
-            _mkt_sess = "opening-volatility"
-        elif _minutes_since_open < 60:
-            _mkt_sess = "prime-morning"
-        elif _minutes_since_open < 150:
-            _mkt_sess = "mid-morning"
-        elif _minutes_since_open < 240:
-            _mkt_sess = "midday-lull"
-        elif _minutes_to_close > 60:
-            _mkt_sess = "afternoon"
-        elif _minutes_to_close > 20:
-            _mkt_sess = "power-hour"
-        elif _close_guard:
-            _mkt_sess = "close-guard"
-        else:
-            _mkt_sess = "open"
-        tlog["market_session"] = _mkt_sess
-    except Exception:
-        tlog.setdefault("market_session", "unknown")
+    # Market session label — already computed early in run(), just write to tlog
+    tlog["market_session"] = _mkt_sess
     # Market timing quality: 0=avoid, 1=neutral, 2=good, 3=prime
     _timing_q = 0
     if market_open and not _open_guard and not _close_guard:
@@ -13855,6 +13828,24 @@ def run():
     history = tlog.setdefault("perf_history", [])
     history.append(snap)
     tlog["perf_history"] = history[-500:]
+
+    # SPY vs Bot Alpha tracking — compare portfolio return to buy-and-hold SPY
+    try:
+        _spy_now_price = _fetch_spy_perf().get("closes", [])
+        _spy_now_price = _spy_now_price[-1] if _spy_now_price else 0
+        # On first run, record inception values
+        if not tlog.get("inception_spy_price") and _spy_now_price > 0 and portfolio_val > 0:
+            tlog["inception_spy_price"]  = round(_spy_now_price, 2)
+            tlog["inception_port_value"] = round(portfolio_val, 2)
+            tlog["inception_date"]       = now_utc.strftime("%Y-%m-%d")
+        elif tlog.get("inception_spy_price") and tlog.get("inception_port_value") and _spy_now_price > 0:
+            _spy_ret  = (_spy_now_price - tlog["inception_spy_price"]) / tlog["inception_spy_price"] * 100
+            _port_ret = (portfolio_val - tlog["inception_port_value"]) / tlog["inception_port_value"] * 100
+            tlog["spy_since_inception"]  = round(_spy_ret, 2)
+            tlog["port_since_inception"] = round(_port_ret, 2)
+            tlog["alpha_vs_spy"]         = round(_port_ret - _spy_ret, 2)
+    except Exception:
+        pass
 
     # Precompute daily P&L from perf_history for calendar heatmap
     # Groups snapshots by date, takes opening and closing values per day

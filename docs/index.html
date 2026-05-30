@@ -57834,6 +57834,20 @@ window.renderSectorRotation = renderSectorRotation;
             <div style="font-size:8px;color:#4a6fa5;letter-spacing:.1em;text-transform:uppercase;font-weight:800;margin-bottom:.2rem">Portfolio Value</div>
             <div style="font-family:var(--disp);font-size:1.4rem;color:#82b1ff">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
             <div style="font-size:8.5px;color:#555;margin-top:.1rem">Cash: <span style="color:#64b5f6">\$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</span></div>
+            ${(() => {
+              const alphaVsSpy = data.alpha_vs_spy;
+              const portRet = data.port_since_inception;
+              const spyRet  = data.spy_since_inception;
+              const incDate = data.inception_date || '';
+              if (alphaVsSpy == null) return '';
+              const aCol = alphaVsSpy >= 5 ? '#00e676' : alphaVsSpy >= 0 ? '#69f0ae' : alphaVsSpy >= -5 ? '#ff9800' : '#ef5350';
+              const aIcon = alphaVsSpy >= 0 ? '▲' : '▼';
+              return `<div style="margin-top:.25rem;font-size:6px;color:#555">
+                vs SPY${incDate?' since '+incDate:''}:
+                <span style="font-weight:900;color:${aCol}">${aIcon}${alphaVsSpy>=0?'+':''}${alphaVsSpy.toFixed(1)}% alpha</span>
+                <span style="color:#333"> (Bot ${portRet>=0?'+':''}${portRet.toFixed(1)}% vs SPY ${spyRet>=0?'+':''}${spyRet.toFixed(1)}%)</span>
+              </div>`;
+            })()}
           </div>
           <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
             <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Positions</div><div style="font-size:14px;font-weight:900;color:#ffd54f">${openPos}/${regimeMaxPos}</div></div>
@@ -59598,6 +59612,18 @@ window.renderSectorRotation = renderSectorRotation;
           <div>
             <div style="font-size:8px;color:#4a6fa5;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.15rem">ROK BOT — LIVE POSITIONS</div>
             <div style="font-family:var(--disp);font-size:1.4rem;color:#82b1ff">\$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            ${(() => {
+              const alp = data.alpha_vs_spy;
+              const pr  = data.port_since_inception;
+              const sr  = data.spy_since_inception;
+              const inc = data.inception_date;
+              if (alp == null) return '';
+              const ac = alp >= 3 ? '#00e676' : alp >= 0 ? '#69f0ae' : alp >= -3 ? '#ff9800' : '#ef5350';
+              return `<div style="font-size:6.5px;color:#555;margin-top:.1rem">
+                <span style="color:${ac};font-weight:800">Alpha: ${alp>=0?'+':''}${alp.toFixed(1)}% vs SPY</span>
+                <span style="margin-left:.4rem">(${pr>=0?'+':''}${pr.toFixed(1)}% bot vs ${sr>=0?'+':''}${sr.toFixed(1)}% SPY${inc?' since '+inc:''})</span>
+              </div>`;
+            })()}
           </div>
           <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
             <span style="font-size:8px;font-weight:900;color:${_mktStateCol};border:1px solid ${_mktStateCol}55;border-radius:20px;padding:2px 9px;background:${_mktStateCol}11">${_mktStateLabel}${_mktStateTimer}</span>
