@@ -54962,6 +54962,36 @@ window.renderSectorRotation = renderSectorRotation;
       }
     }
 
+    // Pre-market gap scanner display
+    const pmGaps = data.premarket_gaps || [];
+    if (pmGaps.length > 0) {
+      const gapUps = pmGaps.filter(g => g.direction === 'up').sort((a,b) => b.gap_pct - a.gap_pct);
+      const gapDns = pmGaps.filter(g => g.direction === 'down').sort((a,b) => a.gap_pct - b.gap_pct);
+      const makeGapRow = (g) => {
+        const col = g.direction === 'up' ? '#00e676' : '#ef5350';
+        const bg  = g.direction === 'up' ? 'rgba(0,230,118,.07)' : 'rgba(239,83,80,.07)';
+        const icon = g.direction === 'up' ? '▲' : '▼';
+        const catBadge = g.catalyst_type && g.catalyst_type !== 'none' ?
+          `<span style="font-size:5.5px;background:rgba(255,213,79,.15);color:#ffd54f;border-radius:3px;padding:0 3px">${g.catalyst_type.toUpperCase()}</span>` : '';
+        const sec = g.sector ? `<span style="font-size:5.5px;color:#444">${g.sector}</span>` : '';
+        return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem .3rem;background:${bg};border-radius:4px">
+          <span style="font-size:8px;font-weight:900;color:${col};min-width:16px">${icon}</span>
+          <span style="font-size:8px;font-weight:800;color:#e0e0e0;min-width:40px">${g.ticker}</span>
+          <span style="font-size:8px;font-weight:900;color:${col}">${g.gap_pct >= 0 ? '+' : ''}${g.gap_pct.toFixed(1)}%</span>
+          ${g.price ? `<span style="font-size:6.5px;color:#555">$${g.price}</span>` : ''}
+          ${catBadge}${sec}
+        </div>`;
+      };
+      let gapHtml = '';
+      if (gapUps.length) gapHtml += `<div style="margin-bottom:.3rem"><div style="font-size:6px;color:#00e676;font-weight:700;margin-bottom:.15rem">▲ GAP UP (${gapUps.length})</div><div style="display:flex;flex-direction:column;gap:2px">${gapUps.slice(0,5).map(makeGapRow).join('')}</div></div>`;
+      if (gapDns.length) gapHtml += `<div><div style="font-size:6px;color:#ef5350;font-weight:700;margin-bottom:.15rem">▼ GAP DOWN (${gapDns.length})</div><div style="display:flex;flex-direction:column;gap:2px">${gapDns.slice(0,5).map(makeGapRow).join('')}</div></div>`;
+      healthEl.innerHTML += `<div style="margin-top:.55rem;padding:.4rem .5rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:6px">
+        <div style="font-size:7px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.35rem">Pre-Market Gappers</div>
+        ${gapHtml}
+        <div style="font-size:5.5px;color:#333;margin-top:.2rem">3%+ gap moves · volume confirmed</div>
+      </div>`;
+    }
+
     // Populate Intel tab ROK trades section
     const intelEl = document.getElementById('intel-rok-trades');
     if (intelEl) {

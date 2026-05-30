@@ -6036,11 +6036,19 @@ def run():
 
     # Pre-market gap scan (bonus score for strong gap-up stocks)
     gap_ups = set()
+    _gap_data: list = []   # full gap list for tlog storage
     if _time_ok(260):
         gaps = get_premarket_gaps(set(candidates))
         gap_ups = {sym for sym, pct, direction in gaps if direction == "up" and pct >= 3}
         if gap_ups:
             logger.info(f"Gap-up candidates: {', '.join(sorted(gap_ups))}")
+        # Build richer gap data for dashboard display
+        for _gs, _gp, _gd in gaps:
+            _gcat = live.get(_gs, {}).get("catalyst_type", "none") if _gs in live else "none"
+            _gsec = SECTOR_MAP.get(_gs, "other")
+            _gap_data.append({"ticker": _gs, "gap_pct": _gp, "direction": _gd,
+                              "sector": _gsec, "catalyst_type": _gcat,
+                              "price": round(live.get(_gs, {}).get("price", 0), 2)})
 
     # Mean reversion setups — deeply oversold stocks bouncing from support
     # High RSI divergence + Stoch RSI < 15 + EMA50 support = strong bounce setup
@@ -7559,6 +7567,8 @@ def run():
     tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
     tlog["sector_etf_trends"]  = sector_etf_trends  # {sector: {bullish, chg5d, chg1d, above_ema20}}
     tlog["portfolio_beta"]     = _port_beta_est      # estimated portfolio beta
+    if _gap_data:  # only update if we ran the gap scanner this cycle
+        tlog["premarket_gaps"] = _gap_data
 
     # Portfolio concentration and correlation risk analysis
     try:
