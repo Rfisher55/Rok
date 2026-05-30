@@ -54297,8 +54297,8 @@ window.renderSectorRotation = renderSectorRotation;
   }
   window.renderUpcomingEvents = renderUpcomingEvents;
 
-  //  SECTOR HEATMAP 
-  const SECTOR_ETFS = {
+  //  SECTOR HEATMAP
+  const _HEATMAP_SECTOR_MAP = {
     'Technology': 'XLK', 'Healthcare': 'XLV', 'Energy': 'XLE', 'Financials': 'XLF',
     'Consumer': 'XLY', 'Industrials': 'XLI', 'Materials': 'XLB', 'Utilities': 'XLU',
     'Real Estate': 'XLRE', 'Communications': 'XLC', 'Consumer Staples': 'XLP',
@@ -54306,7 +54306,7 @@ window.renderSectorRotation = renderSectorRotation;
   let _sectorEtfData = {};
   async function fetchSectorEtfs() {
     try {
-      const syms = Object.values(SECTOR_ETFS).join(',');
+      const syms = Object.values(_HEATMAP_SECTOR_MAP).join(',');
       const r = await fetch(
         `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${syms}&fields=regularMarketChangePercent`,
         { signal: AbortSignal.timeout(8000) }
@@ -54315,14 +54315,13 @@ window.renderSectorRotation = renderSectorRotation;
       const j = await r.json();
       const quotes = j?.quoteResponse?.result || [];
       quotes.forEach(q => {
-        // Map ETF symbol back to sector name
-        for (const [sector, etfSym] of Object.entries(SECTOR_ETFS)) {
+        for (const [sector, etfSym] of Object.entries(_HEATMAP_SECTOR_MAP)) {
           if (q.symbol === etfSym && q.regularMarketChangePercent != null) {
             _sectorEtfData[sector] = q.regularMarketChangePercent;
           }
         }
       });
-      renderSectorHeatmap(); // re-render with ETF data
+      renderSectorHeatmap();
     } catch { /* silent */ }
   }
   window.fetchSectorEtfs = fetchSectorEtfs;
