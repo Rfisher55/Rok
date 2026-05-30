@@ -4006,6 +4006,46 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Swing-based Support/Resistance levels — institutional memory zones
+    # Find local extremes in last 60 days; cluster nearby levels for quality S/R
+    key_support_1 = 0.0
+    key_support_2 = 0.0
+    key_resist_1  = 0.0
+    key_resist_2  = 0.0
+    near_key_support = False
+    near_key_resist  = False
+    try:
+        if len(daily) >= 10 and "High" in daily.columns and "Low" in daily.columns and "Close" in daily.columns:
+            _d60 = daily.iloc[-60:]
+            _highs = list(_d60["High"])
+            _lows  = list(_d60["Low"])
+            _closes = list(_d60["Close"])
+            _n = len(_highs)
+            # Find swing highs (local max of 2 bars either side)
+            swing_highs = []
+            swing_lows  = []
+            for _i in range(2, _n - 2):
+                if _highs[_i] >= max(_highs[_i-2], _highs[_i-1], _highs[_i+1], _highs[_i+2]):
+                    swing_highs.append(_highs[_i])
+                if _lows[_i] <= min(_lows[_i-2], _lows[_i-1], _lows[_i+1], _lows[_i+2]):
+                    swing_lows.append(_lows[_i])
+            # Sort supports below current price, resistances above
+            _sup = sorted([l for l in swing_lows if l < price], reverse=True)[:3]
+            _res = sorted([h for h in swing_highs if h > price])[:3]
+            if _sup:
+                key_support_1 = round(_sup[0], 2)
+            if len(_sup) >= 2:
+                key_support_2 = round(_sup[1], 2)
+            if _res:
+                key_resist_1 = round(_res[0], 2)
+            if len(_res) >= 2:
+                key_resist_2 = round(_res[1], 2)
+            # Near key level: within 1.5%
+            near_key_support = key_support_1 > 0 and abs(price - key_support_1) / price < 0.015
+            near_key_resist  = key_resist_1 > 0 and abs(price - key_resist_1) / price < 0.015
+    except Exception:
+        pass
+
     # Parabolic SAR: accelerating trailing stop — tightens as trend matures
     psar_val  = 0.0
     psar_bull = True
@@ -4555,6 +4595,12 @@ def _extract(daily, hourly):
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
         "fib_level_382":       fib_level_382,
+        "key_support_1":       key_support_1,
+        "key_support_2":       key_support_2,
+        "key_resist_1":        key_resist_1,
+        "key_resist_2":        key_resist_2,
+        "near_key_support":    near_key_support,
+        "near_key_resist":     near_key_resist,
         "fib_level_500":       fib_level_500,
         "fib_level_618":       fib_level_618,
         "fib_level_786":       fib_level_786,
@@ -4852,6 +4898,7 @@ def momentum_grade(d, final_score=0):
     if d.get("ichimoku_above", False):         criteria += 1  # Ichimoku bullish
     if d.get("ttm_squeeze_fired", False):      criteria += 1  # squeeze breakout
     if d.get("fib_support", False):            criteria += 1  # Fibonacci support
+    if d.get("near_key_support", False):       criteria += 1  # Near swing support
     if d.get("macd_bull_div", False):          criteria += 1  # MACD divergence
     if d.get("at_breakout", False):            criteria += 1  # technical breakout
     if d.get("vwap_reclaim", False):           criteria += 1  # VWAP reclaim
@@ -5134,6 +5181,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Fibonacci retracement support: bouncing off 38.2/50/61.8% level = institutional buy zone (+9)
     if d.get("fib_support", False):    s += 9
     if d.get("fib_resistance", False): s -= 5
+
+    # Swing-based support/resistance: at historical institutional memory zone
+    if d.get("near_key_support", False): s += 4   # price at swing support = high-probability bounce zone
+    if d.get("near_key_resist", False):  s -= 3   # approaching swing resistance = entry timing risk
 
     # MACD divergence: price and momentum disagree — leading reversal signal (+11/-8)
     if d.get("macd_bull_div", False): s += 11   # price lower, MACD higher = hidden bullish strength
@@ -6707,6 +6758,10 @@ def run():
                 "hv5":               live.get(tk, {}).get("hv5", 0.0),
                 "hv_expanding":      live.get(tk, {}).get("hv_expanding", False),
                 "hv_contracting":    live.get(tk, {}).get("hv_contracting", False),
+                "key_support_1":     live.get(tk, {}).get("key_support_1", 0.0),
+                "key_resist_1":      live.get(tk, {}).get("key_resist_1", 0.0),
+                "near_key_support":  live.get(tk, {}).get("near_key_support", False),
+                "near_key_resist":   live.get(tk, {}).get("near_key_resist", False),
                 "fib_level_382":     live.get(tk, {}).get("fib_level_382", 0.0),
                 "fib_level_500":     live.get(tk, {}).get("fib_level_500", 0.0),
                 "fib_level_618":     live.get(tk, {}).get("fib_level_618", 0.0),
@@ -7050,6 +7105,12 @@ def run():
                 "hv5":                sig.get("hv5", 0.0),
                 "hv_expanding":       sig.get("hv_expanding", False),
                 "hv_contracting":     sig.get("hv_contracting", False),
+                "key_support_1":      sig.get("key_support_1", 0.0),
+                "key_support_2":      sig.get("key_support_2", 0.0),
+                "key_resist_1":       sig.get("key_resist_1", 0.0),
+                "key_resist_2":       sig.get("key_resist_2", 0.0),
+                "near_key_support":   sig.get("near_key_support", False),
+                "near_key_resist":    sig.get("near_key_resist", False),
                 "fib_level_382":      sig.get("fib_level_382", 0.0),
                 "fib_level_500":      sig.get("fib_level_500", 0.0),
                 "fib_level_618":      sig.get("fib_level_618", 0.0),
