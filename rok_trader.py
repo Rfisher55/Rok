@@ -10283,6 +10283,12 @@ def run():
                 ) * (1 + (sc - 60) / 100))), 1) if win_rate > 0.4 and _payoff_ratio > 0.5 else 0.0,
                 "atr":               round(live.get(tk, {}).get("atr", 0.0) or 0.0, 3),
                 "effective_min_score": tlog.get("effective_min_score", 60),
+                "premium_signal_count": sum(bool(live.get(tk,{}).get(k)) for k in (
+                    "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
+                    "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising")),
+                "nr7":               live.get(tk, {}).get("nr7_signal", False),
+                "above_avwap":       live.get(tk, {}).get("above_avwap_52wl", False),
+                "vol_dry_up":        live.get(tk, {}).get("vol_dry_up", False),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
