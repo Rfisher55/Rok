@@ -59568,6 +59568,45 @@ window.renderSectorRotation = renderSectorRotation;
           'early-premarket':    {lbl:'PRE-MARKET', note:'Market opens at 9:30 ET — review plan', col:'#555', icon:'🌙'},
         };
         const si = sessLabels[sess];
+
+        // ── SPY / Market Macro Bar ────────────────────────────────────────────
+        {
+          const spyD1  = data.spy_d1  != null ? data.spy_d1  : null;
+          const spyD5  = data.spy_d5  != null ? data.spy_d5  : null;
+          const spyD20 = data.spy_d20 != null ? data.spy_d20 : null;
+          if (spyD1 != null) {
+            const _spyFmt = (v, label) => {
+              if (v == null) return '';
+              const col = v >= 1.5 ? '#00e676' : v >= 0.3 ? '#69f0ae' : v >= -0.3 ? '#ffd54f' : v >= -1.5 ? '#ff9800' : '#ef5350';
+              const arr = v >= 0.3 ? '▲' : v <= -0.3 ? '▼' : '→';
+              return `<div style="text-align:center;flex:1">
+                <div style="font-size:5px;color:#444;text-transform:uppercase;letter-spacing:.07em;margin-bottom:1px">${label}</div>
+                <div style="font-size:9px;font-weight:900;color:${col};font-family:var(--mono)">${arr}${v>=0?'+':''}${v.toFixed(1)}%</div>
+              </div>`;
+            };
+            const spyTrend = spyD20 >= 3 ? 'STRONG BULL' : spyD20 >= 0 ? 'UPTREND' : spyD20 >= -5 ? 'PULLBACK' : 'DOWNTREND';
+            const spyTrendCol = spyD20 >= 3 ? '#00e676' : spyD20 >= 0 ? '#69f0ae' : spyD20 >= -5 ? '#ffd54f' : '#ef5350';
+            const optFlow = data.options_flow_agg || {};
+            const netBull = optFlow.net_bull || 0;
+            const optCol = netBull > 2 ? '#00e676' : netBull > 0 ? '#69f0ae' : netBull < -2 ? '#ef5350' : '#ffd54f';
+            const optLbl = netBull > 2 ? '🎯 CALL FLOW' : netBull > 0 ? '↑ CALLS' : netBull < -2 ? '⚠ PUT FLOW' : '→ NEUTRAL';
+            html += `<div style="margin-bottom:.35rem;padding:.35rem .6rem;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.07);border-radius:8px">
+              <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.25rem">
+                <span style="font-size:5.5px;font-weight:800;color:#555;letter-spacing:.1em;text-transform:uppercase">SPY Performance</span>
+                <span style="font-size:5.5px;font-weight:800;color:${spyTrendCol};background:${spyTrendCol}15;border-radius:3px;padding:1px 4px">${spyTrend}</span>
+                ${optFlow.unusual_calls != null ? `<span style="font-size:5.5px;font-weight:700;color:${optCol};background:${optCol}12;border-radius:3px;padding:1px 4px;margin-left:auto">${optLbl}</span>` : ''}
+              </div>
+              <div style="display:flex;gap:.3rem">
+                ${_spyFmt(spyD1, 'Today')}
+                <div style="width:1px;background:rgba(255,255,255,.05)"></div>
+                ${_spyFmt(spyD5, '1-Week')}
+                <div style="width:1px;background:rgba(255,255,255,.05)"></div>
+                ${_spyFmt(spyD20, '1-Month')}
+              </div>
+            </div>`;
+          }
+        }
+
         // ── Traffic Light Status Row ─────────────────────────────────────────
         {
           const reg = data.regime || {};
@@ -59956,6 +59995,20 @@ window.renderSectorRotation = renderSectorRotation;
                 <span style="font-size:6px;color:#00ff88;min-width:38px;text-align:right" title="ATR-based profit target">🎯\$${target.toFixed(2)}</span>
               </div>
               ${trailWarning ? `<div style="font-size:6px;color:#ff9800;margin-top:.2rem;font-weight:700">⚡ ${distTrail.toFixed(1)}% from trail stop — tightening</div>` : ''}
+              ${(() => {
+                const ts = p.thesis_status;
+                if (!ts || ts === 'unknown') return '';
+                const tot = p.thesis_total || 0;
+                const ok  = p.thesis_intact || 0;
+                const gone= p.thesis_gone  || 0;
+                const tsCol = ts === 'INTACT' ? '#00e676' : ts === 'DEGRADING' ? '#ffa726' : '#ef5350';
+                const tsIcon = ts === 'INTACT' ? '✓' : ts === 'DEGRADING' ? '⚠' : '✗';
+                const tsNote = ts === 'INTACT' ? 'Entry signals holding' : ts === 'DEGRADING' ? `${gone}/${tot} entry signals gone` : `${gone}/${tot} signals gone — consider exit`;
+                return `<div style="margin-top:.2rem;display:flex;align-items:center;gap:.35rem">
+                  <span style="font-size:5.5px;font-weight:900;color:${tsCol};background:${tsCol}18;border:1px solid ${tsCol}44;border-radius:3px;padding:1px 5px">${tsIcon} THESIS ${ts}</span>
+                  <span style="font-size:5.5px;color:#555">${tsNote}</span>
+                </div>`;
+              })()}
               <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.15rem;align-items:center">
                 ${rMult !== 0 ? `<span style="font-size:6px;color:${rMult>=2?'#00ff88':rMult>=1?'#69f0ae':rMult>0?'#ffd54f':'#ef5350'}">${rMult>=0?'+':''}${rMult.toFixed(1)}R ${rMult>=2?'🚀 run':rMult>=1?'✓ solid':rMult>0?'📈 build':''}</span>` : ''}
                 ${(() => {

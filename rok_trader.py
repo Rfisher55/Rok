@@ -8500,12 +8500,14 @@ def bearish_score(tk, d):
 # ── Position sizing ───────────────────────────────────────────────────────────
 def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
                   score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5,
-                  true_beta=1.0, hv_ratio=1.0, premium_count=0):
+                  true_beta=1.0, hv_ratio=1.0, premium_count=0,
+                  market_session="", market_quality=50):
     """
     ATR-based risk sizing with full Kelly criterion, beta-adjusted, and HV-regime-adaptive sizing.
     Full Kelly: f* = (W*B - L) / B  where W=win%, L=loss%, B=avg_win/avg_loss (payoff)
     Beta adjustment: high-beta stocks get smaller positions (equal-risk sizing).
     HV ratio: hv5/hv20 — expanding vol shrinks size, contracting vol allows slightly larger.
+    Session scaling: prime-morning/power-hour get larger allocations; midday-lull smaller.
     """
     vix_scale = 1.0
     if vix > VIX_EXTREME_THRESH:   vix_scale = 0.4
@@ -8563,6 +8565,23 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
     if premium_count >= 6:   notional *= 1.15   # elite setup: confident, size up
     elif premium_count >= 4: notional *= 1.08   # strong setup: slightly larger
     elif premium_count <= 1: notional *= 0.85   # weak signal count: smaller position
+
+    # Session-aware scaling: trade larger in high-edge windows, smaller in low-edge periods
+    _sess_mult = {
+        "prime-morning":   1.15,  # 9:40-10:30 — best edge, institutions setting the tape
+        "power-hour":      1.10,  # 3:00-4:00 PM — second best, institutional close positioning
+        "mid-morning":     1.00,  # 10:30-11 — normal
+        "afternoon":       0.92,  # 1-3 PM — lower vol, slightly reduce
+        "midday-lull":     0.80,  # 11-1 PM — lowest edge, tightest sizing
+        "opening-volatility": 0.55,  # first 10 min — very risky, minimal size if any
+        "close-guard":     0.50,  # last 20 min — almost no new buys
+    }.get(market_session, 1.0)
+    notional *= _sess_mult
+
+    # Market quality scaling: strong macro conditions → larger; poor conditions → smaller
+    _mq = max(0, min(100, market_quality or 50))
+    _mq_mult = 1.10 if _mq >= 70 else 1.0 if _mq >= 50 else 0.85 if _mq >= 35 else 0.70
+    notional *= _mq_mult
 
     cap = min(portfolio_val * MAX_POSITION_PCT, buying_power * 0.95)
     return round(min(notional, cap), 2)
@@ -8634,6 +8653,20 @@ def run():
     _close_guard = market_open and _minutes_to_close < 20
     # Market close cleanup: last 8 min before close, liquidate losing positions > -3%
     _close_cleanup = market_open and _minutes_to_close < 8
+    # Market session label — computed early so position sizing can use it
+    if not market_open:
+        _mkt_sess_hr0 = _et_hour * 60 + _et_min
+        if _mkt_sess_hr0 < 9 * 60 + 30:    _mkt_sess = "pre-market"
+        elif _mkt_sess_hr0 < 10 * 60:      _mkt_sess = "early-premarket"
+        else:                              _mkt_sess = "after-hours"
+    elif _open_guard:                      _mkt_sess = "opening-volatility"
+    elif _minutes_since_open < 60:         _mkt_sess = "prime-morning"
+    elif _minutes_since_open < 150:        _mkt_sess = "mid-morning"
+    elif _minutes_since_open < 240:        _mkt_sess = "midday-lull"
+    elif _minutes_to_close > 60:           _mkt_sess = "afternoon"
+    elif _minutes_to_close > 20:           _mkt_sess = "power-hour"
+    elif _close_guard:                     _mkt_sess = "close-guard"
+    else:                                  _mkt_sess = "open"
     if _open_guard:
         logger.info(f"OPEN GUARD: {_minutes_since_open:.0f} min since open — skipping new buys")
     if _close_guard:
@@ -10471,7 +10504,9 @@ def run():
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct,
                                              payoff_ratio=_payoff_ratio, true_beta=_tk_beta,
-                                             hv_ratio=_tk_hv_ratio, premium_count=_tk_prem_ct)
+                                             hv_ratio=_tk_hv_ratio, premium_count=_tk_prem_ct,
+                                             market_session=_mkt_sess,
+                                             market_quality=tlog.get("market_quality", 50))
                     # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
                     # allow slightly larger positions; if deeply underwater, shrink further
                     if _portfolio_heat > 5:
@@ -10768,7 +10803,9 @@ def run():
                     notional = calc_notional(portfolio_val, buying_power, price, atr, vix,
                                              macro_day=macro_day, score_val=sc,
                                              win_rate=win_rate, drawdown_pct=drawdown_pct,
-                                             payoff_ratio=_payoff_ratio, true_beta=_tk_beta_s)
+                                             payoff_ratio=_payoff_ratio, true_beta=_tk_beta_s,
+                                             market_session=_mkt_sess,
+                                             market_quality=tlog.get("market_quality", 50))
                     notional = round(notional * 0.6, 2)   # size shorts smaller
                     if notional < 1:
                         continue
@@ -11018,6 +11055,34 @@ def run():
                 pass
             _intraday_chg_pct = round(live.get(_sym, {}).get("change_pct", 0), 2)
             _vol_pace          = round(live.get(_sym, {}).get("rvol", 1.0), 2)
+            # Neural Thesis Status: track which entry signals are still active
+            _thesis_status = "unknown"
+            _thesis_intact = 0
+            _thesis_gone   = 0
+            _thesis_total  = 0
+            try:
+                _entry_sigs_pos = []
+                for _tt in tlog.get("trades", []):
+                    if _tt.get("action") == "BUY" and _tt.get("ticker") == _sym:
+                        _entry_sigs_pos = _tt.get("entry_signals", [])
+                        break
+                _KEY_SIGS = ("cup_handle","vcp","at_breakout","rvol_surge","ttm_squeeze_fired",
+                             "donchian_up","kc_breakout","at_demand_zone","three_white_soldiers",
+                             "ema_stacked_bull","mtf_aligned","supertrend_bull","pocket_pivot",
+                             "high_tight_flag","gap_and_hold","orb_breakout","obv_rising","mtf_triple")
+                _key_entry = [s for s in _entry_sigs_pos if s in _KEY_SIGS]
+                if _key_entry:
+                    _live_pos = live.get(_sym, {})
+                    _still_on = [s for s in _key_entry if _live_pos.get(s)]
+                    _thesis_total  = len(_key_entry)
+                    _thesis_intact = len(_still_on)
+                    _thesis_gone   = _thesis_total - _thesis_intact
+                    _gone_pct = _thesis_gone / _thesis_total if _thesis_total else 0
+                    if _gone_pct <= 0.2:   _thesis_status = "INTACT"
+                    elif _gone_pct <= 0.5: _thesis_status = "DEGRADING"
+                    else:                  _thesis_status = "COLLAPSED"
+            except Exception:
+                pass
             _pos_list_raw.append({
                 "ticker":     _sym,
                 "side":       "long" if float(p.get("qty", 0)) > 0 else "short",
@@ -11036,6 +11101,10 @@ def run():
                 "hours_held":  _hours_held,
                 "intraday_chg_pct": _intraday_chg_pct,
                 "vol_pace":    _vol_pace,
+                "thesis_status":       _thesis_status,
+                "thesis_intact":       _thesis_intact,
+                "thesis_gone":         _thesis_gone,
+                "thesis_total":        _thesis_total,
                 "live_signals": _pos_signals(_sym),
                 "score_history": peaks.get(_sym, {}).get("score_history", []) if isinstance(peaks.get(_sym), dict) else [],
                 "pnl_history":   peaks.get(_sym, {}).get("pnl_history", []) if isinstance(peaks.get(_sym), dict) else [],
