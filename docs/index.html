@@ -55719,6 +55719,35 @@ window.renderSectorRotation = renderSectorRotation;
           </div>`;
         }
       }
+      // Daily P&L Attribution — how much each position contributed today
+      {
+        const attrib = data.daily_pnl_attribution || [];
+        const meaningful = attrib.filter(a => Math.abs(a.day_chg_usd||0) >= 5 || Math.abs(a.day_chg_pct||0) >= 0.3);
+        if (meaningful.length > 0) {
+          const totalDayUsd = meaningful.reduce((s,a) => s + (a.day_chg_usd||0), 0);
+          const totalCol = totalDayUsd >= 0 ? '#00ff88' : '#ef5350';
+          const rows = meaningful.slice(0,6).map(a => {
+            const col = (a.day_chg_usd||0) >= 0 ? '#00ff88' : '#ef5350';
+            const barW = Math.min(100, Math.abs(a.day_chg_pct||0) * 20);
+            return `<div style="display:flex;align-items:center;gap:.4rem;padding:.15rem .25rem">
+              <span style="font-family:var(--disp);font-size:.75rem;color:#ffd54f;min-width:38px">\$${a.ticker}</span>
+              <div style="flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:2px;position:relative">
+                <div style="position:absolute;${(a.day_chg_pct||0)>=0?'left:50%':'right:50%'};top:0;height:100%;width:${barW/2}%;background:${col};border-radius:2px;max-width:50%"></div>
+              </div>
+              <span style="font-size:7px;font-weight:800;color:${col};min-width:36px;text-align:right">${(a.day_chg_pct||0)>=0?'+':''}${(a.day_chg_pct||0).toFixed(1)}%</span>
+              <span style="font-size:7px;color:${col};min-width:40px;text-align:right">${(a.day_chg_usd||0)>=0?'+':''}$${Math.abs(a.day_chg_usd||0).toFixed(0)}</span>
+            </div>`;
+          }).join('');
+          html += `<div style="margin-bottom:.6rem;background:rgba(255,255,255,.02);border-radius:8px;padding:.4rem .6rem;border:1px solid rgba(255,255,255,.07)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
+              <span style="font-size:7.5px;font-weight:800;color:#4a6fa5;letter-spacing:.08em;text-transform:uppercase">Today's Attribution</span>
+              <span style="font-size:8px;font-weight:900;color:${totalCol}">${totalDayUsd>=0?'+':'-'}$${Math.abs(totalDayUsd).toFixed(0)} today</span>
+            </div>
+            ${rows}
+          </div>`;
+        }
+      }
+
       if (trades.length === 0 && positions.length === 0) {
         html += `<div style="color:var(--wh4);font-size:10px;padding:.4rem 0;margin-bottom:.5rem">No trades yet — bot executes automatically during market hours (Mon–Fri 9:30 AM–4 PM ET).</div>`;
       }

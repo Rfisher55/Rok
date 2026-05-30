@@ -4912,6 +4912,7 @@ def _extract(daily, hourly):
     # Gap and hold: price opens with a gap up ≥1.5% vs yesterday's close and holds above it
     # Institutional confirmation — no one is selling into the gap
     gap_and_hold = False
+    today_open   = 0.0  # today's open price — used for daily P&L attribution
     try:
         dc = list(daily["Close"])
         dc_open = list(daily["Open"]) if "Open" in daily.columns else []
@@ -5234,6 +5235,7 @@ def _extract(daily, hourly):
         "vwap_reclaim":        vwap_reclaim,
         "orb_breakout":        orb_breakout,
         "gap_and_hold":        gap_and_hold,
+        "day_open":            round(today_open, 2) if (isinstance(today_open, (int, float)) and today_open > 0) else 0.0,
         "adx":                 round(adx_val, 1),
         "intraday_tq":         round(intraday_trend_quality, 2),
         "ichimoku_above":      ichimoku.get("above_cloud", False),
@@ -9085,6 +9087,45 @@ def run():
         }
     except Exception:
         pass
+
+    # Daily P&L attribution: for each held position, compute today's USD P&L change
+    # Uses market open price vs current price * shares held
+    try:
+        _attrib = []
+        for _ap in tlog.get("positions", []):
+            _asym  = _ap.get("ticker", "")
+            _aprice = _ap.get("price", 0) or 0
+            _acost  = _ap.get("cost", 0) or 0
+            _aqty   = _ap.get("qty", 0) or 0
+            _amval  = _ap.get("market_val", 0) or 0
+            _apnl_pct = _ap.get("pnl_pct", 0) or 0
+            # Try to get today's open price for the stock
+            _aopen_price = 0.0
+            try:
+                _asig = live.get(_asym, {})
+                _aopen_price = _asig.get("day_open", 0.0) or 0.0
+            except Exception:
+                pass
+            if _aprice > 0 and _aqty > 0:
+                if _aopen_price > 0:
+                    _day_chg_pct = round((_aprice - _aopen_price) / _aopen_price * 100, 2)
+                    _day_chg_usd = round(_aqty * (_aprice - _aopen_price), 2)
+                else:
+                    _day_chg_pct = 0.0
+                    _day_chg_usd = 0.0
+                _attrib.append({
+                    "ticker":      _asym,
+                    "day_chg_pct": _day_chg_pct,
+                    "day_chg_usd": _day_chg_usd,
+                    "open_price":  round(_aopen_price, 2),
+                    "cur_price":   round(_aprice, 2),
+                    "pnl_pct":     round(_apnl_pct, 2),
+                    "mval":        round(_amval, 2),
+                })
+        _attrib.sort(key=lambda x: -(abs(x["day_chg_usd"])))
+        tlog["daily_pnl_attribution"] = _attrib
+    except Exception as _att_e:
+        logger.debug(f"P&L attribution: {_att_e}")
 
     # Append to portfolio performance history (last 500 snapshots)
     snap = {
