@@ -3203,6 +3203,22 @@ def get_market_breadth() -> dict:
         except Exception:
             pass
 
+        # Sector ETF returns for heatmap: 1d and 5d performance
+        _sector_syms = {
+            "XLK":"Tech","XLF":"Fins","XLV":"Health","XLE":"Energy","XLY":"Cons.Disc",
+            "XLI":"Indust","XLP":"Staples","XLC":"Comms","XLU":"Util","XLRE":"RE","XLB":"Matrl",
+        }
+        _sector_perf = {}
+        for _ss, _sl in _sector_syms.items():
+            try:
+                _sc = list(raw["Close"][_ss].dropna())
+                if len(_sc) >= 2:
+                    _ret1d = round((_sc[-1] - _sc[-2]) / _sc[-2] * 100, 2)
+                    _ret5d = round((_sc[-1] - _sc[max(0, -6)]) / _sc[max(0, -6)] * 100, 2) if len(_sc) >= 6 else _ret1d
+                    _sector_perf[_ss] = {"name": _sl, "ret1d": _ret1d, "ret5d": _ret5d}
+            except Exception:
+                pass
+
         _BREADTH_CACHE = {
             "adv_pct":       adv_pct,
             "adv_5d_avg":    adv_5d_avg,
@@ -3214,6 +3230,7 @@ def get_market_breadth() -> dict:
             "total":         total_counted,
             "trin_proxy":    trin_proxy,
             "trin_signal":   trin_signal,
+            "sector_perf":   _sector_perf,
         }
         logger.info(f"Market breadth: today={adv_pct}% | 5d avg={adv_5d_avg}% | trend={breadth_trend} | MCL={mcl_osc:+.1f} | TRIN~{trin_proxy:.2f}({trin_signal})")
         return _BREADTH_CACHE
@@ -8454,6 +8471,35 @@ def run():
                     _ls["expected_move_pct_wk"] = round(_em_wk / _pr * 100, 2)
                 except Exception:
                     pass
+            # Anchored VWAP from entry date — key institutional hold/exit level
+            _pos["avwap_entry"] = 0.0
+            _pos["avwap_entry_pct"] = 0.0
+            try:
+                _pk_data  = peaks.get(_pos["ticker"], {})
+                _entry_ts = (_pk_data.get("time") or "") if isinstance(_pk_data, dict) else ""
+                _entry_pr = _pos.get("cost", 0) or 0
+                _cur_pr   = _pos.get("price", 0) or 0
+                if _entry_ts and _entry_pr > 0 and _cur_pr > 0:
+                    _entry_date_str = _entry_ts[:10]  # YYYY-MM-DD
+                    _av_hist = yf.download(
+                        _pos["ticker"], start=_entry_date_str,
+                        progress=False, auto_adjust=True
+                    )
+                    if not _av_hist.empty and "Volume" in _av_hist.columns:
+                        _av_col = "Close" if "Close" in _av_hist.columns else _av_hist.columns[-1]
+                        _av_h = _av_hist["High"] if "High" in _av_hist.columns else _av_hist[_av_col]
+                        _av_l = _av_hist["Low"]  if "Low"  in _av_hist.columns else _av_hist[_av_col]
+                        _av_c = _av_hist[_av_col]
+                        _av_v = _av_hist["Volume"]
+                        _tp   = (_av_h + _av_l + _av_c) / 3
+                        _vsum = float(_av_v.sum())
+                        if _vsum > 0:
+                            _avwap_e = float((_tp * _av_v).sum() / _vsum)
+                            _pos["avwap_entry"]     = round(_avwap_e, 2)
+                            _pos["avwap_entry_pct"] = round((_cur_pr - _avwap_e) / _avwap_e * 100, 2)
+            except Exception:
+                pass
+
             # Active dynamic trailing stop: mirrors the live trading logic
             # Shows the trader exactly what stop % is currently protecting this position
             _pnl = _pos.get("pnl_pct", 0) or 0
@@ -8514,8 +8560,50 @@ def run():
                 _rec_action = "REVIEW"; _rec_reason = "score degrading"
             _pos["recommendation"] = _rec_action
             _pos["rec_reason"]     = _rec_reason
+            # Live score vs entry score delta — shows if conviction is rising or falling
+            _live_sc = score(_pos["ticker"], live.get(_pos["ticker"], {}), regime_adj=regime_adj)
+            _entry_sc = _pos.get("entry_score", 0) or 0
+            _pos["live_score"]   = round(_live_sc)
+            _pos["score_delta"]  = round(_live_sc - _entry_sc)
+            # R:R ratio live: (distance to target) / (distance to trail stop)
+            _pr2 = _pos.get("price", 0) or 0
+            _tgt2 = _pos.get("target_price", 0) or 0
+            _stp2 = _pos.get("trail_stop_price", 0) or _pos.get("stop_price", 0) or 0
+            if _pr2 > 0 and _tgt2 > _pr2 and _stp2 > 0 and _stp2 < _pr2:
+                _rr = round((_tgt2 - _pr2) / (_pr2 - _stp2), 2)
+                _pos["live_rr"] = _rr
+            else:
+                _pos["live_rr"] = 0.0
     except Exception as e:
         logger.warning(f"Position snapshot failed: {e}")
+
+    # Rolling 20-trade win rate and portfolio correlation heuristic
+    try:
+        _closed_all = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","COVER") and t.get("pnl_pct") is not None]
+        _recent20 = sorted(_closed_all, key=lambda t: t.get("time",""))[-20:]
+        if _recent20:
+            _r20_wins = sum(1 for t in _recent20 if t["pnl_pct"] > 0)
+            _r20_wr   = round(_r20_wins / len(_recent20) * 100, 1)
+            _r20_avg  = round(sum(t["pnl_pct"] for t in _recent20) / len(_recent20), 2)
+        else:
+            _r20_wr = None; _r20_avg = None
+        tlog["rolling_wr_20"]  = _r20_wr
+        tlog["rolling_avg_20"] = _r20_avg
+        # Portfolio sector concentration: count positions per sector
+        _pos_sectors = {}
+        for _cp in tlog.get("positions", []):
+            _csec = live.get(_cp["ticker"], {}).get("sector_key", "unknown")
+            _pos_sectors[_csec] = _pos_sectors.get(_csec, 0) + 1
+        _max_conc_sector = max(_pos_sectors.values()) if _pos_sectors else 0
+        _max_conc_name   = max(_pos_sectors, key=_pos_sectors.get) if _pos_sectors else ""
+        tlog["sector_concentration"] = {
+            "max_count": _max_conc_sector,
+            "max_sector": _max_conc_name,
+            "distribution": _pos_sectors,
+            "alert": _max_conc_sector >= 3,  # 3+ positions in same sector = concentration risk
+        }
+    except Exception as _rstats_e:
+        logger.debug(f"Rolling stats: {_rstats_e}")
 
     # Compute profit factor, Sharpe-like ratio, and max drawdown from trade history
     _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
@@ -9056,6 +9144,67 @@ def run():
                 logger.info(f"Daily debrief: {_debrief_text[:100]}...")
     except Exception as _dd_e:
         logger.debug(f"Daily debrief skipped: {_dd_e}")
+
+    # AI Position Commentary: one-sentence Haiku assessment per held position
+    # Throttled: only regenerates if commentary is > 4 hours old or score shifted >= 10 pts
+    try:
+        _is_market_hours = 14 <= now_utc.hour <= 22  # ~9 AM – 5 PM ET
+        if ANTHROPIC_KEY and _is_market_hours and tlog.get("positions"):
+            import requests as _req3
+            for _pc in tlog["positions"]:
+                _pc_sym   = _pc.get("ticker", "")
+                _pc_pk    = peaks.get(_pc_sym, {})
+                if not isinstance(_pc_pk, dict):
+                    continue
+                _pc_last_ts = _pc_pk.get("commentary_ts", "")
+                _pc_age_hrs = 99
+                if _pc_last_ts:
+                    try:
+                        _pc_age_hrs = (now_utc - datetime.fromisoformat(
+                            _pc_last_ts.replace("Z", "+00:00"))).total_seconds() / 3600
+                    except Exception:
+                        pass
+                _pc_entry_score = _pc.get("entry_score", 0) or 0
+                _pc_live_score  = score(_pc_sym, live.get(_pc_sym, {}), regime_adj=regime_adj)
+                _pc_score_delta = abs(_pc_live_score - _pc_entry_score)
+                if _pc_age_hrs < 4 and _pc_score_delta < 10:
+                    if _pc_pk.get("commentary"):
+                        _pc["ai_commentary"] = _pc_pk["commentary"]
+                    continue
+                _pc_ls = _pc.get("live_signals", {})
+                _pc_prompt = (
+                    f"1-sentence analyst note (≤25 words) for {_pc_sym} position: "
+                    f"entry ${_pc.get('cost',0):.2f} → now ${_pc.get('price',0):.2f} "
+                    f"({_pc.get('pnl_pct',0):+.1f}%), "
+                    f"score {_pc_live_score:.0f}, "
+                    f"RSI {_pc_ls.get('rsi',50):.0f}, "
+                    f"RVOL {_pc_ls.get('rvol',1):.1f}x, "
+                    f"ADX {_pc_ls.get('adx',0):.0f}, "
+                    f"dist-from-trail {_pc.get('dist_from_trail',0):.1f}%, "
+                    f"AVWAP-entry-pct {_pc.get('avwap_entry_pct',0):+.1f}%, "
+                    f"rec={_pc.get('recommendation','HOLD')}. "
+                    "State action and key reason only. No fluff."
+                )
+                try:
+                    _pc_resp = _req3.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                                 "content-type": "application/json"},
+                        json={"model": "claude-haiku-4-5-20251001", "max_tokens": 60,
+                              "messages": [{"role": "user", "content": _pc_prompt}]},
+                        timeout=8,
+                    )
+                    if _pc_resp.status_code == 200:
+                        _pc_text = _pc_resp.json()["content"][0]["text"].strip()
+                        _pc["ai_commentary"] = _pc_text
+                        _pc_pk["commentary"]    = _pc_text
+                        _pc_pk["commentary_ts"] = now_utc.isoformat()
+                        peaks[_pc_sym] = _pc_pk
+                except Exception:
+                    pass
+            _save(PEAKS_FILE, peaks)
+    except Exception as _pc_e:
+        logger.debug(f"Position commentary skipped: {_pc_e}")
 
     _save(TRADES_FILE, tlog)
     logger.info(

@@ -55366,7 +55366,26 @@ window.renderSectorRotation = renderSectorRotation;
               return `<div style="text-align:center" title="New 52-week highs vs lows in scan universe — higher ratio = broad bull market leadership"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">52W H/L</div><div style="font-size:11px;font-weight:900;color:${nhCol}">${nh}/${nl}</div><div style="font-size:6.5px;color:${nhCol}">${ratio.toFixed(1)}x ratio</div></div>`;
             })()}
           </div>
+          ${(() => {
+            // Live sector ETF 1-day performance strip (from market_breadth.sector_perf)
+            const sp = (data.market_breadth || {}).sector_perf || {};
+            const spEntries = Object.entries(sp).sort((a,b) => (b[1].ret1d||0) - (a[1].ret1d||0));
+            if (!spEntries.length) return '';
+            const spCol = v => v >= 1.5 ? '#00ff88' : v >= 0.5 ? '#69f0ae' : v >= 0 ? '#888' : v >= -0.5 ? '#ff9800' : '#ef5350';
+            const spBg  = v => v >= 1 ? 'rgba(0,255,136,.1)' : v >= 0 ? 'rgba(255,255,255,.03)' : v >= -1 ? 'rgba(255,152,0,.08)' : 'rgba(239,83,80,.1)';
+            return `<div style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.25rem" title="Sector ETF 1-day performance (live)">
+              ${spEntries.map(([etf,d]) => {
+                const v = d.ret1d || 0;
+                const col = spCol(v); const bg = spBg(v);
+                return `<div style="background:${bg};border:1px solid ${col}33;border-radius:4px;padding:2px 5px;min-width:44px;text-align:center" title="${d.name}: 1d ${v>=0?'+':''}${v.toFixed(1)}% | 5d ${(d.ret5d||0)>=0?'+':''}${(d.ret5d||0).toFixed(1)}%">
+                  <div style="font-size:6px;color:rgba(255,255,255,.4);font-weight:700">${d.name}</div>
+                  <div style="font-size:8px;font-weight:900;color:${col}">${v>=0?'+':''}${v.toFixed(1)}%</div>
+                </div>`;
+              }).join('')}
+            </div>`;
+          })()}
         </div>
+
         <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600;margin-bottom:.3rem">
           ${drawdownHalt ? '<span style="background:rgba(255,34,85,.18);border:1px solid rgba(255,34,85,.5);border-radius:4px;padding:2px 8px;margin-right:.5rem;font-size:8px;color:#ef5350;font-weight:900">⛔ DRAWDOWN HALT — no new buys</span>' : ''}
           ${macroDay ? '<span style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);border-radius:4px;padding:1px 6px;margin-right:.4rem;font-size:8px;color:#ffd54f;font-weight:800">⚠️ FOMC/MACRO DAY</span>' : ''}
@@ -56231,8 +56250,24 @@ window.renderSectorRotation = renderSectorRotation;
           ${sortino != null ? `<div style="text-align:center;min-width:38px" title="Sortino Ratio: like Sharpe but only penalizes downside volatility — better for traders. >1.5 = elite"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Sortino</div><div style="font-size:13px;font-weight:900;color:${sortinoCol}">${sortino}</div></div>` : ''}
           ${calmar != null ? `<div style="text-align:center;min-width:38px" title="Calmar Ratio: annualized return / max drawdown. >1 = excellent capital efficiency"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Calmar</div><div style="font-size:13px;font-weight:900;color:${calmarCol}">${calmar}</div></div>` : ''}
           ${maxDd > 0 ? `<div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Max DD</div><div style="font-size:13px;font-weight:900;color:#ef5350">-${maxDd.toFixed(1)}%</div></div>` : ''}
+          ${data.rolling_wr_20 != null ? (() => {
+            const rwr = data.rolling_wr_20;
+            const rwrCol = rwr >= 60 ? '#00ff88' : rwr >= 50 ? '#ffd54f' : '#ef5350';
+            return `<div style="text-align:center;min-width:38px" title="Win rate of last 20 closed trades (more relevant than all-time)"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Wr20</div><div style="font-size:13px;font-weight:900;color:${rwrCol}">${rwr}%</div></div>`;
+          })() : ''}
           <div style="text-align:center;min-width:38px"><div style="font-size:7px;color:#4a6fa5;text-transform:uppercase;font-weight:700">Peak</div><div style="font-size:11px;font-weight:800;color:#82b1ff">\$${(data.portfolio_peak||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
         </div>`;
+        // Sector concentration alert
+        const sc = data.sector_concentration || {};
+        if (sc.alert && sc.max_count >= 3) {
+          html += `<div style="margin-bottom:.5rem;padding:.35rem .6rem;background:rgba(255,152,0,.06);border:1px solid rgba(255,152,0,.3);border-radius:7px;display:flex;align-items:center;gap:.5rem">
+            <span style="font-size:8px">⚠️</span>
+            <div>
+              <div style="font-size:7.5px;font-weight:900;color:#ff9800">Sector Concentration Alert</div>
+              <div style="font-size:6.5px;color:rgba(255,255,255,.5)">${sc.max_count} positions in <strong style="color:#ffd54f">${sc.max_sector}</strong> sector — consider diversifying to reduce correlated risk</div>
+            </div>
+          </div>`;
+        }
       }
 
       // Signal performance win rates (self-learning — builds over time)
@@ -56714,7 +56749,24 @@ window.renderSectorRotation = renderSectorRotation;
                 <span style="font-size:6px;color:#00ff88;min-width:38px;text-align:right" title="ATR-based profit target">🎯\$${target.toFixed(2)}</span>
               </div>
               ${trailWarning ? `<div style="font-size:6px;color:#ff9800;margin-top:.2rem;font-weight:700">⚡ ${distTrail.toFixed(1)}% from trail stop — tightening</div>` : ''}
-              ${rMult !== 0 ? `<div style="font-size:6px;color:${rMult>=2?'#00ff88':rMult>=1?'#69f0ae':rMult>0?'#ffd54f':'#ef5350'};margin-top:.1rem">${rMult>=0?'+':''}${rMult.toFixed(1)}R ${rMult>=2?'· let it run':rMult>=1?'· solid':rMult>0?'· building':''}</div>` : ''}
+              <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.15rem;align-items:center">
+                ${rMult !== 0 ? `<span style="font-size:6px;color:${rMult>=2?'#00ff88':rMult>=1?'#69f0ae':rMult>0?'#ffd54f':'#ef5350'}">${rMult>=0?'+':''}${rMult.toFixed(1)}R ${rMult>=2?'🚀 run':rMult>=1?'✓ solid':rMult>0?'📈 build':''}</span>` : ''}
+                ${(() => {
+                  const lrr = p.live_rr || 0;
+                  if (lrr <= 0) return '';
+                  const rrCol = lrr >= 3 ? '#00ff88' : lrr >= 2 ? '#69f0ae' : lrr >= 1 ? '#ffd54f' : '#ff9800';
+                  return `<span style="font-size:6px;font-weight:700;color:${rrCol}" title="Live Risk:Reward — distance to target / distance to stop">R:R ${lrr.toFixed(1)}:1</span>`;
+                })()}
+                ${(() => {
+                  const sc = p.live_score || 0;
+                  const delta = p.score_delta || 0;
+                  if (!sc) return '';
+                  const dCol = delta >= 5 ? '#00ff88' : delta >= 0 ? '#69f0ae' : delta >= -5 ? '#ff9800' : '#ef5350';
+                  const dArrow = delta >= 5 ? '▲' : delta >= 0 ? '↗' : delta >= -5 ? '↘' : '▼';
+                  const dLbl = delta > 0 ? `+${delta}` : `${delta}`;
+                  return `<span style="font-size:6px;color:${dCol}" title="Live score ${sc} vs entry score ${(p.entry_score||0)} (delta ${dLbl}). Score rising = conviction strengthening.">SC${sc} ${dArrow}${dLbl}</span>`;
+                })()}
+              </div>
               ${(() => {
                 // P&L sparkline — shows unrealized return trend over last 24 bot scans (~2 hrs)
                 const hist = (p.pnl_history || []).filter(h => typeof h.p === 'number');
@@ -56795,6 +56847,34 @@ window.renderSectorRotation = renderSectorRotation;
                 }
                 return parts.length ? `<div style="display:flex;gap:.3rem;margin-top:.3rem;flex-wrap:wrap">${parts.join('')}</div>` : '';
               })() : ''}
+              ${(() => {
+                // Anchored VWAP from entry — institutional hold/exit level
+                const av = p.avwap_entry || 0;
+                const avPct = p.avwap_entry_pct || 0;
+                if (av <= 0) return '';
+                const avCol = avPct >= 3 ? '#26a69a' : avPct >= 0 ? '#80cbc4' : avPct >= -3 ? '#ff9800' : '#ef5350';
+                const avBg  = avPct >= 0 ? 'rgba(38,166,154,.08)' : 'rgba(239,83,80,.08)';
+                const avIcon = avPct >= 0 ? '▲' : '▼';
+                const rvol = (p.live_signals || {}).rvol || 1;
+                const rvolCol = rvol >= 2.5 ? '#ffd600' : rvol >= 1.5 ? '#ffd54f' : rvol < 0.7 ? '#ef5350' : '#888';
+                const rvolBg  = rvol >= 1.5 ? 'rgba(255,215,0,.08)' : 'rgba(255,255,255,.04)';
+                const rvolBar = Math.min(100, Math.round(rvol * 40));
+                return `<div style="margin-top:.3rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+                  <div style="display:flex;align-items:center;gap:.25rem;background:${avBg};border:1px solid ${avCol}33;border-radius:4px;padding:2px 6px" title="Anchored VWAP from entry date ($${av.toFixed(2)}) — key institutional cost-basis level. Price ${avPct>=0?'above':'below'} AVWAP by ${Math.abs(avPct).toFixed(1)}%">
+                    <span style="font-size:6px;color:rgba(255,255,255,.35)">AVWAP-E</span>
+                    <span style="font-size:7px;font-weight:800;color:${avCol}">${avIcon}${Math.abs(avPct).toFixed(1)}%</span>
+                    <span style="font-size:6px;color:rgba(255,255,255,.4)">$${av.toFixed(2)}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:.3rem;background:${rvolBg};border:1px solid ${rvolCol}33;border-radius:4px;padding:2px 6px" title="Volume Pace: ${rvol.toFixed(1)}x average daily volume (time-adjusted projection)">
+                    <span style="font-size:6px;color:rgba(255,255,255,.35)">VOL</span>
+                    <div style="width:28px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden">
+                      <div style="width:${rvolBar}%;height:100%;background:${rvolCol};border-radius:2px"></div>
+                    </div>
+                    <span style="font-size:7px;font-weight:800;color:${rvolCol}">${rvol.toFixed(1)}x</span>
+                  </div>
+                </div>`;
+              })()}
+              ${p.ai_commentary ? `<div style="margin-top:.3rem;font-size:7px;color:#90caf9;padding:.25rem .4rem;background:linear-gradient(135deg,rgba(33,150,243,.06),rgba(25,118,210,.04));border-left:2px solid rgba(33,150,243,.3);border-radius:0 4px 4px 0;line-height:1.4;font-style:italic" title="AI position assessment (Claude Haiku)">🤖 ${p.ai_commentary}</div>` : ''}
               ${p.entry_thesis ? `<div style="margin-top:.3rem;font-size:7px;color:#4a6fa5;font-style:italic;padding:.2rem .35rem;background:rgba(74,111,165,.06);border-left:2px solid rgba(74,111,165,.3);border-radius:0 3px 3px 0;line-height:1.35">${p.entry_thesis}</div>` : ''}
               ${(() => {
                 const rec = p.recommendation;
@@ -56819,6 +56899,32 @@ window.renderSectorRotation = renderSectorRotation;
           </div>`;
         });
         html += `</div>`;
+      }
+
+      // Earnings Risk Dashboard — consolidated upcoming earnings for held positions
+      const earnsRisk = (data.positions || []).filter(p => p.earnings_days != null && p.earnings_days >= 0 && p.earnings_days <= 14).sort((a,b) => a.earnings_days - b.earnings_days);
+      if (earnsRisk.length > 0) {
+        const erHtml = earnsRisk.map(p => {
+          const ed = p.earnings_days;
+          const pnl = p.pnl_pct || 0;
+          const em = (p.live_signals || {}).expected_move_pct_wk || 0;
+          const eCol = ed === 0 ? '#ff1744' : ed <= 2 ? '#ef5350' : ed <= 5 ? '#ff9800' : '#ffd54f';
+          const edLbl = ed === 0 ? 'TODAY' : ed === 1 ? 'TMRW' : `${ed}D`;
+          const rec = ed <= 2 && pnl > 2 ? 'REDUCE 50%' : ed <= 2 ? 'MONITOR' : ed <= 5 && pnl > 5 ? 'CONSIDER REDUCE' : 'HOLD';
+          const recCol = rec.startsWith('REDUCE') ? '#ef5350' : rec === 'MONITOR' ? '#ff9800' : '#ffd54f';
+          return `<div style="display:flex;align-items:center;gap:.4rem;padding:.25rem .4rem;background:rgba(255,255,255,.02);border-radius:5px;border:1px solid ${eCol}22">
+            <span style="font-family:var(--disp);font-size:.8rem;color:#ffd54f;font-weight:900;min-width:40px">\$${p.ticker}</span>
+            <span style="font-size:7px;font-weight:900;color:${eCol};background:${eCol}22;padding:1px 5px;border-radius:3px">📅 ${edLbl}</span>
+            <span style="font-size:6.5px;color:${pnl>=0?'#00ff88':'#ef5350'};font-weight:700">${pnl>=0?'+':''}${pnl.toFixed(1)}%</span>
+            ${em > 0 ? `<span style="font-size:6px;color:#888">±${em.toFixed(1)}% opt move</span>` : ''}
+            <span style="font-size:6px;font-weight:800;color:${recCol};margin-left:auto">${rec}</span>
+          </div>`;
+        }).join('');
+        html += `<div style="margin-top:.5rem;background:rgba(255,23,68,.04);border:1px solid rgba(255,152,0,.25);border-radius:8px;padding:.45rem .6rem">
+          <div style="font-size:7px;font-weight:900;color:#ff9800;letter-spacing:.08em;margin-bottom:.3rem;text-transform:uppercase">📅 EARNINGS RISK — ${earnsRisk.length} POSITION${earnsRisk.length>1?'S':''}</div>
+          <div style="display:flex;flex-direction:column;gap:.2rem">${erHtml}</div>
+          <div style="margin-top:.3rem;font-size:6px;color:rgba(255,255,255,.3)">Standard IBD rule: reduce 50% before earnings if >2% gain — re-enter on breakout after print</div>
+        </div>`;
       }
 
       // Portfolio Rotation Intelligence banner
