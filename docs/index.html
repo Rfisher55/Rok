@@ -59549,6 +59549,44 @@ window.renderSectorRotation = renderSectorRotation;
           'early-premarket':    {lbl:'PRE-MARKET', note:'Market opens at 9:30 ET — review plan', col:'#555', icon:'🌙'},
         };
         const si = sessLabels[sess];
+        // ── Traffic Light Status Row ─────────────────────────────────────────
+        {
+          const reg = data.regime || {};
+          const regLabel = reg.regime === 'bull' ? 'BULL' : reg.regime === 'bear' ? 'BEAR' : 'NEUTRAL';
+          const regCol   = reg.regime === 'bull' ? '#00e676' : reg.regime === 'bear' ? '#ef5350' : '#ffd54f';
+          const mq = data.market_quality || 50;
+          const mqCol = mq >= 65 ? '#00e676' : mq >= 50 ? '#ffd54f' : mq >= 35 ? '#ff9800' : '#ef5350';
+          const mqLabel = mq >= 65 ? 'STRONG' : mq >= 50 ? 'OK' : mq >= 35 ? 'WEAK' : 'POOR';
+          const conv = data.bot_conviction;
+          const convCol = conv == null ? '#555' : conv >= 70 ? '#00e676' : conv >= 50 ? '#ffd54f' : '#ef5350';
+          const convLabel = conv == null ? '—' : conv >= 70 ? 'HIGH' : conv >= 50 ? 'OK' : 'LOW';
+          const tqBig = tq == null ? '—' : tq >= 3 ? 'PRIME ⚡' : tq >= 2 ? 'GOOD' : tq >= 1 ? 'WAIT' : 'AVOID';
+          const tqCol = tq == null ? '#555' : tq >= 3 ? '#00e676' : tq >= 2 ? '#69f0ae' : tq >= 1 ? '#ffd54f' : '#ef5350';
+          const vix = reg.vix || 0;
+          const vixCol = vix >= 30 ? '#ef5350' : vix >= 22 ? '#ff9800' : vix >= 16 ? '#ffd54f' : '#00e676';
+          html += `<div style="margin-bottom:.45rem;display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem">
+            <div style="text-align:center;padding:.3rem .2rem;background:${regCol}0f;border:1px solid ${regCol}33;border-radius:7px">
+              <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">Market</div>
+              <div style="font-size:9px;font-weight:900;color:${regCol}">${regLabel}</div>
+              <div style="font-size:5px;color:${mqCol}">${mqLabel} ${mq}</div>
+            </div>
+            <div style="text-align:center;padding:.3rem .2rem;background:${tqCol}0f;border:1px solid ${tqCol}33;border-radius:7px">
+              <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">Timing</div>
+              <div style="font-size:8px;font-weight:900;color:${tqCol}">${tqBig}</div>
+              <div style="font-size:5px;color:#555">${si ? si.lbl.split(' ').slice(0,2).join(' ') : '—'}</div>
+            </div>
+            <div style="text-align:center;padding:.3rem .2rem;background:${convCol}0f;border:1px solid ${convCol}33;border-radius:7px">
+              <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">Bot</div>
+              <div style="font-size:9px;font-weight:900;color:${convCol}">${convLabel}</div>
+              <div style="font-size:5px;color:#555">${conv != null ? conv+'/100' : '—'}</div>
+            </div>
+            <div style="text-align:center;padding:.3rem .2rem;background:${vixCol}0f;border:1px solid ${vixCol}33;border-radius:7px">
+              <div style="font-size:5.5px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.07em">VIX</div>
+              <div style="font-size:9px;font-weight:900;color:${vixCol}">${vix.toFixed(1)}</div>
+              <div style="font-size:5px;color:${vixCol}">${vix>=30?'FEAR':vix>=22?'CAUTION':vix>=16?'CALM':'LOW'}</div>
+            </div>
+          </div>`;
+        }
         if (si) {
           const sessWR = todWR[sess];
           const wrBadge = sessWR && sessWR.trades >= 3
