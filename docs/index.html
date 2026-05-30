@@ -60131,9 +60131,16 @@ window.renderSectorRotation = renderSectorRotation;
 
         // Position Performance Heatmap — quick-view grid sorted by P&L
         {
-          const sorted = [...positions].sort((a,b) => (b.pnl_pct||0) - (a.pnl_pct||0));
+          const sorted = [...positions].sort((a,b) => {
+            const aLP = liveprices[a.ticker]; const bLP = liveprices[b.ticker];
+            const aP = (aLP?.price > 0 && (a.cost||0) > 0) ? ((aLP.price-(a.cost||0))/(a.cost||0)*100) : (a.pnl_pct||0);
+            const bP = (bLP?.price > 0 && (b.cost||0) > 0) ? ((bLP.price-(b.cost||0))/(b.cost||0)*100) : (b.pnl_pct||0);
+            return bP - aP;
+          });
           const pmHtml = sorted.map(p => {
-            const pct = p.pnl_pct || 0;
+            const _hmLP = liveprices[p.ticker] || {}; const _hmCost = p.cost || 0;
+            const hmIsLive = _hmLP.price > 0 && _hmCost > 0;
+            const pct = hmIsLive ? ((_hmLP.price - _hmCost) / _hmCost * 100) : (p.pnl_pct || 0);
             const alpha = p.rs_alpha || 0;
             const eu = p.exit_urgency || 0;
             const ph = p.pos_health;
@@ -60142,9 +60149,10 @@ window.renderSectorRotation = renderSectorRotation;
             const borderC = eu >= 7 ? 'rgba(239,83,80,.7)' : eu >= 5 ? 'rgba(255,167,38,.5)' : `${pnlC}33`;
             const alphaStr = Math.abs(alpha) >= 0.5 ? `<div style="font-size:5px;color:${alpha>=0?'#69f0ae':'#ef9a9a'};margin-top:1px">${alpha>=0?'+':''}${alpha.toFixed(1)}α</div>` : '';
             const phStr = ph != null ? `<div style="font-size:5px;color:${ph>=7?'#00e676':ph>=4?'#ffd54f':'#ef5350'};margin-top:1px">${ph}/10${eu>=5?' 🚨':''}</div>` : '';
-            return `<div style="background:${bgC};border:1px solid ${borderC};border-radius:5px;padding:.25rem .35rem;text-align:center;flex:1;min-width:44px;${eu>=7?'animation:pulse-red 1.5s ease-in-out infinite':''}" title="${p.ticker}: P&L ${pct>=0?'+':''}${pct.toFixed(1)}%, Health ${ph}/10, Exit urgency ${eu}/10">
+            return `<div style="background:${bgC};border:1px solid ${borderC};border-radius:5px;padding:.25rem .35rem;text-align:center;flex:1;min-width:44px;${eu>=7?'animation:pulse-red 1.5s ease-in-out infinite':''}" title="${p.ticker}: ${hmIsLive?'LIVE ':''}P&L ${pct>=0?'+':''}${pct.toFixed(1)}%, Health ${ph}/10, Exit urgency ${eu}/10">
               <div style="font-family:var(--disp);font-size:8px;color:#ffd54f;font-weight:900">${p.ticker}</div>
               <div style="font-size:8px;font-weight:800;color:${pnlC}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>
+              ${hmIsLive ? `<div style="font-size:4.5px;color:#00e5ff;letter-spacing:.04em;margin-top:1px">LIVE</div>` : ''}
               ${alphaStr}${phStr}
             </div>`;
           }).join('');
@@ -60226,6 +60234,11 @@ window.renderSectorRotation = renderSectorRotation;
           const stop = p.trail_stop_price || p.stop_price || (cost * 0.93);
           const target = p.target_price || (cost * 1.20);
           const cur = p.price || cost;
+          // Live P&L from Yahoo Finance real-time prices (refreshed every 30s)
+          const _liveLP = liveprices[p.ticker] || {};
+          const _livePx = _liveLP.price || 0;
+          const livePct = (cost > 0 && _livePx > 0) ? ((_livePx - cost) / cost * 100) : null;
+          const livePnlUsd = (livePct != null && (p.qty||0) > 0) ? ((_livePx - cost) * (p.qty||0)) : null;
           const progPct = cost > 0 ? Math.max(0, Math.min(100, (cur - stop) / (target - stop) * 100)) : 0;
           const progCol = progPct > 60 ? '#00ff88' : progPct > 30 ? '#ffd54f' : '#ef5350';
           const grade = p.grade || '?';
@@ -60257,8 +60270,7 @@ window.renderSectorRotation = renderSectorRotation;
                 ${p.pos_health != null ? (() => { const ph=p.pos_health; const phC=ph>=8?'#00e676':ph>=6?'#69f0ae':ph>=4?'#ffd54f':ph>=2?'#ff9800':'#ef5350'; return `<div style="font-size:6px;font-weight:800;color:${phC};border:1px solid ${phC}44;padding:1px 4px;border-radius:3px" title="Position health ${ph}/10">${ph}♥</div>`; })() : ''}
                 ${p.exit_urgency >= 5 ? `<div style="font-size:6px;font-weight:900;color:${p.exit_urgency>=7?'#ef5350':'#ffa726'};background:${p.exit_urgency>=7?'rgba(239,83,80,.15)':'rgba(255,167,38,.12)'};border-radius:3px;padding:1px 4px" title="Exit urgency ${p.exit_urgency}/10">${p.exit_urgency>=7?'🔴 EXIT':'🟠 WATCH'}</div>` : ''}
                 <div style="font-size:8px;color:#4a6fa5;flex:1">${(p.qty||0).toFixed(4).replace(/\.?0+$/,'')} sh · \$${(cost).toFixed(2)}${pv > 0 ? ` · <span style="color:${(p.market_val||0)/pv*100>20?'#ffa726':(p.market_val||0)/pv*100>15?'#ffd54f':'#4a6fa5'}" title="Position size as % of portfolio">${((p.market_val||0)/pv*100).toFixed(1)}%</span>` : ''}</div>
-                <div style="font-size:12px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
-                <div style="font-size:8.5px;color:${pnlColor};font-weight:700">${pnlUsd}</div>
+                ${livePct != null ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0"><div style="display:flex;align-items:center;gap:2px"><span style="font-size:5px;font-weight:900;color:#00e5ff;background:rgba(0,229,255,.15);border:1px solid rgba(0,229,255,.35);padding:0 2px;border-radius:2px;letter-spacing:.04em">LIVE</span><span style="font-size:12px;font-weight:900;color:${livePct>=0?'#00ff88':'#ef5350'}">${livePct>=0?'+':''}${livePct.toFixed(2)}%</span></div>${livePnlUsd!=null?`<span style="font-size:8.5px;color:${livePct>=0?'#00ff88':'#ef5350'};font-weight:700">${livePnlUsd>=0?'+':''}$${Math.abs(livePnlUsd).toFixed(0)}</span>`:''}</div>` : `<div style="display:flex;flex-direction:column;align-items:flex-end"><div style="font-size:12px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div><div style="font-size:8.5px;color:${pnlColor};font-weight:700">${pnlUsd}</div></div>`}
               </div>
               <div style="display:flex;align-items:center;gap:.4rem">
                 <span style="font-size:6px;color:#ef5350;min-width:38px" title="Dynamic trail stop (${dynTrail.toFixed(1)}% from peak)">🔻\$${stop.toFixed(2)}</span>
