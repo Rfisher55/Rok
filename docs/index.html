@@ -57363,6 +57363,8 @@ window.renderSectorRotation = renderSectorRotation;
     if (botPicksEl) {
       const topScan    = data.last_scan_top      || [];
       const rejected   = data.last_scan_rejected  || [];
+      const nearMiss   = data.near_miss_watch     || [];
+      const botStatusMsg = data.bot_status_summary || '';
       const lu         = data.last_updated ? new Date(data.last_updated) : null;
       const minsAgo    = lu ? Math.round((Date.now()-lu)/60000) : null;
       const positions  = data.positions || [];
@@ -57404,6 +57406,17 @@ window.renderSectorRotation = renderSectorRotation;
               ${drawdown > 1 ? `<span style="font-size:7.5px;font-weight:700;color:#ef5350;border:1px solid rgba(255,34,85,.25);border-radius:12px;padding:2px 7px">DD −${drawdown.toFixed(1)}%</span>` : ''}
             </div>
           </div>`;
+
+        // Bot status summary line
+        if (botStatusMsg) {
+          const sIsHalted = botStatusMsg.includes('HALTED');
+          const sIsActive = botStatusMsg.includes('Active') || botStatusMsg.includes('bought');
+          const sMsgCol = sIsHalted ? '#ef5350' : sIsActive ? '#00ff88' : '#ffd54f';
+          html += `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem;padding:.3rem .5rem;background:rgba(0,0,0,.25);border-radius:6px;border-left:2px solid ${sMsgCol}55">
+            <span style="font-size:6px;font-weight:900;color:${sMsgCol};min-width:48px;letter-spacing:.06em">${sIsHalted?'HALTED':sIsActive?'ACTIVE':'STATUS'}</span>
+            <span style="font-size:7px;color:#888;line-height:1.3">${botStatusMsg}</span>
+          </div>`;
+        }
 
         if (!topScan.length) {
           html += `<div style="color:#3a5a8a;font-size:9px;padding:.3rem 0">Bot is scanning — picks appear after next run</div>`;
@@ -57561,6 +57574,49 @@ window.renderSectorRotation = renderSectorRotation;
                 <span style="font-size:7px;color:#444;min-width:36px;font-family:var(--disp)">\$${r.ticker}</span>
                 ${r.score ? `<span style="font-size:6.5px;color:#333;min-width:18px">${r.score}</span>` : ''}
                 <span style="font-size:6.5px;color:#2a3a4a;flex:1">↩ ${reason}</span>
+              </div>`;
+            });
+            html += `</div></div>`;
+          }
+
+          // Near-miss watchlist: stocks just below buy threshold
+          if (nearMiss.length > 0) {
+            const effThresh = data.effective_min_score || 18;
+            html += `<div style="margin-top:.55rem;border-top:1px solid rgba(255,255,255,.04);padding-top:.45rem">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+                <span style="font-size:7.5px;font-weight:800;color:#546e7a;letter-spacing:.08em;text-transform:uppercase">👀 On Radar — Just Below Threshold (${effThresh})</span>
+                <span style="font-size:6.5px;color:#333">Watch these for entries</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.3rem">`;
+            nearMiss.forEach(nm => {
+              const gap = nm.gap_to_buy || 0;
+              const gapCol = gap <= 3 ? '#ffd54f' : gap <= 6 ? '#546e7a' : '#333';
+              const gapLabel = gap <= 3 ? `${gap}pt gap` : `${gap}pts away`;
+              const prem = nm.premium_signal_count || 0;
+              const premLabel = prem >= 4 ? `⭐⭐${prem}sig` : prem >= 2 ? `⭐${prem}sig` : `${prem}sig`;
+              const premCol = prem >= 4 ? '#ffd54f' : prem >= 2 ? '#546e7a' : '#333';
+              const chg = nm.chg_pct || 0;
+              const chgCol = chg >= 1 ? '#69f0ae' : chg <= -1 ? '#ef9a9a' : '#444';
+              const sigParts = [];
+              if (nm.at_breakout)   sigParts.push('<span style="font-size:5px;color:#00ff88">BRK</span>');
+              if (nm.mtf_triple)    sigParts.push('<span style="font-size:5px;color:#00e676">3TF</span>');
+              if (nm.vcp)           sigParts.push('<span style="font-size:5px;color:#ffd54f">VCP</span>');
+              if (nm.rvol_surge)    sigParts.push('<span style="font-size:5px;color:#ff9800">RVOL</span>');
+              if (nm.supertrend_bull) sigParts.push('<span style="font-size:5px;color:#00e5ff">ST↑</span>');
+              html += `<div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.04);border-radius:7px;padding:.4rem .5rem">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                  <span style="font-family:var(--disp);font-size:.85rem;color:#546e7a;font-weight:900">\$${nm.ticker}</span>
+                  <span style="font-size:7px;font-weight:700;color:${gapCol}">${nm.score}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:.1rem">
+                  <span style="font-size:6px;color:${gapCol}">${gapLabel}</span>
+                  <span style="font-size:6px;color:${chgCol}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>
+                </div>
+                ${sigParts.length ? `<div style="display:flex;gap:2px;margin-top:.15rem;flex-wrap:wrap">${sigParts.join('')}</div>` : ''}
+                <div style="display:flex;justify-content:space-between;margin-top:.1rem">
+                  <span style="font-size:5.5px;color:#333">${(nm.sector||'').substring(0,10)}</span>
+                  <span style="font-size:5.5px;color:${premCol}">${premLabel}</span>
+                </div>
               </div>`;
             });
             html += `</div></div>`;
@@ -59059,6 +59115,38 @@ window.renderSectorRotation = renderSectorRotation;
             <span style="font-size:7.5px;color:#444;flex:1">↩ ${reason}</span>
           </div>`;
         });
+
+        // Near-miss watchlist — stocks just below threshold
+        const nearMiss2 = data.near_miss_watch || [];
+        if (nearMiss2.length > 0) {
+          const effThresh2 = data.effective_min_score || 18;
+          html += `<div style="margin-top:.45rem;border-top:1px solid rgba(255,255,255,.04);padding-top:.35rem">
+            <div style="font-size:8px;font-weight:700;color:#333;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">👀 Near-Miss Watch (within ${effThresh2 > 10 ? Math.min(12, effThresh2) : 12}pts of threshold ${effThresh2})</div>
+            <div style="display:flex;flex-direction:column;gap:2px">`;
+          nearMiss2.forEach(nm => {
+            const gap = nm.gap_to_buy || 0;
+            const gapCol = gap <= 3 ? '#ffd54f' : gap <= 7 ? '#546e7a' : '#333';
+            const chg = nm.chg_pct || 0;
+            const chgCol = chg >= 1 ? '#69f0ae' : chg <= -1 ? '#ef9a9a' : '#444';
+            const prem = nm.premium_signal_count || 0;
+            const activeSigs = [];
+            if (nm.at_breakout) activeSigs.push('BRK');
+            if (nm.mtf_triple)  activeSigs.push('3TF');
+            if (nm.vcp)         activeSigs.push('VCP');
+            if (nm.rvol_surge)  activeSigs.push('RVOL');
+            if (nm.supertrend_bull) activeSigs.push('ST↑');
+            html += `<div style="display:flex;align-items:center;gap:.5rem;padding:.25rem .45rem;background:rgba(0,0,0,.15);border-radius:5px;border-left:2px solid ${gapCol}44">
+              <span style="font-family:var(--disp);color:#546e7a;min-width:42px;font-size:.9rem">\$${nm.ticker}</span>
+              <span style="font-size:8px;font-weight:800;color:${gapCol}">${nm.score}</span>
+              <span style="font-size:6.5px;color:${gapCol}">−${gap}pts</span>
+              <span style="font-size:7px;color:${chgCol}">${chg>=0?'+':''}${chg.toFixed(1)}%</span>
+              <span style="font-size:6.5px;color:#3a5a8a">${(nm.sector||'').substring(0,8)}</span>
+              ${activeSigs.length ? `<span style="font-size:6px;color:#546e7a">${activeSigs.join(' ')}</span>` : ''}
+              ${prem >= 2 ? `<span style="font-size:6px;color:#546e7a">${prem}⭐</span>` : ''}
+            </div>`;
+          });
+          html += `</div></div>`;
+        }
         html += `</div>`;
       }
 

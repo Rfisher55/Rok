@@ -10294,6 +10294,67 @@ def run():
         ]
         tlog["last_scan_rejected"] = _rejected_log[:8]
 
+        # Near-miss watchlist: stocks just below buy threshold — "watch these closely"
+        # These scored in the top range but didn't quite qualify this cycle
+        try:
+            _nm_min = max(0, _eff_min_score - 12)
+            _nm_max = _eff_min_score - 1
+            _nm_all = sorted(
+                [(tk, sc) for tk, sc in tech_scores.items()
+                 if _nm_min <= sc <= _nm_max and tk not in held],
+                key=lambda x: -x[1]
+            )[:8]
+            tlog["near_miss_watch"] = [
+                {
+                    "ticker":    tk,
+                    "score":     sc,
+                    "gap_to_buy": _eff_min_score - sc,
+                    "price":     round(live.get(tk, {}).get("price", 0), 2),
+                    "chg_pct":   round(live.get(tk, {}).get("change_pct", 0), 2),
+                    "rsi":       round(live.get(tk, {}).get("daily_rsi", 50), 1),
+                    "rvol":      round(live.get(tk, {}).get("rvol", 1.0), 2),
+                    "sector":    SECTOR_MAP.get(tk, "other"),
+                    "premium_signal_count": sum(bool(live.get(tk, {}).get(k)) for k in (
+                        "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
+                        "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising")),
+                    "at_breakout":   live.get(tk, {}).get("at_breakout", False),
+                    "mtf_triple":    live.get(tk, {}).get("mtf_triple", False),
+                    "vcp":           live.get(tk, {}).get("vcp", False),
+                    "rvol_surge":    live.get(tk, {}).get("rvol_surge", False),
+                    "supertrend_bull": live.get(tk, {}).get("supertrend_bull", False),
+                    "earnings_days": get_earnings_days(tk),
+                }
+                for tk, sc in _nm_all
+            ]
+        except Exception:
+            tlog.setdefault("near_miss_watch", [])
+
+        # Bot status summary: human-readable explanation of current bot state
+        try:
+            _status_parts = []
+            if _drawdown_halt:
+                _status_parts.append(f"HALTED: drawdown {drawdown_pct:.1f}% exceeded limit")
+            elif not market_open:
+                _status_parts.append("Market closed — monitoring crypto/extended hours")
+            elif _open_guard:
+                _status_parts.append(f"Opening guard active ({_minutes_since_open:.0f} min since open — waiting for 5 min)")
+            elif _close_guard:
+                _status_parts.append(f"Close guard active ({_minutes_to_close:.0f} min to close — no new positions)")
+            elif open_long_slots == 0:
+                _status_parts.append(f"Portfolio full ({len(longs)}/{MAX_LONGS} positions) — monitoring holds")
+            elif not final_scores:
+                _status_parts.append(f"No setups met threshold {_eff_min_score} — watching {len(candidates_buy)} candidates")
+            else:
+                _n_bought = sum(1 for t in tlog.get("trades", [])
+                                if t.get("action") == "BUY" and
+                                t.get("time", "") >= now_utc.isoformat()[:13])
+                _status_parts.append(f"Active — bought {_n_bought} new position(s) this cycle")
+            if _eff_min_score > MIN_BUY_SCORE:
+                _status_parts.append(f"Threshold raised to {_eff_min_score} (regime/risk filter)")
+            tlog["bot_status_summary"] = " · ".join(_status_parts)
+        except Exception:
+            tlog.setdefault("bot_status_summary", "")
+
         # Portfolio Rotation Intelligence: when portfolio is full and a meaningfully
         # superior new candidate exists, surface the weakest held position for review.
         # This does NOT auto-trade — it flags the opportunity for the dashboard.
