@@ -55089,6 +55089,21 @@ window.renderSectorRotation = renderSectorRotation;
           const bpColor = bpPct >= 65 ? '#00e676' : bpPct >= 50 ? '#ffd54f' : '#ef5350';
           const sbpPct = sbp != null ? Math.round(sbp) : null;
           const vixStr = vix != null ? `VIX${vix.toFixed(1)}` : '';
+          // Market quality history sparkline
+          const mqHist = (data.market_quality_history || []).slice(-24);
+          let mqSparkline = '';
+          if (mqHist.length >= 4) {
+            const mqVals = mqHist.map(h => h.q || 50);
+            const minMq = Math.min(...mqVals), maxMq = Math.max(...mqVals);
+            const mqRange = Math.max(maxMq - minMq, 5);
+            const spW = 70, spH = 14;
+            const xStep = spW / Math.max(mqVals.length - 1, 1);
+            const toY = v => spH - ((v - minMq) / mqRange * spH * 0.8 + spH * 0.1);
+            const pts = mqVals.map((v, i) => `${(i * xStep).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+            const lastMq = mqVals[mqVals.length-1];
+            const spCol = lastMq >= 65 ? '#00e676' : lastMq >= 45 ? '#ffd54f' : '#ef5350';
+            mqSparkline = `<svg width="${spW}" height="${spH}" viewBox="0 0 ${spW} ${spH}" style="display:block;margin-top:.2rem;opacity:.7"><polyline points="${pts}" fill="none" stroke="${spCol}" stroke-width="1.5" stroke-linejoin="round"/><circle cx="${((mqVals.length-1)*xStep).toFixed(1)}" cy="${toY(lastMq).toFixed(1)}" r="2" fill="${spCol}"/></svg>`;
+          }
           return `<div style="background:rgba(0,0,0,.2);border:1px solid ${mqColor}33;border-radius:12px;padding:.7rem 1rem;cursor:default" title="Market quality composite: ${mqLabel} (${mqVal}/100)">
             <div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market Health</div>
             <div style="display:flex;align-items:baseline;gap:.35rem">
@@ -55099,6 +55114,7 @@ window.renderSectorRotation = renderSectorRotation;
               ${sbpPct != null ? ` · scan ${sbpPct}%` : ''}
               ${vixStr ? ` · ${vixStr}` : ''}
             </div>
+            ${mqSparkline}
           </div>`;
         })()}
         ${(() => {
@@ -57033,6 +57049,35 @@ window.renderSectorRotation = renderSectorRotation;
                   <svg width="${svgW}" height="${barH}" viewBox="0 0 ${svgW} ${barH}" style="flex-shrink:0">${bars}</svg>
                   <span style="font-size:5.5px;font-weight:700;color:${trendCol}">${trend>=0?'+':''}${trend.toFixed(0)}</span>
                   <span style="font-size:5.5px;color:rgba(255,255,255,.3)">${firstS}→${lastS}</span>
+                </div>`;
+              })()}
+              ${(() => {
+                // Intraday range position — shows where price is in today's range
+                const ls = p.live_signals || {};
+                const dHigh = ls.day_high || 0;
+                const dLow  = ls.day_low  || 0;
+                const dOpen = ls.day_open || 0;
+                const cur   = p.price || 0;
+                if (!dHigh || !dLow || !cur || dHigh <= dLow) return '';
+                const rangePct = ((cur - dLow) / (dHigh - dLow) * 100);
+                const openPct  = dOpen > 0 ? ((dOpen - dLow) / (dHigh - dLow) * 100) : 50;
+                const posCol = rangePct >= 70 ? '#00ff88' : rangePct >= 50 ? '#69f0ae' : rangePct >= 30 ? '#ffd54f' : '#ef5350';
+                const nearHigh = rangePct >= 85, nearLow = rangePct <= 15;
+                const rangeStr = `Day: $${dLow.toFixed(2)}–$${dHigh.toFixed(2)} | ${rangePct.toFixed(0)}% of range`;
+                return `<div style="margin-top:.3rem" title="${rangeStr}">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.25)">DAY RANGE</span>
+                    <span style="font-size:5.5px;color:${posCol};font-weight:700">${rangePct.toFixed(0)}% of range${nearHigh?' ↑NEAR HIGH':nearLow?' ↓NEAR LOW':''}</span>
+                  </div>
+                  <div style="position:relative;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:visible">
+                    <div style="position:absolute;left:0;top:0;height:100%;width:${Math.min(100,rangePct)}%;background:linear-gradient(90deg,rgba(239,83,80,.4),${posCol});border-radius:3px"></div>
+                    ${dOpen > 0 ? `<div style="position:absolute;left:${Math.min(100,openPct)}%;top:-2px;height:9px;width:2px;background:#ffd54f;border-radius:1px" title="Open at $${dOpen.toFixed(2)}"></div>` : ''}
+                    <div style="position:absolute;left:${Math.min(100,rangePct)}%;top:-3px;height:11px;width:2px;background:${posCol};border-radius:1px" title="Current $${cur.toFixed(2)}"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-top:2px">
+                    <span style="font-size:5px;color:rgba(255,255,255,.2)">L \$${dLow.toFixed(2)}</span>
+                    <span style="font-size:5px;color:rgba(255,255,255,.2)">H \$${dHigh.toFixed(2)}</span>
+                  </div>
                 </div>`;
               })()}
               ${p.live_signals ? (() => {

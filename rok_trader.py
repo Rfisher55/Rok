@@ -5239,6 +5239,8 @@ def _extract(daily, hourly):
         "orb_breakout":        orb_breakout,
         "gap_and_hold":        gap_and_hold,
         "day_open":            round(today_open, 2) if (isinstance(today_open, (int, float)) and today_open > 0) else 0.0,
+        "day_high":            round(float(daily["High"].iloc[-1]), 2) if ("High" in daily.columns and len(daily) > 0) else 0.0,
+        "day_low":             round(float(daily["Low"].iloc[-1]),  2) if ("Low"  in daily.columns and len(daily) > 0) else 0.0,
         "adx":                 round(adx_val, 1),
         "intraday_tq":         round(intraday_trend_quality, 2),
         "ichimoku_above":      ichimoku.get("above_cloud", False),
@@ -8397,6 +8399,10 @@ def run():
                                       if sym in _NEWS_VEL_CACHE else 0,
                 "catalyst_dir":       _NEWS_VEL_CACHE.get(sym, ({}, 0))[0].get("catalyst_dir", "none")
                                       if sym in _NEWS_VEL_CACHE else "none",
+                # Intraday range data for range-position indicator on position cards
+                "day_high":           round(sig.get("day_high", 0.0) or 0.0, 2),
+                "day_low":            round(sig.get("day_low", 0.0)  or 0.0, 2),
+                "day_open":           round(sig.get("day_open", 0.0) or 0.0, 2),
             }
 
         _pos_list_raw = []
@@ -9025,6 +9031,14 @@ def run():
         tlog["market_quality"] = max(0, min(100, round(_mq)))
     except Exception:
         tlog["market_quality"] = 50
+
+    # Market quality rolling history for trend display
+    try:
+        _mqh = tlog.get("market_quality_history", [])
+        _mqh.append({"q": tlog.get("market_quality", 50), "t": now_utc.isoformat()})
+        tlog["market_quality_history"] = _mqh[-48:]
+    except Exception:
+        pass
 
     # Internal scan breadth metrics
     try:
