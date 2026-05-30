@@ -9921,6 +9921,62 @@ def run():
                     _ng_sh = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
                     if len(_ng_sh) >= 2 and (_ng_sh[-1] - _ng_sh[0]) <= -8:
                         _ng_strikes += 1; _ng_reasons.append(f"score falling({_ng_sh[-1]-_ng_sh[0]:.0f}pts)")
+                # ── Extended neural gate using learned neuron patterns ──────────
+                _lp_ng = tlog.get("bot_learned_params", {})
+                # Strike: overbought stoch at entry has historically failed
+                _sk_wr = {s.get("zone", s.get("state","")): s.get("win_rate", 50)
+                          for s in _lp_ng.get("stoch_zone_perf", [])}
+                if _sk_wr.get("overbought", 50) < 40 and len(_sk_wr) >= 2:
+                    _stk_now = float(_tk_sig.get("stoch_k", 50) or 50)
+                    if _stk_now > 80:
+                        _ng_strikes += 1; _ng_reasons.append(f"overbought stoch({_stk_now:.0f}) learned fail({_sk_wr.get('overbought',50):.0f}%WR)")
+                # Strike: weak RVOL tier historically under-performs
+                _rv_wr = {s.get("tier", s.get("state","")): s.get("win_rate", 50)
+                          for s in _lp_ng.get("rvol_tier_perf", [])}
+                if _rv_wr.get("weak", 50) < 38 and len(_rv_wr) >= 2:
+                    _rvol_now = float(_tk_sig.get("rvol", 1.0) or 1.0)
+                    if _rvol_now < 1.0:
+                        _ng_strikes += 1; _ng_reasons.append(f"weak RVOL({_rvol_now:.1f}) learned fail({_rv_wr.get('weak',50):.0f}%WR)")
+                # Strike: ADX weak trend + learned penalty
+                _ax_wr = {s.get("bucket", s.get("state","")): s.get("win_rate", 50)
+                          for s in _lp_ng.get("adx_perf", [])}
+                if _ax_wr.get("weak", 50) < 40 and len(_ax_wr) >= 2:
+                    _adx_now = float(_tk_sig.get("adx", 0) or 0)
+                    if _adx_now < 15:
+                        _ng_strikes += 1; _ng_reasons.append(f"ADX weak({_adx_now:.0f}) learned fail({_ax_wr.get('weak',50):.0f}%WR)")
+                # Strike: below both EMAs historically bad
+                _es_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("ema_struct_perf",[])}
+                if _es_wr.get("below_both", 50) < 38 and len(_es_wr) >= 2:
+                    _above_50 = bool(_tk_sig.get("price_vs_ema50", False))
+                    _above_200 = bool(_tk_sig.get("price_vs_ema200", False))
+                    if not _above_50 and not _above_200:
+                        _ng_strikes += 1; _ng_reasons.append(f"below EMA50+200 learned fail({_es_wr.get('below_both',50):.0f}%WR)")
+                # Strike: premium tier "weak" historically fails
+                _pt_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("premium_tier_perf",[])}
+                if _pt_wr.get("weak", 50) < 40 and len(_pt_wr) >= 3:
+                    _prem_ct = sum([
+                        bool(_tk_sig.get("vcp")), bool(_tk_sig.get("cup_handle")),
+                        bool(_tk_sig.get("at_breakout")), bool(_tk_sig.get("mtf_triple")),
+                        bool(_tk_sig.get("ttm_squeeze_fired")), bool(_tk_sig.get("gap_and_hold")),
+                        bool(_tk_sig.get("orb_breakout")), bool(_tk_sig.get("rvol_surge")),
+                        bool(_tk_sig.get("supertrend_bull")), bool(_tk_sig.get("obv_rising")),
+                    ])
+                    if _prem_ct < 2:
+                        _ng_strikes += 1; _ng_reasons.append(f"low premium sigs({_prem_ct}) learned fail({_pt_wr.get('weak',50):.0f}%WR)")
+                # ── Neural Green Light: if 3+ learned patterns strongly confirm, BONUS ─
+                _ng_green_lights = 0
+                _pt_strong = _pt_wr.get("strong", 0)
+                if _pt_strong >= 65:  # learned: strong-premium entries win >65%
+                    _prem_ct2 = sum([bool(_tk_sig.get(k)) for k in ("vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired","gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising")])
+                    if _prem_ct2 >= 4:
+                        _ng_green_lights += 1
+                if _rv_wr.get("explosive", 0) >= 65 and float(_tk_sig.get("rvol", 0) or 0) >= 5.0:
+                    _ng_green_lights += 1
+                if _ax_wr.get("strong", 0) >= 65 and float(_tk_sig.get("adx", 0) or 0) >= 25:
+                    _ng_green_lights += 1
+                if _ng_green_lights >= 2:
+                    _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
+                    logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
                 # VETO: 3+ strikes = neural gate fires
                 if _ng_strikes >= 3:
                     logger.info(f"NEURAL GATE: {tk} vetoed ({_ng_strikes} strikes: {', '.join(_ng_reasons)})")
@@ -9955,11 +10011,45 @@ def run():
             pre_earn_adj   = 12 if tk in pre_earn_cands else 0
             mean_rev_adj   = 10 if tk in mean_rev_cands else 0
             breakout_adj   = 15 if tk in breakout_52w_cands else 0
+            # ── Learned Pattern Bonus: use neuron data to adjust score ───────────
+            _learned_bonus = 0
+            try:
+                _lp_sc = tlog.get("bot_learned_params", {})
+                _tk_sig_sc = live.get(tk, {})
+                # Bonus: MTF triple alignment historically great → +3 when present
+                _m3_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("mtf_triple_perf",[])}
+                if _m3_wr.get("triple", 50) >= 68 and bool(_tk_sig_sc.get("mtf_triple", False)):
+                    _learned_bonus += 3
+                # Bonus: VCP historically great → +3 when present
+                _vcp_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("vcp_perf",[])}
+                if _vcp_wr.get("vcp", 50) >= 68 and bool(_tk_sig_sc.get("vcp", False)):
+                    _learned_bonus += 3
+                # Bonus: gap-and-hold historically great → +2
+                _gh_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("gap_hold_perf",[])}
+                if _gh_wr.get("holding", 50) >= 65 and bool(_tk_sig_sc.get("gap_and_hold", False)):
+                    _learned_bonus += 2
+                # Bonus: NR7 historically great → +2
+                _n7_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("nr7_perf",[])}
+                if _n7_wr.get("compressed", 50) >= 65 and bool(_tk_sig_sc.get("nr7_signal", False)):
+                    _learned_bonus += 2
+                # Bonus: above demand zone historically great → +2
+                _dz_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("demand_zone_perf",[])}
+                if _dz_wr.get("at_zone", 50) >= 65 and bool(_tk_sig_sc.get("at_demand_zone", False)):
+                    _learned_bonus += 2
+                # Bonus: RS63 elite tier → +3
+                _rs63_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("rs63_q_tier_perf",[])}
+                if _rs63_wr.get("elite", 50) >= 65 and float(_tk_sig_sc.get("rs63", 0) or 0) >= 1.5:
+                    _learned_bonus += 3
+                # Cap bonus at +8 so it can't override fundamentals
+                _learned_bonus = min(8, _learned_bonus)
+            except Exception:
+                _learned_bonus = 0
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
-                                             + breakout_adj)
+                                             + breakout_adj + _learned_bonus)
             # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
             _grade_thresh = _eff_min_score - 5 if _grade_now == "A+" else _eff_min_score
