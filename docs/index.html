@@ -53967,6 +53967,34 @@ function _renderIntelReport(el, intel) {
           ${pgHtml}${ehHtml}
         </div>`;
       })()}
+      ${(() => {
+        // ── Sector Momentum Neuron: sector ETF acceleration at entry ──────────
+        const sm = lp.sector_momentum_perf || [];
+        if (!sm.length) return '';
+        const SM_ORDER = ['accelerating','neutral','decelerating'];
+        const smIcons = {accelerating:'🚀',neutral:'➡️',decelerating:'🔻'};
+        const smBg = {accelerating:'rgba(0,230,118,.07)',neutral:'rgba(255,255,255,.04)',decelerating:'rgba(239,83,80,.07)'};
+        const smMap = {};
+        sm.forEach(s => smMap[s.momentum] = s);
+        const smCells = SM_ORDER.map(key => {
+          const s = smMap[key];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3">
+            <div style="font-size:8px">${smIcons[key]||''}</div>
+            <div style="font-size:6px;color:#333">${key}</div>
+          </div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${smBg[key]||'rgba(0,0,0,.2)'};border:1px solid rgba(255,255,255,.06);border-radius:5px;padding:.25rem;text-align:center">
+            <div style="font-size:9px">${smIcons[key]||''}</div>
+            <div style="font-size:6px;color:#ccc;font-weight:700">${key.charAt(0).toUpperCase()+key.slice(1)}</div>
+            <div style="font-size:10px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:5.5px;color:#26c6da;font-weight:700;margin-bottom:.2rem">🏭 SECTOR MOMENTUM NEURON — sector ETF accelerating at entry = better outcome?</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.25rem">${smCells}</div>
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

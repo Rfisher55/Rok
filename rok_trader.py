@@ -358,6 +358,17 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["pm_gap_pct"] = round(_pm_gap, 1)
         e["pm_gap_bucket"] = ("big_up" if _pm_gap > 3 else "small_up" if _pm_gap > 0.5 else
                               "big_down" if _pm_gap < -3 else "small_down" if _pm_gap < -0.5 else "flat")
+        # Sector momentum at entry (Neuron 32): was the sector ETF accelerating?
+        try:
+            _sec_etf_now = tlog.get("sector_etf_trends", {}).get(SECTOR_MAP.get(sym, "other"), {})
+            _sec_chg1d = float(_sec_etf_now.get("chg1d", 0.0) or 0.0)
+            _sec_chg5d = float(_sec_etf_now.get("chg5d", 0.0) or 0.0)
+            _sec_momentum = ("accelerating" if _sec_chg1d > 0.5 and _sec_chg5d > 1.0 else
+                             "decelerating" if _sec_chg1d < -0.3 and _sec_chg5d < 0 else "neutral")
+            e["sector_etf_momentum"] = _sec_momentum
+            e["sector_chg1d"] = round(_sec_chg1d, 2)
+        except Exception:
+            e["sector_etf_momentum"] = "neutral"
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -940,6 +951,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _psp["total"] > 0:
                 _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
                 _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Sector Momentum Neuron: sector ETF accelerating/neutral/decelerating ──
+    # Tracks whether the whole sector was accelerating when the trade was entered.
+    # Learns: do entries during sector acceleration phases produce better outcomes?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_sm = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sm_bkt = _buy_sm.get("sector_etf_momentum", "neutral") if _buy_sm else "neutral"
+            _sm_perf = tlog.setdefault("sector_momentum_perf", {})
+            _smp = _sm_perf.setdefault(_sm_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "momentum": _sm_bkt})
+            _smp["total"] = _smp.get("total", 0) + 1
+            _smp["total_pnl"] = round(_smp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _smp["wins"] = _smp.get("wins", 0) + 1
+            else: _smp["losses"] = _smp.get("losses", 0) + 1
+            if _smp["total"] > 0:
+                _smp["win_rate"] = round(_smp["wins"] / _smp["total"] * 100, 1)
+                _smp["avg_pnl"]  = round(_smp["total_pnl"] / _smp["total"], 2)
         except Exception:
             pass
 
@@ -10640,6 +10670,22 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 32. Sector Momentum Neuron: sector ETF acceleration at entry ────────
+        _sm_raw = tlog.get("sector_momentum_perf", {})
+        _sm_insights = []
+        for _smbk, _smd in _sm_raw.items():
+            if _smd.get("total", 0) >= 3:
+                _sm_insights.append({"momentum": _smbk, "win_rate": _smd.get("win_rate", 50),
+                                     "avg_pnl": _smd.get("avg_pnl", 0), "total": _smd.get("total", 0)})
+        if _sm_insights:
+            _sm_s = sorted(_sm_insights, key=lambda x: -x["win_rate"])
+            _sm_sum = " | ".join(f"sector_{s['momentum']}:{s['win_rate']:.0f}%WR" for s in _sm_s)
+            _learn_log.append(f"Sector momentum WRs: {_sm_sum}")
+            _accel = next((s for s in _sm_insights if s["momentum"] == "accelerating"), None)
+            _decel = next((s for s in _sm_insights if s["momentum"] == "decelerating"), None)
+            if _accel and _decel and (_accel["win_rate"] - _decel["win_rate"]) >= 15:
+                _learn_log.append(f"Sector acceleration matters: accelerating={_accel['win_rate']:.0f}% vs decelerating={_decel['win_rate']:.0f}% WR")
+
         # ── 30. Pre-Market Gap Neuron: gap-up/down entries vs outcome ─────────
         _pg_raw = tlog.get("pm_gap_perf", {})
         _pg_insights = []
@@ -10803,6 +10849,7 @@ def run():
             "atr_mult_learned":    _learned_atr_mult,       # learned ATR stop multiplier
             "pm_gap_perf":         _pg_insights,            # pre-market gap size vs outcome
             "exit_hour_perf":      _eh_insights,            # exit timing (hour) vs P&L
+            "sector_momentum_perf": _sm_insights,           # sector ETF acceleration at entry
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
