@@ -532,6 +532,18 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _pa = bool(signals.get("price_accel_pos", False))
         e["price_accel_at_entry"] = _pa
         e["price_accel_state"] = ("accelerating" if _pa else "decelerating")
+        # Gap-and-Hold Neuron (59): stock gapped up AND is holding above the gap.
+        # Gap-and-hold = institutional accumulation; gap-and-fill = distribution/trap.
+        # Learns: do gap-and-hold entries (confirms institutional buyers) produce better returns?
+        _gah = bool(signals.get("gap_and_hold", False))
+        e["gap_and_hold_at_entry"] = _gah
+        e["gap_hold_state"] = ("holding" if _gah else "normal")
+        # Opening Range Breakout Neuron (60): classic first-30-min range breakout.
+        # Price breaks above the first 30 minutes range = trend for the day is set.
+        # Learns: do ORB entries (clear directional intent) produce more consistent wins?
+        _orb = bool(signals.get("orb_breakout", False))
+        e["orb_at_entry"] = _orb
+        e["orb_state"] = ("breakout" if _orb else "consolidating")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1409,6 +1421,42 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── ORB Neuron (60): Opening Range Breakout at entry ─────────────────────────
+    # Tracks win rates for ORB entries vs non-ORB entries.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ob = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ob_state = _buy_ob.get("orb_state", "consolidating") if _buy_ob else "consolidating"
+            _ob_perf = tlog.setdefault("orb_perf", {})
+            _obp = _ob_perf.setdefault(_ob_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _ob_state})
+            _obp["total"] = _obp.get("total", 0) + 1
+            _obp["total_pnl"] = round(_obp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _obp["wins"] = _obp.get("wins", 0) + 1
+            else:        _obp["losses"] = _obp.get("losses", 0) + 1
+            if _obp["total"] > 0:
+                _obp["win_rate"] = round(_obp["wins"] / _obp["total"] * 100, 1)
+                _obp["avg_pnl"]  = round(_obp["total_pnl"] / _obp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Gap-and-Hold Neuron (59): gap held above open = institutional buying ──────
+    # Tracks win rates when gap_and_hold confirms institutional accumulation at entry.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_gh = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _gh_state = _buy_gh.get("gap_hold_state", "normal") if _buy_gh else "normal"
+            _gh_perf = tlog.setdefault("gap_hold_perf", {})
+            _ghp = _gh_perf.setdefault(_gh_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _gh_state})
+            _ghp["total"] = _ghp.get("total", 0) + 1
+            _ghp["total_pnl"] = round(_ghp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _ghp["wins"] = _ghp.get("wins", 0) + 1
+            else:        _ghp["losses"] = _ghp.get("losses", 0) + 1
+            if _ghp["total"] > 0:
+                _ghp["win_rate"] = round(_ghp["wins"] / _ghp["total"] * 100, 1)
+                _ghp["avg_pnl"]  = round(_ghp["total_pnl"] / _ghp["total"], 2)
         except Exception:
             pass
 
@@ -11967,6 +12015,40 @@ def run():
             if _pa_accel and _pa_decel and _pa_accel["win_rate"] > _pa_decel["win_rate"] + 15:
                 _learn_log.append(f"Accelerating entries win {_pa_accel['win_rate']:.0f}% vs decelerating {_pa_decel['win_rate']:.0f}%")
 
+        # ── 59. Gap-and-Hold Neuron ────────────────────────────────────────
+        _gh_raw = tlog.get("gap_hold_perf", {})
+        _gh_insights = []
+        for _ghk, _ghd in _gh_raw.items():
+            if _ghd.get("total", 0) >= 3:
+                _gh_insights.append({
+                    "state": _ghk, "win_rate": _ghd.get("win_rate", 50),
+                    "avg_pnl": _ghd.get("avg_pnl", 0), "total": _ghd.get("total", 0)
+                })
+        if _gh_insights:
+            _gh_holding = next((s for s in _gh_insights if s["state"] == "holding"), None)
+            _gh_normal  = next((s for s in _gh_insights if s["state"] == "normal"), None)
+            _gh_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _gh_insights)
+            _learn_log.append(f"Gap-and-Hold WRs: {_gh_sum}")
+            if _gh_holding and _gh_normal and _gh_holding["win_rate"] > _gh_normal["win_rate"] + 12:
+                _learn_log.append(f"Gap-hold entries win {_gh_holding['win_rate']:.0f}% vs normal {_gh_normal['win_rate']:.0f}%")
+
+        # ── 60. Opening Range Breakout Neuron ─────────────────────────────
+        _ob_raw = tlog.get("orb_perf", {})
+        _ob_insights = []
+        for _obk, _obd in _ob_raw.items():
+            if _obd.get("total", 0) >= 3:
+                _ob_insights.append({
+                    "state": _obk, "win_rate": _obd.get("win_rate", 50),
+                    "avg_pnl": _obd.get("avg_pnl", 0), "total": _obd.get("total", 0)
+                })
+        if _ob_insights:
+            _ob_brk  = next((s for s in _ob_insights if s["state"] == "breakout"), None)
+            _ob_cons = next((s for s in _ob_insights if s["state"] == "consolidating"), None)
+            _ob_sum  = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _ob_insights)
+            _learn_log.append(f"ORB WRs: {_ob_sum}")
+            if _ob_brk and _ob_cons and _ob_brk["win_rate"] > _ob_cons["win_rate"] + 12:
+                _learn_log.append(f"ORB breakout entries win {_ob_brk['win_rate']:.0f}% vs consolidating {_ob_cons['win_rate']:.0f}%")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -12035,6 +12117,8 @@ def run():
             "obv_trend_perf":       _ov_insights,            # OBV trend (volume confirms price) vs outcome
             "force_index_perf":     _fi_insights,            # Force Index state at entry vs outcome
             "price_accel_perf":     _pa_insights,            # price acceleration state vs outcome
+            "gap_hold_perf":        _gh_insights,            # gap-and-hold vs normal entry vs outcome
+            "orb_perf":             _ob_insights,            # opening range breakout vs consolidating vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

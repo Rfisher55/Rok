@@ -54503,6 +54503,59 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── Gap-and-Hold (N59) + Opening Range Breakout (N60) dual panel ─────
+        const gh = lp.gap_hold_perf || [];
+        const ob = lp.orb_perf || [];
+        if (!gh.length && !ob.length) return '';
+        const GH_ORDER = ['holding','normal'];
+        const GH_ICONS = {holding:'🧲',normal:'📋'};
+        const GH_BG = {holding:'rgba(0,230,118,.09)',normal:'rgba(255,255,255,.04)'};
+        const ghMap = {}; gh.forEach(s => ghMap[s.state] = s);
+        const ghBest = gh.length ? gh.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, gh[0]) : null;
+        const ghCells = GH_ORDER.map(st => {
+          const s = ghMap[st];
+          const lbl = st==='holding'?'Gap Hold':'Normal';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${GH_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = ghBest && s.state === ghBest.state ? '⭐' : '';
+          return `<div style="background:${GH_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${GH_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const OB_ORDER = ['breakout','consolidating'];
+        const OB_ICONS = {breakout:'🔔',consolidating:'⏸️'};
+        const OB_BG = {breakout:'rgba(255,235,59,.07)',consolidating:'rgba(255,255,255,.03)'};
+        const obMap = {}; ob.forEach(s => obMap[s.state] = s);
+        const obBest = ob.length ? ob.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, ob[0]) : null;
+        const obCells = OB_ORDER.map(st => {
+          const s = obMap[st];
+          const lbl = st==='breakout'?'ORB Break':'Consol.';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${OB_ICONS[st]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = obBest && s.state === obBest.state ? '⭐' : '';
+          return `<div style="background:${OB_BG[st]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${OB_ICONS[st]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const ghHtml = gh.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🧲 GAP-AND-HOLD (N59): gap held above open = institutional demand</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">${ghCells}</div>
+        </div>` : '';
+        const obHtml = ob.length ? `<div>
+          <div style="font-size:5.5px;color:#ffeb3b;font-weight:700;margin-bottom:.1rem">🔔 ORB (N60): Opening Range Breakout vs consolidating entry</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">${obCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${ghHtml}${obHtml}
+        </div>`;
+      })()}
+      ${(() => {
         // ── Force Index (N57) + Price Acceleration (N58) dual panel ──────────
         const fi = lp.force_index_perf || [];
         const pa = lp.price_accel_perf || [];
