@@ -52925,8 +52925,108 @@ async function fetchIntelReport() {
     _intelCacheTs = Date.now();
     _renderIntelReport(el, intel);
   } catch {
-    el.innerHTML = '<div style="color:var(--wh4);font-size:11px;padding:.5rem 0">Intelligence report unavailable — will retry next cycle (every 15 min).</div>';
+    // Fallback: generate a synthetic intel report from trades.json data
+    const td = (typeof _tradesData !== 'undefined' && _tradesData) ? _tradesData : null;
+    if (td && td.portfolio_value) {
+      _renderFallbackIntelReport(el, td);
+    } else {
+      el.innerHTML = '<div style="color:var(--wh4);font-size:11px;padding:.5rem 0">Intelligence report loading — bot runs every 15 min and will generate a full AI analysis when market opens.</div>';
+    }
   }
+}
+
+function _renderFallbackIntelReport(el, data) {
+  const reg = data.regime || {};
+  const positions = data.positions || [];
+  const pv = data.portfolio_value || 0;
+  const bp = data.buying_power || 0;
+  const invested = Math.max(0, pv - bp);
+  const investedPct = pv > 0 ? Math.round(invested / pv * 100) : 0;
+  const stats = data.stats || {};
+  const wins = stats.wins || 0, losses = stats.losses || 0;
+  const wr = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : null;
+  const totalPnl = stats.total_pnl || 0;
+  const nA = data.neurons_active || 0;
+  const nT = data.neurons_total || 60;
+  const sigWR = data.signal_win_rates || {};
+  const topSigs = Object.entries(sigWR).filter(([,v]) => (v.total||0) >= 2).sort(([,a],[,b]) => (b.win_rate||0)-(a.win_rate||0)).slice(0, 5);
+  const vix = reg.vix || 0;
+  const vixLabel = vix >= 30 ? 'EXTREME FEAR' : vix >= 20 ? 'ELEVATED FEAR' : vix >= 15 ? 'NORMAL' : vix > 0 ? 'LOW FEAR / COMPLACENCY' : 'N/A';
+  const vixCol = vix >= 30 ? '#ef5350' : vix >= 20 ? '#ffa726' : vix >= 15 ? '#ffd54f' : '#00e676';
+  const regimeLabel = reg.regime ? reg.regime.toUpperCase() : 'UNKNOWN';
+  const regCol = reg.regime === 'bull' ? '#00ff88' : reg.regime === 'bear' ? '#ef5350' : '#ffd54f';
+  const wl = data.weekend_watchlist || [];
+  const now = new Date();
+  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+
+  el.innerHTML = `<div style="padding:.25rem 0">
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem">
+      <div style="width:6px;height:6px;border-radius:50%;background:#546e7a;flex-shrink:0"></div>
+      <span style="font-size:9px;font-weight:800;letter-spacing:.1em;color:#546e7a;text-transform:uppercase">ROK BOT BRAIN REPORT</span>
+      <span style="font-size:7px;color:#3a4a5a;margin-left:auto">from trades.json • AI report generates during market hours</span>
+    </div>
+
+    <!-- Market Status -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.6rem">
+      <div style="background:rgba(0,0,0,.25);border:1px solid ${regCol}22;border-radius:10px;padding:.55rem .75rem">
+        <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem">Market Regime</div>
+        <div style="font-size:15px;font-weight:900;color:${regCol}">${regimeLabel}</div>
+        ${reg.above_200 !== undefined ? `<div style="font-size:7px;color:${reg.above_200?'#00e676':'#ef5350'}">SPY ${reg.above_200?'above':'below'} 200-day EMA</div>` : ''}
+      </div>
+      <div style="background:rgba(0,0,0,.25);border:1px solid ${vixCol}22;border-radius:10px;padding:.55rem .75rem">
+        <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem">Fear/Greed (VIX)</div>
+        <div style="font-size:15px;font-weight:900;color:${vixCol}">${vix > 0 ? vix.toFixed(1) : '—'}</div>
+        <div style="font-size:7px;color:${vixCol}">${vixLabel}</div>
+      </div>
+    </div>
+
+    <!-- Portfolio + Bot Performance -->
+    <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.55rem .75rem;margin-bottom:.6rem">
+      <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem">Your Portfolio</div>
+      <div style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap">
+        <div><div style="font-size:7.5px;color:#546e7a">Total Value</div><div style="font-size:14px;font-weight:900;color:#00ff88;font-family:var(--disp)">$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div><div style="font-size:7.5px;color:#546e7a">Invested</div><div style="font-size:13px;font-weight:700;color:#82b1ff">${investedPct}%</div></div>
+        <div><div style="font-size:7.5px;color:#546e7a">Positions</div><div style="font-size:13px;font-weight:700;color:#ffd54f">${positions.length}</div></div>
+        ${wr != null ? `<div><div style="font-size:7.5px;color:#546e7a">Win Rate</div><div style="font-size:13px;font-weight:700;color:${wr>=55?'#00e676':wr>=45?'#ffd54f':'#ef5350'}">${wr}%</div></div>` : ''}
+        ${Math.abs(totalPnl) > 0.01 ? `<div><div style="font-size:7.5px;color:#546e7a">Total P&L</div><div style="font-size:13px;font-weight:700;color:${totalPnl>=0?'#00e676':'#ef5350'}">${totalPnl>=0?'+':''}${totalPnl.toFixed(1)}%</div></div>` : ''}
+      </div>
+    </div>
+
+    <!-- Neural Brain Summary -->
+    <div style="background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-radius:10px;padding:.55rem .75rem;margin-bottom:.6rem">
+      <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem">100-Neuron AI Brain — ${nA}/${nT} Neurons Active</div>
+      <div style="height:4px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;margin-bottom:.4rem">
+        <div style="width:${nT>0?Math.round(nA/nT*100):0}%;height:100%;background:linear-gradient(90deg,#00e5ff,#82b1ff);border-radius:3px;transition:width .8s"></div>
+      </div>
+      ${topSigs.length > 0 ? `
+      <div style="font-size:7px;color:#3a4a5a;margin-bottom:.25rem">Best performing signals (learned from trades):</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${topSigs.map(([s, v]) => {
+          const wr2 = Math.round((v.win_rate||0) * 100);
+          const col2 = wr2 >= 70 ? '#00e676' : wr2 >= 55 ? '#ffd54f' : '#ff9800';
+          return `<span style="font-size:7px;padding:2px 5px;background:${col2}11;border:1px solid ${col2}33;border-radius:4px;color:${col2}">${s.replace(/_/g,' ')}: ${wr2}% (${v.total||0})</span>`;
+        }).join('')}
+      </div>` : `<div style="font-size:8.5px;color:#2a3a4a">Brain needs trade history to activate neurons. Will start learning from first trade.</div>`}
+    </div>
+
+    <!-- Weekend watchlist preview -->
+    ${wl.length > 0 ? `
+    <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:.55rem .75rem;margin-bottom:.6rem">
+      <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem">Week's Top Movers</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">
+        ${[...wl].sort((a,b)=>(b.week_chg||0)-(a.week_chg||0)).slice(0,10).map(s => {
+          const wc = s.week_chg || 0;
+          const col3 = wc >= 5 ? '#00ff88' : wc >= 2 ? '#69f0ae' : wc >= 0 ? '#ffd54f' : wc >= -3 ? '#ff9800' : '#ef5350';
+          return `<span style="font-size:7.5px;padding:2px 6px;background:${col3}0d;border:1px solid ${col3}33;border-radius:5px;color:${col3};cursor:pointer" onclick="if(typeof openModal==='function')openModal('${s.ticker}')">${s.ticker} ${wc>=0?'+':''}${wc.toFixed(1)}%</span>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
+    <div style="font-size:8px;color:#2a3a4a;border-top:1px solid rgba(255,255,255,.04);padding-top:.5rem;margin-top:.25rem">
+      ${isWeekend ? '📅 Full AI intelligence report generates automatically when market opens Monday 9:30 AM ET.' : '⏳ Full AI report generates every 5 minutes during market hours via the Claude AI.'}
+      <br>This summary built from real-time bot data in trades.json.
+    </div>
+  </div>`;
 }
 
 function _renderIntelReport(el, intel) {
@@ -52941,7 +53041,8 @@ function _renderIntelReport(el, intel) {
 
   // Dynamic Trading Playbook — synthesizes live data into actionable priorities
   const playbookHtml = (() => {
-    const td = ROK || {};
+    // Use _tradesData as primary source (most current), fall back to ROK
+    const td = (typeof _tradesData !== 'undefined' && _tradesData && _tradesData.last_updated) ? _tradesData : (ROK || {});
     if (!td.last_updated) return '';
     const items = [];
     const dt = td.day_type || '';
@@ -57562,6 +57663,37 @@ window.renderSectorRotation = renderSectorRotation;
       try { if (typeof renderWeekendPanel === 'function') renderWeekendPanel(data); } catch(e) {}
       // Neural Brain strip (shows during market hours when learning is active)
       try { if (typeof renderNeuralBrainPanel === 'function') renderNeuralBrainPanel(data); } catch(e) {}
+
+      // ── Bridge key trades.json fields into ROK global for Intel tab functions ──
+      // Many Intel tab functions read from ROK.* which is populated by intel_report.json.
+      // We bridge the subset that we have from trades.json so they work even without AI.
+      try {
+        const _reg = data.regime || {};
+        if (!ROK.last_updated) ROK.last_updated = data.last_updated;
+        if (!ROK.market_open) ROK.market_open = data.market_open;
+        if (!ROK.day_type) ROK.day_type = data.day_type;
+        if (!ROK.market_quality) ROK.market_quality = data.market_quality;
+        if (!ROK.timing_quality) ROK.timing_quality = data.timing_quality;
+        if (!ROK.drawdown_pct) ROK.drawdown_pct = data.drawdown_pct;
+        if (!ROK.spy_consec_decline) ROK.spy_consec_decline = data.spy_consec_decline;
+        if (!ROK.spy_tape_score_adj) ROK.spy_tape_score_adj = data.spy_tape_score_adj;
+        if (!ROK.positions) ROK.positions = data.positions;
+        if (!ROK.last_scan_top) ROK.last_scan_top = data.last_scan_top;
+        if (!ROK.market_breadth) ROK.market_breadth = data.market_breadth;
+        if (!ROK.portfolio_value) ROK.portfolio_value = data.portfolio_value;
+        if (!ROK.buying_power) ROK.buying_power = data.buying_power;
+        if (!ROK.vix_value) ROK.vix_value = _reg.vix;
+        if (!ROK.market_regime) ROK.market_regime = _reg.regime;
+        if (!ROK.regime) ROK.regime = _reg;
+        if (!ROK.fear_greed) ROK.fear_greed = data.fear_greed;
+        if (!ROK.stats) ROK.stats = data.stats;
+        if (!ROK.neurons_active) ROK.neurons_active = data.neurons_active;
+        if (!ROK.signal_win_rates) ROK.signal_win_rates = data.signal_win_rates;
+        if (!ROK.bot_conviction) ROK.bot_conviction = data.bot_conviction;
+        if (!ROK.strategy_mode) ROK.strategy_mode = data.strategy_mode;
+        if (!ROK.sector_etf_trends) ROK.sector_etf_trends = data.sector_etf_trends;
+        if (!ROK.weekend_watchlist) ROK.weekend_watchlist = data.weekend_watchlist;
+      } catch(e) {}
     }
     // ── End bridge ───────────────────────────────────────────────────────────
 
