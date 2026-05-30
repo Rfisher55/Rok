@@ -11228,6 +11228,11 @@ def run():
             _mq_pos = tlog.get("market_quality", 50) or 50
             if _mq_pos < 35 and _pnl > 2:
                 _dyn_trail = max(_dyn_trail * 0.80, _dyn_trail - 1.5)  # tighten 20% in bad market
+            # Session-aware trailing stop: power-hour tightens to protect day's gains
+            if _mkt_sess == "power-hour" and _pnl > 2:
+                _dyn_trail = max(_dyn_trail * 0.85, _dyn_trail - 1.0)  # tighten 15% in power-hour
+            elif _mkt_sess == "close-guard" and _pnl > 0:
+                _dyn_trail = max(_dyn_trail * 0.70, 1.5)  # very tight near close
             _trail_stop_price = round(_peak_p * (1 - _dyn_trail / 100), 2) if _peak_p > 0 else 0
             _dist_from_trail  = round((_pr - _trail_stop_price) / _pr * 100, 2) if (_trail_stop_price > 0 and _pr > 0) else 0
             _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
@@ -11477,6 +11482,56 @@ def run():
                 "signals":      _buy.get("entry_signals", [])[:8],
             })
         tlog["recent_closed_trades"] = _enriched_closed
+        # Comprehensive bot performance statistics
+        try:
+            _all_closed = [t for t in tlog.get("trades", [])
+                           if t.get("action") in ("SELL","COVER") and t.get("pnl_pct") is not None]
+            if len(_all_closed) >= 3:
+                _all_pnls   = [t["pnl_pct"] for t in _all_closed]
+                _n_total    = len(_all_pnls)
+                _n_wins     = sum(1 for p in _all_pnls if p > 0)
+                _all_wr     = round(_n_wins / _n_total * 100, 1)
+                _all_avg    = round(sum(_all_pnls) / _n_total, 2)
+                _all_best   = round(max(_all_pnls), 2)
+                _all_worst  = round(min(_all_pnls), 2)
+                _wins_only  = [p for p in _all_pnls if p > 0]
+                _loss_only  = [p for p in _all_pnls if p < 0]
+                _avg_win    = round(sum(_wins_only) / len(_wins_only), 2) if _wins_only else 0
+                _avg_loss   = round(sum(_loss_only) / len(_loss_only), 2) if _loss_only else 0
+                _payoff_r   = round(abs(_avg_win / _avg_loss), 2) if _avg_loss != 0 else 0
+                _std_pnl    = round((_sum := sum((p - _all_avg)**2 for p in _all_pnls)) ** 0.5 / _n_total ** 0.5, 2) if _n_total > 1 else 0
+                _sharpe_like = round(_all_avg / _std_pnl, 2) if _std_pnl > 0 else 0
+                # Avg hold time in hours from enriched closed
+                _hold_times = [ec.get("hold_hours", 0) or 0 for ec in _enriched_closed if ec.get("hold_hours")]
+                _avg_hold_h = round(sum(_hold_times) / len(_hold_times), 1) if _hold_times else 0
+                # Running P&L curve and max drawdown from individual trades
+                _curve = []
+                _running = 0
+                _peak_curve = 0
+                _max_dd = 0
+                for p in _all_pnls:
+                    _running += p
+                    _peak_curve = max(_peak_curve, _running)
+                    _dd = _peak_curve - _running
+                    _max_dd = max(_max_dd, _dd)
+                    _curve.append(round(_running, 2))
+                tlog["bot_stats"] = {
+                    "total_trades": _n_total,
+                    "win_rate":     _all_wr,
+                    "avg_pnl":      _all_avg,
+                    "best_trade":   _all_best,
+                    "worst_trade":  _all_worst,
+                    "avg_win":      _avg_win,
+                    "avg_loss":     _avg_loss,
+                    "payoff_ratio": _payoff_r,
+                    "sharpe_like":  _sharpe_like,
+                    "avg_hold_h":   _avg_hold_h,
+                    "max_drawdown": round(_max_dd, 2),
+                    "total_return": round(_running, 2),
+                    "pnl_curve":    _curve[-20:],  # last 20 trades for sparkline
+                }
+        except Exception:
+            pass
         # Win/loss streak from most recent trades
         _streak_len = 0
         _streak_type = "none"

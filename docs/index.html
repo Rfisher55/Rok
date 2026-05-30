@@ -58172,6 +58172,53 @@ window.renderSectorRotation = renderSectorRotation;
           ${totalRisk > 0 ? `<div style="font-size:5.5px;color:#3a5a8a;margin-top:.2rem">Trail stops protect up to $${totalRisk.toLocaleString()} of downside</div>` : ''}
         </div>`;
       }
+      // Bot Performance Stats (from bot_stats in trades.json)
+      const bs = data.bot_stats;
+      if (bs && (bs.total_trades || 0) >= 3) {
+        const bsWrCol = bs.win_rate >= 60 ? '#00e676' : bs.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+        const bsShCol = bs.sharpe_like >= 1.5 ? '#00e676' : bs.sharpe_like >= 0.8 ? '#ffd54f' : bs.sharpe_like >= 0 ? '#ff9800' : '#ef5350';
+        const bsDdCol = bs.max_drawdown <= 5 ? '#00e676' : bs.max_drawdown <= 15 ? '#ffd54f' : '#ef5350';
+        const bsPayCol = bs.payoff_ratio >= 2 ? '#00e676' : bs.payoff_ratio >= 1.5 ? '#ffd54f' : '#ef5350';
+        // Mini sparkline for PnL curve
+        const curve = bs.pnl_curve || [];
+        let sparkSvg = '';
+        if (curve.length >= 4) {
+          const mn = Math.min(...curve); const mx = Math.max(...curve);
+          const range = mx - mn || 1;
+          const pts = curve.map((v,i) => `${(i/(curve.length-1)*100).toFixed(0)},${(1-(v-mn)/range)*28}`).join(' ');
+          const lastCol = (curve[curve.length-1] || 0) >= 0 ? '#00e676' : '#ef5350';
+          sparkSvg = `<svg width="60" height="28" viewBox="0 0 100 28" style="overflow:visible"><polyline points="${pts}" fill="none" stroke="${lastCol}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+        }
+        healthEl.innerHTML += `<div style="margin-top:.5rem;padding:.45rem .6rem;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.12);border-radius:8px">
+          <div style="font-size:6.5px;font-weight:900;color:#00e676;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">📊 ALL-TIME BOT PERFORMANCE (${bs.total_trades} trades)</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.3rem">
+            <div style="text-align:center">
+              <div style="font-size:5.5px;color:#4a6fa5;text-transform:uppercase">Win Rate</div>
+              <div style="font-size:11px;font-weight:900;color:${bsWrCol}">${bs.win_rate.toFixed(0)}%</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:5.5px;color:#4a6fa5;text-transform:uppercase">Payoff</div>
+              <div style="font-size:11px;font-weight:900;color:${bsPayCol}">${bs.payoff_ratio.toFixed(2)}×</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:5.5px;color:#4a6fa5;text-transform:uppercase">Sharpe~</div>
+              <div style="font-size:11px;font-weight:900;color:${bsShCol}">${bs.sharpe_like.toFixed(2)}</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:5.5px;color:#4a6fa5;text-transform:uppercase">Max DD</div>
+              <div style="font-size:11px;font-weight:900;color:${bsDdCol}">${bs.max_drawdown.toFixed(1)}%</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;gap:.8rem">
+              <span style="font-size:6px;color:#555">Avg win: <span style="color:#69f0ae">+${bs.avg_win.toFixed(1)}%</span></span>
+              <span style="font-size:6px;color:#555">Avg loss: <span style="color:#ef9a9a">${bs.avg_loss.toFixed(1)}%</span></span>
+              <span style="font-size:6px;color:#555">Avg hold: <span style="color:#82b1ff">${bs.avg_hold_h.toFixed(0)}h</span></span>
+            </div>
+            ${sparkSvg}
+          </div>
+        </div>`;
+      }
     }
 
     // Populate Intel tab ROK trades section
