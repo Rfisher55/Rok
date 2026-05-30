@@ -55074,6 +55074,13 @@ window.renderSectorRotation = renderSectorRotation;
             return `<span style="font-size:6px;font-weight:800;color:${col}" title="Trend Quality Score ${tq.toFixed(1)}/10 — composite of ADX strength, LR linearity, green streaks, intraday trend">TQ${tq.toFixed(0)}</span>`;
           })() : '';
           const lsRs63 = ls.rs63 != null && Math.abs(ls.rs63) > 2 ? `<span style="font-size:6.5px;color:${ls.rs63>8?'#00ff88':ls.rs63>3?'#69f0ae':ls.rs63<-8?'#ef5350':'#888'}">RS63:${ls.rs63>=0?'+':''}${ls.rs63.toFixed(0)}%</span>` : '';
+          const lsRsSec = (() => {
+            const rs = ls.rs_sector;
+            if (rs == null || Math.abs(rs) < 3) return '';
+            const col = rs >= 10 ? '#00e676' : rs >= 5 ? '#69f0ae' : rs >= 3 ? '#b0f0c0' : rs <= -8 ? '#ef5350' : rs <= -4 ? '#ffa726' : '#888';
+            const icon = rs >= 10 ? '★' : rs <= -8 ? '▼' : '';
+            return `<span style="font-size:6.5px;font-weight:${Math.abs(rs)>=10?'900':'600'};color:${col}" title="Relative strength vs sector ETF (63-day): ${rs>=0?'+':''}${rs.toFixed(1)}% — positive=sector leader, negative=sector laggard">${icon}SEC:${rs>=0?'+':''}${rs.toFixed(0)}%</span>`;
+          })();
           const lsChan = ls.chandelier_stop > 0 && p.price > 0 ? `<span style="font-size:6px;color:${p.price < ls.chandelier_stop ? '#ef5350' : '#2a3a5a'}">⛛$${ls.chandelier_stop.toFixed(2)}</span>` : '';
           const lsMtf  = ls.mtf_aligned ? `<span style="font-size:6.5px;font-weight:800;color:#80deea">MTF✓</span>` : '';
           const lsE200 = ls.price_vs_ema200 != null ? `<span style="font-size:6px;color:${ls.price_vs_ema200>5?'#00ff88':ls.price_vs_ema200<-5?'#ef5350':'#888'}">200d:${ls.price_vs_ema200>=0?'+':''}${ls.price_vs_ema200.toFixed(1)}%</span>` : '';
@@ -55369,7 +55376,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRMult||lsDaysHeld) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;align-items:center">${lsRMult}${lsDaysHeld}</div>` : ''}
-                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
+                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsRsSec||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsRsSec}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels||lsKeyLevels||lsIV) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsIV}${lsHV}${lsStreak}${lsKeyLevels}${lsFibLevels}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
@@ -55610,6 +55617,7 @@ window.renderSectorRotation = renderSectorRotation;
               ${sigBadges}
               ${s.rsi ? `<span style="font-size:7.5px;color:#888">RSI ${s.rsi}</span>` : ''}
               ${s.rs5 != null ? `<span style="font-size:7.5px;color:${s.rs5>=0?'#00b87a':'#ef5350'}">RS5 ${s.rs5>=0?'+':''}${s.rs5}%</span>` : ''}
+              ${s.rs_sector != null && Math.abs(s.rs_sector) >= 3 ? `<span style="font-size:7px;font-weight:800;color:${s.rs_sector>=10?'#00e676':s.rs_sector>=5?'#69f0ae':s.rs_sector<=-8?'#ef5350':'#888'}" title="Sector leadership: ${s.rs_sector>=0?'+':''}${s.rs_sector.toFixed(1)}% vs sector ETF">${s.rs_sector>=10?'★':''}SEC${s.rs_sector>=0?'+':''}${s.rs_sector.toFixed(0)}%</span>` : ''}
               ${s.sent ? `<span style="font-size:7.5px;color:${s.sent>=3?'var(--g)':s.sent<=-3?'var(--r)':'var(--wh4)'};margin-left:auto">AI ${s.sent>=0?'+':''}${s.sent}</span>` : ''}
             </div>
             ${cat ? `<div style="margin-top:.2rem">${cat}</div>` : ''}

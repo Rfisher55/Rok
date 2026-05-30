@@ -412,6 +412,9 @@ def build_prompt(
             if atm_iv > 0 and hv20 > 0:
                 if atm_iv > hv20 * 1.35: flags.append(f"IV_ELEVATED({atm_iv:.0f}%vsHV{hv20:.0f}%)")
                 elif atm_iv < hv20 * 0.8: flags.append(f"IV_CHEAP({atm_iv:.0f}%vsHV{hv20:.0f}%)")
+            rs_sec = ls.get("rs_sector") or 0
+            if rs_sec >= 10:   flags.append(f"SECTOR_LEADER(+{rs_sec:.0f}%vsETF)")
+            elif rs_sec <= -8: flags.append(f"SECTOR_LAGGARD({rs_sec:.0f}%vsETF)")
             flag_str = " | ".join(flags) if flags else "no_flags"
             pos_detail_lines.append(
                 f"  ${tk}: P&L {pnl:+.1f}% | cost ${cost:.2f} → ${cur:.2f} | val ${val:,.0f}"

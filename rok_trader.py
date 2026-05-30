@@ -5083,6 +5083,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     rs1        = d.get("rs1",          0) or 0   # relative strength vs SPY (1-day)
     rs5        = d.get("rs5",          0) or 0   # relative strength vs SPY (5-day)
     rs63       = d.get("rs63",         0) or 0   # 63-day RS vs SPY (quarterly — O'Neil style)
+    rs_sector  = d.get("rs_sector",    0) or 0   # 63-day RS vs own sector ETF (sector leadership)
 
     # Relative strength vs SPY (+14/-12)
     # Strong relative strength = institutional buying even when SPY flat
@@ -5103,6 +5104,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif rs63 > 3:   s +=  3
     elif rs63 < -15: s -=  6   # persistent underperformer — avoid
     elif rs63 < -8:  s -=  3
+
+    # Sector leadership RS: outperforming own sector = true leader, not just market-tide float (+8/-6)
+    if   rs_sector > 10: s +=  8   # clear sector leader — institutions picking this name specifically
+    elif rs_sector >  5: s +=  5
+    elif rs_sector >  2: s +=  2
+    elif rs_sector < -10: s -= 6   # laggard even vs weak sector — avoid
+    elif rs_sector <  -5: s -= 3
 
     # Multi-timeframe trend filter: daily EMA5/10 alignment (+8/-10)
     if   daily_tr > 0.5:  s +=  8
@@ -5932,6 +5940,20 @@ def run():
     # Fetch live data (two-phase: quick pre-screen all, full analysis on top 80)
     live = fetch_batch(candidates, held_symbols=set(held.keys()))
 
+    # Post-process: add rs_sector (stock 63d return vs sector ETF) using ETF data already in live
+    # Formula: rs_sector = stock_rs63 - sector_etf_rs63 → no extra API calls needed
+    _sector_etf_rs63: dict = {}
+    for _sec, _etf in SECTOR_ETFS.items():
+        if _etf in live:
+            _sector_etf_rs63[_sec] = live[_etf].get("rs63", 0) or 0
+    for _tk, _sig in live.items():
+        _sec = SECTOR_MAP.get(_tk, "other")
+        _etf_rs63 = _sector_etf_rs63.get(_sec)
+        if _etf_rs63 is not None:
+            _sig["rs_sector"] = round((_sig.get("rs63", 0) or 0) - _etf_rs63, 2)
+        else:
+            _sig.setdefault("rs_sector", 0.0)
+
     # Internal scan breadth: how many of our scanned stocks are trending up?
     # This is a proprietary advance/decline ratio for our universe
     _scan_up   = sum(1 for sig in live.values() if (sig.get("change_pct", 0) or 0) > 0.3)
@@ -6566,6 +6588,17 @@ def run():
         _eff_min_score += 5
         logger.info(f"Portfolio beta guard: beta≈{_port_beta_est:.2f} — raising threshold to {_eff_min_score}")
 
+    # Drawdown guard: portfolio in drawdown = demand higher-quality signals before entering
+    if drawdown_pct >= 5.0:
+        _eff_min_score += 12
+        logger.info(f"Drawdown guard (-{drawdown_pct:.1f}%): +12 to min score → {_eff_min_score}")
+    elif drawdown_pct >= 3.0:
+        _eff_min_score += 8
+        logger.info(f"Drawdown guard (-{drawdown_pct:.1f}%): +8 to min score → {_eff_min_score}")
+    elif drawdown_pct >= 1.5:
+        _eff_min_score += 4
+        logger.info(f"Drawdown guard (-{drawdown_pct:.1f}%): +4 to min score → {_eff_min_score}")
+
     # Time-of-day score adjustment: lower threshold during statistically optimal windows
     # Power Hour (3pm-3:45pm ET): institutional accumulation at day's end, strong follow-through
     # Mid-morning sweet spot (10am-11:30am): post-opening noise settled, trends confirmed
@@ -6898,6 +6931,8 @@ def run():
                 "fib_level_382":     live.get(tk, {}).get("fib_level_382", 0.0),
                 "fib_level_500":     live.get(tk, {}).get("fib_level_500", 0.0),
                 "fib_level_618":     live.get(tk, {}).get("fib_level_618", 0.0),
+                "w52_range_pos":     live.get(tk, {}).get("w52_range_pos", 0.0),
+                "rs_sector":         round(live.get(tk, {}).get("rs_sector", 0.0), 2),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -7254,6 +7289,7 @@ def run():
                 "short_ratio":        sig.get("short_ratio", 0.0),
                 "high_short":         sig.get("high_short", False),
                 "atm_iv":             sig.get("atm_iv", 0.0),
+                "rs_sector":          round(sig.get("rs_sector", 0.0), 2),
                 "w52_range_pos":      sig.get("w52_range_pos", 0.0),
                 "expected_move_wk":   sig.get("expected_move_wk", 0.0),
                 "expected_move_mo":   sig.get("expected_move_mo", 0.0),
