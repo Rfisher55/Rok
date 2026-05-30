@@ -13171,10 +13171,36 @@ def run():
             _strat_mode = "CASH CONSERVATION"
             _strat_desc = "Poor conditions — holding cash, waiting for market to stabilize"
 
-        tlog["bot_conviction"] = _conv_final
-        tlog["strategy_mode"]  = _strat_mode
-        tlog["strategy_desc"]  = _strat_desc
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode}")
+        _conv_final = max(5, min(98, round(_conv)))
+
+        # ── Neuron Activity Stats: how many neurons have learned insights ────────
+        _lp_conv = tlog.get("bot_learned_params", {})
+        _neuron_active = sum(1 for k in (
+            "score_decay_perf","poc_dist_perf","intraday_mom_perf","adx_perf",
+            "rvol_tier_perf","stoch_zone_perf","mtf_align_perf","options_flow_perf",
+            "mfi_zone_perf","wr_zone_perf","ichimoku_perf","lr_quality_perf",
+            "donchian_perf","ha_trend_perf","kc_zone_perf","obv_trend_perf",
+            "force_index_perf","price_accel_perf","gap_hold_perf","orb_perf",
+            "trend_conf_perf","bb_zone_perf","candle_pattern_perf","vol_dry_perf",
+            "chart_pattern_perf","roc_perf","rs_mom_perf","demand_zone_perf",
+            "higher_lows_perf","ha_consec_perf","nr7_perf","ema_struct_perf",
+            "macd_div_perf","mfi_div_perf","vol_ratio_mom_perf","double_bottom_perf",
+            "at_breakout_perf","avwap_perf","poc_control_perf","pm_gap_perf",
+            "htf_perf","ema21_pb_perf","mtf_triple_perf","rs63_q_tier_perf",
+            "sq_potential_perf","news_count_perf","news_accel_perf","true_alpha_perf",
+            "pivot_support_perf","vcp_perf","pocket_pivot_perf","morning_star_perf",
+            "tws_perf","beng_perf","hammer_perf","cup_handle_perf","dbn_perf",
+            "eg_tier_perf","st_gap_perf","premium_tier_perf",
+        ) if _lp_conv.get(k))
+        _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
+                              if s.get("state") == "elite"), 50)
+        tlog["bot_conviction"]    = _conv_final
+        tlog["strategy_mode"]     = _strat_mode
+        tlog["strategy_desc"]     = _strat_desc
+        tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
+        tlog["neurons_total"]     = 60               # total tracked neuron dimensions
+        tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/60 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

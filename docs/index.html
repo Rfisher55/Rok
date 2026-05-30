@@ -59283,6 +59283,19 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="height:100%;width:${barW}%;background:${barBg};border-radius:3px;transition:width 0.6s ease"></div>
             </div>
             ${stratDesc ? `<div style="font-size:7px;color:var(--wh4)">${stratDesc}</div>` : ''}
+            ${(() => {
+              const nA = data.neurons_active || 0;
+              const nT = data.neurons_total || 60;
+              const eWr = data.elite_setup_wr || 0;
+              if (!nA) return '';
+              const nCol = nA >= 50 ? '#00e676' : nA >= 30 ? '#ffd54f' : nA >= 15 ? '#ff9800' : '#ef9a9a';
+              const ewCol = eWr >= 65 ? '#00e676' : eWr >= 55 ? '#ffd54f' : eWr >= 45 ? '#ff9800' : '#ef5350';
+              return `<div style="display:flex;gap:.5rem;align-items:center;margin-top:.3rem;flex-wrap:wrap">
+                <span style="font-size:6px;color:${nCol};font-weight:700"> ${nA}/${nT} neurons learned</span>
+                ${eWr > 0 ? `<span style="font-size:6px;color:${ewCol};font-weight:700">elite setups: ${eWr.toFixed(0)}% WR</span>` : ''}
+                <span style="font-size:5.5px;color:#555">100-neuron AI brain</span>
+              </div>`;
+            })()}
           </div>`;
         }
       }
