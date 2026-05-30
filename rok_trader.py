@@ -393,6 +393,14 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                            "recovering" if _macd_v < 0 and _macd_s > 0 else "negative")
         # TTM Squeeze Breakout Neuron (38): was a squeeze fired at entry?
         e["squeeze_fired"] = bool(signals.get("ttm_squeeze_fired", False))
+        # News Catalyst Urgency Neuron (39): urgency score 0-5 from AI catalyst classification
+        _urg = int(signals.get("catalyst_urg", 0) or 0)
+        e["catalyst_urgency"] = _urg
+        e["urgency_bucket"] = ("high" if _urg >= 4 else "medium" if _urg >= 2 else "low")
+        # VWAP Position Neuron (40): was price above/below VWAP at entry?
+        _vwap_p = float(signals.get("vwap_pos", 0.0) or 0.0)
+        e["vwap_pos_at_entry"] = round(_vwap_p, 2)
+        e["vwap_bucket"] = ("above" if _vwap_p > 0.5 else "below" if _vwap_p < -0.5 else "at_vwap")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -975,6 +983,46 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _psp["total"] > 0:
                 _psp["win_rate"] = round(_psp["wins"] / _psp["total"] * 100, 1)
                 _psp["avg_pnl"]  = round(_psp["total_pnl"] / _psp["total"], 2)
+        except Exception:
+            pass
+
+    # ── News Catalyst Urgency Neuron: high-urgency catalyst vs normal entries ────
+    # Tracks win rates for trades entered on high-urgency catalysts (earnings beats,
+    # FDA approval, M&A) vs medium (analyst upgrade) vs low/none. Tests if AI-classified
+    # urgency level predicts trade success.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_nu = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _nu_bkt = _buy_nu.get("urgency_bucket", "low") if _buy_nu else "low"
+            _nu_perf = tlog.setdefault("urgency_perf", {})
+            _nup = _nu_perf.setdefault(_nu_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _nu_bkt})
+            _nup["total"] = _nup.get("total", 0) + 1
+            _nup["total_pnl"] = round(_nup.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _nup["wins"] = _nup.get("wins", 0) + 1
+            else: _nup["losses"] = _nup.get("losses", 0) + 1
+            if _nup["total"] > 0:
+                _nup["win_rate"] = round(_nup["wins"] / _nup["total"] * 100, 1)
+                _nup["avg_pnl"]  = round(_nup["total_pnl"] / _nup["total"], 2)
+        except Exception:
+            pass
+
+    # ── VWAP Position Neuron: above/below VWAP at entry vs outcome ───────────────
+    # VWAP is the institutional benchmark price for the day.
+    # Above VWAP = buyers in control (institutional accumulation); below = distribution.
+    # The bot learns whether above-VWAP entries produce consistently better outcomes.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_vw = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _vw_bkt = _buy_vw.get("vwap_bucket", "at_vwap") if _buy_vw else "at_vwap"
+            _vw_perf = tlog.setdefault("vwap_perf", {})
+            _vwp = _vw_perf.setdefault(_vw_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _vw_bkt})
+            _vwp["total"] = _vwp.get("total", 0) + 1
+            _vwp["total_pnl"] = round(_vwp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _vwp["wins"] = _vwp.get("wins", 0) + 1
+            else: _vwp["losses"] = _vwp.get("losses", 0) + 1
+            if _vwp["total"] > 0:
+                _vwp["win_rate"] = round(_vwp["wins"] / _vwp["total"] * 100, 1)
+                _vwp["avg_pnl"]  = round(_vwp["total_pnl"] / _vwp["total"], 2)
         except Exception:
             pass
 
@@ -10809,6 +10857,37 @@ def run():
             if _loser_re and _loser_re["win_rate"] < 40:
                 _learn_log.append(f"Loser re-entries failing ({_loser_re['win_rate']:.0f}% WR) — cooldown is correct behavior")
 
+        # ── 39. News Catalyst Urgency Neuron: high-urgency catalyst vs outcome ────
+        _nu_raw = tlog.get("urgency_perf", {})
+        _nu_insights = []
+        for _nubk, _nud in _nu_raw.items():
+            if _nud.get("total", 0) >= 3:
+                _nu_insights.append({"bucket": _nubk, "win_rate": _nud.get("win_rate", 50),
+                                     "avg_pnl": _nud.get("avg_pnl", 0), "total": _nud.get("total", 0)})
+        if _nu_insights:
+            _nu_s = sorted(_nu_insights, key=lambda x: -x["win_rate"])
+            _nu_sum = " | ".join(f"urgency_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _nu_s)
+            _learn_log.append(f"Catalyst urgency WRs: {_nu_sum}")
+            _high_urg = next((s for s in _nu_insights if s["bucket"] == "high"), None)
+            if _high_urg and _high_urg["win_rate"] >= 65:
+                _learn_log.append(f"High-urgency catalysts producing {_high_urg['win_rate']:.0f}% WR — AI urgency signal validated")
+
+        # ── 40. VWAP Position Neuron: above/below VWAP at entry ───────────────
+        _vw_raw = tlog.get("vwap_perf", {})
+        _vw_insights = []
+        for _vwbk, _vwd in _vw_raw.items():
+            if _vwd.get("total", 0) >= 3:
+                _vw_insights.append({"bucket": _vwbk, "win_rate": _vwd.get("win_rate", 50),
+                                     "avg_pnl": _vwd.get("avg_pnl", 0), "total": _vwd.get("total", 0)})
+        if _vw_insights:
+            _vw_s = sorted(_vw_insights, key=lambda x: -x["win_rate"])
+            _vw_sum = " | ".join(f"VWAP_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _vw_s)
+            _learn_log.append(f"VWAP position WRs: {_vw_sum}")
+            _above_vw = next((s for s in _vw_insights if s["bucket"] == "above"), None)
+            _below_vw = next((s for s in _vw_insights if s["bucket"] == "below"), None)
+            if _above_vw and _below_vw and (_above_vw["win_rate"] - _below_vw["win_rate"]) >= 15:
+                _learn_log.append(f"Above-VWAP entries outperform by {_above_vw['win_rate']-_below_vw['win_rate']:.0f}pts — VWAP as key institutional filter confirmed")
+
         # ── 37. MACD State Neuron: MACD phase at entry vs outcome ─────────────────
         _mc_raw = tlog.get("macd_state_perf", {})
         _mc_insights = []
@@ -11089,6 +11168,8 @@ def run():
             "rs_rating_perf":       _rs_insights,           # IBD RS Rating bracket vs outcome
             "macd_state_perf":      _mc_insights,           # MACD state at entry vs outcome
             "squeeze_perf":         _sq_insights,           # TTM squeeze breakout vs normal
+            "urgency_perf":         _nu_insights,           # news catalyst urgency vs outcome
+            "vwap_perf":            _vw_insights,           # VWAP position at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),

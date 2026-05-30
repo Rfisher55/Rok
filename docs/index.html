@@ -54134,6 +54134,55 @@ function _renderIntelReport(el, intel) {
           ${mcHtml}${sqHtml}
         </div>`;
       })()}
+      ${(() => {
+        // ── News Urgency + VWAP Position dual panel ───────────────────────────
+        const nu = lp.urgency_perf || [];
+        const vw = lp.vwap_perf || [];
+        if (!nu.length && !vw.length) return '';
+        const NU_ORDER = ['high','medium','low'];
+        const NU_ICONS = {high:'🔥',medium:'📰',low:'📄'};
+        const NU_BG = {high:'rgba(239,83,80,.07)',medium:'rgba(255,213,79,.06)',low:'rgba(255,255,255,.03)'};
+        const nuMap = {};
+        nu.forEach(s => nuMap[s.bucket] = s);
+        const nuCells = NU_ORDER.map(bkt => {
+          const s = nuMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:8px">${NU_ICONS[bkt]||''}</div><div style="font-size:5px;color:#333">${bkt} urgency</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${NU_BG[bkt]||'rgba(0,0,0,.2)'};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
+            <div style="font-size:8px">${NU_ICONS[bkt]||''}</div>
+            <div style="font-size:5.5px;color:#ccc;font-weight:700">${bkt.charAt(0).toUpperCase()+bkt.slice(1)} Urgency</div>
+            <div style="font-size:10px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const VW_ORDER = ['above','at_vwap','below'];
+        const VW_ICONS = {above:'📈',at_vwap:'⚖️',below:'📉'};
+        const VW_BG = {above:'rgba(0,230,118,.07)',at_vwap:'rgba(255,255,255,.04)',below:'rgba(239,83,80,.07)'};
+        const vwMap = {};
+        vw.forEach(s => vwMap[s.bucket] = s);
+        const vwCells = VW_ORDER.map(bkt => {
+          const s = vwMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:8px">${VW_ICONS[bkt]||''}</div><div style="font-size:5px;color:#333">${bkt.replace('_',' ')}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${VW_BG[bkt]||'rgba(0,0,0,.2)'};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
+            <div style="font-size:8px">${VW_ICONS[bkt]||''}</div>
+            <div style="font-size:5.5px;color:#ccc;font-weight:700">${bkt.replace('_',' ').charAt(0).toUpperCase()+bkt.replace('_',' ').slice(1)}</div>
+            <div style="font-size:10px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const nuHtml = nu.length?`<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#ef9a9a;font-weight:700;margin-bottom:.1rem">🔥 NEWS CATALYST URGENCY: does breaking news urgency predict outcome?</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem">${nuCells}</div>
+        </div>`:'';
+        const vwHtml = vw.length?`<div>
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">📊 VWAP POSITION: above/below VWAP at entry vs outcome</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.2rem">${vwCells}</div>
+        </div>`:'';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${nuHtml}${vwHtml}
+        </div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}
