@@ -56408,6 +56408,19 @@ async function renderPerfChart() {
         ${data.scan_universe ? `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:12px;font-weight:800;color:#ccc">${data.scan_universe}</div></div>` : ''}
       </div>
 
+      <!-- Recovery mode alert -->
+      ${data.recovery_mode ? `<div style="margin-bottom:.5rem;padding:.4rem .7rem;background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.35);border-radius:8px;display:flex;align-items:center;gap:.5rem">
+        <span style="font-size:10px">⚠️</span>
+        <span style="font-size:9px;color:#ef5350;font-weight:700">RECOVERY MODE — Bot is cutting position sizes 40% until win rate recovers. Stay patient.</span>
+      </div>` : ''}
+
+      <!-- N101 Sector rotation flip alert -->
+      ${(data.rotation_flip_sectors||[]).length > 0 ? `<div style="margin-bottom:.5rem;padding:.4rem .7rem;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.25);border-radius:8px;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+        <span style="font-size:9px;color:#00ff88;font-weight:700;flex-shrink:0">↗ SECTOR FLIP:</span>
+        ${(data.rotation_flip_sectors).map(s => `<span style="font-size:8px;padding:2px 7px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);border-radius:12px;color:#00e676">${s}</span>`).join('')}
+        <span style="font-size:8px;color:#3a7a5a;margin-left:auto">Lagging → Leading this week</span>
+      </div>` : ''}
+
       <!-- Equity curve chart -->
       ${showChart ? `<div style="position:relative;height:115px;margin:0 -.1rem .55rem"><canvas id="perf-equity-chart"></canvas></div>` :
         `<div style="height:40px;display:flex;align-items:center;justify-content:center;color:#2a3a5a;font-size:.7rem;margin-bottom:.4rem">Equity curve builds after first market-hours run</div>`}

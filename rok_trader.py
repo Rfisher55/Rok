@@ -2187,6 +2187,15 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             _track("eg_tier_perf",        "eg_tier",              "negative")     # N98
             _track("st_gap_perf",         "st_gap_tier",          "no_st")        # N99
             _track("premium_tier_perf",   "premium_tier",         "weak")         # N100
+            # N101: Sector rotation flip — did entries during sector flips outperform?
+            _n101_state = "flip" if (_buy_ref and _buy_ref.get("rotation_flip_entry")) else "no_flip"
+            _n101_perf  = tlog.setdefault("rotation_flip_perf", {})
+            _n101p = _n101_perf.setdefault(_n101_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n101_state})
+            _n101p["total"] += 1; _n101p["total_pnl"] = round(_n101p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n101p["wins"] += 1
+            else:        _n101p["losses"] += 1
+            _n101p["win_rate"] = round(_n101p["wins"] / _n101p["total"] * 100, 1)
+            _n101p["avg_pnl"]  = round(_n101p["total_pnl"] / _n101p["total"], 2)
         except Exception:
             pass
 
@@ -10283,6 +10292,36 @@ def run():
     if _win_streak_5:
         logger.info(f"WIN STREAK: last 5 trades all won ({[round(p,1) for p in _last5_pnl]}) — bot in sync with market")
 
+    # ── Recovery Mode Neuron: protect capital when bot is losing AND in drawdown ──
+    # When both signals fire simultaneously the bot is clearly out of sync.
+    # Response: reduce all new position sizes by 40% and require 1 more signal before buying.
+    _recent_wr_now = float(_learned.get("recent_wr", 0.5) or 0.5)
+    _recovery_mode = (
+        _recent_wr_now < 0.40 and drawdown_pct >= 5.0
+        and len(_last5_pnl) >= 5 and sum(1 for p in _last5_pnl if p < 0) >= 4
+    )
+    if _recovery_mode:
+        logger.info(
+            f"RECOVERY MODE ACTIVE: 20T win_rate={_recent_wr_now:.0%} drawdown={drawdown_pct:.1f}%"
+            f" last5={[round(p,1) for p in _last5_pnl]} — sizing cut 40%, threshold +5"
+        )
+    tlog["recovery_mode"] = _recovery_mode
+
+    # ── Sector Rotation Flip Detector (N101) ─────────────────────────────────
+    # Identifies sectors that flipped from lagging → leading this week.
+    # "From worst to first" is the highest-conviction entry timing signal.
+    _prior_sec_trends = tlog.get("sector_etf_trends", {})
+    _rotation_flip_sectors: set[str] = set()
+    for _rsec, _rdata in sector_etf_trends.items():
+        _prior_chg5 = _prior_sec_trends.get(_rsec, {}).get("chg5d", 0) or 0
+        _cur_chg5   = _rdata.get("chg5d", 0) or 0
+        _flip_delta = _cur_chg5 - _prior_chg5
+        # Sector went from negative or flat to clearly positive (acceleration ≥ 2%)
+        if _prior_chg5 < 0.5 and _cur_chg5 > 1.5 and _flip_delta >= 2.0:
+            _rotation_flip_sectors.add(_rsec)
+    if _rotation_flip_sectors:
+        logger.info(f"SECTOR ROTATION FLIP (N101): {sorted(_rotation_flip_sectors)} — score boost for stocks in these sectors")
+
     # Portfolio beta estimation: estimate aggregate market exposure of open positions
     # Uses 63-day RS vs SPY as a beta proxy (positively correlated with actual beta)
     # If portfolio beta > 1.5 we're overexposed to market risk — raise buying threshold
@@ -10368,6 +10407,11 @@ def run():
     if _vix_spike:
         _eff_min_score += 8
         logger.info(f"VIX spike guard active — raising threshold to {_eff_min_score}")
+
+    # Recovery mode guard: bot in losing streak + drawdown — raise threshold further
+    if _recovery_mode:
+        _eff_min_score += 5
+        logger.info(f"Recovery mode guard — raising threshold by 5 → {_eff_min_score}")
 
     # Distribution Day Guard (IBD method): institutional selling pressure → raise bar
     # 4+ distribution days in 25 sessions = heavy selling; demand higher-conviction setups
@@ -10675,6 +10719,8 @@ def run():
             pre_earn_adj   = 12 if tk in pre_earn_cands else 0
             mean_rev_adj   = 10 if tk in mean_rev_cands else 0
             breakout_adj   = 15 if tk in breakout_52w_cands else 0
+            # N101: Sector rotation flip bonus — "from worst to first" timing signal
+            rotation_flip_adj = 10 if sec in _rotation_flip_sectors else 0
             # ── Learned Pattern Bonus: use neuron data to adjust score ───────────
             _learned_bonus = 0
             try:
@@ -10713,7 +10759,7 @@ def run():
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
-                                             + breakout_adj + _learned_bonus)
+                                             + breakout_adj + _learned_bonus + rotation_flip_adj)
             # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
             _grade_thresh = _eff_min_score - 5 if _grade_now == "A+" else _eff_min_score
@@ -10734,8 +10780,9 @@ def run():
                 if persist_adj:    extras.append(f"persistent×{_curr_persist.get(tk,0)}")
                 if earnings_adj:   extras.append("earnings-beat")
                 if pre_earn_adj:   extras.append("pre-earnings")
-                if mean_rev_adj:   extras.append("mean-rev")
-                if breakout_adj:   extras.append("52W-breakout")
+                if mean_rev_adj:        extras.append("mean-rev")
+                if breakout_adj:        extras.append("52W-breakout")
+                if rotation_flip_adj:   extras.append("ROT-FLIP")
                 if live.get(tk, {}).get("cup_handle"):    extras.append("C&H")
                 if live.get(tk, {}).get("mom_accel"):     extras.append("accel")
                 if live.get(tk, {}).get("higher_lows"):    extras.append("HL↑")
@@ -11191,6 +11238,23 @@ def run():
                         notional = min(notional * 1.08, portfolio_val * MAX_POSITION_PCT * 1.10)
                         logger.debug(f"Win streak(3) sizing: {tk} +8%")
 
+                    # ── Sector Concentration Sizing Neuron ────────────────────────────
+                    # Reduce position size when we already hold too many stocks in same sector.
+                    # Prevents over-concentration: losing 3 tech stocks in same crash hurts 3x.
+                    _sec_held_count = sector_counts.get(sec, 0)
+                    if _sec_held_count >= 2:
+                        notional = round(notional * 0.68, 2)
+                        logger.info(f"Sector concentration ({sec}: {_sec_held_count} held) — notional -32% for {tk}")
+                    elif _sec_held_count >= 1:
+                        notional = round(notional * 0.84, 2)
+                        logger.debug(f"Sector concentration ({sec}: 1 held) — notional -16% for {tk}")
+
+                    # ── Recovery Mode Sizing Neuron ───────────────────────────────────
+                    # Bot is losing AND in drawdown — protect remaining capital aggressively.
+                    if _recovery_mode:
+                        notional = round(notional * 0.60, 2)
+                        logger.info(f"Recovery mode sizing: {tk} notional cut 40%")
+
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
                         continue
@@ -11335,6 +11399,8 @@ def run():
                         _full_notional = notional
                     # Inject extra context into signals for learning neurons
                     _buy_signals_merged = dict(live.get(tk, {}))
+                    # N101: tag whether this entry was triggered during a sector rotation flip
+                    _buy_signals_merged["rotation_flip_entry"] = sec in _rotation_flip_sectors
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -12606,8 +12672,9 @@ def run():
     tlog["avg_win_pct"]     = _avg_win
     tlog["avg_loss_pct"]    = _avg_loss
     tlog["portfolio_heat"]  = round(_portfolio_heat, 2)
-    tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
-    tlog["sector_etf_trends"]  = sector_etf_trends  # {sector: {bullish, chg5d, chg1d, above_ema20}}
+    tlog["sector_rotation"]         = sector_adjs          # {sector: adj_score} for dashboard heatmap
+    tlog["sector_etf_trends"]       = sector_etf_trends    # {sector: {bullish, chg5d, chg1d, above_ema20}}
+    tlog["rotation_flip_sectors"]   = sorted(_rotation_flip_sectors)  # N101: sectors flipping worst→best
     # Store full sector rotation detail (1d, 5d, 20d, 63d per sector) for heatmap
     try:
         import builtins as _bt
@@ -13989,6 +14056,7 @@ def run():
         _hm_insights  = _tune_binary("hammer_perf",        "hammer",      "none",         "N95 Hammer Candle")
         _ch_insights  = _tune_binary("cup_handle_perf",    "at_pivot",    "none",         "N96 Cup+Handle")
         _dbn_insights = _tune_binary("dbn_perf",           "neckline_break","below_neck", "N97 DB Neckline")
+        _rf_insights  = _tune_binary("rotation_flip_perf", "flip",          "no_flip",   "N101 Sector Rot Flip")
 
         # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
         _eg_raw = tlog.get("eg_tier_perf", {})
@@ -14138,6 +14206,7 @@ def run():
             "hammer_perf":          _hm_insights,            # hammer at support vs outcome
             "cup_handle_perf":      _ch_insights,            # cup+handle at pivot vs outcome
             "dbn_perf":             _dbn_insights,           # double bottom neckline break vs outcome
+            "rotation_flip_perf":   _rf_insights,            # N101: sector rotation flip entry vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -14240,7 +14309,7 @@ def run():
             "sq_potential_perf","news_count_perf","news_accel_perf","true_alpha_perf",
             "pivot_support_perf","vcp_perf","pocket_pivot_perf","morning_star_perf",
             "tws_perf","beng_perf","hammer_perf","cup_handle_perf","dbn_perf",
-            "eg_tier_perf","st_gap_perf","premium_tier_perf",
+            "eg_tier_perf","st_gap_perf","premium_tier_perf","rotation_flip_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -14248,7 +14317,7 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 60               # total tracked neuron dimensions
+        tlog["neurons_total"]     = 61               # total tracked neuron dimensions (N101 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
         logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/60 neurons active")
     except Exception as _ce:
