@@ -55806,6 +55806,46 @@ window.renderSectorRotation = renderSectorRotation;
         </div>`;
       }
 
+      // Per-sector trade performance
+      const secPerf = data.sector_performance || {};
+      const secPerfEntries = Object.entries(secPerf).filter(([,v]) => (v.total||0) >= 2).sort((a,b) => (b[1].avg_pnl||0) - (a[1].avg_pnl||0));
+      if (secPerfEntries.length > 0) {
+        const secHtml = secPerfEntries.slice(0, 6).map(([sec, v]) => {
+          const col = (v.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef9a9a';
+          const wrCol = (v.win_rate||0) >= 60 ? '#00ff88' : (v.win_rate||0) >= 45 ? '#ffd54f' : '#ef5350';
+          return `<div style="display:flex;align-items:center;gap:.35rem;padding:.15rem .3rem;background:rgba(255,255,255,.02);border-radius:4px">
+            <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600;text-transform:capitalize">${sec}</span>
+            <span style="font-size:8px;font-weight:800;color:${wrCol};min-width:24px">${v.win_rate||0}%</span>
+            <span style="font-size:7px;color:${col};min-width:30px">${(v.avg_pnl||0)>=0?'+':''}${(v.avg_pnl||0).toFixed(1)}%</span>
+            <span style="font-size:6.5px;color:#3a5a8a">${v.total||0}t</span>
+          </div>`;
+        }).join('');
+        html += `<div style="margin-bottom:.6rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector PnL Breakdown</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${secHtml}</div>
+        </div>`;
+      }
+
+      // Per-catalyst-type trade performance
+      const catPerf = data.catalyst_performance || {};
+      const catPerfEntries = Object.entries(catPerf).filter(([k,v]) => k !== 'none' && (v.total||0) >= 2).sort((a,b) => (b[1].avg_pnl||0) - (a[1].avg_pnl||0));
+      if (catPerfEntries.length > 0) {
+        const catHtml = catPerfEntries.slice(0, 5).map(([cat, v]) => {
+          const col = (v.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef9a9a';
+          const wrCol = (v.win_rate||0) >= 60 ? '#00ff88' : (v.win_rate||0) >= 45 ? '#ffd54f' : '#ef5350';
+          return `<div style="display:flex;align-items:center;gap:.35rem;padding:.15rem .3rem;background:rgba(255,255,255,.02);border-radius:4px">
+            <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600;text-transform:capitalize">${cat}</span>
+            <span style="font-size:8px;font-weight:800;color:${wrCol};min-width:24px">${v.win_rate||0}%</span>
+            <span style="font-size:7px;color:${col};min-width:30px">${(v.avg_pnl||0)>=0?'+':''}${(v.avg_pnl||0).toFixed(1)}%</span>
+            <span style="font-size:6.5px;color:#3a5a8a">${v.total||0}t</span>
+          </div>`;
+        }).join('');
+        html += `<div style="margin-bottom:.6rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Catalyst Type PnL</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${catHtml}</div>
+        </div>`;
+      }
+
       // Last scan candidates (even when no trades executed)
       const topScan = data.last_scan_top || [];
       const rejected = data.last_scan_rejected || [];

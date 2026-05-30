@@ -287,6 +287,11 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     else:
         e["qty"] = float(amount)
 
+    # Store catalyst type and sector at entry for performance attribution
+    if action == "BUY" and signals:
+        e["catalyst_type"] = signals.get("catalyst_type", "none")
+        e["sector"] = SECTOR_MAP.get(sym, "other")
+
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
         _SIGNAL_KEYS = [
@@ -355,6 +360,40 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             for sig, v in perf_all.items()
             if v.get("total", 0) >= 3  # only trust with ≥3 samples
         }
+
+    # Per-sector performance tracking (updated on every close)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        _sector_key = SECTOR_MAP.get(sym, "other")
+        _sec_perf = tlog.setdefault("sector_performance", {})
+        _sp = _sec_perf.setdefault(_sector_key, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+        _sp["total"] = _sp.get("total", 0) + 1
+        _sp["total_pnl"] = round(_sp.get("total_pnl", 0.0) + pnl, 2)
+        if pnl > 0:
+            _sp["wins"] = _sp.get("wins", 0) + 1
+        else:
+            _sp["losses"] = _sp.get("losses", 0) + 1
+        if _sp["total"] > 0:
+            _sp["win_rate"] = round(_sp["wins"] / _sp["total"] * 100, 1)
+            _sp["avg_pnl"]  = round(_sp["total_pnl"] / _sp["total"], 2)
+
+    # Catalyst-type performance tracking
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        # Find matching BUY entry with catalyst info
+        for t in tlog.get("trades", []):
+            if t.get("action") == "BUY" and t.get("ticker") == sym and t.get("catalyst_type"):
+                _cat_key = t["catalyst_type"]
+                _cat_perf = tlog.setdefault("catalyst_performance", {})
+                _cp = _cat_perf.setdefault(_cat_key, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _cp["total"] = _cp.get("total", 0) + 1
+                _cp["total_pnl"] = round(_cp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0:
+                    _cp["wins"] = _cp.get("wins", 0) + 1
+                else:
+                    _cp["losses"] = _cp.get("losses", 0) + 1
+                if _cp["total"] > 0:
+                    _cp["win_rate"] = round(_cp["wins"] / _cp["total"] * 100, 1)
+                    _cp["avg_pnl"]  = round(_cp["total_pnl"] / _cp["total"], 2)
+                break
 
 
 # ── Technical indicators ──────────────────────────────────────────────────────
