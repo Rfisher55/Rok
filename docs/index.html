@@ -56364,7 +56364,7 @@ window.renderSectorRotation = renderSectorRotation;
             <div style="position:relative;display:flex;align-items:center;gap:.6rem">
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
-                <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+                <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}${_todayA && Math.abs(_todayA.day_chg_usd||0) >= 1 ? ` · <span style="color:${(_todayA.day_chg_usd||0)>=0?'#00e676':'#ef5350'};font-weight:800">TODAY ${(_todayA.day_chg_pct||0)>=0?'+':''}${(_todayA.day_chg_pct||0).toFixed(1)}% (${(_todayA.day_chg_usd||0)>=0?'+':''}$${Math.abs(_todayA.day_chg_usd||0).toFixed(0)})</span>` : ''}</div>
                 ${(lsRMult||lsDaysHeld||lsMAE) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;align-items:center">${lsRMult}${lsDaysHeld}${lsMAE}</div>` : ''}
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsRsSec||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD||lsW52) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsRsSec}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${lsW52}${earnD}</div>` : ''}
                 ${(distStopHtml||lsTrail||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${lsTrail}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
@@ -56607,6 +56607,50 @@ window.renderSectorRotation = renderSectorRotation;
         html += `<div style="margin-bottom:.6rem">
           <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Catalyst Type PnL</div>
           <div style="display:flex;flex-direction:column;gap:2px">${catHtml}</div>
+        </div>`;
+      }
+
+      // Regime-based performance breakdown
+      const regPerf = data.regime_performance || {};
+      const regPerfEntries = Object.entries(regPerf).filter(([,v]) => (v.total||0) >= 2).sort((a,b) => (b[1].avg_pnl||0) - (a[1].avg_pnl||0));
+      if (regPerfEntries.length > 0) {
+        const regHtml = regPerfEntries.map(([reg, v]) => {
+          const col = (v.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef9a9a';
+          const wrCol = (v.win_rate||0) >= 60 ? '#00ff88' : (v.win_rate||0) >= 45 ? '#ffd54f' : '#ef5350';
+          const regLabel = reg.replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase());
+          return `<div style="display:flex;align-items:center;gap:.35rem;padding:.15rem .3rem;background:rgba(255,255,255,.02);border-radius:4px">
+            <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600">${regLabel}</span>
+            <span style="font-size:8px;font-weight:800;color:${wrCol};min-width:24px">${v.win_rate||0}%</span>
+            <span style="font-size:7px;color:${col};min-width:30px">${(v.avg_pnl||0)>=0?'+':''}${(v.avg_pnl||0).toFixed(1)}%</span>
+            <span style="font-size:6.5px;color:#3a5a8a">${v.total||0}t</span>
+          </div>`;
+        }).join('');
+        html += `<div style="margin-bottom:.6rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Performance by Market Regime</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${regHtml}</div>
+        </div>`;
+      }
+
+      // Hold time performance breakdown
+      const htPerf = data.hold_time_performance || {};
+      const htOrder = ['0-2d','3-7d','8-14d','15d+'];
+      const htEntries = htOrder.filter(k => htPerf[k] && (htPerf[k].total||0) >= 2).map(k => [k, htPerf[k]]);
+      if (htEntries.length > 0) {
+        const htHtml = htEntries.map(([bucket, v]) => {
+          const col = (v.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef9a9a';
+          const wrCol = (v.win_rate||0) >= 60 ? '#00ff88' : (v.win_rate||0) >= 45 ? '#ffd54f' : '#ef5350';
+          const barW = Math.min(100, v.win_rate || 0);
+          return `<div style="display:flex;align-items:center;gap:.35rem;padding:.15rem .3rem;background:rgba(255,255,255,.02);border-radius:4px">
+            <span style="font-size:7px;color:#4a6fa5;min-width:38px;font-weight:700">${bucket}</span>
+            <div style="flex:1;height:3px;background:rgba(255,255,255,.06);border-radius:2px;max-width:60px"><div style="width:${barW}%;height:100%;background:${wrCol};border-radius:2px"></div></div>
+            <span style="font-size:8px;font-weight:800;color:${wrCol};min-width:24px">${v.win_rate||0}%</span>
+            <span style="font-size:7px;color:${col};min-width:30px">${(v.avg_pnl||0)>=0?'+':''}${(v.avg_pnl||0).toFixed(1)}%</span>
+            <span style="font-size:6.5px;color:#3a5a8a">${v.total||0}t</span>
+          </div>`;
+        }).join('');
+        html += `<div style="margin-bottom:.6rem">
+          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Performance by Hold Duration</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${htHtml}</div>
         </div>`;
       }
 
@@ -56990,7 +57034,17 @@ window.renderSectorRotation = renderSectorRotation;
             ⚡ Near stop: ${nearStop.map(p => '$'+p.ticker+' ('+p.pnl_pct.toFixed(1)+'%)').join(' · ')}
           </div>`;
         }
-        html += `<div style="font-size:8px;color:${totalUnrealCol};font-weight:700;margin-bottom:.4rem">Unrealized P&L: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</div>`;
+        {
+          const todayTotal = (data.daily_pnl_attribution || []).reduce((s,a) => s + (a.day_chg_usd||0), 0);
+          const todayCol = todayTotal >= 0 ? '#00e676' : '#ef5350';
+          const todayPctAvg = (data.daily_pnl_attribution || []).length > 0
+            ? (data.daily_pnl_attribution.reduce((s,a) => s + (a.day_chg_pct||0), 0) / data.daily_pnl_attribution.length)
+            : 0;
+          html += `<div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.4rem;flex-wrap:wrap">
+            <span style="font-size:8px;color:${totalUnrealCol};font-weight:700">Total Unrealized: ${totalUnreal>=0?'+':''}$${Math.abs(totalUnreal).toFixed(0)}</span>
+            ${Math.abs(todayTotal) >= 1 ? `<span style="font-size:8px;font-weight:800;color:${todayCol};background:${todayCol}18;border:1px solid ${todayCol}33;border-radius:10px;padding:1px 7px">Today: ${todayTotal>=0?'+':''}$${Math.abs(todayTotal).toFixed(0)} (${todayPctAvg>=0?'+':''}${todayPctAvg.toFixed(1)}% avg)</span>` : ''}
+          </div>`;
+        }
 
         // Daily Action Plan — urgent items and today's top opportunity
         {
@@ -57056,6 +57110,9 @@ window.renderSectorRotation = renderSectorRotation;
         }
 
         html += `<div style="display:flex;flex-direction:column;gap:.4rem">`;
+        // Build today's P&L lookup by ticker from daily_pnl_attribution
+        const _todayPnlMap = {};
+        (data.daily_pnl_attribution || []).forEach(a => { if (a.ticker) _todayPnlMap[a.ticker] = a; });
         positions.forEach(p => {
           const pct = p.pnl_pct || 0;
           const pnlColor = pct >= 0 ? '#00ff88' : '#ef5350';
@@ -57064,6 +57121,8 @@ window.renderSectorRotation = renderSectorRotation;
           const barCol = pct >= 0 ? 'rgba(0,255,136,.2)' : 'rgba(255,34,85,.2)';
           const sideLbl = p.side === 'short' ? 'SHORT' : 'LONG';
           const sideCol = p.side === 'short' ? '#ef5350' : '#00ff88';
+          // Today's P&L for this position
+          const _todayA = _todayPnlMap[p.ticker] || null;
           // Progress between trail stop and target
           const cost = p.cost || 0;
           const stop = p.trail_stop_price || p.stop_price || (cost * 0.93);

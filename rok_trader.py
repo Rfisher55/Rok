@@ -291,6 +291,9 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action == "BUY" and signals:
         e["catalyst_type"] = signals.get("catalyst_type", "none")
         e["sector"] = SECTOR_MAP.get(sym, "other")
+        # Store current regime at entry so we can analyze regime-based performance later
+        _cur_regime = tlog.get("regime", {})
+        e["regime"] = _cur_regime.get("regime", "unknown") if isinstance(_cur_regime, dict) else str(_cur_regime)[:20]
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -394,6 +397,55 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                     _cp["win_rate"] = round(_cp["wins"] / _cp["total"] * 100, 1)
                     _cp["avg_pnl"]  = round(_cp["total_pnl"] / _cp["total"], 2)
                 break
+
+    # Regime-based performance tracking (bull/bear/choppy performance breakdown)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            # Look up the regime at time of entry from the trade record
+            _buy_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _reg_key = "unknown"
+            if _buy_entry:
+                _reg_key = _buy_entry.get("regime", "unknown")
+            else:
+                # Use current regime as fallback
+                _cur_reg = tlog.get("regime", {})
+                _reg_key = _cur_reg if isinstance(_cur_reg, str) else (_cur_reg.get("regime", "unknown") if isinstance(_cur_reg, dict) else "unknown")
+            _reg_perf = tlog.setdefault("regime_performance", {})
+            _rp = _reg_perf.setdefault(str(_reg_key), {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _rp["total"] = _rp.get("total", 0) + 1
+            _rp["total_pnl"] = round(_rp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0:
+                _rp["wins"] = _rp.get("wins", 0) + 1
+            else:
+                _rp["losses"] = _rp.get("losses", 0) + 1
+            if _rp["total"] > 0:
+                _rp["win_rate"] = round(_rp["wins"] / _rp["total"] * 100, 1)
+                _rp["avg_pnl"]  = round(_rp["total_pnl"] / _rp["total"], 2)
+        except Exception:
+            pass
+
+    # Hold time performance tracking
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _buy_t and _buy_t.get("time"):
+                from datetime import datetime as _hdt, timezone as _htz
+                _entry_t = _hdt.fromisoformat(_buy_t["time"].replace("Z", "+00:00"))
+                _hold_d  = max(0, int((_entry_t.utcnow().replace(tzinfo=_htz.utc) - _entry_t).total_seconds() / 86400))
+                _ht_bucket = "0-2d" if _hold_d <= 2 else ("3-7d" if _hold_d <= 7 else ("8-14d" if _hold_d <= 14 else "15d+"))
+                _ht_perf = tlog.setdefault("hold_time_performance", {})
+                _htp = _ht_perf.setdefault(_ht_bucket, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _htp["total"] = _htp.get("total", 0) + 1
+                _htp["total_pnl"] = round(_htp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0:
+                    _htp["wins"] = _htp.get("wins", 0) + 1
+                else:
+                    _htp["losses"] = _htp.get("losses", 0) + 1
+                if _htp["total"] > 0:
+                    _htp["win_rate"] = round(_htp["wins"] / _htp["total"] * 100, 1)
+                    _htp["avg_pnl"]  = round(_htp["total_pnl"] / _htp["total"], 2)
+        except Exception:
+            pass
 
 
 # ── Technical indicators ──────────────────────────────────────────────────────
