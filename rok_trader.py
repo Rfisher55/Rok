@@ -2183,15 +2183,15 @@ SECTOR_ETFS = {
 
 def sector_rotation() -> dict:
     """
-    Rank sectors by 1-day, 5-day, and 20-day ETF performance.
-    Returns {sector: adj_score} where adj_score is -12 to +12.
-    3-timeframe momentum: recent (1d) + short-term (5d) + medium-term (20d).
+    Rank sectors by 1-day, 5-day, 20-day, and 63-day ETF performance.
+    Returns {sector: adj_score} where adj_score is -16 to +16.
+    4-timeframe momentum: recent (1d) + short-term (5d) + medium-term (20d) + quarterly (63d).
     Hot sectors get a bonus; cold sectors get a penalty.
     """
     etfs = list(SECTOR_ETFS.values())
     try:
         kw  = dict(group_by="ticker", auto_adjust=True, progress=False)
-        raw = yf.download(" ".join(etfs), period="30d", interval="1d", **kw)
+        raw = yf.download(" ".join(etfs), period="90d", interval="1d", **kw)
         adj = {}
         detail = {}
         for sec, etf in SECTOR_ETFS.items():
@@ -2207,6 +2207,7 @@ def sector_rotation() -> dict:
                 chg1d  = (closes[-1] - closes[-2]) / closes[-2] * 100
                 chg5d  = (closes[-1] - closes[-5]) / closes[-5] * 100 if len(closes) >= 5  else 0
                 chg20d = (closes[-1] - closes[-20]) / closes[-20] * 100 if len(closes) >= 20 else 0
+                chg63d = (closes[-1] - closes[-63]) / closes[-63] * 100 if len(closes) >= 63 else 0
                 sc = 0
                 # 1-day momentum (weight: ±4)
                 if   chg1d > 2.0:  sc += 4
@@ -2229,8 +2230,16 @@ def sector_rotation() -> dict:
                 elif chg20d < -8.0: sc -= 4
                 elif chg20d < -3.0: sc -= 2
                 elif chg20d < -1.0: sc -= 1
-                adj[sec]    = max(-12, min(12, sc))
-                detail[sec] = {"1d": round(chg1d,2), "5d": round(chg5d,2), "20d": round(chg20d,2)}
+                # 63-day quarterly trend (weight: ±4) — persistent institutional money flows
+                if   chg63d > 15.0: sc += 4   # top-quartile sector over 3 months
+                elif chg63d >  8.0: sc += 2
+                elif chg63d >  3.0: sc += 1
+                elif chg63d < -15.0: sc -= 4  # persistent underperformance
+                elif chg63d <  -8.0: sc -= 2
+                elif chg63d <  -3.0: sc -= 1
+                adj[sec]    = max(-16, min(16, sc))
+                detail[sec] = {"1d": round(chg1d,2), "5d": round(chg5d,2),
+                               "20d": round(chg20d,2), "63d": round(chg63d,2)}
             except Exception:
                 adj[sec] = 0
         hot  = sorted(adj.items(), key=lambda x: -x[1])[:3]
@@ -2245,9 +2254,16 @@ def sector_rotation() -> dict:
             accel = d_info["1d"] - avg_daily_5d
             if accel > 1.5:   # today outpacing the recent average by >1.5% per day
                 accel_sectors.append(sec)
-                adj[sec] = min(12, adj.get(sec, 0) + 2)  # extra boost for accelerating sectors
+                adj[sec] = min(16, adj.get(sec, 0) + 2)  # extra boost for accelerating sectors
         if accel_sectors:
             logger.info(f"Sector acceleration (money flowing in NOW): {', '.join(accel_sectors)}")
+
+        # Store full detail for dashboard sector heatmap
+        try:
+            import builtins
+            builtins._SECTOR_ROTATION_DETAIL = detail
+        except Exception:
+            pass
 
         return adj
     except Exception as e:
@@ -5084,6 +5100,11 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("analyst_price_tgt", 0.0)
                             sig.setdefault("analyst_upside_pct", 0.0)
                             sig.setdefault("atm_iv", 0.0)
+                        # Earnings calendar: pre-earnings drift window (5-20d) is a reliable alpha factor
+                        try:
+                            sig["earnings_days"] = get_earnings_days(tk)
+                        except Exception:
+                            sig.setdefault("earnings_days", None)
                         result[tk] = sig
                 except Exception:
                     pass
@@ -5661,6 +5682,23 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if _up_tgt >= 20:            s += 2
     elif _up_tgt >= 12:          s += 1
     elif _up_tgt < -10:          s -= 2  # trading above consensus = priced for perfection
+
+    # Pre-earnings drift: stocks tend to rise 5-20 days before earnings on anticipation
+    # IBD studies: high-RS stocks in pre-earnings window outperform by 2-3× — one of the
+    # most reliable calendar effects in equities. Window: 5-20 days before report.
+    _earn_days = d.get("earnings_days")
+    if _earn_days is not None and isinstance(_earn_days, (int, float)):
+        if 5 <= _earn_days <= 20:
+            # Classic pre-earnings drift: only reward stocks with positive momentum context
+            if rs_rating >= 70 and roc5 > 0 and (d.get("price_vs_ema200", 0) or 0) > 0:
+                s += 10   # high-RS stock in pre-earnings sweet spot — institutions positioning
+            elif rs_rating >= 55 and roc5 > 0:
+                s += 6    # above-average RS with momentum — moderate drift setup
+            else:
+                s += 3    # mild pre-earnings positioning bonus
+        elif 2 <= _earn_days < 5:
+            # Very close to earnings: binary risk zone — slightly penalize new entries
+            s -= 4  # too close — gap risk exceeds expected drift
 
     # Adaptive scoring: boost/penalize signals based on historical win rates AND avg PnL
     # Uses accumulated signal_performance data to learn which signals actually work
@@ -7147,6 +7185,16 @@ def run():
                             break
                     if _wr_boost > 1.0:
                         notional = min(notional * _wr_boost, portfolio_val * MAX_POSITION_PCT, buying_power * 0.40)
+                    # HIGH-CONVICTION size boost: when score, RS Rating, AND multi-timeframe all align,
+                    # this is the rarest and most reliable setup — deserve a larger position.
+                    # IBD research: stocks with RS≥90 + MTF triple alignment win 70%+ of the time.
+                    _tk_rs_r = d.get("rs_rating", 50) or 50
+                    _is_high_conv = (sc >= 80 and _tk_rs_r >= 80 and d.get("mtf_triple", False)
+                                     and not d.get("hv_expanding", False))
+                    if _is_high_conv:
+                        # Allow up to 15% of portfolio for the highest-conviction setups
+                        notional = min(notional * 1.5, portfolio_val * 0.15, buying_power * 0.45)
+                        logger.info(f"HIGH-CONVICTION boost {tk}: score={sc}, RS={_tk_rs_r}, MTF triple → ${notional:.0f}")
                     # Size up further for strong catalysts or squeeze setups (on top of Kelly)
                     if catalyst and sent >= 5:
                         notional = min(notional * 1.4, portfolio_val * MAX_POSITION_PCT, buying_power * 0.4)
@@ -7729,6 +7777,12 @@ def run():
     tlog["portfolio_heat"]  = round(_portfolio_heat, 2)
     tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
     tlog["sector_etf_trends"]  = sector_etf_trends  # {sector: {bullish, chg5d, chg1d, above_ema20}}
+    # Store full sector rotation detail (1d, 5d, 20d, 63d per sector) for heatmap
+    try:
+        import builtins as _bt
+        tlog["sector_rotation_detail"] = getattr(_bt, "_SECTOR_ROTATION_DETAIL", {})
+    except Exception:
+        tlog.setdefault("sector_rotation_detail", {})
     tlog["portfolio_beta"]     = _port_beta_est      # estimated portfolio beta
     if _gap_data:  # only update if we ran the gap scanner this cycle
         tlog["premarket_gaps"] = _gap_data

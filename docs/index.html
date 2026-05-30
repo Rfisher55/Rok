@@ -54889,24 +54889,61 @@ window.renderSectorRotation = renderSectorRotation;
 
       // Sector rotation heatmap
       const sectorRot = data.sector_rotation || {};
+      const sectorDetail = data.sector_rotation_detail || {};
       const secEntries = Object.entries(sectorRot).sort((a,b) => b[1]-a[1]);
       if (secEntries.length > 0) {
-        const secHtml = secEntries.map(([sec,val]) => {
-          const col = val >= 6 ? '#00ff88' : val >= 3 ? '#4caf50' : val > 0 ? '#388e3c' :
-                      val <= -6 ? '#ef5350' : val <= -3 ? '#e57373' : val < 0 ? '#b71c1c' : '#555';
-          const bg  = val >= 4 ? 'rgba(0,255,136,.12)' : val <= -4 ? 'rgba(255,34,85,.1)' : 'rgba(255,255,255,.03)';
-          const barW = Math.min(Math.abs(val) / 12 * 100, 100);
-          const barCol = val >= 0 ? 'rgba(0,255,136,.25)' : 'rgba(255,34,85,.2)';
-          return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem .4rem;background:${bg};border-radius:5px">
-            <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600">${sec}</span>
-            <div style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px"><div style="width:${barW}%;height:100%;background:${barCol};border-radius:2px;${val<0?'margin-left:auto':''}"></div></div>
-            <span style="font-size:8px;font-weight:800;color:${col};min-width:22px;text-align:right">${val>=0?'+':''}${val}</span>
+        // Helper: color a % return value
+        const secRetCol = (v) => v >= 5 ? '#00ff88' : v >= 2 ? '#69f0ae' : v >= 0.5 ? '#c8e6c9' : v >= 0 ? '#888' : v >= -2 ? '#ffab40' : v >= -5 ? '#ef9a9a' : '#ef5350';
+        const secRetBg  = (v) => v >= 3 ? 'rgba(0,255,136,.12)' : v >= 1 ? 'rgba(0,255,136,.05)' : v <= -3 ? 'rgba(255,34,85,.12)' : v <= -1 ? 'rgba(255,34,85,.05)' : 'transparent';
+        const hasDetail = Object.keys(sectorDetail).length > 0;
+        if (hasDetail) {
+          // Multi-timeframe heatmap: sector × (1d, 5d, 20d, 63d)
+          const hdr = `<div style="display:grid;grid-template-columns:58px 1fr 1fr 1fr 1fr;gap:1px;margin-bottom:2px;padding:0 .3rem">
+            <span style="font-size:5.5px;color:#333"></span>
+            <span style="font-size:6px;color:#4a6fa5;text-align:center;font-weight:700">1D</span>
+            <span style="font-size:6px;color:#4a6fa5;text-align:center;font-weight:700">5D</span>
+            <span style="font-size:6px;color:#4a6fa5;text-align:center;font-weight:700">20D</span>
+            <span style="font-size:6px;color:#4a6fa5;text-align:center;font-weight:700">63D</span>
           </div>`;
-        }).join('');
-        healthEl.innerHTML += `<div style="margin-top:.5rem">
-          <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector Rotation</div>
-          <div style="display:flex;flex-direction:column;gap:2px">${secHtml}</div>
-        </div>`;
+          const rows = secEntries.map(([sec, adjScore]) => {
+            const d = sectorDetail[sec] || {};
+            const d1=d['1d']||0, d5=d['5d']||0, d20=d['20d']||0, d63=d['63d']||0;
+            const rowBg = adjScore >= 6 ? 'rgba(0,255,136,.07)' : adjScore <= -6 ? 'rgba(255,34,85,.06)' : 'rgba(255,255,255,.02)';
+            const secLabel = sec.length > 9 ? sec.slice(0,9) : sec;
+            const scoreCol = adjScore >= 8 ? '#00ff88' : adjScore >= 4 ? '#69f0ae' : adjScore >= 0 ? '#888' : adjScore >= -4 ? '#ffa726' : '#ef5350';
+            return `<div style="display:grid;grid-template-columns:58px 1fr 1fr 1fr 1fr;gap:1px;padding:.2rem .3rem;background:${rowBg};border-radius:4px">
+              <span style="font-size:6.5px;color:#aaa;font-weight:700;white-space:nowrap;overflow:hidden">${secLabel} <span style="color:${scoreCol}">${adjScore>=0?'+':''}${adjScore}</span></span>
+              <div style="background:${secRetBg(d1)};border-radius:2px;text-align:center;padding:1px 0"><span style="font-size:6px;color:${secRetCol(d1)};font-weight:${Math.abs(d1)>=2?'700':'400'}">${d1>=0?'+':''}${d1.toFixed(1)}%</span></div>
+              <div style="background:${secRetBg(d5)};border-radius:2px;text-align:center;padding:1px 0"><span style="font-size:6px;color:${secRetCol(d5)};font-weight:${Math.abs(d5)>=3?'700':'400'}">${d5>=0?'+':''}${d5.toFixed(1)}%</span></div>
+              <div style="background:${secRetBg(d20)};border-radius:2px;text-align:center;padding:1px 0"><span style="font-size:6px;color:${secRetCol(d20)};font-weight:${Math.abs(d20)>=5?'700':'400'}">${d20>=0?'+':''}${d20.toFixed(1)}%</span></div>
+              <div style="background:${secRetBg(d63)};border-radius:2px;text-align:center;padding:1px 0"><span style="font-size:6px;color:${secRetCol(d63)};font-weight:${Math.abs(d63)>=8?'700':'400'}">${d63>=0?'+':''}${d63.toFixed(1)}%</span></div>
+            </div>`;
+          }).join('');
+          healthEl.innerHTML += `<div style="margin-top:.5rem;padding:.4rem .4rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:6px">
+            <div style="font-size:7px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector Rotation Heatmap (1D/5D/20D/63D)</div>
+            ${hdr}
+            <div style="display:flex;flex-direction:column;gap:1.5px">${rows}</div>
+            <div style="font-size:5.5px;color:#333;margin-top:.2rem">Score=momentum adj | Green=outperforming | Amber=weak | Red=avoid</div>
+          </div>`;
+        } else {
+          // Fallback: simple bar chart
+          const secHtml = secEntries.map(([sec,val]) => {
+            const col = val >= 6 ? '#00ff88' : val >= 3 ? '#4caf50' : val > 0 ? '#388e3c' :
+                        val <= -6 ? '#ef5350' : val <= -3 ? '#e57373' : val < 0 ? '#b71c1c' : '#555';
+            const bg  = val >= 4 ? 'rgba(0,255,136,.12)' : val <= -4 ? 'rgba(255,34,85,.1)' : 'rgba(255,255,255,.03)';
+            const barW = Math.min(Math.abs(val) / 16 * 100, 100);
+            const barCol = val >= 0 ? 'rgba(0,255,136,.25)' : 'rgba(255,34,85,.2)';
+            return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem .4rem;background:${bg};border-radius:5px">
+              <span style="font-size:7px;color:#4a6fa5;min-width:55px;font-weight:600">${sec}</span>
+              <div style="flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px"><div style="width:${barW}%;height:100%;background:${barCol};border-radius:2px;${val<0?'margin-left:auto':''}"></div></div>
+              <span style="font-size:8px;font-weight:800;color:${col};min-width:22px;text-align:right">${val>=0?'+':''}${val}</span>
+            </div>`;
+          }).join('');
+          healthEl.innerHTML += `<div style="margin-top:.5rem">
+            <div style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.3rem">Sector Rotation</div>
+            <div style="display:flex;flex-direction:column;gap:2px">${secHtml}</div>
+          </div>`;
+        }
       }
 
       // Sector ETF health heatmap (live ETF data: above EMA20, 1d/5d change)
