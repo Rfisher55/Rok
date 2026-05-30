@@ -59816,6 +59816,27 @@ window.renderSectorRotation = renderSectorRotation;
         }
       }
 
+      // ── Daily P&L Protection Mode ────────────────────────────────────────────
+      {
+        const dpMode = data.daily_protection_mode;
+        const todayUsd = data.today_unrealized_gain_usd || 0;
+        const todayPct = data.today_unrealized_gain_pct || 0;
+        const dpTighten = data.daily_protection_tighten_pct || 0;
+        if (dpMode && positions.length > 0) {
+          const dpCol = dpMode === 'STRONG' ? '#00e676' : dpMode === 'MODERATE' ? '#69f0ae' : '#ffd54f';
+          const dpIcon = dpMode === 'STRONG' ? '🛡' : dpMode === 'MODERATE' ? '✓' : '↑';
+          html += `<div style="margin-bottom:.4rem;padding:.3rem .6rem;background:${dpCol}0d;border:1px solid ${dpCol}44;border-radius:8px;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <span style="font-size:8px;font-weight:900;color:${dpCol}">${dpIcon} PROFIT PROTECTION ${dpMode}</span>
+            <span style="font-size:7px;color:rgba(255,255,255,.5)">Portfolio up ${todayPct>=0?'+':''}${todayPct.toFixed(1)}% today ($${Math.abs(todayUsd).toFixed(0)}) — all stops tightened ${dpTighten}% to lock gains</span>
+          </div>`;
+        } else if (todayUsd !== 0 && positions.length > 0) {
+          const udCol = todayUsd >= 0 ? '#69f0ae' : '#ef9a9a';
+          html += `<div style="margin-bottom:.35rem;font-size:7px;color:#555;display:flex;gap:.5rem">
+            <span>Today unrealized: <span style="color:${udCol};font-weight:700">${todayUsd>=0?'+':''}$${Math.abs(todayUsd).toFixed(0)} (${todayPct>=0?'+':''}${todayPct.toFixed(1)}%)</span></span>
+          </div>`;
+        }
+      }
+
       // ── Sector Concentration Warning ─────────────────────────────────────────
       {
         const sc2 = data.sector_concentration || {};

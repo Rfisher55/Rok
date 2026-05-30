@@ -11233,6 +11233,11 @@ def run():
                 _dyn_trail = max(_dyn_trail * 0.85, _dyn_trail - 1.0)  # tighten 15% in power-hour
             elif _mkt_sess == "close-guard" and _pnl > 0:
                 _dyn_trail = max(_dyn_trail * 0.70, 1.5)  # very tight near close
+            # Daily P&L protection: if portfolio up significantly today, protect all positions
+            _dp_mode = tlog.get("daily_protection_mode")
+            if _dp_mode and _pnl > 1:
+                _dp_tighten = tlog.get("daily_protection_tighten_pct", 0) / 100
+                _dyn_trail = max(_dyn_trail * (1 - _dp_tighten), 1.5)
             _trail_stop_price = round(_peak_p * (1 - _dyn_trail / 100), 2) if _peak_p > 0 else 0
             _dist_from_trail  = round((_pr - _trail_stop_price) / _pr * 100, 2) if (_trail_stop_price > 0 and _pr > 0) else 0
             _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
@@ -13815,6 +13820,26 @@ def run():
                 })
         _attrib.sort(key=lambda x: -(abs(x["day_chg_usd"])))
         tlog["daily_pnl_attribution"] = _attrib
+        # Daily P&L protection mode: if portfolio is up significantly today, tighten all stops
+        try:
+            _today_usd_gain = sum(a.get("day_chg_usd", 0) for a in _attrib)
+            _today_pct_gain = round(_today_usd_gain / max(portfolio_val, 1) * 100, 2)
+            tlog["today_unrealized_gain_usd"] = round(_today_usd_gain, 2)
+            tlog["today_unrealized_gain_pct"] = _today_pct_gain
+            # Protection levels: 1% gain → mild protection, 2% → moderate, 3%+ → strong
+            _daily_protect = None
+            if _today_pct_gain >= 3.0:
+                _daily_protect = "STRONG"  # all stops tighten 30%
+            elif _today_pct_gain >= 2.0:
+                _daily_protect = "MODERATE"  # stops tighten 20%
+            elif _today_pct_gain >= 1.0:
+                _daily_protect = "MILD"  # stops tighten 10%
+            tlog["daily_protection_mode"] = _daily_protect
+            tlog["daily_protection_tighten_pct"] = (30 if _daily_protect == "STRONG"
+                                                     else 20 if _daily_protect == "MODERATE"
+                                                     else 10 if _daily_protect == "MILD" else 0)
+        except Exception:
+            pass
     except Exception as _att_e:
         logger.debug(f"P&L attribution: {_att_e}")
 
