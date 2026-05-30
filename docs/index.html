@@ -52802,6 +52802,12 @@ function _renderIntelReport(el, intel) {
       items.push({ icon: '📈', col: '#ef5350', text: `10Y yield ${reg.tnx_level?.toFixed(2)}% (RESTRICTIVE) — avoid high-multiple growth stocks, favor value & energy` });
     }
 
+    // Loss cooldown tickers
+    const cooldown = td.loss_cooldown_tickers || [];
+    if (cooldown.length > 0) {
+      items.push({ icon: '🚫', col: '#888', text: `Loss cooldown (48h): ${cooldown.join(', ')} — recently stopped out, blocked from re-entry until pattern re-forms` });
+    }
+
     if (!items.length) return '';
     const rows = items.slice(0, 10).map(it =>
       `<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.2rem 0;border-top:1px solid rgba(255,255,255,.04)">
@@ -52988,13 +52994,31 @@ function _renderIntelReport(el, intel) {
     const streakHtml = streak.count > 1 ? `<span style="font-size:7.5px;font-weight:800;color:${streak.type==='win'?'#00e676':'#ef5350'};background:${streak.type==='win'?'rgba(0,230,118,.12)':'rgba(239,83,80,.1)'};border-radius:3px;padding:1px 5px">${streak.type==='win'?'🔥':'💀'} ${streak.count} ${streak.type} streak</span>` : '';
     if (!recentTrades.length && !metricItems.length) return '';
     const tradeRows = recentTrades.slice(0, 8).map(t => {
-      const col = t.pnl_pct >= 0 ? '#69f0ae' : '#ef5350';
-      const ts = t.time ? new Date(t.time).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-      return `<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
-        <span style="font-size:9px;font-weight:800;color:var(--au);min-width:36px">\$${t.ticker||'?'}</span>
-        <span style="font-size:9px;font-weight:900;color:${col};min-width:46px">${t.pnl_pct>=0?'+':''}${t.pnl_pct.toFixed(1)}%</span>
-        <span style="font-size:7.5px;color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(t.reason||'').replace(/score=.*$/,'').trim()}</span>
-        <span style="font-size:7px;color:#3a5a8a;white-space:nowrap">${ts}</span>
+      const col  = (t.pnl_pct||0) >= 0 ? '#69f0ae' : '#ef5350';
+      const bg   = (t.pnl_pct||0) >= 3 ? 'rgba(0,230,118,.05)' : (t.pnl_pct||0) <= -2 ? 'rgba(239,83,80,.05)' : 'transparent';
+      const ts   = t.time ? new Date(t.time).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      const sc   = t.entry_score || 0;
+      const scCol = sc >= 80 ? '#00e676' : sc >= 65 ? '#ffd54f' : '#555';
+      const holdStr = t.hold_hrs > 0 ? (t.hold_hrs >= 24 ? `${(t.hold_hrs/24).toFixed(0)}d` : `${t.hold_hrs.toFixed(0)}h`) : '';
+      const sigs = (t.signals || []).slice(0, 3).map(s => {
+        const sLabels = {cup_handle:'C&H',vcp:'VCP',at_breakout:'BRK',ttm_squeeze_fired:'SQZ',
+          vwap_reclaim:'VWAP↑',ema21_pullback:'E21',pocket_pivot:'PP',htf:'HTF',
+          mom_accel:'MOM↑',orb_breakout:'ORB',unusual_calls:'CALLS',rvol_surge:'RVOL',
+          ema_stacked_bull:'EMA✓',mtf_aligned:'MTF',bull_flag:'FLAG',trend_reversal:'REV',
+          fib_support:'FIB',macd_bull_div:'MACD↑',double_bottom:'2BTM',obv_rising:'OBV↑'};
+        return sLabels[s] || s.replace(/_/g,' ').slice(0,6).toUpperCase();
+      }).join(' ');
+      const regCol = t.regime==='bull'?'#69f0ae':t.regime==='bear'?'#ef5350':'#555';
+      return `<div style="padding:.25rem .3rem;border-bottom:1px solid rgba(255,255,255,.04);background:${bg};border-radius:4px;margin-bottom:1px">
+        <div style="display:flex;align-items:center;gap:.35rem">
+          <span style="font-size:9.5px;font-weight:800;color:var(--au);min-width:36px">\$${t.ticker||'?'}</span>
+          <span style="font-size:9.5px;font-weight:900;color:${col};min-width:42px">${(t.pnl_pct||0)>=0?'+':''}${(t.pnl_pct||0).toFixed(1)}%</span>
+          ${sc > 0 ? `<span style="font-size:6.5px;color:${scCol};background:${scCol}18;border-radius:2px;padding:1px 4px">s${sc}</span>` : ''}
+          ${holdStr ? `<span style="font-size:6.5px;color:#555">${holdStr}</span>` : ''}
+          ${t.regime ? `<span style="font-size:6px;color:${regCol}">${t.regime}</span>` : ''}
+          <span style="font-size:7px;color:#3a5a8a;margin-left:auto;white-space:nowrap">${ts}</span>
+        </div>
+        ${sigs ? `<div style="font-size:6px;color:#445;margin-top:1px">${sigs}</div>` : ''}
       </div>`;
     }).join('');
     return `<div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:.6rem .75rem;margin-bottom:.75rem">
@@ -53217,6 +53241,230 @@ function _renderIntelReport(el, intel) {
     </div>`;
   })();
 
+  // ── Performance Calendar ─────────────────────────────────────────────────
+  const perfCalendarHtml = (() => {
+    const daily = td.daily_pnl || [];
+    if (daily.length < 3) return '';
+    // Build a 5-wide grid (Mon-Fri) for last 30 trading days
+    const weeks = [];
+    let week = [];
+    daily.slice(-30).forEach((d, i) => {
+      const dt   = new Date(d.date + 'T12:00:00');
+      const dow  = dt.getDay(); // 0=Sun ... 6=Sat
+      if (week.length === 0 && i === 0) {
+        for (let pad = 1; pad < dow; pad++) week.push(null);
+      }
+      week.push(d);
+      if (week.length === 5) { weeks.push(week); week = []; }
+    });
+    if (week.length > 0) {
+      while (week.length < 5) week.push(null);
+      weeks.push(week);
+    }
+    const cellHtml = (d) => {
+      if (!d) return `<div style="width:22px;height:22px"></div>`;
+      const ret = d.ret_pct || 0;
+      const bg = ret >= 2 ? '#00c853' : ret >= 0.5 ? '#43a047' : ret >= 0 ? '#1b5e20' :
+                 ret >= -0.5 ? '#b71c1c' : ret >= -2 ? '#c62828' : '#d50000';
+      const opacity = Math.min(1, 0.4 + Math.abs(ret) * 0.2);
+      const dt = new Date(d.date + 'T12:00:00');
+      const dayN = dt.getDate();
+      const tip = `${d.date}: ${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%`;
+      return `<div title="${tip}" style="width:22px;height:22px;background:${bg};opacity:${opacity};border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:6px;color:rgba(255,255,255,.5)">${dayN}</div>`;
+    };
+    const dayHeaders = ['M','T','W','T','F'].map(d =>
+      `<div style="width:22px;font-size:5.5px;color:#333;text-align:center">${d}</div>`
+    ).join('');
+    const gridRows = weeks.map(w =>
+      `<div style="display:flex;gap:2px">${w.map(cellHtml).join('')}</div>`
+    ).join('');
+    // Summary stats
+    const wins  = daily.filter(d => (d.ret_pct||0) > 0).length;
+    const total = daily.length;
+    const wr    = total ? Math.round(wins/total*100) : 0;
+    const avg   = total ? (daily.reduce((s,d) => s+(d.ret_pct||0), 0)/total).toFixed(2) : '0';
+    const best  = Math.max(...daily.map(d=>d.ret_pct||0)).toFixed(2);
+    const worst = Math.min(...daily.map(d=>d.ret_pct||0)).toFixed(2);
+    const wrCol = wr >= 60 ? '#00e676' : wr >= 50 ? '#ffd54f' : '#ef5350';
+    const avgCol = parseFloat(avg) >= 0 ? '#69f0ae' : '#ef5350';
+    return `<div style="margin-bottom:.75rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:.6rem .75rem">
+      <div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#82b1ff;margin-bottom:.45rem"> PERFORMANCE CALENDAR (last 30 trading days)</div>
+      <div style="display:flex;align-items:flex-start;gap:.8rem;flex-wrap:wrap">
+        <div>
+          <div style="display:flex;gap:2px;margin-bottom:2px">${dayHeaders}</div>
+          <div style="display:flex;flex-direction:column;gap:2px">${gridRows}</div>
+          <div style="display:flex;gap:.5rem;align-items:center;margin-top:.4rem">
+            <div style="width:10px;height:10px;background:#1b5e20;border-radius:2px;opacity:.9"></div><span style="font-size:6px;color:#555">+</span>
+            <div style="width:10px;height:10px;background:#b71c1c;border-radius:2px;opacity:.9"></div><span style="font-size:6px;color:#555">-</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.3rem;min-width:80px">
+          <div><span style="font-size:6px;color:#444">WIN DAYS</span><br><span style="font-size:11px;font-weight:800;color:${wrCol}">${wr}%</span></div>
+          <div><span style="font-size:6px;color:#444">AVG/DAY</span><br><span style="font-size:10px;font-weight:700;color:${avgCol}">${parseFloat(avg)>=0?'+':''}${avg}%</span></div>
+          <div style="display:flex;gap:.5rem">
+            <div><span style="font-size:5.5px;color:#444">BEST</span><br><span style="font-size:8px;color:#00e676">+${best}%</span></div>
+            <div><span style="font-size:5.5px;color:#444">WORST</span><br><span style="font-size:8px;color:#ef5350">${worst}%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  })();
+
+  // ── Score Bucket Accuracy panel — is high score actually predictive? ──────
+  const scoreBucketHtml = (() => {
+    const sb = td.score_bucket_perf;
+    if (!sb) return '';
+    const buckets = ['90-100','80-89','70-79','60-69','50-59','<50'];
+    const rows = buckets.filter(k => (sb[k]||{}).trades >= 1).map(k => {
+      const b = sb[k];
+      const wrCol = (b.wr||0) >= 65 ? '#00e676' : (b.wr||0) >= 50 ? '#ffd54f' : '#ef5350';
+      const pnlCol = (b.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef5350';
+      const barW = Math.min(b.wr||0, 100);
+      const barBg = (b.wr||0) >= 60 ? 'rgba(0,255,136,.3)' : (b.wr||0) >= 45 ? 'rgba(255,215,0,.25)' : 'rgba(255,34,85,.22)';
+      const bkCol = k === '90-100' ? '#00e676' : k === '80-89' ? '#69f0ae' : k === '70-79' ? '#82b1ff' : k === '60-69' ? '#ffd54f' : k === '50-59' ? '#ff9800' : '#888';
+      return `<div style="display:grid;grid-template-columns:52px 1fr 42px 44px 34px;align-items:center;gap:.3rem;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:7.5px;font-weight:800;color:${bkCol}">${k}</span>
+        <div style="height:5px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${barBg};border-radius:2px"></div>
+        </div>
+        <span style="font-size:7.5px;font-weight:800;color:${wrCol};text-align:right">${(b.wr||0).toFixed(0)}%</span>
+        <span style="font-size:6.5px;color:${pnlCol};text-align:right">${(b.avg_pnl||0)>=0?'+':''}${(b.avg_pnl||0).toFixed(1)}%</span>
+        <span style="font-size:6px;color:#444;text-align:right">${b.trades}T</span>
+      </div>`;
+    });
+    if (!rows.length) return '';
+    return `<div style="margin-top:.5rem;padding:.5rem .65rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:9px">
+      <div style="font-size:7px;font-weight:800;color:#82b1ff;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem"> SCORE → WIN RATE (is high score predictive?)</div>
+      <div style="display:grid;grid-template-columns:52px 1fr 42px 44px 34px;gap:.3rem;padding:.1rem 0;margin-bottom:.1rem">
+        <span style="font-size:5.5px;color:#333">SCORE</span>
+        <span style="font-size:5.5px;color:#333">WIN RATE BAR</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">WIN%</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">AVG P&L</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">N</span>
+      </div>
+      ${rows.join('')}
+    </div>`;
+  })();
+
+  // ── Hour-of-Day Entry Analysis panel ──────────────────────────────────────
+  const hourWinRateHtml = (() => {
+    const hw = td.hour_win_rates;
+    if (!hw || !Object.keys(hw).length) return '';
+    // Convert UTC hours to ET (subtract 4 or 5 depending on DST — approximate as -4)
+    const etHours = Object.entries(hw).filter(([,v]) => (v.trades||0) >= 1).map(([h, v]) => {
+      const utcH = parseInt(h);
+      const etH  = ((utcH - 4 + 24) % 24);
+      let label;
+      if      (etH >= 4  && etH < 6)  label = `${etH}:00 pre`;
+      else if (etH === 9)              label = '9:30 open';
+      else if (etH === 10)             label = '10am';
+      else if (etH === 11)             label = '11am';
+      else if (etH === 12)             label = '12pm';
+      else if (etH === 13)             label = '1pm';
+      else if (etH === 14)             label = '2pm';
+      else if (etH === 15)             label = '3pm pwr';
+      else if (etH === 16)             label = '4pm';
+      else                             label = `${etH}:00`;
+      return { label, ...v, utcH };
+    }).sort((a,b) => a.utcH - b.utcH);
+    if (!etHours.length) return '';
+    const maxTrades = Math.max(...etHours.map(x => x.trades||0));
+    const rows = etHours.map(slot => {
+      const wrCol  = (slot.wr||0) >= 65 ? '#00e676' : (slot.wr||0) >= 50 ? '#ffd54f' : '#ef5350';
+      const pnlCol = (slot.avg_pnl||0) >= 0 ? '#69f0ae' : '#ef5350';
+      const barW   = maxTrades > 0 ? Math.round((slot.trades/maxTrades)*100) : 0;
+      const prime  = slot.label.includes('open') || slot.label.includes('pwr');
+      const lCol   = prime ? '#ffd54f' : '#888';
+      return `<div style="display:grid;grid-template-columns:54px 1fr 42px 44px 28px;align-items:center;gap:.3rem;padding:.18rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:7px;font-weight:${prime?'800':'600'};color:${lCol}">${slot.label}</span>
+        <div style="height:5px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:rgba(130,177,255,.3);border-radius:2px"></div>
+        </div>
+        <span style="font-size:7.5px;font-weight:800;color:${wrCol};text-align:right">${(slot.wr||0).toFixed(0)}%</span>
+        <span style="font-size:6.5px;color:${pnlCol};text-align:right">${(slot.avg_pnl||0)>=0?'+':''}${(slot.avg_pnl||0).toFixed(1)}%</span>
+        <span style="font-size:6px;color:#444;text-align:right">${slot.trades}T</span>
+      </div>`;
+    });
+    return `<div style="margin-top:.5rem;padding:.5rem .65rem;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:9px">
+      <div style="font-size:7px;font-weight:800;color:#ffd54f;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem"> HOUR-OF-DAY ENTRY ANALYSIS (ET)</div>
+      <div style="display:grid;grid-template-columns:54px 1fr 42px 44px 28px;gap:.3rem;padding:.1rem 0;margin-bottom:.1rem">
+        <span style="font-size:5.5px;color:#333">TIME (ET)</span>
+        <span style="font-size:5.5px;color:#333">FREQUENCY</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">WIN%</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">AVG P&L</span>
+        <span style="font-size:5.5px;color:#333;text-align:right">N</span>
+      </div>
+      ${rows.join('')}
+    </div>`;
+  })();
+
+  // ── Live Scan Candidates table ─────────────────────────────────────────────
+  const scanCandidatesHtml = (() => {
+    const scanTop = td.last_scan_top || [];
+    if (scanTop.length < 2) return '';
+    const rows = scanTop.slice(0, 8).map((c, i) => {
+      const sc    = c.score || 0;
+      const scCol = sc >= 80 ? '#00e676' : sc >= 65 ? '#69f0ae' : sc >= 50 ? '#ffd54f' : '#888';
+      const chg   = c.chg_pct || 0;
+      const chgCol = chg >= 0 ? '#69f0ae' : '#ef5350';
+      const rsi   = c.rsi || 50;
+      const rsiCol = rsi > 70 ? '#ef5350' : rsi > 50 ? '#69f0ae' : rsi < 30 ? '#ffd54f' : '#888';
+      const vr    = c.vol_ratio || 1;
+      const vrStr = vr >= 2 ? `${vr.toFixed(1)}x` : `${vr.toFixed(1)}x`;
+      const vrCol = vr >= 2 ? '#ffd54f' : '#555';
+      // Key patterns
+      const pats = [];
+      if (c.mtf_triple)     pats.push(['3TF','#00e676']);
+      if (c.cup_handle)     pats.push(['C&H','#ffd600']);
+      if (c.vcp)            pats.push(['VCP','#ff6d00']);
+      if (c.ttm_squeeze)    pats.push(['SQZ','#ff9800']);
+      if (c.at_breakout)    pats.push(['BRK','#00e676']);
+      if (c.vwap_reclaim)   pats.push(['VWAP↑','#82b1ff']);
+      if (c.ema21_pullback) pats.push(['E21','#82b1ff']);
+      if (c.pocket_pivot)   pats.push(['PP','#ffd600']);
+      if (c.htf)            pats.push(['HTF','#ff6d00']);
+      if (c.mom_accel)      pats.push(['MOM↑','#69f0ae']);
+      if (c.orb_breakout)   pats.push(['ORB','#00e676']);
+      if (c.unusual_calls)  pats.push(['CALLS','#82b1ff']);
+      if (c.rvol_surge)     pats.push(['RVOL','#ffd54f']);
+      const patHtml = pats.slice(0,4).map(([lbl,col]) =>
+        `<span style="font-size:5.5px;font-weight:800;color:${col};background:${col}18;border-radius:2px;padding:1px 3px">${lbl}</span>`
+      ).join('');
+      const gradeCol = c.grade==='A+'?'#00e676':c.grade==='A'?'#69f0ae':c.grade==='B+'?'#82b1ff':c.grade==='B'?'#ffd54f':'#888';
+      const rs = c.rs_rating || 0;
+      const rsCol = rs >= 90 ? '#00e676' : rs >= 80 ? '#69f0ae' : rs >= 70 ? '#ffd54f' : '#555';
+      return `<div style="display:grid;grid-template-columns:36px 28px 52px 42px 32px 40px 1fr;align-items:center;gap:.25rem;padding:.25rem .35rem;border-radius:5px;margin-bottom:2px;background:${i===0?'rgba(0,255,136,.04)':'rgba(255,255,255,.01)'}">
+        <span style="font-size:9px;font-weight:800;color:${scCol}">${c.ticker}</span>
+        <span style="font-size:7.5px;font-weight:800;color:${scCol}">${sc}</span>
+        <span style="font-size:7px;color:${chgCol}">${chg>=0?'+':''}${chg.toFixed(1)}% · ${vrStr}</span>
+        <span style="font-size:7px;color:${rsiCol}">RSI${rsi.toFixed(0)}</span>
+        <span style="font-size:7px;font-weight:800;color:${gradeCol}">${c.grade||'?'}</span>
+        <span style="font-size:6.5px;color:${rsCol}">RS${rs}</span>
+        <div style="display:flex;gap:2px;flex-wrap:wrap">${patHtml}</div>
+      </div>`;
+    });
+    const scanAge = td.last_updated ? (() => {
+      const m = Math.round((Date.now() - new Date(td.last_updated))/60000);
+      return m < 2 ? 'just now' : `${m}m ago`;
+    })() : '';
+    return `<div style="margin-bottom:.75rem;background:rgba(0,0,0,.2);border:1px solid rgba(0,255,136,.1);border-radius:9px;padding:.55rem .7rem">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+        <span style="font-size:7.5px;font-weight:900;color:#00e676;letter-spacing:.1em;text-transform:uppercase"> LIVE SCAN WATCHLIST</span>
+        <span style="font-size:6.5px;color:#333">${scanTop.length} candidates · ${scanAge}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:36px 28px 52px 42px 32px 40px 1fr;gap:.25rem;padding:.15rem .35rem;margin-bottom:.15rem">
+        <span style="font-size:5.5px;color:#333">TICKER</span>
+        <span style="font-size:5.5px;color:#333">SCORE</span>
+        <span style="font-size:5.5px;color:#333">CHG · VOL</span>
+        <span style="font-size:5.5px;color:#333">RSI</span>
+        <span style="font-size:5.5px;color:#333">GRADE</span>
+        <span style="font-size:5.5px;color:#333">RS</span>
+        <span style="font-size:5.5px;color:#333">PATTERNS</span>
+      </div>
+      ${rows.join('')}
+    </div>`;
+  })();
+
   // Position Sizer Calculator — practical tool for determining share count and risk
   const posSizerHtml = `<div style="margin-top:.5rem;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.12);border-radius:9px;padding:.6rem .75rem">
     <div style="font-size:7px;font-weight:900;color:#00e5ff;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem"> POSITION SIZER</div>
@@ -53249,7 +53497,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${journalHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${dailyDebriefHtml}${priorityActionsHtml}${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${scanCandidatesHtml}${journalHtml}${perfCalendarHtml}${scoreBucketHtml}${hourWinRateHtml}${gapStatsHtml}${patternAccHtml}${posSizerHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 
   // Live position sizer calculator

@@ -7615,7 +7615,17 @@ def run():
         # They get a +8 bonus score to reflect high-conviction setup
         recent_sells = set()
         cutoff = now_utc - timedelta(days=3)
+        # Loss cooldown: stocks sold for >2% loss within 48h are blocked from re-entry
+        # Avoids "falling knife" repeats — same thesis that broke is unlikely to immediately recover
+        _loss_cooldown: set = set()
+        _loss_cutoff = now_utc - timedelta(hours=48)
         for t in tlog.get("trades", []):
+            if t.get("action") in ("SELL", "COVER") and (t.get("pnl_pct") or 0) < -2:
+                try:
+                    if datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > _loss_cutoff:
+                        _loss_cooldown.add(t.get("ticker", ""))
+                except Exception:
+                    pass
             if t.get("action") in ("SELL", "SELL_HALF") and (t.get("pnl_pct") or 0) > 3:
                 try:
                     if datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > cutoff:
@@ -7679,6 +7689,10 @@ def run():
         _rejected_log = []   # track rejections with reasons for dashboard
         for tk, tech_sc in candidates_buy:
             sec = SECTOR_MAP.get(tk, "other")
+            # Loss cooldown: don't re-enter within 48h of a >2% loss exit
+            if tk in _loss_cooldown:
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": "48h loss cooldown"})
+                continue
             if sector_counts.get(sec, 0) >= MAX_SECTOR_LONGS:
                 logger.info(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{MAX_SECTOR_LONGS})")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"sector {sec} full"})
@@ -8005,6 +8019,11 @@ def run():
                     # Earnings proximity guard: don't buy within 2 days of earnings report
                     if earnings_too_close(tk, guard_days=2):
                         logger.info(f"SKIP {tk} — earnings within 2 days (gap-risk guard)")
+                        continue
+                    # Loss cooldown: don't re-enter stocks sold at >2% loss within 48h
+                    # "Do not add to losers" principle — wait for the pattern to re-form
+                    if tk in _loss_cooldown:
+                        logger.info(f"SKIP {tk} — 48h loss cooldown (sold at >2% loss recently)")
                         continue
                     d        = live[tk]
                     price    = d["price"]
@@ -8838,13 +8857,53 @@ def run():
                     "wr":      round(len(_wins_with) / len(_trades_with) * 100, 1),
                     "avg_pnl": _avg_pnl_tag,
                 }
-        # Recent 10 closed trades for quick dashboard display
+        # Recent 10 closed trades for quick dashboard display — enriched with entry context
         _recent_closed = sorted(_closed, key=lambda t: t.get("time", ""), reverse=True)[:10]
-        tlog["recent_closed_trades"] = [
-            {"ticker": t.get("ticker",""), "pnl_pct": round(t["pnl_pct"],2),
-             "reason": (t.get("reason","") or "")[:40], "time": t.get("time","")}
-            for t in _recent_closed
-        ]
+        # Build quick BUY lookup for enrichment (ticker → sorted BUYs descending by time)
+        _jl_buy_idx: dict = {}
+        for _jb in tlog.get("trades", []):
+            if _jb.get("action") == "BUY":
+                _jl_buy_idx.setdefault(_jb.get("ticker",""), []).append(_jb)
+        for _jbl in _jl_buy_idx.values():
+            _jbl.sort(key=lambda x: x.get("time",""), reverse=True)
+        def _entry_for(ticker, sell_time):
+            """Find most recent matching BUY entry before this SELL."""
+            for _jb in _jl_buy_idx.get(ticker, []):
+                if (_jb.get("time","") or "") <= (sell_time or ""):
+                    return _jb
+            return {}
+        _enriched_closed = []
+        for t in _recent_closed:
+            _buy = _entry_for(t.get("ticker",""), t.get("time",""))
+            _entry_sc = _buy.get("score") or 0
+            _entry_t  = _buy.get("time","")
+            _hold_hrs = 0
+            try:
+                if _entry_t and t.get("time"):
+                    _dt_e = datetime.fromisoformat(_entry_t.replace("Z","+00:00"))
+                    _dt_s = datetime.fromisoformat(t["time"].replace("Z","+00:00"))
+                    _hold_hrs = round((_dt_s - _dt_e).total_seconds() / 3600, 1)
+            except Exception:
+                pass
+            _entry_h = None
+            try:
+                if _entry_t:
+                    _entry_h = datetime.fromisoformat(_entry_t.replace("Z","+00:00")).hour
+            except Exception:
+                pass
+            _enriched_closed.append({
+                "ticker":       t.get("ticker",""),
+                "pnl_pct":      round(t["pnl_pct"], 2),
+                "reason":       (t.get("reason","") or "")[:60],
+                "time":         t.get("time",""),
+                "entry_score":  _entry_sc,
+                "hold_hrs":     _hold_hrs,
+                "entry_hour":   _entry_h,
+                "sector":       t.get("sector",""),
+                "regime":       t.get("regime",""),
+                "signals":      _buy.get("entry_signals", [])[:8],
+            })
+        tlog["recent_closed_trades"] = _enriched_closed
         # Win/loss streak from most recent trades
         _streak_len = 0
         _streak_type = "none"
@@ -8861,6 +8920,82 @@ def run():
     except Exception:
         pass
     tlog["signal_analytics"] = _signal_analytics
+
+    # Build a BUY lookup index for O(1) lookups per SELL trade
+    # Maps ticker → list of (time, score, entry_hour, entry_signals) sorted by time desc
+    _buy_idx: dict = {}
+    for _bx in tlog.get("trades", []):
+        if _bx.get("action") == "BUY":
+            _bxt = _bx.get("ticker","")
+            try: _bxh = datetime.fromisoformat((_bx.get("time","")).replace("Z","+00:00")).hour
+            except Exception: _bxh = None
+            _buy_idx.setdefault(_bxt, []).append({
+                "time": _bx.get("time",""),
+                "score": _bx.get("score") or 0,
+                "hour": _bxh,
+                "signals": _bx.get("entry_signals", []),
+            })
+    for _bxl in _buy_idx.values():
+        _bxl.sort(key=lambda x: x["time"], reverse=True)
+
+    def _find_entry(ticker, sell_time):
+        """O(n_buys_for_ticker) lookup using pre-built index."""
+        for _bv in _buy_idx.get(ticker, []):
+            if (_bv["time"] or "") <= (sell_time or ""):
+                return _bv
+        return {}
+
+    # Score bucket accuracy: entry score range → win rate (shows if scoring is predictive)
+    try:
+        _score_buckets = {
+            "90-100": {"trades":0,"wins":0,"pnl":0.0},
+            "80-89":  {"trades":0,"wins":0,"pnl":0.0},
+            "70-79":  {"trades":0,"wins":0,"pnl":0.0},
+            "60-69":  {"trades":0,"wins":0,"pnl":0.0},
+            "50-59":  {"trades":0,"wins":0,"pnl":0.0},
+            "<50":    {"trades":0,"wins":0,"pnl":0.0},
+        }
+        for _bt in _closed:
+            _buy_e  = _find_entry(_bt.get("ticker",""), _bt.get("time",""))
+            _sc_entry = _buy_e.get("score", 0) or 0
+            if   _sc_entry >= 90: _bk = "90-100"
+            elif _sc_entry >= 80: _bk = "80-89"
+            elif _sc_entry >= 70: _bk = "70-79"
+            elif _sc_entry >= 60: _bk = "60-69"
+            elif _sc_entry >= 50: _bk = "50-59"
+            else:                 _bk = "<50"
+            _score_buckets[_bk]["trades"] += 1
+            _score_buckets[_bk]["pnl"]    = round(_score_buckets[_bk]["pnl"] + _bt["pnl_pct"], 2)
+            if _bt["pnl_pct"] > 0:
+                _score_buckets[_bk]["wins"] += 1
+        for _bv in _score_buckets.values():
+            if _bv["trades"] > 0:
+                _bv["wr"]      = round(_bv["wins"] / _bv["trades"] * 100, 1)
+                _bv["avg_pnl"] = round(_bv["pnl"] / _bv["trades"], 2)
+        tlog["score_bucket_perf"] = _score_buckets
+    except Exception:
+        tlog.setdefault("score_bucket_perf", {})
+
+    # Hour-of-day entry win rate: tracks which market hours produce the best outcomes
+    try:
+        _hour_perf: dict = {}
+        for _ht in _closed:
+            _buy_e2 = _find_entry(_ht.get("ticker",""), _ht.get("time",""))
+            _bh = _buy_e2.get("hour")
+            if _bh is None:
+                continue
+            _hb = _hour_perf.setdefault(str(_bh), {"trades":0,"wins":0,"pnl":0.0})
+            _hb["trades"] += 1
+            _hb["pnl"]     = round(_hb["pnl"] + _ht["pnl_pct"], 2)
+            if _ht["pnl_pct"] > 0:
+                _hb["wins"] += 1
+        for _hv in _hour_perf.values():
+            if _hv["trades"] > 0:
+                _hv["wr"]      = round(_hv["wins"] / _hv["trades"] * 100, 1)
+                _hv["avg_pnl"] = round(_hv["pnl"] / _hv["trades"], 2)
+        tlog["hour_win_rates"] = _hour_perf
+    except Exception:
+        tlog.setdefault("hour_win_rates", {})
 
     # Pattern accuracy tracker: which chart patterns have the best win rates in our system
     # Uses closed trade 'reason' strings which contain pattern tags from the buy logic.
@@ -9178,6 +9313,10 @@ def run():
         tlog["effective_min_score"] = _eff_min_score
     except NameError:
         tlog["effective_min_score"] = MIN_BUY_SCORE
+    try:
+        tlog["loss_cooldown_tickers"] = sorted(_loss_cooldown)
+    except NameError:
+        tlog.setdefault("loss_cooldown_tickers", [])
 
     # Market quality score: 0-100, composite of VIX, breadth, regime, sector momentum
     try:
