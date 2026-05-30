@@ -57906,6 +57906,13 @@ window.renderSectorRotation = renderSectorRotation;
               </div>`;
             })() : ''}
             ${data.market_quality != null ? (() => { const mq = data.market_quality; const mqCol = mq >= 65 ? '#00ff88' : mq >= 50 ? '#ffd54f' : mq >= 35 ? '#ff9800' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Mkt Quality</div><div style="font-size:14px;font-weight:900;color:${mqCol}">${mq}/100</div></div>`; })() : ''}
+            ${regime.distribution_days != null ? (() => {
+              const dd = regime.distribution_days;
+              const ddLbl = regime.distribution_day_label || 'healthy';
+              const ddCol = dd >= 6 ? '#ef5350' : dd >= 4 ? '#ffa726' : dd >= 2 ? '#ffd54f' : '#69f0ae';
+              const ddTitle = `IBD Distribution Days: ${dd} in last 25 sessions. ${dd>=6?'Heavy institutional selling — tighten stops':dd>=4?'Under distribution — reduce buying':dd>=2?'Some distribution — be selective':'Market healthy — institutions accumulating'}`;
+              return `<div style="text-align:center" title="${ddTitle}"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Dist Days</div><div style="font-size:14px;font-weight:900;color:${ddCol}">${dd}</div><div style="font-size:6.5px;color:${ddCol};opacity:.8">${ddLbl}</div></div>`;
+            })() : ''}
             ${data.scan_breadth_pct != null ? (() => { const bp = data.scan_breadth_pct; const bpCol = bp >= 60 ? '#00ff88' : bp >= 40 ? '#ffd54f' : '#ef5350'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scan A/D</div><div style="font-size:14px;font-weight:900;color:${bpCol}">${bp}%</div></div>`; })() : ''}
             ${data.effective_min_score != null && data.effective_min_score !== 18 ? `<div style="text-align:center"><div style="font-size:8px;color:#ff9800;font-weight:700;text-transform:uppercase">Min Score</div><div style="font-size:11px;font-weight:900;color:#ff9800">${data.effective_min_score}↑</div></div>` : ''}
             ${data.portfolio_beta != null ? (() => { const pb = data.portfolio_beta; const pbCol = pb > 1.5 ? '#ef5350' : pb > 1.2 ? '#ffab40' : pb > 0.8 ? '#ffd54f' : '#69f0ae'; return `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Port β</div><div style="font-size:14px;font-weight:900;color:${pbCol}">${pb.toFixed(2)}</div></div>`; })() : ''}
@@ -58250,6 +58257,53 @@ window.renderSectorRotation = renderSectorRotation;
           </div>
         </div>`;
       }
+
+      // Portfolio equity curve — visual chart of portfolio value over time from perf_history
+      const perfHist = data.perf_history || [];
+      if (perfHist.length >= 4) {
+        const samples = perfHist.slice(-120); // last 120 snapshots (~10hrs at 5min)
+        const vals = samples.map(h => h.v || 0).filter(v => v > 0);
+        if (vals.length >= 4) {
+          const mnV = Math.min(...vals), mxV = Math.max(...vals);
+          const rangeV = mxV - mnV || 1;
+          const W = 400, H = 48;
+          const firstV = vals[0], lastV = vals[vals.length - 1];
+          const netChg = lastV - firstV;
+          const netPct = firstV > 0 ? (netChg / firstV * 100) : 0;
+          const lineCol = netChg >= 0 ? '#00e676' : '#ef5350';
+          const zeroY = H - ((firstV - mnV) / rangeV * H * 0.82 + H * 0.09);
+          const pts = vals.map((v, i) => {
+            const x = (i / (vals.length - 1) * W).toFixed(1);
+            const y = (H - ((v - mnV) / rangeV * H * 0.82 + H * 0.09)).toFixed(1);
+            return `${x},${y}`;
+          }).join(' ');
+          const lastX = (vals.length - 1) / (vals.length - 1) * W;
+          const lastY = H - ((lastV - mnV) / rangeV * H * 0.82 + H * 0.09);
+          healthEl.innerHTML += `<div style="margin-top:.5rem;padding:.4rem .6rem;background:rgba(0,0,0,.25);border:1px solid rgba(130,177,255,.12);border-radius:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.2rem">
+              <span style="font-size:6.5px;font-weight:900;color:#82b1ff;letter-spacing:.08em;text-transform:uppercase">📈 PORTFOLIO EQUITY CURVE (last ${samples.length} scans)</span>
+              <span style="font-size:7px;font-weight:800;color:${lineCol}">${netChg>=0?'+':''}${netPct.toFixed(2)}% | \$${Math.abs(netChg).toLocaleString('en-US',{maximumFractionDigits:0})} ${netChg>=0?'gain':'loss'}</span>
+            </div>
+            <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;opacity:.9" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="${lineCol}" stop-opacity=".25"/>
+                  <stop offset="100%" stop-color="${lineCol}" stop-opacity=".02"/>
+                </linearGradient>
+              </defs>
+              <line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" stroke="rgba(255,255,255,.06)" stroke-width="1" stroke-dasharray="4,4"/>
+              <polygon points="${pts} ${W},${H} 0,${H}" fill="url(#eqGrad)"/>
+              <polyline points="${pts}" fill="none" stroke="${lineCol}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3" fill="${lineCol}"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;margin-top:2px">
+              <span style="font-size:5px;color:#333">\$${mnV.toLocaleString('en-US',{maximumFractionDigits:0})} low</span>
+              <span style="font-size:5px;color:#333">\$${lastV.toLocaleString('en-US',{maximumFractionDigits:0})} now</span>
+              <span style="font-size:5px;color:#333">\$${mxV.toLocaleString('en-US',{maximumFractionDigits:0})} high</span>
+            </div>
+          </div>`;
+        }
+      }
     }
 
     // Populate Intel tab ROK trades section
@@ -58318,6 +58372,12 @@ window.renderSectorRotation = renderSectorRotation;
         // Portfolio-level checks
         if (data.drawdown_halt)
           actions.push({pri:1, col:'#ef5350', icon:'⛔', msg:`Drawdown halt active (${(data.drawdown_pct||0).toFixed(1)}% from peak) — no new buys until recovery`});
+        // Distribution Day warning (IBD metric)
+        const distDays = (data.regime || {}).distribution_days;
+        if (distDays != null && distDays >= 6)
+          actions.push({pri:1, col:'#ef5350', icon:'📉', msg:`Market under <strong>HEAVY DISTRIBUTION</strong> — ${distDays} distribution days in 25 sessions. Tighten all stops, reduce new buys.`});
+        else if (distDays != null && distDays >= 4)
+          actions.push({pri:2, col:'#ffa726', icon:'📉', msg:`Market showing <strong>distribution</strong> — ${distDays} institutional selling days. Be selective on new buys.`});
         const rot = data.rotation_suggestion;
         if (rot && rot.buy && rot.gap >= 22)
           actions.push({pri:3, col:'#ff9800', icon:'🔄', msg:`Rotation opportunity: swap <strong>$${rot.sell}</strong> (sc${rot.sell_score}) → <strong>$${rot.buy}</strong> (sc${rot.buy_score}, +${rot.gap.toFixed(0)}pts)`});

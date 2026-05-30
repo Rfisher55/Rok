@@ -4056,6 +4056,37 @@ def market_regime():
         except Exception:
             pass
 
+        # IBD Distribution Day Counter: count SPY down-days on rising volume (last 25 sessions)
+        # 4+ distribution days = institutional sellers emerging; 6+ = heavy distribution
+        distribution_days = 0
+        distribution_day_label = "healthy"
+        try:
+            _spy_vols = []
+            try:
+                _spy_vols = list(raw["Volume"]["SPY"].dropna())
+            except Exception:
+                try:
+                    _spy_vols = list(raw[("Volume", "SPY")].dropna())
+                except Exception:
+                    pass
+            if len(spy_closes) >= 26 and len(_spy_vols) >= 26:
+                _c25 = spy_closes[-26:]
+                _v25 = _spy_vols[-26:]
+                for _di in range(1, 26):
+                    _chg_d = (_c25[_di] - _c25[_di - 1]) / _c25[_di - 1] * 100
+                    if _chg_d < -0.2 and _v25[_di] > _v25[_di - 1]:
+                        distribution_days += 1
+                if distribution_days >= 6:
+                    score -= 2
+                    distribution_day_label = "heavy distribution"
+                elif distribution_days >= 4:
+                    score -= 1
+                    distribution_day_label = "under distribution"
+                elif distribution_days >= 2:
+                    distribution_day_label = "some distribution"
+        except Exception:
+            pass
+
         if score >= 2:    regime = "bull"
         elif score <= -2: regime = "bear"
         else:             regime = "neutral"
@@ -4064,7 +4095,7 @@ def market_regime():
             f"Market regime: {regime} | SPY trend: {spy_trend:+.1f}% | "
             f"VIX: {vix:.1f} (9d:{vix9d:.1f} 3m:{vix3m:.1f} {vts_regime}) | "
             f"DXY: {dxy_level:.1f} ({dxy_5d:+.2f}%5d) | TNX: {tnx_level:.2f}% ({rate_environment}) | "
-            f"Above 200d: {above_200} | score: {score}"
+            f"Above 200d: {above_200} | Dist days: {distribution_days} ({distribution_day_label}) | score: {score}"
         )
         return {"regime": regime, "vix": vix, "spy_trend": spy_trend,
                 "score": score, "above_200": above_200,
@@ -4072,7 +4103,9 @@ def market_regime():
                 "vts_regime": vts_regime,
                 "dxy_level": dxy_level, "dxy_5d": dxy_5d,
                 "tnx_level": tnx_level, "tnx_5d": tnx_5d,
-                "rate_environment": rate_environment}
+                "rate_environment": rate_environment,
+                "distribution_days": distribution_days,
+                "distribution_day_label": distribution_day_label}
 
     except Exception as e:
         logger.warning(f"Regime check failed: {e}")
