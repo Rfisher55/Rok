@@ -4483,6 +4483,14 @@ def _extract(daily, hourly):
         "rsi_bull_divergence": rsi_bull_divergence,
         "consec_green":        consec_green,
         "consec_red":          consec_red,
+        # Trend Quality composite: 0-10 = how clean + strong the trend is
+        # ADX(strength) + LR R²(linearity) + consecutive greens + intraday TQ
+        "trend_quality_score": round(min(10, max(0,
+            (min(adx_val, 50) / 50 * 3.5)         # ADX: 0-3.5 pts (max at ADX=50)
+            + (lr_r2 * 2.5)                         # R²: 0-2.5 pts (linear = 2.5)
+            + (min(consec_green, 4) / 4 * 2.0)      # Consecutive greens: 0-2 pts
+            + (intraday_trend_quality * 2.0)         # Intraday TQ: -2 to +2
+        )), 1),
         "hv20":                hv20,
         "hv5":                 hv5,
         "hv_expanding":        hv_expanding,
@@ -5348,6 +5356,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Historical Volatility regime: contracting HV = coiled spring before breakout
     if d.get("hv_contracting", False):             s += 3   # volatility coil = breakout setup
     if d.get("hv_expanding", False) and d.get("rvol_surge", False): s += 2  # vol expansion + RVOL = momentum confirmed
+
+    # Trend Quality Score: clean, strong, linear trends earn a bonus
+    _tqs = d.get("trend_quality_score", 0) or 0
+    if _tqs >= 8.0:   s += 4   # pristine trend — high quality breakout candidate
+    elif _tqs >= 6.0: s += 2   # solid trend quality
+    elif _tqs >= 4.0: s += 1   # modest quality
 
     # Analyst Estimate Revisions: estimate upgrades = institutional re-rating signal
     # Fresh upgrades in last 14d = analysts just revised outlook upward = strong alpha factor
@@ -6686,6 +6700,7 @@ def run():
                 "gamma_wall_up":  live.get(tk, {}).get("gamma_wall_up", 0.0),
                 "gamma_wall_down":live.get(tk, {}).get("gamma_wall_down", 0.0),
                 "squeeze_potential": live.get(tk, {}).get("squeeze_potential", False),
+                "trend_quality_score": live.get(tk, {}).get("trend_quality_score", 0.0),
                 "consec_green":      live.get(tk, {}).get("consec_green", 0),
                 "consec_red":        live.get(tk, {}).get("consec_red", 0),
                 "hv20":              live.get(tk, {}).get("hv20", 0.0),
@@ -7028,6 +7043,7 @@ def run():
                 "gamma_wall_up":   sig.get("gamma_wall_up", 0.0),
                 "gamma_wall_down": sig.get("gamma_wall_down", 0.0),
                 "squeeze_potential": sig.get("squeeze_potential", False),
+                "trend_quality_score": sig.get("trend_quality_score", 0.0),
                 "consec_green":       sig.get("consec_green", 0),
                 "consec_red":         sig.get("consec_red", 0),
                 "hv20":               sig.get("hv20", 0.0),

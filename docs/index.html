@@ -54484,6 +54484,42 @@ window.renderSectorRotation = renderSectorRotation;
             </div>
           </div>`;
         })()}
+        ${(() => {
+          // Session Timer tile — countdown to next key trading window (ET)
+          const now = new Date();
+          const etOffset = -5; // EST base, adjust for EDT -4 vs EST -5
+          // Get current ET hour (approximate — uses browser's UTC offset knowledge)
+          const utcH = now.getUTCHours(), utcM = now.getUTCMinutes();
+          // Determine if DST (rough: March 2nd Sunday to Nov 1st Sunday)
+          const month = now.getMonth(), day = now.getDate();
+          const isDST = (month > 2 && month < 10) || (month === 2 && day >= 8) || (month === 10 && day < 7);
+          const etH = ((utcH + (isDST ? -4 : -5)) + 24) % 24;
+          const etMin = utcM;
+          const etTotalMins = etH * 60 + etMin;
+          const sessions = [
+            { name: 'Pre-Market', start: 4*60, end: 9*60+30, color: '#ffa726', icon: '🌅' },
+            { name: 'Open Bell', start: 9*60+30, end: 9*60+40, color: '#00e676', icon: '🔔' },
+            { name: 'Morning Session', start: 9*60+40, end: 11*60+30, color: '#00ff88', icon: '⚡' },
+            { name: 'Lunch Lull', start: 11*60+30, end: 13*60+30, color: '#ff9800', icon: '⏸' },
+            { name: 'Afternoon', start: 13*60+30, end: 15*60, color: '#ffd54f', icon: '📈' },
+            { name: 'Power Hour', start: 15*60, end: 16*60, color: '#00e5ff', icon: '⚡' },
+            { name: 'After Hours', start: 16*60, end: 20*60, color: '#888', icon: '🌙' },
+          ];
+          const active = sessions.find(s => etTotalMins >= s.start && etTotalMins < s.end);
+          const next = sessions.find(s => s.start > etTotalMins);
+          if (!active && !next) return '';
+          const cur = active || next;
+          const minsLeft = cur ? (cur.end - etTotalMins) : null;
+          const minsTo = next && !active ? (next.start - etTotalMins) : null;
+          const display = active
+            ? `${cur.name} ${minsLeft != null ? minsLeft + 'm left' : ''}`
+            : `${next.name} in ${minsTo}m`;
+          return `<div style="background:rgba(0,0,0,.2);border:1px solid ${cur.color}33;border-radius:12px;padding:.7rem 1rem">
+            <div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Session</div>
+            <div style="font-size:10px;font-weight:900;color:${cur.color}">${cur.icon} ${active ? cur.name : '→'+next.name}</div>
+            <div style="font-size:7px;color:var(--wh4)">${active ? minsLeft+'m remaining' : 'in '+minsTo+'m'}${etH < 16 && etH >= 9 ? ' · ET '+etH+':'+(etMin<10?'0':'')+etMin : ''}</div>
+          </div>`;
+        })()}
       </div>`;
     }
 
@@ -54566,6 +54602,7 @@ window.renderSectorRotation = renderSectorRotation;
             if (s.hv_contracting) signalTags.push('<span style="font-size:5.5px;font-weight:800;background:rgba(64,196,255,.1);color:#40c4ff;padding:1px 3px;border-radius:3px" title="Volatility coiling — breakout setup">HV↓COIL</span>');
             else if (s.hv_expanding) signalTags.push('<span style="font-size:5.5px;font-weight:800;background:rgba(255,145,0,.1);color:#ff9100;padding:1px 3px;border-radius:3px" title="Volatility expanding — momentum move">HV↑EXP</span>');
             if ((s.consec_green||0) >= 3) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,230,118,.1);color:#00e676;padding:1px 3px;border-radius:3px" title="${s.consec_green} consecutive green days">${s.consec_green}🟢</span>`);
+            if ((s.trend_quality_score||0) >= 7) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,229,255,.1);color:#00e5ff;padding:1px 3px;border-radius:3px" title="Trend Quality Score ${(s.trend_quality_score||0).toFixed(1)}/10">TQ${(s.trend_quality_score||0).toFixed(0)}✓</span>`);
             html += `<div style="background:${bgGrad};border:${border};border-radius:9px;padding:.55rem .65rem;display:flex;flex-direction:column;gap:.2rem;position:relative">
               ${i===0 ? '<div style="position:absolute;top:-1px;right:-1px;background:#00ff88;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:0 9px 0 5px;letter-spacing:.05em">TOP</div>' : ''}
               ${isHeld ? '<div style="position:absolute;top:-1px;left:-1px;background:#ffd54f;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:9px 0 5px 0;letter-spacing:.05em">HELD</div>' : ''}
@@ -54910,6 +54947,11 @@ window.renderSectorRotation = renderSectorRotation;
           const lsRcl = ls.vwap_reclaim ? `<span style="font-size:6.5px;font-weight:800;color:#00ffc8">VWAP↑</span>` : '';
           const lsRoc = ls.roc5 != null ? `<span style="font-size:6.5px;color:${ls.roc5>2?'#00ff88':ls.roc5<-2?'#ef5350':'#888'}">${ls.roc5>=0?'+':''}${ls.roc5.toFixed(1)}%5d</span>` : '';
           const lsAdx = ls.adx > 0 ? `<span style="font-size:6.5px;color:${ls.adx>=35?'#00e5ff':ls.adx>=25?'#80deea':ls.adx<15?'#555':'#aaa'}">ADX${Math.round(ls.adx)}</span>` : '';
+          const lsTQ = (ls.trend_quality_score || 0) >= 4 ? (() => {
+            const tq = ls.trend_quality_score || 0;
+            const col = tq >= 8 ? '#00e5ff' : tq >= 6 ? '#69f0ae' : tq >= 4 ? '#ffd54f' : '#555';
+            return `<span style="font-size:6px;font-weight:800;color:${col}" title="Trend Quality Score ${tq.toFixed(1)}/10 — composite of ADX strength, LR linearity, green streaks, intraday trend">TQ${tq.toFixed(0)}</span>`;
+          })() : '';
           const lsRs63 = ls.rs63 != null && Math.abs(ls.rs63) > 2 ? `<span style="font-size:6.5px;color:${ls.rs63>8?'#00ff88':ls.rs63>3?'#69f0ae':ls.rs63<-8?'#ef5350':'#888'}">RS63:${ls.rs63>=0?'+':''}${ls.rs63.toFixed(0)}%</span>` : '';
           const lsChan = ls.chandelier_stop > 0 && p.price > 0 ? `<span style="font-size:6px;color:${p.price < ls.chandelier_stop ? '#ef5350' : '#2a3a5a'}">⛛$${ls.chandelier_stop.toFixed(2)}</span>` : '';
           const lsMtf  = ls.mtf_aligned ? `<span style="font-size:6.5px;font-weight:800;color:#80deea">MTF✓</span>` : '';
@@ -55126,7 +55168,7 @@ window.renderSectorRotation = renderSectorRotation;
               <div style="font-family:var(--disp);font-size:1.15rem;color:var(--au);min-width:55px;font-weight:900">$${p.ticker}</div>
               <div style="flex:1">
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
+                ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsTQ||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsTQ}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPnlSpark||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPnlSpark}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
                 ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsHV}${lsStreak}${lsFibLevels}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
