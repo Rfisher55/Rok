@@ -7774,6 +7774,47 @@ def run():
         ]
         tlog["last_scan_rejected"] = _rejected_log[:8]
 
+        # Portfolio Rotation Intelligence: when portfolio is full and a meaningfully
+        # superior new candidate exists, surface the weakest held position for review.
+        # This does NOT auto-trade — it flags the opportunity for the dashboard.
+        tlog["rotation_suggestion"] = None
+        try:
+            if open_long_slots == 0 and final_scores and held:
+                _top_cand = final_scores[0]
+                _top_cand_sc = _top_cand[1]
+                _held_scores = {}
+                for _hs in held:
+                    _hsig = live.get(_hs, {})
+                    if _hsig:
+                        _held_scores[_hs] = score(_hs, _hsig, regime_adj=regime_adj)
+                if _held_scores:
+                    _weakest_sym = min(_held_scores, key=_held_scores.get)
+                    _weakest_sc  = _held_scores[_weakest_sym]
+                    _gap = _top_cand_sc - _weakest_sc
+                    if _gap >= 18:
+                        _weak_pnl = 0
+                        for _p_chk in (tlog.get("positions") or []):
+                            if _p_chk.get("ticker") == _weakest_sym:
+                                _weak_pnl = _p_chk.get("pnl_pct", 0) or 0
+                                break
+                        tlog["rotation_suggestion"] = {
+                            "sell":       _weakest_sym,
+                            "sell_score": _weakest_sc,
+                            "sell_pnl":   round(_weak_pnl, 2),
+                            "buy":        _top_cand[0],
+                            "buy_score":  _top_cand_sc,
+                            "buy_sent":   round(_top_cand[2], 1),
+                            "gap":        round(_gap, 1),
+                            "buy_cat":    _top_cand[4] or "",
+                            "buy_sector": _top_cand[3] or "",
+                        }
+                        logger.info(
+                            f"ROTATION SIGNAL: SELL {_weakest_sym}(score={_weakest_sc},pnl={_weak_pnl:.1f}%) "
+                            f"→ BUY {_top_cand[0]}(score={_top_cand_sc}, gap={_gap:.0f}pts)"
+                        )
+        except Exception as _rot_e:
+            logger.debug(f"Rotation check: {_rot_e}")
+
         if not final_scores:
             logger.info(f"No longs passed threshold {_eff_min_score} (base={MIN_BUY_SCORE}).")
             if candidates_buy:
@@ -8343,26 +8384,47 @@ def run():
             _pos["dyn_trail_pct"]    = round(_dyn_trail, 1)
             _pos["trail_stop_price"] = _trail_stop_price
             _pos["dist_from_trail"]  = _dist_from_trail
-            # Position recommendation: simple rule-based action advice for the dashboard
+            # Position recommendation: comprehensive rule-based action advice for dashboard
+            # Priority order: urgent sell conditions first, then management signals
             _rec_action = "HOLD"
             _rec_reason = ""
             _ls_r = _pos.get("live_signals", {})
             _sh_r = [h["s"] for h in _pos.get("score_history", []) if isinstance(h.get("s"), (int, float))]
             _age_r = _pos.get("days_held", 0)
-            if _ls_r.get("macd_bear_div") and _pnl > 5:
+            _earn_r = _pos.get("earnings_days")
+            _rm_r = _pos.get("r_multiple", 0) or 0
+            # Highest priority: Earnings risk management
+            if _earn_r is not None and 2 < _earn_r <= 5 and _pnl > 3:
+                _rec_action = "REDUCE"; _rec_reason = f"earnings in {_earn_r}d — protect gains"
+            # High priority: multiple bearish signals converging
+            elif (_ls_r.get("macd_bear_div") and _ls_r.get("vol_bearish_div") and _pnl > 3):
+                _rec_action = "REDUCE"; _rec_reason = "MACD div + vol distribution — exit signal"
+            elif _ls_r.get("macd_bear_div") and _pnl > 5:
                 _rec_action = "REDUCE"; _rec_reason = "MACD bearish div"
+            elif _ls_r.get("vol_bearish_div") and _pnl >= 12:
+                _rec_action = "REDUCE"; _rec_reason = "volume distribution at new high"
             elif _dist_from_trail < 1.5 and _trail_stop_price > 0:
                 _rec_action = "TIGHTEN"; _rec_reason = f"near trail stop ({_dist_from_trail:.1f}%)"
             elif _pnl >= 15 and not _ls_r.get("supertrend_bull", True):
                 _rec_action = "REDUCE"; _rec_reason = "supertrend reversed, locked gains"
+            # R-multiple milestones: lock profits at 3R+
+            elif _rm_r >= 3 and _pnl > 0:
+                _rec_action = "LOCK"; _rec_reason = f"{_rm_r:.1f}R — exceptional gain, move stop to 2R"
+            # Scale-in opportunity (EMA21 pullback on high-conviction setup)
+            elif _ls_r.get("ema21_pullback") and _pos.get("scale_in_pending") and _pnl > 0:
+                _rec_action = "SCALE IN"; _rec_reason = f"EMA21 pullback — add ${(_pos.get('scale_in_notional',0) or 0):.0f}"
             elif _ls_r.get("ema21_pullback") and _pnl > 0 and not _ls_r.get("hv_expanding"):
                 _rec_action = "ADD"; _rec_reason = "EMA21 pullback re-entry"
+            # Extend on high-conviction momentum setup with strong signals
+            elif _pnl >= 20 and _ls_r.get("mtf_triple") and _ls_r.get("supertrend_bull", True):
+                _rec_action = "EXTEND"; _rec_reason = "high-conviction, let run"
+            elif _ls_r.get("pocket_pivot") and _pnl > 0 and not _ls_r.get("vol_bearish_div"):
+                _rec_action = "EXTEND"; _rec_reason = "pocket pivot re-accumulation signal"
+            # Stale position reviews
             elif _age_r >= 7 and _pnl < 1.5 and _pnl > -2:
                 _rec_action = "REVIEW"; _rec_reason = "dead money 7d"
             elif len(_sh_r) >= 4 and _sh_r[0] - _sh_r[-1] >= 15:
                 _rec_action = "REVIEW"; _rec_reason = "score degrading"
-            elif _pnl >= 20 and _ls_r.get("mtf_triple") and _ls_r.get("supertrend_bull", True):
-                _rec_action = "EXTEND"; _rec_reason = "high-conviction, let run"
             _pos["recommendation"] = _rec_action
             _pos["rec_reason"]     = _rec_reason
     except Exception as e:

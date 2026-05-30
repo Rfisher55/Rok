@@ -54709,6 +54709,50 @@ window.renderSectorRotation = renderSectorRotation;
   });
 
   // ── Load trades.json and populate live trader widgets ───────────────────
+  // Smart Push Notifications for Priority Alerts (pri ≤ 2 = urgent)
+  const _NOTIF_SEEN_KEY = 'rok_notif_seen_v1';
+  function _checkPriorityNotifications(data) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+      return; // will fire next cycle once permission granted
+    }
+    if (Notification.permission !== 'granted') return;
+    const positions = data.positions || [];
+    const topScan = data.last_scan_top || [];
+    const seen = JSON.parse(localStorage.getItem(_NOTIF_SEEN_KEY) || '{}');
+    const now = Date.now();
+    const toFire = [];
+    // Check held positions for urgent alerts
+    positions.forEach(p => {
+      const sym = p.ticker;
+      const pct = p.pnl_pct || 0;
+      const ed  = p.earnings_days;
+      const dist = p.dist_from_trail || 999;
+      // Earnings today or tomorrow
+      if (ed != null && ed >= 0 && ed <= 1) {
+        const key = `earns_${sym}_${ed}`;
+        if (!seen[key]) { toFire.push({ key, title: `ROK: ${sym} EARNS ${ed===0?'TODAY':'TOMORROW'}`, body: `Decide to hold or reduce ${sym} before the announcement. P&L: ${pct>=0?'+':''}${pct.toFixed(1)}%` }); }
+      }
+      // Near stop — within 1% of trail stop
+      if (dist >= 0 && dist < 1.0 && p.trail_stop_price > 0) {
+        const key = `nearstop_${sym}`;
+        if (!seen[key] || now - seen[key] > 900000) { toFire.push({ key, title: `ROK: ${sym} NEAR STOP LOSS`, body: `${sym} is ${dist.toFixed(1)}% from trail stop $${(p.trail_stop_price||0).toFixed(2)}. Review now.` }); }
+      }
+    });
+    // Portfolio rotation signal
+    const rot = data.rotation_suggestion;
+    if (rot && rot.gap >= 22) {
+      const key = `rot_${rot.sell}_${rot.buy}`;
+      if (!seen[key] || now - seen[key] > 3600000) { toFire.push({ key, title: `ROK: Rotation Signal`, body: `Consider rotating ${rot.sell} (score ${rot.sell_score}) → ${rot.buy} (score ${rot.buy_score}, +${rot.gap.toFixed(0)}pts stronger)` }); }
+    }
+    toFire.slice(0, 3).forEach(n => {
+      try { new Notification(n.title, { body: n.body, icon: './icon-192.png', tag: n.key, silent: false }); } catch(e) {}
+      seen[n.key] = now;
+    });
+    localStorage.setItem(_NOTIF_SEEN_KEY, JSON.stringify(seen));
+  }
+
   async function loadTradesData() {
     let data = null;
     for (const url of ['trades.json?t='+Date.now(), '/docs/trades.json?t='+Date.now()]) {
@@ -56469,6 +56513,39 @@ window.renderSectorRotation = renderSectorRotation;
               </div>
               ${trailWarning ? `<div style="font-size:6px;color:#ff9800;margin-top:.2rem;font-weight:700">⚡ ${distTrail.toFixed(1)}% from trail stop — tightening</div>` : ''}
               ${rMult !== 0 ? `<div style="font-size:6px;color:${rMult>=2?'#00ff88':rMult>=1?'#69f0ae':rMult>0?'#ffd54f':'#ef5350'};margin-top:.1rem">${rMult>=0?'+':''}${rMult.toFixed(1)}R ${rMult>=2?'· let it run':rMult>=1?'· solid':rMult>0?'· building':''}</div>` : ''}
+              ${(() => {
+                // P&L sparkline — shows unrealized return trend over last 24 bot scans (~2 hrs)
+                const hist = (p.pnl_history || []).filter(h => typeof h.p === 'number');
+                if (hist.length < 4) return '';
+                const vals = hist.map(h => h.p);
+                const minV = Math.min(0, ...vals);
+                const maxV = Math.max(0, ...vals);
+                const range = maxV - minV || 1;
+                const W = 200, H = 24;
+                const xStep = W / Math.max(vals.length - 1, 1);
+                const toY = v => H - ((v - minV) / range * H * 0.82 + H * 0.09);
+                const pts = vals.map((v, i) => `${(i * xStep).toFixed(1)},${toY(v).toFixed(1)}`).join(' ');
+                const zeroY = toY(0).toFixed(1);
+                const lastV = vals[vals.length - 1];
+                const col = lastV >= 0 ? '#00ff88' : '#ef5350';
+                const firstV = vals[0];
+                const trend = lastV >= firstV ? '▲' : '▼';
+                const trendCol = lastV >= firstV ? '#00ff88' : '#ef5350';
+                const mae = p.mae != null ? p.mae.toFixed(1) : null;
+                const mfe = p.mfe != null ? p.mfe.toFixed(1) : null;
+                return `<div style="margin-top:.3rem;position:relative" title="P&amp;L history (last ${vals.length} scans) | MAE: ${mae}% worst | MFE: ${mfe}% best">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.25);letter-spacing:.06em">P&amp;L TREND</span>
+                    <span style="font-size:5.5px;font-weight:700;color:${trendCol}">${trend} ${lastV >= 0 ? '+' : ''}${lastV.toFixed(1)}%</span>
+                  </div>
+                  <svg width="${W}" height="${H}" style="display:block;width:100%;opacity:.8" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                    <line x1="0" y1="${zeroY}" x2="${W}" y2="${zeroY}" stroke="rgba(255,255,255,.1)" stroke-width="1" stroke-dasharray="3,3"/>
+                    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+                    <circle cx="${((vals.length-1)*xStep).toFixed(1)}" cy="${toY(lastV).toFixed(1)}" r="2.5" fill="${col}" opacity=".9"/>
+                  </svg>
+                  ${mae != null && mfe != null ? `<div style="display:flex;gap:.5rem;margin-top:1px"><span style="font-size:5px;color:#ef5350" title="Max Adverse Excursion — worst unrealized loss from entry">MAE ${mae}%</span><span style="font-size:5px;color:#00ff88" title="Max Favorable Excursion — best unrealized gain from entry">MFE +${mfe}%</span></div>` : ''}
+                </div>`;
+              })()}
               ${p.live_signals ? (() => {
                 const ls = p.live_signals;
                 const parts = [];
@@ -56519,11 +56596,13 @@ window.renderSectorRotation = renderSectorRotation;
                 const reason = p.rec_reason || '';
                 if (!rec || rec === 'HOLD') return '';
                 const recStyles = {
-                  'ADD':    {col:'#00e676', bg:'rgba(0,230,118,.15)', icon:'➕'},
-                  'REDUCE': {col:'#ef5350', bg:'rgba(255,82,82,.12)', icon:'➖'},
-                  'TIGHTEN':{col:'#ff9800', bg:'rgba(255,152,0,.12)', icon:'⚠'},
-                  'REVIEW': {col:'#ffd54f', bg:'rgba(255,213,79,.1)', icon:'🔍'},
-                  'EXTEND': {col:'#69f0ae', bg:'rgba(105,240,174,.1)', icon:'🚀'},
+                  'ADD':      {col:'#00e676', bg:'rgba(0,230,118,.15)', icon:'➕'},
+                  'SCALE IN': {col:'#00e5ff', bg:'rgba(0,229,255,.15)', icon:'⚡'},
+                  'REDUCE':   {col:'#ef5350', bg:'rgba(255,82,82,.12)', icon:'➖'},
+                  'TIGHTEN':  {col:'#ff9800', bg:'rgba(255,152,0,.12)', icon:'⚠'},
+                  'REVIEW':   {col:'#ffd54f', bg:'rgba(255,213,79,.1)', icon:'🔍'},
+                  'EXTEND':   {col:'#69f0ae', bg:'rgba(105,240,174,.1)', icon:'🚀'},
+                  'LOCK':     {col:'#ffd600', bg:'rgba(255,215,0,.18)', icon:'🔒'},
                 };
                 const s = recStyles[rec] || {col:'#888', bg:'rgba(255,255,255,.05)', icon:'ℹ'};
                 return `<div style="margin-top:.35rem;display:inline-flex;align-items:center;gap:.3rem;background:${s.bg};border:1px solid ${s.col}44;border-radius:4px;padding:2px 6px">
@@ -56535,6 +56614,31 @@ window.renderSectorRotation = renderSectorRotation;
           </div>`;
         });
         html += `</div>`;
+      }
+
+      // Portfolio Rotation Intelligence banner
+      const rot = data.rotation_suggestion;
+      if (rot && rot.buy && rot.sell) {
+        const rotGapCol = rot.gap >= 30 ? '#ff5252' : rot.gap >= 22 ? '#ff9800' : '#ffd54f';
+        html += `<div style="margin-top:.55rem;background:linear-gradient(135deg,rgba(255,152,0,.08),rgba(255,82,82,.06));border:1px solid rgba(255,152,0,.35);border-radius:9px;padding:.55rem .75rem">
+          <div style="font-size:7px;font-weight:900;color:#ff9800;letter-spacing:.1em;margin-bottom:.3rem;text-transform:uppercase"> ROTATION SIGNAL</div>
+          <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:.35rem">
+              <span style="font-size:7.5px;font-weight:800;color:#ef5350">CONSIDER CLOSING</span>
+              <span style="font-family:var(--disp);font-size:.95rem;color:#ffd54f;font-weight:900">\$${rot.sell}</span>
+              <span style="font-size:6.5px;color:#888">score ${rot.sell_score}</span>
+              <span style="font-size:6.5px;color:${rot.sell_pnl >= 0 ? '#00ff88' : '#ef5350'}">${rot.sell_pnl >= 0 ? '+' : ''}${rot.sell_pnl.toFixed(1)}%</span>
+            </div>
+            <span style="font-size:9px;color:rgba(255,152,0,.6)">→</span>
+            <div style="display:flex;align-items:center;gap:.35rem">
+              <span style="font-size:7.5px;font-weight:800;color:#00ff88">ROTATING INTO</span>
+              <span style="font-family:var(--disp);font-size:.95rem;color:#69f0ae;font-weight:900">\$${rot.buy}</span>
+              <span style="font-size:6.5px;color:#888">score ${rot.buy_score}</span>
+              ${rot.buy_cat ? `<span style="font-size:5.5px;background:rgba(0,255,136,.1);color:#00ff88;padding:1px 4px;border-radius:3px">${rot.buy_cat.substring(0,25)}</span>` : ''}
+            </div>
+          </div>
+          <div style="margin-top:.3rem;font-size:6px;color:#888">Signal gap: <span style="font-weight:800;color:${rotGapCol}">${rot.gap.toFixed(0)} pts</span> stronger than weakest held position — review if position is stalling</div>
+        </div>`;
       }
 
       // Portfolio equity curve + monthly P&L calendar
@@ -56676,6 +56780,8 @@ window.renderSectorRotation = renderSectorRotation;
         }
       }
     }
+    // Fire push notifications for urgent alerts (non-intrusive — only granted permission)
+    try { _checkPriorityNotifications(data); } catch(e) {}
   }
 
   // Show next scheduled bot run time
