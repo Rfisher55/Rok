@@ -9602,19 +9602,41 @@ def run():
             except Exception:
                 pass
 
-            # ── Partial exit at +10% (sell half) ──
+            # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
+            # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
+            # so we raise the bar. Bear regime: take gains sooner.
             half_out = peaks[sym].get("half_out", False)
             _half_value = current * (qty / 2)  # value of half position
-            if pnl_pct >= (PARTIAL_PROFIT_PCT * 100) and not half_out and _half_value >= 50:
+            _atr_entry = float(peaks.get(sym, {}).get("atr_at_entry", 0) or 0)
+            _atr_pct   = (_atr_entry / current * 100) if (current > 0 and _atr_entry > 0) else 2.0
+            # Base: PARTIAL_PROFIT_PCT = 10%. Scale by ATR: high-ATR needs more room.
+            _partial_target = PARTIAL_PROFIT_PCT * 100  # 10.0%
+            if _atr_pct >= 4.0:   # very high ATR (volatile): let it run to 14%
+                _partial_target = 14.0
+            elif _atr_pct >= 2.5: # high ATR: 12%
+                _partial_target = 12.0
+            elif _atr_pct <= 1.0: # tight/low ATR: 8%
+                _partial_target = 8.0
+            # Regime overlay: bear = faster exits, strong bull = let run
+            _reg_now = regime.get("regime", "neutral")
+            if _reg_now == "bear":
+                _partial_target = max(5.0, _partial_target - 4.0)
+            elif _reg_now == "strong_bull":
+                _partial_target = _partial_target + 2.0
+            # A+ grade: these have strong continuation — hold longer
+            _entry_grade = live.get(sym, {}).get("grade", "") or ""
+            if _entry_grade == "A+":
+                _partial_target = _partial_target + 3.0
+            if pnl_pct >= _partial_target and not half_out and _half_value >= 50:
                 half_qty = round(qty / 2, 4)
-                logger.info(f"SELL_HALF {sym} — partial at {pnl_pct:+.1f}%")
+                logger.info(f"SELL_HALF {sym} — adaptive partial at {pnl_pct:+.1f}% (target={_partial_target:.0f}%, ATR={_atr_pct:.1f}%)")
                 try:
                     alpaca_post("/v2/orders", {
                         "symbol": sym, "qty": str(half_qty),
                         "side": "sell", "type": "market", "time_in_force": "day",
                     })
                     log_trade(tlog, "SELL_HALF", sym, current, half_qty,
-                              pnl=pnl_pct, reason=f"partial profit ({pnl_pct:+.1f}%)")
+                              pnl=pnl_pct, reason=f"adaptive partial profit ({pnl_pct:+.1f}%, target={_partial_target:.0f}%)")
                     peaks[sym]["half_out"] = True
                     made_trades = True
                 except Exception as e:
@@ -9693,6 +9715,40 @@ def run():
                         except Exception as e:
                             logger.warning(f"RSI overbought sell failed {sym}: {e}")
                         continue
+
+            # ── Negative News Velocity Exit: exit before stops hit if news turns negative ──
+            # If a held position accumulates 4+ negative headlines in the last 2 hours
+            # AND the position is losing, we exit before the stop-loss triggers.
+            # This avoids the "stop-hunting" crash on bad news.
+            if pnl_pct < -1.0 and age_days >= 0.25:  # only on losing positions held >6h
+                try:
+                    _neg_news = _news_velocity(sym, max_age_sec=7200)  # 2h window
+                    _neg_headlines = _neg_news.get("headlines", [])
+                    _neg_sentiment_avg = 0.0
+                    if _neg_headlines:
+                        _neg_scores = [h.get("s", 0) for h in _neg_headlines if "s" in h]
+                        _neg_sentiment_avg = sum(_neg_scores) / len(_neg_scores) if _neg_scores else 0
+                    # Exit if: 4+ negative articles in 2h AND avg sentiment < -0.4 AND accelerating
+                    if (len(_neg_headlines) >= 4 and _neg_sentiment_avg < -0.4
+                            and _neg_news.get("velocity", 0) > 2.0
+                            and not half_out):
+                        logger.info(f"NEG_NEWS_VELOCITY {sym}: {len(_neg_headlines)} neg headlines in 2h "
+                                    f"(sentiment={_neg_sentiment_avg:.2f}, vel={_neg_news.get('velocity',0):.1f}) "
+                                    f"— exiting at {pnl_pct:+.1f}% before stop hits")
+                        _nnv_val = current * qty
+                        if _nnv_val >= 30:
+                            try:
+                                alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                    "side": "sell", "type": "market", "time_in_force": "day"})
+                                log_trade(tlog, "SELL", sym, current, qty,
+                                          pnl=pnl_pct,
+                                          reason=f"neg news velocity exit ({len(_neg_headlines)} neg arts, sent={_neg_sentiment_avg:.2f}, {pnl_pct:+.1f}%)")
+                                made_trades = True
+                            except Exception as _nnv_e:
+                                logger.warning(f"Neg news velocity exit failed {sym}: {_nnv_e}")
+                            continue
+                except Exception:
+                    pass
 
             # ── Profit lock at +8%: if momentum reverses with solid gain, sell 75% ──
             # This locks in most of the profit while keeping a runner going
@@ -10467,7 +10523,15 @@ def run():
         logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj + _spy_tape_score_adj)
 
-    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses and not _drawdown_halt:
+    # ── Portfolio Risk Limit Guard ─────────────────────────────────────────────
+    # If total stop-loss exposure > 9% of portfolio, halt new buys.
+    # This prevents the bot from piling on risk when all positions are at risk simultaneously.
+    _total_risk_pct_now = float(tlog.get("total_risk_pct", 0) or 0)
+    _risk_limit_halt = _total_risk_pct_now > 9.0
+    if _risk_limit_halt:
+        logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 9% — no new buys")
+
+    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses and not _drawdown_halt and not _risk_limit_halt:
         # Sector counts for diversification
         sector_counts = {}
         for sym in longs:
