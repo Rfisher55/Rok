@@ -53587,6 +53587,29 @@ function _renderIntelReport(el, intel) {
           ${bars}
         </div>`;
       })()}
+      ${(() => {
+        // ── Breadth + DCA Intelligence dual panel ──────────────────────────
+        const bp = lp.breadth_perf || [];
+        const di = lp.dca_intelligence || [];
+        if (!bp.length && !di.length) return '';
+        const bktCol = wr => wr >= 60 ? '#00e676' : wr >= 50 ? '#ffd54f' : '#ef5350';
+        const bLabels = {weak:'Breadth<40%',mixed:'40-55%',broad:'55-70%',strong:'>70%'};
+        const bCells = bp.map(b => `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.2rem .3rem;text-align:center">
+          <div style="font-size:5px;color:#555">${bLabels[b.bucket]||b.bucket}</div>
+          <div style="font-size:8px;font-weight:800;color:${bktCol(b.win_rate)}">${b.win_rate.toFixed(0)}%</div>
+          <div style="font-size:5px;color:${b.avg_pnl>=0?'#69f0ae':'#ef5350'}">${b.avg_pnl>=0?'+':''}${b.avg_pnl.toFixed(1)}%</div>
+        </div>`).join('');
+        const bHtml = bp.length ? `<div>
+          <div style="font-size:5.5px;color:#80deea;font-weight:700;margin-bottom:.15rem">🌊 BREADTH ENTRY PERFORMANCE</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${bCells}</div>
+          ${lp.min_breadth_learned > 0 ? `<div style="font-size:5.5px;color:#ef9a9a;margin-top:.1rem">⚠️ Bot avoids entries when breadth < ${lp.min_breadth_learned.toFixed(0)}%</div>` : ''}
+        </div>` : '';
+        const dHtml = di.length ? `<div style="margin-top:.2rem">
+          <div style="font-size:5.5px;color:#ce93d8;font-weight:700;margin-bottom:.15rem">🔄 DCA INTELLIGENCE (avg-down outcomes by regime)</div>
+          <div style="display:flex;gap:.2rem;flex-wrap:wrap">${di.map(d => `<span style="font-size:6px;background:rgba(0,0,0,.2);border-radius:3px;padding:1px 5px;color:${bktCol(d.win_rate)}">${d.regime}: ${d.win_rate.toFixed(0)}%WR (${d.total}T)</span>`).join('')}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem">${bHtml}${dHtml}</div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

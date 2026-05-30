@@ -87,6 +87,7 @@ _LEARNED_BEST_HOURS:   set = set()   # UTC hours with high historical win rates
 _LEARNED_TICKER_MEMORY: dict = {}   # {ticker: score_adj} — per-ticker score modifier from history
 _LEARNED_WORST_HALFHOURS: set = set()  # "HHMM" strings of 30-min windows to avoid
 _LEARNED_BEST_HALFHOURS:  set = set()  # "HHMM" strings of 30-min windows that outperform
+_LEARNED_MIN_BREADTH:     float = 0.0  # minimum breadth % that produces consistent wins (learned)
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -309,6 +310,9 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         e["rvol_at_entry"]        = round(float(signals.get("rvol", 1.0) or 1.0), 2)
         e["earnings_days_at_entry"] = signals.get("earnings_days")  # None if unknown
         e["mkt_quality_at_entry"]  = int(tlog.get("market_quality", 50) or 50)
+        # Breadth at entry (% sectors/stocks advancing)
+        _breadth_entry = tlog.get("market_breadth", {})
+        e["breadth_at_entry"] = round(float(_breadth_entry.get("adv_pct", 50) or 50), 1)
         # Momentum grade at entry (A+/A/B/C/D) — compute here using score + signals
         try:
             e["grade_at_entry"] = momentum_grade(signals, score or 0)
@@ -672,6 +676,65 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _tp["total"] > 0:
                 _tp["win_rate"] = round(_tp["wins"] / _tp["total"] * 100, 1)
                 _tp["avg_pnl"]  = round(_tp["total_pnl"] / _tp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Market Breadth Neuron: learn optimal breadth threshold ────────────────
+    # Tracks win rate by how broad the market was advancing when we entered.
+    # Learns: do entries in strong breadth (>65%) days outperform narrow markets?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t9 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _br_e = float(_buy_t9.get("breadth_at_entry", 50) or 50) if _buy_t9 else None
+            if _br_e is not None:
+                _br_bkt = ("weak" if _br_e < 40 else
+                           "mixed" if _br_e < 55 else
+                           "broad" if _br_e < 70 else "strong")
+                _br_perf = tlog.setdefault("breadth_perf", {})
+                _brp = _br_perf.setdefault(_br_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _brp["total"] = _brp.get("total", 0) + 1
+                _brp["total_pnl"] = round(_brp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _brp["wins"] = _brp.get("wins", 0) + 1
+                else: _brp["losses"] = _brp.get("losses", 0) + 1
+                if _brp["total"] > 0:
+                    _brp["win_rate"] = round(_brp["wins"] / _brp["total"] * 100, 1)
+                    _brp["avg_pnl"]  = round(_brp["total_pnl"] / _brp["total"], 2)
+        except Exception:
+            pass
+
+    # ── DCA Intelligence Neuron: learn when averaging down helps or hurts ─────
+    # When a DCA occurs and the position eventually closes, track the outcome.
+    # The bot learns: in what conditions does DCA improve total returns?
+    if action == "DCA" and pnl is None:  # DCA entry — tag it for tracking
+        try:
+            _dca_ctx = tlog.setdefault("dca_events", [])
+            _dca_ctx.insert(0, {
+                "ticker": sym,
+                "time": datetime.now(timezone.utc).isoformat(),
+                "mkt_quality": tlog.get("market_quality", 50),
+                "breadth": (tlog.get("market_breadth") or {}).get("adv_pct", 50),
+                "regime": (tlog.get("regime") or {}).get("regime", "unknown"),
+            })
+            tlog["dca_events"] = _dca_ctx[:50]  # keep last 50 DCA events
+        except Exception:
+            pass
+
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            # Check if this position had a DCA — was DCA beneficial?
+            _dca_ev = next((d for d in tlog.get("dca_events", []) if d.get("ticker") == sym), None)
+            if _dca_ev:
+                _dca_perf = tlog.setdefault("dca_outcome_perf", {})
+                _dca_result = "win" if pnl > 0 else "loss"
+                _dca_regime = _dca_ev.get("regime", "unknown")
+                _dp = _dca_perf.setdefault(_dca_regime, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _dp["total"] = _dp.get("total", 0) + 1
+                _dp["total_pnl"] = round(_dp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _dp["wins"] = _dp.get("wins", 0) + 1
+                else: _dp["losses"] = _dp.get("losses", 0) + 1
+                if _dp["total"] > 0:
+                    _dp["win_rate"] = round(_dp["wins"] / _dp["total"] * 100, 1)
+                    _dp["avg_pnl"]  = round(_dp["total_pnl"] / _dp["total"], 2)
         except Exception:
             pass
 
@@ -7204,6 +7267,9 @@ def run():
     # Half-hour window awareness
     _LEARNED_WORST_HALFHOURS = set(str(h) for h in _learned.get("worst_halfhours_utc", []))
     _LEARNED_BEST_HALFHOURS  = set(str(h) for h in _learned.get("best_halfhours_utc", []))
+    # Breadth minimum (learned from breadth_perf — if weak breadth entries fail, raise the floor)
+    global _LEARNED_MIN_BREADTH
+    _LEARNED_MIN_BREADTH = float(_learned.get("min_breadth_learned", 0.0) or 0.0)
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
@@ -7927,6 +7993,12 @@ def run():
         logger.info(f"Breadth deteriorating (MCL{_breadth_mcl:.1f}) — raising threshold by 6 → {_eff_min_score}")
     elif _breadth_trend == "deteriorating":
         _eff_min_score += 3
+
+    # Learned breadth minimum guard: raise threshold when current breadth is below the learned floor
+    _cur_breadth_adv = breadth.get("adv_pct", 50) or 50
+    if _LEARNED_MIN_BREADTH > 0 and _cur_breadth_adv < _LEARNED_MIN_BREADTH:
+        _eff_min_score += 5
+        logger.info(f"Breadth below learned floor ({_cur_breadth_adv:.0f}% < {_LEARNED_MIN_BREADTH:.0f}%) — threshold +5 → {_eff_min_score}")
 
     # VIX spike guard: if VIX is spiking rapidly, add extra +8 to threshold
     if _vix_spike:
@@ -9987,6 +10059,44 @@ def run():
             if _worst_cat and _worst_cat["win_rate"] <= 40 and _worst_cat["total"] >= 5:
                 _learn_log.append(f"Weak catalyst: {_worst_cat['catalyst']} only {_worst_cat['win_rate']:.0f}% WR — deprioritizing")
 
+        # ── 18. Breadth Threshold Neuron: minimum breadth for entries ────────
+        _br_data = tlog.get("breadth_perf", {})
+        _br_insights = []
+        _min_breadth_learned = 0.0
+        for _br_bkt in ("weak", "mixed", "broad", "strong"):
+            _brd = _br_data.get(_br_bkt, {})
+            if _brd.get("total", 0) >= 3:
+                _br_insights.append({"bucket": _br_bkt, "win_rate": _brd.get("win_rate", 50),
+                                     "avg_pnl": _brd.get("avg_pnl", 0), "total": _brd.get("total", 0)})
+        if _br_insights:
+            _br_summary = " | ".join(f"{b['bucket']}:{b['win_rate']:.0f}%WR" for b in _br_insights)
+            _learn_log.append(f"Breadth bracket WRs: {_br_summary}")
+            # Learn minimum breadth: if weak breadth (<40%) has <40% WR, avoid those conditions
+            _weak_br = next((b for b in _br_insights if b["bucket"] == "weak"), None)
+            if _weak_br and _weak_br["win_rate"] < 40:
+                _min_breadth_learned = 40.0
+                _learn_log.append(f"Weak breadth entries failing ({_weak_br['win_rate']:.0f}% WR) — minimum breadth raised to 40%")
+            _best_br = max(_br_insights, key=lambda x: x["win_rate"]) if _br_insights else None
+            if _best_br:
+                _learn_log.append(f"Best breadth entry zone: {_best_br['bucket']} ({_best_br['win_rate']:.0f}% WR)")
+
+        # ── 19. DCA Intelligence Neuron: when does averaging down work? ──────
+        _dca_out = tlog.get("dca_outcome_perf", {})
+        _dca_insights = []
+        for _dreg, _dd in _dca_out.items():
+            if _dd.get("total", 0) >= 2:
+                _dca_insights.append({"regime": _dreg, "win_rate": _dd.get("win_rate", 50),
+                                      "avg_pnl": _dd.get("avg_pnl", 0), "total": _dd.get("total", 0)})
+        if _dca_insights:
+            _dca_summary = " | ".join(f"{d['regime']}:{d['win_rate']:.0f}%WR" for d in _dca_insights)
+            _learn_log.append(f"DCA outcomes by regime: {_dca_summary}")
+            _best_dca = max(_dca_insights, key=lambda x: x["win_rate"]) if _dca_insights else None
+            _worst_dca = min(_dca_insights, key=lambda x: x["win_rate"]) if _dca_insights else None
+            if _best_dca and _best_dca["win_rate"] >= 60:
+                _learn_log.append(f"DCA works well in {_best_dca['regime']} markets ({_best_dca['win_rate']:.0f}% WR)")
+            if _worst_dca and _worst_dca["win_rate"] < 40:
+                _learn_log.append(f"DCA hurts in {_worst_dca['regime']} markets ({_worst_dca['win_rate']:.0f}% WR) — cut faster")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -10011,6 +10121,9 @@ def run():
             "grade_perf":          _grade_insights,        # momentum grade performance
             "price_tier_perf":     _tier_insights,         # price tier performance
             "catalyst_perf":       _cat_insights[:8],      # catalyst type performance
+            "breadth_perf":        _br_insights,           # breadth bracket performance
+            "min_breadth_learned": _min_breadth_learned,   # learned breadth floor
+            "dca_intelligence":    _dca_insights,          # DCA outcome by regime
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
