@@ -56382,6 +56382,8 @@ async function renderPerfChart() {
         ${equityData?.sharpe_ratio != null ? (() => { const sr=equityData.sharpe_ratio; const src=sr>=1.5?'#00ff88':sr>=0.5?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Sharpe</div><div style="font-size:12px;font-weight:800;color:${src}">${sr.toFixed(2)}</div></div>`; })() : ''}
         ${equityData?.max_drawdown_pct > 0.5 ? (() => { const dd=equityData.max_drawdown_pct; const ddc=dd<5?'#69f0ae':dd<10?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Max DD</div><div style="font-size:12px;font-weight:800;color:${ddc}">-${dd.toFixed(1)}%</div></div>`; })() : ''}
         ${equityData?.daily_win_rate != null ? (() => { const dwr=equityData.daily_win_rate; const dwrc=dwr>=55?'#00ff88':dwr>=40?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Day Win%</div><div style="font-size:12px;font-weight:800;color:${dwrc}">${dwr}%</div></div>`; })() : ''}
+        ${data.profit_factor != null ? (() => { const pf=data.profit_factor; const pfc=pf>=2?'#00ff88':pf>=1.2?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Prof.Factor</div><div style="font-size:12px;font-weight:800;color:${pfc}">${pf.toFixed(2)}x</div></div>`; })() : ''}
+        ${(data.avg_win_pct && data.avg_loss_pct) ? (() => { const aw=data.avg_win_pct; const al=Math.abs(data.avg_loss_pct); const ratio=(al>0?aw/al:0); const rc=ratio>=2?'#00ff88':ratio>=1?'#ffd54f':'#ef5350'; return `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">W/L Ratio</div><div style="font-size:12px;font-weight:800;color:${rc}">${ratio.toFixed(1)}:1</div></div>`; })() : ''}
         ${data.scan_universe ? `<div><div style="font-size:7px;color:#3a5a8a;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:12px;font-weight:800;color:#ccc">${data.scan_universe}</div></div>` : ''}
       </div>
 
@@ -56461,6 +56463,33 @@ async function renderPerfChart() {
         });
       }
 
+      // SPY benchmark line — indexed to same starting portfolio value
+      if (useDaily && dailySnaps.length >= 2) {
+        const _spyCloses = dailySnaps.map(s => s.spy_close || 0).filter(v => v > 0);
+        const _spyStart  = equityData?.spy_start || (_spyCloses.length ? _spyCloses[0] : 0);
+        if (_spyStart > 0 && _spyCloses.length >= 2) {
+          const _spyIndexed = dailySnaps.map(s => {
+            const sc = s.spy_close || 0;
+            return sc > 0 ? +(startVal * sc / _spyStart).toFixed(2) : null;
+          });
+          datasets.push({
+            type: 'line',
+            label: 'SPY Benchmark',
+            data: _spyIndexed,
+            borderColor: 'rgba(100,181,246,.55)',
+            borderWidth: 1,
+            borderDash: [4, 3],
+            backgroundColor: 'transparent',
+            fill: false,
+            pointRadius: 0,
+            tension: 0.3,
+            yAxisID: 'y',
+            order: 3,
+            spanGaps: true,
+          });
+        }
+      }
+
       new Chart(canvas, {
         data: { labels, datasets },
         options: {
@@ -56475,8 +56504,9 @@ async function renderPerfChart() {
               callbacks: {
                 title: items => items[0].label,
                 label: item => {
-                  if (item.datasetIndex === 0) return `Portfolio: $${Number(item.raw).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}`;
-                  if (item.datasetIndex === 1 && item.raw != null) return `Day P&L: ${item.raw >= 0 ? '+' : ''}${Number(item.raw).toFixed(2)}%`;
+                  if (item.dataset.label === 'Portfolio') return `Portfolio: $${Number(item.raw).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+                  if (item.dataset.label === 'SPY Benchmark' && item.raw != null) return `SPY Equiv: $${Number(item.raw).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+                  if (item.dataset.label === 'Daily P&L %' && item.raw != null) return `Day P&L: ${item.raw >= 0 ? '+' : ''}${Number(item.raw).toFixed(2)}%`;
                   return '';
                 }
               },

@@ -302,25 +302,39 @@ def _save_equity_snapshot(tlog: dict) -> None:
         _daily_pnl_pct = round((_daily_pnl_usd / _prior_val * 100) if _prior_val else 0, 3)
         # Current open P&L from positions
         _open_pnl_usd = sum(float(p.get("pnl_usd", 0)) for p in tlog.get("positions", []))
+        # SPY close for benchmark comparison (from already-fetched cache)
+        _spy_close_now = 0.0
+        try:
+            if _SPY_PERF_CACHE and _SPY_PERF_CACHE.get("closes"):
+                _spy_close_now = round(float(_SPY_PERF_CACHE["closes"][-1]), 2)
+        except Exception:
+            pass
         # Update today's entry or append
         if snaps and snaps[-1].get("date") == today:
             snaps[-1]["value"] = round(pv, 2)
             snaps[-1]["ts"] = datetime.now(timezone.utc).isoformat()
             snaps[-1]["open_pnl"] = round(_open_pnl_usd, 2)
             snaps[-1]["positions"] = len(tlog.get("positions", []))
+            if _spy_close_now > 0:
+                snaps[-1]["spy_close"] = _spy_close_now
         else:
-            snaps.append({
+            _new_snap = {
                 "date": today, "value": round(pv, 2),
                 "ts": datetime.now(timezone.utc).isoformat(),
                 "daily_pnl_usd": _daily_pnl_usd,
                 "daily_pnl_pct": _daily_pnl_pct,
                 "open_pnl": round(_open_pnl_usd, 2),
                 "positions": len(tlog.get("positions", [])),
-            })
-        # Record start value on first snapshot
+            }
+            if _spy_close_now > 0:
+                _new_snap["spy_close"] = _spy_close_now
+            snaps.append(_new_snap)
+        # Record start value on first snapshot (including SPY start for benchmark)
         if not eq.get("start_value"):
-            eq["start_value"] = round(pv, 2)
-            eq["start_date"]  = today
+            eq["start_value"]     = round(pv, 2)
+            eq["start_date"]      = today
+            if _spy_close_now > 0:
+                eq["spy_start"] = _spy_close_now
         # Keep 365 days
         eq["snapshots"] = snaps[-365:]
         values = [s["value"] for s in eq["snapshots"]]
@@ -9432,8 +9446,46 @@ def run():
                 "time":           entry_time,
                 "half_out":       peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False,
                 "ever_hit_5pct":  _ever_hit,
+                "gap_day":        peaks.get(sym, {}).get("gap_day", "") if isinstance(peaks.get(sym), dict) else "",
+                "entry_score":    peaks.get(sym, {}).get("entry_score", 0) if isinstance(peaks.get(sym), dict) else 0,
+                "atr_at_entry":   peaks.get(sym, {}).get("atr_at_entry", 0) if isinstance(peaks.get(sym), dict) else 0,
+                "pnl_history":    peaks.get(sym, {}).get("pnl_history", []) if isinstance(peaks.get(sym), dict) else [],
+                "score_history":  peaks.get(sym, {}).get("score_history", []) if isinstance(peaks.get(sym), dict) else [],
             }
             trail_drop = (current - peak) / peak * 100
+
+            # ── Gap-up profit harvest: if stock gapped 3%+ at open, sell half ──
+            # Massive gap-ups frequently fill; locking in half secures overnight-news gains.
+            # Only triggers once per day (gap_day flag) and only when position is profitable.
+            try:
+                _sig_gu = live.get(sym, {}) or {}
+                _day_open_gu   = float(_sig_gu.get("day_open",   0) or 0)
+                _prev_close_gu = float(_sig_gu.get("prev_close", 0) or 0)
+                _gap_today     = today[:10]  # YYYY-MM-DD
+                if (_day_open_gu > 0 and _prev_close_gu > 0 and pnl_pct > 2
+                        and not peaks[sym].get("half_out")
+                        and peaks[sym].get("gap_day", "") != _gap_today):
+                    _gap_up_pct = (_day_open_gu - _prev_close_gu) / _prev_close_gu * 100
+                    if _gap_up_pct >= 3.0:
+                        _gap_qty = round(qty / 2, 4)
+                        _gap_val = current * _gap_qty
+                        if _gap_val >= 50:
+                            logger.info(f"GAP_HARVEST {sym} — gap={_gap_up_pct:+.1f}% at open, pnl={pnl_pct:+.1f}%, selling half")
+                            try:
+                                alpaca_post("/v2/orders", {
+                                    "symbol": sym, "qty": str(_gap_qty),
+                                    "side": "sell", "type": "market", "time_in_force": "day",
+                                })
+                                log_trade(tlog, "SELL_HALF", sym, current, _gap_qty,
+                                          pnl=pnl_pct, reason=f"gap-up harvest (gap={_gap_up_pct:+.1f}%, {pnl_pct:+.1f}%)")
+                                peaks[sym]["half_out"] = True
+                                peaks[sym]["gap_day"]  = _gap_today
+                                made_trades = True
+                            except Exception as _ge:
+                                logger.warning(f"Gap harvest order failed {sym}: {_ge}")
+                            continue
+            except Exception:
+                pass
 
             # Position age
             age_days = 0
@@ -9549,6 +9601,25 @@ def run():
             if _earn_d_close is not None and 2 < _earn_d_close <= 7 and pnl_pct > 1.5:
                 dyn_trail = max(1.0, dyn_trail * 0.50)
                 logger.debug(f"Pre-earnings tighten {sym}: trail→{dyn_trail:.1f}% (earns in {_earn_d_close}d)")
+
+            # ── News sentiment tightening: bad headlines → protect profits ────────────
+            # If recent news contains downgrade / guidance-cut / legal keywords,
+            # shrink the trailing stop to lock in gains before a potential news-driven drop.
+            try:
+                _nv_held = _news_velocity(sym, max_age_sec=900)  # 15-min fresh cache
+                _hl_held = [h.get("t", "").lower() for h in _nv_held.get("headlines", [])]
+                _neg_kws = ("downgrade", "downgraded", "cuts guidance", "lowers guidance",
+                            "guidance cut", "guidance below", "misses estimates", "miss",
+                            "recall", "sec investigation", "fraud", "class action",
+                            "suspended guidance", "revokes", "warning letter",
+                            "disappoints", "below expectations")
+                _neg_hits_h = sum(1 for h in _hl_held if any(w in h for w in _neg_kws))
+                if _neg_hits_h >= 1 and pnl_pct > 1.5:
+                    _news_mult = 0.55 if _neg_hits_h >= 2 else 0.72
+                    dyn_trail  = max(1.5, dyn_trail * _news_mult)
+                    logger.info(f"NEWS_TIGHTEN {sym}: {_neg_hits_h} neg headline(s) → trail={dyn_trail:.1f}%")
+            except Exception:
+                pass
 
             # ── Neural continuation bonus: widen trail when strong patterns still active ──
             # If the premium signals that got us in are STILL firing, give more room
