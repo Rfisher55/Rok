@@ -54458,6 +54458,32 @@ window.renderSectorRotation = renderSectorRotation;
           const effPct = eff != null ? Math.round(eff * 100) : null;
           return `<div style="background:rgba(0,0,0,.2);border:1px solid ${dtColor}33;border-radius:12px;padding:.7rem 1rem"><div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Day Type</div><div style="font-size:11px;font-weight:900;color:${dtColor}">${dtLabel}</div><div style="font-size:7px;color:var(--wh4)">${hintLabel}${effPct != null ? ' · eff '+effPct+'%' : ''}${rr != null ? ' · ×'+rr.toFixed(2) : ''}</div></div>`;
         })()}
+        ${(() => {
+          // Market Internals tile: breadth + scan breadth + market quality
+          const mq  = data.market_quality;
+          const bp  = (data.market_breadth || {}).breadth_pct || (data.market_breadth || {}).adv_pct;
+          const sbp = data.scan_breadth_pct;
+          const vix = (data.regime || {}).vix;
+          if (mq == null && bp == null) return '';
+          const mqVal = mq != null ? Math.round(mq) : null;
+          const mqColor = mqVal >= 65 ? '#00e676' : mqVal >= 45 ? '#ffd54f' : mqVal >= 30 ? '#ff9100' : '#ef5350';
+          const mqLabel = mqVal >= 65 ? 'STRONG' : mqVal >= 45 ? 'OK' : mqVal >= 30 ? 'WEAK' : 'POOR';
+          const bpPct = bp != null ? Math.round(bp) : null;
+          const bpColor = bpPct >= 65 ? '#00e676' : bpPct >= 50 ? '#ffd54f' : '#ef5350';
+          const sbpPct = sbp != null ? Math.round(sbp) : null;
+          const vixStr = vix != null ? `VIX${vix.toFixed(1)}` : '';
+          return `<div style="background:rgba(0,0,0,.2);border:1px solid ${mqColor}33;border-radius:12px;padding:.7rem 1rem;cursor:default" title="Market quality composite: ${mqLabel} (${mqVal}/100)">
+            <div style="font-size:8px;color:var(--wh3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">Market Health</div>
+            <div style="display:flex;align-items:baseline;gap:.35rem">
+              ${mqVal != null ? `<span style="font-size:11px;font-weight:900;color:${mqColor}">${mqVal}</span><span style="font-size:7.5px;color:${mqColor};font-weight:700">/100</span>` : ''}
+            </div>
+            <div style="font-size:7px;color:var(--wh4);margin-top:.1rem">
+              ${bpPct != null ? `<span style="color:${bpColor}">${bpPct}%</span> sectors` : ''}
+              ${sbpPct != null ? ` · scan ${sbpPct}%` : ''}
+              ${vixStr ? ` · ${vixStr}` : ''}
+            </div>
+          </div>`;
+        })()}
       </div>`;
     }
 
@@ -54537,6 +54563,9 @@ window.renderSectorRotation = renderSectorRotation;
             else if (s.gex_sign === -1) signalTags.push('<span style="font-size:5.5px;color:#ce93d8;padding:1px 3px;border-radius:3px" title="Negative dealer GEX — trending conditions">γ−</span>');
             if (s.pm_big_gap_up) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,255,136,.12);color:#00ff88;padding:1px 3px;border-radius:3px" title="Pre-market gap up ${(s.pm_gap_pct||0).toFixed(1)}%">PM+${(s.pm_gap_pct||0).toFixed(1)}%🚀</span>`);
             else if (s.pm_gap_up) signalTags.push(`<span style="font-size:5.5px;color:#69f0ae;padding:1px 3px;border-radius:3px">PM+${(s.pm_gap_pct||0).toFixed(1)}%</span>`);
+            if (s.hv_contracting) signalTags.push('<span style="font-size:5.5px;font-weight:800;background:rgba(64,196,255,.1);color:#40c4ff;padding:1px 3px;border-radius:3px" title="Volatility coiling — breakout setup">HV↓COIL</span>');
+            else if (s.hv_expanding) signalTags.push('<span style="font-size:5.5px;font-weight:800;background:rgba(255,145,0,.1);color:#ff9100;padding:1px 3px;border-radius:3px" title="Volatility expanding — momentum move">HV↑EXP</span>');
+            if ((s.consec_green||0) >= 3) signalTags.push(`<span style="font-size:5.5px;font-weight:900;background:rgba(0,230,118,.1);color:#00e676;padding:1px 3px;border-radius:3px" title="${s.consec_green} consecutive green days">${s.consec_green}🟢</span>`);
             html += `<div style="background:${bgGrad};border:${border};border-radius:9px;padding:.55rem .65rem;display:flex;flex-direction:column;gap:.2rem;position:relative">
               ${i===0 ? '<div style="position:absolute;top:-1px;right:-1px;background:#00ff88;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:0 9px 0 5px;letter-spacing:.05em">TOP</div>' : ''}
               ${isHeld ? '<div style="position:absolute;top:-1px;left:-1px;background:#ffd54f;color:#000;font-size:6px;font-weight:900;padding:1px 5px;border-radius:9px 0 5px 0;letter-spacing:.05em">HELD</div>' : ''}
@@ -54709,6 +54738,32 @@ window.renderSectorRotation = renderSectorRotation;
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${etfHtml}</div>
         </div>`;
       }
+
+      // Portfolio Concentration Risk
+      const portConc = data.portfolio_concentration || {};
+      if (portConc.position_count > 0) {
+        const riskLevel = portConc.risk_level || 'LOW';
+        const riskCol = riskLevel === 'HIGH' ? '#ef5350' : riskLevel === 'MEDIUM' ? '#ffa726' : '#69f0ae';
+        const riskIcon = riskLevel === 'HIGH' ? '⚠' : riskLevel === 'MEDIUM' ? '⚡' : '✓';
+        const secBuckets = portConc.sector_buckets || {};
+        const secItems = Object.entries(secBuckets).sort((a,b)=>b[1]-a[1]).map(([sec,cnt]) => {
+          const secCol = cnt >= 3 ? '#ef5350' : cnt === 2 ? '#ffa726' : '#69f0ae';
+          return `<span style="font-size:6.5px;background:rgba(255,255,255,.04);border-radius:3px;padding:1px 4px"><span style="color:${secCol};font-weight:700">${cnt}×</span><span style="color:#888"> ${sec}</span></span>`;
+        }).join('');
+        const betaVal = data.portfolio_beta;
+        const betaCol = betaVal > 1.5 ? '#ef5350' : betaVal > 1.2 ? '#ffa726' : '#69f0ae';
+        healthEl.innerHTML += `<div style="margin-top:.6rem;padding:.4rem .6rem;background:${riskLevel==='HIGH'?'rgba(255,34,85,.06)':riskLevel==='MEDIUM'?'rgba(255,167,38,.05)':'rgba(0,0,0,.15)'};border:1px solid ${riskCol}22;border-radius:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem">
+            <span style="font-size:7.5px;color:#4a6fa5;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Portfolio Risk</span>
+            <span style="font-size:7px;font-weight:900;color:${riskCol}">${riskIcon} ${riskLevel} CONC</span>
+          </div>
+          ${secItems ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:.25rem">${secItems}</div>` : ''}
+          <div style="display:flex;gap:.6rem">
+            ${betaVal != null ? `<span style="font-size:6.5px;color:#888">Beta: <span style="color:${betaCol};font-weight:700">${betaVal.toFixed(2)}β</span></span>` : ''}
+            ${portConc.dominant_sector ? `<span style="font-size:6.5px;color:#888">Dominant: <span style="color:#aaa">${portConc.dominant_sector}</span></span>` : ''}
+          </div>
+        </div>`;
+      }
     }
 
     // Populate Intel tab ROK trades section
@@ -54874,6 +54929,40 @@ window.renderSectorRotation = renderSectorRotation;
           const lsMtfTriple = ls.mtf_triple ? `<span style="font-size:6px;font-weight:900;color:#00e676" title="Triple timeframe aligned: weekly+daily+hourly bullish">3TF✓</span>` : '';
           const lsGex = ls.squeeze_potential ? `<span style="font-size:6px;font-weight:900;color:#e040fb" title="Gamma squeeze potential">γSQZ🎯</span>` : (ls.gex_sign === -1 ? `<span style="font-size:6px;color:#ce93d8" title="Negative GEX — trending conditions">γ−</span>` : '');
           const lsGammaWall = ls.gamma_wall_up > 0 && p.price > 0 && ls.gamma_wall_up > p.price ? `<span style="font-size:6px;color:#82b1ff" title="Gamma wall at $${(ls.gamma_wall_up||0).toFixed(0)}">γ↑$${(ls.gamma_wall_up||0).toFixed(0)}</span>` : '';
+          // HV regime badge — volatility expansion/contraction
+          const lsHV = (() => {
+            if (ls.hv_expanding) return `<span style="font-size:6px;font-weight:800;color:#ff9100;background:rgba(255,145,0,.1);border-radius:3px;padding:0 3px" title="Volatility expanding: 5d HV ${(ls.hv5||0).toFixed(0)}% vs 20d HV ${(ls.hv20||0).toFixed(0)}% — momentum move">HV↑EXP</span>`;
+            if (ls.hv_contracting) return `<span style="font-size:6px;font-weight:800;color:#40c4ff;background:rgba(64,196,255,.1);border-radius:3px;padding:0 3px" title="Volatility contracting: 5d HV ${(ls.hv5||0).toFixed(0)}% vs 20d HV ${(ls.hv20||0).toFixed(0)}% — coil before breakout">HV↓COIL</span>`;
+            return '';
+          })();
+          // Consecutive day streak badge
+          const lsStreak = (() => {
+            const cg = ls.consec_green || 0;
+            const cr = ls.consec_red || 0;
+            if (cg >= 4) return `<span style="font-size:6px;font-weight:900;color:#00e676;background:rgba(0,230,118,.1);border-radius:3px;padding:0 3px" title="${cg} consecutive green days — strong uptrend">${cg}🟢</span>`;
+            if (cg >= 2) return `<span style="font-size:6px;color:#69f0ae" title="${cg} green days">${cg}🟢</span>`;
+            if (cr >= 4) return `<span style="font-size:6px;font-weight:900;color:#ef5350;background:rgba(239,83,80,.1);border-radius:3px;padding:0 3px" title="${cr} consecutive red days — WARNING">${cr}🔴⚠</span>`;
+            if (cr >= 2) return `<span style="font-size:6px;color:#ef9a9a" title="${cr} red days">${cr}🔴</span>`;
+            return '';
+          })();
+          // Fibonacci level mini-display: show nearest fib level and direction
+          const lsFibLevels = (() => {
+            const f382 = ls.fib_level_382 || 0;
+            const f500 = ls.fib_level_500 || 0;
+            const f618 = ls.fib_level_618 || 0;
+            const pr = p.price || 0;
+            if (!f382 || !pr) return '';
+            // Find nearest fib level
+            const levels = [{n:'38.2',v:f382},{n:'50',v:f500},{n:'61.8',v:f618}].filter(l=>l.v>0);
+            const nearest = levels.sort((a,b)=>Math.abs(a.v-pr)-Math.abs(b.v-pr))[0];
+            if (!nearest) return '';
+            const pct = ((pr - nearest.v) / pr * 100);
+            const close = Math.abs(pct) < 2;
+            const above = pct > 0;
+            const col = ls.fib_support ? '#ffd600' : close ? '#ffe57f' : '#4a5570';
+            const icon = ls.fib_support ? '🎯' : above ? '▲' : '▼';
+            return `<span style="font-size:6px;color:${col};background:rgba(255,215,0,.06);border-radius:3px;padding:0 3px" title="Nearest Fibonacci ${nearest.n}% = $${nearest.v.toFixed(2)} — ${above?'above':'below'} by ${Math.abs(pct).toFixed(1)}%${ls.fib_support?' — AT SUPPORT ZONE':''}">${icon}FIB${nearest.n}$${nearest.v.toFixed(2)}</span>`;
+          })();
           const lsAnalyst = (() => {
             const bp = ls.analyst_buy_pct || 0;
             const nr = ls.analyst_net_rev || 0;
@@ -54971,8 +55060,38 @@ window.renderSectorRotation = renderSectorRotation;
           const distStopHtml = distToStop != null ? (() => {
             const col = distToStop < 2 ? '#ef5350' : distToStop < 4 ? '#ffa726' : distToStop < 7 ? '#ffd54f' : '#4a6fa5';
             const icon = distToStop < 2 ? '⚠' : distToStop < 4 ? '⚡' : '';
-            return `<span style="font-size:7px;font-weight:800;color:${col}" title="Distance to stop loss">STOP${icon} ${distToStop.toFixed(1)}% away@$${stopLevel.toFixed(2)}</span>`;
+            return `<span style="font-size:7px;font-weight:800;color:${col}" title="Distance to stop loss">STOP${icon} ${distToStop.toFixed(1)}%@$${stopLevel.toFixed(2)}</span>`;
           })() : '';
+          // R:R progress bar — visual strip from stop → entry → current → target
+          const rrBarHtml = (() => {
+            const stop   = stopLevel || 0;
+            const entry  = p.cost || 0;
+            const cur    = p.price || 0;
+            const tgt    = ls.analyst_price_tgt > 0 ? ls.analyst_price_tgt : p.target_price || 0;
+            if (!stop || !entry || !cur || !tgt || tgt <= entry) return '';
+            const risk   = entry - stop;
+            const reward = tgt - entry;
+            if (risk <= 0 || reward <= 0) return '';
+            const rrRatio = (reward / risk).toFixed(1);
+            // Position of current price on the stop→target range
+            const range  = tgt - stop;
+            const curPct = Math.min(100, Math.max(0, ((cur - stop) / range * 100)));
+            const entPct = Math.min(100, Math.max(0, ((entry - stop) / range * 100)));
+            const inProfit = cur >= entry;
+            const barColor = cur >= tgt * 0.97 ? '#00e676' : inProfit ? '#69f0ae' : '#ef5350';
+            return `<div style="margin-top:.35rem;padding:.2rem .3rem;background:rgba(0,0,0,.25);border-radius:4px" title="R:R = ${rrRatio}:1 · stop $${stop.toFixed(2)} → entry $${entry.toFixed(2)} → current $${cur.toFixed(2)} → target $${tgt.toFixed(2)}">
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                <span style="font-size:5.5px;color:#555">STOP $${stop.toFixed(0)}</span>
+                <span style="font-size:5.5px;color:#ffd54f;font-weight:700">R:R ${rrRatio}:1</span>
+                <span style="font-size:5.5px;color:#555">TGT $${tgt.toFixed(0)}</span>
+              </div>
+              <div style="position:relative;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:visible">
+                <div style="position:absolute;left:0;top:0;height:100%;width:${curPct}%;background:${barColor};border-radius:3px;opacity:.7"></div>
+                <div style="position:absolute;left:calc(${entPct}% - 1px);top:-1px;width:2px;height:7px;background:#ffd54f;border-radius:1px" title="Entry $${entry.toFixed(2)}"></div>
+                <div style="position:absolute;left:calc(${curPct}% - 2px);top:-2px;width:4px;height:9px;background:${barColor};border-radius:2px;box-shadow:0 0 4px ${barColor}88" title="Current $${cur.toFixed(2)}"></div>
+              </div>
+            </div>`;
+          })();
           const peakPctStr = p.peak_price > 0 && p.price > 0 ? (() => {
             const dd = (p.price - p.peak_price) / p.peak_price * 100;
             return dd < -1 ? `<span style="font-size:6.5px;color:#ef5350" title="Drawdown from peak">▼${Math.abs(dd).toFixed(1)}%peak</span>` : '';
@@ -54993,7 +55112,7 @@ window.renderSectorRotation = renderSectorRotation;
                 <div style="font-size:8.5px;color:var(--wh3)">${p.qty||''} sh · cost $${(p.cost||0).toFixed(2)} → $${(p.price||0).toFixed(2)} · val $${(p.market_val||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
                 ${(lsRsi||lsVwap||lsRcl||lsRoc||lsAdx||lsRs63||lsChan||lsMtf||lsE200||lsMfi||lsST||lsPSAR||earnD) ? `<div style="display:flex;gap:.35rem;margin-top:.2rem;flex-wrap:wrap">${lsRcl}${lsVwap}${lsRsi}${lsRoc}${lsAdx}${lsRs63}${lsChan}${lsST}${lsPSAR}${lsMfi}${lsMtf}${lsE200}${earnD}</div>` : ''}
                 ${(distStopHtml||peakPctStr||lsScoreDeg||lsPivot||lsCandle||lsLR||lsAccel||lsVwapBand) ? `<div style="display:flex;gap:.5rem;margin-top:.15rem;flex-wrap:wrap;align-items:center">${distStopHtml}${peakPctStr}${lsScoreDeg}${lsPivot}${lsLR}${lsAccel}${lsVwapBand}${lsCandle}</div>` : ''}
-                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsAnalyst}</div>` : ''}
+                ${(lsAccumScore||lsNewsVel||lsPmGap||lsMtfTriple||lsGex||lsGammaWall||lsShortInt||lsAnalyst||lsHV||lsStreak||lsFibLevels) ? `<div style="display:flex;gap:.4rem;margin-top:.1rem;flex-wrap:wrap">${lsMtfTriple}${lsAccumScore}${lsNewsVel}${lsPmGap}${lsGex}${lsGammaWall}${lsShortInt}${lsHV}${lsStreak}${lsFibLevels}${lsAnalyst}</div>` : ''}
                 ${intelSig ? (() => {
                   const ic = intelSig.type === 'buy' ? '#00ff88' : intelSig.type === 'sell' ? '#ef5350' : '#ffd54f';
                   const il = intelSig.type === 'buy' ? 'AI BUY' : intelSig.type === 'sell' ? 'AI SELL' : 'AI WATCH';
@@ -55037,6 +55156,7 @@ window.renderSectorRotation = renderSectorRotation;
                     ${items}
                   </div>`;
                 })()}
+                ${rrBarHtml}
               </div>
               <div style="text-align:right">
                 <div style="font-size:12.5px;font-weight:900;color:${pnlColor}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>
@@ -55214,6 +55334,8 @@ window.renderSectorRotation = renderSectorRotation;
             s.squeeze_potential ? `<span style="background:rgba(255,100,255,.3);color:#e040fb;font-size:6.5px;font-weight:900;padding:1px 5px;border-radius:3px" title="Gamma squeeze potential — large put wall below price with negative dealer gamma">γSQZ🎯</span>` : (s.gex_sign === -1 ? `<span style="background:rgba(180,80,255,.18);color:#ce93d8;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Negative GEX — dealers short gamma, amplified moves expected">γ−</span>` : ''),
             (s.gamma_wall_up > 0 && s.price > 0 && s.gamma_wall_up > s.price) ? `<span style="background:rgba(100,180,255,.15);color:#82b1ff;font-size:6px;padding:1px 4px;border-radius:3px" title="Gamma wall resistance at $${(s.gamma_wall_up||0).toFixed(0)}">γ↑$${(s.gamma_wall_up||0).toFixed(0)}</span>` : '',
             (s.earnings_days != null && s.earnings_days <= 20) ? (() => { const d = s.earnings_days; const col = d <= 2 ? '#ef5350' : d <= 7 ? '#ffa726' : '#ffd54f'; return `<span style="font-size:6px;font-weight:800;color:${col}">📅${d}d</span>`; })() : '',
+            s.hv_contracting ? '<span style="background:rgba(64,196,255,.12);color:#40c4ff;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volatility contracting — coil before breakout">HV↓COIL</span>' : (s.hv_expanding ? '<span style="background:rgba(255,145,0,.12);color:#ff9100;font-size:6.5px;font-weight:800;padding:1px 4px;border-radius:3px" title="Volatility expanding — momentum move">HV↑EXP</span>' : ''),
+            (s.consec_green >= 3) ? `<span style="background:rgba(0,230,118,.12);color:#00e676;font-size:6.5px;font-weight:900;padding:1px 4px;border-radius:3px" title="${s.consec_green} consecutive green days">${s.consec_green}🟢</span>` : '',
           ].filter(Boolean).join('');
           const gradeCol = s.grade === 'A+' ? '#00ff88' : s.grade === 'A' ? '#69f0ae' : s.grade === 'B+' ? '#ffd54f' : s.grade === 'B' ? '#ffcc02' : s.grade === 'C' ? '#ff9800' : '#ef5350';
           html += `<div style="padding:.35rem .55rem;background:rgba(0,255,136,.04);border-radius:7px;border-left:2.5px solid rgba(0,255,136,.3)">
@@ -55231,7 +55353,7 @@ window.renderSectorRotation = renderSectorRotation;
               ${s.sent ? `<span style="font-size:7.5px;color:${s.sent>=3?'var(--g)':s.sent<=-3?'var(--r)':'var(--wh4)'};margin-left:auto">AI ${s.sent>=0?'+':''}${s.sent}</span>` : ''}
             </div>
             ${cat ? `<div style="margin-top:.2rem">${cat}</div>` : ''}
-            ${s.stop_price ? `<div style="font-size:7px;color:#555;margin-top:.1rem">Stop \$${s.stop_price} · Target \$${s.price ? (s.price*1.20).toFixed(2) : '—'}</div>` : ''}
+            ${s.stop_price ? `<div style="font-size:7px;color:#555;margin-top:.1rem">Stop \$${s.stop_price} · Target \$${s.price ? (s.price*1.20).toFixed(2) : '—'}${s.fib_level_382 && s.price ? ` · Fib38.2%=\$${s.fib_level_382.toFixed(2)} 50%=\$${(s.fib_level_500||0).toFixed(2)} 61.8%=\$${(s.fib_level_618||0).toFixed(2)}` : ''}</div>` : ''}
           </div>`;
         });
         rejected.slice(0,5).forEach(s => {

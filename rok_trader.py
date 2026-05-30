@@ -3668,25 +3668,32 @@ def _extract(daily, hourly):
     # Fibonacci retracement level detection — institutional support zones
     fib_support    = False   # price near 38.2% / 50% / 61.8% retracement and holding
     fib_resistance = False   # price near 61.8% / 78.6% when in downtrend
+    fib_level_382  = 0.0
+    fib_level_500  = 0.0
+    fib_level_618  = 0.0
+    fib_level_786  = 0.0
+    fib_high_ref   = 0.0
+    fib_low_ref    = 0.0
     try:
         if len(daily) >= 20 and "High" in daily.columns and "Low" in daily.columns:
             _fib_high = float(daily["High"].iloc[-20:].max())
             _fib_low  = float(daily["Low"].iloc[-20:].min())
             _range    = _fib_high - _fib_low
             if _range > 0:
-                fib_382 = _fib_high - 0.382 * _range
-                fib_500 = _fib_high - 0.500 * _range
-                fib_618 = _fib_high - 0.618 * _range
-                fib_786 = _fib_high - 0.786 * _range
+                fib_level_382 = round(_fib_high - 0.382 * _range, 2)
+                fib_level_500 = round(_fib_high - 0.500 * _range, 2)
+                fib_level_618 = round(_fib_high - 0.618 * _range, 2)
+                fib_level_786 = round(_fib_high - 0.786 * _range, 2)
+                fib_high_ref  = round(_fib_high, 2)
+                fib_low_ref   = round(_fib_low, 2)
                 # Within 1% of Fibonacci level = at the zone
-                for fib_lvl in [fib_382, fib_500, fib_618]:
+                for fib_lvl in [fib_level_382, fib_level_500, fib_level_618]:
                     if abs(price - fib_lvl) / fib_lvl < 0.012:
-                        # Bouncing off support: price was below this level recently
                         dc_fib = list(daily["Close"].iloc[-5:])
                         if dc_fib and min(dc_fib[:-1]) < fib_lvl and price >= fib_lvl * 0.998:
                             fib_support = True
                         break
-                if abs(price - fib_786) / fib_786 < 0.012:
+                if abs(price - fib_level_786) / fib_level_786 < 0.012:
                     fib_resistance = True  # near 78.6% = often strong resistance
     except Exception:
         pass
@@ -4179,6 +4186,40 @@ def _extract(daily, hourly):
     except Exception:
         pass
 
+    # Consecutive red candle count — for exit timing
+    consec_red = 0
+    try:
+        closes = list(daily["Close"])
+        for i in range(len(closes) - 1, 0, -1):
+            if closes[i] < closes[i - 1]:
+                consec_red += 1
+            else:
+                break
+    except Exception:
+        pass
+
+    # Historical Volatility ratio — expansion vs contraction regime
+    hv20 = 0.0
+    hv5  = 0.0
+    hv_expanding = False
+    hv_contracting = False
+    try:
+        if len(daily) >= 22 and "Close" in daily.columns:
+            _c = list(daily["Close"])
+            _rets20 = [(_c[i] - _c[i-1]) / _c[i-1] for i in range(len(_c)-20, len(_c))]
+            _rets5  = [(_c[i] - _c[i-1]) / _c[i-1] for i in range(len(_c)-5,  len(_c))]
+            import statistics
+            if len(_rets20) >= 2:
+                hv20 = round(statistics.stdev(_rets20) * (252 ** 0.5) * 100, 1)
+            if len(_rets5) >= 2:
+                hv5  = round(statistics.stdev(_rets5)  * (252 ** 0.5) * 100, 1)
+            if hv20 > 0:
+                _hv_ratio = hv5 / hv20
+                hv_expanding   = _hv_ratio >= 1.4   # volatility surging = momentum move
+                hv_contracting = _hv_ratio <= 0.65  # volatility compressing = coil setup
+    except Exception:
+        pass
+
     # Volume dry-up on pullback — bullish accumulation signal
     # When stock dips on lower-than-average volume: sellers exhausted, big money holding
     vol_dry_up = False
@@ -4441,6 +4482,11 @@ def _extract(daily, hourly):
         "rsi_divergence":      rsi_divergence,
         "rsi_bull_divergence": rsi_bull_divergence,
         "consec_green":        consec_green,
+        "consec_red":          consec_red,
+        "hv20":                hv20,
+        "hv5":                 hv5,
+        "hv_expanding":        hv_expanding,
+        "hv_contracting":      hv_contracting,
         "vol_dry_up":          vol_dry_up,
         "rvol":                rvol,
         "rvol_surge":          rvol_surge,
@@ -4500,6 +4546,12 @@ def _extract(daily, hourly):
         "lr_channel_width":    lr_ch_width,
         "fib_support":         fib_support,
         "fib_resistance":      fib_resistance,
+        "fib_level_382":       fib_level_382,
+        "fib_level_500":       fib_level_500,
+        "fib_level_618":       fib_level_618,
+        "fib_level_786":       fib_level_786,
+        "fib_high_ref":        fib_high_ref,
+        "fib_low_ref":         fib_low_ref,
         "macd_bull_div":       macd_div.get("bullish_div", False),
         "macd_bear_div":       macd_div.get("bearish_div", False),
         "chandelier_stop":     chandelier_stop,
@@ -5293,6 +5345,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Long days-to-cover + rising = short covering squeeze more prolonged
     if _sr >= 5 and _hs and d.get("mom_accel"):   s += 2
 
+    # Historical Volatility regime: contracting HV = coiled spring before breakout
+    if d.get("hv_contracting", False):             s += 3   # volatility coil = breakout setup
+    if d.get("hv_expanding", False) and d.get("rvol_surge", False): s += 2  # vol expansion + RVOL = momentum confirmed
+
     # Analyst Estimate Revisions: estimate upgrades = institutional re-rating signal
     # Fresh upgrades in last 14d = analysts just revised outlook upward = strong alpha factor
     _ar_score = d.get("analyst_rev_score", 0) or 0
@@ -6007,6 +6063,12 @@ def run():
                     _ar_nr    = _live_sig_ar.get("analyst_net_rev", 0) or 0
                     if _ar_score <= -1 and _ar_nr <= -2 and pnl_pct < 2 and age_days >= 3:
                         reason = f"analyst downgrade wave ({_ar_nr} net downgrades, {pnl_pct:+.1f}%)"
+                # Consecutive red day exit: 4+ straight down days while losing
+                if not reason:
+                    _live_sig_cr = live.get(sym, {})
+                    _cr = _live_sig_cr.get("consec_red", 0) or 0
+                    if _cr >= 4 and pnl_pct < -1.5:
+                        reason = f"4 consecutive red days ({_cr}d streak, {pnl_pct:+.1f}%)"
             if reason is None:
                 # Signal emergency exit: check live technical signal on held stock
                 live_sig = live.get(sym, {})
@@ -6624,6 +6686,15 @@ def run():
                 "gamma_wall_up":  live.get(tk, {}).get("gamma_wall_up", 0.0),
                 "gamma_wall_down":live.get(tk, {}).get("gamma_wall_down", 0.0),
                 "squeeze_potential": live.get(tk, {}).get("squeeze_potential", False),
+                "consec_green":      live.get(tk, {}).get("consec_green", 0),
+                "consec_red":        live.get(tk, {}).get("consec_red", 0),
+                "hv20":              live.get(tk, {}).get("hv20", 0.0),
+                "hv5":               live.get(tk, {}).get("hv5", 0.0),
+                "hv_expanding":      live.get(tk, {}).get("hv_expanding", False),
+                "hv_contracting":    live.get(tk, {}).get("hv_contracting", False),
+                "fib_level_382":     live.get(tk, {}).get("fib_level_382", 0.0),
+                "fib_level_500":     live.get(tk, {}).get("fib_level_500", 0.0),
+                "fib_level_618":     live.get(tk, {}).get("fib_level_618", 0.0),
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -6949,6 +7020,18 @@ def run():
                 "gamma_wall_up":   sig.get("gamma_wall_up", 0.0),
                 "gamma_wall_down": sig.get("gamma_wall_down", 0.0),
                 "squeeze_potential": sig.get("squeeze_potential", False),
+                "consec_green":       sig.get("consec_green", 0),
+                "consec_red":         sig.get("consec_red", 0),
+                "hv20":               sig.get("hv20", 0.0),
+                "hv5":                sig.get("hv5", 0.0),
+                "hv_expanding":       sig.get("hv_expanding", False),
+                "hv_contracting":     sig.get("hv_contracting", False),
+                "fib_level_382":      sig.get("fib_level_382", 0.0),
+                "fib_level_500":      sig.get("fib_level_500", 0.0),
+                "fib_level_618":      sig.get("fib_level_618", 0.0),
+                "fib_level_786":      sig.get("fib_level_786", 0.0),
+                "fib_high_ref":       sig.get("fib_high_ref", 0.0),
+                "fib_low_ref":        sig.get("fib_low_ref", 0.0),
                 "short_float":        sig.get("short_float", 0.0),
                 "short_ratio":        sig.get("short_ratio", 0.0),
                 "high_short":         sig.get("high_short", False),
@@ -7081,6 +7164,27 @@ def run():
     tlog["sector_rotation"]    = sector_adjs   # {sector: adj_score} for dashboard heatmap
     tlog["sector_etf_trends"]  = sector_etf_trends  # {sector: {bullish, chg5d, chg1d, above_ema20}}
     tlog["portfolio_beta"]     = _port_beta_est      # estimated portfolio beta
+
+    # Portfolio concentration and correlation risk analysis
+    try:
+        _pos_list = tlog.get("positions", [])
+        _held_syms = [p["ticker"] for p in _pos_list if p.get("ticker")]
+        _sec_buckets: dict = {}
+        for _p in _pos_list:
+            _ps = live.get(_p.get("ticker",""), {}).get("sector", SECTOR_MAP.get(_p.get("ticker",""), "other"))
+            _sec_buckets[_ps] = _sec_buckets.get(_ps, 0) + 1
+        _max_sector_conc = max(_sec_buckets.values()) if _sec_buckets else 0
+        _dominant_sector = max(_sec_buckets, key=_sec_buckets.get) if _sec_buckets else None
+        _port_conc_risk = "HIGH" if _max_sector_conc >= 3 else ("MEDIUM" if _max_sector_conc == 2 else "LOW")
+        tlog["portfolio_concentration"] = {
+            "sector_buckets":   _sec_buckets,
+            "dominant_sector":  _dominant_sector,
+            "max_sector_count": _max_sector_conc,
+            "risk_level":       _port_conc_risk,
+            "position_count":   len(_held_syms),
+        }
+    except Exception:
+        tlog["portfolio_concentration"] = {}
 
     # Compute per-signal win rates from accumulated performance data
     try:
