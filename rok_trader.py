@@ -6090,7 +6090,10 @@ def run():
     _hist_values = [h["v"] for h in _perf_hist if isinstance(h.get("v"), (int, float)) and h["v"] > 0]
     _peak_port   = max(_hist_values) if _hist_values else portfolio_val
     drawdown_pct = max(0.0, (_peak_port - portfolio_val) / _peak_port * 100) if _peak_port > 0 else 0.0
-    if drawdown_pct > 2:
+    _drawdown_halt = drawdown_pct >= 5.0  # hard halt: no new buys until portfolio recovers
+    if _drawdown_halt:
+        logger.warning(f"DRAWDOWN HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys until recovery")
+    elif drawdown_pct > 2:
         logger.info(f"Portfolio drawdown: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — risk reduced")
 
     # Win rate + payoff ratio from trade history for full Kelly criterion
@@ -6756,7 +6759,20 @@ def run():
                 logger.debug(f"DCA error {sym}: {e}")
 
     # ── BUY: long positions ───────────────────────────────────────────────
-    open_long_slots = MAX_POSITIONS - len(longs)
+    # Regime-aware max positions: more room in bull, tighter in bear
+    _reg_str   = regime.get("regime", "neutral")
+    _reg_score = regime.get("score", 0)
+    if   _reg_str == "bull" and _reg_score >= 3:  _regime_max = min(MAX_POSITIONS + 3, 15)
+    elif _reg_str == "bull":                       _regime_max = min(MAX_POSITIONS + 1, 14)
+    elif _reg_str == "bear" and _reg_score <= -3:  _regime_max = max(MAX_POSITIONS - 6, 4)
+    elif _reg_str == "bear":                       _regime_max = max(MAX_POSITIONS - 3, 6)
+    else:                                          _regime_max = MAX_POSITIONS
+    # Drawdown shrinks max further (recovery mode = smaller book)
+    if   drawdown_pct >= 5:  _regime_max = max(_regime_max - 4, 2)
+    elif drawdown_pct >= 3:  _regime_max = max(_regime_max - 2, 4)
+    if _regime_max != MAX_POSITIONS:
+        logger.info(f"Regime-adjusted max positions: {_regime_max} (regime={_reg_str}, score={_reg_score}, dd={drawdown_pct:.1f}%)")
+    open_long_slots = _regime_max - len(longs)
 
     # Portfolio heat: compute total unrealized P&L across all open positions
     # Use this to subtly adjust position sizing (house money = can be slightly bolder)
@@ -6870,7 +6886,7 @@ def run():
         logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj)
 
-    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses:
+    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses and not _drawdown_halt:
         # Sector counts for diversification
         sector_counts = {}
         for sym in longs:
@@ -7822,6 +7838,8 @@ def run():
     tlog["day_opening_bias"]= day_type_info.get("opening_bias", "flat")
     tlog["strategy_hint"]   = day_type_info.get("strategy_hint", "neutral")
     tlog["drawdown_pct"]    = round(drawdown_pct, 2)
+    tlog["drawdown_halt"]   = _drawdown_halt
+    tlog["regime_max_pos"]  = _regime_max
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
     tlog["market_breadth"]  = breadth
@@ -8006,6 +8024,8 @@ def run():
             _last_decision = f"Close guard: no new buys last 20 min. Managing {_n_pos} open positions. VIX {_vix_now:.1f}."
         elif _consecutive_losses:
             _last_decision = f"Loss guard: last 3 trades were losses — protecting capital. {_n_pos} open. VIX {_vix_now:.1f}."
+        elif _drawdown_halt:
+            _last_decision = f"Drawdown halt: -{drawdown_pct:.1f}% from peak — no new buys until recovery. {_n_pos} open. VIX {_vix_now:.1f}."
         elif vix > VIX_EXTREME_THRESH:
             _last_decision = f"VIX {_vix_now:.1f} extreme — all buys suspended. Managing exits only. MktQuality {_mq_now}/100."
         elif _top_scan:

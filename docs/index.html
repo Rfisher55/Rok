@@ -54822,6 +54822,8 @@ window.renderSectorRotation = renderSectorRotation;
       const bAdvPct = breadth.adv_pct;
       const bNote   = breadth.note || '';
       const drawdownPct = data.drawdown_pct || 0;
+      const drawdownHalt = data.drawdown_halt || false;
+      const regimeMaxPos = data.regime_max_pos || 12;
 
       let statusLine, statusBg, statusBorder;
       if (hasErr) {
@@ -54849,7 +54851,7 @@ window.renderSectorRotation = renderSectorRotation;
             <div style="font-size:8.5px;color:#555;margin-top:.1rem">Cash: <span style="color:#64b5f6">\$${bp.toLocaleString('en-US',{maximumFractionDigits:0})}</span></div>
           </div>
           <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
-            <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Positions</div><div style="font-size:14px;font-weight:900;color:#ffd54f">${openPos}/12</div></div>
+            <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Positions</div><div style="font-size:14px;font-weight:900;color:#ffd54f">${openPos}/${regimeMaxPos}</div></div>
             ${wr !== null ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Win Rate</div><div style="font-size:14px;font-weight:900;color:#ffd54f">${wr}%</div></div>` : ''}
             <div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">P&L</div><div style="font-size:14px;font-weight:900;color:${pnlCol}">${totalPnl>=0?'+':''}${totalPnl.toFixed(1)}%</div></div>
             ${scanSize ? `<div style="text-align:center"><div style="font-size:8px;color:#4a6fa5;font-weight:700;text-transform:uppercase">Scanned</div><div style="font-size:14px;font-weight:900;color:#aaa">${scanSize}</div></div>` : ''}
@@ -54880,6 +54882,7 @@ window.renderSectorRotation = renderSectorRotation;
           </div>
         </div>
         <div style="font-size:9px;color:${hasErr?'#ef5350':minsAgo!==null&&minsAgo<10?'#00ff88':minsAgo!==null&&minsAgo<35?'#ffd54f':'#666'};font-weight:600;margin-bottom:.3rem">
+          ${drawdownHalt ? '<span style="background:rgba(255,34,85,.18);border:1px solid rgba(255,34,85,.5);border-radius:4px;padding:2px 8px;margin-right:.5rem;font-size:8px;color:#ef5350;font-weight:900">⛔ DRAWDOWN HALT — no new buys</span>' : ''}
           ${macroDay ? '<span style="background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);border-radius:4px;padding:1px 6px;margin-right:.4rem;font-size:8px;color:#ffd54f;font-weight:800">⚠️ FOMC/MACRO DAY</span>' : ''}
           ${bNote && bAdvPct !== undefined ? `<span style="color:${bAdvPct>65?'#00ff88':bAdvPct<35?'#ef5350':'#666'};margin-right:.5rem">${bNote}</span>` : ''}
           ${statusLine}
