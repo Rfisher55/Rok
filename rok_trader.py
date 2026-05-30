@@ -8902,6 +8902,19 @@ def run():
             tlog["buying_power"]    = round(buying_power, 2)
             tlog["status"]          = "crypto-only"
             logger.info(f"Off-hours crypto-only run complete.")
+        # Log closed-market activity
+        try:
+            _cm_act = tlog.get("bot_activity_log", [])
+            _cm_positions = tlog.get("positions", [])
+            _cm_entry = {
+                "ts": run_start.isoformat(),
+                "type": "CLOSED",
+                "icon": "🌙",
+                "msg": f"Market closed — monitoring {len(_cm_positions)} position{'s' if len(_cm_positions) != 1 else ''} | portfolio ${portfolio_val:,.0f}",
+            }
+            tlog["bot_activity_log"] = [_cm_entry] + _cm_act[:29]
+        except Exception:
+            pass
         _save(TRADES_FILE, tlog)
         return
 
@@ -14328,6 +14341,61 @@ def run():
             _save(PEAKS_FILE, peaks)
     except Exception as _pc_e:
         logger.debug(f"Position commentary skipped: {_pc_e}")
+
+    # ── Bot Activity Log: rolling feed of what happened this cycle ───────────
+    try:
+        _act_log = tlog.get("bot_activity_log", [])
+        _act_entries = []
+        _pos_count = len(tlog.get("positions", []))
+        _scan_size = tlog.get("scan_universe", 0)
+        _top_scan = tlog.get("last_scan_top", [])
+        _buys_this_cycle = [t for t in tlog.get("trades", []) if t.get("action") in ("BUY","DCA")
+                            and t.get("time","").startswith(run_start.strftime("%Y-%m-%d"))]
+        _sells_this_cycle = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","SELL_HALF","COVER")
+                             and t.get("time","").startswith(run_start.strftime("%Y-%m-%d"))]
+        # Summarize what happened
+        if _buys_this_cycle:
+            for _bt in _buys_this_cycle:
+                _act_entries.append({
+                    "ts": _bt.get("time", run_start.isoformat()),
+                    "type": "BUY",
+                    "icon": "🟢",
+                    "msg": f"Bought ${_bt.get('ticker','')} — score {_bt.get('score','?')} | {(_bt.get('reason',''))[:60]}",
+                })
+        if _sells_this_cycle:
+            for _st in _sells_this_cycle:
+                _pnl = _st.get("pnl_pct")
+                _act_entries.append({
+                    "ts": _st.get("time", run_start.isoformat()),
+                    "type": "SELL",
+                    "icon": "🔴" if (_pnl or 0) < 0 else "✅",
+                    "msg": f"Sold ${_st.get('ticker','')} {'+' if (_pnl or 0) >= 0 else ''}{(_pnl or 0):.1f}% | {(_st.get('reason',''))[:50]}",
+                })
+        if not _buys_this_cycle and not _sells_this_cycle:
+            # Scan summary
+            _qualified = [s for s in _top_scan if (s.get("score",0) or 0) >= tlog.get("effective_min_score", 55)]
+            _regime_str = tlog.get("regime", {}).get("regime", "neutral")
+            _act_entries.append({
+                "ts": run_start.isoformat(),
+                "type": "SCAN",
+                "icon": "🔍",
+                "msg": f"Scanned {_scan_size} stocks | {len(_top_scan)} top picks | {len(_qualified)} qualified | regime {_regime_str}",
+            })
+        # Regime change detection
+        if len(tlog.get("regime_history", [])) >= 2:
+            _rh = tlog["regime_history"]
+            if _rh[-1].get("r") != _rh[-2].get("r"):
+                _act_entries.append({
+                    "ts": run_start.isoformat(),
+                    "type": "REGIME",
+                    "icon": "🔄",
+                    "msg": f"Regime changed: {_rh[-2].get('r','?').upper()} → {_rh[-1].get('r','?').upper()} | VIX {tlog.get('regime',{}).get('vix',0):.1f}",
+                })
+        # Prepend new entries (newest first), keep last 30
+        _act_log = _act_entries + _act_log
+        tlog["bot_activity_log"] = _act_log[:30]
+    except Exception as _act_e:
+        logger.debug(f"Activity log: {_act_e}")
 
     _save(TRADES_FILE, tlog)
     logger.info(

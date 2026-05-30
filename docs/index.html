@@ -8123,6 +8123,30 @@ body.beginner-mode #beginner-banner { display:block }
         </div>` : `<div style="font-size:8.5px;color:#2a3a4a;line-height:1.5">Neurons activate as the bot completes trades — each trade teaches the brain which signals work best. Starts learning from trade #1.</div>`}
       </div>
 
+      <!-- ACTIVITY LOG -->
+      ${(() => {
+        const actLog = data.bot_activity_log || [];
+        if (!actLog.length) return '';
+        const typeColors = { BUY:'#00e676', SELL:'#ef5350', SCAN:'#82b1ff', CLOSED:'#546e7a', REGIME:'#ffd54f', CRYPTO:'#00e5ff' };
+        return `<div style="padding:.5rem .85rem;border-top:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:7px;font-weight:700;color:#3a4a5a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem">Bot Activity Feed</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            ${actLog.slice(0,8).map(a => {
+              const ts = a.ts ? new Date(a.ts) : null;
+              const ago = ts ? (() => { const m=Math.round((Date.now()-ts)/60000); return m<2?'now':m<60?m+'m':Math.floor(m/60)+'h'+m%60+'m'; })() : '';
+              const col4 = typeColors[a.type] || '#546e7a';
+              return `<div style="display:flex;align-items:flex-start;gap:.4rem;padding:2px 0">
+                <span style="font-size:10px;flex-shrink:0;line-height:1.4">${a.icon||'○'}</span>
+                <div style="flex:1;min-width:0">
+                  <span style="font-size:8px;color:rgba(255,255,255,.6);line-height:1.4;word-break:break-word">${a.msg||''}</span>
+                </div>
+                <span style="font-size:6.5px;color:#3a4a5a;flex-shrink:0;white-space:nowrap">${ago}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      })()}
+
     </div>`;
   }
   window.renderWeekendPanel = renderWeekendPanel;
@@ -52596,44 +52620,58 @@ window.renderGapAlertNow = renderGapAlertNow;
 function renderBotActivity() {
   const el = document.getElementById('port-bot-activity');
   if (!el) return;
-  const lp = window._livePrices || {};
-  const WATCHLIST = ['NVDA','TSLA','AAPL','MSFT','AMZN','META','GOOGL','AMD','PLTR','SPY','QQQ','COIN','MSTR','SOFI','IBIT'];
-  const scored = [];
-  WATCHLIST.forEach(tk => {
-    const d = lp[tk]; if (!d || !d.price) return;
-    const chg = d.change_pct || 0, vr = d.vol_ratio || 1;
-    const wh = d.week_high || d.price, wl = d.week_low || d.price;
-    let sc = 0;
-    if (chg > 3) sc += 25; else if (chg > 1) sc += 15; else if (chg > 0) sc += 8; else if (chg < -3) sc -= 20; else if (chg < -1) sc -= 10;
-    if (vr > 2.5) sc += 25; else if (vr > 1.8) sc += 18; else if (vr > 1.3) sc += 10; else if (vr < 0.6) sc -= 8;
-    const rng = wh - wl;
-    if (rng > 0) { const pos = (d.price - wl) / rng * 100; if (pos > 40 && pos < 80) sc += 15; else if (pos >= 80) sc += 8; else if (pos < 20) sc -= 8; }
-    sc = Math.max(0, Math.min(100, sc));
-    const action = sc >= 30 ? 'BUY' : sc <= 10 ? 'SKIP' : 'WATCH';
-    const col = action === 'BUY' ? '#66bb6a' : action === 'WATCH' ? '#ffb74d' : '#555';
-    scored.push({ tk, sc, action, col, chg });
-  });
-  scored.sort((a,b) => b.sc - a.sc);
+  const td = typeof _tradesData !== 'undefined' ? _tradesData : null;
+  const actLog = (td && td.bot_activity_log) ? td.bot_activity_log : [];
   el.style.display = 'block';
-  const rows = scored.slice(0, 10).map(s =>
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid #1a1a1a">
-      <span style="font-weight:700;color:#ccc;font-size:.88rem;width:50px">${s.tk}</span>
-      <div style="flex:1;margin:0 8px;background:#1a1a1a;border-radius:3px;height:8px;overflow:hidden">
-        <div style="width:${s.sc}%;background:${s.col};height:100%;border-radius:3px"></div>
+
+  if (actLog.length > 0) {
+    const typeColors = { BUY:'#00e676', SELL:'#ef5350', SCAN:'#82b1ff', CLOSED:'#546e7a', REGIME:'#ffd54f', CRYPTO:'#00e5ff' };
+    const rows = actLog.slice(0, 15).map(a => {
+      const ts = a.ts ? new Date(a.ts) : null;
+      const ago = ts ? (() => { const m = Math.round((Date.now()-ts)/60000); return m < 2 ? 'now' : m < 60 ? m+'m' : Math.floor(m/60)+'h'+m%60+'m'; })() : '';
+      const col = typeColors[a.type] || '#888';
+      return `<div style="display:flex;align-items:flex-start;gap:.45rem;padding:.28rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:10px;flex-shrink:0;line-height:1.5">${a.icon || '○'}</span>
+        <span style="flex:1;font-size:8.5px;color:rgba(255,255,255,.65);line-height:1.5;min-width:0;word-break:break-word">${a.msg || ''}</span>
+        <span style="font-size:7px;color:#3a4a5a;flex-shrink:0;white-space:nowrap">${ago}</span>
+      </div>`;
+    }).join('');
+    const lu = td.last_updated ? new Date(td.last_updated) : null;
+    const mAgo = lu ? Math.round((Date.now()-lu)/60000) : null;
+    el.innerHTML = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:10px;padding:.75rem .9rem">
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+        <div style="width:5px;height:5px;border-radius:50%;background:${mAgo!=null&&mAgo<10?'#00ff88':'#546e7a'};flex-shrink:0"></div>
+        <span style="font-size:8px;font-weight:800;letter-spacing:.09em;color:#546e7a;text-transform:uppercase">Bot Activity Feed</span>
+        ${mAgo!=null?`<span style="font-size:7px;color:#3a4a5a;margin-left:auto">Updated ${mAgo<60?mAgo+'m':Math.floor(mAgo/60)+'h'} ago</span>`:''}
       </div>
-      <span style="color:${s.chg>=0?'#66bb6a':'#ef5350'};font-size:.75rem;width:40px;text-align:right">${s.chg>=0?'+':''}${s.chg.toFixed(1)}%</span>
-      <span style="color:${s.col};font-weight:700;font-size:.78rem;width:38px;text-align:right">${s.action}</span>
-    </div>`
-  ).join('');
-  const buyCount = scored.filter(s => s.action === 'BUY').length;
-  el.innerHTML = `<div style="background:#111;border:1px solid #222;border-radius:8px;padding:.85rem">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-      <span style="color:#aaa;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Auto-Trader Scores</span>
-      <span style="color:#66bb6a;font-size:.72rem;font-weight:700">${buyCount} BUY signal${buyCount!==1?'s':''}</span>
-    </div>
-    ${rows}
-    <div style="color:#555;font-size:.7rem;margin-top:.4rem">Score >= 30 = bot will buy next market-hours run. Bot runs every 30 min Mon-Fri 9:30-4 PM ET.</div>
-  </div>`;
+      ${rows}
+      <div style="font-size:7.5px;color:#2a3a4a;margin-top:.4rem">Bot runs every 5 min during market hours · every 15 min off-hours</div>
+    </div>`;
+  } else {
+    // Fallback: simple live scoring when no activity log yet
+    const lp = window._livePrices || {};
+    const WL = ['NVDA','TSLA','AAPL','MSFT','AMZN','META','GOOGL','AMD','PLTR','SPY','QQQ','COIN'];
+    const scored = WL.map(tk => {
+      const d = lp[tk]; if (!d || !d.price) return null;
+      const chg = d.change_pct||0, vr = d.vol_ratio||1;
+      let sc = 50 + chg*3 + (vr-1)*10;
+      sc = Math.max(0, Math.min(100, Math.round(sc)));
+      const action = sc >= 65 ? 'BUY' : sc >= 45 ? 'WATCH' : 'SKIP';
+      const col = action==='BUY'?'#00e676':action==='WATCH'?'#ffd54f':'#555';
+      return { tk, sc, action, col, chg };
+    }).filter(Boolean).sort((a,b)=>b.sc-a.sc);
+    if (!scored.length) { el.innerHTML=''; return; }
+    el.innerHTML = `<div style="background:#060d1a;border:1px solid #1e3050;border-radius:10px;padding:.75rem .9rem">
+      <div style="font-size:8px;font-weight:800;color:#546e7a;letter-spacing:.09em;text-transform:uppercase;margin-bottom:.5rem">Live Quick Scan</div>
+      ${scored.slice(0,8).map(s=>`<div style="display:flex;align-items:center;gap:.4rem;padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-family:var(--disp);font-size:.85rem;color:#ffd54f;width:45px">${s.tk}</span>
+        <div style="flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:2px"><div style="width:${s.sc}%;height:100%;background:${s.col};border-radius:2px"></div></div>
+        <span style="font-size:7.5px;color:${s.chg>=0?'#00e676':'#ef5350'};width:38px;text-align:right">${s.chg>=0?'+':''}${s.chg.toFixed(1)}%</span>
+        <span style="font-size:7.5px;font-weight:800;color:${s.col};width:36px;text-align:right">${s.action}</span>
+      </div>`).join('')}
+      <div style="font-size:7px;color:#2a3a4a;margin-top:.35rem">Full activity log builds after first bot run during market hours.</div>
+    </div>`;
+  }
 }
 window.renderBotActivity = renderBotActivity;
 
