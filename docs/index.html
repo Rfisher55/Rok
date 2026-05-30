@@ -54503,6 +54503,117 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── N76-N83 Pattern Confirmation Neurons ─────────────────────────────
+        const dbP   = lp.double_bottom_perf  || [];
+        const atbP  = lp.at_breakout_perf    || [];
+        const avwP  = lp.avwap_perf          || [];
+        const pocP  = lp.poc_control_perf    || [];
+        const pmgP  = lp.pm_gap_perf         || [];
+        const htfP  = lp.htf_perf            || [];
+        const e21P  = lp.ema21_pb_perf       || [];
+        const m3P   = lp.mtf_triple_perf     || [];
+        if (!dbP.length && !atbP.length && !avwP.length && !pocP.length &&
+            !pmgP.length && !htfP.length && !e21P.length && !m3P.length) return '';
+        const mkBinCell = (arr, posKey, negKey, posIcon, negIcon, posBg, negBg) => {
+          const pos = arr.find(s => s.state === posKey);
+          const neg = arr.find(s => s.state === negKey);
+          const best = arr.length ? arr.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, arr[0]) : null;
+          const mkC = (s, icon, bg) => {
+            if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${icon}</div><div style="font-size:5px;color:#333">–</div></div>`;
+            const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+            const star = best && s.state === best.state ? '⭐' : '';
+            return `<div style="background:${bg};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+              <div style="font-size:7px">${icon}${star}</div>
+              <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+              <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%·${s.total}T</div>
+            </div>`;
+          };
+          return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:.1rem">
+            ${mkC(pos,posIcon,posBg)}${mkC(neg,negIcon,negBg)}
+          </div>`;
+        };
+        const rows = [
+          { label:'🔻 DBL BOT (N76)', arr:dbP,  pos:'confirmed',      neg:'none',          pi:'✅',ni:'❌',pb:'rgba(0,230,118,.09)',nb:'rgba(255,255,255,.03)' },
+          { label:'🎯 AT-BRK (N77)',  arr:atbP, pos:'at_level',       neg:'not_at_level',  pi:'🎯',ni:'–', pb:'rgba(0,230,118,.09)',nb:'rgba(255,255,255,.03)' },
+          { label:'⚓ AVWAP (N78)',   arr:avwP, pos:'above',          neg:'below',          pi:'⬆️',ni:'⬇️',pb:'rgba(0,230,118,.08)',nb:'rgba(239,83,80,.06)' },
+          { label:'🌀 POC (N79)',     arr:pocP, pos:'above',          neg:'below',          pi:'🟢',ni:'🔴',pb:'rgba(0,230,118,.08)',nb:'rgba(239,83,80,.06)' },
+          { label:'🚀 PM GAP (N80)',  arr:pmgP, pos:'big',            neg:'flat',           pi:'🚀',ni:'➖',pb:'rgba(255,235,59,.07)',nb:'rgba(255,255,255,.03)' },
+          { label:'📡 HTF (N81)',     arr:htfP, pos:'aligned',        neg:'not_aligned',    pi:'✅',ni:'❌',pb:'rgba(0,230,118,.09)',nb:'rgba(255,255,255,.03)' },
+          { label:'📌 EMA21PB (N82)', arr:e21P, pos:'pullback',       neg:'extended',       pi:'📌',ni:'🔥',pb:'rgba(100,149,237,.08)',nb:'rgba(255,100,100,.06)' },
+          { label:'🎯🎯 MTF3 (N83)', arr:m3P,  pos:'triple',         neg:'partial_or_none',pi:'🎯🎯',ni:'–',pb:'rgba(0,230,118,.09)',nb:'rgba(255,255,255,.03)' },
+        ].filter(r => r.arr.length > 0);
+        if (!rows.length) return '';
+        const rowsHtml = rows.map(r => `<div style="margin-bottom:.18rem">
+          <div style="font-size:5px;color:#9e9e9e;font-weight:700;margin-bottom:.08rem">${r.label}</div>
+          ${mkBinCell(r.arr, r.pos, r.neg, r.pi, r.ni, r.pb, r.nb)}
+        </div>`).join('');
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:5.5px;color:#ef9a9a;font-weight:700;margin-bottom:.25rem">🔬 PATTERN NEURONS (N76-N83): technical pattern confirmation</div>
+          ${rowsHtml}
+        </div>`;
+      })()}
+      ${(() => {
+        // ── N84-N90 Advanced context neurons ─────────────────────────────────
+        const rs63P  = lp.rs63_q_tier_perf  || [];
+        const sqpP   = lp.sq_potential_perf || [];
+        const ncP    = lp.news_count_perf   || [];
+        const naP    = lp.news_accel_perf   || [];
+        const taP    = lp.true_alpha_perf   || [];
+        const pvtP   = lp.pivot_support_perf|| [];
+        const vcpP   = lp.vcp_perf          || [];
+        if (!rs63P.length && !sqpP.length && !ncP.length && !naP.length &&
+            !taP.length  && !pvtP.length && !vcpP.length) return '';
+        const mkRC = (s, icon, bg) => {
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.15rem;text-align:center;opacity:.3"><div style="font-size:6px">${icon}</div><div style="font-size:4.5px;color:#333">–</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          return `<div style="background:${bg};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.15rem;text-align:center">
+            <div style="font-size:6px">${icon}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:4.5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%·${s.total}T</div>
+          </div>`;
+        };
+        // RS63 multi-tier
+        const rs63Elite = rs63P.find(s=>s.state==='elite'), rs63Lead = rs63P.find(s=>s.state==='leading');
+        const rs63Avg = rs63P.find(s=>s.state==='average'), rs63Lag = rs63P.find(s=>s.state==='lagging');
+        const rs63Html = rs63P.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5px;color:#ffd54f;font-weight:700;margin-bottom:.08rem">🦅 RS63 TIER (N84): quarterly RS momentum</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.1rem">
+            ${mkRC(rs63Elite,'🦅','rgba(0,230,118,.09)')}${mkRC(rs63Lead,'📈','rgba(255,213,79,.06)')}${mkRC(rs63Avg,'📊','rgba(255,255,255,.04)')}${mkRC(rs63Lag,'🐌','rgba(239,83,80,.06)')}
+          </div>
+        </div>` : '';
+        // Binary pairs
+        const binaries = [
+          { label:'🌀 SQ POT (N85)', arr:sqpP,  pos:'coiled',       neg:'not_coiled',  pi:'🌀',pb:'rgba(234,128,252,.08)',nb:'rgba(255,255,255,.03)' },
+          { label:'📰 NEWS (N86)',   arr:ncP,   pos:'hot',          neg:'quiet',        pi:'🔥',pb:'rgba(255,100,0,.08)',nb:'rgba(255,255,255,.03)' },
+          { label:'📣 N-ACCEL (N87)',arr:naP,   pos:'accelerating', neg:'steady',       pi:'📣',pb:'rgba(255,213,79,.07)',nb:'rgba(255,255,255,.03)' },
+          { label:'α ALPHA (N88)',   arr:taP,   pos:'high',         neg:'negative',     pi:'α', pb:'rgba(0,230,118,.09)',nb:'rgba(239,83,80,.06)' },
+          { label:'📍 PIVOT (N89)',  arr:pvtP,  pos:'at_support',   neg:'between',      pi:'📍',pb:'rgba(100,149,237,.08)',nb:'rgba(255,255,255,.03)' },
+          { label:'📐 VCP (N90)',    arr:vcpP,  pos:'vcp',          neg:'no_vcp',       pi:'📐',pb:'rgba(0,230,118,.09)',nb:'rgba(255,255,255,.03)' },
+        ].filter(r => r.arr.length > 0);
+        const binsHtml = binaries.map(r => {
+          const pos = r.arr.find(s=>s.state===r.pos), neg = r.arr.find(s=>s.state===r.neg);
+          const best = r.arr.reduce((a,b)=>a.win_rate>=b.win_rate?a:b, r.arr[0]);
+          const mk = (s, icon, bg) => {
+            if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.15rem;text-align:center;opacity:.3"><div style="font-size:6px">${icon}</div></div>`;
+            const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+            const star = s.state === best.state ? '⭐' : '';
+            return `<div style="background:${bg};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.15rem;text-align:center">
+              <div style="font-size:6px">${icon}${star}</div>
+              <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+              <div style="font-size:4.5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}%·${s.total}T</div>
+            </div>`;
+          };
+          return `<div style="margin-bottom:.15rem">
+            <div style="font-size:5px;color:#9e9e9e;font-weight:700;margin-bottom:.06rem">${r.label}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.1rem">${mk(pos,r.pi,r.pb)}${mk(neg,'–',r.nb)}</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:5.5px;color:#80cbc4;font-weight:700;margin-bottom:.25rem">🧠 CONTEXT NEURONS (N84-N90): RS, news, alpha, pivot, VCP</div>
+          ${rs63Html}${binsHtml}
+        </div>`;
+      })()}
+      ${(() => {
         // ── Supertrend+PSAR (N61) + BB Zone (N62) dual panel ─────────────────
         const tc = lp.trend_conf_perf || [];
         const bb = lp.bb_zone_perf || [];

@@ -650,6 +650,86 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                                     else "partial" if _vol_ratio_v >= 1.2 or _mom_acc
                                     else "weak")
 
+        # Double Bottom Neuron (76): classic reversal pattern at support
+        _db = bool(signals.get("double_bottom", False))
+        e["double_bottom_at_entry"] = _db
+        e["double_bottom_state"] = ("confirmed" if _db else "none")
+
+        # At-Breakout Level Neuron (77): price exactly at key breakout = low risk entry
+        _atb = bool(signals.get("at_breakout", False))
+        e["at_breakout_at_entry"] = _atb
+        e["at_breakout_state"] = ("at_level" if _atb else "not_at_level")
+
+        # Above AVWAP-52WL Neuron (78): above anchored VWAP from 52wk low = bullish bias
+        _avwap = bool(signals.get("above_avwap_52wl", False))
+        e["above_avwap_at_entry"] = _avwap
+        e["avwap_state"] = ("above" if _avwap else "below")
+
+        # Above POC Neuron (79): price above volume point-of-control = buyers in control
+        _apoc = bool(signals.get("above_poc", False))
+        e["above_poc_at_entry"] = _apoc
+        e["poc_control_state"] = ("above" if _apoc else "below")
+
+        # Pre-Market Big Gap-Up Neuron (80): overnight institutional conviction
+        _pmgap = bool(signals.get("pm_big_gap_up", False))
+        _pmgap_pct = float(signals.get("pm_gap_pct", 0.0) or 0.0)
+        e["pm_big_gap_at_entry"] = _pmgap
+        e["pm_gap_pct_at_entry"] = round(_pmgap_pct, 2)
+        e["pm_gap_state"] = ("big" if _pmgap and _pmgap_pct >= 2.0 else "small_gap" if _pmgap_pct > 0.5 else "flat")
+
+        # HTF Confirmation Neuron (81): higher timeframe trend alignment
+        _htf = bool(signals.get("htf", False))
+        e["htf_at_entry"] = _htf
+        e["htf_state"] = ("aligned" if _htf else "not_aligned")
+
+        # EMA21 Pullback Neuron (82): pulling back to fast EMA = second-chance entry
+        _ema21pb = bool(signals.get("ema21_pullback", False))
+        e["ema21_pb_at_entry"] = _ema21pb
+        e["ema21_pb_state"] = ("pullback" if _ema21pb else "extended")
+
+        # MTF Triple Neuron (83): three-timeframe perfect alignment (tighter signal)
+        _mtf3 = bool(signals.get("mtf_triple", False))
+        e["mtf_triple_at_entry"] = _mtf3
+        e["mtf_triple_state"] = ("triple" if _mtf3 else "partial_or_none")
+
+        # RS63 (Quarterly RS) Neuron (84): leading stocks consistently outperform
+        _rs63q = float(signals.get("rs63", 0.0) or 0.0)
+        e["rs63_q_at_entry"] = round(_rs63q, 2)
+        e["rs63_q_tier"] = ("elite" if _rs63q >= 1.5 else "leading" if _rs63q >= 1.0 else "average" if _rs63q >= 0.5 else "lagging")
+
+        # Squeeze Potential Neuron (85): coiled but not fired = get in before the move
+        _sqpot = bool(signals.get("squeeze_potential", False))
+        e["sq_potential_at_entry"] = _sqpot
+        e["sq_potential_state"] = ("coiled" if _sqpot else "not_coiled")
+
+        # News Count 24h Neuron (86): volume of news = catalyst heat
+        _nc24 = int(signals.get("news_count_24h", 0) or 0)
+        e["news_count_at_entry"] = _nc24
+        e["news_count_tier"] = ("hot" if _nc24 >= 10 else "active" if _nc24 >= 4 else "quiet")
+
+        # News Accelerating Neuron (87): building narrative = momentum play
+        _nacc = bool(signals.get("news_accelerating", False))
+        e["news_accel_at_entry"] = _nacc
+        e["news_accel_state"] = ("accelerating" if _nacc else "steady")
+
+        # True Alpha Neuron (88): independent stock move vs market beta
+        _talpha = float(signals.get("true_alpha", 0.0) or 0.0)
+        e["true_alpha_at_entry"] = round(_talpha, 3)
+        e["true_alpha_tier"] = ("high" if _talpha >= 0.5 else "positive" if _talpha > 0 else "negative")
+
+        # Pivot Support Neuron (89): at S1 or S2 pivot = classic institutional support
+        _ps1 = float(signals.get("pivot_s1", 0.0) or 0.0)
+        _ps2 = float(signals.get("pivot_s2", 0.0) or 0.0)
+        _pr_now = float(signals.get("price", 0.0) or _entry_pr)
+        _at_pivot = (_ps1 > 0 and abs(_pr_now - _ps1) / _ps1 < 0.005) or (_ps2 > 0 and abs(_pr_now - _ps2) / _ps2 < 0.005)
+        e["at_pivot_support"] = _at_pivot
+        e["pivot_state"] = ("at_support" if _at_pivot else "between")
+
+        # VCP Dedicated Neuron (90): Volatility Contraction Pattern — O'Neil setup
+        _vcp_v = bool(signals.get("vcp", False))
+        e["vcp_at_entry"] = _vcp_v
+        e["vcp_state"] = ("vcp" if _vcp_v else "no_vcp")
+
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
         _SIGNAL_KEYS = [
@@ -1817,6 +1897,39 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _n75p["total"] > 0:
                 _n75p["win_rate"] = round(_n75p["wins"] / _n75p["total"] * 100, 1)
                 _n75p["avg_pnl"]  = round(_n75p["total_pnl"] / _n75p["total"], 2)
+        except Exception:
+            pass
+
+    # ── Neurons 76-90 SELL tracking (compact form) ────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ref = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            def _track(perf_key, state_key, default_state):
+                st = _buy_ref.get(state_key, default_state) if _buy_ref else default_state
+                perf = tlog.setdefault(perf_key, {})
+                p = perf.setdefault(st, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": st})
+                p["total"] = p.get("total", 0) + 1
+                p["total_pnl"] = round(p.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: p["wins"] = p.get("wins", 0) + 1
+                else:        p["losses"] = p.get("losses", 0) + 1
+                if p["total"] > 0:
+                    p["win_rate"] = round(p["wins"] / p["total"] * 100, 1)
+                    p["avg_pnl"]  = round(p["total_pnl"] / p["total"], 2)
+            _track("double_bottom_perf",  "double_bottom_state",  "none")        # N76
+            _track("at_breakout_perf",    "at_breakout_state",    "not_at_level") # N77
+            _track("avwap_perf",          "avwap_state",          "below")        # N78
+            _track("poc_control_perf",    "poc_control_state",    "below")        # N79
+            _track("pm_gap_perf",         "pm_gap_state",         "flat")         # N80
+            _track("htf_perf",            "htf_state",            "not_aligned")  # N81
+            _track("ema21_pb_perf",       "ema21_pb_state",       "extended")     # N82
+            _track("mtf_triple_perf",     "mtf_triple_state",     "partial_or_none") # N83
+            _track("rs63_q_tier_perf",    "rs63_q_tier",          "lagging")      # N84
+            _track("sq_potential_perf",   "sq_potential_state",   "not_coiled")   # N85
+            _track("news_count_perf",     "news_count_tier",      "quiet")        # N86
+            _track("news_accel_perf",     "news_accel_state",     "steady")       # N87
+            _track("true_alpha_perf",     "true_alpha_tier",      "negative")     # N88
+            _track("pivot_support_perf",  "pivot_state",          "between")      # N89
+            _track("vcp_perf",            "vcp_state",            "no_vcp")       # N90
         except Exception:
             pass
 
@@ -12602,6 +12715,37 @@ def run():
             if _vrm_conf and _vrm_weak and _vrm_conf["win_rate"] > _vrm_weak["win_rate"] + 12:
                 _learn_log.append(f"Vol-confirmed momentum wins {_vrm_conf['win_rate']:.0f}% vs weak {_vrm_weak['win_rate']:.0f}%")
 
+        # ── 76-90. Advanced pattern neurons (compact self-tuning) ───────────────
+        def _tune_binary(perf_key, pos_key, neg_key, label):
+            raw = tlog.get(perf_key, {})
+            ins = []
+            for k, d in raw.items():
+                if d.get("total", 0) >= 3:
+                    ins.append({"state": k, "win_rate": d.get("win_rate", 50),
+                                "avg_pnl": d.get("avg_pnl", 0), "total": d.get("total", 0)})
+            if ins:
+                pos = next((s for s in ins if s["state"] == pos_key), None)
+                neg = next((s for s in ins if s["state"] == neg_key), None)
+                if pos and neg and pos["win_rate"] > neg["win_rate"] + 10:
+                    _learn_log.append(f"{label}: {pos_key} wins {pos['win_rate']:.0f}% vs {neg_key} {neg['win_rate']:.0f}%")
+            return ins
+
+        _db_insights  = _tune_binary("double_bottom_perf",  "confirmed",   "none",         "N76 Double Bottom")
+        _atb_insights = _tune_binary("at_breakout_perf",    "at_level",    "not_at_level", "N77 At-Breakout")
+        _avwap_ins    = _tune_binary("avwap_perf",          "above",       "below",        "N78 AVWAP-52WL")
+        _poc_ctrl_ins = _tune_binary("poc_control_perf",    "above",       "below",        "N79 Above-POC")
+        _pmg_insights = _tune_binary("pm_gap_perf",         "big",         "flat",         "N80 PM Big Gap")
+        _htf_insights = _tune_binary("htf_perf",            "aligned",     "not_aligned",  "N81 HTF Confirm")
+        _e21_insights = _tune_binary("ema21_pb_perf",       "pullback",    "extended",     "N82 EMA21 PB")
+        _m3_insights  = _tune_binary("mtf_triple_perf",     "triple",      "partial_or_none","N83 MTF Triple")
+        _rs63_insights= _tune_binary("rs63_q_tier_perf",    "elite",       "lagging",      "N84 RS63 Quarter")
+        _sqp_insights = _tune_binary("sq_potential_perf",   "coiled",      "not_coiled",   "N85 Squeeze Pot")
+        _nc_insights  = _tune_binary("news_count_perf",     "hot",         "quiet",        "N86 News Count")
+        _na_insights  = _tune_binary("news_accel_perf",     "accelerating","steady",       "N87 News Accel")
+        _ta_insights  = _tune_binary("true_alpha_perf",     "high",        "negative",     "N88 True Alpha")
+        _pvt_insights = _tune_binary("pivot_support_perf",  "at_support",  "between",      "N89 Pivot Supp")
+        _vcp_insights = _tune_binary("vcp_perf",            "vcp",         "no_vcp",       "N90 VCP Pattern")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -12687,6 +12831,21 @@ def run():
             "macd_div_perf":        _md_insights,            # MACD bull divergence vs outcome
             "mfi_div_perf":         _mfd_insights,           # MFI bull divergence vs outcome
             "vol_ratio_mom_perf":   _vrm_insights,           # volume ratio + momentum confirmed vs outcome
+            "double_bottom_perf":   _db_insights,            # double bottom reversal pattern vs outcome
+            "at_breakout_perf":     _atb_insights,           # at-breakout level at entry vs outcome
+            "avwap_perf":           _avwap_ins,              # above anchored VWAP from 52-week low vs outcome
+            "poc_control_perf":     _poc_ctrl_ins,           # above POC (buyers in control) vs outcome
+            "pm_gap_perf":          _pmg_insights,           # pre-market big gap-up vs outcome
+            "htf_perf":             _htf_insights,           # higher timeframe alignment vs outcome
+            "ema21_pb_perf":        _e21_insights,           # EMA21 pullback entry vs outcome
+            "mtf_triple_perf":      _m3_insights,            # three-timeframe perfect alignment vs outcome
+            "rs63_q_tier_perf":     _rs63_insights,          # quarterly RS tier vs outcome
+            "sq_potential_perf":    _sqp_insights,           # TTM squeeze potential (coiled) vs outcome
+            "news_count_perf":      _nc_insights,            # news volume in 24h vs outcome
+            "news_accel_perf":      _na_insights,            # news accelerating (building narrative) vs outcome
+            "true_alpha_perf":      _ta_insights,            # true stock alpha vs market vs outcome
+            "pivot_support_perf":   _pvt_insights,           # at pivot S1/S2 support level vs outcome
+            "vcp_perf":             _vcp_insights,           # VCP (O'Neil volatility contraction) vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
