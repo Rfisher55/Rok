@@ -1261,6 +1261,39 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── Score Decay Neuron (41): did exiting on score collapse save money? ───────
+    # Tracks whether trades that exited due to score decay produced better or worse P&L
+    # than trades that held through score decline. Learns the optimal decay threshold.
+    # Buckets: "decay_exit" (score decay was the reason), "held_with_decay" (score fell
+    # but bot held based on other signals), "no_decay" (score was stable at exit).
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_sd = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sd_entry_score = _buy_sd.get("score", 0) if _buy_sd else 0
+            _sd_reason = reason or ""
+            if "score decay exit" in _sd_reason:
+                _sd_key = "decay_exit"
+            elif _sd_entry_score > 0 and signals and isinstance(signals, dict):
+                # Check if score decayed even though we're exiting for another reason
+                _sd_curr_sc = signals.get("live_score_at_sell", 0) or 0
+                if _sd_curr_sc > 0 and (_sd_entry_score - _sd_curr_sc) >= 10:
+                    _sd_key = "held_with_decay"
+                else:
+                    _sd_key = "no_decay"
+            else:
+                _sd_key = "no_decay"
+            _sd_perf = tlog.setdefault("score_decay_perf", {})
+            _sdp2 = _sd_perf.setdefault(_sd_key, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "type": _sd_key})
+            _sdp2["total"] = _sdp2.get("total", 0) + 1
+            _sdp2["total_pnl"] = round(_sdp2.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _sdp2["wins"] = _sdp2.get("wins", 0) + 1
+            else:        _sdp2["losses"] = _sdp2.get("losses", 0) + 1
+            if _sdp2["total"] > 0:
+                _sdp2["win_rate"] = round(_sdp2["wins"] / _sdp2["total"] * 100, 1)
+                _sdp2["avg_pnl"]  = round(_sdp2["total_pnl"] / _sdp2["total"], 2)
+        except Exception:
+            pass
+
 
 # ── Technical indicators ──────────────────────────────────────────────────────
 def _ema(prices, period):
@@ -8110,6 +8143,22 @@ def run():
                 reason = f"chandelier exit (price ${price:.2f} < stop ${_chan_stop:.2f}, {pnl_pct:+.1f}%)"
             elif pnl_pct <= -_atr_stop_pct:
                 reason = f"stop loss ({pnl_pct:+.1f}% ≤ -{_atr_stop_pct:.1f}%)"
+            elif pnl_pct > 1.0 and age_days >= 0.5:
+                # ── SCORE DECAY EXIT (Neuron 41) ──────────────────────────────────
+                # If the live setup score has collapsed vs entry, the thesis is broken.
+                # Learned threshold adjusts: starts at 15pts, tightens if decay exits save money.
+                try:
+                    _n41_entry_sc = peaks.get(sym, {}).get("entry_score", 0) or 0
+                    if _n41_entry_sc > 0:
+                        _n41_live_sig = live.get(sym, {})
+                        _n41_live_sc = score(sym, _n41_live_sig, regime_adj=regime_adj) if _n41_live_sig else _n41_entry_sc
+                        _n41_decay = _n41_entry_sc - _n41_live_sc
+                        _n41_thresh = float(_learned.get("score_decay_threshold", 15) or 15) if _learned else 15.0
+                        _n41_thresh = max(10.0, min(25.0, _n41_thresh))
+                        if _n41_decay >= _n41_thresh and pnl_pct > 1.0:
+                            reason = f"score decay exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
+                except Exception:
+                    pass
             elif (_atr_target_ent := peaks.get(sym, {}).get("atr_at_entry", 0)) and pnl_pct >= max(PROFIT_TARGET_PCT * 100, min(22.0, _atr_target_ent / cost * 100 * 4.5 if cost > 0 else PROFIT_TARGET_PCT * 100)):
                 # ATR-based take-profit: volatile stocks get wider target (4.5× ATR at entry)
                 _eff_tp = max(PROFIT_TARGET_PCT * 100, min(22.0, _atr_target_ent / cost * 100 * 4.5 if cost > 0 else PROFIT_TARGET_PCT * 100))
@@ -11159,6 +11208,34 @@ def run():
             if _rising and _falling and (_rising["win_rate"] - _falling["win_rate"]) >= 15:
                 _learn_log.append(f"Rising score entries ({_rising['win_rate']:.0f}% WR) outperform falling ({_falling['win_rate']:.0f}%) by {_rising['win_rate']-_falling['win_rate']:.0f}pts — momentum timing confirmed")
 
+        # ── 41. Score Decay Warning Neuron: did decay exits save money? ─────────
+        _sd_raw = tlog.get("score_decay_perf", {})
+        _sd_insights = []
+        for _sdk, _sdd in _sd_raw.items():
+            if _sdd.get("total", 0) >= 3:
+                _sd_insights.append({
+                    "type": _sdk, "win_rate": _sdd.get("win_rate", 50),
+                    "avg_pnl": _sdd.get("avg_pnl", 0), "total": _sdd.get("total", 0)
+                })
+        # Learn: if decay exits produce higher avg_pnl than held_with_decay, threshold is working
+        _learned_decay_thresh = 15.0  # default
+        _decay_exit_data  = next((s for s in _sd_insights if s["type"] == "decay_exit"), None)
+        _held_decay_data  = next((s for s in _sd_insights if s["type"] == "held_with_decay"), None)
+        if _decay_exit_data and _held_decay_data and _decay_exit_data["total"] >= 5:
+            _avg_pnl_decay_exit = _decay_exit_data["avg_pnl"]
+            _avg_pnl_held_decay = _held_decay_data["avg_pnl"]
+            if _avg_pnl_decay_exit > _avg_pnl_held_decay + 1.0:
+                # Exiting on decay is better than holding — tighten trigger (exit earlier)
+                _learned_decay_thresh = max(10.0, _learned_decay_thresh - 1.5)
+                _learn_log.append(f"Neuron41: decay exits avg {_avg_pnl_decay_exit:+.1f}% vs held {_avg_pnl_held_decay:+.1f}% — tightening decay threshold to {_learned_decay_thresh:.0f}pts")
+            elif _avg_pnl_held_decay > _avg_pnl_decay_exit + 1.0:
+                # Holding through decay works better — loosen trigger
+                _learned_decay_thresh = min(25.0, _learned_decay_thresh + 1.5)
+                _learn_log.append(f"Neuron41: held-with-decay avg {_avg_pnl_held_decay:+.1f}% vs exits {_avg_pnl_decay_exit:+.1f}% — loosening decay threshold to {_learned_decay_thresh:.0f}pts")
+        if _sd_insights:
+            _sd_sum = " | ".join(f"{s['type']}:{s['win_rate']:.0f}%WR({s['avg_pnl']:+.1f}%)" for s in _sd_insights)
+            _learn_log.append(f"Score decay neuron: {_sd_sum}")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11208,6 +11285,8 @@ def run():
             "squeeze_perf":         _sq_insights,           # TTM squeeze breakout vs normal
             "urgency_perf":         _nu_insights,           # news catalyst urgency vs outcome
             "vwap_perf":            _vw_insights,           # VWAP position at entry vs outcome
+            "score_decay_perf":     _sd_insights,           # decay exit vs held outcomes
+            "score_decay_threshold": _learned_decay_thresh,  # learned optimal decay trigger (pts)
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
