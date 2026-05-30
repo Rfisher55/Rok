@@ -52771,11 +52771,31 @@ function _renderIntelReport(el, intel) {
     if (topScan.length > 0) {
       const top = topScan[0];
       const tqStr = top.trend_quality_score >= 7 ? ' · TQ' + top.trend_quality_score.toFixed(0) : '';
-      items.push({ icon: '🔍', col: '#82b1ff', text: `Top scan: $${top.ticker} score ${top.score}${tqStr}${top.catalyst ? ' — ' + top.catalyst.slice(0,50) : ''}` });
+      const kellyStr = top.kelly_size_pct > 0 ? ` · Kelly ${top.kelly_size_pct.toFixed(1)}%` : '';
+      items.push({ icon: '🔍', col: '#82b1ff', text: `Top scan: $${top.ticker} score ${top.score}${tqStr}${kellyStr}${top.catalyst ? ' — ' + top.catalyst.slice(0,50) : ''}` });
+    }
+
+    // 6. Win/loss streak momentum
+    const streak = td.trade_streak || {};
+    if (streak.count >= 4 && streak.type === 'win') {
+      items.push({ icon: '🔥', col: '#00ff88', text: `${streak.count}-trade WIN STREAK — bot is in peak form. Trust signals, consider full Kelly sizing` });
+    } else if (streak.count >= 3 && streak.type === 'loss') {
+      items.push({ icon: '💀', col: '#ef5350', text: `${streak.count}-trade LOSS STREAK — reduce size, raise quality bar. Recovery mode until win returns` });
+    }
+
+    // 7. DXY/TNX macro headwinds
+    const reg = td.regime || {};
+    if (reg.dxy_5d > 1.5) {
+      items.push({ icon: '💵', col: '#ff9800', text: `Dollar strengthening (+${reg.dxy_5d?.toFixed(1)}%/5d DXY ${reg.dxy_level?.toFixed(1)}) — headwind for multinational & commodity plays` });
+    } else if (reg.dxy_5d < -1.5) {
+      items.push({ icon: '💵', col: '#69f0ae', text: `Dollar weakening (${reg.dxy_5d?.toFixed(1)}%/5d DXY ${reg.dxy_level?.toFixed(1)}) — tailwind for global risk-on` });
+    }
+    if (reg.rate_environment === 'restrictive') {
+      items.push({ icon: '📈', col: '#ef5350', text: `10Y yield ${reg.tnx_level?.toFixed(2)}% (RESTRICTIVE) — avoid high-multiple growth stocks, favor value & energy` });
     }
 
     if (!items.length) return '';
-    const rows = items.slice(0, 8).map(it =>
+    const rows = items.slice(0, 10).map(it =>
       `<div style="display:flex;align-items:flex-start;gap:.5rem;padding:.2rem 0;border-top:1px solid rgba(255,255,255,.04)">
         <span style="font-size:11px;flex-shrink:0">${it.icon}</span>
         <span style="font-size:9.5px;color:${it.col};line-height:1.5">${it.text}</span>
@@ -55726,6 +55746,7 @@ window.renderSectorRotation = renderSectorRotation;
               ${s.rsi ? `<span style="font-size:7.5px;color:#888">RSI ${s.rsi}</span>` : ''}
               ${s.rs5 != null ? `<span style="font-size:7.5px;color:${s.rs5>=0?'#00b87a':'#ef5350'}">RS5 ${s.rs5>=0?'+':''}${s.rs5}%</span>` : ''}
               ${s.rs_sector != null && Math.abs(s.rs_sector) >= 3 ? `<span style="font-size:7px;font-weight:800;color:${s.rs_sector>=10?'#00e676':s.rs_sector>=5?'#69f0ae':s.rs_sector<=-8?'#ef5350':'#888'}" title="Sector leadership: ${s.rs_sector>=0?'+':''}${s.rs_sector.toFixed(1)}% vs sector ETF">${s.rs_sector>=10?'★':''}SEC${s.rs_sector>=0?'+':''}${s.rs_sector.toFixed(0)}%</span>` : ''}
+              ${s.kelly_size_pct > 0 ? `<span style="font-size:6.5px;font-weight:800;color:#ffd54f;background:rgba(255,215,0,.12);padding:1px 4px;border-radius:3px" title="Kelly-suggested position size: ${s.kelly_size_pct.toFixed(1)}% of portfolio based on historical win rate">K:${s.kelly_size_pct.toFixed(1)}%</span>` : ''}
               ${s.sent ? `<span style="font-size:7.5px;color:${s.sent>=3?'var(--g)':s.sent<=-3?'var(--r)':'var(--wh4)'};margin-left:auto">AI ${s.sent>=0?'+':''}${s.sent}</span>` : ''}
             </div>
             ${cat ? `<div style="margin-top:.2rem">${cat}</div>` : ''}
@@ -55780,6 +55801,144 @@ window.renderSectorRotation = renderSectorRotation;
         });
         html += `</div>`;
       }
+
+      // ── Performance Analytics Panel ──────────────────────────────────────────
+      // Win streak, best/worst trade, daily P&L sparkline, trade quality heatmap
+      (() => {
+        const rc = data.recent_closed_trades || [];
+        const stats3 = data.stats || {};
+        const totClosed = (stats3.wins||0) + (stats3.losses||0);
+        const wr3 = totClosed > 0 ? Math.round((stats3.wins||0)/totClosed*100) : null;
+
+        // Use precomputed streak from bot (falls back to JS calc)
+        let curStreak = 0, streakType = 'none';
+        if (data.trade_streak && data.trade_streak.count > 0) {
+          curStreak = data.trade_streak.count;
+          streakType = data.trade_streak.type;
+        } else if (rc.length > 0) {
+          streakType = rc[0].pnl_pct >= 0 ? 'win' : 'loss';
+          for (const t of rc) {
+            if ((streakType === 'win' && t.pnl_pct >= 0) || (streakType === 'loss' && t.pnl_pct < 0)) curStreak++;
+            else break;
+          }
+        }
+
+        // Best / worst from all recent closed
+        let bestTrade = null, worstTrade = null;
+        rc.forEach(t => {
+          if (!bestTrade  || t.pnl_pct > bestTrade.pnl_pct)  bestTrade  = t;
+          if (!worstTrade || t.pnl_pct < worstTrade.pnl_pct) worstTrade = t;
+        });
+
+        // Use precomputed daily P&L from bot, fallback to perf_history calculation
+        let dailyRets = (data.daily_pnl || []).map(d => ({ t: d.date, ret: d.ret_pct }));
+        if (dailyRets.length < 3) {
+          const pHist = data.perf_history || [];
+          if (pHist.length >= 2) {
+            for (let i = 1; i < pHist.length; i++) {
+              const prev = pHist[i-1].v, curr = pHist[i].v;
+              if (prev > 0) dailyRets.push({ t: pHist[i].t, ret: (curr-prev)/prev*100 });
+            }
+          }
+        }
+        dailyRets = dailyRets.slice(-30);
+
+        // Nothing to show
+        if (rc.length === 0 && dailyRets.length === 0) return;
+
+        html += `<div style="margin-top:.85rem;padding:.7rem .85rem;background:rgba(0,0,0,.35);border-radius:10px;border:1px solid #1a2f50">
+          <div style="font-size:8px;color:#4a6fa5;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.55rem">Performance Analytics</div>`;
+
+        // Row 1: Streak + Win Rate gauge + Best/Worst
+        html += `<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.55rem">`;
+
+        // Streak badge
+        if (curStreak > 0 && streakType !== 'none') {
+          const sIcon = streakType === 'win' ? '🔥' : '💀';
+          const sCol  = streakType === 'win' ? '#00ff88' : '#ef5350';
+          const sBg   = streakType === 'win' ? 'rgba(0,255,136,.08)' : 'rgba(255,34,85,.08)';
+          html += `<div style="background:${sBg};border:1px solid ${sCol}44;border-radius:8px;padding:.35rem .65rem;text-align:center;flex:1;min-width:60px">
+            <div style="font-size:7px;color:#4a6fa5;font-weight:700;margin-bottom:2px">STREAK</div>
+            <div style="font-size:1.1rem;font-weight:900;color:${sCol}">${sIcon}${curStreak}</div>
+            <div style="font-size:6.5px;color:${sCol};opacity:.7">${streakType.toUpperCase()}</div>
+          </div>`;
+        }
+
+        // Win rate gauge
+        if (wr3 !== null && totClosed >= 3) {
+          const wrCol = wr3 >= 60 ? '#00ff88' : wr3 >= 50 ? '#ffd54f' : wr3 >= 40 ? '#ff9800' : '#ef5350';
+          html += `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem .65rem;text-align:center;flex:1;min-width:60px">
+            <div style="font-size:7px;color:#4a6fa5;font-weight:700;margin-bottom:2px">WIN RATE</div>
+            <div style="font-size:1.1rem;font-weight:900;color:${wrCol}">${wr3}%</div>
+            <div style="font-size:6.5px;color:#3a5a8a">${totClosed} trades</div>
+          </div>`;
+        }
+
+        // Best trade
+        if (bestTrade && bestTrade.pnl_pct > 0) {
+          html += `<div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:.35rem .65rem;text-align:center;flex:1;min-width:60px">
+            <div style="font-size:7px;color:#4a6fa5;font-weight:700;margin-bottom:2px">BEST TRADE</div>
+            <div style="font-size:1.1rem;font-weight:900;color:#00ff88">+${bestTrade.pnl_pct.toFixed(1)}%</div>
+            <div style="font-size:6.5px;color:#00ff88;opacity:.7">\$${bestTrade.ticker}</div>
+          </div>`;
+        }
+
+        // Worst trade
+        if (worstTrade && worstTrade.pnl_pct < 0) {
+          html += `<div style="background:rgba(255,34,85,.06);border:1px solid rgba(255,34,85,.2);border-radius:8px;padding:.35rem .65rem;text-align:center;flex:1;min-width:60px">
+            <div style="font-size:7px;color:#4a6fa5;font-weight:700;margin-bottom:2px">WORST TRADE</div>
+            <div style="font-size:1.1rem;font-weight:900;color:#ef5350">${worstTrade.pnl_pct.toFixed(1)}%</div>
+            <div style="font-size:6.5px;color:#ef5350;opacity:.7">\$${worstTrade.ticker}</div>
+          </div>`;
+        }
+
+        html += `</div>`;
+
+        // Row 2: Daily P&L sparkline bars (last 30 sessions)
+        if (dailyRets.length >= 5) {
+          const maxAbs = Math.max(...dailyRets.map(d => Math.abs(d.ret)), 0.5);
+          const bars = dailyRets.map(d => {
+            const pct = d.ret;
+            const barH = Math.round(Math.min(Math.abs(pct) / maxAbs * 20, 20));
+            const col = pct >= 0 ? '#00ff88' : '#ef5350';
+            const bgCol = pct >= 0 ? 'rgba(0,255,136,.25)' : 'rgba(255,34,85,.25)';
+            const tip = new Date(d.t).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ': ' + (pct>=0?'+':'') + pct.toFixed(2) + '%';
+            return `<div title="${tip}" style="flex:1;display:flex;align-items:flex-end;min-width:3px;max-width:10px">
+              <div style="width:100%;height:${Math.max(barH,2)}px;background:${bgCol};border-radius:1px 1px 0 0;border-top:1px solid ${col}"></div>
+            </div>`;
+          }).join('');
+
+          const greenDays = dailyRets.filter(d => d.ret >= 0).length;
+          const totalRet = dailyRets.reduce((s, d) => s + d.ret, 0);
+          const retCol = totalRet >= 0 ? '#00ff88' : '#ef5350';
+          html += `<div style="margin-bottom:.45rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.2rem">
+              <span style="font-size:6.5px;color:#3a5a8a;font-weight:700">DAILY P&L — LAST ${dailyRets.length} SESSIONS</span>
+              <span style="font-size:6.5px;color:${retCol};font-weight:800">${greenDays}G/${dailyRets.length-greenDays}R &nbsp; ${totalRet>=0?'+':''}${totalRet.toFixed(1)}%</span>
+            </div>
+            <div style="display:flex;gap:1px;height:22px;align-items:flex-end;background:rgba(255,255,255,.02);padding:2px 3px 0;border-radius:4px;border:1px solid rgba(255,255,255,.05)">
+              ${bars}
+            </div>
+          </div>`;
+        }
+
+        // Row 3: Recent trade P&L sparkline dots
+        if (rc.length >= 3) {
+          const dots = rc.slice(0, 20).map(t => {
+            const pct = t.pnl_pct || 0;
+            const col = pct >= 3 ? '#00ff88' : pct >= 0 ? '#69f0ae' : pct >= -3 ? '#ef9a9a' : '#ef5350';
+            const sz = Math.min(Math.max(Math.abs(pct) * 1.2, 5), 14);
+            return `<div title="\$${t.ticker} ${pct>=0?'+':''}${pct.toFixed(1)}%" style="width:${sz}px;height:${sz}px;border-radius:50%;background:${col};opacity:.8;flex-shrink:0"></div>`;
+          }).join('');
+          html += `<div>
+            <div style="font-size:6.5px;color:#3a5a8a;font-weight:700;margin-bottom:.25rem">TRADE RESULTS (size = magnitude)</div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;padding:.25rem;background:rgba(255,255,255,.02);border-radius:4px">${dots}</div>
+          </div>`;
+        }
+
+        html += `</div>`;
+      })();
+      // ── end Performance Analytics Panel ──────────────────────────────────────
 
       intelEl.innerHTML = html;
     }
@@ -55879,13 +56038,77 @@ window.renderSectorRotation = renderSectorRotation;
         html += `</div>`;
       }
 
-      // Portfolio equity curve (perf_history)
+      // Portfolio equity curve + monthly P&L calendar
       const perfHist = data.perf_history || [];
       if (perfHist.length > 3) {
+        // Compute daily returns for the calendar heatmap
+        const dailyMap = {};
+        for (let i = 1; i < perfHist.length; i++) {
+          const prev = perfHist[i-1], curr = perfHist[i];
+          if (!prev.v || !curr.v || prev.v <= 0) continue;
+          const dayKey = curr.t ? curr.t.slice(0,10) : null;
+          if (!dayKey) continue;
+          const ret = (curr.v - prev.v) / prev.v * 100;
+          // Keep only the last snapshot for each day
+          if (!dailyMap[dayKey] || curr.t > dailyMap[dayKey].t) {
+            dailyMap[dayKey] = { ret, v: curr.v, p: curr.p || 0, t: curr.t };
+          }
+        }
+        const dayEntries = Object.entries(dailyMap).sort((a,b) => a[0] > b[0] ? 1 : -1);
+        const last30 = dayEntries.slice(-30);
+
+        // Compute from-start return
+        const vStart = perfHist[0].v;
+        const vEnd   = perfHist[perfHist.length-1].v;
+        const totalRetPct = vStart > 0 ? (vEnd - vStart) / vStart * 100 : 0;
+        const totalRetCol = totalRetPct >= 0 ? '#00ff88' : '#ef5350';
+
+        // Max drawdown from equity history
+        let runPeak = vStart, maxDdPct = 0;
+        perfHist.forEach(h => {
+          if (h.v > runPeak) runPeak = h.v;
+          const dd = runPeak > 0 ? (runPeak - h.v) / runPeak * 100 : 0;
+          if (dd > maxDdPct) maxDdPct = dd;
+        });
+
         html += `<div style="margin-top:.75rem">
-          <div style="font-size:8px;color:#4a6fa5;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Equity Curve</div>
-          <canvas id="port-equity-mini" height="55" style="width:100%;display:block"></canvas>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
+            <div style="font-size:8px;color:#4a6fa5;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Equity Curve</div>
+            <div style="display:flex;gap:.6rem;align-items:center">
+              <span style="font-size:7.5px;font-weight:800;color:${totalRetCol}">${totalRetPct>=0?'+':''}${totalRetPct.toFixed(1)}% total</span>
+              ${maxDdPct > 0.5 ? `<span style="font-size:7px;color:#ef5350">Max DD: -${maxDdPct.toFixed(1)}%</span>` : ''}
+            </div>
+          </div>
+          <canvas id="port-equity-mini" height="60" style="width:100%;display:block"></canvas>
         </div>`;
+
+        // Monthly P&L calendar (last 30 trading sessions)
+        if (last30.length >= 5) {
+          const calCells = last30.map(([day, d]) => {
+            const ret = d.ret;
+            const bg = ret >= 2  ? 'rgba(0,255,136,.4)' :
+                       ret >= 0.5 ? 'rgba(0,255,136,.2)' :
+                       ret >= 0   ? 'rgba(0,255,136,.08)':
+                       ret >= -1  ? 'rgba(255,34,85,.12)' :
+                       ret >= -2  ? 'rgba(255,34,85,.25)' : 'rgba(255,34,85,.45)';
+            const col = ret >= 0 ? '#69f0ae' : '#ef9a9a';
+            const dd = new Date(day + 'T12:00:00');
+            const lbl = dd.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+            return `<div title="${lbl}: ${ret>=0?'+':''}${ret.toFixed(2)}%${d.p?' · '+d.p+' pos':''}" style="flex:1;min-width:14px;max-width:22px;background:${bg};border-radius:2px;padding:2px 0;text-align:center">
+              <div style="font-size:5.5px;color:${col};font-weight:700;line-height:1">${ret>=0?'+':''}${Math.abs(ret)<10?ret.toFixed(1):Math.round(ret)}%</div>
+            </div>`;
+          }).join('');
+          const greenDays = last30.filter(([,d]) => d.ret >= 0).length;
+          const totalCal = last30.reduce((s,[,d]) => s+d.ret, 0);
+          const calRetCol = totalCal >= 0 ? '#00ff88' : '#ef5350';
+          html += `<div style="margin-top:.5rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem">
+              <span style="font-size:7px;color:#3a5a8a;font-weight:700">DAILY P&L — LAST ${last30.length} SESSIONS</span>
+              <span style="font-size:7px;color:${calRetCol};font-weight:800">${greenDays}G / ${last30.length-greenDays}R &nbsp; ${totalCal>=0?'+':''}${totalCal.toFixed(1)}%</span>
+            </div>
+            <div style="display:flex;gap:1px;flex-wrap:wrap">${calCells}</div>
+          </div>`;
+        }
       }
 
       html += `</div>`;
@@ -55895,6 +56118,7 @@ window.renderSectorRotation = renderSectorRotation;
       const miniCanvas = document.getElementById('port-equity-mini');
       if (miniCanvas && perfHist.length > 3) {
         const vals = perfHist.map(h => h.v);
+        const posData = perfHist.map(h => h.p || 0);
         const labels = perfHist.map(h => {
           const d = new Date(h.t);
           return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
@@ -55905,34 +56129,48 @@ window.renderSectorRotation = renderSectorRotation;
         const pEnd   = vals[vals.length-1];
         const isUp   = pEnd >= pStart;
         const lineCol = isUp ? '#00ff88' : '#ef5350';
-        // Destroy existing chart if present
         if (window._portEquityChart) { try { window._portEquityChart.destroy(); } catch(e){} }
         if (typeof Chart !== 'undefined') {
           const ctx = miniCanvas.getContext('2d');
-          const grad = ctx.createLinearGradient(0,0,0,55);
-          grad.addColorStop(0, isUp ? 'rgba(0,255,136,.35)' : 'rgba(255,34,85,.35)');
+          const grad = ctx.createLinearGradient(0,0,0,60);
+          grad.addColorStop(0, isUp ? 'rgba(0,255,136,.3)' : 'rgba(255,34,85,.3)');
           grad.addColorStop(1, 'rgba(0,0,0,0)');
           window._portEquityChart = new Chart(ctx, {
             type: 'line',
             data: {
               labels,
-              datasets: [{
-                data: vals,
-                borderColor: lineCol,
-                backgroundColor: grad,
-                borderWidth: 1.5,
-                fill: true,
-                tension: 0.35,
-                pointRadius: 0,
-              }]
+              datasets: [
+                {
+                  data: vals,
+                  borderColor: lineCol,
+                  backgroundColor: grad,
+                  borderWidth: 1.5,
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 0,
+                  yAxisID: 'y',
+                },
+                {
+                  data: posData,
+                  borderColor: 'rgba(130,177,255,.4)',
+                  backgroundColor: 'rgba(130,177,255,.05)',
+                  borderWidth: 1,
+                  fill: false,
+                  tension: 0.2,
+                  pointRadius: 0,
+                  yAxisID: 'y2',
+                  borderDash: [2,3],
+                }
+              ]
             },
             options: {
               responsive: false,
               animation: false,
               plugins: { legend: { display: false }, tooltip: { enabled: false } },
               scales: {
-                x: { display: false },
-                y: { display: false, min: minV, max: maxV }
+                x:  { display: false },
+                y:  { display: false, min: minV, max: maxV },
+                y2: { display: false, min: 0, max: Math.max(...posData, 5) * 2.5 }
               }
             }
           });

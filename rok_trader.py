@@ -7001,6 +7001,11 @@ def run():
                 "fib_level_618":     live.get(tk, {}).get("fib_level_618", 0.0),
                 "w52_range_pos":     live.get(tk, {}).get("w52_range_pos", 0.0),
                 "rs_sector":         round(live.get(tk, {}).get("rs_sector", 0.0), 2),
+                # Kelly-suggested position size as % of portfolio (half-Kelly for safety)
+                "kelly_size_pct":    round(max(0, min(10.0, (
+                    (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
+                    max(0.01, max(0.5, min(5.0, _payoff_ratio))) * 50   # half-Kelly %
+                ) * (1 + (sc - 60) / 100))), 1) if win_rate > 0.4 and _payoff_ratio > 0.5 else 0.0,
             }
             for tk, sc, sent, sec, cat in (final_scores or [])[:8]
         ]
@@ -7502,6 +7507,19 @@ def run():
              "reason": (t.get("reason","") or "")[:40], "time": t.get("time","")}
             for t in _recent_closed
         ]
+        # Win/loss streak from most recent trades
+        _streak_len = 0
+        _streak_type = "none"
+        for _st in _recent_closed:
+            _is_win = _st["pnl_pct"] >= 0
+            if _streak_len == 0:
+                _streak_type = "win" if _is_win else "loss"
+                _streak_len = 1
+            elif (_streak_type == "win" and _is_win) or (_streak_type == "loss" and not _is_win):
+                _streak_len += 1
+            else:
+                break
+        tlog["trade_streak"] = {"type": _streak_type, "count": _streak_len}
     except Exception:
         pass
     tlog["signal_analytics"] = _signal_analytics
@@ -7747,6 +7765,39 @@ def run():
     history = tlog.setdefault("perf_history", [])
     history.append(snap)
     tlog["perf_history"] = history[-500:]
+
+    # Precompute daily P&L from perf_history for calendar heatmap
+    # Groups snapshots by date, takes opening and closing values per day
+    try:
+        _day_map: dict = {}
+        for _h in tlog["perf_history"]:
+            _hday = (_h.get("t") or "")[:10]
+            if not _hday or not _h.get("v"):
+                continue
+            if _hday not in _day_map:
+                _day_map[_hday] = {"open": _h["v"], "close": _h["v"],
+                                   "high": _h["v"], "low": _h["v"],
+                                   "positions": _h.get("p", 0)}
+            else:
+                _day_map[_hday]["close"] = _h["v"]
+                _day_map[_hday]["high"]  = max(_day_map[_hday]["high"], _h["v"])
+                _day_map[_hday]["low"]   = min(_day_map[_hday]["low"],  _h["v"])
+                _day_map[_hday]["positions"] = _h.get("p", 0)
+        _daily_pnl = []
+        for _dk in sorted(_day_map.keys())[-60:]:   # keep last 60 trading days
+            _dv = _day_map[_dk]
+            _o, _c = _dv["open"], _dv["close"]
+            _ret = round((_c - _o) / _o * 100, 3) if _o > 0 else 0.0
+            _daily_pnl.append({
+                "date":      _dk,
+                "open":      round(_o, 2),
+                "close":     round(_c, 2),
+                "ret_pct":   _ret,
+                "positions": _dv["positions"],
+            })
+        tlog["daily_pnl"] = _daily_pnl
+    except Exception:
+        pass
 
     _save(TRADES_FILE, tlog)
     logger.info(
