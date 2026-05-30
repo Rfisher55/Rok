@@ -8525,6 +8525,11 @@ def run():
                 "rs252":         round(live.get(_sym, {}).get("rs252", 0.0), 2) if live.get(_sym) else 0.0,
                 "sector":        SECTOR_MAP.get(_sym, "other"),
                 "rs_sector":     round(live.get(_sym, {}).get("rs_sector", 0.0), 2) if live.get(_sym) else 0.0,
+                # Kelly criterion optimal size for this position
+                "kelly_size_pct": round(max(0, min(10.0, (
+                    (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
+                    max(0.01, max(0.5, min(5.0, _payoff_ratio))) * 50
+                ))), 1) if win_rate > 0.4 and _payoff_ratio > 0.5 else 0.0,
             })
         tlog["positions"] = _pos_list_raw
         # Post-process: compute active trailing stop, refine EM with ATM IV, ATR position sizing

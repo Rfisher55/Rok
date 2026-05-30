@@ -57030,6 +57030,54 @@ window.renderSectorRotation = renderSectorRotation;
           </div>
         </div>`;
 
+      // ── Macro Context Strip ──────────────────────────────────────────────────
+      {
+        const reg = data.regime || {};
+        const vix = reg.vix || 0;
+        const vixCol = vix >= 30 ? '#ef5350' : vix >= 20 ? '#ffa726' : vix >= 15 ? '#ffd54f' : '#00e676';
+        const vixLbl = vix >= 30 ? 'FEAR' : vix >= 20 ? 'CAUTION' : vix >= 15 ? 'NORMAL' : 'GREED';
+        const tnx = reg.tnx_level || 0;
+        const tnx5d = reg.tnx_5d || 0;
+        const tnxCol = tnx5d > 0.1 ? '#ef9a9a' : tnx5d < -0.1 ? '#69f0ae' : '#888';
+        const dxy = reg.dxy_level || 0;
+        const dxy5d = reg.dxy_5d || 0;
+        const dxyCol = dxy5d > 0.5 ? '#ef9a9a' : dxy5d < -0.5 ? '#69f0ae' : '#888';
+        const rateEnv = reg.rate_environment || '';
+        const breadth = data.market_breadth || {};
+        const advPct = breadth.adv_pct || breadth.breadth_pct || 0;
+        const bThrust = breadth.breadth_thrust || false;
+        const bTrend = breadth.breadth_trend || '';
+        const advCol = advPct >= 60 ? '#00e676' : advPct >= 50 ? '#69f0ae' : advPct >= 40 ? '#ffd54f' : '#ef5350';
+        const fg = (data.fear_greed || (_intelCache||{}).fear_greed || {}).value || (data.fear_greed || (_intelCache||{}).fear_greed || {}).score || 0;
+        const fgLabel = fg >= 75 ? 'XGREED' : fg >= 55 ? 'GREED' : fg >= 45 ? 'NEUTRAL' : fg >= 25 ? 'FEAR' : 'XFEAR';
+        const fgCol = fg >= 75 ? '#ef5350' : fg >= 55 ? '#ff9800' : fg >= 45 ? '#ffd54f' : fg >= 25 ? '#82b1ff' : '#7986cb';
+        const var95 = data.var_95_usd || 0;
+        const cvar95 = data.cvar_95_usd || 0;
+        const volD = data.port_vol_daily_pct || 0;
+        const volCol = volD > 3 ? '#ef5350' : volD > 1.5 ? '#ffa726' : '#ffd54f';
+        const macroItems = [];
+        if (vix > 0) macroItems.push(`<div style="text-align:center" title="CBOE VIX: ${vix.toFixed(1)} — ${vixLbl}"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">VIX</div><div style="font-size:9px;font-weight:900;color:${vixCol}">${vix.toFixed(1)}</div><div style="font-size:5px;color:${vixCol}">${vixLbl}</div></div>`);
+        if (tnx > 0) macroItems.push(`<div style="text-align:center" title="10Y Treasury: ${tnx.toFixed(2)}% (5d: ${tnx5d>=0?'+':''}${tnx5d.toFixed(2)}%)"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">10Y</div><div style="font-size:9px;font-weight:900;color:${tnxCol}">${tnx.toFixed(2)}%</div><div style="font-size:5px;color:${tnxCol}">${tnx5d>=0?'+':''}${tnx5d.toFixed(2)}%5d</div></div>`);
+        if (dxy > 0) macroItems.push(`<div style="text-align:center" title="US Dollar Index DXY: ${dxy.toFixed(1)} (5d: ${dxy5d>=0?'+':''}${dxy5d.toFixed(2)}%)"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">DXY</div><div style="font-size:9px;font-weight:900;color:${dxyCol}">${dxy.toFixed(1)}</div><div style="font-size:5px;color:${dxyCol}">${dxy5d>=0?'+':''}${dxy5d.toFixed(1)}%5d</div></div>`);
+        if (advPct > 0) macroItems.push(`<div style="text-align:center" title="Market breadth: ${advPct.toFixed(0)}% sectors advancing | trend: ${bTrend}${bThrust?' | BREADTH THRUST':''}"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">BRDTH</div><div style="font-size:9px;font-weight:900;color:${advCol}">${advPct.toFixed(0)}%</div><div style="font-size:5px;color:${advCol}">${bThrust?'THRUST':bTrend||'adv'}</div></div>`);
+        if (fg > 0) macroItems.push(`<div style="text-align:center" title="Fear & Greed Index: ${fg}/100 (${fgLabel})"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">F&G</div><div style="font-size:9px;font-weight:900;color:${fgCol}">${fg}</div><div style="font-size:5px;color:${fgCol}">${fgLabel}</div></div>`);
+        if (var95 > 0) macroItems.push(`<div style="text-align:center" title="Portfolio 1-day VaR 95%: -$${var95.toLocaleString()} | CVaR: -$${cvar95.toLocaleString()} | Daily vol: ${volD.toFixed(1)}%"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">VaR95</div><div style="font-size:9px;font-weight:900;color:${volCol}">$${var95 >= 1000 ? (var95/1000).toFixed(1)+'k' : var95.toFixed(0)}</div><div style="font-size:5px;color:${volCol}">${volD.toFixed(1)}%σ/d</div></div>`);
+        // Add SPY/QQQ live from liveprices
+        const spyLp = (typeof liveprices !== 'undefined' && liveprices) ? liveprices['SPY'] : null;
+        const qqqLp = (typeof liveprices !== 'undefined' && liveprices) ? liveprices['QQQ'] : null;
+        if (spyLp && spyLp.change_pct != null) {
+          const sc = spyLp.change_pct; const scCol = sc >= 0.5 ? '#00e676' : sc >= 0 ? '#69f0ae' : sc >= -0.5 ? '#ff9800' : '#ef5350';
+          macroItems.unshift(`<div style="text-align:center" title="S&P 500 ETF: $${(spyLp.price||0).toFixed(2)} (${sc>=0?'+':''}${sc.toFixed(2)}%)"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">SPY</div><div style="font-size:9px;font-weight:900;color:${scCol}">${sc>=0?'+':''}${sc.toFixed(2)}%</div><div style="font-size:5px;color:rgba(255,255,255,.3)">$${(spyLp.price||0).toFixed(0)}</div></div>`);
+        }
+        if (qqqLp && qqqLp.change_pct != null) {
+          const qc = qqqLp.change_pct; const qcCol = qc >= 0.5 ? '#00e676' : qc >= 0 ? '#69f0ae' : qc >= -0.5 ? '#ff9800' : '#ef5350';
+          macroItems.splice(1, 0, `<div style="text-align:center" title="Nasdaq-100 ETF: $${(qqqLp.price||0).toFixed(2)} (${qc>=0?'+':''}${qc.toFixed(2)}%)"><div style="font-size:5.5px;color:rgba(255,255,255,.3)">QQQ</div><div style="font-size:9px;font-weight:900;color:${qcCol}">${qc>=0?'+':''}${qc.toFixed(2)}%</div><div style="font-size:5px;color:rgba(255,255,255,.3)">$${(qqqLp.price||0).toFixed(0)}</div></div>`);
+        }
+        if (macroItems.length > 0) {
+          html += `<div style="display:flex;gap:.5rem;align-items:center;justify-content:space-around;padding:.3rem .45rem;background:rgba(0,0,0,.25);border-radius:7px;border:1px solid rgba(255,255,255,.05);margin-bottom:.5rem;flex-wrap:wrap">${macroItems.join('<div style="width:1px;height:20px;background:rgba(255,255,255,.06)"></div>')}</div>`;
+        }
+      }
+
       if (positions.length === 0) {
         html += `<div style="color:#3a5a8a;font-size:10px;padding:.3rem 0">No open positions — bot is scanning ${data.scan_universe||0} stocks and will buy when signals align.</div>`;
       } else {
@@ -57599,6 +57647,19 @@ window.renderSectorRotation = renderSectorRotation;
                     <span style="font-size:6.5px;font-weight:800;color:${tCol}">$${atgt.toFixed(0)}</span>
                     <span style="font-size:5.5px;color:${tCol}">${aUp>=0?'+':''}${aUp.toFixed(0)}%</span>
                     ${buyStr ? `<span style="font-size:5px;color:rgba(255,255,255,.3)">${buyStr}</span>` : ''}
+                  </div>`);
+                }
+                // Kelly optimal position size vs current
+                const kellySz = p.kelly_size_pct || 0;
+                if (kellySz > 0 && pv > 0) {
+                  const curSzPct = ((p.market_val||0) / pv * 100);
+                  const diff = curSzPct - kellySz;
+                  const kCol = Math.abs(diff) < 0.5 ? '#69f0ae' : diff > 2 ? '#ef5350' : diff > 0 ? '#ffa726' : '#82b1ff';
+                  const kLbl = Math.abs(diff) < 0.5 ? 'IDEAL' : diff > 0 ? `+${diff.toFixed(1)}% OVER` : `${diff.toFixed(1)}% UNDER`;
+                  parts.push(`<div style="display:flex;align-items:center;gap:.25rem;background:rgba(255,255,255,.03);border:1px solid ${kCol}33;border-radius:4px;padding:2px 6px" title="Kelly optimal size: ${kellySz.toFixed(1)}% | Current: ${curSzPct.toFixed(1)}% | ${kLbl}. Based on historical win rate and payoff ratio.">
+                    <span style="font-size:5.5px;color:rgba(255,255,255,.3)">Kelly</span>
+                    <span style="font-size:6.5px;font-weight:800;color:${kCol}">${kellySz.toFixed(1)}%</span>
+                    <span style="font-size:5px;color:${kCol}">${kLbl}</span>
                   </div>`);
                 }
                 return parts.length ? `<div style="margin-top:.3rem;display:flex;gap:.35rem;flex-wrap:wrap;align-items:center">${parts.join('')}</div>` : '';
