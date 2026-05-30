@@ -9807,6 +9807,19 @@ def run():
         _eff_min_score += 8
         logger.info(f"VIX spike guard active — raising threshold to {_eff_min_score}")
 
+    # Distribution Day Guard (IBD method): institutional selling pressure → raise bar
+    # 4+ distribution days in 25 sessions = heavy selling; demand higher-conviction setups
+    _dist_days = regime.get("distribution_days", 0) or 0
+    if _dist_days >= 6:
+        _eff_min_score += 10
+        logger.info(f"Distribution day guard: {_dist_days} dist days (HEAVY) — raising threshold by 10 → {_eff_min_score}")
+    elif _dist_days >= 4:
+        _eff_min_score += 5
+        logger.info(f"Distribution day guard: {_dist_days} dist days — raising threshold by 5 → {_eff_min_score}")
+    elif _dist_days >= 2:
+        _eff_min_score += 2
+        logger.info(f"Distribution day guard: {_dist_days} dist days — raising threshold by 2 → {_eff_min_score}")
+
     # Portfolio beta guard: high-beta portfolio + new high-beta buy = double the risk
     # Add +5 to threshold when portfolio is already high-beta (>1.5 estimate)
     if _port_beta_est > 1.5:

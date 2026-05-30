@@ -59863,15 +59863,37 @@ window.renderSectorRotation = renderSectorRotation;
             : '';
           const closeStr = mOpen && minsClose != null && minsClose < 120 ? `<span style="font-size:6px;color:#555">${minsClose}m to close</span>` : '';
           const tqBadge = tq != null && mOpen ? `<span style="font-size:6px;font-weight:800;padding:1px 5px;border-radius:3px;background:${tq>=3?'rgba(0,230,118,.15)':tq>=2?'rgba(105,240,174,.12)':tq>=1?'rgba(255,213,79,.1)':'rgba(255,34,85,.1)'};color:${tq>=3?'#00e676':tq>=2?'#69f0ae':tq>=1?'#ffd54f':'#ef5350'}">${tq>=3?'PRIME ⚡':tq>=2?'GOOD':tq>=1?'CAUTION':'WAIT'}</span>` : '';
-          html += `<div style="margin-bottom:.5rem;padding:.35rem .6rem;background:${si.col}0d;border:1px solid ${si.col}33;border-radius:8px;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-            <span style="font-size:10px;flex-shrink:0">${si.icon}</span>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
-                <span style="font-size:7px;font-weight:900;color:${si.col};letter-spacing:.07em">${si.lbl}</span>
-                ${tqBadge}${wrBadge}${closeStr}
+          // Session progress bar: how far through the current session window?
+          let sessProg = 50, sessProgressNote = '';
+          if (mOpen && minsOpen != null && minsClose != null) {
+            const totalMins = minsOpen + minsClose;
+            sessProg = totalMins > 0 ? Math.round(minsOpen / totalMins * 100) : 50;
+            // Key countdown: power hour starts at 195 min from open (3:15 PM ET)
+            const minsToPhour = 195 - minsOpen;
+            const minsToPrime = 30 - minsOpen;  // prime morning ends at 60m, but starts at 10m
+            if (minsClose <= 20) sessProgressNote = `Close guard in ${minsClose}m`;
+            else if (minsClose <= 80 && minsClose > 20) sessProgressNote = `Power hour ${minsClose - 20}m until close`;
+            else if (minsToPhour > 0 && minsToPhour <= 30) sessProgressNote = `Power hour in ${minsToPhour}m`;
+            else if (minsOpen < 10) sessProgressNote = `Opening guard — ${10 - minsOpen}m until prime`;
+            else if (minsOpen >= 10 && minsOpen < 60) sessProgressNote = `Prime window — ${60 - minsOpen}m left`;
+          }
+          html += `<div style="margin-bottom:.5rem;padding:.35rem .6rem;background:${si.col}0d;border:1px solid ${si.col}33;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem">
+              <span style="font-size:10px;flex-shrink:0">${si.icon}</span>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">
+                  <span style="font-size:7px;font-weight:900;color:${si.col};letter-spacing:.07em">${si.lbl}</span>
+                  ${tqBadge}${wrBadge}${closeStr}
+                </div>
+                <div style="font-size:6px;color:rgba(255,255,255,.35);margin-top:1px">${si.note}</div>
               </div>
-              <div style="font-size:6px;color:rgba(255,255,255,.35);margin-top:1px">${si.note}</div>
             </div>
+            ${mOpen && minsOpen != null ? `<div>
+              <div style="height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:2px">
+                <div style="height:100%;width:${sessProg}%;background:linear-gradient(90deg,${si.col}88,${si.col});border-radius:2px;transition:width .5s"></div>
+              </div>
+              ${sessProgressNote ? `<div style="font-size:5.5px;color:${si.col};opacity:.7;text-align:right">${sessProgressNote}</div>` : ''}
+            </div>` : ''}
           </div>`;
         }
       }
