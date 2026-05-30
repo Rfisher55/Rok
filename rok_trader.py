@@ -475,6 +475,16 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _wr_v = float(signals.get("williams_r", -50.0) or -50.0)
         e["williams_r_at_entry"] = round(_wr_v, 1)
         e["wr_zone"] = ("overbought" if _wr_v > -20 else "oversold" if _wr_v < -80 else "trending")
+        # Ichimoku Cloud Neuron (51): cloud position at entry — institutional trend system.
+        # above = above cloud (strong bull trend, institutions own it).
+        # cloud = inside cloud (transition, uncertainty — high failure risk).
+        # below = below cloud (bearish — avoid unless contrarian with tight stop).
+        _ichi_above = bool(signals.get("ichimoku_above", False))
+        _ichi_bull  = bool(signals.get("ichimoku_bull_cloud", False))
+        _ichi_tk    = bool(signals.get("ichimoku_tk_bull", False))
+        _ichi_score = int(_ichi_above) + int(_ichi_bull) + int(_ichi_tk)
+        e["ichimoku_score_at_entry"] = _ichi_score
+        e["ichimoku_position"] = ("above" if _ichi_above else "inside" if _ichi_bull else "below")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1352,6 +1362,25 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Ichimoku Cloud Neuron (51): cloud position at entry ──────────────────────
+    # Tracks win rates for entries above cloud (bull trend confirmed) vs inside cloud
+    # (transition/uncertain) vs below cloud (bearish). Institutional trend system.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ic = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ic_pos = _buy_ic.get("ichimoku_position", "inside") if _buy_ic else "inside"
+            _ic_perf = tlog.setdefault("ichimoku_perf", {})
+            _icp = _ic_perf.setdefault(_ic_pos, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "position": _ic_pos})
+            _icp["total"] = _icp.get("total", 0) + 1
+            _icp["total_pnl"] = round(_icp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _icp["wins"] = _icp.get("wins", 0) + 1
+            else:        _icp["losses"] = _icp.get("losses", 0) + 1
+            if _icp["total"] > 0:
+                _icp["win_rate"] = round(_icp["wins"] / _icp["total"] * 100, 1)
+                _icp["avg_pnl"]  = round(_icp["total_pnl"] / _icp["total"], 2)
         except Exception:
             pass
 
@@ -11634,6 +11663,23 @@ def run():
             if _wr_ob and _wr_tr and _wr_ob["win_rate"] < 40 and _wr_ob["total"] >= 5:
                 _learn_log.append(f"W%R overbought entries fail ({_wr_ob['win_rate']:.0f}% WR) — trend is exhausting")
 
+        # ── 51. Ichimoku Cloud Neuron: institutional cloud position at entry ──
+        _ic_raw = tlog.get("ichimoku_perf", {})
+        _ic_insights = []
+        for _ick, _icd in _ic_raw.items():
+            if _icd.get("total", 0) >= 3:
+                _ic_insights.append({
+                    "position": _ick, "win_rate": _icd.get("win_rate", 50),
+                    "avg_pnl": _icd.get("avg_pnl", 0), "total": _icd.get("total", 0)
+                })
+        if _ic_insights:
+            _ic_above = next((s for s in _ic_insights if s["position"] == "above"), None)
+            _ic_below = next((s for s in _ic_insights if s["position"] == "below"), None)
+            _ic_sum = " | ".join(f"ichi_{s['position']}:{s['win_rate']:.0f}%WR" for s in _ic_insights)
+            _learn_log.append(f"Ichimoku cloud WRs: {_ic_sum}")
+            if _ic_above and _ic_below and _ic_above["win_rate"] > _ic_below["win_rate"] + 15:
+                _learn_log.append(f"Above cloud entries win {_ic_above['win_rate']:.0f}% vs below {_ic_below['win_rate']:.0f}% — cloud acts as institutional filter")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11694,6 +11740,7 @@ def run():
             "options_flow_perf":    _of_insights,            # options flow confirmation at entry vs outcome
             "mfi_zone_perf":        _mi_insights,            # MFI zone (volume-weighted RSI) at entry vs outcome
             "wr_zone_perf":         _wr_insights,            # Williams %R zone at entry vs outcome
+            "ichimoku_perf":        _ic_insights,            # Ichimoku cloud position at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
