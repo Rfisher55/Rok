@@ -54184,6 +54184,34 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── POC Distance Neuron (42): entry vs Volume Profile POC ─────────────
+        const pc = lp.poc_dist_perf || [];
+        if (!pc.length) return '';
+        const PC_ORDER = ['breakout','above','at_poc','below'];
+        const PC_ICONS = {breakout:'🚀',above:'📈',at_poc:'⚖️',below:'📉'};
+        const PC_LABELS = {breakout:'>2% above',above:'0.5-2% above',at_poc:'at POC',below:'below POC'};
+        const PC_BG = {breakout:'rgba(0,230,118,.08)',above:'rgba(0,200,83,.05)',at_poc:'rgba(255,255,255,.04)',below:'rgba(239,83,80,.07)'};
+        const pcMap = {};
+        pc.forEach(s => pcMap[s.bucket] = s);
+        const best = pc.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, pc[0]);
+        const pcCells = PC_ORDER.map(bkt => {
+          const s = pcMap[bkt];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.25rem;text-align:center;opacity:.3"><div style="font-size:8px">${PC_ICONS[bkt]}</div><div style="font-size:5px;color:#333">${PC_LABELS[bkt]}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = s.bucket === best.bucket ? ' ⭐' : '';
+          return `<div style="background:${PC_BG[bkt]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.25rem;text-align:center">
+            <div style="font-size:8px">${PC_ICONS[bkt]}</div>
+            <div style="font-size:5.5px;color:#ccc;font-weight:700">${PC_LABELS[bkt]}${star}</div>
+            <div style="font-size:10px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.2rem">⚖️ POC DISTANCE (Neuron 42): how far above/below Volume Profile POC at entry — institutional anchor price</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem">${pcCells}</div>
+        </div>`;
+      })()}
+      ${(() => {
         // ── Score Decay Warning Neuron (41) ───────────────────────────────────
         const sd = lp.score_decay_perf || [];
         const sdThresh = lp.score_decay_threshold || 15;

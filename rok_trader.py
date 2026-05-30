@@ -401,6 +401,19 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _vwap_p = float(signals.get("vwap_pos", 0.0) or 0.0)
         e["vwap_pos_at_entry"] = round(_vwap_p, 2)
         e["vwap_bucket"] = ("above" if _vwap_p > 0.5 else "below" if _vwap_p < -0.5 else "at_vwap")
+        # POC Distance Neuron (42): how far above/below Point of Control at entry?
+        # POC = price level with most volume traded = institutional anchor price.
+        # Breakout entries (well above POC) = smart money control; below = risky.
+        _poc_pr = float(signals.get("poc_price", 0.0) or 0.0)
+        _entry_pr = float(price if price else 0.0)
+        if _poc_pr > 0 and _entry_pr > 0:
+            _poc_dist = round((_entry_pr - _poc_pr) / _poc_pr * 100, 2)
+            e["poc_dist_pct"] = _poc_dist
+            e["poc_dist_bucket"] = ("breakout" if _poc_dist > 2.0 else "above" if _poc_dist > 0.5
+                                    else "at_poc" if _poc_dist >= -0.5 else "below")
+        else:
+            e["poc_dist_pct"] = 0.0
+            e["poc_dist_bucket"] = "at_poc"
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1258,6 +1271,26 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             # Keep recent SPY returns for correlation insight
             _sdp.setdefault("spy_returns", []).append(round(float(_spy_ret), 2))
             _sdp["spy_returns"] = _sdp["spy_returns"][-20:]
+        except Exception:
+            pass
+
+    # ── POC Distance Neuron (42): entry distance from Volume Profile POC ────────
+    # Tracks performance by how far price was above/below the Point of Control at entry.
+    # POC = price level with the most volume traded = institutional price anchor.
+    # Learns: do breakout entries (>2% above POC) outperform near-POC or below-POC entries?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_pc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _pc_bkt = _buy_pc.get("poc_dist_bucket", "at_poc") if _buy_pc else "at_poc"
+            _pc_perf = tlog.setdefault("poc_dist_perf", {})
+            _pcp = _pc_perf.setdefault(_pc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _pc_bkt})
+            _pcp["total"] = _pcp.get("total", 0) + 1
+            _pcp["total_pnl"] = round(_pcp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _pcp["wins"] = _pcp.get("wins", 0) + 1
+            else:        _pcp["losses"] = _pcp.get("losses", 0) + 1
+            if _pcp["total"] > 0:
+                _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
+                _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
         except Exception:
             pass
 
@@ -11236,6 +11269,23 @@ def run():
             _sd_sum = " | ".join(f"{s['type']}:{s['win_rate']:.0f}%WR({s['avg_pnl']:+.1f}%)" for s in _sd_insights)
             _learn_log.append(f"Score decay neuron: {_sd_sum}")
 
+        # ── 42. POC Distance Neuron: entry vs volume POC position ─────────────
+        _pc_raw = tlog.get("poc_dist_perf", {})
+        _pc_insights = []
+        for _pck, _pcd in _pc_raw.items():
+            if _pcd.get("total", 0) >= 3:
+                _pc_insights.append({
+                    "bucket": _pck, "win_rate": _pcd.get("win_rate", 50),
+                    "avg_pnl": _pcd.get("avg_pnl", 0), "total": _pcd.get("total", 0)
+                })
+        if _pc_insights:
+            _pc_best = max(_pc_insights, key=lambda x: x["win_rate"])
+            _pc_worst = min(_pc_insights, key=lambda x: x["win_rate"])
+            _pc_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _pc_insights)
+            _learn_log.append(f"POC distance WRs: {_pc_sum}")
+            if _pc_best["win_rate"] - _pc_worst["win_rate"] >= 15:
+                _learn_log.append(f"Best POC entry zone: {_pc_best['bucket']} ({_pc_best['win_rate']:.0f}% WR) — worst: {_pc_worst['bucket']} ({_pc_worst['win_rate']:.0f}%)")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11287,6 +11337,7 @@ def run():
             "vwap_perf":            _vw_insights,           # VWAP position at entry vs outcome
             "score_decay_perf":     _sd_insights,           # decay exit vs held outcomes
             "score_decay_threshold": _learned_decay_thresh,  # learned optimal decay trigger (pts)
+            "poc_dist_perf":        _pc_insights,            # POC distance at entry vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
