@@ -52820,6 +52820,34 @@ function _renderIntelReport(el, intel) {
       <div style="font-size:12px;color:var(--wh);line-height:1.6">${intel.rok_message}</div>
     </div>` : '';
 
+  // RS Rating leaderboard (IBD-style leaders from live scan)
+  const rsLeaders = intel.rs_leaders || [];
+  const ema21Setups = intel.ema21_setups || [];
+  const rsLeaderHtml = (rsLeaders.length > 0 || ema21Setups.length > 0) ? (() => {
+    const leaderRows = rsLeaders.map(l => {
+      const rr = l.rs_rating || 0;
+      const col = rr >= 90 ? '#00e676' : rr >= 80 ? '#69f0ae' : '#ffd54f';
+      const bg = rr >= 90 ? 'rgba(0,230,118,.1)' : rr >= 80 ? 'rgba(105,240,174,.06)' : 'rgba(255,213,79,.05)';
+      return `<span style="display:inline-flex;align-items:center;gap:3px;background:${bg};border:1px solid ${col}44;border-radius:5px;padding:2px 6px">
+        <span style="font-size:10px;font-weight:800;color:${col}">${l.ticker}</span>
+        <span style="font-size:8px;color:${col};opacity:.8">RS${rr}</span>
+        ${l.score ? `<span style="font-size:7px;color:#888">s${l.score}</span>` : ''}
+      </span>`;
+    }).join('');
+    const ema21Rows = ema21Setups.map(t =>
+      `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(130,177,255,.08);border:1px solid rgba(130,177,255,.25);border-radius:5px;padding:2px 6px">
+        <span style="font-size:10px;font-weight:800;color:#82b1ff">${t}</span>
+        <span style="font-size:7px;color:#82b1ff;opacity:.7">E21↩</span>
+      </span>`
+    ).join('');
+    return `<div style="background:rgba(0,230,118,.03);border:1px solid rgba(0,230,118,.12);border-radius:10px;padding:.6rem .75rem;margin-bottom:.75rem">
+      ${rsLeaders.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#00e676;margin-bottom:.35rem"> RS LEADERS (IBD ≥80)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:${ema21Setups.length?'.4rem':'0'}">${leaderRows}</div>` : ''}
+      ${ema21Setups.length > 0 ? `<div style="font-size:8px;font-weight:900;letter-spacing:.08em;color:#82b1ff;margin-bottom:.3rem${rsLeaders.length?';margin-top:.35rem':''}"> EMA21 PULLBACK SETUPS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.3rem">${ema21Rows}</div>` : ''}
+    </div>`;
+  })() : '';
+
   // Buy signals
   const buys = (intel.buy_signals || []).slice(0, 6);
   const buysHtml = buys.length ? `
@@ -52909,7 +52937,7 @@ function _renderIntelReport(el, intel) {
       ${intel.sell_count != null ? `<span style="font-size:10px;color:var(--r)">${intel.sell_count} sells</span>` : ''}
       ${ago ? `<span style="font-size:9px;color:var(--wh4);margin-left:auto">Updated ${ago}</span>` : ''}
     </div>
-    ${playbookHtml}${summaryHtml}${msgHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
+    ${playbookHtml}${summaryHtml}${msgHtml}${rsLeaderHtml}${buysHtml}${sellsHtml}${trendsHtml}${risksHtml}${newsHtml}${statsHtml}
   `;
 }
 window.fetchIntelReport = fetchIntelReport;

@@ -215,6 +215,12 @@ def _run():
             current_positions = td.get("positions", [])
             last_scan_top     = td.get("last_scan_top", [])
             # Extract live market context for richer AI prompt
+            # Extract RS leaders and EMA21 setups from last scan
+            _rs_leaders = sorted(
+                [e for e in last_scan_top if (e.get("rs_rating") or 50) >= 80],
+                key=lambda e: -(e.get("rs_rating") or 50)
+            )[:6]
+            _ema21_setups = [e["ticker"] for e in last_scan_top if e.get("ema21_pullback")][:5]
             live_market_context = {
                 "market_open":     td.get("market_open"),
                 "timing_quality":  td.get("timing_quality"),
@@ -230,6 +236,8 @@ def _run():
                 "effective_min_score": td.get("effective_min_score"),
                 "win_rate":        td.get("win_rate"),
                 "drawdown_pct":    td.get("drawdown_pct"),
+                "drawdown_halt":   td.get("drawdown_halt", False),
+                "regime_max_pos":  td.get("regime_max_pos", 12),
                 "profit_factor":   td.get("profit_factor"),
                 "portfolio_beta":  td.get("portfolio_beta"),
                 "portfolio_heat":  td.get("portfolio_heat"),
@@ -237,6 +245,8 @@ def _run():
                 "scan_breadth_pct": td.get("scan_breadth_pct"),
                 "portfolio_concentration": td.get("portfolio_concentration", {}),
                 "sector_etf_trends": td.get("sector_etf_trends", {}),
+                "rs_leaders":      [{"ticker": e["ticker"], "rs_rating": e.get("rs_rating"), "score": e.get("score")} for e in _rs_leaders],
+                "ema21_setups":    _ema21_setups,
             }
             logger.info(f"Loaded {len(current_positions)} positions and {len(last_scan_top)} scan candidates from trades.json")
     except Exception as _te:
@@ -473,6 +483,11 @@ def _run():
         "sell_count": len(analysis.get("sell_signals", [])),
         "current_positions": current_positions[:10],  # pass-through for dashboard cross-reference
         "position_analysis": analysis.get("position_analysis", []),  # AI commentary on held positions
+        "rs_leaders":      live_market_context.get("rs_leaders", []),
+        "ema21_setups":    live_market_context.get("ema21_setups", []),
+        "drawdown_halt":   live_market_context.get("drawdown_halt", False),
+        "regime_max_pos":  live_market_context.get("regime_max_pos", 12),
+        "scan_breadth_pct": live_market_context.get("scan_breadth_pct"),
     }
 
     # Sanitize all datetime objects before JSON serialization

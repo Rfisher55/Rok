@@ -7201,6 +7201,8 @@ def run():
                 "rs_sector":         round(live.get(tk, {}).get("rs_sector", 0.0), 2),
                 "rs252":             round(live.get(tk, {}).get("rs252", 0.0), 2),
                 "rs_rating":         live.get(tk, {}).get("rs_rating", 50),
+                "ema21_pullback":    live.get(tk, {}).get("ema21_pullback", False),
+                "ema21_touch":       live.get(tk, {}).get("ema21_touch", False),
                 # Kelly-suggested position size as % of portfolio (half-Kelly for safety)
                 "kelly_size_pct":    round(max(0, min(10.0, (
                     (win_rate * max(0.5, min(5.0, _payoff_ratio)) - (1 - win_rate)) /
