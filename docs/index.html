@@ -53434,6 +53434,49 @@ function _renderIntelReport(el, intel) {
           ${worstHW.length ? `<div><span style="font-size:5.5px;color:#444">AVOID: </span><span style="display:inline-flex;gap:3px;flex-wrap:wrap">${worstHW.map(h=>hwChip(h,false)).join('')}</span></div>` : ''}
         </div>`;
       })()}
+      ${(() => {
+        // ── Earnings Proximity Neuron panel ────────────────────────────────
+        const ep = lp.earnings_prox_perf || [];
+        if (!ep.length) return '';
+        const cells = ep.map(e => {
+          const col = e.win_rate >= 60 ? '#00e676' : e.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+          const labels = {'0-2d':'≤2d to Earn','3-7d':'3-7d out','8-20d':'8-20d out','21d+':'21d+ out'};
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.25rem .35rem;text-align:center">
+            <div style="font-size:5.5px;color:#555">${labels[e.bucket]||e.bucket}</div>
+            <div style="font-size:9px;font-weight:800;color:${col}">${e.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5.5px;color:${e.avg_pnl>=0?'#69f0ae':'#ef5350'}">${e.avg_pnl>=0?'+':''}${e.avg_pnl.toFixed(1)}% (${e.total}T)</div>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:.3rem">
+          <div style="font-size:6px;color:#ce93d8;font-weight:700;margin-bottom:.2rem">📅 EARNINGS PROXIMITY LEARNING (timing near earnings)</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.2rem">${cells}</div>
+        </div>`;
+      })()}
+      ${(() => {
+        // ── RVOL + Market Quality dual panel ─────────────────────────────
+        const rv = lp.rvol_perf || [];
+        const mq = lp.mkt_quality_perf || [];
+        if (!rv.length && !mq.length) return '';
+        const rvCell = (r, label) => {
+          const col = r.win_rate >= 60 ? '#00e676' : r.win_rate >= 50 ? '#ffd54f' : '#ef5350';
+          return `<div style="background:rgba(0,0,0,.2);border-radius:4px;padding:.22rem .3rem;text-align:center">
+            <div style="font-size:5.5px;color:#555">${label}</div>
+            <div style="font-size:8px;font-weight:800;color:${col}">${r.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${r.avg_pnl>=0?'#69f0ae':'#ef5350'}">${r.avg_pnl>=0?'+':''}${r.avg_pnl.toFixed(1)}%</div>
+          </div>`;
+        };
+        const rvLabels = {low:'RVOL<1.5',normal:'1.5-2.5×',high:'2.5-4×',surge:'4×+'};
+        const mqLabels = {poor:'MQ<40',fair:'MQ 40-60',good:'MQ 60-75',excellent:'MQ 75+'};
+        const rvHtml = rv.length ? `<div>
+          <div style="font-size:5.5px;color:#82b1ff;font-weight:700;margin-bottom:.15rem">📊 RVOL ENTRY PERFORMANCE</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${rv.map(r=>rvCell(r,rvLabels[r.bucket]||r.bucket)).join('')}</div>
+        </div>` : '';
+        const mqHtml = mq.length ? `<div style="margin-top:.2rem">
+          <div style="font-size:5.5px;color:#80cbc4;font-weight:700;margin-bottom:.15rem">🌡 MARKET QUALITY PERFORMANCE</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.15rem">${mq.map(m=>rvCell(m,mqLabels[m.bucket]||m.bucket)).join('')}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem">${rvHtml}${mqHtml}</div>`;
+      })()}
       ${ll.length ? `<div style="margin-top:.35rem;border-top:1px solid rgba(255,255,255,.06);padding-top:.3rem">
         <div style="font-size:6px;color:#444;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem">Latest Learning Events</div>
         ${logRows}

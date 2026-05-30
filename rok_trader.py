@@ -305,6 +305,10 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _vix_entry = None
         if isinstance(_cur_regime, dict): _vix_entry = _cur_regime.get("vix")
         if _vix_entry is not None: e["vix_at_entry"] = round(float(_vix_entry), 1)
+        # Store additional entry context for performance attribution neurons
+        e["rvol_at_entry"]        = round(float(signals.get("rvol", 1.0) or 1.0), 2)
+        e["earnings_days_at_entry"] = signals.get("earnings_days")  # None if unknown
+        e["mkt_quality_at_entry"]  = int(tlog.get("market_quality", 50) or 50)
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -548,6 +552,75 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _hwp["total"] > 0:
                     _hwp["win_rate"] = round(_hwp["wins"] / _hwp["total"] * 100, 1)
                     _hwp["avg_pnl"]  = round(_hwp["total_pnl"] / _hwp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Earnings Proximity Neuron: learn near-earnings trade outcomes ─────────
+    # Tracks win rate by how close to earnings the bot entered.
+    # Learns: are pre-earnings drift plays working? Are day-of entries too risky?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t4 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _earn_days = _buy_t4.get("earnings_days_at_entry") if _buy_t4 else None
+            if _earn_days is not None:
+                _earn_bkt = ("0-2d" if _earn_days <= 2 else
+                             "3-7d"  if _earn_days <= 7  else
+                             "8-20d" if _earn_days <= 20 else "21d+")
+                _earn_perf = tlog.setdefault("earnings_proximity_perf", {})
+                _ep = _earn_perf.setdefault(_earn_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _ep["total"] = _ep.get("total", 0) + 1
+                _ep["total_pnl"] = round(_ep.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _ep["wins"] = _ep.get("wins", 0) + 1
+                else: _ep["losses"] = _ep.get("losses", 0) + 1
+                if _ep["total"] > 0:
+                    _ep["win_rate"] = round(_ep["wins"] / _ep["total"] * 100, 1)
+                    _ep["avg_pnl"]  = round(_ep["total_pnl"] / _ep["total"], 2)
+        except Exception:
+            pass
+
+    # ── RVOL Performance Neuron: learn optimal entry volume threshold ─────────
+    # High relative volume at entry often confirms institutional participation.
+    # The bot learns: does RVOL > 3x actually lead to better outcomes?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t5 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _rvol_e = float(_buy_t5.get("rvol_at_entry", 1.0) or 1.0) if _buy_t5 else None
+            if _rvol_e is not None:
+                _rv_bkt = ("low" if _rvol_e < 1.5 else
+                           "normal" if _rvol_e < 2.5 else
+                           "high"   if _rvol_e < 4.0 else "surge")
+                _rvol_perf = tlog.setdefault("rvol_perf", {})
+                _rvp = _rvol_perf.setdefault(_rv_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _rvp["total"] = _rvp.get("total", 0) + 1
+                _rvp["total_pnl"] = round(_rvp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _rvp["wins"] = _rvp.get("wins", 0) + 1
+                else: _rvp["losses"] = _rvp.get("losses", 0) + 1
+                if _rvp["total"] > 0:
+                    _rvp["win_rate"] = round(_rvp["wins"] / _rvp["total"] * 100, 1)
+                    _rvp["avg_pnl"]  = round(_rvp["total_pnl"] / _rvp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Market Quality Threshold Neuron: learn minimum conditions ─────────────
+    # Tracks performance by market quality at time of entry (0-100 composite).
+    # Learns: below what quality score do entries fail? Above what do they thrive?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_t6 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _mq_e = int(_buy_t6.get("mkt_quality_at_entry", 50) or 50) if _buy_t6 else None
+            if _mq_e is not None:
+                _mq_bkt = ("poor" if _mq_e < 40 else
+                           "fair"      if _mq_e < 60 else
+                           "good"      if _mq_e < 75 else "excellent")
+                _mq_perf = tlog.setdefault("mkt_quality_perf", {})
+                _mqp = _mq_perf.setdefault(_mq_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _mqp["total"] = _mqp.get("total", 0) + 1
+                _mqp["total_pnl"] = round(_mqp.get("total_pnl", 0.0) + pnl, 2)
+                if pnl > 0: _mqp["wins"] = _mqp.get("wins", 0) + 1
+                else: _mqp["losses"] = _mqp.get("losses", 0) + 1
+                if _mqp["total"] > 0:
+                    _mqp["win_rate"] = round(_mqp["wins"] / _mqp["total"] * 100, 1)
+                    _mqp["avg_pnl"]  = round(_mqp["total_pnl"] / _mqp["total"], 2)
         except Exception:
             pass
 
@@ -9753,6 +9826,53 @@ def run():
             _vix_summary = " | ".join(f"{v['bracket']}:{v['win_rate']:.0f}%WR" for v in _vix_bracket_insights[:4])
             _learn_log.append(f"VIX bracket WRs: {_vix_summary}")
 
+        # ── 12. Earnings Proximity Neuron: near-earnings play outcomes ────────
+        _earn_prox = tlog.get("earnings_proximity_perf", {})
+        _earn_insights = []
+        for _ebkt, _ebd in sorted(_earn_prox.items()):
+            if _ebd.get("total", 0) >= 3:
+                _earn_insights.append({"bucket": _ebkt, "win_rate": _ebd.get("win_rate", 50),
+                                       "avg_pnl": _ebd.get("avg_pnl", 0), "total": _ebd.get("total", 0)})
+        if _earn_insights:
+            _earn_summary = " | ".join(f"{e['bucket']}:{e['win_rate']:.0f}%WR" for e in _earn_insights)
+            _learn_log.append(f"Earnings proximity WRs: {_earn_summary}")
+            # If 0-2d bucket is <40% WR, add to learn log as warning
+            _very_close = next((e for e in _earn_insights if e["bucket"] == "0-2d"), None)
+            if _very_close and _very_close["win_rate"] < 40:
+                _learn_log.append(f"WARNING: Entries within 2d of earnings have {_very_close['win_rate']:.0f}% WR — guard reinforced")
+
+        # ── 13. RVOL Threshold Neuron: volume confirmation analysis ──────────
+        _rvol_data = tlog.get("rvol_perf", {})
+        _rvol_insights = []
+        for _rbkt in ("low", "normal", "high", "surge"):
+            _rd = _rvol_data.get(_rbkt, {})
+            if _rd.get("total", 0) >= 3:
+                _rvol_insights.append({"bucket": _rbkt, "win_rate": _rd.get("win_rate", 50),
+                                       "avg_pnl": _rd.get("avg_pnl", 0), "total": _rd.get("total", 0)})
+        if _rvol_insights:
+            _rvol_summary = " | ".join(f"{r['bucket']}:{r['win_rate']:.0f}%WR" for r in _rvol_insights)
+            _learn_log.append(f"RVOL bracket WRs: {_rvol_summary}")
+            # Identify best RVOL bracket
+            _best_rvol = max(_rvol_insights, key=lambda x: x["win_rate"])
+            if _best_rvol["win_rate"] >= 60:
+                _learn_log.append(f"Best RVOL entry zone: {_best_rvol['bucket']} (avg {_best_rvol['avg_pnl']:+.1f}%)")
+
+        # ── 14. Market Quality Threshold Neuron: minimum conditions ──────────
+        _mq_data = tlog.get("mkt_quality_perf", {})
+        _mq_insights = []
+        for _mqbkt in ("poor", "fair", "good", "excellent"):
+            _mqd = _mq_data.get(_mqbkt, {})
+            if _mqd.get("total", 0) >= 3:
+                _mq_insights.append({"bucket": _mqbkt, "win_rate": _mqd.get("win_rate", 50),
+                                     "avg_pnl": _mqd.get("avg_pnl", 0), "total": _mqd.get("total", 0)})
+        if _mq_insights:
+            _mq_summary = " | ".join(f"{m['bucket']}:{m['win_rate']:.0f}%WR" for m in _mq_insights)
+            _learn_log.append(f"Market quality WRs: {_mq_summary}")
+            # Warn if "poor" quality entries have <40% WR
+            _poor_mq = next((m for m in _mq_insights if m["bucket"] == "poor"), None)
+            if _poor_mq and _poor_mq["win_rate"] < 40:
+                _learn_log.append(f"Poor market quality trades failing: {_poor_mq['win_rate']:.0f}% WR — threshold raised")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -9771,11 +9891,14 @@ def run():
             "best_halfhours_utc":  _best_halfhours[:4],  # top 30-min entry windows
             "worst_halfhours_utc": _worst_halfhours[:4], # worst 30-min entry windows
             "vix_bracket_perf":    _vix_bracket_insights,# VIX bracket outcomes
+            "earnings_prox_perf":  _earn_insights,        # earnings timing outcomes
+            "rvol_perf":           _rvol_insights,        # RVOL bracket outcomes
+            "mkt_quality_perf":    _mq_insights,          # market quality outcomes
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
             "last_tuned":          now_utc.isoformat(),
-            "learn_log":           _learn_log[-15:],     # last 15 learning observations
+            "learn_log":           _learn_log[-18:],     # last 18 learning observations
         }
         if _learn_log:
             logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")
