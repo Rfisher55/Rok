@@ -88,6 +88,8 @@ _LEARNED_TICKER_MEMORY: dict = {}   # {ticker: score_adj} — per-ticker score m
 _LEARNED_WORST_HALFHOURS: set = set()  # "HHMM" strings of 30-min windows to avoid
 _LEARNED_BEST_HALFHOURS:  set = set()  # "HHMM" strings of 30-min windows that outperform
 _LEARNED_MIN_BREADTH:     float = 0.0  # minimum breadth % that produces consistent wins (learned)
+_LEARNED_SIGNAL_COUNT_SWEET: str  = ""   # "1-3"|"4-6"|"7-10"|"11+" — best-performing signal count bucket
+_LEARNED_SPY_DOWN_PENALTY:  bool = False  # True when red SPY days consistently hurt outcomes
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -350,6 +352,15 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             "lr_below_channel",  # mean reversion buy at LR channel support
         ]
         e["entry_signals"] = list(dict.fromkeys(k for k in _SIGNAL_KEYS if signals.get(k)))
+        e["signal_count_at_entry"] = len(e["entry_signals"])
+        # SPY day return at entry: up/flat/down market context for trade outcome learning
+        try:
+            _spy_d1 = _fetch_spy_perf().get("d1", 0.0) or 0.0
+            e["spy_day_return"] = round(float(_spy_d1), 2)
+            e["spy_day_bucket"] = ("up" if _spy_d1 > 0.5 else "down" if _spy_d1 < -0.5 else "flat")
+        except Exception:
+            e["spy_day_return"] = 0.0
+            e["spy_day_bucket"] = "flat"
 
     tlog.setdefault("trades", []).insert(0, e)
     tlog["trades"] = tlog["trades"][:500]
@@ -789,6 +800,52 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _mp["total"] > 0:
                 _mp["win_rate"] = round(_mp["wins"] / _mp["total"] * 100, 1)
                 _mp["avg_pnl"]  = round(_mp["total_pnl"] / _mp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Signal Count Neuron: learn optimal # of confirming signals ────────────
+    # Tracks whether trades with 1-3 signals vs 4-6 vs 7+ perform differently.
+    # A sweet spot (e.g., 4-6 confirming signals) gets a score boost; extreme
+    # counts (too few = weak, too many = late/crowded) get a penalty.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_tc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sc = _buy_tc.get("signal_count_at_entry", 0) if _buy_tc else 0
+            _sc_bkt = ("1-3" if _sc <= 3 else "4-6" if _sc <= 6 else "7-10" if _sc <= 10 else "11+")
+            _sc_perf = tlog.setdefault("signal_count_perf", {})
+            _scp = _sc_perf.setdefault(_sc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _sc_bkt})
+            _scp["total"] = _scp.get("total", 0) + 1
+            _scp["total_pnl"] = round(_scp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _scp["wins"] = _scp.get("wins", 0) + 1
+            else: _scp["losses"] = _scp.get("losses", 0) + 1
+            if _scp["total"] > 0:
+                _scp["win_rate"] = round(_scp["wins"] / _scp["total"] * 100, 1)
+                _scp["avg_pnl"]  = round(_scp["total_pnl"] / _scp["total"], 2)
+        except Exception:
+            pass
+
+    # ── SPY Day Return Neuron: learn how market direction at entry affects outcome ──
+    # Tracks win rates when SPY was up >0.5% (up), flat (-0.5 to 0.5%), or down <-0.5%.
+    # The bot learns: do entries on red SPY days fail? Do green SPY days help?
+    # This is a key market regime micro-signal that goes beyond just "bull/bear".
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_td = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _spy_bkt = _buy_td.get("spy_day_bucket", "flat") if _buy_td else "flat"
+            _spy_ret = _buy_td.get("spy_day_return", 0.0) if _buy_td else 0.0
+            _spy_perf = tlog.setdefault("spy_day_perf", {})
+            _sdp = _spy_perf.setdefault(_spy_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0,
+                                                     "bucket": _spy_bkt, "spy_returns": []})
+            _sdp["total"] = _sdp.get("total", 0) + 1
+            _sdp["total_pnl"] = round(_sdp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _sdp["wins"] = _sdp.get("wins", 0) + 1
+            else: _sdp["losses"] = _sdp.get("losses", 0) + 1
+            if _sdp["total"] > 0:
+                _sdp["win_rate"] = round(_sdp["wins"] / _sdp["total"] * 100, 1)
+                _sdp["avg_pnl"]  = round(_sdp["total_pnl"] / _sdp["total"], 2)
+            # Keep recent SPY returns for correlation insight
+            _sdp.setdefault("spy_returns", []).append(round(float(_spy_ret), 2))
+            _sdp["spy_returns"] = _sdp["spy_returns"][-20:]
         except Exception:
             pass
 
@@ -6807,6 +6864,38 @@ def score(tk, d, sentiment=0, regime_adj=0):
     except Exception:
         pass
 
+    # ── SIGNAL COUNT LAYER: reward trades hitting the learned sweet spot ─────────
+    # The bot has learned which # of confirming signals produces the best outcomes.
+    # Too few = weak setup; too many = late/crowded; sweet spot = edge.
+    try:
+        if _LEARNED_SIGNAL_COUNT_SWEET:
+            # Count active binary signals in d to determine current signal count
+            _sc_keys = [
+                "cup_handle", "at_demand_zone", "mom_accel", "vcp", "obv_rising",
+                "ema_reclaim", "pullback_to_ma", "earnings_beat", "news_catalyst",
+                "gap_up", "psar_bull", "rvol_surge", "ha_bull", "donchian_up",
+                "lr_below_channel", "options_bull", "unusual_calls", "price_accel_pos",
+            ]
+            _sc_live = sum(1 for k in _sc_keys if d.get(k))
+            _sc_live_bkt = ("1-3" if _sc_live <= 3 else "4-6" if _sc_live <= 6 else "7-10" if _sc_live <= 10 else "11+")
+            if _sc_live_bkt == _LEARNED_SIGNAL_COUNT_SWEET:
+                s += 3   # in the learned sweet spot — boost confidence
+            elif _sc_live <= 1:
+                s -= 2   # very weak signal confluence — reduce conviction
+    except Exception:
+        pass
+
+    # ── SPY DAY RETURN LAYER: learned penalty when entering on red market days ─
+    # If historical data shows red-SPY-day entries consistently fail,
+    # apply a -4 penalty to make the bot more selective on down days.
+    try:
+        if _LEARNED_SPY_DOWN_PENALTY:
+            _cur_spy_d1 = _fetch_spy_perf().get("d1", 0.0) or 0.0
+            if _cur_spy_d1 < -0.5:   # SPY is down today by more than 0.5%
+                s -= 4
+    except Exception:
+        pass
+
     # Market regime adjustment
     s += regime_adj
 
@@ -7359,6 +7448,19 @@ def run():
     # Breadth minimum (learned from breadth_perf — if weak breadth entries fail, raise the floor)
     global _LEARNED_MIN_BREADTH
     _LEARNED_MIN_BREADTH = float(_learned.get("min_breadth_learned", 0.0) or 0.0)
+    # Signal count sweet spot (the bucket with the highest win rate)
+    global _LEARNED_SIGNAL_COUNT_SWEET
+    _sc_perf_learned = _learned.get("signal_count_perf", [])
+    if _sc_perf_learned:
+        _sc_best = max(_sc_perf_learned, key=lambda x: x.get("win_rate", 0))
+        _LEARNED_SIGNAL_COUNT_SWEET = _sc_best.get("bucket", "")
+    else:
+        _LEARNED_SIGNAL_COUNT_SWEET = ""
+    # SPY day penalty: True when red SPY days consistently produce losses
+    global _LEARNED_SPY_DOWN_PENALTY
+    _spy_day_learned = _learned.get("spy_day_perf", [])
+    _spy_down_learned = next((s for s in _spy_day_learned if s.get("bucket") == "down"), None)
+    _LEARNED_SPY_DOWN_PENALTY = bool(_spy_down_learned and _spy_down_learned.get("win_rate", 50) < 40 and _spy_down_learned.get("total", 0) >= 5)
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
@@ -10229,6 +10331,46 @@ def run():
             if _ev_day and _ev_day["win_rate"] < 40:
                 _learn_log.append(f"FOMC/CPI/NFP event-day entries failing ({_ev_day['win_rate']:.0f}% WR) — will skip on event days")
 
+        # ── 22. Signal Count Neuron: optimal # of confirming signals ──────────
+        _sc_raw = tlog.get("signal_count_perf", {})
+        _sc_insights = []
+        _sc_best_bucket = None
+        _sc_worst_bucket = None
+        for _scb, _scd in _sc_raw.items():
+            if _scd.get("total", 0) >= 3:
+                _sc_insights.append({
+                    "bucket": _scb, "win_rate": _scd.get("win_rate", 50),
+                    "avg_pnl": _scd.get("avg_pnl", 0), "total": _scd.get("total", 0)
+                })
+        if _sc_insights:
+            _sc_insights_s = sorted(_sc_insights, key=lambda x: -x["win_rate"])
+            _sc_best_bucket  = _sc_insights_s[0]
+            _sc_worst_bucket = _sc_insights_s[-1]
+            _sc_sum = " | ".join(f"{s['bucket']}sigs:{s['win_rate']:.0f}%WR" for s in _sc_insights_s)
+            _learn_log.append(f"Signal count WRs: {_sc_sum}")
+            if _sc_best_bucket and _sc_worst_bucket and (_sc_best_bucket["win_rate"] - _sc_worst_bucket["win_rate"]) >= 15:
+                _learn_log.append(f"Sweet spot: {_sc_best_bucket['bucket']} confirming signals ({_sc_best_bucket['win_rate']:.0f}% WR) outperforms {_sc_worst_bucket['bucket']} ({_sc_worst_bucket['win_rate']:.0f}%)")
+
+        # ── 23. SPY Day Return Neuron: market direction at entry vs outcome ─────
+        _spy_day_raw = tlog.get("spy_day_perf", {})
+        _spy_day_insights = []
+        for _sbk, _sd in _spy_day_raw.items():
+            if _sd.get("total", 0) >= 3:
+                _spy_day_insights.append({
+                    "bucket": _sbk, "win_rate": _sd.get("win_rate", 50),
+                    "avg_pnl": _sd.get("avg_pnl", 0), "total": _sd.get("total", 0)
+                })
+        if _spy_day_insights:
+            _spy_day_insights_s = sorted(_spy_day_insights, key=lambda x: -x["win_rate"])
+            _spy_sum = " | ".join(f"SPY_{s['bucket']}:{s['win_rate']:.0f}%WR" for s in _spy_day_insights_s)
+            _learn_log.append(f"SPY day return vs outcome: {_spy_sum}")
+            _spy_down = next((s for s in _spy_day_insights if s["bucket"] == "down"), None)
+            _spy_up   = next((s for s in _spy_day_insights if s["bucket"] == "up"), None)
+            if _spy_down and _spy_down["win_rate"] < 40:
+                _learn_log.append(f"Red SPY days hurting trades ({_spy_down['win_rate']:.0f}% WR) — raising threshold on down days")
+            if _spy_up and _spy_up["win_rate"] >= 65:
+                _learn_log.append(f"Green SPY days boost win rate to {_spy_up['win_rate']:.0f}% — ideal entry condition confirmed")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -10258,6 +10400,8 @@ def run():
             "dca_intelligence":    _dca_insights,          # DCA outcome by regime
             "rsi_entry_zones":     _rsi_zone_insights,     # RSI at entry performance
             "macro_event_perf":    _macro_insights,        # FOMC/CPI/NFP trade outcomes
+            "signal_count_perf":   _sc_insights,           # optimal signal count sweet spot
+            "spy_day_perf":        _spy_day_insights,      # SPY up/flat/down day vs. outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
