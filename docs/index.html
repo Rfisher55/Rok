@@ -54503,6 +54503,58 @@ function _renderIntelReport(el, intel) {
         </div>`;
       })()}
       ${(() => {
+        // ── Keltner Channel (N55) + OBV Trend (N56) dual panel ───────────────
+        const kc = lp.kc_zone_perf || [];
+        const ov = lp.obv_trend_perf || [];
+        if (!kc.length && !ov.length) return '';
+        const KC_ORDER = ['breakout','inside','oversold'];
+        const KC_ICONS = {breakout:'🚀',inside:'📊',oversold:'🎣'};
+        const KC_BG = {breakout:'rgba(0,230,118,.08)',inside:'rgba(255,255,255,.04)',oversold:'rgba(100,100,255,.07)'};
+        const kcMap = {}; kc.forEach(s => kcMap[s.zone] = s);
+        const kcBest = kc.length ? kc.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, kc[0]) : null;
+        const kcCells = KC_ORDER.map(z => {
+          const s = kcMap[z];
+          const lbl = z==='breakout'?'KC Breakout':z==='oversold'?'KC Oversold':'KC Inside';
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${KC_ICONS[z]}</div><div style="font-size:5px;color:#333">${lbl}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = kcBest && s.zone === kcBest.zone ? '⭐' : '';
+          return `<div style="background:${KC_BG[z]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${KC_ICONS[z]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">${lbl}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const OV_ORDER = ['rising','falling'];
+        const OV_ICONS = {rising:'📈',falling:'📉'};
+        const OV_BG = {rising:'rgba(0,230,118,.08)',falling:'rgba(239,83,80,.07)'};
+        const ovMap = {}; ov.forEach(s => ovMap[s.trend] = s);
+        const ovBest = ov.length ? ov.reduce((a,b) => a.win_rate >= b.win_rate ? a : b, ov[0]) : null;
+        const ovCells = OV_ORDER.map(t => {
+          const s = ovMap[t];
+          if (!s) return `<div style="background:rgba(255,255,255,.03);border-radius:5px;padding:.2rem;text-align:center;opacity:.3"><div style="font-size:7px">${OV_ICONS[t]}</div><div style="font-size:5px;color:#333">OBV ${t}</div></div>`;
+          const col = s.win_rate>=60?'#00e676':s.win_rate>=50?'#ffd54f':'#ef5350';
+          const star = ovBest && s.trend === ovBest.trend ? '⭐' : '';
+          return `<div style="background:${OV_BG[t]};border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:.2rem;text-align:center">
+            <div style="font-size:7px">${OV_ICONS[t]}${star}</div>
+            <div style="font-size:5px;color:#ccc;font-weight:700">OBV ${t.charAt(0).toUpperCase()+t.slice(1)}</div>
+            <div style="font-size:9px;font-weight:900;color:${col}">${s.win_rate.toFixed(0)}%</div>
+            <div style="font-size:5px;color:${s.avg_pnl>=0?'#69f0ae':'#ef5350'}">${s.avg_pnl>=0?'+':''}${s.avg_pnl.toFixed(1)}% · ${s.total}T</div>
+          </div>`;
+        }).join('');
+        const kcHtml = kc.length ? `<div style="margin-bottom:.2rem">
+          <div style="font-size:5.5px;color:#69f0ae;font-weight:700;margin-bottom:.1rem">🚀 KELTNER CHANNEL (N55): price zone in volatility channel at entry</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.15rem">${kcCells}</div>
+        </div>` : '';
+        const ovHtml = ov.length ? `<div>
+          <div style="font-size:5.5px;color:#ffd54f;font-weight:700;margin-bottom:.1rem">📈 OBV TREND (N56): volume confirms price — rising OBV = institutional buying</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.15rem">${ovCells}</div>
+        </div>` : '';
+        return `<div style="margin-bottom:.3rem;padding:.3rem .4rem;background:rgba(0,0,0,.15);border-radius:6px;border:1px solid rgba(255,255,255,.05)">
+          ${kcHtml}${ovHtml}
+        </div>`;
+      })()}
+      ${(() => {
         // ── Donchian (N53) + Heikin Ashi (N54) dual panel ────────────────────
         const dc = lp.donchian_perf || [];
         const ha = lp.ha_trend_perf || [];

@@ -505,6 +505,19 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _ha_bull = bool(signals.get("ha_bull", False))
         e["ha_bull_at_entry"] = _ha_bull
         e["ha_trend"] = ("bull" if _ha_bull else "bear")
+        # Keltner Channel Position Neuron (55): is price at KC breakout or oversold bounce?
+        # kc_pos = price % position in Keltner Channel. breakout = price above KC upper band.
+        # kc_oversold = price below lower band. Learns: breakout vs bounce entries.
+        _kc_brk = bool(signals.get("kc_breakout", False))
+        _kc_pos = float(signals.get("kc_pos", 50.0) or 50.0)
+        e["kc_pos_at_entry"] = round(_kc_pos, 1)
+        e["kc_zone"] = ("breakout" if _kc_brk or _kc_pos >= 80 else "oversold" if _kc_pos <= 20 else "inside")
+        # OBV Trend Neuron (56): On Balance Volume trend at entry.
+        # OBV rising = volume confirming price uptrend (institutions buying).
+        # OBV falling while price flat/up = distribution (smart money exiting quietly).
+        _obv_rise = bool(signals.get("obv_rising", False))
+        e["obv_rising_at_entry"] = _obv_rise
+        e["obv_trend"] = ("rising" if _obv_rise else "falling")
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
@@ -1382,6 +1395,43 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _pcp["total"] > 0:
                 _pcp["win_rate"] = round(_pcp["wins"] / _pcp["total"] * 100, 1)
                 _pcp["avg_pnl"]  = round(_pcp["total_pnl"] / _pcp["total"], 2)
+        except Exception:
+            pass
+
+    # ── OBV Trend Neuron (56): On Balance Volume trend at entry ──────────────────
+    # OBV rising = volume confirming price uptrend (smart money buying).
+    # Learns: do entries with rising OBV produce better outcomes (volume leads price)?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_ov = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _ov_trend = _buy_ov.get("obv_trend", "rising") if _buy_ov else "rising"
+            _ov_perf = tlog.setdefault("obv_trend_perf", {})
+            _ovp = _ov_perf.setdefault(_ov_trend, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "trend": _ov_trend})
+            _ovp["total"] = _ovp.get("total", 0) + 1
+            _ovp["total_pnl"] = round(_ovp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _ovp["wins"] = _ovp.get("wins", 0) + 1
+            else:        _ovp["losses"] = _ovp.get("losses", 0) + 1
+            if _ovp["total"] > 0:
+                _ovp["win_rate"] = round(_ovp["wins"] / _ovp["total"] * 100, 1)
+                _ovp["avg_pnl"]  = round(_ovp["total_pnl"] / _ovp["total"], 2)
+        except Exception:
+            pass
+
+    # ── Keltner Channel Zone Neuron (55): price position in KC at entry ──────────
+    # Tracks breakout (above upper KC band) vs inside vs oversold bounce entries.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_kc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _kc_zone = _buy_kc.get("kc_zone", "inside") if _buy_kc else "inside"
+            _kc_perf = tlog.setdefault("kc_zone_perf", {})
+            _kcp = _kc_perf.setdefault(_kc_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _kc_zone})
+            _kcp["total"] = _kcp.get("total", 0) + 1
+            _kcp["total_pnl"] = round(_kcp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _kcp["wins"] = _kcp.get("wins", 0) + 1
+            else:        _kcp["losses"] = _kcp.get("losses", 0) + 1
+            if _kcp["total"] > 0:
+                _kcp["win_rate"] = round(_kcp["wins"] / _kcp["total"] * 100, 1)
+                _kcp["avg_pnl"]  = round(_kcp["total_pnl"] / _kcp["total"], 2)
         except Exception:
             pass
 
@@ -11806,6 +11856,36 @@ def run():
             if _ha_bull_s and _ha_bear_s and _ha_bull_s["win_rate"] > _ha_bear_s["win_rate"] + 15:
                 _learn_log.append(f"HA-bullish entries win {_ha_bull_s['win_rate']:.0f}% vs HA-bearish {_ha_bear_s['win_rate']:.0f}% — smoothed trend works")
 
+        # ── 55. Keltner Channel Zone Neuron ───────────────────────────────────
+        _kc_raw = tlog.get("kc_zone_perf", {})
+        _kc_insights = []
+        for _kck, _kcd in _kc_raw.items():
+            if _kcd.get("total", 0) >= 3:
+                _kc_insights.append({
+                    "zone": _kck, "win_rate": _kcd.get("win_rate", 50),
+                    "avg_pnl": _kcd.get("avg_pnl", 0), "total": _kcd.get("total", 0)
+                })
+        if _kc_insights:
+            _kc_sum = " | ".join(f"KC_{s['zone']}:{s['win_rate']:.0f}%WR" for s in _kc_insights)
+            _learn_log.append(f"Keltner channel WRs: {_kc_sum}")
+
+        # ── 56. OBV Trend Neuron ──────────────────────────────────────────────
+        _ov_raw = tlog.get("obv_trend_perf", {})
+        _ov_insights = []
+        for _ovk, _ovd in _ov_raw.items():
+            if _ovd.get("total", 0) >= 3:
+                _ov_insights.append({
+                    "trend": _ovk, "win_rate": _ovd.get("win_rate", 50),
+                    "avg_pnl": _ovd.get("avg_pnl", 0), "total": _ovd.get("total", 0)
+                })
+        if _ov_insights:
+            _ov_r = next((s for s in _ov_insights if s["trend"] == "rising"), None)
+            _ov_f = next((s for s in _ov_insights if s["trend"] == "falling"), None)
+            _ov_sum = " | ".join(f"OBV_{s['trend']}:{s['win_rate']:.0f}%WR" for s in _ov_insights)
+            _learn_log.append(f"OBV trend WRs: {_ov_sum}")
+            if _ov_r and _ov_f and _ov_r["win_rate"] > _ov_f["win_rate"] + 15:
+                _learn_log.append(f"Rising OBV entries win {_ov_r['win_rate']:.0f}% vs falling {_ov_f['win_rate']:.0f}% — volume leads price confirmed")
+
         # Store all learned parameters for next cycle
         tlog["bot_learned_params"] = {
             "base_score_adj":      _base_score_adj,      # added to MIN_BUY_SCORE each run
@@ -11870,6 +11950,8 @@ def run():
             "lr_quality_perf":      _lr_insights,            # Linear Regression R² trend quality vs outcome
             "donchian_perf":        _dc_insights,            # Donchian channel zone at entry vs outcome
             "ha_trend_perf":        _ha_insights,            # Heikin Ashi trend at entry vs outcome
+            "kc_zone_perf":         _kc_insights,            # Keltner channel zone at entry vs outcome
+            "obv_trend_perf":       _ov_insights,            # OBV trend (volume confirms price) vs outcome
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
