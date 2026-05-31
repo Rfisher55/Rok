@@ -225,6 +225,16 @@ def _build_weekly_bot_report(docs_dir):
         "bond_yield_direction_perf": "N208 Bond Yields",
         "social_sentiment_score_perf": "N209 Social Sent",
         "put_call_ratio_perf": "N210 Put/Call Ratio",
+        "market_cap_regime_perf": "N211 Cap Regime",
+        "gold_signal_perf": "N212 Gold Signal",
+        "sector_concentration_perf": "N213 Sector Conc",
+        "entry_premium_count_perf": "N214 Premium Count",
+        "daily_drawdown_state_perf": "N215 Daily DD State",
+        "adv_decline_line_perf": "N216 A/D Line",
+        "yield_curve_perf": "N217 Yield Curve",
+        "cross_asset_momentum_perf": "N218 Cross Asset",
+        "technical_pattern_strength_perf": "N219 Pattern Str",
+        "position_duration_target_perf": "N220 Duration Target",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
