@@ -2516,6 +2516,68 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N120: Options PCR at Entry ────────────────────────────────────────────────
+    # Put/Call ratio below 0.7 = excessive calls = everyone bullish = contrarian red flag.
+    # PCR 0.7-1.0 = balanced = ideal for long entries. PCR > 1.5 = fear = mean-rev opp.
+    # Bot learns: does moderate PCR actually predict better long outcomes than extremes?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n120 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _pcr = float((_buy_n120 or {}).get("options_pcr", 1.0) or 1.0)
+            _pcr_bkt = ("extreme_calls" if _pcr < 0.5 else "bullish" if _pcr < 0.75 else
+                        "balanced" if _pcr < 1.1 else "hedged" if _pcr < 1.5 else "fear")
+            _n120_perf = tlog.setdefault("pcr_entry_perf", {})
+            _n120p = _n120_perf.setdefault(_pcr_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_pcr_bkt})
+            _n120p["total"] += 1; _n120p["total_pnl"] = round(_n120p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n120p["wins"] += 1
+            else:        _n120p["losses"] += 1
+            _n120p["win_rate"] = round(_n120p["wins"] / _n120p["total"] * 100, 1)
+            _n120p["avg_pnl"]  = round(_n120p["total_pnl"] / _n120p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N121: Short Interest Squeeze Potential ─────────────────────────────────────
+    # High short interest + RVOL surge = gamma/short squeeze potential.
+    # Bot already scores short squeezes but learns the actual outcome vs. the signal.
+    # Tracks: high_si_squeeze (SI>15%+RVOL>3x), high_si_no_surge, low_si.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n121 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _si_pct = float((_buy_n121 or {}).get("short_float", 0) or 0) * 100
+            _rvol_121 = float((_buy_n121 or {}).get("rvol", 1.0) or 1.0)
+            _n121_bkt = ("squeeze_setup" if _si_pct >= 15 and _rvol_121 >= 3.0 else
+                         "high_si" if _si_pct >= 15 else
+                         "moderate_si" if _si_pct >= 8 else "low_si")
+            _n121_perf = tlog.setdefault("si_squeeze_perf", {})
+            _n121p = _n121_perf.setdefault(_n121_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n121_bkt})
+            _n121p["total"] += 1; _n121p["total_pnl"] = round(_n121p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n121p["wins"] += 1
+            else:        _n121p["losses"] += 1
+            _n121p["win_rate"] = round(_n121p["wins"] / _n121p["total"] * 100, 1)
+            _n121p["avg_pnl"]  = round(_n121p["total_pnl"] / _n121p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N122: Price Distance from 200 EMA ─────────────────────────────────────────
+    # How far is the price from its 200-day EMA? Large distance = extended; near = support.
+    # Stocks 20%+ above 200 EMA = can mean-revert violently; stocks near 200 EMA bouncing
+    # = classic institutional accumulation zone. Bot learns optimal distance for entries.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n122 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _dist200 = float((_buy_n122 or {}).get("dist_from_200ema_pct", 0) or 0)
+            _d200_bkt = ("extended" if _dist200 >= 30 else "strong" if _dist200 >= 15 else
+                         "moderate" if _dist200 >= 5 else "near_200" if _dist200 >= -5 else "below_200")
+            _n122_perf = tlog.setdefault("dist_200ema_perf", {})
+            _n122p = _n122_perf.setdefault(_d200_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_d200_bkt})
+            _n122p["total"] += 1; _n122p["total_pnl"] = round(_n122p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n122p["wins"] += 1
+            else:        _n122p["losses"] += 1
+            _n122p["win_rate"] = round(_n122p["wins"] / _n122p["total"] * 100, 1)
+            _n122p["avg_pnl"]  = round(_n122p["total_pnl"] / _n122p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -12003,6 +12065,18 @@ def run():
                         _buy_signals_merged["consec_red_days_at_entry"] = 0
                     # N119: macro event happening on entry day (FOMC/CPI/NFP)
                     _buy_signals_merged["macro_event_at_entry"] = "none" if not macro_day else macro_day
+                    # N120: options PCR at entry (already in signal dict as options_pcr)
+                    _buy_signals_merged["options_pcr"] = float(live.get(tk, {}).get("options_pcr", 1.0) or 1.0)
+                    # N121: short float at entry (already in signal dict as short_float)
+                    _buy_signals_merged["short_float"] = float(live.get(tk, {}).get("short_float", 0) or 0)
+                    # N122: distance from 200 EMA at entry
+                    try:
+                        _px_n122 = float(live.get(tk, {}).get("price", 0) or 0)
+                        _ema200_n122 = float(live.get(tk, {}).get("ema200", 0) or 0)
+                        _d200 = round((_px_n122 - _ema200_n122) / _ema200_n122 * 100, 1) if _ema200_n122 > 0 else 0
+                        _buy_signals_merged["dist_from_200ema_pct"] = _d200
+                    except Exception:
+                        _buy_signals_merged["dist_from_200ema_pct"] = 0
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14828,6 +14902,39 @@ def run():
             _best_red = max(_n118_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N118 best entry setup: {_best_red['state']} ({_best_red['win_rate']:.0f}%WR vs red days)")
 
+        # ── N120: Options PCR at Entry (multi-tier) ────────────────────────────────
+        _n120_raw = tlog.get("pcr_entry_perf", {})
+        _n120_insights = []
+        for _n20k, _n20d in _n120_raw.items():
+            if _n20d.get("total", 0) >= 2:
+                _n120_insights.append({"state": _n20k, "win_rate": _n20d.get("win_rate", 50),
+                                       "avg_pnl": _n20d.get("avg_pnl", 0), "total": _n20d.get("total", 0)})
+        if _n120_insights:
+            _best_pcr = max(_n120_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N120 best PCR bracket at entry: {_best_pcr['state']} ({_best_pcr['win_rate']:.0f}%WR)")
+
+        # ── N121: Short Interest Squeeze Setup (multi-tier) ────────────────────────
+        _n121_raw = tlog.get("si_squeeze_perf", {})
+        _n121_insights = []
+        for _n21k, _n21d in _n121_raw.items():
+            if _n21d.get("total", 0) >= 2:
+                _n121_insights.append({"state": _n21k, "win_rate": _n21d.get("win_rate", 50),
+                                       "avg_pnl": _n21d.get("avg_pnl", 0), "total": _n21d.get("total", 0)})
+        if _n121_insights:
+            _best_si = max(_n121_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N121 best SI setup: {_best_si['state']} ({_best_si['win_rate']:.0f}%WR)")
+
+        # ── N122: Distance from 200 EMA (multi-tier) ───────────────────────────────
+        _n122_raw = tlog.get("dist_200ema_perf", {})
+        _n122_insights = []
+        for _n22k, _n22d in _n122_raw.items():
+            if _n22d.get("total", 0) >= 2:
+                _n122_insights.append({"state": _n22k, "win_rate": _n22d.get("win_rate", 50),
+                                       "avg_pnl": _n22d.get("avg_pnl", 0), "total": _n22d.get("total", 0)})
+        if _n122_insights:
+            _best_d200 = max(_n122_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N122 best 200EMA distance: {_best_d200['state']} ({_best_d200['win_rate']:.0f}%WR)")
+
         # ── N119: Macro Event Holding (multi-tier) ─────────────────────────────────
         _n119_raw = tlog.get("macro_hold_perf", {})
         _n119_insights = []
@@ -15008,6 +15115,9 @@ def run():
             "vts_perf":             _n117_insights,          # N117: VIX term structure (contango/backwardation) vs outcome
             "consec_red_entry_perf":_n118_insights,          # N118: consecutive red days on stock at entry vs outcome
             "macro_hold_perf":      _n119_insights,          # N119: macro event day (FOMC/CPI/NFP) at entry vs outcome
+            "pcr_entry_perf":       _n120_insights,          # N120: options put/call ratio bracket at entry vs outcome
+            "si_squeeze_perf":      _n121_insights,          # N121: short interest / squeeze setup vs outcome
+            "dist_200ema_perf":     _n122_insights,          # N122: distance from 200 EMA at entry vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -15116,6 +15226,7 @@ def run():
             "spy_vwap_entry_perf","signal_density_perf","ai_sentiment_tier_perf",
             "hold_duration_perf","mktcap_tier_perf","float_tier_perf",
             "vts_perf","consec_red_entry_perf","macro_hold_perf",
+            "pcr_entry_perf","si_squeeze_perf","dist_200ema_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -15123,9 +15234,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 78               # total tracked neuron dimensions (N103-N119 added)
+        tlog["neurons_total"]     = 81               # total tracked neuron dimensions (N103-N122 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/78 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/81 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
