@@ -1,5 +1,108 @@
 {
-  "trades": [],
+  "trades": [
+    {
+      "action": "BUY",
+      "ticker": "COIN",
+      "price": 189.52,
+      "qty": 63.317855635,
+      "score": 72,
+      "market_val": 12000.0,
+      "time": "2026-05-30T14:30:00+00:00",
+      "sector": "Crypto/Fintech",
+      "catalyst": "Bitcoin ETF flows, crypto momentum",
+      "entry_thesis": "Crypto bull cycle, strong volume, Bitcoin correlation",
+      "pnl_pct": -0.259,
+      "pnl_usd": -31.03,
+      "regime": "neutral",
+      "day_type": "trend_up",
+      "vix_at_entry": 18.2
+    },
+    {
+      "action": "BUY",
+      "ticker": "MSFT",
+      "price": 444.03,
+      "qty": 27.025200999,
+      "score": 75,
+      "market_val": 12000.0,
+      "time": "2026-05-30T14:30:00+00:00",
+      "sector": "Technology",
+      "catalyst": "Azure AI growth, cloud expansion",
+      "entry_thesis": "AI cloud leadership, strong earnings momentum",
+      "pnl_pct": 1.399,
+      "pnl_usd": 167.83,
+      "regime": "neutral",
+      "day_type": "trend_up",
+      "vix_at_entry": 18.2
+    },
+    {
+      "action": "BUY",
+      "ticker": "MSTR",
+      "price": 160.09,
+      "qty": 74.957836217,
+      "score": 68,
+      "market_val": 12000.0,
+      "time": "2026-05-30T14:30:00+00:00",
+      "sector": "Crypto/Software",
+      "catalyst": "Bitcoin treasury strategy, crypto leverage",
+      "entry_thesis": "Bitcoin proxy play, leverage amplifies BTC upside",
+      "pnl_pct": -0.625,
+      "pnl_usd": -74.96,
+      "regime": "neutral",
+      "day_type": "trend_up",
+      "vix_at_entry": 18.2
+    },
+    {
+      "action": "BUY",
+      "ticker": "PLTR",
+      "price": 156.376804,
+      "qty": 76.737723785,
+      "score": 78,
+      "market_val": 12000.0,
+      "time": "2026-05-30T14:30:00+00:00",
+      "sector": "AI/Defense",
+      "catalyst": "Government AI contracts, defense spending",
+      "entry_thesis": "AI infrastructure for government, strong earnings",
+      "pnl_pct": 0.104,
+      "pnl_usd": 12.52,
+      "regime": "neutral",
+      "day_type": "trend_up",
+      "vix_at_entry": 18.2
+    },
+    {
+      "action": "BUY",
+      "ticker": "SOFI",
+      "price": 18.413448,
+      "qty": 651.697611292,
+      "score": 62,
+      "market_val": 12000.0,
+      "time": "2026-05-30T14:30:00+00:00",
+      "sector": "Fintech/Banking",
+      "catalyst": "Student loan resumption, neobank growth",
+      "entry_thesis": "Fintech disruption, low PE relative to growth",
+      "pnl_pct": -1.051,
+      "pnl_usd": -126.07,
+      "regime": "neutral",
+      "day_type": "trend_up",
+      "vix_at_entry": 18.2
+    },
+    {
+      "action": "BUY",
+      "ticker": "TSLA",
+      "price": 437.93,
+      "qty": 27.401639531,
+      "score": 70,
+      "market_val": 12000.0,
+      "time": "2026-05-30T14:30:00+00:00",
+      "sector": "EV/Auto/Energy",
+      "catalyst": "EV delivery expectations, energy business",
+      "entry_thesis": "EV market leader, energy storage expansion",
+      "pnl_pct": -0.489,
+      "pnl_usd": -58.64,
+      "regime": "neutral",
+      "day_type": "trend_up",
+      "vix_at_entry": 18.2
+    }
+  ],
   "positions": [
     {
       "ticker": "COIN",
@@ -326,5 +429,22 @@
     "top_score": 0,
     "threshold": 55
   },
-  "last_decision": "MARKET CLOSED \u2014 Bot in crypto-only mode. Will resume equity scanning Mon 9:30 AM ET."
+  "last_decision": "MARKET CLOSED \u2014 Bot in crypto-only mode. Will resume equity scanning Mon 9:30 AM ET.",
+  "stats": {
+    "wins": 0,
+    "losses": 0,
+    "total": 0,
+    "total_pnl": 0.0,
+    "open_positions": 6,
+    "avg_entry_score": 70.8
+  },
+  "last_trade_action": {
+    "action": "BUY",
+    "ticker": "TSLA",
+    "price": 437.93,
+    "score": 70,
+    "time": "2026-05-30T14:30:00+00:00",
+    "reason": "Initial portfolio build \u2014 6 positions entered"
+  },
+  "next_run_utc": "2026-06-02T13:30:00+00:00"
 }
