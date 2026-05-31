@@ -265,6 +265,16 @@ def _build_weekly_bot_report(docs_dir):
         "catalyst_sector_match_perf": "N248 Catalyst Sector",
         "recent_buy_count_perf": "N249 Recent Buy Count",
         "macro_stress_index_perf": "N250 Macro Stress",
+        "overnight_gap_follow_perf": "N251 Overnight Gap",
+        "spy_breadth_thrust_perf": "N252 Breadth Thrust",
+        "tick_extreme_perf": "N253 TICK Extreme",
+        "sector_leader_lag_perf": "N254 Sector Leader/Lag",
+        "put_call_ratio_perf": "N255 Put/Call Ratio",
+        "options_expiry_week_perf": "N256 OPEX Week",
+        "momentum_divergence_perf": "N257 Mom Divergence",
+        "gap_fill_tendency_perf": "N258 Gap Fill",
+        "earnings_season_phase_perf": "N259 Earnings Season",
+        "liquidity_score_perf": "N260 Liquidity Score",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])

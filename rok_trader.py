@@ -4662,6 +4662,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N251: Overnight Gap Follow-Through Performance ────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n251 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n251_field = _buy_n251.get("overnight_gap_follow_state", "flat_open") if _buy_n251 else "flat_open"
+            _n251_perf = tlog.setdefault("overnight_gap_follow_perf", {})
+            _n251p = _n251_perf.setdefault(_n251_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n251_field})
+            _n251p["total"] += 1; _n251p["total_pnl"] = round(_n251p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n251p["wins"] += 1
+            else:        _n251p["losses"] += 1
+            _n251p["win_rate"] = round(_n251p["wins"] / _n251p["total"] * 100, 1)
+            _n251p["avg_pnl"]  = round(_n251p["total_pnl"] / _n251p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N252: SPY Breadth Thrust Performance ──────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n252 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n252_field = _buy_n252.get("spy_breadth_thrust_state", "neutral_breadth") if _buy_n252 else "neutral_breadth"
+            _n252_perf = tlog.setdefault("spy_breadth_thrust_perf", {})
+            _n252p = _n252_perf.setdefault(_n252_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n252_field})
+            _n252p["total"] += 1; _n252p["total_pnl"] = round(_n252p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n252p["wins"] += 1
+            else:        _n252p["losses"] += 1
+            _n252p["win_rate"] = round(_n252p["wins"] / _n252p["total"] * 100, 1)
+            _n252p["avg_pnl"]  = round(_n252p["total_pnl"] / _n252p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N253: TICK Extreme Performance ────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n253 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n253_field = _buy_n253.get("tick_extreme_state", "tick_neutral") if _buy_n253 else "tick_neutral"
+            _n253_perf = tlog.setdefault("tick_extreme_perf", {})
+            _n253p = _n253_perf.setdefault(_n253_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n253_field})
+            _n253p["total"] += 1; _n253p["total_pnl"] = round(_n253p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n253p["wins"] += 1
+            else:        _n253p["losses"] += 1
+            _n253p["win_rate"] = round(_n253p["wins"] / _n253p["total"] * 100, 1)
+            _n253p["avg_pnl"]  = round(_n253p["total_pnl"] / _n253p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N254: Sector Leader/Lag Performance ───────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n254 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n254_field = _buy_n254.get("sector_leader_lag_state", "neutral_sector") if _buy_n254 else "neutral_sector"
+            _n254_perf = tlog.setdefault("sector_leader_lag_perf", {})
+            _n254p = _n254_perf.setdefault(_n254_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n254_field})
+            _n254p["total"] += 1; _n254p["total_pnl"] = round(_n254p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n254p["wins"] += 1
+            else:        _n254p["losses"] += 1
+            _n254p["win_rate"] = round(_n254p["wins"] / _n254p["total"] * 100, 1)
+            _n254p["avg_pnl"]  = round(_n254p["total_pnl"] / _n254p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N255: Put/Call Ratio Performance ──────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n255 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n255_field = _buy_n255.get("put_call_ratio_state", "neutral_pc") if _buy_n255 else "neutral_pc"
+            _n255_perf = tlog.setdefault("put_call_ratio_perf", {})
+            _n255p = _n255_perf.setdefault(_n255_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n255_field})
+            _n255p["total"] += 1; _n255p["total_pnl"] = round(_n255p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n255p["wins"] += 1
+            else:        _n255p["losses"] += 1
+            _n255p["win_rate"] = round(_n255p["wins"] / _n255p["total"] * 100, 1)
+            _n255p["avg_pnl"]  = round(_n255p["total_pnl"] / _n255p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N256: Options Expiry Week Performance ─────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n256 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n256_field = _buy_n256.get("options_expiry_week_state", "non_opex") if _buy_n256 else "non_opex"
+            _n256_perf = tlog.setdefault("options_expiry_week_perf", {})
+            _n256p = _n256_perf.setdefault(_n256_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n256_field})
+            _n256p["total"] += 1; _n256p["total_pnl"] = round(_n256p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n256p["wins"] += 1
+            else:        _n256p["losses"] += 1
+            _n256p["win_rate"] = round(_n256p["wins"] / _n256p["total"] * 100, 1)
+            _n256p["avg_pnl"]  = round(_n256p["total_pnl"] / _n256p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N257: Momentum Divergence Performance ─────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n257 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n257_field = _buy_n257.get("momentum_divergence_state", "aligned") if _buy_n257 else "aligned"
+            _n257_perf = tlog.setdefault("momentum_divergence_perf", {})
+            _n257p = _n257_perf.setdefault(_n257_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n257_field})
+            _n257p["total"] += 1; _n257p["total_pnl"] = round(_n257p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n257p["wins"] += 1
+            else:        _n257p["losses"] += 1
+            _n257p["win_rate"] = round(_n257p["wins"] / _n257p["total"] * 100, 1)
+            _n257p["avg_pnl"]  = round(_n257p["total_pnl"] / _n257p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N258: Gap Fill Tendency Performance ───────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n258 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n258_field = _buy_n258.get("gap_fill_tendency_state", "no_gap") if _buy_n258 else "no_gap"
+            _n258_perf = tlog.setdefault("gap_fill_tendency_perf", {})
+            _n258p = _n258_perf.setdefault(_n258_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n258_field})
+            _n258p["total"] += 1; _n258p["total_pnl"] = round(_n258p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n258p["wins"] += 1
+            else:        _n258p["losses"] += 1
+            _n258p["win_rate"] = round(_n258p["wins"] / _n258p["total"] * 100, 1)
+            _n258p["avg_pnl"]  = round(_n258p["total_pnl"] / _n258p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N259: Earnings Season Phase Performance ───────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n259 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n259_field = _buy_n259.get("earnings_season_phase_state", "quiet_period") if _buy_n259 else "quiet_period"
+            _n259_perf = tlog.setdefault("earnings_season_phase_perf", {})
+            _n259p = _n259_perf.setdefault(_n259_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n259_field})
+            _n259p["total"] += 1; _n259p["total_pnl"] = round(_n259p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n259p["wins"] += 1
+            else:        _n259p["losses"] += 1
+            _n259p["win_rate"] = round(_n259p["wins"] / _n259p["total"] * 100, 1)
+            _n259p["avg_pnl"]  = round(_n259p["total_pnl"] / _n259p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N260: Liquidity Score Performance ─────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n260 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n260_field = _buy_n260.get("liquidity_score_state", "medium_liquidity") if _buy_n260 else "medium_liquidity"
+            _n260_perf = tlog.setdefault("liquidity_score_perf", {})
+            _n260p = _n260_perf.setdefault(_n260_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n260_field})
+            _n260p["total"] += 1; _n260p["total_pnl"] = round(_n260p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n260p["wins"] += 1
+            else:        _n260p["losses"] += 1
+            _n260p["win_rate"] = round(_n260p["wins"] / _n260p["total"] * 100, 1)
+            _n260p["avg_pnl"]  = round(_n260p["total_pnl"] / _n260p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11437,7 +11587,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 210
+            _n_total = tlog.get("neurons_total") or 220
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -16046,6 +16196,112 @@ def run():
                         _buy_signals_merged["macro_stress_index_state"] = _n250_s
                     except Exception:
                         _buy_signals_merged["macro_stress_index_state"] = "moderate_stress"
+                    # N251: overnight gap follow-through (today open vs prev close)
+                    try:
+                        _n251_chg1d = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        _n251_spy1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                        _n251_gap_pct = _n251_chg1d - _n251_spy1d
+                        if _n251_gap_pct > 0.5:    _n251_s = "gap_up_follow"
+                        elif _n251_gap_pct < -0.5: _n251_s = "gap_down_fade"
+                        else:                        _n251_s = "flat_open"
+                        _buy_signals_merged["overnight_gap_follow_state"] = _n251_s
+                    except Exception:
+                        _buy_signals_merged["overnight_gap_follow_state"] = "flat_open"
+                    # N252: SPY breadth thrust (advance/decline ratio)
+                    try:
+                        _n252_adv = float(tlog.get("market_breadth", {}).get("adv_pct", 50) or 50)
+                        if _n252_adv > 65:    _n252_s = "thrust_up"
+                        elif _n252_adv < 35:  _n252_s = "thrust_down"
+                        else:                  _n252_s = "neutral_breadth"
+                        _buy_signals_merged["spy_breadth_thrust_state"] = _n252_s
+                    except Exception:
+                        _buy_signals_merged["spy_breadth_thrust_state"] = "neutral_breadth"
+                    # N253: NYSE TICK extreme proxy (breadth momentum proxy)
+                    try:
+                        _n253_adv = float(tlog.get("market_breadth", {}).get("adv_pct", 50) or 50)
+                        _n253_spy1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                        _n253_tick_proxy = (_n253_adv - 50) * 0.4 + _n253_spy1d * 10
+                        if _n253_tick_proxy > 200:    _n253_s = "tick_high"
+                        elif _n253_tick_proxy < -200: _n253_s = "tick_low"
+                        else:                          _n253_s = "tick_neutral"
+                        _buy_signals_merged["tick_extreme_state"] = _n253_s
+                    except Exception:
+                        _buy_signals_merged["tick_extreme_state"] = "tick_neutral"
+                    # N254: sector leader vs lag vs SPY 3-day performance
+                    try:
+                        _n254_sector = SECTOR_MAP.get(tk, "other")
+                        _n254_sec3d = float(tlog.get("sector_etf_trends", {}).get(_n254_sector, {}).get("chg5d", 0) or 0)
+                        _n254_spy3d = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                        _n254_diff = _n254_sec3d - _n254_spy3d
+                        if _n254_diff > 1.0:    _n254_s = "leader_sector"
+                        elif _n254_diff < -1.0: _n254_s = "lagging_sector"
+                        else:                    _n254_s = "neutral_sector"
+                        _buy_signals_merged["sector_leader_lag_state"] = _n254_s
+                    except Exception:
+                        _buy_signals_merged["sector_leader_lag_state"] = "neutral_sector"
+                    # N255: put/call ratio sentiment (VIX proxy: >25=fear, <15=complacent)
+                    try:
+                        _n255_vix = float(regime.get("vix", 20) or 20)
+                        if _n255_vix > 25:    _n255_s = "fear_elevated"
+                        elif _n255_vix < 15:  _n255_s = "complacent"
+                        else:                  _n255_s = "neutral_pc"
+                        _buy_signals_merged["put_call_ratio_state"] = _n255_s
+                    except Exception:
+                        _buy_signals_merged["put_call_ratio_state"] = "neutral_pc"
+                    # N256: options expiry week (OPEX = 3rd Friday week, use week of month)
+                    try:
+                        _n256_now = datetime.now(timezone.utc)
+                        _n256_day = _n256_now.day
+                        _n256_weekday = _n256_now.weekday()  # 0=Mon, 4=Fri
+                        # 3rd Friday is day 15-21; we mark entire week (Mon-Fri) containing 3rd Friday
+                        _n256_third_fri = next(
+                            d for d in range(15, 22)
+                            if datetime(_n256_now.year, _n256_now.month, d).weekday() == 4
+                        )
+                        _n256_week_start = _n256_third_fri - 4
+                        _n256_s = "opex_week" if _n256_week_start <= _n256_day <= _n256_third_fri else "non_opex"
+                        _buy_signals_merged["options_expiry_week_state"] = _n256_s
+                    except Exception:
+                        _buy_signals_merged["options_expiry_week_state"] = "non_opex"
+                    # N257: momentum divergence (price direction vs RSI direction)
+                    try:
+                        _n257_chg1d = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        _n257_rsi   = float(live.get(tk, {}).get("daily_rsi", 50) or 50)
+                        if _n257_chg1d > 0.3 and _n257_rsi < 45:    _n257_s = "price_up_mom_weak"
+                        elif _n257_chg1d < -0.3 and _n257_rsi > 55: _n257_s = "price_down_mom_strong"
+                        else:                                          _n257_s = "aligned"
+                        _buy_signals_merged["momentum_divergence_state"] = _n257_s
+                    except Exception:
+                        _buy_signals_merged["momentum_divergence_state"] = "aligned"
+                    # N258: gap fill tendency (today open vs yesterday close >1%)
+                    try:
+                        _n258_chg1d = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        if _n258_chg1d > 1.0:     _n258_s = "above_gap"
+                        elif _n258_chg1d < -1.0:  _n258_s = "below_gap"
+                        else:                       _n258_s = "no_gap"
+                        _buy_signals_merged["gap_fill_tendency_state"] = _n258_s
+                    except Exception:
+                        _buy_signals_merged["gap_fill_tendency_state"] = "no_gap"
+                    # N259: earnings season phase (Jan/Apr/Jul/Oct = peak)
+                    try:
+                        _n259_month = datetime.now(timezone.utc).month
+                        if _n259_month in (1, 4, 7, 10):   _n259_s = "peak_earnings"
+                        elif _n259_month in (2, 5, 8, 11): _n259_s = "mid_earnings"
+                        else:                                _n259_s = "quiet_period"
+                        _buy_signals_merged["earnings_season_phase_state"] = _n259_s
+                    except Exception:
+                        _buy_signals_merged["earnings_season_phase_state"] = "quiet_period"
+                    # N260: liquidity score (based on avg volume from live data)
+                    try:
+                        _n260_avg_vol = float(live.get(tk, {}).get("avg_volume", 0) or 0)
+                        if _n260_avg_vol == 0:
+                            _n260_avg_vol = float(_d_buy.get("avg_vol_14", 0) or 0)
+                        if _n260_avg_vol >= 5_000_000:    _n260_s = "high_liquidity"
+                        elif _n260_avg_vol >= 1_000_000:  _n260_s = "medium_liquidity"
+                        else:                               _n260_s = "low_liquidity"
+                        _buy_signals_merged["liquidity_score_state"] = _n260_s
+                    except Exception:
+                        _buy_signals_merged["liquidity_score_state"] = "medium_liquidity"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -20204,6 +20460,116 @@ def run():
             if _ls_n250 and _hs_n250:
                 _learn_log.append(f"N250 macro stress: low={_ls_n250['win_rate']:.0f}% high={_hs_n250['win_rate']:.0f}%WR")
 
+        # ── N251: Overnight Gap Follow-Through tuner ────────────────────────────────
+        _n251_raw = tlog.get("overnight_gap_follow_perf", {})
+        _n251_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n251_raw.items() if v.get("total", 0) >= 2]
+        if _n251_insights:
+            _gu_n251 = next((s for s in _n251_insights if s["state"] == "gap_up_follow"), None)
+            _gd_n251 = next((s for s in _n251_insights if s["state"] == "gap_down_fade"), None)
+            if _gu_n251 and _gd_n251:
+                _learn_log.append(f"N251 overnight gap: up_follow={_gu_n251['win_rate']:.0f}% down_fade={_gd_n251['win_rate']:.0f}%WR")
+
+        # ── N252: SPY Breadth Thrust tuner ──────────────────────────────────────────
+        _n252_raw = tlog.get("spy_breadth_thrust_perf", {})
+        _n252_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n252_raw.items() if v.get("total", 0) >= 2]
+        if _n252_insights:
+            _tu_n252 = next((s for s in _n252_insights if s["state"] == "thrust_up"), None)
+            _td_n252 = next((s for s in _n252_insights if s["state"] == "thrust_down"), None)
+            if _tu_n252 and _td_n252:
+                _learn_log.append(f"N252 breadth thrust: up={_tu_n252['win_rate']:.0f}% down={_td_n252['win_rate']:.0f}%WR")
+
+        # ── N253: TICK Extreme tuner ─────────────────────────────────────────────────
+        _n253_raw = tlog.get("tick_extreme_perf", {})
+        _n253_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n253_raw.items() if v.get("total", 0) >= 2]
+        if _n253_insights:
+            _th_n253 = next((s for s in _n253_insights if s["state"] == "tick_high"), None)
+            _tl_n253 = next((s for s in _n253_insights if s["state"] == "tick_low"), None)
+            if _th_n253 and _tl_n253:
+                _learn_log.append(f"N253 tick extreme: high={_th_n253['win_rate']:.0f}% low={_tl_n253['win_rate']:.0f}%WR")
+
+        # ── N254: Sector Leader/Lag tuner ────────────────────────────────────────────
+        _n254_raw = tlog.get("sector_leader_lag_perf", {})
+        _n254_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n254_raw.items() if v.get("total", 0) >= 2]
+        if _n254_insights:
+            _ld_n254 = next((s for s in _n254_insights if s["state"] == "leader_sector"), None)
+            _lg_n254 = next((s for s in _n254_insights if s["state"] == "lagging_sector"), None)
+            if _ld_n254 and _lg_n254:
+                _learn_log.append(f"N254 sector leader/lag: leader={_ld_n254['win_rate']:.0f}% lagging={_lg_n254['win_rate']:.0f}%WR")
+
+        # ── N255: Put/Call Ratio tuner ───────────────────────────────────────────────
+        _n255_raw = tlog.get("put_call_ratio_perf", {})
+        _n255_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n255_raw.items() if v.get("total", 0) >= 2]
+        if _n255_insights:
+            _fe_n255 = next((s for s in _n255_insights if s["state"] == "fear_elevated"), None)
+            _cm_n255 = next((s for s in _n255_insights if s["state"] == "complacent"), None)
+            if _fe_n255 and _cm_n255:
+                _learn_log.append(f"N255 put/call: fear={_fe_n255['win_rate']:.0f}% complacent={_cm_n255['win_rate']:.0f}%WR")
+
+        # ── N256: Options Expiry Week tuner ──────────────────────────────────────────
+        _n256_raw = tlog.get("options_expiry_week_perf", {})
+        _n256_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n256_raw.items() if v.get("total", 0) >= 2]
+        if _n256_insights:
+            _ow_n256 = next((s for s in _n256_insights if s["state"] == "opex_week"), None)
+            _no_n256 = next((s for s in _n256_insights if s["state"] == "non_opex"), None)
+            if _ow_n256 and _no_n256:
+                _learn_log.append(f"N256 OPEX week: opex={_ow_n256['win_rate']:.0f}% non_opex={_no_n256['win_rate']:.0f}%WR")
+
+        # ── N257: Momentum Divergence tuner ──────────────────────────────────────────
+        _n257_raw = tlog.get("momentum_divergence_perf", {})
+        _n257_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n257_raw.items() if v.get("total", 0) >= 2]
+        if _n257_insights:
+            _pu_n257 = next((s for s in _n257_insights if s["state"] == "price_up_mom_weak"), None)
+            _al_n257 = next((s for s in _n257_insights if s["state"] == "aligned"), None)
+            if _pu_n257 and _al_n257:
+                _learn_log.append(f"N257 mom divergence: diverged={_pu_n257['win_rate']:.0f}% aligned={_al_n257['win_rate']:.0f}%WR")
+
+        # ── N258: Gap Fill Tendency tuner ─────────────────────────────────────────────
+        _n258_raw = tlog.get("gap_fill_tendency_perf", {})
+        _n258_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n258_raw.items() if v.get("total", 0) >= 2]
+        if _n258_insights:
+            _ag_n258 = next((s for s in _n258_insights if s["state"] == "above_gap"), None)
+            _ng_n258 = next((s for s in _n258_insights if s["state"] == "no_gap"), None)
+            if _ag_n258 and _ng_n258:
+                _learn_log.append(f"N258 gap fill: above_gap={_ag_n258['win_rate']:.0f}% no_gap={_ng_n258['win_rate']:.0f}%WR")
+
+        # ── N259: Earnings Season Phase tuner ────────────────────────────────────────
+        _n259_raw = tlog.get("earnings_season_phase_perf", {})
+        _n259_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n259_raw.items() if v.get("total", 0) >= 2]
+        if _n259_insights:
+            _pe_n259 = next((s for s in _n259_insights if s["state"] == "peak_earnings"), None)
+            _qp_n259 = next((s for s in _n259_insights if s["state"] == "quiet_period"), None)
+            if _pe_n259 and _qp_n259:
+                _learn_log.append(f"N259 earnings phase: peak={_pe_n259['win_rate']:.0f}% quiet={_qp_n259['win_rate']:.0f}%WR")
+
+        # ── N260: Liquidity Score tuner ───────────────────────────────────────────────
+        _n260_raw = tlog.get("liquidity_score_perf", {})
+        _n260_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n260_raw.items() if v.get("total", 0) >= 2]
+        if _n260_insights:
+            _hl_n260 = next((s for s in _n260_insights if s["state"] == "high_liquidity"), None)
+            _ll_n260 = next((s for s in _n260_insights if s["state"] == "low_liquidity"), None)
+            if _hl_n260 and _ll_n260:
+                _learn_log.append(f"N260 liquidity: high={_hl_n260['win_rate']:.0f}% low={_ll_n260['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -20741,6 +21107,16 @@ def run():
             "catalyst_sector_match_perf":  _n248_insights,   # N248: catalyst/sector hot-cold match vs outcome
             "recent_buy_count_perf":       _n249_insights,   # N249: number of buys in last 5 sessions vs outcome
             "macro_stress_index_perf":     _n250_insights,   # N250: composite macro stress index vs outcome
+            "overnight_gap_follow_perf":   _n251_insights,   # N251: overnight gap follow-through vs outcome
+            "spy_breadth_thrust_perf":     _n252_insights,   # N252: SPY breadth thrust (adv/dec) vs outcome
+            "tick_extreme_perf":           _n253_insights,   # N253: NYSE TICK extreme proxy vs outcome
+            "sector_leader_lag_perf":      _n254_insights,   # N254: sector leader/lag vs SPY 3d vs outcome
+            "put_call_ratio_perf":         _n255_insights,   # N255: put/call ratio sentiment (VIX proxy) vs outcome
+            "options_expiry_week_perf":    _n256_insights,   # N256: options expiry week effect vs outcome
+            "momentum_divergence_perf":    _n257_insights,   # N257: price vs RSI momentum divergence vs outcome
+            "gap_fill_tendency_perf":      _n258_insights,   # N258: gap fill tendency (open vs prev close) vs outcome
+            "earnings_season_phase_perf":  _n259_insights,   # N259: earnings season phase vs outcome
+            "liquidity_score_perf":        _n260_insights,   # N260: liquidity score (avg volume) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -20922,6 +21298,11 @@ def run():
             "sector_etf_vs_spy_perf", "adv_decline_ratio_today_perf",
             "entry_near_high_low_perf", "catalyst_sector_match_perf",
             "recent_buy_count_perf", "macro_stress_index_perf",
+            "overnight_gap_follow_perf", "spy_breadth_thrust_perf",
+            "tick_extreme_perf", "sector_leader_lag_perf",
+            "put_call_ratio_perf", "options_expiry_week_perf",
+            "momentum_divergence_perf", "gap_fill_tendency_perf",
+            "earnings_season_phase_perf", "liquidity_score_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -20929,9 +21310,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 210              # total tracked neuron dimensions (N103-N250 complete)
+        tlog["neurons_total"]     = 220              # total tracked neuron dimensions (N103-N260 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/210 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/220 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
