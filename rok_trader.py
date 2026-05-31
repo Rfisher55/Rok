@@ -10668,7 +10668,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 150
+            _n_total = tlog.get("neurons_total") or 160
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -18243,6 +18243,117 @@ def run():
             if _act_n190 and _qui_n190:
                 _learn_log.append(f"N190 pre-market: active={_act_n190['win_rate']:.0f}% quiet={_qui_n190['win_rate']:.0f}%WR")
 
+        # ── N191: Fed Week tuner ──────────────────────────────────────────────────────
+        _n191_raw = tlog.get("fed_week_perf", {})
+        _n191_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n191_raw.items() if v.get("total", 0) >= 2]
+        if _n191_insights:
+            _fed_n191 = next((s for s in _n191_insights if s["state"] == "fed_meeting_week"), None)
+            _nrm_n191 = next((s for s in _n191_insights if s["state"] == "normal_week"), None)
+            if _fed_n191 and _nrm_n191:
+                _learn_log.append(f"N191 fed week: fomc={_fed_n191['win_rate']:.0f}% normal={_nrm_n191['win_rate']:.0f}%WR")
+
+        # ── N192: Earnings Season Phase tuner ────────────────────────────────────────
+        _n192_raw = tlog.get("earnings_season_perf", {})
+        _n192_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n192_raw.items() if v.get("total", 0) >= 2]
+        if _n192_insights:
+            _best_n192 = max(_n192_insights, key=lambda x: x["win_rate"])
+            _worst_n192 = min(_n192_insights, key=lambda x: x["win_rate"])
+            if len(_n192_insights) >= 2:
+                _learn_log.append(f"N192 earnings season: best={_best_n192['state']}({_best_n192['win_rate']:.0f}%) worst={_worst_n192['state']}({_worst_n192['win_rate']:.0f}%)")
+
+        # ── N193: SPY RSI Zone tuner ──────────────────────────────────────────────────
+        _n193_raw = tlog.get("spy_rsi_zone_perf", {})
+        _n193_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n193_raw.items() if v.get("total", 0) >= 2]
+        if _n193_insights:
+            _ob_n193 = next((s for s in _n193_insights if s["state"] == "overbought"), None)
+            _os_n193 = next((s for s in _n193_insights if s["state"] == "oversold"), None)
+            _nt_n193 = next((s for s in _n193_insights if s["state"] == "neutral"), None)
+            if _ob_n193 and _nt_n193:
+                _learn_log.append(f"N193 SPY RSI: overbought={_ob_n193['win_rate']:.0f}% neutral={_nt_n193['win_rate']:.0f}%WR")
+
+        # ── N194: Volume vs 30-Day Average tuner ─────────────────────────────────────
+        _n194_raw = tlog.get("volume_vs_avg30_perf", {})
+        _n194_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n194_raw.items() if v.get("total", 0) >= 2]
+        if _n194_insights:
+            _best_n194 = max(_n194_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N194 vol vs avg30: best={_best_n194['state']}({_best_n194['win_rate']:.0f}%WR avg={_best_n194['avg_pnl']:+.2f}%)")
+
+        # ── N195: Stock Beta Tier tuner ───────────────────────────────────────────────
+        _n195_raw = tlog.get("stock_beta_tier_perf", {})
+        _n195_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n195_raw.items() if v.get("total", 0) >= 2]
+        if _n195_insights:
+            _hb_n195 = next((s for s in _n195_insights if s["state"] == "high_beta"), None)
+            _lb_n195 = next((s for s in _n195_insights if s["state"] == "low_beta"), None)
+            if _hb_n195 and _lb_n195:
+                _learn_log.append(f"N195 beta tier: high={_hb_n195['win_rate']:.0f}% low={_lb_n195['win_rate']:.0f}%WR")
+
+        # ── N196: Price vs VWAP tuner ─────────────────────────────────────────────────
+        _n196_raw = tlog.get("price_vs_vwap_perf", {})
+        _n196_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n196_raw.items() if v.get("total", 0) >= 2]
+        if _n196_insights:
+            _best_n196 = max(_n196_insights, key=lambda x: x["win_rate"])
+            _worst_n196 = min(_n196_insights, key=lambda x: x["win_rate"])
+            if len(_n196_insights) >= 2:
+                _learn_log.append(f"N196 price vs VWAP: best={_best_n196['state']}({_best_n196['win_rate']:.0f}%) worst={_worst_n196['state']}({_worst_n196['win_rate']:.0f}%)")
+
+        # ── N197: Seasonal Month tuner ────────────────────────────────────────────────
+        _n197_raw = tlog.get("seasonal_month_perf", {})
+        _n197_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n197_raw.items() if v.get("total", 0) >= 2]
+        if _n197_insights:
+            _best_n197 = max(_n197_insights, key=lambda x: x["win_rate"])
+            _worst_n197 = min(_n197_insights, key=lambda x: x["win_rate"])
+            if len(_n197_insights) >= 2:
+                _learn_log.append(f"N197 seasonal: best={_best_n197['state']}({_best_n197['win_rate']:.0f}%) worst={_worst_n197['state']}({_worst_n197['win_rate']:.0f}%)")
+
+        # ── N198: Market Breadth Level tuner ─────────────────────────────────────────
+        _n198_raw = tlog.get("market_breadth_level_perf", {})
+        _n198_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n198_raw.items() if v.get("total", 0) >= 2]
+        if _n198_insights:
+            _sb_n198 = next((s for s in _n198_insights if s["state"] == "strong_breadth"), None)
+            _vw_n198 = next((s for s in _n198_insights if s["state"] == "very_weak"), None)
+            if _sb_n198 and _vw_n198:
+                _learn_log.append(f"N198 breadth: strong={_sb_n198['win_rate']:.0f}% very_weak={_vw_n198['win_rate']:.0f}%WR")
+
+        # ── N199: SPY Gap vs Stock Gap Divergence tuner ───────────────────────────────
+        _n199_raw = tlog.get("spy_gap_vs_stock_perf", {})
+        _n199_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n199_raw.items() if v.get("total", 0) >= 2]
+        if _n199_insights:
+            _ct_n199 = next((s for s in _n199_insights if s["state"] == "spy_down_stock_up"), None)
+            if _ct_n199:
+                _learn_log.append(f"N199 gap diverge: contrarian(spy_dn_stk_up)={_ct_n199['win_rate']:.0f}%WR avg={_ct_n199['avg_pnl']:+.2f}%")
+            else:
+                _best_n199 = max(_n199_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N199 gap diverge: best={_best_n199['state']}({_best_n199['win_rate']:.0f}%WR)")
+
+        # ── N200: Institutional Quality Tier tuner ────────────────────────────────────
+        _n200_raw = tlog.get("institutional_quality_perf", {})
+        _n200_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n200_raw.items() if v.get("total", 0) >= 2]
+        if _n200_insights:
+            _t1_n200 = next((s for s in _n200_insights if s["state"] == "tier1_institutional"), None)
+            _rg_n200 = next((s for s in _n200_insights if s["state"] == "retail_grade"), None)
+            if _t1_n200 and _rg_n200:
+                _learn_log.append(f"N200 inst quality: tier1={_t1_n200['win_rate']:.0f}% retail={_rg_n200['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -18720,6 +18831,16 @@ def run():
             "support_quality_perf":  _n188_insights,          # N188: support quality confluences vs outcome
             "relative_perf_1w_perf": _n189_insights,          # N189: 1-week relative performance vs outcome
             "pre_market_action_perf": _n190_insights,         # N190: pre-market action vs outcome
+            "fed_week_perf":          _n191_insights,         # N191: fed meeting week vs outcome
+            "earnings_season_perf":   _n192_insights,         # N192: earnings season phase vs outcome
+            "spy_rsi_zone_perf":      _n193_insights,         # N193: SPY RSI zone at entry vs outcome
+            "volume_vs_avg30_perf":   _n194_insights,         # N194: volume vs 30-day average vs outcome
+            "stock_beta_tier_perf":   _n195_insights,         # N195: stock beta tier vs outcome
+            "price_vs_vwap_perf":     _n196_insights,         # N196: price vs VWAP at entry vs outcome
+            "seasonal_month_perf":    _n197_insights,         # N197: seasonal month vs outcome
+            "market_breadth_level_perf": _n198_insights,      # N198: market breadth level vs outcome
+            "spy_gap_vs_stock_perf":  _n199_insights,         # N199: SPY gap vs stock gap divergence vs outcome
+            "institutional_quality_perf": _n200_insights,     # N200: institutional quality tier vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -18875,6 +18996,10 @@ def run():
             "float_size_perf", "momentum_quality_perf", "sector_news_flow_perf",
             "morning_star_time_perf", "support_quality_perf", "relative_perf_1w_perf",
             "pre_market_action_perf",
+            "fed_week_perf", "earnings_season_perf", "spy_rsi_zone_perf",
+            "volume_vs_avg30_perf", "stock_beta_tier_perf", "price_vs_vwap_perf",
+            "seasonal_month_perf", "market_breadth_level_perf", "spy_gap_vs_stock_perf",
+            "institutional_quality_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -18882,9 +19007,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 150              # total tracked neuron dimensions (N103-N190 complete)
+        tlog["neurons_total"]     = 160              # total tracked neuron dimensions (N103-N200 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/150 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/160 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

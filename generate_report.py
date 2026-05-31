@@ -205,6 +205,16 @@ def _build_weekly_bot_report(docs_dir):
         "support_quality_perf": "N188 Support Qual",
         "relative_perf_1w_perf": "N189 Rel Perf 1W",
         "pre_market_action_perf": "N190 Pre-Market",
+        "fed_week_perf": "N191 Fed Week",
+        "earnings_season_perf": "N192 Earnings Season",
+        "spy_rsi_zone_perf": "N193 SPY RSI Zone",
+        "volume_vs_avg30_perf": "N194 Vol vs Avg30",
+        "stock_beta_tier_perf": "N195 Beta Tier",
+        "price_vs_vwap_perf": "N196 Price vs VWAP",
+        "seasonal_month_perf": "N197 Seasonal Month",
+        "market_breadth_level_perf": "N198 Breadth Level",
+        "spy_gap_vs_stock_perf": "N199 Gap Diverge",
+        "institutional_quality_perf": "N200 Inst Quality",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
