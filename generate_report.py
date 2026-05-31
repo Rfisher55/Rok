@@ -355,6 +355,16 @@ def _build_weekly_bot_report(docs_dir):
         "index_divergence_perf": "N338 Index Divergence",
         "opening_gap_follow_perf": "N339 Gap Follow",
         "earnings_revision_perf": "N340 EPS Revision",
+        "pre_market_gap_perf": "N341 Pre-Market Gap",
+        "regime_transition_perf": "N342 Regime Transition",
+        "ticker_age_bucket_perf": "N343 Ticker Age",
+        "spy_options_oi_perf": "N344 SPY Options Flow",
+        "breakout_confirmation_perf": "N345 Breakout Confirm",
+        "portfolio_heat_perf": "N346 Portfolio Heat",
+        "earnings_momentum_perf": "N347 Earnings Momentum",
+        "sector_breadth_perf": "N348 Sector Breadth",
+        "volatility_contraction_perf": "N349 Vol Contraction",
+        "time_since_last_trade_perf": "N350 Time Since Trade",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
