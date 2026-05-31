@@ -16202,37 +16202,81 @@ def run():
             breakout_adj   = 15 if tk in breakout_52w_cands else 0
             # N101: Sector rotation flip bonus — "from worst to first" timing signal
             rotation_flip_adj = 10 if sec in _rotation_flip_sectors else 0
-            # ── Learned Pattern Bonus: use neuron data to adjust score ───────────
+            # ── Learned Pattern Bonus: neuron intelligence influences every score ──
             _learned_bonus = 0
             try:
                 _lp_sc = tlog.get("bot_learned_params", {})
                 _tk_sig_sc = live.get(tk, {})
-                # Bonus: MTF triple alignment historically great → +3 when present
-                _m3_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("mtf_triple_perf",[])}
-                if _m3_wr.get("triple", 50) >= 68 and bool(_tk_sig_sc.get("mtf_triple", False)):
-                    _learned_bonus += 3
-                # Bonus: VCP historically great → +3 when present
-                _vcp_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("vcp_perf",[])}
-                if _vcp_wr.get("vcp", 50) >= 68 and bool(_tk_sig_sc.get("vcp", False)):
-                    _learned_bonus += 3
-                # Bonus: gap-and-hold historically great → +2
-                _gh_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("gap_hold_perf",[])}
-                if _gh_wr.get("holding", 50) >= 65 and bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    _learned_bonus += 2
-                # Bonus: NR7 historically great → +2
-                _n7_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("nr7_perf",[])}
-                if _n7_wr.get("compressed", 50) >= 65 and bool(_tk_sig_sc.get("nr7_signal", False)):
-                    _learned_bonus += 2
-                # Bonus: above demand zone historically great → +2
-                _dz_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("demand_zone_perf",[])}
-                if _dz_wr.get("at_zone", 50) >= 65 and bool(_tk_sig_sc.get("at_demand_zone", False)):
-                    _learned_bonus += 2
-                # Bonus: RS63 elite tier → +3
-                _rs63_wr = {s.get("state",""):s.get("win_rate",50) for s in _lp_sc.get("rs63_q_tier_perf",[])}
-                if _rs63_wr.get("elite", 50) >= 65 and float(_tk_sig_sc.get("rs63", 0) or 0) >= 1.5:
-                    _learned_bonus += 3
-                # Cap bonus at +8 so it can't override fundamentals
-                _learned_bonus = min(8, _learned_bonus)
+                _vix_now_lb = float(regime.get("vix", 20.0) or 20.0)
+                _regime_lb  = regime.get("regime", "neutral")
+                _MIN_N = 5  # minimum sample count before trusting a neuron
+                def _nwr(key, state):
+                    return next((s.get("win_rate", 50) for s in _lp_sc.get(key, []) if s.get("state") == state), 50)
+                def _nn(key, state):
+                    return next((s.get("total", 0) for s in _lp_sc.get(key, []) if s.get("state") == state), 0)
+                def _nbns(key, state, thr=65, pts=2):
+                    return pts if _nwr(key, state) >= thr and _nn(key, state) >= _MIN_N else 0
+                def _npen(key, state, thr=42, pts=-1):
+                    return pts if _nwr(key, state) <= thr and _nn(key, state) >= _MIN_N else 0
+                if bool(_tk_sig_sc.get("mtf_triple", False)):
+                    _learned_bonus += _nbns("mtf_triple_perf", "triple", 68, 3)
+                if bool(_tk_sig_sc.get("vcp", False)):
+                    _learned_bonus += _nbns("vcp_perf", "vcp", 68, 3)
+                if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                    _learned_bonus += _nbns("gap_hold_perf", "holding", 65, 2)
+                if bool(_tk_sig_sc.get("nr7_signal", False)):
+                    _learned_bonus += _nbns("nr7_perf", "compressed", 65, 2)
+                if bool(_tk_sig_sc.get("at_demand_zone", False)):
+                    _learned_bonus += _nbns("demand_zone_perf", "at_zone", 65, 2)
+                if float(_tk_sig_sc.get("rs63", 0) or 0) >= 1.5:
+                    _learned_bonus += _nbns("rs63_q_tier_perf", "elite", 65, 3)
+                if bool(_tk_sig_sc.get("at_breakout", False)):
+                    _learned_bonus += _nbns("at_breakout_perf", "breakout", 65, 2)
+                _rvol_lb = float(_tk_sig_sc.get("rvol", 1.0) or 1.0)
+                if _rvol_lb >= 3.0:
+                    _learned_bonus += _nbns("rvol_tier_perf", "extreme", 62, 2)
+                elif _rvol_lb >= 1.5:
+                    _learned_bonus += _nbns("rvol_tier_perf", "high", 62, 1)
+                elif _rvol_lb < 0.8:
+                    _learned_bonus += _npen("rvol_tier_perf", "below_avg", 42, -1)
+                _e21 = float(_tk_sig_sc.get("ema21", 0) or 0)
+                _e50 = float(_tk_sig_sc.get("ema50", 0) or 0)
+                _e200 = float(_tk_sig_sc.get("ema200", 0) or 0)
+                if bool(_tk_sig_sc.get("ema_stack", False)) or (_e21 > _e50 > _e200 > 0):
+                    _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 2)
+                elif _e200 > _e50 > 0:
+                    _learned_bonus += _npen("ema_stack_quality_perf", "ema_stack_broken", 42, -2)
+                _rs1_lb = float(_tk_sig_sc.get("rs1", 0) or 0)
+                _adx_lb = float(_tk_sig_sc.get("adx", _tk_sig_sc.get("adx_14", 20)) or 20)
+                if _rs1_lb > 3 and _adx_lb > 25:
+                    _learned_bonus += _nbns("trend_quality_score_perf", "strong_trend", 65, 2)
+                elif _rs1_lb < 0 or _adx_lb < 20:
+                    _learned_bonus += _npen("trend_quality_score_perf", "weak_trend", 42, -1)
+                _spy200_lb = tlog.get("spy_above_200ma", True)
+                if _spy200_lb and _vix_now_lb < 20:
+                    _learned_bonus += _nbns("macro_backdrop_perf", "favorable_macro", 65, 1)
+                elif not _spy200_lb or _vix_now_lb > 28:
+                    _learned_bonus += _npen("macro_backdrop_perf", "unfavorable_macro", 42, -2)
+                if _regime_lb == "bull":
+                    _learned_bonus += _nbns("regime_spy_alignment_perf", "bull_aligned", 65, 1)
+                elif _regime_lb == "bear":
+                    _learned_bonus += _npen("regime_spy_alignment_perf", "bear_counter", 42, -2)
+                if bool(_tk_sig_sc.get("options_flow", False)):
+                    _learned_bonus += _nbns("option_flow_imbalance_perf", "call_dominated", 65, 1)
+                if _rvol_lb >= 2.0:
+                    _learned_bonus += _nbns("vol_expansion_at_entry_perf", "vol_expanding", 65, 1)
+                elif _rvol_lb < 0.6:
+                    _learned_bonus += _npen("vol_expansion_at_entry_perf", "vol_contracting", 42, -1)
+                _vix_br = "low" if _vix_now_lb < 15 else ("elevated" if _vix_now_lb > 25 else "normal")
+                if _vix_br == "low":
+                    _learned_bonus += _nbns("vix_entry_perf", "low", 62, 1)
+                elif _vix_br == "elevated":
+                    _learned_bonus += _npen("vix_entry_perf", "elevated", 42, -2)
+                if bool(_tk_sig_sc.get("pocket_pivot", False)):
+                    _learned_bonus += _nbns("pocket_pivot_perf", "pp", 65, 2)
+                if bool(_tk_sig_sc.get("ha_bull", False)):
+                    _learned_bonus += _nbns("ha_trend_perf", "bullish", 62, 1)
+                _learned_bonus = max(-8, min(14, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
 
