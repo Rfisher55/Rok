@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-31T06:21:02.122597+00:00",
+  "generated_at": "2026-05-31T09:32:55.478827+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -1079,76 +1079,76 @@
       10
     ],
     [
-      "COM",
-      213
+      "HTTPS",
+      252
     ],
     [
-      "HTTPS",
-      213
+      "COM",
+      252
     ],
     [
       "HREF",
-      212
+      251
     ],
     [
       "WWW",
-      179
+      218
     ],
     [
       "BR",
-      154
+      190
     ],
     [
       "LINK",
-      151
+      188
     ],
     [
       "SPAN",
-      148
+      185
     ],
     [
       "USER",
-      147
+      184
     ],
     [
       "CLASS",
-      145
+      179
     ],
     [
       "MD",
-      143
-    ],
-    [
-      "DIV",
-      142
+      177
     ],
     [
       "SC",
-      142
+      176
+    ],
+    [
+      "DIV",
+      176
     ],
     [
       "AMP",
-      129
+      142
     ],
     [
       "AS",
-      100
+      105
     ],
     [
       "TABLE",
-      80
-    ],
-    [
-      "TITLE",
-      80
+      87
     ],
     [
       "WIDTH",
-      79
+      86
+    ],
+    [
+      "SRC",
+      86
     ],
     [
       "IMG",
-      79
+      86
     ]
   ],
   "stocktwits_trending": [],
@@ -1225,106 +1225,45 @@
       "entry_price": 216.01,
       "current_price": 211.14,
       "pct_change": -2.3,
-      "date": "2026-05-30"
+      "date": "2026-05-31"
     },
     {
       "ticker": "OKTA",
       "entry_price": 120.8,
       "current_price": 123.27,
       "pct_change": 2.0,
-      "date": "2026-05-30"
+      "date": "2026-05-31"
     },
     {
       "ticker": "NOW",
       "entry_price": 123.48,
       "current_price": 124.37,
       "pct_change": 0.7,
-      "date": "2026-05-30"
+      "date": "2026-05-31"
     },
     {
       "ticker": "SOFI",
       "entry_price": 18.32,
       "current_price": 18.22,
       "pct_change": -0.5,
-      "date": "2026-05-30"
+      "date": "2026-05-31"
     },
     {
       "ticker": "AMP",
       "entry_price": 444.67,
       "current_price": 445.71,
       "pct_change": 0.2,
-      "date": "2026-05-30"
+      "date": "2026-05-31"
     },
     {
       "ticker": "PLTR",
       "entry_price": 156.41,
       "current_price": 156.54,
       "pct_change": 0.1,
-      "date": "2026-05-30"
+      "date": "2026-05-31"
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-05-30",
-      "timestamp": "2026-05-30T16:44:20.872466",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-05-30",
       "timestamp": "2026-05-30T17:47:54.670959",
@@ -1751,181 +1690,200 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-05-31",
+      "timestamp": "2026-05-31T09:32:54.960941",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": null,
+          "target": null
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
     {
-      "title": "SpaceX awarded $6.45B in Space Force contracts ahead of IPO",
+      "title": "Exclusive-From lottery draws to fiscal spending, China broadens digital yuan footprint",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/spacex-awarded-6-45b-space-222138253.html",
+      "url": "https://finance.yahoo.com/markets/crypto/articles/exclusive-lottery-draws-fiscal-spending-050343922.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Cotton Closes Mixed on Friday",
+      "title": "IonQ vs. Quantum Computing Inc.: What Their Revenue Trends Tell Investors",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/commodities/articles/cotton-closes-mixed-friday-215954585.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/ionq-vs-quantum-computing-inc-045711797.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Hewlett-Packard (HPE) on All-Time High Ahead of Q2 Earnings",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/hewlett-packard-hpe-time-high-053803870.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Corn Faces Month End and Outside Pressure on Friday",
+      "title": "Atlassian (TEAM) Soars 15% Ahead of Business Updates",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/commodities/articles/corn-faces-month-end-outside-215954113.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/atlassian-team-soars-15-ahead-061243337.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Soybeans Slip Lower into Month End",
+      "title": "Forgent Power (FPS) Hits All-Time High on 27% PT Hike",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/commodities/articles/soybeans-slip-lower-month-end-215954237.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/forgent-power-fps-hits-time-060645900.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Wheat Falls into the End of the Month",
+      "title": "NetApp (NTAP) Hits All-Time High as AI Propels Profits",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/commodities/articles/wheat-falls-end-month-215954716.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/netapp-ntap-hits-time-high-062113410.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Visa vs. Mastercard Stock: Using Barchart Data to Pick the Best Payments Giant Now",
+      "title": "Artificial Intelligence (AI) Stocks Are Surging. But This AI Stock Is Down 24.27%.",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/visa-vs-mastercard-stock-using-230002922.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/artificial-intelligence-ai-stocks-surging-052000803.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "NVDL ETF Explained: Leveraged Nvidia, Decay Risk, and Who Should Actually Own It",
+      "title": "BBB Foods (TBBB) Climbs 15% on Investment Plan, Fundraising",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/options/articles/nvdl-etf-explained-leveraged-nvidia-233313764.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/bbb-foods-tbbb-climbs-15-061845382.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Social media companies pay $27 million to settle Kentucky school district\u2019s lawsuit over social media harms, records show",
+      "title": "ServiceNow (NOW) Climbs 14% Ahead of Business Updates",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/meta-paid-9-million-settle-234825076.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/servicenow-now-climbs-14-ahead-060034818.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Zeta Global (ZETA) Soars 25% as CEO \u2018Highly Optimistic\u2019",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/zeta-global-zeta-soars-25-055534344.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Okta (OKTA) Hits 4-Year High as Earnings Soar",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/okta-okta-hits-4-high-062312694.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "The RealReal's CFO Sold Over 35,000 Company Shares. Here's What That Means for Investors.",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/realreals-cfo-sold-over-35-042324791.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Social media companies to pay $27 million to settle Kentucky school district's lawsuit, records show",
+      "title": "Dell Technologies (DELL) Wins $10B Govt Contract, Hits All-Time High",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/meta-paid-9-million-settle-234825372.html",
-      "sentiment": -1.0,
+      "url": "https://finance.yahoo.com/markets/stocks/articles/dell-technologies-dell-wins-10b-062727963.html",
+      "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Will Solana (SOL) Make You a Millionaire?",
+      "title": "International Business Machines (IBM) Unveils $15B Investments, Surges 12.7%",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/solana-sol-millionaire-223918455.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/international-business-machines-ibm-unveils-054341591.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Morgan Stanley Trims CMS Energy (CMS) Target While Keeping Equal Weight Rating",
+      "title": "Is Linde Stock Underperforming the Nasdaq?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-lowers-radnet-rdnt-price-010940219.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Strategy Bitcoin Transfer Puts Saylor\u2019s Treasury Model Back Under Pressure",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/strategy-bitcoin-transfer-puts-saylor-011300880.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Barclays Says Honeywell (HON) Has Clear Catalysts as Spinoffs Near",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-says-honeywell-hon-clear-012708272.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/linde-stock-underperforming-nasdaq-070923298.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Is Smurfit Westrock (SW) One of the Best Stocks to Buy from Billionaire George Soros\u2019 Stock Portfolio?",
+      "title": "Is Wells Fargo Stock Underperforming the Dow?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/smurfit-westrock-sw-one-best-013013463.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "62-Year-Old Retiree\u2019s $2.4M Portfolio Could Drop to $1.1M by 80 in the Wrong Market",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/62-old-retiree-2-4m-213253801.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Electronic Arts (EA) \u2013 Among the 10 Best Stocks to Buy from Billionaire George Soros\u2019 Stock Portfolio",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/electronic-arts-ea-among-10-013229874.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "This Analyst Just Downgraded ASTS Stock, and Blue Origin May Be to Blame",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/analyst-just-downgraded-asts-stock-210320461.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Northland Trims Salesforce (CRM) Valuation Following Earnings Report",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/northland-trims-salesforce-crm-valuation-013849252.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/wells-fargo-stock-underperforming-dow-080053567.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Barclays Lowers RadNet (RDNT) Price Target, Says Imaging Business Continues to Outperform",
+      "title": "Wall Street Has a Consensus on This AI Stock. The Consensus Is Dead Wrong.",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-lowers-radnet-rdnt-price-014247376.html",
-      "sentiment": 1.0,
+      "url": "https://finance.yahoo.com/markets/stocks/articles/wall-street-consensus-ai-stock-042000606.html",
+      "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "CVC to Buy IFF\u2019s Food-Ingredients Unit in $4.3 Billion Deal",
+      "title": "T-Mobile US Stock: Is TMUS Underperforming the Communication Sector?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/cvc-buy-iff-food-ingredients-115200369.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Jamie Dimon Says JPMorgan (JPM) Could Spend Up to $20 Billion on an Acquisition",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/jamie-dimon-says-jpmorgan-jpm-014441157.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Unusual Machines Stock Looks Like a Winner as Trump Backs Drone Makers",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/unusual-machines-stock-looks-winner-205728091.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/t-mobile-us-stock-tmus-090948987.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Susquehanna Bullish on Woodward (WWD) as Aerospace Demand Supports Long-Term Growth",
+      "title": "They used to work for Wall Street banks \u2014 now they charge those same firms $25,000 a day to teach them AI",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/susquehanna-bullish-woodward-wwd-aerospace-014759852.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Truist Lowers Xcel Energy (XEL) Price Target, Sees Utilities Benefiting From Data Center Growth",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/truist-lowers-xcel-energy-xel-015043841.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Michael Saylor Says Bitcoin Has No Competition: 'There's No Second Best Crypto Asset'",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/michael-saylor-says-bitcoin-no-233214644.html",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/used-wall-street-banks-now-093000599.html",
       "sentiment": 0.0,
       "tickers": []
     },
@@ -1937,38 +1895,80 @@
       "tickers": []
     },
     {
-      "title": "PLTR Stock Alert: Why Palantir Is Getting a Boost from Dell Earnings",
+      "title": "Truist Lowers Xcel Energy (XEL) Price Target, Sees Utilities Benefiting From Data Center Growth",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/pltr-stock-alert-why-palantir-204408942.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Stocks Rally on Easing Geopolitical Tensions and AI Enthusiasm",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/stocks-rally-easing-geopolitical-tensions-203401276.html",
+      "url": "https://finance.yahoo.com/sectors/energy/articles/truist-lowers-xcel-energy-xel-015043841.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Western Digital Is Making the Right Moves Amid Fierce Momentum for Memory Stocks",
+      "title": "Bank of England prepares to roll back lending rules in bid to unlock billions for Britain",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/western-digital-making-moves-amid-201816720.html",
+      "url": "https://finance.yahoo.com/economy/policy/articles/bank-england-prepares-roll-back-060100919.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Susquehanna Bullish on Woodward (WWD) as Aerospace Demand Supports Long-Term Growth",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/susquehanna-bullish-woodward-wwd-aerospace-014759852.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Stride Stock Is Down 40% This Past Year. Here's Why One Investor Added $58 Million",
+      "title": "Jamie Dimon Says JPMorgan (JPM) Could Spend Up to $20 Billion on an Acquisition",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/stride-stock-down-40-past-000833273.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/jamie-dimon-says-jpmorgan-jpm-014441157.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Barclays Lowers RadNet (RDNT) Price Target, Says Imaging Business Continues to Outperform",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-lowers-radnet-rdnt-price-014247376.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Northland Trims Salesforce (CRM) Valuation Following Earnings Report",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/northland-trims-salesforce-crm-valuation-013849252.html",
       "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Inflation Squeezes Retirement. 5 Smart Tips to Protect Yourself.",
+      "source": "Yahoo Finance",
+      "url": "https://www.barrons.com/articles/inflation-retirement-investments-stocks-a28870b6?siteid=yhoof2&yptr=yahoo",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Electronic Arts (EA) \u2013 Among the 10 Best Stocks to Buy from Billionaire George Soros\u2019 Stock Portfolio",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/electronic-arts-ea-among-10-013229874.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Mortgage and refinance interest rates today, Saturday, May 30, 2026: Rates mixed to start the weekend",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/mortgage-refinance-interest-rates-today-saturday-may-30-2026-100000280.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Best money market account rates today, Saturday, May 30, 2026: Best account provides 4.01% APY",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-money-market-account-rates-today-saturday-may-30-2026-100000932.html",
+      "sentiment": -1.0,
       "tickers": []
     }
   ],
   "source_stats": {
-    "reddit": 177,
+    "reddit": 216,
     "news": 247,
-    "stocks": 37,
+    "stocks": 38,
     "sec": 40,
     "earnings_upcoming": 25,
     "unusual_options": 20,
