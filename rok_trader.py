@@ -6762,6 +6762,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N391: Intraday High Quality Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n391 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n391_field = _buy_n391.get("intraday_high_quality_perf", "mid_range") if _buy_n391 else "mid_range"
+            _n391_perf = tlog.setdefault("intraday_high_quality_perf", {})
+            _n391p = _n391_perf.setdefault(_n391_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n391_field})
+            _n391p["total"] += 1; _n391p["total_pnl"] = round(_n391p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n391p["wins"] += 1
+            else:        _n391p["losses"] += 1
+            _n391p["win_rate"] = round(_n391p["wins"] / _n391p["total"] * 100, 1)
+            _n391p["avg_pnl"]  = round(_n391p["total_pnl"] / _n391p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N392: Sector ETF Gap Performance ──────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n392 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n392_field = _buy_n392.get("sector_etf_gap_perf", "sector_flat") if _buy_n392 else "sector_flat"
+            _n392_perf = tlog.setdefault("sector_etf_gap_perf", {})
+            _n392p = _n392_perf.setdefault(_n392_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n392_field})
+            _n392p["total"] += 1; _n392p["total_pnl"] = round(_n392p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n392p["wins"] += 1
+            else:        _n392p["losses"] += 1
+            _n392p["win_rate"] = round(_n392p["wins"] / _n392p["total"] * 100, 1)
+            _n392p["avg_pnl"]  = round(_n392p["total_pnl"] / _n392p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N393: SPY Open vs Close Performance ───────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n393 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n393_field = _buy_n393.get("spy_open_vs_close_perf", "neutral_open") if _buy_n393 else "neutral_open"
+            _n393_perf = tlog.setdefault("spy_open_vs_close_perf", {})
+            _n393p = _n393_perf.setdefault(_n393_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n393_field})
+            _n393p["total"] += 1; _n393p["total_pnl"] = round(_n393p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n393p["wins"] += 1
+            else:        _n393p["losses"] += 1
+            _n393p["win_rate"] = round(_n393p["wins"] / _n393p["total"] * 100, 1)
+            _n393p["avg_pnl"]  = round(_n393p["total_pnl"] / _n393p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N394: Prior Day Range Performance ─────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n394 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n394_field = _buy_n394.get("prior_day_range_perf", "normal_range") if _buy_n394 else "normal_range"
+            _n394_perf = tlog.setdefault("prior_day_range_perf", {})
+            _n394p = _n394_perf.setdefault(_n394_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n394_field})
+            _n394p["total"] += 1; _n394p["total_pnl"] = round(_n394p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n394p["wins"] += 1
+            else:        _n394p["losses"] += 1
+            _n394p["win_rate"] = round(_n394p["wins"] / _n394p["total"] * 100, 1)
+            _n394p["avg_pnl"]  = round(_n394p["total_pnl"] / _n394p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N395: Entry vs Sector Beta Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n395 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n395_field = _buy_n395.get("entry_vs_sector_beta_perf", "mid_beta_sector") if _buy_n395 else "mid_beta_sector"
+            _n395_perf = tlog.setdefault("entry_vs_sector_beta_perf", {})
+            _n395p = _n395_perf.setdefault(_n395_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n395_field})
+            _n395p["total"] += 1; _n395p["total_pnl"] = round(_n395p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n395p["wins"] += 1
+            else:        _n395p["losses"] += 1
+            _n395p["win_rate"] = round(_n395p["wins"] / _n395p["total"] * 100, 1)
+            _n395p["avg_pnl"]  = round(_n395p["total_pnl"] / _n395p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N396: Market Internals Quality Performance ────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n396 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n396_field = _buy_n396.get("market_internals_quality_perf", "neutral_internals") if _buy_n396 else "neutral_internals"
+            _n396_perf = tlog.setdefault("market_internals_quality_perf", {})
+            _n396p = _n396_perf.setdefault(_n396_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n396_field})
+            _n396p["total"] += 1; _n396p["total_pnl"] = round(_n396p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n396p["wins"] += 1
+            else:        _n396p["losses"] += 1
+            _n396p["win_rate"] = round(_n396p["wins"] / _n396p["total"] * 100, 1)
+            _n396p["avg_pnl"]  = round(_n396p["total_pnl"] / _n396p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N397: EMA Stack Quality Performance ───────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n397 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n397_field = _buy_n397.get("ema_stack_quality_perf", "partial_stack") if _buy_n397 else "partial_stack"
+            _n397_perf = tlog.setdefault("ema_stack_quality_perf", {})
+            _n397p = _n397_perf.setdefault(_n397_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n397_field})
+            _n397p["total"] += 1; _n397p["total_pnl"] = round(_n397p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n397p["wins"] += 1
+            else:        _n397p["losses"] += 1
+            _n397p["win_rate"] = round(_n397p["wins"] / _n397p["total"] * 100, 1)
+            _n397p["avg_pnl"]  = round(_n397p["total_pnl"] / _n397p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N398: Vol Expansion at Entry Performance ───────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n398 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n398_field = _buy_n398.get("vol_expansion_at_entry_perf", "vol_stable") if _buy_n398 else "vol_stable"
+            _n398_perf = tlog.setdefault("vol_expansion_at_entry_perf", {})
+            _n398p = _n398_perf.setdefault(_n398_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n398_field})
+            _n398p["total"] += 1; _n398p["total_pnl"] = round(_n398p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n398p["wins"] += 1
+            else:        _n398p["losses"] += 1
+            _n398p["win_rate"] = round(_n398p["wins"] / _n398p["total"] * 100, 1)
+            _n398p["avg_pnl"]  = round(_n398p["total_pnl"] / _n398p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N399: News Age Quality Performance ────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n399 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n399_field = _buy_n399.get("news_age_quality_perf", "recent_catalyst") if _buy_n399 else "recent_catalyst"
+            _n399_perf = tlog.setdefault("news_age_quality_perf", {})
+            _n399p = _n399_perf.setdefault(_n399_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n399_field})
+            _n399p["total"] += 1; _n399p["total_pnl"] = round(_n399p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n399p["wins"] += 1
+            else:        _n399p["losses"] += 1
+            _n399p["win_rate"] = round(_n399p["wins"] / _n399p["total"] * 100, 1)
+            _n399p["avg_pnl"]  = round(_n399p["total_pnl"] / _n399p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N400: Technical Score Quality Performance ──────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n400 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n400_field = _buy_n400.get("technical_score_quality_perf", "solid_technical") if _buy_n400 else "solid_technical"
+            _n400_perf = tlog.setdefault("technical_score_quality_perf", {})
+            _n400p = _n400_perf.setdefault(_n400_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n400_field})
+            _n400p["total"] += 1; _n400p["total_pnl"] = round(_n400p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n400p["wins"] += 1
+            else:        _n400p["losses"] += 1
+            _n400p["win_rate"] = round(_n400p["wins"] / _n400p["total"] * 100, 1)
+            _n400p["avg_pnl"]  = round(_n400p["total_pnl"] / _n400p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -13537,7 +13687,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 350
+            _n_total = tlog.get("neurons_total") or 360
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -19761,6 +19911,126 @@ def run():
                         _buy_signals_merged["position_risk_reward_entry_perf"] = _n390_s
                     except Exception:
                         _buy_signals_merged["position_risk_reward_entry_perf"] = "standard_rr"
+                    # N391: Intraday high quality at entry
+                    try:
+                        _dh = d.get("day_high", d.get("price", 0))
+                        _rvol = d.get("rvol", 1.0)
+                        if _dh and _price >= _dh * 0.999 and _rvol > 1.5:
+                            _n391_s = "new_high_breakout"
+                        elif _dh and _price >= _dh * 0.99 and _rvol < 0.8:
+                            _n391_s = "failed_breakout"
+                        else:
+                            _n391_s = "mid_range"
+                    except Exception:
+                        _n391_s = "mid_range"
+                    _buy_signals_merged["intraday_high_quality_perf"] = _n391_s
+                    # N392: Sector ETF gap at entry
+                    try:
+                        _n392_gap = d.get("sector_gap_pct", 0)
+                        if _n392_gap > 0.5:
+                            _n392_s = "sector_gap_up"
+                        elif _n392_gap < -0.5:
+                            _n392_s = "sector_gap_down"
+                        else:
+                            _n392_s = "sector_flat"
+                    except Exception:
+                        _n392_s = "sector_flat"
+                    _buy_signals_merged["sector_etf_gap_perf"] = _n392_s
+                    # N393: SPY open vs close at entry
+                    try:
+                        _n393_spy_open = tlog.get("spy_open_chg", tlog.get("regime", {}).get("spy_open_chg", 0) if isinstance(tlog.get("regime"), dict) else 0)
+                        if _n393_spy_open > 0.3:
+                            _n393_s = "strong_open"
+                        elif _n393_spy_open < -0.3:
+                            _n393_s = "weak_open"
+                        else:
+                            _n393_s = "neutral_open"
+                    except Exception:
+                        _n393_s = "neutral_open"
+                    _buy_signals_merged["spy_open_vs_close_perf"] = _n393_s
+                    # N394: Prior day range at entry
+                    try:
+                        _n394_rng = d.get("prev_day_range_pct", d.get("atr_pct", 1.5))
+                        if _n394_rng > 3.0:
+                            _n394_s = "wide_range"
+                        elif _n394_rng < 1.0:
+                            _n394_s = "narrow_range"
+                        else:
+                            _n394_s = "normal_range"
+                    except Exception:
+                        _n394_s = "normal_range"
+                    _buy_signals_merged["prior_day_range_perf"] = _n394_s
+                    # N395: Entry vs sector beta at entry
+                    try:
+                        _n395_beta = d.get("sector_beta", d.get("beta", 1.0))
+                        if _n395_beta > 1.3:
+                            _n395_s = "high_beta_sector"
+                        elif _n395_beta < 0.7:
+                            _n395_s = "low_beta_sector"
+                        else:
+                            _n395_s = "mid_beta_sector"
+                    except Exception:
+                        _n395_s = "mid_beta_sector"
+                    _buy_signals_merged["entry_vs_sector_beta_perf"] = _n395_s
+                    # N396: Market internals quality at entry
+                    try:
+                        _n396_adr = tlog.get("adv_decline_ratio", 1.0)
+                        _n396_mb = tlog.get("market_breadth", 50)
+                        if _n396_adr > 1.5 and _n396_mb > 60:
+                            _n396_s = "strong_internals"
+                        elif _n396_adr < 0.7 or _n396_mb < 35:
+                            _n396_s = "weak_internals"
+                        else:
+                            _n396_s = "neutral_internals"
+                    except Exception:
+                        _n396_s = "neutral_internals"
+                    _buy_signals_merged["market_internals_quality_perf"] = _n396_s
+                    # N397: EMA stack quality at entry
+                    try:
+                        if d.get("ema_stack", False) or (d.get("ema21", 0) > d.get("ema50", 0) > d.get("ema200", 0)):
+                            _n397_s = "full_ema_stack"
+                        elif d.get("ema200", 0) > d.get("ema50", 0):
+                            _n397_s = "ema_stack_broken"
+                        else:
+                            _n397_s = "partial_stack"
+                    except Exception:
+                        _n397_s = "partial_stack"
+                    _buy_signals_merged["ema_stack_quality_perf"] = _n397_s
+                    # N398: Vol expansion at entry
+                    try:
+                        if d.get("vol_expanding", False) or d.get("rvol", 1.0) > 2.0:
+                            _n398_s = "vol_expanding"
+                        elif d.get("rvol", 1.0) < 0.6:
+                            _n398_s = "vol_contracting"
+                        else:
+                            _n398_s = "vol_stable"
+                    except Exception:
+                        _n398_s = "vol_stable"
+                    _buy_signals_merged["vol_expansion_at_entry_perf"] = _n398_s
+                    # N399: News age quality at entry
+                    try:
+                        _n399_age = d.get("news_age_hours", d.get("catalyst_age_h", 999))
+                        if _n399_age < 4:
+                            _n399_s = "fresh_catalyst"
+                        elif _n399_age > 24:
+                            _n399_s = "stale_catalyst"
+                        else:
+                            _n399_s = "recent_catalyst"
+                    except Exception:
+                        _n399_s = "recent_catalyst"
+                    _buy_signals_merged["news_age_quality_perf"] = _n399_s
+                    # N400: Technical score quality at entry
+                    try:
+                        _n400_score = d.get("technical_score", d.get("score", 0))
+                        if _n400_score >= 85:
+                            _n400_s = "elite_technical"
+                        elif _n400_score < 50:
+                            _n400_s = "weak_technical"
+                        else:
+                            _n400_s = "solid_technical"
+                    except Exception:
+                        _n400_s = "solid_technical"
+                    _buy_signals_merged["technical_score_quality_perf"] = _n400_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -25459,6 +25729,86 @@ def run():
             if _hr_n390 and _sr_n390:
                 _learn_log.append(f"N390 risk/reward: high={_hr_n390['win_rate']:.0f}% standard={_sr_n390['win_rate']:.0f}%WR")
 
+        # ── N391: Intraday high quality tuner ────────────────────────────────────────
+        _n391_raw = tlog.get("intraday_high_quality_perf", {})
+        _n391_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n391_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _hr_n391 = next((s for s in _n391_list if s.get("state")=="new_high_breakout"), _n391_list[0] if _n391_list else {"win_rate":50})
+        _sr_n391 = next((s for s in _n391_list if s.get("state")=="mid_range"), _n391_list[-1] if _n391_list else {"win_rate":50})
+        if _n391_list:
+            _learn_log.append(f"N391 intraday high: breakout={_hr_n391['win_rate']:.0f}% mid={_sr_n391['win_rate']:.0f}%WR")
+
+        # ── N392: Sector ETF gap tuner ────────────────────────────────────────────────
+        _n392_raw = tlog.get("sector_etf_gap_perf", {})
+        _n392_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n392_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _gu_n392 = next((s for s in _n392_list if s.get("state")=="sector_gap_up"), _n392_list[0] if _n392_list else {"win_rate":50})
+        _fl_n392 = next((s for s in _n392_list if s.get("state")=="sector_flat"), _n392_list[-1] if _n392_list else {"win_rate":50})
+        if _n392_list:
+            _learn_log.append(f"N392 sector gap: up={_gu_n392['win_rate']:.0f}% flat={_fl_n392['win_rate']:.0f}%WR")
+
+        # ── N393: SPY open vs close tuner ─────────────────────────────────────────────
+        _n393_raw = tlog.get("spy_open_vs_close_perf", {})
+        _n393_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n393_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _so_n393 = next((s for s in _n393_list if s.get("state")=="strong_open"), _n393_list[0] if _n393_list else {"win_rate":50})
+        _no_n393 = next((s for s in _n393_list if s.get("state")=="neutral_open"), _n393_list[-1] if _n393_list else {"win_rate":50})
+        if _n393_list:
+            _learn_log.append(f"N393 SPY open: strong={_so_n393['win_rate']:.0f}% neutral={_no_n393['win_rate']:.0f}%WR")
+
+        # ── N394: Prior day range tuner ───────────────────────────────────────────────
+        _n394_raw = tlog.get("prior_day_range_perf", {})
+        _n394_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n394_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _wr_n394 = next((s for s in _n394_list if s.get("state")=="wide_range"), _n394_list[0] if _n394_list else {"win_rate":50})
+        _nr_n394 = next((s for s in _n394_list if s.get("state")=="normal_range"), _n394_list[-1] if _n394_list else {"win_rate":50})
+        if _n394_list:
+            _learn_log.append(f"N394 prior range: wide={_wr_n394['win_rate']:.0f}% normal={_nr_n394['win_rate']:.0f}%WR")
+
+        # ── N395: Entry vs sector beta tuner ──────────────────────────────────────────
+        _n395_raw = tlog.get("entry_vs_sector_beta_perf", {})
+        _n395_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n395_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _hb_n395 = next((s for s in _n395_list if s.get("state")=="high_beta_sector"), _n395_list[0] if _n395_list else {"win_rate":50})
+        _mb_n395 = next((s for s in _n395_list if s.get("state")=="mid_beta_sector"), _n395_list[-1] if _n395_list else {"win_rate":50})
+        if _n395_list:
+            _learn_log.append(f"N395 sector beta: high={_hb_n395['win_rate']:.0f}% mid={_mb_n395['win_rate']:.0f}%WR")
+
+        # ── N396: Market internals quality tuner ──────────────────────────────────────
+        _n396_raw = tlog.get("market_internals_quality_perf", {})
+        _n396_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n396_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _si_n396 = next((s for s in _n396_list if s.get("state")=="strong_internals"), _n396_list[0] if _n396_list else {"win_rate":50})
+        _ni_n396 = next((s for s in _n396_list if s.get("state")=="neutral_internals"), _n396_list[-1] if _n396_list else {"win_rate":50})
+        if _n396_list:
+            _learn_log.append(f"N396 internals: strong={_si_n396['win_rate']:.0f}% neutral={_ni_n396['win_rate']:.0f}%WR")
+
+        # ── N397: EMA stack quality tuner ─────────────────────────────────────────────
+        _n397_raw = tlog.get("ema_stack_quality_perf", {})
+        _n397_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n397_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _fe_n397 = next((s for s in _n397_list if s.get("state")=="full_ema_stack"), _n397_list[0] if _n397_list else {"win_rate":50})
+        _ps_n397 = next((s for s in _n397_list if s.get("state")=="partial_stack"), _n397_list[-1] if _n397_list else {"win_rate":50})
+        if _n397_list:
+            _learn_log.append(f"N397 EMA stack: full={_fe_n397['win_rate']:.0f}% partial={_ps_n397['win_rate']:.0f}%WR")
+
+        # ── N398: Vol expansion at entry tuner ────────────────────────────────────────
+        _n398_raw = tlog.get("vol_expansion_at_entry_perf", {})
+        _n398_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n398_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _ve_n398 = next((s for s in _n398_list if s.get("state")=="vol_expanding"), _n398_list[0] if _n398_list else {"win_rate":50})
+        _vs_n398 = next((s for s in _n398_list if s.get("state")=="vol_stable"), _n398_list[-1] if _n398_list else {"win_rate":50})
+        if _n398_list:
+            _learn_log.append(f"N398 vol expansion: expanding={_ve_n398['win_rate']:.0f}% stable={_vs_n398['win_rate']:.0f}%WR")
+
+        # ── N399: News age quality tuner ──────────────────────────────────────────────
+        _n399_raw = tlog.get("news_age_quality_perf", {})
+        _n399_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n399_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _fc_n399 = next((s for s in _n399_list if s.get("state")=="fresh_catalyst"), _n399_list[0] if _n399_list else {"win_rate":50})
+        _rc_n399 = next((s for s in _n399_list if s.get("state")=="recent_catalyst"), _n399_list[-1] if _n399_list else {"win_rate":50})
+        if _n399_list:
+            _learn_log.append(f"N399 news age: fresh={_fc_n399['win_rate']:.0f}% recent={_rc_n399['win_rate']:.0f}%WR")
+
+        # ── N400: Technical score quality tuner ───────────────────────────────────────
+        _n400_raw = tlog.get("technical_score_quality_perf", {})
+        _n400_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n400_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _et_n400 = next((s for s in _n400_list if s.get("state")=="elite_technical"), _n400_list[0] if _n400_list else {"win_rate":50})
+        _st_n400 = next((s for s in _n400_list if s.get("state")=="solid_technical"), _n400_list[-1] if _n400_list else {"win_rate":50})
+        if _n400_list:
+            _learn_log.append(f"N400 tech score: elite={_et_n400['win_rate']:.0f}% solid={_st_n400['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -26136,6 +26486,16 @@ def run():
             "regime_spy_alignment_perf":        _n388_insights,   # N388: regime SPY alignment vs outcome
             "entry_time_quality_perf":          _n389_insights,   # N389: entry time quality vs outcome
             "position_risk_reward_entry_perf":  _n390_insights,   # N390: position risk/reward entry vs outcome
+            "intraday_high_quality_perf":       _n391_list,       # N391: intraday high quality vs outcome
+            "sector_etf_gap_perf":              _n392_list,       # N392: sector ETF gap vs outcome
+            "spy_open_vs_close_perf":           _n393_list,       # N393: SPY open vs close vs outcome
+            "prior_day_range_perf":             _n394_list,       # N394: prior day range vs outcome
+            "entry_vs_sector_beta_perf":        _n395_list,       # N395: entry vs sector beta vs outcome
+            "market_internals_quality_perf":    _n396_list,       # N396: market internals quality vs outcome
+            "ema_stack_quality_perf":           _n397_list,       # N397: EMA stack quality vs outcome
+            "vol_expansion_at_entry_perf":      _n398_list,       # N398: vol expansion at entry vs outcome
+            "news_age_quality_perf":            _n399_list,       # N399: news age quality vs outcome
+            "technical_score_quality_perf":     _n400_list,       # N400: technical score quality vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -26386,6 +26746,11 @@ def run():
             "macro_backdrop_perf", "price_vs_ma20_perf",
             "breakout_volume_quality_perf", "regime_spy_alignment_perf",
             "entry_time_quality_perf", "position_risk_reward_entry_perf",
+            "intraday_high_quality_perf", "sector_etf_gap_perf",
+            "spy_open_vs_close_perf", "prior_day_range_perf",
+            "entry_vs_sector_beta_perf", "market_internals_quality_perf",
+            "ema_stack_quality_perf", "vol_expansion_at_entry_perf",
+            "news_age_quality_perf", "technical_score_quality_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -26393,9 +26758,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 350              # total tracked neuron dimensions (N103-N390 complete)
+        tlog["neurons_total"]     = 360              # total tracked neuron dimensions (N103-N400 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/350 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/360 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
