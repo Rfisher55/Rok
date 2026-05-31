@@ -693,19 +693,60 @@ def _run():
     history_path.write_text(json.dumps(_sanitize(history), cls=_Encoder, indent=2), encoding="utf-8")
     logger.info(f"History updated → docs/history.json ({len(history['runs'])} runs)")
 
-    # Write prices.json for JS fallback
+    # Write prices.json for JS fallback — ALWAYS include index ETFs + VIX
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    prices_dict = {}
+    # Start with existing prices.json to preserve any bot-written data (positions, etc.)
+    try:
+        _existing_prices = json.loads((docs_dir / "prices.json").read_text()) if (docs_dir / "prices.json").exists() else {}
+    except Exception:
+        _existing_prices = {}
+    prices_dict = dict(_existing_prices)  # preserve existing (bot positions)
+    # Overwrite with fresh signal data
     for s in stock_data:
         t = s.get("ticker")
-        if t:
+        if t and t:
             prices_dict[t] = {
                 "price": s.get("price"),
                 "change_pct": s.get("change_pct"),
                 "updated": now_iso,
             }
+    # Always fetch and include index ETFs + VIX (most critical for dashboard)
+    try:
+        import yfinance as _yf_rpt
+        _idx_tickers = ["SPY", "QQQ", "DIA", "IWM"]
+        _idx_df = _yf_rpt.download(
+            _idx_tickers, period="5d", interval="1d",
+            auto_adjust=True, progress=False, group_by="ticker", threads=False
+        )
+        for _tk in _idx_tickers:
+            try:
+                if hasattr(_idx_df.columns, "levels"):
+                    _closes = _idx_df[_tk]["Close"].dropna()
+                else:
+                    _closes = _idx_df["Close"].dropna()
+                if len(_closes) >= 1:
+                    _px   = float(_closes.iloc[-1])
+                    _prev = float(_closes.iloc[-2]) if len(_closes) >= 2 else _px
+                    _chg  = round((_px - _prev) / _prev * 100, 2) if _prev else 0
+                    prices_dict[_tk] = {"price": round(_px, 2), "change_pct": _chg, "updated": now_iso}
+            except Exception:
+                pass
+        # VIX
+        _vix_data = _yf_rpt.download("^VIX", period="5d", interval="1d",
+                                      auto_adjust=True, progress=False, threads=False)
+        if not _vix_data.empty:
+            _vix_cls = _vix_data["Close"].dropna()
+            if len(_vix_cls) >= 1:
+                _vx = float(_vix_cls.iloc[-1])
+                _vp = float(_vix_cls.iloc[-2]) if len(_vix_cls) >= 2 else _vx
+                _vc = round((_vx - _vp) / _vp * 100, 2) if _vp else 0
+                prices_dict["^VIX"] = {"price": round(_vx, 2), "change_pct": _vc, "updated": now_iso}
+                prices_dict["VIX"]  = prices_dict["^VIX"]
+    except Exception as _ep:
+        logger.debug(f"Index ETF fetch in report: {_ep}")
+    _idx_found = [k for k in ("SPY","QQQ","DIA","IWM","^VIX") if k in prices_dict]
     (docs_dir / "prices.json").write_text(json.dumps(prices_dict, cls=_Encoder), encoding="utf-8")
-    logger.info(f"Prices written → docs/prices.json ({len(prices_dict)} tickers)")
+    logger.info(f"Prices written → docs/prices.json ({len(prices_dict)} tickers, indices={_idx_found})")
 
     # ── Weekly Bot Performance Report ────────────────────────────────
     try:
