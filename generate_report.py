@@ -335,6 +335,16 @@ def _build_weekly_bot_report(docs_dir):
         "earnings_distance_perf": "N318 Earnings Distance",
         "portfolio_win_rate_trend_perf": "N319 Win Rate Trend",
         "position_size_bucket_perf": "N320 Position Size",
+        "chg_ytd_bucket_perf": "N321 YTD Return",
+        "market_leader_flag_perf": "N322 Market Leader",
+        "macd_cross_state_perf": "N323 MACD Cross",
+        "bb_position_perf": "N324 BB Position",
+        "consecutive_green_days_perf": "N325 Green Streak",
+        "sma50_slope_perf": "N326 SMA50 Slope",
+        "entry_at_support_perf": "N327 Support Bounce",
+        "psar_bull_entry_perf": "N328 PSAR Entry",
+        "adx_trend_strength_perf": "N329 ADX Strength",
+        "volume_trend_3d_perf": "N330 Volume Trend",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
