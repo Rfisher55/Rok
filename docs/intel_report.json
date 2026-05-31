@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-31T20:58:36.974102+00:00",
+  "generated_at": "2026-05-31T22:06:13.812642+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -1080,79 +1080,144 @@
     ],
     [
       "HTTPS",
-      198
+      200
     ],
     [
       "COM",
-      198
+      200
     ],
     [
       "HREF",
-      194
+      196
     ],
     [
       "WWW",
-      161
+      163
     ],
     [
       "CLASS",
-      151
+      150
     ],
     [
       "SC",
-      148
-    ],
-    [
-      "MD",
-      148
+      147
     ],
     [
       "DIV",
-      148
+      147
+    ],
+    [
+      "MD",
+      147
     ],
     [
       "BR",
-      141
-    ],
-    [
-      "USER",
-      138
-    ],
-    [
-      "SPAN",
-      138
+      144
     ],
     [
       "LINK",
-      138
+      142
+    ],
+    [
+      "USER",
+      141
+    ],
+    [
+      "SPAN",
+      141
     ],
     [
       "AMP",
-      104
+      99
     ],
     [
       "AS",
-      92
+      87
     ],
     [
-      "SRC",
-      64
-    ],
-    [
-      "IMG",
-      64
+      "AI",
+      59
     ],
     [
       "WIDTH",
-      64
+      57
     ],
     [
-      "TABLE",
-      63
+      "POST",
+      57
+    ],
+    [
+      "SRC",
+      56
     ]
   ],
   "stocktwits_trending": [],
-  "congressional_buys": [],
+  "congressional_buys": [
+    {
+      "ticker": "GIL",
+      "buy_count": 4,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Gilbert Cisneros",
+      "latest_date": "2026-04-29"
+    },
+    {
+      "ticker": "T",
+      "buy_count": 3,
+      "sell_count": 0,
+      "member_count": 2,
+      "members_preview": "David J. Taylor, Tim Moore",
+      "latest_date": "2026-05-18"
+    },
+    {
+      "ticker": "HD",
+      "buy_count": 3,
+      "sell_count": 1,
+      "member_count": 1,
+      "members_preview": "David J. Taylor",
+      "latest_date": "2026-05-15"
+    },
+    {
+      "ticker": "STE",
+      "buy_count": 3,
+      "sell_count": 0,
+      "member_count": 2,
+      "members_preview": "April Mcclain Delaney, Gilbert Cisneros",
+      "latest_date": "2026-05-01"
+    },
+    {
+      "ticker": "TDG",
+      "buy_count": 3,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "April Mcclain Delaney",
+      "latest_date": "2026-04-29"
+    },
+    {
+      "ticker": "MEDP",
+      "buy_count": 2,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "David J. Taylor",
+      "latest_date": "2026-05-15"
+    },
+    {
+      "ticker": "PH",
+      "buy_count": 2,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "David J. Taylor",
+      "latest_date": "2026-05-15"
+    },
+    {
+      "ticker": "AMD",
+      "buy_count": 2,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Josh Gottheimer",
+      "latest_date": "2026-04-27"
+    }
+  ],
   "insider_buys": [],
   "track_record": [
     {
@@ -1199,67 +1264,6 @@
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-05-31",
-      "timestamp": "2026-05-31T06:21:01.547264",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-05-31",
       "timestamp": "2026-05-31T09:32:54.960941",
@@ -1686,6 +1690,67 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-05-31",
+      "timestamp": "2026-05-31T22:06:12.865062",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": null,
+          "target": null
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
@@ -1697,37 +1762,30 @@
       "tickers": []
     },
     {
-      "title": "Trump praised IBM's 'legend' CEO, government floated a $1B quantum award \u2014 is the stock still a 'very nice price'?",
+      "title": "Keel Infrastructure Corp. (KEEL): Leopold Aschenbrenner Is Buying This Stock",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/trump-praised-ibms-legend-ceo-191000655.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/keel-infrastructure-corp-keel-leopold-213945800.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "T1 Energy Inc. (TE): Leopold Aschenbrenner Reveals New Bet",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/energy/articles/t1-energy-inc-te-leopold-213843251.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "360 Energy Pulse: What mattered this month in energy",
+      "title": "Solaris Energy Infrastructure, Inc. (SEI): Leopold Aschenbrenner Trims Position",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/360-energy-pulse-mattered-month-183019766.html",
+      "url": "https://finance.yahoo.com/sectors/energy/articles/solaris-energy-infrastructure-inc-sei-213727691.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Why rising interest rates haven't crushed stock valuations",
+      "title": "CleanSpark Inc. (CLSK): Leopold Aschenbrenner Is Loading Up on This AI Stock",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/article/why-rising-interest-rates-havent-crushed-stock-valuations-174412488.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "May rewired global energy markets",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/may-rewired-global-energy-markets-163050787.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Another company shuts down Bitcoin treasury",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/another-company-shuts-down-bitcoin-160000343.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/cleanspark-inc-clsk-leopold-aschenbrenner-213631557.html",
       "sentiment": 0.0,
       "tickers": []
     },
@@ -1739,9 +1797,65 @@
       "tickers": []
     },
     {
-      "title": "These gas deals could make summer road trips a lot cheaper",
+      "title": "Riot Platforms Inc. (RIOT): Leopold Aschenbrenner Reaffirms Bullish Stance",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/these-gas-deals-could-make-summer-road-trips-a-lot-cheaper-194922927.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/riot-platforms-inc-riot-leopold-213535503.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Intel Corporation (INTC): Leopold Aschenbrenner Is Not a Big Fan",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/intel-corporation-intc-leopold-aschenbrenner-213452019.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Applied Digital Corporation (APLD): Leopold Aschenbrenner Likes This AI Play",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/applied-digital-corporation-apld-leopold-213349868.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Core Scientific, Inc. (CORZ): Leopold Aschenbrenner Trims Holding",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/core-scientific-inc-corz-leopold-213300983.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Another company shuts down Bitcoin treasury",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/crypto/articles/another-company-shuts-down-bitcoin-160000343.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "IREN Limited (IREN): Leopold Aschenbrenner Has a Bullish View on This Stock",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/iren-limited-iren-leopold-aschenbrenner-213145746.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "ASML Holding N.V. (ASML): Leopold Aschenbrenner Reveals New Position",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/asml-holding-n-v-asml-212915301.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Taiwan Semiconductor Manufacturing (TSM): Leopold Aschenbrenner Takes Bearish View",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/taiwan-semiconductor-manufacturing-tsm-leopold-212817394.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "CoreWeave, Inc. (CRWV): Leopold Aschenbrenner Admires AI Pivot",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/coreweave-inc-crwv-leopold-aschenbrenner-212713223.html",
       "sentiment": 0.0,
       "tickers": []
     },
@@ -1753,149 +1867,100 @@
       "tickers": []
     },
     {
-      "title": "Breakfast giant shuts plant, cuts 100s of workers",
+      "title": "Micron Technology (MU): Leopold Aschenbrenner Unveils Bearish Bet",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/economy/articles/breakfast-giant-shuts-plant-cuts-090300298.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/micron-technology-mu-leopold-aschenbrenner-212624827.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "HELOC and home equity loan rates Sunday, May 31, 2026: Besides great rates, what is a HELOC lender considered the best?",
+      "title": "Sandisk Corporation (SNDK): Leopold Aschenbrenner Is Backing This Memory Firm",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/heloc-home-equity-loan-interest-rates-today-sunday-may-31-2026-100000025.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Mortgage and refinance interest rates today, Sunday, May 31, 2026: Fixed rates edge lower, ARMs remain volatile",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/mortgage-refinance-interest-rates-today-sunday-may-31-2026-100000557.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Best money market account rates today, Sunday, May 31, 2026: Best account provides 4.01% APY",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-money-market-account-rates-today-sunday-may-31-2026-100000836.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Best high-yield savings interest rates today, Sunday, May 31, 2026: Earn up to 4.1% APY",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-high-yield-savings-interest-rates-today-sunday-may-31-2026-100000489.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "A New $21 Million Position Signals Confidence in This Post-IPO Drug Developer",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/healthcare/articles/21-million-position-signals-confidence-203757575.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/sandisk-corporation-sndk-leopold-aschenbrenner-212526893.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Best CD rates today, Sunday, May 31, 2026: Lock in up to 4% APY",
+      "title": "Bloom Energy Corporation (BE): Leopold Aschenbrenner Is a Huge Fan of This Company",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-cd-rates-today-sunday-may-31-2026-100000978.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/bloom-energy-corporation-leopold-aschenbrenner-212437865.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Advanced Micro Devices Inc. (AMD): Leopold Aschenbrenner Has a Bearish View on This Chip Stock",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/advanced-micro-devices-inc-amd-212355475.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "HELOC and home equity loan rates Saturday, May 30, 2026: HELOC rates are low, but may soon rise",
+      "title": "Why a Wealth Manager Made This $155 Million Asset Manager Stake Its Largest Holding",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/heloc-home-equity-loan-interest-rates-today-saturday-may-30-2026-100000325.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-wealth-manager-made-155-214207093.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Broadcom Inc. (AVGO): Leopold Aschenbrenner Reveals Bearish Bet",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/broadcom-inc-avgo-leopold-aschenbrenner-212244011.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Mortgage and refinance interest rates today, Saturday, May 30, 2026: Rates mixed to start the weekend",
+      "title": "Oracle Corporation (ORCL): Leopold Aschenbrenner Is Bearish on This Software Stock",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/mortgage-refinance-interest-rates-today-saturday-may-30-2026-100000280.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/oracle-corporation-orcl-leopold-aschenbrenner-212208197.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Best money market account rates today, Saturday, May 30, 2026: Best account provides 4.01% APY",
+      "title": "NVIDIA Corporation (NVDA): Leopold Aschenbrenner Is Betting Against This AI Giant",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-money-market-account-rates-today-saturday-may-30-2026-100000932.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/nvidia-corporation-nvda-leopold-aschenbrenner-212121469.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "VanEck Semiconductor ETF (SMH): Leopold Aschenbrenner Is Bearish on Chip Stocks",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/vaneck-semiconductor-etf-smh-leopold-212034712.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Nvidia\u2019s $150 billion bet trumps AMD",
+      "title": "Why Redwire Stock Skyrocketed This Week",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/nvidia-150-billion-bet-trumps-203300255.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-redwire-stock-skyrocketed-week-213820962.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Best high-yield savings interest rates today, Saturday, May 30, 2026: Earn up to 4.1% APY",
+      "title": "Berkshire Hathaway Announces First Takeover Since Warren Buffett's Exit",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-high-yield-savings-interest-rates-today-saturday-may-30-2026-100000660.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Best CD rates today, Saturday, May 30, 2026: Best account provides 4% APY",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-cd-rates-today-saturday-may-30-2026-100000443.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Software Was the Market's Big Laggard This Year. Snowflake's Blowout Might Be the Spark That Changes That.",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/software-markets-big-laggard-snowflakes-203100432.html",
+      "url": "https://www.investors.com/news/berkshire-hathaway-to-buy-taylor-morrison-home-8-5-billion-warren-buffett/?src=A00220&yptr=yahoo",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "I'm Thinking About Pulling the Trigger on This Producer of a Mineral Deemed \"Critical\" to the U.S.",
+      "title": "Corning Incorporated (GLW): Leopold Aschenbrenner Discloses New Holding",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/im-thinking-pulling-trigger-producer-203000771.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/corning-incorporated-glw-leopold-aschenbrenner-205513332.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "This $5.5 Million Exit Raises Questions After Wave Life Sciences' Rough First Quarter",
+      "title": "Dow Jones Futures Loom As Trump Makes This Iran Move; Nvidia, Tesla Lead 5 Titans Near Buy Points",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/healthcare/articles/5-5-million-exit-raises-201627078.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "HYPE Flips DOGE: Hyperliquid Cracks Top 10 Crypto As Price Nears $70",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/hype-flips-doge-hyperliquid-cracks-201358132.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "The stock index you invest in isn\u2019t always the most important decision. Here\u2019s what matters even more.",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/stock-index-invest-isn-t-145800517.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Archer Stock a Millionaire Maker?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/archer-stock-millionaire-maker-200500262.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Micron Stock Forecast: Can MU Sustain Its AI-Driven Breakout After Record High?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/micron-stock-forecast-mu-sustain-200124668.html",
+      "url": "https://www.investors.com/market-trend/stock-market-today/dow-jones-futures-iran-hopes-nvidia-tesla-stocks-near-buy-points/?src=A00220&yptr=yahoo",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Grid Modernization and Electrification Power Quanta's Backlog of Nearly $50 Billion",
+      "title": "Trump praised IBM's 'legend' CEO, government floated a $1B quantum award \u2014 is the stock still a 'very nice price'?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/grid-modernization-electrification-power-quantas-194800662.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/trump-praised-ibms-legend-ceo-191000655.html",
       "sentiment": 0.0,
       "tickers": []
     }
@@ -1903,12 +1968,12 @@
   "source_stats": {
     "reddit": 172,
     "news": 243,
-    "stocks": 37,
+    "stocks": 38,
     "sec": 40,
     "earnings_upcoming": 25,
     "unusual_options": 20,
-    "congress_trades": 0,
-    "technical": 10,
+    "congress_trades": 15,
+    "technical": 12,
     "insider_buys": 0
   },
   "buy_count": 7,
