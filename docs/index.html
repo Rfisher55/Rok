@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>if(typeof Chart==='undefined'){document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"><\/script>');}</script>
 <style>
 :root{
   --g:#00ff88;--gd:rgba(0,255,136,.12);--gdd:rgba(0,255,136,.05);
@@ -1436,6 +1437,9 @@ body.beginner-mode #beginner-banner { display:block }
     <div id="sig-profit-calc" style="margin-bottom:.85rem"></div>
 
     <!-- Weekend Brain / Market Closed Panel — shows when market is closed -->
+    <!-- Auto-Trader Status Panel — always visible, updated by loadTradesData -->
+    <div id="autotrader-status-panel" style="margin-bottom:.75rem"></div>
+
     <div id="weekend-brain-panel" style="margin-bottom:.75rem"></div>
 
     <!-- Neural Brain Visualization — shows bot learning state -->
@@ -3177,7 +3181,7 @@ body.beginner-mode #beginner-banner { display:block }
 (function () {
   'use strict';
   const ROK = {};
-  Chart.defaults.animation.duration = 300;
+  if (typeof Chart !== 'undefined') Chart.defaults.animation.duration = 300;
 
   //  LIVE PRICE CACHE 
   const liveprices = Object.create(null); // ticker -> {price, change_pct}
@@ -3729,7 +3733,8 @@ body.beginner-mode #beginner-banner { display:block }
     updateFearGreedFromVIX();
     renderLivePortStrip();
     updateTickerTape();
-    // Re-render weekend panel with fresh live prices
+    // Re-render panels with fresh live prices
+    if (typeof renderAutoTraderStatus === 'function' && _tradesData) renderAutoTraderStatus(_tradesData);
     if (typeof renderWeekendPanel === 'function' && _tradesData) renderWeekendPanel(_tradesData);
     if (btn) { btn.classList.remove('spinning'); }
     flashPriceUpdate();
@@ -7957,6 +7962,88 @@ body.beginner-mode #beginner-banner { display:block }
     while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1);
     return new Date(next.getTime() + etOffsetMs) - now;
   }
+
+  function renderAutoTraderStatus(data) {
+    const el = document.getElementById('autotrader-status-panel');
+    if (!el) return;
+    const positions = data.positions || [];
+    const pv = data.portfolio_value || 0;
+    const bp = data.buying_power || 0;
+    const invested = Math.max(0, pv - bp);
+    const investedPct = pv > 0 ? Math.round(invested / pv * 100) : 0;
+    const totalPnl = positions.reduce((s,p) => s + (p.pnl_usd||0), 0);
+    const pnlCol = totalPnl >= 0 ? '#00e676' : '#ef5350';
+    const pnlSign = totalPnl >= 0 ? '+' : '';
+    const status = data.status || 'active';
+    const mOpen = data.market_open;
+    const lastUpd = data.last_updated ? new Date(data.last_updated) : null;
+    const minsAgo = lastUpd ? Math.round((Date.now() - lastUpd) / 60000) : null;
+    const freshnessCol = minsAgo === null ? '#546e7a' : minsAgo < 10 ? '#00e676' : minsAgo < 30 ? '#ffd54f' : '#ef5350';
+    const freshnessTxt = minsAgo === null ? 'Unknown' : minsAgo < 2 ? 'Just now' : minsAgo < 60 ? `${minsAgo}m ago` : `${Math.floor(minsAgo/60)}h ago`;
+    const statusTxt = mOpen ? '🟢 TRADING LIVE' : status === 'crypto-only' ? '🔵 CRYPTO MODE' : '🌙 MARKET CLOSED';
+    const statusCol = mOpen ? '#00e676' : status === 'crypto-only' ? '#00e5ff' : '#546e7a';
+    const nec = data.next_entry_conditions;
+    const botReady = nec ? nec.ready : false;
+    const metConds = nec ? `${nec.met||0}/${nec.total||7} conditions met` : '';
+    const posRows = positions.slice(0, 6).map(p => {
+      const lp = (typeof liveprices !== 'undefined' ? liveprices[p.ticker] : null) || {};
+      const livePx = lp.price || p.price || p.cost || 0;
+      const isLive = (lp.price||0) > 0 && (p.cost||0) > 0;
+      const pct = isLive ? ((livePx - p.cost) / p.cost * 100) : (p.pnl_pct || 0);
+      const col = pct >= 0 ? '#00e676' : '#ef5350';
+      const pnlU = isLive ? ((livePx - p.cost) * (p.qty||0)) : (p.pnl_usd || 0);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.28rem .5rem;border-radius:6px;background:rgba(255,255,255,.025);margin-bottom:2px;cursor:pointer" onclick="if(typeof openModal==='function')openModal('${p.ticker}')">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span style="font-family:var(--disp);font-size:1rem;font-weight:700;color:#e0e0e0">${p.ticker}</span>
+          <span style="font-size:7px;color:#546e7a">${(p.qty||0).toFixed(0)}sh</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span style="font-size:10px;font-weight:700;color:${col}">${pct>=0?'+':''}${pct.toFixed(2)}%</span>
+          <span style="font-size:8.5px;color:${col};font-weight:600">${pnlU>=0?'+':'-'}$${Math.abs(pnlU).toFixed(0)}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div style="background:linear-gradient(135deg,#060a12,#0a0f1e);border:1.5px solid rgba(0,255,136,.18);border-radius:14px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem 1rem;background:rgba(0,255,136,.05);border-bottom:1px solid rgba(0,255,136,.1)">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="width:7px;height:7px;border-radius:50%;background:${statusCol};flex-shrink:0;${mOpen?'animation:livePulse 1.8s ease infinite':''}"></div>
+          <span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:${statusCol};text-transform:uppercase">${statusTxt}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <span style="font-size:7.5px;color:${freshnessCol};font-weight:700">Data: ${freshnessTxt}</span>
+          ${botReady ? '<span style="font-size:7px;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);color:#00e676;border-radius:8px;padding:2px 6px;font-weight:700">READY TO BUY</span>' : ''}
+        </div>
+      </div>
+      <div style="padding:.6rem 1rem">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.6rem;text-align:center">
+          <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:.4rem .3rem;border:1px solid rgba(255,255,255,.05)">
+            <div style="font-size:7px;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Portfolio</div>
+            <div style="font-size:13px;font-weight:900;color:#82b1ff;font-family:var(--disp)">$${pv.toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+          </div>
+          <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:.4rem .3rem;border:1px solid rgba(255,255,255,.05)">
+            <div style="font-size:7px;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Open P&L</div>
+            <div style="font-size:13px;font-weight:900;color:${pnlCol};font-family:var(--disp)">${pnlSign}$${Math.abs(totalPnl).toFixed(0)}</div>
+          </div>
+          <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:.4rem .3rem;border:1px solid rgba(255,255,255,.05)">
+            <div style="font-size:7px;color:#546e7a;text-transform:uppercase;letter-spacing:.06em">Positions</div>
+            <div style="font-size:13px;font-weight:900;color:#ffd54f;font-family:var(--disp)">${positions.length} <span style="font-size:9px;color:#3a4a5a">/ 12 max</span></div>
+          </div>
+        </div>
+        ${positions.length > 0 ? `
+        <div style="margin-bottom:.45rem">
+          <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem">OPEN POSITIONS — click any to view details</div>
+          ${posRows}
+        </div>` : '<div style="font-size:9px;color:#2a3a4a;margin-bottom:.45rem;padding:.35rem;text-align:center">No positions — 100% cash available</div>'}
+        ${nec && nec.conditions ? `
+        <div style="font-size:7px;color:#3a4a5a;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem">${metConds} — BOT ENTRY CHECKLIST</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">
+          ${nec.conditions.map(c => `<span style="font-size:7.5px;padding:2px 6px;border-radius:5px;font-weight:600;background:${c.ok?'rgba(0,230,118,.08)':'rgba(255,255,255,.03)'};border:1px solid ${c.ok?'rgba(0,230,118,.25)':'rgba(255,255,255,.08)'};color:${c.ok?'#00e676':'#3a4a5a'}">${c.ok?'✓':'✗'} ${c.label}</span>`).join('')}
+        </div>` : ''}
+      </div>
+    </div>`;
+  }
+  window.renderAutoTraderStatus = renderAutoTraderStatus;
 
   function renderWeekendPanel(data) {
     const el = document.getElementById('weekend-brain-panel');
@@ -58272,6 +58359,8 @@ window.renderPositionNews = renderPositionNews;
         }
       } catch(e) {}
 
+      // Auto-trader status (always visible — shows positions + bot readiness)
+      try { if (typeof renderAutoTraderStatus === 'function') renderAutoTraderStatus(data); } catch(e) {}
       // Weekend Brain panel (shows when market is closed)
       try { if (typeof renderWeekendPanel === 'function') renderWeekendPanel(data); } catch(e) {}
       // Neural Brain strip (shows during market hours when learning is active)

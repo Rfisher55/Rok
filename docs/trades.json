@@ -79,10 +79,10 @@
   "buying_power": 127889.66,
   "status": "crypto-only",
   "neurons_active": 52,
-  "neurons_total": 180,
+  "neurons_total": 220,
   "bot_brain_summary": {
     "neurons_active": 52,
-    "neurons_total": 190,
+    "neurons_total": 220,
     "top_signals": [
       "VIX trend",
       "RS Rating",
@@ -136,53 +136,195 @@
   "effective_min_score": 65,
   "smart_alerts": [
     {
-      "type": "performance",
-      "priority": "low",
-      "title": "\u2705 AUTO TRADING ACTIVE",
-      "body": "Bot running 24/7 \u2014 6 positions via Alpaca paper account. 190 neural dimensions tracking market patterns.",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
+      "type": "system",
+      "priority": "high",
+      "title": "\u2705 AUTO-TRADER ACTIVE",
+      "body": "Bot places real trades on your Alpaca paper account. 6 positions open. Runs every 5 min during market hours (Mon-Fri 9:30 AM - 4 PM ET), crypto 24/7.",
+      "time": "2026-05-31T01:11:35.023181+00:00",
+      "action": "Go to Portfolio tab to see your positions"
+    },
+    {
+      "type": "position",
+      "priority": "medium",
+      "title": "\ud83d\udfe2 MSFT: +1.40% (+$168)",
+      "body": "Microsoft (MSFT) \u2014 best performer. 27 shares @ $444.03. Stop: $0.00",
+      "time": "2026-05-31T01:11:35.023181+00:00"
     },
     {
       "type": "position",
       "priority": "low",
-      "title": "\u26aa COIN: -0.26% ()",
-      "body": "Market value $11,969 \u00b7 Bot holding via Alpaca paper account",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
+      "title": "\u26aa PLTR: +0.10% (+$13)",
+      "body": "Palantir (PLTR) \u2014 slight gain. 77 shares @ $156.38.",
+      "time": "2026-05-31T01:11:35.023181+00:00"
     },
     {
       "type": "position",
       "priority": "low",
-      "title": "\ud83d\udfe2 MSFT: +1.40% ()",
-      "body": "Market value $12,168 \u00b7 Bot holding via Alpaca paper account",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
+      "title": "\ud83d\udd34 SOFI: -1.05% (-$126)",
+      "body": "SoFi (SOFI) \u2014 largest loss position. 652 shares @ $18.41. Bot monitoring closely.",
+      "time": "2026-05-31T01:11:35.023181+00:00"
     },
     {
-      "type": "position",
+      "type": "brain",
       "priority": "low",
-      "title": "\u26aa MSTR: -0.62% ()",
-      "body": "Market value $11,925 \u00b7 Bot holding via Alpaca paper account",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
+      "title": "\ud83e\udde0 AI BRAIN: 220 neurons tracked, 52 active",
+      "body": "Bot is learning from every trade. Neurons activate as patterns are confirmed. Currently 52/220 dimensions have seen enough data to form predictions.",
+      "time": "2026-05-31T01:11:35.023181+00:00"
     },
     {
-      "type": "position",
+      "type": "market",
       "priority": "low",
-      "title": "\u26aa PLTR: +0.10% ()",
-      "body": "Market value $12,013 \u00b7 Bot holding via Alpaca paper account",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
-    },
-    {
-      "type": "position",
-      "priority": "low",
-      "title": "\ud83d\udd34 SOFI: -1.05% ()",
-      "body": "Market value $11,874 \u00b7 Bot holding via Alpaca paper account",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
-    },
-    {
-      "type": "position",
-      "priority": "low",
-      "title": "\u26aa TSLA: -0.49% ()",
-      "body": "Market value $11,941 \u00b7 Bot holding via Alpaca paper account",
-      "ts": "2026-05-31T01:28:56.180859+00:00"
+      "title": "\ud83d\udcca MARKET: Neutral regime, VIX 18.5",
+      "body": "SPY above 200-day EMA. Market quality: 55/100. Bot will look for breakouts when market opens Monday.",
+      "time": "2026-05-31T01:11:35.023181+00:00"
     }
-  ]
+  ],
+  "market_open": false,
+  "regime": {
+    "regime": "neutral",
+    "vix": 18.5,
+    "spy_above_200": true,
+    "above_200": true,
+    "spy_rsi": 52.3,
+    "market_quality": 55
+  },
+  "market_quality": 55,
+  "timing_quality": 60,
+  "drawdown_pct": 0.11,
+  "scan_universe": 200,
+  "weekend_watchlist": [
+    {
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "sector": "Technology",
+      "week_chg": 3.2,
+      "score": 81,
+      "catalyst": "AI demand surge"
+    },
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "sector": "Technology",
+      "week_chg": 1.4,
+      "score": 72,
+      "catalyst": "Azure cloud growth"
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple",
+      "sector": "Technology",
+      "week_chg": 0.8,
+      "score": 65,
+      "catalyst": "iPhone cycle"
+    },
+    {
+      "ticker": "META",
+      "name": "Meta",
+      "sector": "Technology",
+      "week_chg": 2.1,
+      "score": 74,
+      "catalyst": "AI ad revenue"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "sector": "EV/Auto",
+      "week_chg": -0.5,
+      "score": 58,
+      "catalyst": "EV delivery numbers"
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "sector": "E-Commerce",
+      "week_chg": 1.7,
+      "score": 70,
+      "catalyst": "AWS growth"
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "sector": "Technology",
+      "week_chg": 1.2,
+      "score": 68,
+      "catalyst": "Search AI integration"
+    },
+    {
+      "ticker": "PLTR",
+      "name": "Palantir",
+      "sector": "AI/Defense",
+      "week_chg": 0.1,
+      "score": 62,
+      "catalyst": "Government contracts"
+    },
+    {
+      "ticker": "COIN",
+      "name": "Coinbase",
+      "sector": "Crypto",
+      "week_chg": -0.3,
+      "score": 59,
+      "catalyst": "Bitcoin ETF flows"
+    },
+    {
+      "ticker": "SOFI",
+      "name": "SoFi",
+      "sector": "Fintech",
+      "week_chg": -1.1,
+      "score": 51,
+      "catalyst": "Student loan activity"
+    }
+  ],
+  "next_entry_conditions": {
+    "conditions": [
+      {
+        "label": "Market Regime",
+        "ok": true,
+        "value": "neutral",
+        "detail": "Need bull or neutral regime"
+      },
+      {
+        "label": "VIX",
+        "ok": true,
+        "value": "18.5",
+        "detail": "Need VIX < 30"
+      },
+      {
+        "label": "Market Quality",
+        "ok": true,
+        "value": "55/100",
+        "detail": "Need \u2265 45/100"
+      },
+      {
+        "label": "Guards",
+        "ok": true,
+        "value": "Clear",
+        "detail": "All session guards must be clear"
+      },
+      {
+        "label": "Position Slots",
+        "ok": true,
+        "value": "6/12",
+        "detail": "Need < 12 open"
+      },
+      {
+        "label": "Score \u2265 55",
+        "ok": false,
+        "value": "Market closed",
+        "detail": "Top pick must score \u2265 55"
+      },
+      {
+        "label": "Breadth",
+        "ok": false,
+        "value": "Market closed",
+        "detail": "Need \u2265 40% stocks advancing"
+      }
+    ],
+    "met": 5,
+    "total": 7,
+    "ready": false,
+    "top_candidate": null,
+    "top_score": 0,
+    "threshold": 55
+  },
+  "last_decision": "MARKET CLOSED \u2014 Bot in crypto-only mode. Will resume equity scanning Mon 9:30 AM ET."
 }
