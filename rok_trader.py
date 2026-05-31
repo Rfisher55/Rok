@@ -3893,6 +3893,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N201: Macro Shock Event ───────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n201 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n201_field = _buy_n201.get("macro_shock_week", "normal_week") if _buy_n201 else "normal_week"
+            _n201_perf = tlog.setdefault("macro_shock_perf", {})
+            _n201p = _n201_perf.setdefault(_n201_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n201_field})
+            _n201p["total"] += 1; _n201p["total_pnl"] = round(_n201p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n201p["wins"] += 1
+            else:        _n201p["losses"] += 1
+            _n201p["win_rate"] = round(_n201p["wins"] / _n201p["total"] * 100, 1)
+            _n201p["avg_pnl"]  = round(_n201p["total_pnl"] / _n201p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N202: Earnings Surprise Direction ────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n202 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n202_field = _buy_n202.get("earnings_surprise_direction", "met_estimate") if _buy_n202 else "met_estimate"
+            _n202_perf = tlog.setdefault("earnings_surprise_direction_perf", {})
+            _n202p = _n202_perf.setdefault(_n202_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n202_field})
+            _n202p["total"] += 1; _n202p["total_pnl"] = round(_n202p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n202p["wins"] += 1
+            else:        _n202p["losses"] += 1
+            _n202p["win_rate"] = round(_n202p["wins"] / _n202p["total"] * 100, 1)
+            _n202p["avg_pnl"]  = round(_n202p["total_pnl"] / _n202p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N203: Trend Age Days ──────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n203 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n203_field = _buy_n203.get("trend_age_bucket", "young_trend") if _buy_n203 else "young_trend"
+            _n203_perf = tlog.setdefault("trend_age_days_perf", {})
+            _n203p = _n203_perf.setdefault(_n203_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n203_field})
+            _n203p["total"] += 1; _n203p["total_pnl"] = round(_n203p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n203p["wins"] += 1
+            else:        _n203p["losses"] += 1
+            _n203p["win_rate"] = round(_n203p["wins"] / _n203p["total"] * 100, 1)
+            _n203p["avg_pnl"]  = round(_n203p["total_pnl"] / _n203p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N204: Distance from 52-Week High ─────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n204 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n204_field = _buy_n204.get("dist_52wk_zone", "middle") if _buy_n204 else "middle"
+            _n204_perf = tlog.setdefault("dist_52wk_high_perf", {})
+            _n204p = _n204_perf.setdefault(_n204_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n204_field})
+            _n204p["total"] += 1; _n204p["total_pnl"] = round(_n204p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n204p["wins"] += 1
+            else:        _n204p["losses"] += 1
+            _n204p["win_rate"] = round(_n204p["wins"] / _n204p["total"] * 100, 1)
+            _n204p["avg_pnl"]  = round(_n204p["total_pnl"] / _n204p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N205: Advance/Decline Ratio ───────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n205 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n205_field = _buy_n205.get("adv_decline_state", "neutral") if _buy_n205 else "neutral"
+            _n205_perf = tlog.setdefault("adv_decline_ratio_perf", {})
+            _n205p = _n205_perf.setdefault(_n205_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n205_field})
+            _n205p["total"] += 1; _n205p["total_pnl"] = round(_n205p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n205p["wins"] += 1
+            else:        _n205p["losses"] += 1
+            _n205p["win_rate"] = round(_n205p["wins"] / _n205p["total"] * 100, 1)
+            _n205p["avg_pnl"]  = round(_n205p["total_pnl"] / _n205p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N206: Option Implied Move ─────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n206 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n206_field = _buy_n206.get("implied_move_tier", "medium_iv") if _buy_n206 else "medium_iv"
+            _n206_perf = tlog.setdefault("option_implied_move_perf", {})
+            _n206p = _n206_perf.setdefault(_n206_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n206_field})
+            _n206p["total"] += 1; _n206p["total_pnl"] = round(_n206p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n206p["wins"] += 1
+            else:        _n206p["losses"] += 1
+            _n206p["win_rate"] = round(_n206p["wins"] / _n206p["total"] * 100, 1)
+            _n206p["avg_pnl"]  = round(_n206p["total_pnl"] / _n206p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N207: Relative Volume Early (first 30 min) ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n207 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n207_field = _buy_n207.get("rvol_early_tier", "normal_open") if _buy_n207 else "normal_open"
+            _n207_perf = tlog.setdefault("relative_volume_early_perf", {})
+            _n207p = _n207_perf.setdefault(_n207_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n207_field})
+            _n207p["total"] += 1; _n207p["total_pnl"] = round(_n207p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n207p["wins"] += 1
+            else:        _n207p["losses"] += 1
+            _n207p["win_rate"] = round(_n207p["wins"] / _n207p["total"] * 100, 1)
+            _n207p["avg_pnl"]  = round(_n207p["total_pnl"] / _n207p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N208: Bond Yield Direction (TLT proxy) ────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n208 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n208_field = _buy_n208.get("bond_yield_direction", "yields_stable") if _buy_n208 else "yields_stable"
+            _n208_perf = tlog.setdefault("bond_yield_direction_perf", {})
+            _n208p = _n208_perf.setdefault(_n208_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n208_field})
+            _n208p["total"] += 1; _n208p["total_pnl"] = round(_n208p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n208p["wins"] += 1
+            else:        _n208p["losses"] += 1
+            _n208p["win_rate"] = round(_n208p["wins"] / _n208p["total"] * 100, 1)
+            _n208p["avg_pnl"]  = round(_n208p["total_pnl"] / _n208p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N209: Social Sentiment Score ─────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n209 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n209_field = _buy_n209.get("social_sentiment_tier", "neutral") if _buy_n209 else "neutral"
+            _n209_perf = tlog.setdefault("social_sentiment_score_perf", {})
+            _n209p = _n209_perf.setdefault(_n209_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n209_field})
+            _n209p["total"] += 1; _n209p["total_pnl"] = round(_n209p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n209p["wins"] += 1
+            else:        _n209p["losses"] += 1
+            _n209p["win_rate"] = round(_n209p["wins"] / _n209p["total"] * 100, 1)
+            _n209p["avg_pnl"]  = round(_n209p["total_pnl"] / _n209p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N210: Put/Call Ratio ──────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n210 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n210_field = _buy_n210.get("put_call_ratio_tier", "neutral_pcr") if _buy_n210 else "neutral_pcr"
+            _n210_perf = tlog.setdefault("put_call_ratio_perf", {})
+            _n210p = _n210_perf.setdefault(_n210_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n210_field})
+            _n210p["total"] += 1; _n210p["total_pnl"] = round(_n210p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n210p["wins"] += 1
+            else:        _n210p["losses"] += 1
+            _n210p["win_rate"] = round(_n210p["wins"] / _n210p["total"] * 100, 1)
+            _n210p["avg_pnl"]  = round(_n210p["total_pnl"] / _n210p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10668,7 +10818,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 160
+            _n_total = tlog.get("neurons_total") or 170
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -14731,6 +14881,100 @@ def run():
                         _buy_signals_merged["institutional_tier"] = _n200_s
                     except Exception:
                         _buy_signals_merged["institutional_tier"] = "retail_grade"
+                    # N201: macro shock event this week (CPI/jobs/Fed surprise or VIX jump)
+                    try:
+                        _n201_shock = bool(_d_buy.get("macro_shock_day", False))
+                        _buy_signals_merged["macro_shock_week"] = "macro_shock_week" if _n201_shock else "normal_week"
+                    except Exception:
+                        _buy_signals_merged["macro_shock_week"] = "normal_week"
+                    # N202: earnings surprise direction
+                    try:
+                        _n202_eps = float(_d_buy.get("eps_surprise_pct", 0) or 0)
+                        if _n202_eps > 5:    _n202_s = "beat_estimate"
+                        elif _n202_eps < -5: _n202_s = "missed_estimate"
+                        else:                _n202_s = "met_estimate"
+                        _buy_signals_merged["earnings_surprise_direction"] = _n202_s
+                    except Exception:
+                        _buy_signals_merged["earnings_surprise_direction"] = "met_estimate"
+                    # N203: trend age days bucket
+                    try:
+                        _n203_days = int(_d_buy.get("trend_age_days", 10) or 10)
+                        if _n203_days < 5:    _n203_s = "fresh_trend"
+                        elif _n203_days < 15: _n203_s = "young_trend"
+                        elif _n203_days < 30: _n203_s = "mature_trend"
+                        else:                 _n203_s = "old_trend"
+                        _buy_signals_merged["trend_age_bucket"] = _n203_s
+                    except Exception:
+                        _buy_signals_merged["trend_age_bucket"] = "young_trend"
+                    # N204: distance from 52-week high zone
+                    try:
+                        _n204_dist = float(_d_buy.get("dist_52wh_pct", 15) or 15)
+                        if _n204_dist < 2:    _n204_s = "new_high_zone"
+                        elif _n204_dist < 10: _n204_s = "near_high"
+                        elif _n204_dist < 25: _n204_s = "middle"
+                        else:                 _n204_s = "extended"
+                        _buy_signals_merged["dist_52wk_zone"] = _n204_s
+                    except Exception:
+                        _buy_signals_merged["dist_52wk_zone"] = "middle"
+                    # N205: NYSE advance/decline ratio at entry
+                    try:
+                        _n205_adr = float(breadth.get("adv_dec_ratio", 1.0) or 1.0)
+                        if _n205_adr > 2.0:   _n205_s = "strong_adv"
+                        elif _n205_adr >= 1.0: _n205_s = "moderate_adv"
+                        elif _n205_adr >= 0.5: _n205_s = "neutral"
+                        else:                  _n205_s = "declining"
+                        _buy_signals_merged["adv_decline_state"] = _n205_s
+                    except Exception:
+                        _buy_signals_merged["adv_decline_state"] = "neutral"
+                    # N206: option implied move tier
+                    try:
+                        _n206_em = float(_d_buy.get("expected_move_pct", 5) or 5)
+                        if _n206_em < 3:    _n206_s = "low_iv"
+                        elif _n206_em < 7:  _n206_s = "medium_iv"
+                        elif _n206_em < 15: _n206_s = "high_iv"
+                        else:               _n206_s = "extreme_iv"
+                        _buy_signals_merged["implied_move_tier"] = _n206_s
+                    except Exception:
+                        _buy_signals_merged["implied_move_tier"] = "medium_iv"
+                    # N207: relative volume early (first 30 min)
+                    try:
+                        _n207_rvol = float(_d_buy.get("rvol_early", 1) or 1)
+                        if _n207_rvol > 3:    _n207_s = "hot_open"
+                        elif _n207_rvol >= 1.5: _n207_s = "active_open"
+                        elif _n207_rvol >= 0.8: _n207_s = "normal_open"
+                        else:                   _n207_s = "quiet_open"
+                        _buy_signals_merged["rvol_early_tier"] = _n207_s
+                    except Exception:
+                        _buy_signals_merged["rvol_early_tier"] = "normal_open"
+                    # N208: bond yield direction (TLT proxy)
+                    try:
+                        _n208_tlt = float(live.get("TLT", {}).get("chg1d", 0) or 0)
+                        if _n208_tlt > 0.3:    _n208_s = "yields_falling"
+                        elif _n208_tlt < -0.3: _n208_s = "yields_rising"
+                        else:                  _n208_s = "yields_stable"
+                        _buy_signals_merged["bond_yield_direction"] = _n208_s
+                    except Exception:
+                        _buy_signals_merged["bond_yield_direction"] = "yields_stable"
+                    # N209: social sentiment score at entry
+                    try:
+                        _n209_sent = float(_d_buy.get("social_sentiment", 0.5) or 0.5)
+                        if _n209_sent > 0.7:   _n209_s = "very_bullish"
+                        elif _n209_sent > 0.5: _n209_s = "bullish"
+                        elif _n209_sent > 0.3: _n209_s = "neutral"
+                        else:                  _n209_s = "bearish"
+                        _buy_signals_merged["social_sentiment_tier"] = _n209_s
+                    except Exception:
+                        _buy_signals_merged["social_sentiment_tier"] = "neutral"
+                    # N210: market-wide put/call ratio
+                    try:
+                        _n210_pcr = float(live.get("SPY", {}).get("pcr", 0.9) or 0.9)
+                        if _n210_pcr > 1.3:   _n210_s = "extreme_bearish_pcr"
+                        elif _n210_pcr >= 1.0: _n210_s = "bearish_pcr"
+                        elif _n210_pcr >= 0.8: _n210_s = "neutral_pcr"
+                        else:                  _n210_s = "bullish_pcr"
+                        _buy_signals_merged["put_call_ratio_tier"] = _n210_s
+                    except Exception:
+                        _buy_signals_merged["put_call_ratio_tier"] = "neutral_pcr"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -18354,6 +18598,116 @@ def run():
             if _t1_n200 and _rg_n200:
                 _learn_log.append(f"N200 inst quality: tier1={_t1_n200['win_rate']:.0f}% retail={_rg_n200['win_rate']:.0f}%WR")
 
+        # ── N201: Macro Shock Event tuner ────────────────────────────────────────────
+        _n201_raw = tlog.get("macro_shock_perf", {})
+        _n201_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n201_raw.items() if v.get("total", 0) >= 2]
+        if _n201_insights:
+            _shock_n201 = next((s for s in _n201_insights if s["state"] == "macro_shock_week"), None)
+            _norm_n201  = next((s for s in _n201_insights if s["state"] == "normal_week"), None)
+            if _shock_n201 and _norm_n201:
+                _learn_log.append(f"N201 macro shock: shock={_shock_n201['win_rate']:.0f}% normal={_norm_n201['win_rate']:.0f}%WR")
+
+        # ── N202: Earnings Surprise Direction tuner ───────────────────────────────────
+        _n202_raw = tlog.get("earnings_surprise_direction_perf", {})
+        _n202_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n202_raw.items() if v.get("total", 0) >= 2]
+        if _n202_insights:
+            _beat_n202 = next((s for s in _n202_insights if s["state"] == "beat_estimate"), None)
+            _miss_n202 = next((s for s in _n202_insights if s["state"] == "missed_estimate"), None)
+            if _beat_n202 and _miss_n202:
+                _learn_log.append(f"N202 eps surprise: beat={_beat_n202['win_rate']:.0f}% miss={_miss_n202['win_rate']:.0f}%WR")
+
+        # ── N203: Trend Age Days tuner ────────────────────────────────────────────────
+        _n203_raw = tlog.get("trend_age_days_perf", {})
+        _n203_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n203_raw.items() if v.get("total", 0) >= 2]
+        if _n203_insights:
+            _best_n203 = max(_n203_insights, key=lambda x: x["win_rate"])
+            _worst_n203 = min(_n203_insights, key=lambda x: x["win_rate"])
+            if len(_n203_insights) >= 2:
+                _learn_log.append(f"N203 trend age: best={_best_n203['state']}({_best_n203['win_rate']:.0f}%) worst={_worst_n203['state']}({_worst_n203['win_rate']:.0f}%)")
+
+        # ── N204: Distance from 52-Week High tuner ────────────────────────────────────
+        _n204_raw = tlog.get("dist_52wk_high_perf", {})
+        _n204_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n204_raw.items() if v.get("total", 0) >= 2]
+        if _n204_insights:
+            _nh_n204 = next((s for s in _n204_insights if s["state"] == "new_high_zone"), None)
+            _ex_n204 = next((s for s in _n204_insights if s["state"] == "extended"), None)
+            if _nh_n204 and _ex_n204:
+                _learn_log.append(f"N204 dist 52wk high: new_high={_nh_n204['win_rate']:.0f}% extended={_ex_n204['win_rate']:.0f}%WR")
+
+        # ── N205: Advance/Decline Ratio tuner ────────────────────────────────────────
+        _n205_raw = tlog.get("adv_decline_ratio_perf", {})
+        _n205_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n205_raw.items() if v.get("total", 0) >= 2]
+        if _n205_insights:
+            _sa_n205 = next((s for s in _n205_insights if s["state"] == "strong_adv"), None)
+            _dc_n205 = next((s for s in _n205_insights if s["state"] == "declining"), None)
+            if _sa_n205 and _dc_n205:
+                _learn_log.append(f"N205 adv/decline: strong={_sa_n205['win_rate']:.0f}% declining={_dc_n205['win_rate']:.0f}%WR")
+
+        # ── N206: Option Implied Move tuner ───────────────────────────────────────────
+        _n206_raw = tlog.get("option_implied_move_perf", {})
+        _n206_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n206_raw.items() if v.get("total", 0) >= 2]
+        if _n206_insights:
+            _best_n206 = max(_n206_insights, key=lambda x: x["win_rate"])
+            _worst_n206 = min(_n206_insights, key=lambda x: x["win_rate"])
+            if len(_n206_insights) >= 2:
+                _learn_log.append(f"N206 implied move: best={_best_n206['state']}({_best_n206['win_rate']:.0f}%) worst={_worst_n206['state']}({_worst_n206['win_rate']:.0f}%)")
+
+        # ── N207: Relative Volume Early tuner ─────────────────────────────────────────
+        _n207_raw = tlog.get("relative_volume_early_perf", {})
+        _n207_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n207_raw.items() if v.get("total", 0) >= 2]
+        if _n207_insights:
+            _hot_n207 = next((s for s in _n207_insights if s["state"] == "hot_open"), None)
+            _qt_n207  = next((s for s in _n207_insights if s["state"] == "quiet_open"), None)
+            if _hot_n207 and _qt_n207:
+                _learn_log.append(f"N207 rvol early: hot={_hot_n207['win_rate']:.0f}% quiet={_qt_n207['win_rate']:.0f}%WR")
+
+        # ── N208: Bond Yield Direction tuner ──────────────────────────────────────────
+        _n208_raw = tlog.get("bond_yield_direction_perf", {})
+        _n208_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n208_raw.items() if v.get("total", 0) >= 2]
+        if _n208_insights:
+            _yf_n208 = next((s for s in _n208_insights if s["state"] == "yields_falling"), None)
+            _yr_n208 = next((s for s in _n208_insights if s["state"] == "yields_rising"), None)
+            if _yf_n208 and _yr_n208:
+                _learn_log.append(f"N208 bond yields: falling={_yf_n208['win_rate']:.0f}% rising={_yr_n208['win_rate']:.0f}%WR")
+
+        # ── N209: Social Sentiment Score tuner ───────────────────────────────────────
+        _n209_raw = tlog.get("social_sentiment_score_perf", {})
+        _n209_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n209_raw.items() if v.get("total", 0) >= 2]
+        if _n209_insights:
+            _vb_n209 = next((s for s in _n209_insights if s["state"] == "very_bullish"), None)
+            _br_n209 = next((s for s in _n209_insights if s["state"] == "bearish"), None)
+            if _vb_n209 and _br_n209:
+                _learn_log.append(f"N209 social sentiment: very_bull={_vb_n209['win_rate']:.0f}% bearish={_br_n209['win_rate']:.0f}%WR")
+
+        # ── N210: Put/Call Ratio tuner ────────────────────────────────────────────────
+        _n210_raw = tlog.get("put_call_ratio_perf", {})
+        _n210_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n210_raw.items() if v.get("total", 0) >= 2]
+        if _n210_insights:
+            _bl_n210 = next((s for s in _n210_insights if s["state"] == "bullish_pcr"), None)
+            _eb_n210 = next((s for s in _n210_insights if s["state"] == "extreme_bearish_pcr"), None)
+            if _bl_n210 and _eb_n210:
+                _learn_log.append(f"N210 put/call ratio: bullish={_bl_n210['win_rate']:.0f}% extreme_bear={_eb_n210['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -18841,6 +19195,16 @@ def run():
             "market_breadth_level_perf": _n198_insights,      # N198: market breadth level vs outcome
             "spy_gap_vs_stock_perf":  _n199_insights,         # N199: SPY gap vs stock gap divergence vs outcome
             "institutional_quality_perf": _n200_insights,     # N200: institutional quality tier vs outcome
+            "macro_shock_perf":           _n201_insights,     # N201: macro shock event week vs outcome
+            "earnings_surprise_direction_perf": _n202_insights, # N202: earnings surprise direction vs outcome
+            "trend_age_days_perf":        _n203_insights,     # N203: trend age days bucket vs outcome
+            "dist_52wk_high_perf":        _n204_insights,     # N204: distance from 52-week high vs outcome
+            "adv_decline_ratio_perf":     _n205_insights,     # N205: NYSE advance/decline ratio vs outcome
+            "option_implied_move_perf":   _n206_insights,     # N206: option implied move tier vs outcome
+            "relative_volume_early_perf": _n207_insights,     # N207: relative volume early (first 30min) vs outcome
+            "bond_yield_direction_perf":  _n208_insights,     # N208: bond yield direction (TLT proxy) vs outcome
+            "social_sentiment_score_perf": _n209_insights,    # N209: social sentiment score vs outcome
+            "put_call_ratio_perf":        _n210_insights,     # N210: market-wide put/call ratio vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -19000,6 +19364,10 @@ def run():
             "volume_vs_avg30_perf", "stock_beta_tier_perf", "price_vs_vwap_perf",
             "seasonal_month_perf", "market_breadth_level_perf", "spy_gap_vs_stock_perf",
             "institutional_quality_perf",
+            "macro_shock_perf", "earnings_surprise_direction_perf", "trend_age_days_perf",
+            "dist_52wk_high_perf", "adv_decline_ratio_perf", "option_implied_move_perf",
+            "relative_volume_early_perf", "bond_yield_direction_perf",
+            "social_sentiment_score_perf", "put_call_ratio_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -19007,9 +19375,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 160              # total tracked neuron dimensions (N103-N200 complete)
+        tlog["neurons_total"]     = 170              # total tracked neuron dimensions (N103-N210 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/160 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/170 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

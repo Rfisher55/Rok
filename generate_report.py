@@ -215,6 +215,16 @@ def _build_weekly_bot_report(docs_dir):
         "market_breadth_level_perf": "N198 Breadth Level",
         "spy_gap_vs_stock_perf": "N199 Gap Diverge",
         "institutional_quality_perf": "N200 Inst Quality",
+        "macro_shock_perf": "N201 Macro Shock",
+        "earnings_surprise_direction_perf": "N202 EPS Surprise",
+        "trend_age_days_perf": "N203 Trend Age",
+        "dist_52wk_high_perf": "N204 Dist 52wk Hi",
+        "adv_decline_ratio_perf": "N205 A/D Ratio",
+        "option_implied_move_perf": "N206 Impl Move",
+        "relative_volume_early_perf": "N207 Early RVOL",
+        "bond_yield_direction_perf": "N208 Bond Yields",
+        "social_sentiment_score_perf": "N209 Social Sent",
+        "put_call_ratio_perf": "N210 Put/Call Ratio",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
