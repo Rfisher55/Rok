@@ -6912,6 +6912,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N401: Relative Strength vs Market Performance ──────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n401 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n401_field = _buy_n401.get("relative_strength_vs_market_perf", "neutral_relative") if _buy_n401 else "neutral_relative"
+            _n401_perf = tlog.setdefault("relative_strength_vs_market_perf", {})
+            _n401p = _n401_perf.setdefault(_n401_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n401_field})
+            _n401p["total"] += 1; _n401p["total_pnl"] = round(_n401p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n401p["wins"] += 1
+            else:        _n401p["losses"] += 1
+            _n401p["win_rate"] = round(_n401p["wins"] / _n401p["total"] * 100, 1)
+            _n401p["avg_pnl"]  = round(_n401p["total_pnl"] / _n401p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N402: Sector Rotation Phase Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n402 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n402_field = _buy_n402.get("sector_rotation_phase_perf", "mid_rotation") if _buy_n402 else "mid_rotation"
+            _n402_perf = tlog.setdefault("sector_rotation_phase_perf", {})
+            _n402p = _n402_perf.setdefault(_n402_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n402_field})
+            _n402p["total"] += 1; _n402p["total_pnl"] = round(_n402p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n402p["wins"] += 1
+            else:        _n402p["losses"] += 1
+            _n402p["win_rate"] = round(_n402p["wins"] / _n402p["total"] * 100, 1)
+            _n402p["avg_pnl"]  = round(_n402p["total_pnl"] / _n402p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N403: Morning Momentum Quality Performance ─────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n403 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n403_field = _buy_n403.get("morning_momentum_quality_perf", "post_open") if _buy_n403 else "post_open"
+            _n403_perf = tlog.setdefault("morning_momentum_quality_perf", {})
+            _n403p = _n403_perf.setdefault(_n403_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n403_field})
+            _n403p["total"] += 1; _n403p["total_pnl"] = round(_n403p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n403p["wins"] += 1
+            else:        _n403p["losses"] += 1
+            _n403p["win_rate"] = round(_n403p["wins"] / _n403p["total"] * 100, 1)
+            _n403p["avg_pnl"]  = round(_n403p["total_pnl"] / _n403p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N404: Volume Profile Entry Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n404 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n404_field = _buy_n404.get("volume_profile_entry_perf", "near_poc") if _buy_n404 else "near_poc"
+            _n404_perf = tlog.setdefault("volume_profile_entry_perf", {})
+            _n404p = _n404_perf.setdefault(_n404_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n404_field})
+            _n404p["total"] += 1; _n404p["total_pnl"] = round(_n404p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n404p["wins"] += 1
+            else:        _n404p["losses"] += 1
+            _n404p["win_rate"] = round(_n404p["wins"] / _n404p["total"] * 100, 1)
+            _n404p["avg_pnl"]  = round(_n404p["total_pnl"] / _n404p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N405: Institutional Flow Quality Performance ───────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n405 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n405_field = _buy_n405.get("institutional_flow_quality_perf", "neutral_inst_flow") if _buy_n405 else "neutral_inst_flow"
+            _n405_perf = tlog.setdefault("institutional_flow_quality_perf", {})
+            _n405p = _n405_perf.setdefault(_n405_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n405_field})
+            _n405p["total"] += 1; _n405p["total_pnl"] = round(_n405p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n405p["wins"] += 1
+            else:        _n405p["losses"] += 1
+            _n405p["win_rate"] = round(_n405p["wins"] / _n405p["total"] * 100, 1)
+            _n405p["avg_pnl"]  = round(_n405p["total_pnl"] / _n405p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N406: Gap Quality Context Performance ─────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n406 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n406_field = _buy_n406.get("gap_quality_context_perf", "no_gap") if _buy_n406 else "no_gap"
+            _n406_perf = tlog.setdefault("gap_quality_context_perf", {})
+            _n406p = _n406_perf.setdefault(_n406_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n406_field})
+            _n406p["total"] += 1; _n406p["total_pnl"] = round(_n406p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n406p["wins"] += 1
+            else:        _n406p["losses"] += 1
+            _n406p["win_rate"] = round(_n406p["wins"] / _n406p["total"] * 100, 1)
+            _n406p["avg_pnl"]  = round(_n406p["total_pnl"] / _n406p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N407: Support Confluence Quality Performance ───────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n407 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n407_field = _buy_n407.get("support_confluence_quality_perf", "single_support") if _buy_n407 else "single_support"
+            _n407_perf = tlog.setdefault("support_confluence_quality_perf", {})
+            _n407p = _n407_perf.setdefault(_n407_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n407_field})
+            _n407p["total"] += 1; _n407p["total_pnl"] = round(_n407p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n407p["wins"] += 1
+            else:        _n407p["losses"] += 1
+            _n407p["win_rate"] = round(_n407p["wins"] / _n407p["total"] * 100, 1)
+            _n407p["avg_pnl"]  = round(_n407p["total_pnl"] / _n407p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N408: Catalyst Quality Tier Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n408 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n408_field = _buy_n408.get("catalyst_quality_tier_perf", "no_catalyst") if _buy_n408 else "no_catalyst"
+            _n408_perf = tlog.setdefault("catalyst_quality_tier_perf", {})
+            _n408p = _n408_perf.setdefault(_n408_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n408_field})
+            _n408p["total"] += 1; _n408p["total_pnl"] = round(_n408p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n408p["wins"] += 1
+            else:        _n408p["losses"] += 1
+            _n408p["win_rate"] = round(_n408p["wins"] / _n408p["total"] * 100, 1)
+            _n408p["avg_pnl"]  = round(_n408p["total_pnl"] / _n408p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N409: Pre-Market Volume Quality Performance ────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n409 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n409_field = _buy_n409.get("pre_market_volume_quality_perf", "moderate_pm_volume") if _buy_n409 else "moderate_pm_volume"
+            _n409_perf = tlog.setdefault("pre_market_volume_quality_perf", {})
+            _n409p = _n409_perf.setdefault(_n409_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n409_field})
+            _n409p["total"] += 1; _n409p["total_pnl"] = round(_n409p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n409p["wins"] += 1
+            else:        _n409p["losses"] += 1
+            _n409p["win_rate"] = round(_n409p["wins"] / _n409p["total"] * 100, 1)
+            _n409p["avg_pnl"]  = round(_n409p["total_pnl"] / _n409p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N410: Conviction Score Tier Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n410 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n410_field = _buy_n410.get("conviction_score_tier_perf", "medium_conviction") if _buy_n410 else "medium_conviction"
+            _n410_perf = tlog.setdefault("conviction_score_tier_perf", {})
+            _n410p = _n410_perf.setdefault(_n410_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n410_field})
+            _n410p["total"] += 1; _n410p["total_pnl"] = round(_n410p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n410p["wins"] += 1
+            else:        _n410p["losses"] += 1
+            _n410p["win_rate"] = round(_n410p["wins"] / _n410p["total"] * 100, 1)
+            _n410p["avg_pnl"]  = round(_n410p["total_pnl"] / _n410p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -13687,7 +13837,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 360
+            _n_total = tlog.get("neurons_total") or 370
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -20031,6 +20181,136 @@ def run():
                     except Exception:
                         _n400_s = "solid_technical"
                     _buy_signals_merged["technical_score_quality_perf"] = _n400_s
+                    # N401: Relative strength vs market at entry
+                    try:
+                        _n401_rs = d.get("rs1", d.get("rs_score", 0))
+                        _n401_chg = d.get("chg_pct", 0)
+                        if _n401_rs > 2.0 and _n401_chg > 0:
+                            _n401_s = "strong_relative"
+                        elif _n401_rs < -1.0:
+                            _n401_s = "weak_relative"
+                        else:
+                            _n401_s = "neutral_relative"
+                    except Exception:
+                        _n401_s = "neutral_relative"
+                    _buy_signals_merged["relative_strength_vs_market_perf"] = _n401_s
+                    # N402: Sector rotation phase at entry
+                    try:
+                        _n402_phase = d.get("sector_rs_phase", "mid")
+                        if _n402_phase == "early":
+                            _n402_s = "early_rotation"
+                        elif _n402_phase == "late":
+                            _n402_s = "late_rotation"
+                        else:
+                            _n402_s = "mid_rotation"
+                    except Exception:
+                        _n402_s = "mid_rotation"
+                    _buy_signals_merged["sector_rotation_phase_perf"] = _n402_s
+                    # N403: Morning momentum quality at entry
+                    try:
+                        _n403_breakout = d.get("orb_breakout", d.get("at_breakout", False))
+                        _n403_hour = tlog.get("entry_hour", 10)
+                        if _n403_breakout and _n403_hour in range(9, 11):
+                            _n403_s = "strong_morning"
+                        elif not _n403_breakout and _n403_hour < 11:
+                            _n403_s = "slow_morning"
+                        else:
+                            _n403_s = "post_open"
+                    except Exception:
+                        _n403_s = "post_open"
+                    _buy_signals_merged["morning_momentum_quality_perf"] = _n403_s
+                    # N404: Volume profile entry at entry
+                    try:
+                        _n404_poc = d.get("poc_dist", d.get("poc_distance_pct", 0))
+                        if _n404_poc > 0.5:
+                            _n404_s = "above_poc"
+                        elif _n404_poc < -0.5:
+                            _n404_s = "below_poc"
+                        else:
+                            _n404_s = "near_poc"
+                    except Exception:
+                        _n404_s = "near_poc"
+                    _buy_signals_merged["volume_profile_entry_perf"] = _n404_s
+                    # N405: Institutional flow quality at entry
+                    try:
+                        _n405_inst = d.get("institutional_quality", False)
+                        _n405_si = d.get("si_pct", 20)
+                        if _n405_inst or d.get("large_block_trades", False):
+                            _n405_s = "strong_inst_flow"
+                        elif _n405_si > 30 and not _n405_inst:
+                            _n405_s = "weak_inst_flow"
+                        else:
+                            _n405_s = "neutral_inst_flow"
+                    except Exception:
+                        _n405_s = "neutral_inst_flow"
+                    _buy_signals_merged["institutional_flow_quality_perf"] = _n405_s
+                    # N406: Gap quality context at entry
+                    try:
+                        _n406_gap_pct = d.get("gap_pct", 0)
+                        _n406_gap_hold = d.get("gap_hold", False)
+                        _n406_rvol = d.get("rvol", 1)
+                        if _n406_gap_hold or (_n406_gap_pct > 1.0 and _n406_rvol > 1.5):
+                            _n406_s = "confirmed_gap"
+                        elif _n406_gap_pct > 0.5 and _n406_rvol < 0.8:
+                            _n406_s = "gap_fade"
+                        else:
+                            _n406_s = "no_gap"
+                    except Exception:
+                        _n406_s = "no_gap"
+                    _buy_signals_merged["gap_quality_context_perf"] = _n406_s
+                    # N407: Support confluence quality at entry
+                    try:
+                        _n407_demand = d.get("demand_zone", False)
+                        _n407_pivot = d.get("pivot_support", False)
+                        _n407_at_sup = d.get("at_support", False)
+                        if _n407_demand and (_n407_pivot or _n407_at_sup):
+                            _n407_s = "strong_support"
+                        elif not _n407_demand and not _n407_pivot:
+                            _n407_s = "weak_support"
+                        else:
+                            _n407_s = "single_support"
+                    except Exception:
+                        _n407_s = "single_support"
+                    _buy_signals_merged["support_confluence_quality_perf"] = _n407_s
+                    # N408: Catalyst quality tier at entry
+                    try:
+                        _n408_cat = d.get("catalyst_type", "")
+                        if _n408_cat in ["earnings_beat", "analyst_upgrade", "major_news"]:
+                            _n408_s = "tier1_catalyst"
+                        elif _n408_cat in ["momentum", "breakout", "technical"]:
+                            _n408_s = "tier2_catalyst"
+                        else:
+                            _n408_s = "no_catalyst"
+                    except Exception:
+                        _n408_s = "no_catalyst"
+                    _buy_signals_merged["catalyst_quality_tier_perf"] = _n408_s
+                    # N409: Pre-market volume quality at entry
+                    try:
+                        _n409_pmvol = d.get("pm_volume", d.get("pm_vol", 0))
+                        _n409_pmvol_pct = d.get("pm_volume_pct", 0)
+                        if _n409_pmvol > 500000 or _n409_pmvol_pct > 0.15:
+                            _n409_s = "high_pm_volume"
+                        elif _n409_pmvol < 50000 and _n409_pmvol_pct < 0.02:
+                            _n409_s = "low_pm_volume"
+                        else:
+                            _n409_s = "moderate_pm_volume"
+                    except Exception:
+                        _n409_s = "moderate_pm_volume"
+                    _buy_signals_merged["pre_market_volume_quality_perf"] = _n409_s
+                    # N410: Conviction score tier at entry
+                    try:
+                        _n410_score = d.get("score", 0)
+                        _n410_rvol = d.get("rvol", 1)
+                        _n410_rs = d.get("rs1", 0)
+                        if _n410_score >= 80 and _n410_rvol > 1.5 and _n410_rs > 1:
+                            _n410_s = "high_conviction"
+                        elif _n410_score < 60:
+                            _n410_s = "low_conviction"
+                        else:
+                            _n410_s = "medium_conviction"
+                    except Exception:
+                        _n410_s = "medium_conviction"
+                    _buy_signals_merged["conviction_score_tier_perf"] = _n410_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -25809,6 +26089,86 @@ def run():
         if _n400_list:
             _learn_log.append(f"N400 tech score: elite={_et_n400['win_rate']:.0f}% solid={_st_n400['win_rate']:.0f}%WR")
 
+        # ── N401: Relative strength vs market tuner ───────────────────────────────────
+        _n401_raw = tlog.get("relative_strength_vs_market_perf", {})
+        _n401_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n401_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _sr_n401 = next((s for s in _n401_list if s.get("state")=="strong_relative"), _n401_list[0] if _n401_list else {"win_rate":50})
+        _nr_n401 = next((s for s in _n401_list if s.get("state")=="neutral_relative"), _n401_list[-1] if _n401_list else {"win_rate":50})
+        if _n401_list:
+            _learn_log.append(f"N401 rel strength: strong={_sr_n401['win_rate']:.0f}% neutral={_nr_n401['win_rate']:.0f}%WR")
+
+        # ── N402: Sector rotation phase tuner ─────────────────────────────────────────
+        _n402_raw = tlog.get("sector_rotation_phase_perf", {})
+        _n402_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n402_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _er_n402 = next((s for s in _n402_list if s.get("state")=="early_rotation"), _n402_list[0] if _n402_list else {"win_rate":50})
+        _mr_n402 = next((s for s in _n402_list if s.get("state")=="mid_rotation"), _n402_list[-1] if _n402_list else {"win_rate":50})
+        if _n402_list:
+            _learn_log.append(f"N402 sector rotation: early={_er_n402['win_rate']:.0f}% mid={_mr_n402['win_rate']:.0f}%WR")
+
+        # ── N403: Morning momentum quality tuner ──────────────────────────────────────
+        _n403_raw = tlog.get("morning_momentum_quality_perf", {})
+        _n403_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n403_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _sm_n403 = next((s for s in _n403_list if s.get("state")=="strong_morning"), _n403_list[0] if _n403_list else {"win_rate":50})
+        _po_n403 = next((s for s in _n403_list if s.get("state")=="post_open"), _n403_list[-1] if _n403_list else {"win_rate":50})
+        if _n403_list:
+            _learn_log.append(f"N403 morning mom: strong={_sm_n403['win_rate']:.0f}% post_open={_po_n403['win_rate']:.0f}%WR")
+
+        # ── N404: Volume profile entry tuner ──────────────────────────────────────────
+        _n404_raw = tlog.get("volume_profile_entry_perf", {})
+        _n404_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n404_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _ap_n404 = next((s for s in _n404_list if s.get("state")=="above_poc"), _n404_list[0] if _n404_list else {"win_rate":50})
+        _np_n404 = next((s for s in _n404_list if s.get("state")=="near_poc"), _n404_list[-1] if _n404_list else {"win_rate":50})
+        if _n404_list:
+            _learn_log.append(f"N404 vol profile: above_poc={_ap_n404['win_rate']:.0f}% near_poc={_np_n404['win_rate']:.0f}%WR")
+
+        # ── N405: Institutional flow quality tuner ────────────────────────────────────
+        _n405_raw = tlog.get("institutional_flow_quality_perf", {})
+        _n405_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n405_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _si_n405 = next((s for s in _n405_list if s.get("state")=="strong_inst_flow"), _n405_list[0] if _n405_list else {"win_rate":50})
+        _ni_n405 = next((s for s in _n405_list if s.get("state")=="neutral_inst_flow"), _n405_list[-1] if _n405_list else {"win_rate":50})
+        if _n405_list:
+            _learn_log.append(f"N405 inst flow: strong={_si_n405['win_rate']:.0f}% neutral={_ni_n405['win_rate']:.0f}%WR")
+
+        # ── N406: Gap quality context tuner ───────────────────────────────────────────
+        _n406_raw = tlog.get("gap_quality_context_perf", {})
+        _n406_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n406_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _cg_n406 = next((s for s in _n406_list if s.get("state")=="confirmed_gap"), _n406_list[0] if _n406_list else {"win_rate":50})
+        _ng_n406 = next((s for s in _n406_list if s.get("state")=="no_gap"), _n406_list[-1] if _n406_list else {"win_rate":50})
+        if _n406_list:
+            _learn_log.append(f"N406 gap quality: confirmed={_cg_n406['win_rate']:.0f}% no_gap={_ng_n406['win_rate']:.0f}%WR")
+
+        # ── N407: Support confluence quality tuner ────────────────────────────────────
+        _n407_raw = tlog.get("support_confluence_quality_perf", {})
+        _n407_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n407_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _ss_n407 = next((s for s in _n407_list if s.get("state")=="strong_support"), _n407_list[0] if _n407_list else {"win_rate":50})
+        _ws_n407 = next((s for s in _n407_list if s.get("state")=="weak_support"), _n407_list[-1] if _n407_list else {"win_rate":50})
+        if _n407_list:
+            _learn_log.append(f"N407 support: strong={_ss_n407['win_rate']:.0f}% weak={_ws_n407['win_rate']:.0f}%WR")
+
+        # ── N408: Catalyst quality tier tuner ─────────────────────────────────────────
+        _n408_raw = tlog.get("catalyst_quality_tier_perf", {})
+        _n408_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n408_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _t1_n408 = next((s for s in _n408_list if s.get("state")=="tier1_catalyst"), _n408_list[0] if _n408_list else {"win_rate":50})
+        _nc_n408 = next((s for s in _n408_list if s.get("state")=="no_catalyst"), _n408_list[-1] if _n408_list else {"win_rate":50})
+        if _n408_list:
+            _learn_log.append(f"N408 catalyst: tier1={_t1_n408['win_rate']:.0f}% none={_nc_n408['win_rate']:.0f}%WR")
+
+        # ── N409: Pre-market volume quality tuner ─────────────────────────────────────
+        _n409_raw = tlog.get("pre_market_volume_quality_perf", {})
+        _n409_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n409_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _hp_n409 = next((s for s in _n409_list if s.get("state")=="high_pm_volume"), _n409_list[0] if _n409_list else {"win_rate":50})
+        _mp_n409 = next((s for s in _n409_list if s.get("state")=="moderate_pm_volume"), _n409_list[-1] if _n409_list else {"win_rate":50})
+        if _n409_list:
+            _learn_log.append(f"N409 PM volume: high={_hp_n409['win_rate']:.0f}% moderate={_mp_n409['win_rate']:.0f}%WR")
+
+        # ── N410: Conviction score tier tuner ─────────────────────────────────────────
+        _n410_raw = tlog.get("conviction_score_tier_perf", {})
+        _n410_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n410_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _hc_n410 = next((s for s in _n410_list if s.get("state")=="high_conviction"), _n410_list[0] if _n410_list else {"win_rate":50})
+        _mc_n410 = next((s for s in _n410_list if s.get("state")=="medium_conviction"), _n410_list[-1] if _n410_list else {"win_rate":50})
+        if _n410_list:
+            _learn_log.append(f"N410 conviction: high={_hc_n410['win_rate']:.0f}% medium={_mc_n410['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -26496,6 +26856,16 @@ def run():
             "vol_expansion_at_entry_perf":      _n398_list,       # N398: vol expansion at entry vs outcome
             "news_age_quality_perf":            _n399_list,       # N399: news age quality vs outcome
             "technical_score_quality_perf":     _n400_list,       # N400: technical score quality vs outcome
+            "relative_strength_vs_market_perf": _n401_list,  # N401: relative strength vs market vs outcome
+            "sector_rotation_phase_perf":       _n402_list,  # N402: sector rotation phase vs outcome
+            "morning_momentum_quality_perf":    _n403_list,  # N403: morning momentum quality vs outcome
+            "volume_profile_entry_perf":        _n404_list,  # N404: volume profile entry vs outcome
+            "institutional_flow_quality_perf":  _n405_list,  # N405: institutional flow quality vs outcome
+            "gap_quality_context_perf":         _n406_list,  # N406: gap quality context vs outcome
+            "support_confluence_quality_perf":  _n407_list,  # N407: support confluence quality vs outcome
+            "catalyst_quality_tier_perf":       _n408_list,  # N408: catalyst quality tier vs outcome
+            "pre_market_volume_quality_perf":   _n409_list,  # N409: pre-market volume quality vs outcome
+            "conviction_score_tier_perf":       _n410_list,  # N410: conviction score tier vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -26751,6 +27121,11 @@ def run():
             "entry_vs_sector_beta_perf", "market_internals_quality_perf",
             "ema_stack_quality_perf", "vol_expansion_at_entry_perf",
             "news_age_quality_perf", "technical_score_quality_perf",
+            "relative_strength_vs_market_perf", "sector_rotation_phase_perf",
+            "morning_momentum_quality_perf", "volume_profile_entry_perf",
+            "institutional_flow_quality_perf", "gap_quality_context_perf",
+            "support_confluence_quality_perf", "catalyst_quality_tier_perf",
+            "pre_market_volume_quality_perf", "conviction_score_tier_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -26758,9 +27133,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 360              # total tracked neuron dimensions (N103-N400 complete)
+        tlog["neurons_total"]     = 370              # total tracked neuron dimensions (N103-N410 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/360 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/370 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
