@@ -4193,6 +4193,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N221: Dollar Index Performance ────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n221 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n221_field = _buy_n221.get("dollar_index_state", "dollar_flat") if _buy_n221 else "dollar_flat"
+            _n221_perf = tlog.setdefault("dollar_index_perf", {})
+            _n221p = _n221_perf.setdefault(_n221_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n221_field})
+            _n221p["total"] += 1; _n221p["total_pnl"] = round(_n221p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n221p["wins"] += 1
+            else:        _n221p["losses"] += 1
+            _n221p["win_rate"] = round(_n221p["wins"] / _n221p["total"] * 100, 1)
+            _n221p["avg_pnl"]  = round(_n221p["total_pnl"] / _n221p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N222: Sector ETF Momentum Performance ─────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n222 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n222_field = _buy_n222.get("sector_etf_momentum_state", "sector_flat") if _buy_n222 else "sector_flat"
+            _n222_perf = tlog.setdefault("sector_etf_momentum_perf", {})
+            _n222p = _n222_perf.setdefault(_n222_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n222_field})
+            _n222p["total"] += 1; _n222p["total_pnl"] = round(_n222p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n222p["wins"] += 1
+            else:        _n222p["losses"] += 1
+            _n222p["win_rate"] = round(_n222p["wins"] / _n222p["total"] * 100, 1)
+            _n222p["avg_pnl"]  = round(_n222p["total_pnl"] / _n222p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N223: Position Count At Entry Performance ──────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n223 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n223_field = _buy_n223.get("position_count_bucket", "few") if _buy_n223 else "few"
+            _n223_perf = tlog.setdefault("position_count_at_entry_perf", {})
+            _n223p = _n223_perf.setdefault(_n223_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n223_field})
+            _n223p["total"] += 1; _n223p["total_pnl"] = round(_n223p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n223p["wins"] += 1
+            else:        _n223p["losses"] += 1
+            _n223p["win_rate"] = round(_n223p["wins"] / _n223p["total"] * 100, 1)
+            _n223p["avg_pnl"]  = round(_n223p["total_pnl"] / _n223p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N224: SPY 5-Day Trend Performance ─────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n224 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n224_field = _buy_n224.get("spy_5d_trend_state", "spy_flat_week") if _buy_n224 else "spy_flat_week"
+            _n224_perf = tlog.setdefault("spy_5d_trend_perf", {})
+            _n224p = _n224_perf.setdefault(_n224_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n224_field})
+            _n224p["total"] += 1; _n224p["total_pnl"] = round(_n224p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n224p["wins"] += 1
+            else:        _n224p["losses"] += 1
+            _n224p["win_rate"] = round(_n224p["wins"] / _n224p["total"] * 100, 1)
+            _n224p["avg_pnl"]  = round(_n224p["total_pnl"] / _n224p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N225: VIX Regime Performance ──────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n225 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n225_field = _buy_n225.get("vix_regime_state", "normal") if _buy_n225 else "normal"
+            _n225_perf = tlog.setdefault("vix_regime_perf", {})
+            _n225p = _n225_perf.setdefault(_n225_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n225_field})
+            _n225p["total"] += 1; _n225p["total_pnl"] = round(_n225p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n225p["wins"] += 1
+            else:        _n225p["losses"] += 1
+            _n225p["win_rate"] = round(_n225p["wins"] / _n225p["total"] * 100, 1)
+            _n225p["avg_pnl"]  = round(_n225p["total_pnl"] / _n225p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N226: Entry Hour Bucket Performance ───────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n226 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n226_field = _buy_n226.get("entry_hour_bucket", "other_hours") if _buy_n226 else "other_hours"
+            _n226_perf = tlog.setdefault("entry_hour_bucket_perf", {})
+            _n226p = _n226_perf.setdefault(_n226_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n226_field})
+            _n226p["total"] += 1; _n226p["total_pnl"] = round(_n226p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n226p["wins"] += 1
+            else:        _n226p["losses"] += 1
+            _n226p["win_rate"] = round(_n226p["wins"] / _n226p["total"] * 100, 1)
+            _n226p["avg_pnl"]  = round(_n226p["total_pnl"] / _n226p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N227: Consecutive Wins Performance ────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n227 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n227_field = _buy_n227.get("consec_wins_bucket", "neutral") if _buy_n227 else "neutral"
+            _n227_perf = tlog.setdefault("consecutive_wins_perf", {})
+            _n227p = _n227_perf.setdefault(_n227_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n227_field})
+            _n227p["total"] += 1; _n227p["total_pnl"] = round(_n227p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n227p["wins"] += 1
+            else:        _n227p["losses"] += 1
+            _n227p["win_rate"] = round(_n227p["wins"] / _n227p["total"] * 100, 1)
+            _n227p["avg_pnl"]  = round(_n227p["total_pnl"] / _n227p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N228: Market Open Momentum Performance ────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n228 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n228_field = _buy_n228.get("market_open_momentum_state", "neutral_open") if _buy_n228 else "neutral_open"
+            _n228_perf = tlog.setdefault("market_open_momentum_perf", {})
+            _n228p = _n228_perf.setdefault(_n228_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n228_field})
+            _n228p["total"] += 1; _n228p["total_pnl"] = round(_n228p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n228p["wins"] += 1
+            else:        _n228p["losses"] += 1
+            _n228p["win_rate"] = round(_n228p["wins"] / _n228p["total"] * 100, 1)
+            _n228p["avg_pnl"]  = round(_n228p["total_pnl"] / _n228p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N229: SPY vs VIX Divergence Performance ───────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n229 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n229_field = _buy_n229.get("spy_vix_diverge_state", "normal_negative") if _buy_n229 else "normal_negative"
+            _n229_perf = tlog.setdefault("spy_vs_vix_diverge_perf", {})
+            _n229p = _n229_perf.setdefault(_n229_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n229_field})
+            _n229p["total"] += 1; _n229p["total_pnl"] = round(_n229p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n229p["wins"] += 1
+            else:        _n229p["losses"] += 1
+            _n229p["win_rate"] = round(_n229p["wins"] / _n229p["total"] * 100, 1)
+            _n229p["avg_pnl"]  = round(_n229p["total_pnl"] / _n229p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N230: Ticker Prior Day Gap Performance ────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n230 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n230_field = _buy_n230.get("prior_day_gap_state", "flat_open") if _buy_n230 else "flat_open"
+            _n230_perf = tlog.setdefault("ticker_prior_day_gap_perf", {})
+            _n230p = _n230_perf.setdefault(_n230_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n230_field})
+            _n230p["total"] += 1; _n230p["total_pnl"] = round(_n230p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n230p["wins"] += 1
+            else:        _n230p["losses"] += 1
+            _n230p["win_rate"] = round(_n230p["wins"] / _n230p["total"] * 100, 1)
+            _n230p["avg_pnl"]  = round(_n230p["total_pnl"] / _n230p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10968,7 +11118,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 180
+            _n_total = tlog.get("neurons_total") or 190
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -15254,6 +15404,122 @@ def run():
                         _buy_signals_merged["duration_target"] = _n220_s
                     except Exception:
                         _buy_signals_merged["duration_target"] = "swing_target"
+                    # N221: dollar index performance (UUP ETF 5d change)
+                    try:
+                        _n221_uup = float(live.get("UUP", {}).get("chg5d", 0) or 0)
+                        if _n221_uup > 0.5:    _n221_s = "dollar_strong"
+                        elif _n221_uup < -0.5: _n221_s = "dollar_weak"
+                        else:                   _n221_s = "dollar_flat"
+                        _buy_signals_merged["dollar_index_state"] = _n221_s
+                    except Exception:
+                        _buy_signals_merged["dollar_index_state"] = "dollar_flat"
+                    # N222: sector ETF momentum (ticker's sector ETF 5d change)
+                    try:
+                        _SECTOR_ETF_MAP = {"tech":"XLK","fin":"XLF","energy":"XLE","health":"XLV",
+                                           "industrial":"XLI","consumer":"XLY","staples":"XLP",
+                                           "real_estate":"XLRE","materials":"XLB","utilities":"XLU",
+                                           "comms":"XLC"}
+                        _n222_sec = SECTOR_MAP.get(tk, "other")
+                        _n222_etf = _SECTOR_ETF_MAP.get(_n222_sec, None)
+                        _n222_chg = float(live.get(_n222_etf, {}).get("chg5d", 0) or 0) if _n222_etf else 0.0
+                        if _n222_chg > 1.0:    _n222_s = "sector_up"
+                        elif _n222_chg < -1.0: _n222_s = "sector_down"
+                        else:                   _n222_s = "sector_flat"
+                        _buy_signals_merged["sector_etf_momentum_state"] = _n222_s
+                    except Exception:
+                        _buy_signals_merged["sector_etf_momentum_state"] = "sector_flat"
+                    # N223: position count at entry (how many positions open when trade entered)
+                    try:
+                        _n223_ct = len(tlog.get("positions", []))
+                        if _n223_ct <= 1:   _n223_s = "solo"
+                        elif _n223_ct <= 3: _n223_s = "few"
+                        else:               _n223_s = "crowded"
+                        _buy_signals_merged["position_count_bucket"] = _n223_s
+                    except Exception:
+                        _buy_signals_merged["position_count_bucket"] = "few"
+                    # N224: SPY 5-day trend direction
+                    try:
+                        _n224_spy5d = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                        if _n224_spy5d > 1.5:    _n224_s = "spy_up_week"
+                        elif _n224_spy5d < -1.5: _n224_s = "spy_down_week"
+                        else:                     _n224_s = "spy_flat_week"
+                        _buy_signals_merged["spy_5d_trend_state"] = _n224_s
+                    except Exception:
+                        _buy_signals_merged["spy_5d_trend_state"] = "spy_flat_week"
+                    # N225: VIX regime at entry
+                    try:
+                        _n225_vix = float(live.get("VIX", {}).get("price", 18) or 18)
+                        if _n225_vix < 12:       _n225_s = "ultra_low"
+                        elif _n225_vix < 16:     _n225_s = "low"
+                        elif _n225_vix < 20:     _n225_s = "normal"
+                        elif _n225_vix < 25:     _n225_s = "elevated"
+                        elif _n225_vix < 35:     _n225_s = "fear"
+                        else:                     _n225_s = "panic"
+                        _buy_signals_merged["vix_regime_state"] = _n225_s
+                    except Exception:
+                        _buy_signals_merged["vix_regime_state"] = "normal"
+                    # N226: entry hour bucket (ET hour of day when trade entered)
+                    try:
+                        _n226_hr = datetime.now(timezone.utc).hour - 4  # rough ET conversion
+                        _n226_hr = max(9, min(16, _n226_hr))
+                        if _n226_hr == 9:              _n226_s = "open_rush"
+                        elif _n226_hr == 10:           _n226_s = "mid_morning"
+                        elif _n226_hr in (11, 12, 13): _n226_s = "midday"
+                        elif _n226_hr in (15, 16):     _n226_s = "power_hour"
+                        else:                           _n226_s = "other_hours"
+                        _buy_signals_merged["entry_hour_bucket"] = _n226_s
+                    except Exception:
+                        _buy_signals_merged["entry_hour_bucket"] = "other_hours"
+                    # N227: consecutive wins before this entry
+                    try:
+                        _n227_trades = tlog.get("trades", [])[:10]
+                        _n227_wins = 0
+                        for _t227 in reversed(_n227_trades):
+                            if _t227.get("action") not in ("SELL","SELL_HALF","COVER"):
+                                continue
+                            if (_t227.get("pnl_pct") or 0) > 0:
+                                _n227_wins += 1
+                            else:
+                                break
+                        if _n227_wins >= 3:   _n227_s = "hot_streak"
+                        elif _n227_wins >= 1: _n227_s = "positive"
+                        else:                  _n227_s = "neutral"
+                        _buy_signals_merged["consec_wins_bucket"] = _n227_s
+                    except Exception:
+                        _buy_signals_merged["consec_wins_bucket"] = "neutral"
+                    # N228: market open momentum (SPY direction in first 30 min)
+                    try:
+                        _n228_spy1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                        _n228_hr_et = datetime.now(timezone.utc).hour - 4
+                        _n228_early = _n228_hr_et < 10 or (_n228_hr_et == 10 and datetime.now(timezone.utc).minute < 30)
+                        if _n228_early and _n228_spy1d > 0.5:      _n228_s = "strong_open"
+                        elif _n228_early and _n228_spy1d < -0.5:   _n228_s = "weak_open"
+                        else:                                        _n228_s = "neutral_open"
+                        _buy_signals_merged["market_open_momentum_state"] = _n228_s
+                    except Exception:
+                        _buy_signals_merged["market_open_momentum_state"] = "neutral_open"
+                    # N229: SPY vs VIX divergence (both up = unusual risk signal)
+                    try:
+                        _n229_spy = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                        _n229_vix_chg = float(live.get("VIX", {}).get("chg1d", 0) or 0)
+                        if _n229_spy > 0.3 and _n229_vix_chg > 5.0:      _n229_s = "both_up"
+                        elif _n229_spy > 0 and _n229_vix_chg <= 0:        _n229_s = "normal_positive"
+                        elif _n229_spy < -0.3 and _n229_vix_chg < -5.0:  _n229_s = "diverge_down"
+                        else:                                               _n229_s = "normal_negative"
+                        _buy_signals_merged["spy_vix_diverge_state"] = _n229_s
+                    except Exception:
+                        _buy_signals_merged["spy_vix_diverge_state"] = "normal_negative"
+                    # N230: ticker prior day gap (chg1d as proxy for gap at open)
+                    try:
+                        _n230_chg = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        if _n230_chg > 3.0:                          _n230_s = "gap_up_big"
+                        elif _n230_chg > 0.5:                        _n230_s = "gap_up_small"
+                        elif _n230_chg >= -0.5:                      _n230_s = "flat_open"
+                        elif _n230_chg >= -3.0:                      _n230_s = "gap_down_small"
+                        else:                                         _n230_s = "gap_down_big"
+                        _buy_signals_merged["prior_day_gap_state"] = _n230_s
+                    except Exception:
+                        _buy_signals_merged["prior_day_gap_state"] = "flat_open"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -19092,6 +19358,112 @@ def run():
             _best_n220 = max(_n220_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N220 duration target: best={_best_n220['state']}({_best_n220['win_rate']:.0f}%WR avg={_best_n220['avg_pnl']:+.2f}%)")
 
+        # ── N221: Dollar Index tuner ───────────────────────────────────────────────
+        _n221_raw = tlog.get("dollar_index_perf", {})
+        _n221_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n221_raw.items() if v.get("total", 0) >= 2]
+        if _n221_insights:
+            _ds_n221 = next((s for s in _n221_insights if s["state"] == "dollar_strong"), None)
+            _dw_n221 = next((s for s in _n221_insights if s["state"] == "dollar_weak"), None)
+            if _ds_n221 and _dw_n221:
+                _learn_log.append(f"N221 dollar: strong={_ds_n221['win_rate']:.0f}% weak={_dw_n221['win_rate']:.0f}%WR")
+
+        # ── N222: Sector ETF Momentum tuner ───────────────────────────────────────
+        _n222_raw = tlog.get("sector_etf_momentum_perf", {})
+        _n222_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n222_raw.items() if v.get("total", 0) >= 2]
+        if _n222_insights:
+            _su_n222 = next((s for s in _n222_insights if s["state"] == "sector_up"), None)
+            _sd_n222 = next((s for s in _n222_insights if s["state"] == "sector_down"), None)
+            if _su_n222 and _sd_n222:
+                _learn_log.append(f"N222 sector ETF mom: up={_su_n222['win_rate']:.0f}% down={_sd_n222['win_rate']:.0f}%WR")
+
+        # ── N223: Position Count At Entry tuner ───────────────────────────────────
+        _n223_raw = tlog.get("position_count_at_entry_perf", {})
+        _n223_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n223_raw.items() if v.get("total", 0) >= 2]
+        if _n223_insights:
+            _so_n223 = next((s for s in _n223_insights if s["state"] == "solo"), None)
+            _cr_n223 = next((s for s in _n223_insights if s["state"] == "crowded"), None)
+            if _so_n223 and _cr_n223:
+                _learn_log.append(f"N223 pos count: solo={_so_n223['win_rate']:.0f}% crowded={_cr_n223['win_rate']:.0f}%WR")
+
+        # ── N224: SPY 5-Day Trend tuner ───────────────────────────────────────────
+        _n224_raw = tlog.get("spy_5d_trend_perf", {})
+        _n224_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n224_raw.items() if v.get("total", 0) >= 2]
+        if _n224_insights:
+            _su_n224 = next((s for s in _n224_insights if s["state"] == "spy_up_week"), None)
+            _sd_n224 = next((s for s in _n224_insights if s["state"] == "spy_down_week"), None)
+            if _su_n224 and _sd_n224:
+                _learn_log.append(f"N224 SPY 5d: up={_su_n224['win_rate']:.0f}% down={_sd_n224['win_rate']:.0f}%WR")
+
+        # ── N225: VIX Regime tuner ────────────────────────────────────────────────
+        _n225_raw = tlog.get("vix_regime_perf", {})
+        _n225_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n225_raw.items() if v.get("total", 0) >= 2]
+        if _n225_insights:
+            _best_n225 = max(_n225_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N225 VIX regime: best={_best_n225['state']}({_best_n225['win_rate']:.0f}%WR)")
+
+        # ── N226: Entry Hour Bucket tuner ─────────────────────────────────────────
+        _n226_raw = tlog.get("entry_hour_bucket_perf", {})
+        _n226_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n226_raw.items() if v.get("total", 0) >= 2]
+        if _n226_insights:
+            _best_n226 = max(_n226_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N226 entry hour: best={_best_n226['state']}({_best_n226['win_rate']:.0f}%WR)")
+
+        # ── N227: Consecutive Wins tuner ──────────────────────────────────────────
+        _n227_raw = tlog.get("consecutive_wins_perf", {})
+        _n227_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n227_raw.items() if v.get("total", 0) >= 2]
+        if _n227_insights:
+            _hs_n227 = next((s for s in _n227_insights if s["state"] == "hot_streak"), None)
+            _nt_n227 = next((s for s in _n227_insights if s["state"] == "neutral"), None)
+            if _hs_n227 and _nt_n227:
+                _learn_log.append(f"N227 consec wins: streak={_hs_n227['win_rate']:.0f}% neutral={_nt_n227['win_rate']:.0f}%WR")
+
+        # ── N228: Market Open Momentum tuner ──────────────────────────────────────
+        _n228_raw = tlog.get("market_open_momentum_perf", {})
+        _n228_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n228_raw.items() if v.get("total", 0) >= 2]
+        if _n228_insights:
+            _so_n228 = next((s for s in _n228_insights if s["state"] == "strong_open"), None)
+            _wo_n228 = next((s for s in _n228_insights if s["state"] == "weak_open"), None)
+            if _so_n228 and _wo_n228:
+                _learn_log.append(f"N228 open mom: strong={_so_n228['win_rate']:.0f}% weak={_wo_n228['win_rate']:.0f}%WR")
+
+        # ── N229: SPY vs VIX Divergence tuner ────────────────────────────────────
+        _n229_raw = tlog.get("spy_vs_vix_diverge_perf", {})
+        _n229_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n229_raw.items() if v.get("total", 0) >= 2]
+        if _n229_insights:
+            _bu_n229 = next((s for s in _n229_insights if s["state"] == "both_up"), None)
+            _np_n229 = next((s for s in _n229_insights if s["state"] == "normal_positive"), None)
+            if _bu_n229 and _np_n229:
+                _learn_log.append(f"N229 SPY/VIX diverge: both_up={_bu_n229['win_rate']:.0f}% normal={_np_n229['win_rate']:.0f}%WR")
+
+        # ── N230: Ticker Prior Day Gap tuner ──────────────────────────────────────
+        _n230_raw = tlog.get("ticker_prior_day_gap_perf", {})
+        _n230_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n230_raw.items() if v.get("total", 0) >= 2]
+        if _n230_insights:
+            _gu_n230 = next((s for s in _n230_insights if s["state"] == "gap_up_big"), None)
+            _gd_n230 = next((s for s in _n230_insights if s["state"] == "gap_down_big"), None)
+            if _gu_n230 and _gd_n230:
+                _learn_log.append(f"N230 prior gap: gap_up={_gu_n230['win_rate']:.0f}% gap_down={_gd_n230['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -19599,6 +19971,16 @@ def run():
             "cross_asset_momentum_perf":  _n218_insights,     # N218: cross-asset momentum sync vs outcome
             "technical_pattern_strength_perf": _n219_insights, # N219: technical pattern strength tier vs outcome
             "position_duration_target_perf": _n220_insights,  # N220: position duration target vs outcome
+            "dollar_index_perf":          _n221_insights,     # N221: DXY/dollar trend (UUP ETF) vs outcome
+            "sector_etf_momentum_perf":   _n222_insights,     # N222: sector ETF 5d momentum vs outcome
+            "position_count_at_entry_perf": _n223_insights,   # N223: number of open positions at entry vs outcome
+            "spy_5d_trend_perf":          _n224_insights,     # N224: SPY 5-day trend direction vs outcome
+            "vix_regime_perf":            _n225_insights,     # N225: VIX regime bucket at entry vs outcome
+            "entry_hour_bucket_perf":     _n226_insights,     # N226: ET hour bucket when trade entered vs outcome
+            "consecutive_wins_perf":      _n227_insights,     # N227: consecutive wins streak before entry vs outcome
+            "market_open_momentum_perf":  _n228_insights,     # N228: SPY direction in first 30 min of session vs outcome
+            "spy_vs_vix_diverge_perf":    _n229_insights,     # N229: SPY/VIX divergence signal vs outcome
+            "ticker_prior_day_gap_perf":  _n230_insights,     # N230: ticker prior day gap at open vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -19766,6 +20148,10 @@ def run():
             "entry_premium_count_perf", "daily_drawdown_state_perf", "adv_decline_line_perf",
             "yield_curve_perf", "cross_asset_momentum_perf",
             "technical_pattern_strength_perf", "position_duration_target_perf",
+            "dollar_index_perf", "sector_etf_momentum_perf", "position_count_at_entry_perf",
+            "spy_5d_trend_perf", "vix_regime_perf", "entry_hour_bucket_perf",
+            "consecutive_wins_perf", "market_open_momentum_perf",
+            "spy_vs_vix_diverge_perf", "ticker_prior_day_gap_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -19773,9 +20159,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 180              # total tracked neuron dimensions (N103-N220 complete)
+        tlog["neurons_total"]     = 190              # total tracked neuron dimensions (N103-N230 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/180 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/190 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

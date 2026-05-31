@@ -235,6 +235,16 @@ def _build_weekly_bot_report(docs_dir):
         "cross_asset_momentum_perf": "N218 Cross Asset",
         "technical_pattern_strength_perf": "N219 Pattern Str",
         "position_duration_target_perf": "N220 Duration Target",
+        "dollar_index_perf": "N221 Dollar Index",
+        "sector_etf_momentum_perf": "N222 Sector ETF Mom",
+        "position_count_at_entry_perf": "N223 Pos Count",
+        "spy_5d_trend_perf": "N224 SPY 5d Trend",
+        "vix_regime_perf": "N225 VIX Regime",
+        "entry_hour_bucket_perf": "N226 Entry Hour",
+        "consecutive_wins_perf": "N227 Consec Wins",
+        "market_open_momentum_perf": "N228 Open Momentum",
+        "spy_vs_vix_diverge_perf": "N229 SPY/VIX Div",
+        "ticker_prior_day_gap_perf": "N230 Prior Day Gap",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
