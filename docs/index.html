@@ -61223,7 +61223,7 @@ window.renderPositionNews = renderPositionNews;
           const wrCol = recentWR >= 0.6 ? '#00e676' : recentWR >= 0.5 ? '#ffd54f' : recentWR >= 0.4 ? '#ff9800' : '#ef5350';
           const modeIcon = stratMode.includes('AGGRESSIVE') ? '⚡' : stratMode.includes('MOMENTUM') ? '↑' : stratMode.includes('SELECTIVE') ? '~' : stratMode.includes('DEFENSIVE') ? '⬇' : '⏸';
           // Learning observations from the last tuning run
-          const learnItems = learnLog.slice(0, 4).map(l =>
+          const learnItems = learnLog.slice(0, 6).map(l =>
             `<div style="font-size:6px;color:rgba(255,255,255,.4);padding:1px 0;border-left:2px solid rgba(0,229,255,.2);padding-left:.4rem;margin-bottom:1px">${l}</div>`
           ).join('');
           // Session quality indicator for N104
@@ -61294,6 +61294,56 @@ window.renderPositionNews = renderPositionNews;
                 <span style="font-size:6px;color:#ffd54f">Best entry session learned: <strong style="color:#00e676">${bestSess.state||'—'}</strong> (${(bestSess.win_rate||0).toFixed(0)}% WR)</span>
                 ${bestVix ? `<span style="font-size:6px;color:#ffd54f"> · Best VIX bracket: <strong style="color:#00e676">${bestVix.state||'—'}</strong> (${(bestVix.win_rate||0).toFixed(0)}% WR)</span>` : ''}
               </div>` : ''}
+              ${(() => {
+                const lp = data.bot_learned_params || {};
+                // N152 VIX trend
+                const vixTrendPerf = lp.vix_trend_perf || [];
+                const vixFall = vixTrendPerf.find(s=>s.state==='vix_falling');
+                const vixRise = vixTrendPerf.find(s=>s.state==='vix_rising');
+                // N170 risk rotation
+                const riskRotPerf = lp.risk_rotation_perf || [];
+                const riskOn = riskRotPerf.find(s=>s.state==='risk_on');
+                const riskOff = riskRotPerf.find(s=>s.state==='risk_off');
+                // N169 breadth direction
+                const breadthDirPerf = lp.breadth_direction_perf || [];
+                const breadthImp = breadthDirPerf.find(s=>s.state==='breadth_improving');
+                const breadthWrs = breadthDirPerf.find(s=>s.state==='breadth_worsening');
+                // N151 best day
+                const dowPerf = lp.entry_dow_perf || [];
+                const bestDow = dowPerf.length > 0 ? dowPerf.reduce((a,b)=>(a.win_rate||0)>(b.win_rate||0)?a:b, {}) : null;
+                const worstDow = dowPerf.length > 0 ? dowPerf.reduce((a,b)=>(a.win_rate||0)<(b.win_rate||0)?a:b, {}) : null;
+                // N158 best catalyst type
+                const catPerf = lp.catalyst_type_perf || [];
+                const bestCat = catPerf.length > 0 ? catPerf.reduce((a,b)=>(a.win_rate||0)>(b.win_rate||0)?a:b, {}) : null;
+                // N160 breakout age
+                const bkAgePerf = lp.breakout_age_perf || [];
+                const bkDay1 = bkAgePerf.find(s=>s.state==='day1');
+                // N162 streak
+                const streakPerf = lp.streak_state_perf || [];
+                const hotStreak = streakPerf.find(s=>s.state==='hot_streak');
+                const coldStreak = streakPerf.find(s=>s.state==='cold_streak');
+                const hasAnyData = vixTrendPerf.length>0 || riskRotPerf.length>0 || dowPerf.length>0;
+                if (!hasAnyData) return '';
+                const cells = [];
+                if (vixFall && vixRise) cells.push({label:'VIX TREND', good:`↓ fall=${vixFall.win_rate.toFixed(0)}%WR`, bad:`↑ rise=${vixRise.win_rate.toFixed(0)}%WR`, col: vixFall.win_rate > vixRise.win_rate ? '#00e676' : '#ff9800'});
+                if (riskOn && riskOff) cells.push({label:'RISK ROTATION', good:`risk_on=${riskOn.win_rate.toFixed(0)}%WR`, bad:`risk_off=${riskOff.win_rate.toFixed(0)}%WR`, col: riskOn.win_rate > riskOff.win_rate ? '#00e676' : '#ff9800'});
+                if (breadthImp && breadthWrs) cells.push({label:'BREADTH', good:`imp=${breadthImp.win_rate.toFixed(0)}%WR`, bad:`wrs=${breadthWrs.win_rate.toFixed(0)}%WR`, col: breadthImp.win_rate > breadthWrs.win_rate ? '#00e676' : '#ff9800'});
+                if (bestDow && worstDow) cells.push({label:'BEST DAY', good:bestDow.state?.slice(0,3)?.toUpperCase()+'='+bestDow.win_rate?.toFixed(0)+'%', bad:'worst='+worstDow.state?.slice(0,3)?.toUpperCase(), col:'#ffd54f'});
+                if (bestCat) cells.push({label:'CATALYST', good:bestCat.state+'='+bestCat.win_rate?.toFixed(0)+'%WR', bad:'', col:'#82b1ff'});
+                if (bkDay1 && bkDay1.win_rate>=55) cells.push({label:'BREAKOUT AGE', good:`day1=${bkDay1.win_rate.toFixed(0)}%WR`, bad:'buy fresh', col:'#00e676'});
+                if (hotStreak && coldStreak) cells.push({label:'BOT STREAK', good:`hot=${hotStreak.win_rate.toFixed(0)}%WR`, bad:`cold=${coldStreak.win_rate.toFixed(0)}%WR`, col: hotStreak.win_rate>coldStreak.win_rate?'#00e676':'#ff9800'});
+                if (cells.length === 0) return '';
+                return `<div style="margin-bottom:.4rem">
+                  <div style="font-size:5.5px;font-weight:700;color:rgba(124,131,245,.6);letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px">MARKET INTELLIGENCE (${cells.length} neural insights)</div>
+                  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.25rem">
+                    ${cells.map(c=>`<div style="padding:.25rem .4rem;background:rgba(0,0,0,.25);border-radius:5px;border-left:2px solid ${c.col}">
+                      <div style="font-size:5px;color:rgba(255,255,255,.3);text-transform:uppercase;font-weight:800">${c.label}</div>
+                      <div style="font-size:5.5px;color:${c.col};font-weight:700">${c.good}</div>
+                      ${c.bad?`<div style="font-size:5px;color:rgba(255,255,255,.3)">${c.bad}</div>`:''}
+                    </div>`).join('')}
+                  </div>
+                </div>`;
+              })()}
               ${learnItems ? `<div style="margin-top:.3rem">
                 <div style="font-size:5.5px;font-weight:700;color:rgba(0,229,255,.5);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px">LAST LEARNING OBSERVATIONS</div>
                 ${learnItems}
