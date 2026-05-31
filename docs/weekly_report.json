@@ -1,0 +1,43 @@
+{
+  "generated_at": "2026-05-31T02:15:52.927647+00:00",
+  "period": "Last 7 days",
+  "week_start": "2026-05-24",
+  "week_end": "2026-05-31",
+  "trades_total": 0,
+  "trades_wins": 0,
+  "trades_losses": 0,
+  "win_rate": 0,
+  "total_pnl": 0,
+  "avg_pnl_per_trade": 0,
+  "best_trades": [],
+  "worst_trades": [],
+  "neurons_active": 52,
+  "neurons_total": 280,
+  "top_neurons": [],
+  "equity_curve": [
+    {
+      "date": "2026-05-30",
+      "equity": 99889.66,
+      "spy_benchmark": 0
+    },
+    {
+      "date": "2026-05-31",
+      "equity": 99889.66,
+      "spy_benchmark": 0
+    }
+  ],
+  "learn_log": [
+    "Bot started May 30 \u2014 6 positions open. No closed trades yet. Neurons activating...",
+    "Brain tracking 280 learning dimensions. Will start adapting after first trade closes.",
+    "Paper trading via Alpaca. Equity scan resumes Monday 9:30 AM ET."
+  ],
+  "strategy_mode": "MARKET_CLOSED",
+  "recovery_mode": false,
+  "effective_min_score": null,
+  "cross_asset_risk_off": false,
+  "portfolio_value": 99889.66,
+  "drawdown_pct": -0.11,
+  "profit_factor": null,
+  "open_positions": 6,
+  "note": "Bot launched May 30 \u2014 first week is position building phase. Brain has 280 neurons tracking market conditions. Learning activates as trades close."
+}
