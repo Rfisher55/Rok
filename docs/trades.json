@@ -81,9 +81,15 @@
   "neurons_active": 52,
   "neurons_total": 180,
   "bot_brain_summary": {
-    "neurons_active": 0,
-    "neurons_total": 140,
-    "top_signals": [],
+    "neurons_active": 52,
+    "neurons_total": 190,
+    "top_signals": [
+      "VIX trend",
+      "RS Rating",
+      "Volume surge",
+      "VWAP position",
+      "Breadth direction"
+    ],
     "last_tuned": ""
   },
   "bot_activity_log": [
@@ -133,50 +139,50 @@
       "type": "performance",
       "priority": "low",
       "title": "\u2705 AUTO TRADING ACTIVE",
-      "body": "Bot running 24/7 via Alpaca paper account \u2014 6 positions open. Crypto runs every 15 min. Stocks resume Monday 9:30 AM ET.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "body": "Bot running 24/7 \u2014 6 positions via Alpaca paper account. 190 neural dimensions tracking market patterns.",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     },
     {
-      "type": "performance",
+      "type": "position",
       "priority": "low",
-      "title": "\ud83d\udcca COIN: -0.3%",
-      "body": "COIN is down 0.3% \u2014 bot is monitoring position.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "title": "\u26aa COIN: -0.26% ()",
+      "body": "Market value $11,969 \u00b7 Bot holding via Alpaca paper account",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     },
     {
-      "type": "performance",
+      "type": "position",
       "priority": "low",
-      "title": "\ud83d\udcca MSFT: +1.4%",
-      "body": "MSFT is up 1.4% \u2014 bot is monitoring position.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "title": "\ud83d\udfe2 MSFT: +1.40% ()",
+      "body": "Market value $12,168 \u00b7 Bot holding via Alpaca paper account",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     },
     {
-      "type": "performance",
+      "type": "position",
       "priority": "low",
-      "title": "\ud83d\udcca MSTR: -0.6%",
-      "body": "MSTR is down 0.6% \u2014 bot is monitoring position.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "title": "\u26aa MSTR: -0.62% ()",
+      "body": "Market value $11,925 \u00b7 Bot holding via Alpaca paper account",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     },
     {
-      "type": "performance",
+      "type": "position",
       "priority": "low",
-      "title": "\ud83d\udcca PLTR: +0.1%",
-      "body": "PLTR is up 0.1% \u2014 bot is monitoring position.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "title": "\u26aa PLTR: +0.10% ()",
+      "body": "Market value $12,013 \u00b7 Bot holding via Alpaca paper account",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     },
     {
-      "type": "performance",
+      "type": "position",
       "priority": "low",
-      "title": "\ud83d\udcca SOFI: -1.1%",
-      "body": "SOFI is down 1.1% \u2014 bot is monitoring position.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "title": "\ud83d\udd34 SOFI: -1.05% ()",
+      "body": "Market value $11,874 \u00b7 Bot holding via Alpaca paper account",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     },
     {
-      "type": "performance",
+      "type": "position",
       "priority": "low",
-      "title": "\ud83d\udcca TSLA: -0.5%",
-      "body": "TSLA is down 0.5% \u2014 bot is monitoring position.",
-      "ts": "2026-05-31T01:11:35.023181+00:00"
+      "title": "\u26aa TSLA: -0.49% ()",
+      "body": "Market value $11,941 \u00b7 Bot holding via Alpaca paper account",
+      "ts": "2026-05-31T01:28:56.180859+00:00"
     }
   ]
 }
