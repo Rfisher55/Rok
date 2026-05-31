@@ -10552,6 +10552,25 @@ def run():
             except Exception:
                 pass
 
+            # ── N114 Learned Hold Duration Adjustment ───────────────────────────────
+            # If N114 shows scalp exits (same day) historically outperform swing holds,
+            # tighten the trailing stop to force a quicker exit. If swing holds win more,
+            # widen it and let the position breathe longer.
+            try:
+                _n114_lp = tlog.get("bot_learned_params", {}).get("hold_duration_perf", [])
+                if _n114_lp:
+                    _scalp_wr = next((s.get("win_rate", 50) for s in _n114_lp if s.get("state") == "scalp"), 50)
+                    _swing_wr = next((s.get("win_rate", 50) for s in _n114_lp if s.get("state") == "swing"), 50)
+                    _intra_wr = next((s.get("win_rate", 50) for s in _n114_lp if s.get("state") == "intraday"), 50)
+                    if _scalp_wr >= 65 and _scalp_wr > _swing_wr + 10 and age_days < 0.5:
+                        dyn_trail = max(dyn_trail * 0.85, dyn_trail - 1.0)  # scalps best: tighten to exit sooner
+                        logger.debug(f"N114 scalp mode {sym}: learned scalps ({_scalp_wr:.0f}%WR) → trail={dyn_trail:.1f}%")
+                    elif _swing_wr >= 65 and _swing_wr > _scalp_wr + 10 and pnl_pct > 2 and age_days < 3:
+                        dyn_trail = min(dyn_trail * 1.15, dyn_trail + 1.5)  # swings best: widen to hold
+                        logger.debug(f"N114 swing mode {sym}: learned swings ({_swing_wr:.0f}%WR) → trail={dyn_trail:.1f}%")
+            except Exception:
+                pass
+
             # ── Full exit conditions ──
             reason = None
             # ── N102: Dynamic Support Level Exit ─────────────────────────────────
@@ -12342,6 +12361,44 @@ def run():
                     if _recovery_mode:
                         notional = round(notional * 0.60, 2)
                         logger.info(f"Recovery mode sizing: {tk} notional cut 40%")
+
+                    # ── Neural Quality Size Multiplier ────────────────────────────────
+                    # Synthesizes RS tier (N127), trend template (N108), score persistence (N138),
+                    # and sector leadership (N134) into a size adjustment.
+                    # Elite setups get larger positions; mediocre setups get smaller.
+                    try:
+                        _nq_mult = 1.0
+                        _lp_nq = tlog.get("bot_learned_params", {})
+                        # N127: RS elite historically great → size up
+                        _n127_nq = {s.get("state",""):s.get("win_rate",50) for s in _lp_nq.get("rs_tier_entry_perf",[])}
+                        _rs_now_nq = float(live.get(tk, {}).get("rs_rating", 50) or 50)
+                        if _rs_now_nq >= 90 and _n127_nq.get("elite", 50) >= 65:
+                            _nq_mult *= 1.10  # elite RS + historically great: +10%
+                        elif _rs_now_nq < 50 and _n127_nq.get("weak", 50) < 42:
+                            _nq_mult *= 0.85  # weak RS + historically bad: -15%
+                        # N108: trend template elite → size up
+                        _n108_nq = {s.get("state",""):s.get("win_rate",50) for s in _lp_nq.get("trend_template_tier_perf",[])}
+                        _tt_nq = int(_tk_sig.get("trend_template", 0) or 0)
+                        if _tt_nq >= 7 and _n108_nq.get("elite", 50) >= 65:
+                            _nq_mult *= 1.08  # elite trend template + learned: +8%
+                        elif _tt_nq < 3 and _n108_nq.get("weak", 50) < 42:
+                            _nq_mult *= 0.88  # weak TT + historically bad: -12%
+                        # N138: persistent strong score → size up; declining → cut
+                        _n138_nq = {s.get("state",""):s.get("win_rate",50) for s in _lp_nq.get("score_persistence_perf",[])}
+                        _sh_nq = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                        if len(_sh_nq) >= 3:
+                            _avg_nq = sum(_sh_nq) / len(_sh_nq)
+                            if _avg_nq >= 65 and _sh_nq[-1] >= 65 and _n138_nq.get("persistent_strong", 50) >= 65:
+                                _nq_mult *= 1.07  # persistent strong: +7%
+                            elif _sh_nq[-1] < _sh_nq[0] - 5 and _n138_nq.get("declining", 50) < 42:
+                                _nq_mult *= 0.88  # declining score: -12%
+                        # Apply: cap at ±20% from current
+                        _nq_mult = max(0.80, min(1.20, _nq_mult))
+                        if abs(_nq_mult - 1.0) >= 0.05:
+                            notional = round(notional * _nq_mult, 2)
+                            logger.info(f"Neural quality sizer: {tk} × {_nq_mult:.2f} → ${notional:.0f}")
+                    except Exception:
+                        pass
 
                     if notional < 1:
                         logger.info(f"SKIP {tk} — insufficient buying power")
