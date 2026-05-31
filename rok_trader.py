@@ -2951,6 +2951,58 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N144: Multi-Timeframe Trend Agreement ────────────────────────────────────
+    # Do weekly/daily/hourly trends all agree? Triple alignment = highest conviction.
+    # full_bull(all 3 up), 2of3_bull, mixed, 2of3_bear, full_bear
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n144 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n144_mtf = _buy_n144.get("mtf_trend_agree", "mixed") if _buy_n144 else "mixed"
+            _n144_perf = tlog.setdefault("mtf_agree_perf", {})
+            _n144p = _n144_perf.setdefault(_n144_mtf, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n144_mtf})
+            _n144p["total"] += 1; _n144p["total_pnl"] = round(_n144p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n144p["wins"] += 1
+            else:        _n144p["losses"] += 1
+            _n144p["win_rate"] = round(_n144p["wins"] / _n144p["total"] * 100, 1)
+            _n144p["avg_pnl"]  = round(_n144p["total_pnl"] / _n144p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N145: Insider Buying Recency ──────────────────────────────────────────────
+    # Tracks win rates by whether insiders were buying recently.
+    # recent_buy(≤30d), old_buy(31-90d), no_insider_data
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n145 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n145_ins = _buy_n145.get("insider_buy_recency", "no_insider_data") if _buy_n145 else "no_insider_data"
+            _n145_perf = tlog.setdefault("insider_timing_perf", {})
+            _n145p = _n145_perf.setdefault(_n145_ins, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n145_ins})
+            _n145p["total"] += 1; _n145p["total_pnl"] = round(_n145p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n145p["wins"] += 1
+            else:        _n145p["losses"] += 1
+            _n145p["win_rate"] = round(_n145p["wins"] / _n145p["total"] * 100, 1)
+            _n145p["avg_pnl"]  = round(_n145p["total_pnl"] / _n145p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N146: Chart Pattern Confluence Count ──────────────────────────────────────
+    # How many chart patterns confirmed simultaneously at entry?
+    # 4plus / 2to3 / single / none — more patterns = higher-conviction setup
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n146 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n146_ct = int(_buy_n146.get("pattern_confluence_count", 0) or 0) if _buy_n146 else 0
+            _n146_bkt = ("4plus" if _n146_ct >= 4 else "2to3" if _n146_ct >= 2 else "single" if _n146_ct >= 1 else "none")
+            _n146_perf = tlog.setdefault("pattern_confluence_perf", {})
+            _n146p = _n146_perf.setdefault(_n146_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n146_bkt})
+            _n146p["total"] += 1; _n146p["total_pnl"] = round(_n146p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n146p["wins"] += 1
+            else:        _n146p["losses"] += 1
+            _n146p["win_rate"] = round(_n146p["wins"] / _n146p["total"] * 100, 1)
+            _n146p["avg_pnl"]  = round(_n146p["total_pnl"] / _n146p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11826,6 +11878,29 @@ def run():
                     _c1d_ng2 = float(live.get(tk, {}).get("chg1d", 0) or 0)
                     if _px_ng2 > 0 and _vwap_ng2 > 0 and _px_ng2 > _vwap_ng2 and _c1d_ng2 >= 1.0:
                         _ng_green_lights += 1
+                # N144 strike: full_bear MTF alignment historically terrible
+                _n144_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("mtf_agree_perf",[])}
+                if _n144_ng.get("full_bear", 50) < 35 and len(_n144_ng) >= 3:
+                    _c5d_ng = float(live.get(tk, {}).get("chg5d", 0) or 0)
+                    _c1d_ng = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    _tt_ng = int(_tk_sig.get("trend_template", 0) or 0)
+                    if _c5d_ng < -0.5 and _c1d_ng < -0.2 and _tt_ng < 4:
+                        _ng_strikes += 1; _ng_reasons.append(f"full_bear MTF alignment fails({_n144_ng.get('full_bear',50):.0f}%WR)")
+                # N144 green: full_bull MTF alignment historically best
+                if _n144_ng.get("full_bull", 0) >= 65:
+                    _c5d_ng2 = float(live.get(tk, {}).get("chg5d", 0) or 0)
+                    _c1d_ng2 = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    _tt_ng2 = int(_tk_sig.get("trend_template", 0) or 0)
+                    if _c5d_ng2 > 0.5 and _c1d_ng2 > 0.2 and _tt_ng2 >= 4:
+                        _ng_green_lights += 1
+                # N146 green: 4+ chart patterns historically best
+                _n146_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("pattern_confluence_perf",[])}
+                if _n146_ng.get("4plus", 0) >= 65:
+                    _pattern_fields_ng = ["vcp","cup_handle","at_breakout","pocket_pivot","morning_star",
+                                          "double_bottom","higher_lows","ema21_pullback","nr7","ha_bull_consec"]
+                    _pat_ct_ng = sum(1 for _pf in _pattern_fields_ng if live.get(tk, {}).get(_pf))
+                    if _pat_ct_ng >= 4:
+                        _ng_green_lights += 1
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -12750,6 +12825,40 @@ def run():
                         _buy_signals_merged["rs_rating_at_entry"] = 50
                     # N128: entry score value (already set as tech_sc/score before this block)
                     _buy_signals_merged["score"] = tech_sc
+                    # N144: multi-timeframe trend agreement
+                    try:
+                        _chg5d_n144 = float(live.get(tk, {}).get("chg5d", 0) or 0)  # weekly proxy
+                        _chg1d_n144 = float(live.get(tk, {}).get("chg1d", 0) or 0)  # daily
+                        _mtf_sc = int(_tk_sig.get("trend_template", 0) or 0)         # overall structure
+                        _wk_bull = _chg5d_n144 > 0.5
+                        _dy_bull = _chg1d_n144 > 0.2
+                        _st_bull = _mtf_sc >= 4
+                        _bulls_count = sum([_wk_bull, _dy_bull, _st_bull])
+                        if _bulls_count == 3:   _mtf_agree = "full_bull"
+                        elif _bulls_count == 2: _mtf_agree = "2of3_bull"
+                        elif _bulls_count == 1: _mtf_agree = "2of3_bear"
+                        elif _bulls_count == 0: _mtf_agree = "full_bear"
+                        else:                   _mtf_agree = "mixed"
+                        _buy_signals_merged["mtf_trend_agree"] = _mtf_agree
+                    except Exception:
+                        _buy_signals_merged["mtf_trend_agree"] = "mixed"
+                    # N145: insider buying recency (days since last insider buy)
+                    try:
+                        _ins_days = float(live.get(tk, {}).get("insider_buy_days", 999) or 999)
+                        if _ins_days <= 30:    _ins_recency = "recent_buy"
+                        elif _ins_days <= 90:  _ins_recency = "old_buy"
+                        else:                  _ins_recency = "no_insider_data"
+                        _buy_signals_merged["insider_buy_recency"] = _ins_recency
+                    except Exception:
+                        _buy_signals_merged["insider_buy_recency"] = "no_insider_data"
+                    # N146: chart pattern confluence count (how many patterns firing at once)
+                    try:
+                        _pattern_fields = ["vcp","cup_handle","at_breakout","pocket_pivot","morning_star",
+                                           "double_bottom","higher_lows","ema21_pullback","nr7","ha_bull_consec"]
+                        _pat_count = sum(1 for _pf in _pattern_fields if live.get(tk, {}).get(_pf))
+                        _buy_signals_merged["pattern_confluence_count"] = _pat_count
+                    except Exception:
+                        _buy_signals_merged["pattern_confluence_count"] = 0
                     # N141: intraday momentum state at entry
                     try:
                         _vwap_n141 = float(live.get(tk, {}).get("vwap", 0) or 0)
@@ -15792,6 +15901,51 @@ def run():
             _best_vel = max(_n125_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N125 news velocity: best={_best_vel['state']}({_best_vel['win_rate']:.0f}%WR) hot news {'helps' if _best_vel['state']=='hot' else 'not always best'}")
 
+        # ── N144: Multi-Timeframe Trend Agreement (multi-tier) ──────────────────────
+        _n144_raw = tlog.get("mtf_agree_perf", {})
+        _n144_insights = []
+        for _n44k, _n44d in _n144_raw.items():
+            if _n44d.get("total", 0) >= 2:
+                _n144_insights.append({"state": _n44k, "win_rate": _n44d.get("win_rate", 50),
+                                       "avg_pnl": _n44d.get("avg_pnl", 0), "total": _n44d.get("total", 0)})
+        if _n144_insights:
+            _fbull = next((s for s in _n144_insights if s["state"] == "full_bull"), None)
+            _fbear = next((s for s in _n144_insights if s["state"] == "full_bear"), None)
+            if _fbull:
+                _learn_log.append(f"N144 full MTF alignment: {_fbull['win_rate']:.0f}%WR ({_fbull['total']} trades)")
+            if _fbear and _fbear["win_rate"] < 40:
+                _learn_log.append(f"N144 AVOID: full bearish MTF ({_fbear['win_rate']:.0f}%WR)")
+
+        # ── N145: Insider Buying Recency (multi-tier) ────────────────────────────────
+        _n145_raw = tlog.get("insider_timing_perf", {})
+        _n145_insights = []
+        for _n45k, _n45d in _n145_raw.items():
+            if _n45d.get("total", 0) >= 2:
+                _n145_insights.append({"state": _n45k, "win_rate": _n45d.get("win_rate", 50),
+                                       "avg_pnl": _n45d.get("avg_pnl", 0), "total": _n45d.get("total", 0)})
+        if _n145_insights:
+            _recent_ins = next((s for s in _n145_insights if s["state"] == "recent_buy"), None)
+            if _recent_ins:
+                _learn_log.append(f"N145 recent insider buying: {_recent_ins['win_rate']:.0f}%WR — insiders {'right' if _recent_ins['win_rate'] >= 55 else 'not reliably right'}")
+
+        # ── N146: Chart Pattern Confluence (multi-tier) ──────────────────────────────
+        _n146_raw = tlog.get("pattern_confluence_perf", {})
+        _n146_insights = []
+        for _n46k, _n46d in _n146_raw.items():
+            if _n46d.get("total", 0) >= 2:
+                _n146_insights.append({"state": _n46k, "win_rate": _n46d.get("win_rate", 50),
+                                       "avg_pnl": _n46d.get("avg_pnl", 0), "total": _n46d.get("total", 0)})
+        if _n146_insights:
+            _multi_pat = next((s for s in _n146_insights if s["state"] == "4plus"), None)
+            _no_pat = next((s for s in _n146_insights if s["state"] == "none"), None)
+            if _multi_pat and _no_pat:
+                _pat_diff = _multi_pat["win_rate"] - _no_pat["win_rate"]
+                if _pat_diff >= 10:
+                    _learn_log.append(f"N146 pattern confluence: 4+ patterns {_multi_pat['win_rate']:.0f}%WR vs none {_no_pat['win_rate']:.0f}%WR (+{_pat_diff:.0f}pts)")
+            elif _n146_insights:
+                _best_pat = max(_n146_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N146 pattern confluence: best={_best_pat['state']}({_best_pat['win_rate']:.0f}%WR)")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -16222,7 +16376,10 @@ def run():
             "pcr_entry_perf":       _n120_insights,          # N120: options put/call ratio bracket at entry vs outcome
             "si_squeeze_perf":      _n121_insights,          # N121: short interest / squeeze setup vs outcome
             "dist_200ema_perf":     _n122_insights,          # N122: distance from 200 EMA at entry vs outcome
-            "intraday_momentum_perf": _n141_insights,        # N141: intraday momentum state (VWAP+chg1d) vs outcome
+            "mtf_agree_perf":        _n144_insights,          # N144: multi-timeframe trend agreement vs outcome
+            "insider_timing_perf":   _n145_insights,          # N145: insider buying recency vs outcome
+            "pattern_confluence_perf": _n146_insights,        # N146: chart pattern confluence count vs outcome
+            "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
             "sector_etf_strength_perf": _n123_insights,     # N123: sector ETF 5d momentum at entry vs outcome
@@ -16352,6 +16509,7 @@ def run():
             "hold_duration_perf","mktcap_tier_perf","float_tier_perf",
             "vts_perf","consec_red_entry_perf","macro_hold_perf",
             "pcr_entry_perf","si_squeeze_perf","dist_200ema_perf",
+            "mtf_agree_perf","insider_timing_perf","pattern_confluence_perf",
             "intraday_momentum_perf","oi_skew_perf","eps_surprise_perf",
             "sector_etf_strength_perf","spy_alignment_perf","news_velocity_perf",
             "gap_entry_perf","rs_tier_entry_perf","entry_score_tier_perf",
@@ -16367,9 +16525,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 103              # total tracked neuron dimensions (N103-N143 added)
+        tlog["neurons_total"]     = 106              # total tracked neuron dimensions (N103-N146 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/103 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/106 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
