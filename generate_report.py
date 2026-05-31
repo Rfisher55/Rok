@@ -405,6 +405,16 @@ def _build_weekly_bot_report(docs_dir):
         "regime_spy_alignment_perf": "N388 Regime SPY Alignment",
         "entry_time_quality_perf": "N389 Entry Time Quality",
         "position_risk_reward_entry_perf": "N390 Position R/R Entry",
+        "intraday_high_quality_perf": "N391 Intraday High Quality",
+        "sector_etf_gap_perf": "N392 Sector ETF Gap",
+        "spy_open_vs_close_perf": "N393 SPY Open vs Close",
+        "prior_day_range_perf": "N394 Prior Day Range",
+        "entry_vs_sector_beta_perf": "N395 Entry vs Sector Beta",
+        "market_internals_quality_perf": "N396 Market Internals Quality",
+        "ema_stack_quality_perf": "N397 EMA Stack Quality",
+        "vol_expansion_at_entry_perf": "N398 Vol Expansion at Entry",
+        "news_age_quality_perf": "N399 News Age Quality",
+        "technical_score_quality_perf": "N400 Technical Score Quality",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
