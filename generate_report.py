@@ -89,6 +89,145 @@ def run():
         logger.info("Wrote fallback output files")
 
 
+def _build_weekly_bot_report(docs_dir):
+    """Build a weekly performance summary from trades.json and equity.json."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+
+    trades_path = docs_dir / "trades.json"
+    equity_path = docs_dir / "equity.json"
+
+    if not trades_path.exists():
+        return None
+
+    try:
+        td = json.loads(trades_path.read_text())
+    except Exception:
+        return None
+
+    all_trades = td.get("trades", [])
+    lp = td.get("bot_learned_params", {})
+    neurons_total = td.get("neurons_total", 90)
+    neurons_active = td.get("neurons_active", 0)
+
+    # Filter to this week's closed trades (SELL / COVER actions with pnl)
+    week_trades = []
+    for t in all_trades:
+        if t.get("action") not in ("SELL", "SELL_HALF", "COVER"):
+            continue
+        ts = t.get("timestamp") or t.get("time") or ""
+        try:
+            trade_dt = datetime.fromisoformat(ts.replace("Z", "+00:00")) if ts else None
+        except Exception:
+            trade_dt = None
+        if trade_dt and trade_dt >= week_ago:
+            week_trades.append(t)
+
+    wins = [t for t in week_trades if (t.get("pnl") or 0) > 0]
+    losses = [t for t in week_trades if (t.get("pnl") or 0) <= 0]
+    total_pnl = round(sum(t.get("pnl", 0) or 0 for t in week_trades), 2)
+    win_rate = round(len(wins) / len(week_trades) * 100, 1) if week_trades else 0
+    avg_pnl = round(total_pnl / len(week_trades), 2) if week_trades else 0
+
+    # Best and worst trades this week
+    sorted_by_pnl = sorted(week_trades, key=lambda t: t.get("pnl", 0) or 0, reverse=True)
+    best_trades = [{"ticker": t.get("ticker"), "pnl": t.get("pnl")} for t in sorted_by_pnl[:3]]
+    worst_trades = [{"ticker": t.get("ticker"), "pnl": t.get("pnl")} for t in sorted_by_pnl[-3:] if (t.get("pnl") or 0) < 0]
+
+    # Top active neurons (those with learned data)
+    top_neurons = []
+    neuron_map = {
+        "vix_entry_perf": "N103 VIX Bracket",
+        "entry_session_perf": "N104 Session Quality",
+        "breadth_entry_perf": "N105 Market Breadth",
+        "trend_template_tier_perf": "N108 Trend Template",
+        "rvol_entry_tier_perf": "N109 RVOL Tier",
+        "spy_vwap_entry_perf": "N111 SPY VWAP",
+        "signal_density_perf": "N112 Signal Density",
+        "ai_sentiment_tier_perf": "N113 AI Sentiment",
+        "hold_duration_perf": "N114 Hold Duration",
+        "mktcap_tier_perf": "N115 Market Cap",
+        "vts_perf": "N117 VIX Term Structure",
+        "macro_hold_perf": "N119 Macro Events",
+        "pcr_entry_perf": "N120 Options PCR",
+        "si_squeeze_perf": "N121 Short Squeeze",
+        "dist_200ema_perf": "N122 200 EMA Dist",
+        "sector_etf_strength_perf": "N123 Sector ETF",
+        "spy_alignment_perf": "N124 SPY Alignment",
+        "news_velocity_perf": "N125 News Velocity",
+        "gap_entry_perf": "N126 Gap Entry",
+        "rs_tier_entry_perf": "N127 RS Rating",
+        "entry_score_tier_perf": "N128 Score Tier",
+        "exit_trigger_perf": "N129 Exit Trigger",
+        "stock_stability_perf": "N130 Stability",
+    }
+    for key, label in neuron_map.items():
+        data = lp.get(key, [])
+        if not isinstance(data, list) or not data:
+            continue
+        best = max(data, key=lambda x: x.get("win_rate", 50), default=None)
+        if best:
+            top_neurons.append({
+                "neuron": label,
+                "best_state": best.get("state", "?"),
+                "win_rate": best.get("win_rate", 50),
+                "samples": best.get("total", 0),
+            })
+    top_neurons.sort(key=lambda x: x["win_rate"], reverse=True)
+
+    # Equity curve this week (from equity.json)
+    equity_week = []
+    try:
+        if equity_path.exists():
+            eq = json.loads(equity_path.read_text())
+            snapshots = eq.get("snapshots", [])
+            for snap in snapshots:
+                snap_dt_str = snap.get("date") or snap.get("timestamp", "")
+                try:
+                    snap_dt = datetime.fromisoformat(snap_dt_str.replace("Z", "+00:00")) if snap_dt_str else None
+                except Exception:
+                    snap_dt = None
+                if snap_dt and snap_dt >= week_ago:
+                    equity_week.append({
+                        "date": snap.get("date") or snap_dt_str[:10],
+                        "equity": snap.get("equity"),
+                        "spy_benchmark": snap.get("spy_benchmark"),
+                    })
+    except Exception:
+        pass
+
+    # Learn log highlights
+    learn_log = lp.get("learn_log", [])[-10:]
+
+    return {
+        "generated_at": now.isoformat(),
+        "period": "Last 7 days",
+        "week_start": week_ago.strftime("%Y-%m-%d"),
+        "week_end": now.strftime("%Y-%m-%d"),
+        "trades_total": len(week_trades),
+        "trades_wins": len(wins),
+        "trades_losses": len(losses),
+        "win_rate": win_rate,
+        "total_pnl": total_pnl,
+        "avg_pnl_per_trade": avg_pnl,
+        "best_trades": best_trades,
+        "worst_trades": worst_trades,
+        "neurons_active": neurons_active,
+        "neurons_total": neurons_total,
+        "top_neurons": top_neurons[:10],
+        "equity_curve": equity_week,
+        "learn_log": learn_log,
+        "strategy_mode": td.get("strategy_mode", "SELECTIVE"),
+        "recovery_mode": td.get("recovery_mode", False),
+        "effective_min_score": td.get("effective_min_score"),
+        "cross_asset_risk_off": td.get("cross_asset_risk_off", False),
+        "portfolio_value": td.get("portfolio_value"),
+        "drawdown_pct": td.get("drawdown_pct"),
+        "profit_factor": td.get("profit_factor"),
+    }
+
+
 def _run():
     from config import Config
     from scrapers import reddit_scraper, news_scraper, yahoo_finance, sec_scraper
@@ -533,6 +672,17 @@ def _run():
             }
     (docs_dir / "prices.json").write_text(json.dumps(prices_dict, cls=_Encoder), encoding="utf-8")
     logger.info(f"Prices written → docs/prices.json ({len(prices_dict)} tickers)")
+
+    # ── Weekly Bot Performance Report ────────────────────────────────
+    try:
+        _week_report = _build_weekly_bot_report(docs_dir)
+        if _week_report:
+            (docs_dir / "weekly_report.json").write_text(
+                json.dumps(_sanitize(_week_report), cls=_Encoder, indent=2), encoding="utf-8"
+            )
+            logger.info(f"Weekly report written → docs/weekly_report.json")
+    except Exception as _we:
+        logger.warning(f"Weekly report failed: {_we}")
 
     logger.info(f"Summary: {buy_count} buys | {len(analysis.get('sell_signals', []))} sells")
     logger.info("ROK INTELLIGENCE PIPELINE COMPLETE")

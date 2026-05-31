@@ -2578,6 +2578,157 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N123: Sector ETF Momentum Strength at Entry ───────────────────────────────
+    # Tracks win rates grouped by how strong the sector ETF trend was when we entered.
+    # strong_bull(>3%/5d), bull(>1%), neutral, bear(<-1%), strong_bear(<-3%)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n123 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n123_chg = float(_buy_n123.get("sector_etf_chg5d_at_entry", 0) or 0) if _buy_n123 else 0
+            _n123_bkt = ("strong_bull" if _n123_chg >= 3 else "bull" if _n123_chg >= 1 else
+                         "bear" if _n123_chg <= -1 else "strong_bear" if _n123_chg <= -3 else "neutral")
+            _n123_perf = tlog.setdefault("sector_etf_strength_perf", {})
+            _n123p = _n123_perf.setdefault(_n123_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n123_bkt})
+            _n123p["total"] += 1; _n123p["total_pnl"] = round(_n123p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n123p["wins"] += 1
+            else:        _n123p["losses"] += 1
+            _n123p["win_rate"] = round(_n123p["wins"] / _n123p["total"] * 100, 1)
+            _n123p["avg_pnl"]  = round(_n123p["total_pnl"] / _n123p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N124: Intraday SPY Alignment ──────────────────────────────────────────────
+    # Tracks win rates based on whether the stock's intraday move aligned with SPY's.
+    # aligned_bull: both SPY+stock up; aligned_bear: both down; diverging: stock up/SPY down or vice versa.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n124 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n124_align = _buy_n124.get("spy_alignment_at_entry", "neutral") if _buy_n124 else "neutral"
+            _n124_perf = tlog.setdefault("spy_alignment_perf", {})
+            _n124p = _n124_perf.setdefault(_n124_align, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n124_align})
+            _n124p["total"] += 1; _n124p["total_pnl"] = round(_n124p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n124p["wins"] += 1
+            else:        _n124p["losses"] += 1
+            _n124p["win_rate"] = round(_n124p["wins"] / _n124p["total"] * 100, 1)
+            _n124p["avg_pnl"]  = round(_n124p["total_pnl"] / _n124p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N125: Pre-Entry News Velocity ─────────────────────────────────────────────
+    # Tracks win rates grouped by how many fresh news items arrived before we entered.
+    # hot(≥4 recent headlines), warm(2-3), cool(1), cold(0)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n125 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n125_vel = _buy_n125.get("news_velocity_at_entry", "cold") if _buy_n125 else "cold"
+            _n125_perf = tlog.setdefault("news_velocity_perf", {})
+            _n125p = _n125_perf.setdefault(_n125_vel, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n125_vel})
+            _n125p["total"] += 1; _n125p["total_pnl"] = round(_n125p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n125p["wins"] += 1
+            else:        _n125p["losses"] += 1
+            _n125p["win_rate"] = round(_n125p["wins"] / _n125p["total"] * 100, 1)
+            _n125p["avg_pnl"]  = round(_n125p["total_pnl"] / _n125p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N126: Gap-Up Entry Quality ────────────────────────────────────────────────
+    # Tracks win rates grouped by how much of a pre-market gap existed at entry.
+    # large_gap(>3%), gap(>1%), flat(-1% to 1%), gap_down(<-1%)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n126 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n126_gap = float(_buy_n126.get("gap_pct_at_entry", 0) or 0) if _buy_n126 else 0
+            _n126_bkt = ("large_gap" if _n126_gap >= 3 else "gap" if _n126_gap >= 1 else
+                         "gap_down" if _n126_gap <= -1 else "flat")
+            _n126_perf = tlog.setdefault("gap_entry_perf", {})
+            _n126p = _n126_perf.setdefault(_n126_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n126_bkt})
+            _n126p["total"] += 1; _n126p["total_pnl"] = round(_n126p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n126p["wins"] += 1
+            else:        _n126p["losses"] += 1
+            _n126p["win_rate"] = round(_n126p["wins"] / _n126p["total"] * 100, 1)
+            _n126p["avg_pnl"]  = round(_n126p["total_pnl"] / _n126p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N127: Relative Strength Rating Tier at Entry ───────────────────────────────
+    # Tracks win rates by O'Neil-style RS rating tier: elite(≥90), strong(≥70), average(≥50), weak
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n127 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n127_rs = float(_buy_n127.get("rs_rating_at_entry", 50) or 50) if _buy_n127 else 50
+            _n127_bkt = ("elite" if _n127_rs >= 90 else "strong" if _n127_rs >= 70 else
+                         "average" if _n127_rs >= 50 else "weak")
+            _n127_perf = tlog.setdefault("rs_tier_entry_perf", {})
+            _n127p = _n127_perf.setdefault(_n127_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n127_bkt})
+            _n127p["total"] += 1; _n127p["total_pnl"] = round(_n127p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n127p["wins"] += 1
+            else:        _n127p["losses"] += 1
+            _n127p["win_rate"] = round(_n127p["wins"] / _n127p["total"] * 100, 1)
+            _n127p["avg_pnl"]  = round(_n127p["total_pnl"] / _n127p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N128: Entry Score Percentile ──────────────────────────────────────────────
+    # How far above the minimum buy score was our entry? Higher conviction = better trades?
+    # elite(score≥80), strong(≥65), moderate(≥50), borderline(<50)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n128 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n128_sc = float(_buy_n128.get("score", 0) or 0) if _buy_n128 else 0
+            _n128_bkt = ("elite" if _n128_sc >= 80 else "strong" if _n128_sc >= 65 else
+                         "moderate" if _n128_sc >= 50 else "borderline")
+            _n128_perf = tlog.setdefault("entry_score_tier_perf", {})
+            _n128p = _n128_perf.setdefault(_n128_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n128_bkt})
+            _n128p["total"] += 1; _n128p["total_pnl"] = round(_n128p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n128p["wins"] += 1
+            else:        _n128p["losses"] += 1
+            _n128p["win_rate"] = round(_n128p["wins"] / _n128p["total"] * 100, 1)
+            _n128p["avg_pnl"]  = round(_n128p["total_pnl"] / _n128p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N129: Exit Trigger Type ───────────────────────────────────────────────────
+    # Tracks which exit trigger produced the best outcomes: stop_loss/take_profit/trail/time
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n129 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n129_trig = "manual"
+            if reason:
+                _r = str(reason).lower()
+                if "stop" in _r and "trail" in _r:   _n129_trig = "trailing_stop"
+                elif "stop" in _r:                    _n129_trig = "stop_loss"
+                elif "target" in _r or "profit" in _r: _n129_trig = "take_profit"
+                elif "time" in _r or "eod" in _r or "close" in _r: _n129_trig = "time_exit"
+                elif "trail" in _r:                   _n129_trig = "trailing_stop"
+            _n129_perf = tlog.setdefault("exit_trigger_perf", {})
+            _n129p = _n129_perf.setdefault(_n129_trig, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n129_trig})
+            _n129p["total"] += 1; _n129p["total_pnl"] = round(_n129p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n129p["wins"] += 1
+            else:        _n129p["losses"] += 1
+            _n129p["win_rate"] = round(_n129p["wins"] / _n129p["total"] * 100, 1)
+            _n129p["avg_pnl"]  = round(_n129p["total_pnl"] / _n129p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N130: Stock Stability at Entry (recent drawdown) ──────────────────────────
+    # Tracks win rates by how volatile/drawdown-prone the stock was before entry.
+    # heavy_dd(>20%), moderate(10-20%), mild(5-10%), stable(<5%)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n130 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n130_dd = float(_buy_n130.get("max_drawdown_1m_at_entry", 0) or 0) if _buy_n130 else 0
+            _n130_bkt = ("heavy_dd" if _n130_dd >= 20 else "moderate" if _n130_dd >= 10 else
+                         "mild" if _n130_dd >= 5 else "stable")
+            _n130_perf = tlog.setdefault("stock_stability_perf", {})
+            _n130p = _n130_perf.setdefault(_n130_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n130_bkt})
+            _n130p["total"] += 1; _n130p["total_pnl"] = round(_n130p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n130p["wins"] += 1
+            else:        _n130p["losses"] += 1
+            _n130p["win_rate"] = round(_n130p["wins"] / _n130p["total"] * 100, 1)
+            _n130p["avg_pnl"]  = round(_n130p["total_pnl"] / _n130p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11237,6 +11388,48 @@ def run():
                     _mins_check = _minutes_since_open if market_open else 0
                     if 15 <= _mins_check < 90:
                         _ng_green_lights += 1
+                # N123 strike: sector ETF in strong_bear trend and historically bad entries
+                _n123_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("sector_etf_strength_perf",[])}
+                if _n123_ng.get("strong_bear", 50) < 35 and len(_n123_ng) >= 3:
+                    _sec_etf_now = _tk_sig.get("sector_etf", "SPY")
+                    _sec_chg5d_now = float(live.get(_sec_etf_now, {}).get("chg5d", 0) or 0)
+                    if _sec_chg5d_now <= -3:
+                        _ng_strikes += 1; _ng_reasons.append(f"sector {_sec_etf_now} bear({_sec_chg5d_now:.1f}%/5d) learned fail({_n123_ng.get('strong_bear',50):.0f}%WR)")
+                # N123 green: strong sector tailwind historically works
+                if _n123_ng.get("strong_bull", 0) >= 65:
+                    _sec_etf_now = _tk_sig.get("sector_etf", "SPY")
+                    _sec_chg5d_now = float(live.get(_sec_etf_now, {}).get("chg5d", 0) or 0)
+                    if _sec_chg5d_now >= 3:
+                        _ng_green_lights += 1
+                # N124 strike: diverging_bear (stock down while market up) historically fails
+                _n124_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("spy_alignment_perf",[])}
+                if _n124_ng.get("diverging_bear", 50) < 35 and len(_n124_ng) >= 3:
+                    _spy_c1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _stk_c1d = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    if _spy_c1d > 0.2 and _stk_c1d < -0.2:
+                        _ng_strikes += 1; _ng_reasons.append(f"stock weak vs SPY(+{_spy_c1d:.1f}%) diverging_bear fail({_n124_ng.get('diverging_bear',50):.0f}%WR)")
+                # N124 green: diverging_bull (relative strength vs SPY) historically outperforms
+                if _n124_ng.get("diverging_bull", 0) >= 65:
+                    _spy_c1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _stk_c1d = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    if _spy_c1d < -0.2 and _stk_c1d > 0.2:
+                        _ng_green_lights += 1
+                # N127 strike: weak RS historically bad and current RS is weak
+                _n127_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("rs_tier_entry_perf",[])}
+                if _n127_ng.get("weak", 50) < 35 and len(_n127_ng) >= 3:
+                    _rs_now_ng = float(live.get(tk, {}).get("rs_rating", 50) or live.get(tk, {}).get("rs_63", 50) or 50)
+                    if _rs_now_ng < 50:
+                        _ng_strikes += 1; _ng_reasons.append(f"weak RS({_rs_now_ng:.0f}) historically fails({_n127_ng.get('weak',50):.0f}%WR)")
+                # N127 green: elite RS historically best AND stock has elite RS now
+                if _n127_ng.get("elite", 0) >= 65:
+                    _rs_now_ng = float(live.get(tk, {}).get("rs_rating", 50) or live.get(tk, {}).get("rs_63", 50) or 50)
+                    if _rs_now_ng >= 90:
+                        _ng_green_lights += 1
+                # N128 strike: borderline score entries historically bad
+                _n128_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("entry_score_tier_perf",[])}
+                if _n128_ng.get("borderline", 50) < 35 and len(_n128_ng) >= 3:
+                    if tech_sc < 50:
+                        _ng_strikes += 1; _ng_reasons.append(f"borderline score({tech_sc:.0f}) historically fails({_n128_ng.get('borderline',50):.0f}%WR)")
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -12077,6 +12270,58 @@ def run():
                         _buy_signals_merged["dist_from_200ema_pct"] = _d200
                     except Exception:
                         _buy_signals_merged["dist_from_200ema_pct"] = 0
+                    # N123: sector ETF 5-day momentum strength at entry
+                    try:
+                        _sec_etf_tk = _tk_sig.get("sector_etf", "SPY")
+                        _sec_chg5d = float(live.get(_sec_etf_tk, {}).get("chg5d", 0) or 0)
+                        _buy_signals_merged["sector_etf_chg5d_at_entry"] = round(_sec_chg5d, 2)
+                    except Exception:
+                        _buy_signals_merged["sector_etf_chg5d_at_entry"] = 0
+                    # N124: intraday SPY alignment — does stock chg1d match SPY direction?
+                    try:
+                        _spy_chg1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                        _stk_chg1d = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        if _spy_chg1d > 0.2 and _stk_chg1d > 0.2:
+                            _align = "aligned_bull"
+                        elif _spy_chg1d < -0.2 and _stk_chg1d > 0.2:
+                            _align = "diverging_bull"  # stock up while SPY down — strong relative strength
+                        elif _spy_chg1d > 0.2 and _stk_chg1d < -0.2:
+                            _align = "diverging_bear"  # stock down while SPY up — relative weakness
+                        elif _spy_chg1d < -0.2 and _stk_chg1d < -0.2:
+                            _align = "aligned_bear"
+                        else:
+                            _align = "neutral"
+                        _buy_signals_merged["spy_alignment_at_entry"] = _align
+                    except Exception:
+                        _buy_signals_merged["spy_alignment_at_entry"] = "neutral"
+                    # N125: pre-entry news velocity (fresh headlines count)
+                    try:
+                        _news_list = live.get(tk, {}).get("news_headlines", [])
+                        _news_fresh = sum(1 for _nl in _news_list if isinstance(_nl, dict) and float(_nl.get("age_hours", 99) or 99) <= 2)
+                        _vel_bkt = ("hot" if _news_fresh >= 4 else "warm" if _news_fresh >= 2 else "cool" if _news_fresh >= 1 else "cold")
+                        _buy_signals_merged["news_velocity_at_entry"] = _vel_bkt
+                    except Exception:
+                        _buy_signals_merged["news_velocity_at_entry"] = "cold"
+                    # N126: pre-market gap % at entry
+                    try:
+                        _pm_gap_now = float(live.get(tk, {}).get("pm_gap_pct", 0) or 0)
+                        _buy_signals_merged["gap_pct_at_entry"] = round(_pm_gap_now, 2)
+                    except Exception:
+                        _buy_signals_merged["gap_pct_at_entry"] = 0
+                    # N127: RS rating at entry (O'Neil 1-99 relative strength)
+                    try:
+                        _rs_now = float(live.get(tk, {}).get("rs_rating", 50) or live.get(tk, {}).get("rs_63", 50) or 50)
+                        _buy_signals_merged["rs_rating_at_entry"] = round(_rs_now, 1)
+                    except Exception:
+                        _buy_signals_merged["rs_rating_at_entry"] = 50
+                    # N128: entry score value (already set as tech_sc/score before this block)
+                    _buy_signals_merged["score"] = tech_sc
+                    # N130: stock stability at entry (max drawdown last month as %)
+                    try:
+                        _dd1m = float(live.get(tk, {}).get("max_drawdown_1m", 0) or 0)
+                        _buy_signals_merged["max_drawdown_1m_at_entry"] = round(abs(_dd1m), 2)
+                    except Exception:
+                        _buy_signals_merged["max_drawdown_1m_at_entry"] = 0
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14935,6 +15180,106 @@ def run():
             _best_d200 = max(_n122_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N122 best 200EMA distance: {_best_d200['state']} ({_best_d200['win_rate']:.0f}%WR)")
 
+        # ── N123: Sector ETF Momentum Strength (multi-tier) ────────────────────────
+        _n123_raw = tlog.get("sector_etf_strength_perf", {})
+        _n123_insights = []
+        for _n23k, _n23d in _n123_raw.items():
+            if _n23d.get("total", 0) >= 2:
+                _n123_insights.append({"state": _n23k, "win_rate": _n23d.get("win_rate", 50),
+                                       "avg_pnl": _n23d.get("avg_pnl", 0), "total": _n23d.get("total", 0)})
+        if _n123_insights:
+            _best_sec = max(_n123_insights, key=lambda x: x["win_rate"])
+            _worst_sec = min(_n123_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N123 sector ETF: best={_best_sec['state']}({_best_sec['win_rate']:.0f}%WR) worst={_worst_sec['state']}({_worst_sec['win_rate']:.0f}%WR)")
+
+        # ── N124: Intraday SPY Alignment (multi-tier) ───────────────────────────────
+        _n124_raw = tlog.get("spy_alignment_perf", {})
+        _n124_insights = []
+        for _n24k, _n24d in _n124_raw.items():
+            if _n24d.get("total", 0) >= 2:
+                _n124_insights.append({"state": _n24k, "win_rate": _n24d.get("win_rate", 50),
+                                       "avg_pnl": _n24d.get("avg_pnl", 0), "total": _n24d.get("total", 0)})
+        if _n124_insights:
+            _best_align = max(_n124_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N124 SPY alignment: best={_best_align['state']} ({_best_align['win_rate']:.0f}%WR)")
+            _divbull = next((s for s in _n124_insights if s["state"] == "diverging_bull"), None)
+            if _divbull and _divbull["win_rate"] >= 65:
+                _learn_log.append(f"N124 INSIGHT: buying vs SPY downtrend (relative strength) pays off ({_divbull['win_rate']:.0f}%WR)")
+
+        # ── N125: Pre-Entry News Velocity (multi-tier) ──────────────────────────────
+        _n125_raw = tlog.get("news_velocity_perf", {})
+        _n125_insights = []
+        for _n25k, _n25d in _n125_raw.items():
+            if _n25d.get("total", 0) >= 2:
+                _n125_insights.append({"state": _n25k, "win_rate": _n25d.get("win_rate", 50),
+                                       "avg_pnl": _n25d.get("avg_pnl", 0), "total": _n25d.get("total", 0)})
+        if _n125_insights:
+            _best_vel = max(_n125_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N125 news velocity: best={_best_vel['state']}({_best_vel['win_rate']:.0f}%WR) hot news {'helps' if _best_vel['state']=='hot' else 'not always best'}")
+
+        # ── N126: Gap-Up Entry Quality (multi-tier) ────────────────────────────────
+        _n126_raw = tlog.get("gap_entry_perf", {})
+        _n126_insights = []
+        for _n26k, _n26d in _n126_raw.items():
+            if _n26d.get("total", 0) >= 2:
+                _n126_insights.append({"state": _n26k, "win_rate": _n26d.get("win_rate", 50),
+                                       "avg_pnl": _n26d.get("avg_pnl", 0), "total": _n26d.get("total", 0)})
+        if _n126_insights:
+            _best_gap = max(_n126_insights, key=lambda x: x["win_rate"])
+            _gap_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _n126_insights)
+            _learn_log.append(f"N126 gap entry tiers: {_gap_sum}")
+
+        # ── N127: Relative Strength Rating Tier (multi-tier) ────────────────────────
+        _n127_raw = tlog.get("rs_tier_entry_perf", {})
+        _n127_insights = []
+        for _n27k, _n27d in _n127_raw.items():
+            if _n27d.get("total", 0) >= 2:
+                _n127_insights.append({"state": _n27k, "win_rate": _n27d.get("win_rate", 50),
+                                       "avg_pnl": _n27d.get("avg_pnl", 0), "total": _n27d.get("total", 0)})
+        if _n127_insights:
+            _best_rs = max(_n127_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N127 RS tier: best={_best_rs['state']}({_best_rs['win_rate']:.0f}%WR avg_pnl={_best_rs['avg_pnl']:.2f})")
+            _weak_rs = next((s for s in _n127_insights if s["state"] == "weak"), None)
+            if _weak_rs and _weak_rs["win_rate"] < 40:
+                _learn_log.append(f"N127 AVOID: weak RS entries losing ({_weak_rs['win_rate']:.0f}%WR)")
+
+        # ── N128: Entry Score Percentile (multi-tier) ───────────────────────────────
+        _n128_raw = tlog.get("entry_score_tier_perf", {})
+        _n128_insights = []
+        for _n28k, _n28d in _n128_raw.items():
+            if _n28d.get("total", 0) >= 2:
+                _n128_insights.append({"state": _n28k, "win_rate": _n28d.get("win_rate", 50),
+                                       "avg_pnl": _n28d.get("avg_pnl", 0), "total": _n28d.get("total", 0)})
+        if _n128_insights:
+            _best_esc = max(_n128_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N128 entry score: best={_best_esc['state']}({_best_esc['win_rate']:.0f}%WR) — score {'matters' if _best_esc['state'] in ('elite','strong') else 'less predictive than expected'}")
+
+        # ── N129: Exit Trigger Type (multi-tier) ────────────────────────────────────
+        _n129_raw = tlog.get("exit_trigger_perf", {})
+        _n129_insights = []
+        for _n29k, _n29d in _n129_raw.items():
+            if _n29d.get("total", 0) >= 2:
+                _n129_insights.append({"state": _n29k, "win_rate": _n29d.get("win_rate", 50),
+                                       "avg_pnl": _n29d.get("avg_pnl", 0), "total": _n29d.get("total", 0)})
+        if _n129_insights:
+            _best_exit = max(_n129_insights, key=lambda x: x["avg_pnl"])
+            _exit_sum = " | ".join(f"{s['state']}:{s['avg_pnl']:+.2f}" for s in sorted(_n129_insights, key=lambda x: x["avg_pnl"], reverse=True))
+            _learn_log.append(f"N129 exit triggers avg_pnl: {_exit_sum}")
+
+        # ── N130: Stock Stability at Entry (multi-tier) ──────────────────────────────
+        _n130_raw = tlog.get("stock_stability_perf", {})
+        _n130_insights = []
+        for _n30k, _n30d in _n130_raw.items():
+            if _n30d.get("total", 0) >= 2:
+                _n130_insights.append({"state": _n30k, "win_rate": _n30d.get("win_rate", 50),
+                                       "avg_pnl": _n30d.get("avg_pnl", 0), "total": _n30d.get("total", 0)})
+        if _n130_insights:
+            _best_stab = max(_n130_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N130 stock stability: best={_best_stab['state']}({_best_stab['win_rate']:.0f}%WR)")
+            _heavy_dd = next((s for s in _n130_insights if s["state"] == "heavy_dd"), None)
+            if _heavy_dd and _heavy_dd["win_rate"] < 40:
+                _learn_log.append(f"N130 AVOID: heavy-drawdown stocks ({_heavy_dd['win_rate']:.0f}%WR)")
+
         # ── N119: Macro Event Holding (multi-tier) ─────────────────────────────────
         _n119_raw = tlog.get("macro_hold_perf", {})
         _n119_insights = []
@@ -15118,6 +15463,14 @@ def run():
             "pcr_entry_perf":       _n120_insights,          # N120: options put/call ratio bracket at entry vs outcome
             "si_squeeze_perf":      _n121_insights,          # N121: short interest / squeeze setup vs outcome
             "dist_200ema_perf":     _n122_insights,          # N122: distance from 200 EMA at entry vs outcome
+            "sector_etf_strength_perf": _n123_insights,     # N123: sector ETF 5d momentum at entry vs outcome
+            "spy_alignment_perf":   _n124_insights,          # N124: stock intraday alignment vs SPY direction
+            "news_velocity_perf":   _n125_insights,          # N125: pre-entry news velocity (fresh headlines)
+            "gap_entry_perf":       _n126_insights,          # N126: pre-market gap % at entry vs outcome
+            "rs_tier_entry_perf":   _n127_insights,          # N127: RS rating tier at entry vs outcome
+            "entry_score_tier_perf":_n128_insights,          # N128: entry score tier vs outcome
+            "exit_trigger_perf":    _n129_insights,          # N129: exit trigger type (stop/target/trail/time)
+            "stock_stability_perf": _n130_insights,          # N130: stock max drawdown last month at entry
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -15227,6 +15580,9 @@ def run():
             "hold_duration_perf","mktcap_tier_perf","float_tier_perf",
             "vts_perf","consec_red_entry_perf","macro_hold_perf",
             "pcr_entry_perf","si_squeeze_perf","dist_200ema_perf",
+            "sector_etf_strength_perf","spy_alignment_perf","news_velocity_perf",
+            "gap_entry_perf","rs_tier_entry_perf","entry_score_tier_perf",
+            "exit_trigger_perf","stock_stability_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -15234,9 +15590,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 81               # total tracked neuron dimensions (N103-N122 added)
+        tlog["neurons_total"]     = 90               # total tracked neuron dimensions (N103-N130 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/81 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/90 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

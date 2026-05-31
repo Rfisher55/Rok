@@ -61247,6 +61247,89 @@ window.renderPositionNews = renderPositionNews;
         }
       }
 
+      // ── Weekly Bot Performance Card ──────────────────────────────────────────
+      // Fetches weekly_report.json (generated every 15 min by generate_report.py)
+      // Shows weekly trade stats, top neurons, and recent learning observations.
+      try {
+        const wrRes = await fetch('weekly_report.json?t=' + Date.now()).catch(() => null);
+        if (wrRes && wrRes.ok) {
+          const wr = await wrRes.json();
+          if (wr && (wr.trades_total > 0 || wr.neurons_active > 0)) {
+            const wrPnlCol = (wr.total_pnl || 0) >= 0 ? '#00e676' : '#ef5350';
+            const wrWRCol = (wr.win_rate || 0) >= 55 ? '#00e676' : (wr.win_rate || 0) >= 45 ? '#ffd54f' : '#ef5350';
+            const nPct = wr.neurons_total > 0 ? Math.round(wr.neurons_active / wr.neurons_total * 100) : 0;
+            html += `<details style="margin-bottom:.55rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden">
+              <summary style="padding:.4rem .65rem;cursor:pointer;display:flex;align-items:center;gap:.5rem;list-style:none;user-select:none">
+                <span style="font-size:11px">📊</span>
+                <div style="flex:1">
+                  <div style="font-size:7px;font-weight:800;color:#e0e0e0;letter-spacing:.06em">WEEKLY BOT REPORT</div>
+                  <div style="font-size:5.5px;color:#666">${wr.week_start} → ${wr.week_end} · ${wr.trades_total} trades · ${wr.win_rate}%WR · <span style="color:${wrPnlCol}">${(wr.total_pnl||0)>=0?'+':''}${(wr.total_pnl||0).toFixed(2)}% PnL</span></div>
+                </div>
+                <span style="font-size:6px;color:#555">▼</span>
+              </summary>
+              <div style="padding:.45rem .65rem .5rem;border-top:1px solid rgba(255,255,255,.06)">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.45rem">
+                  <div style="text-align:center;padding:.3rem .2rem;background:rgba(255,255,255,.04);border-radius:7px">
+                    <div style="font-size:5.5px;color:#666;text-transform:uppercase;letter-spacing:.07em">Trades</div>
+                    <div style="font-size:11px;font-weight:900;color:#e0e0e0">${wr.trades_total}</div>
+                    <div style="font-size:5px;color:#555">${wr.trades_wins}W/${wr.trades_losses}L</div>
+                  </div>
+                  <div style="text-align:center;padding:.3rem .2rem;background:rgba(255,255,255,.04);border-radius:7px">
+                    <div style="font-size:5.5px;color:#666;text-transform:uppercase;letter-spacing:.07em">Win Rate</div>
+                    <div style="font-size:11px;font-weight:900;color:${wrWRCol}">${wr.win_rate}%</div>
+                    <div style="font-size:5px;color:#555">7-day</div>
+                  </div>
+                  <div style="text-align:center;padding:.3rem .2rem;background:rgba(255,255,255,.04);border-radius:7px">
+                    <div style="font-size:5.5px;color:#666;text-transform:uppercase;letter-spacing:.07em">Total P&L</div>
+                    <div style="font-size:10px;font-weight:900;color:${wrPnlCol}">${(wr.total_pnl||0)>=0?'+':''}${(wr.total_pnl||0).toFixed(2)}%</div>
+                    <div style="font-size:5px;color:#555">avg ${(wr.avg_pnl_per_trade||0)>=0?'+':''}${(wr.avg_pnl_per_trade||0).toFixed(2)}%/trade</div>
+                  </div>
+                  <div style="text-align:center;padding:.3rem .2rem;background:rgba(255,255,255,.04);border-radius:7px">
+                    <div style="font-size:5.5px;color:#666;text-transform:uppercase;letter-spacing:.07em">Neurons</div>
+                    <div style="font-size:11px;font-weight:900;color:#7c83f5">${wr.neurons_active}/${wr.neurons_total}</div>
+                    <div style="font-size:5px;color:#555">${nPct}% firing</div>
+                  </div>
+                </div>
+                ${(wr.best_trades||[]).length > 0 ? `
+                <div style="margin-bottom:.35rem">
+                  <div style="font-size:6px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem">Best Trades This Week</div>
+                  <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+                    ${(wr.best_trades||[]).map(t=>`<span style="font-size:6.5px;padding:2px 7px;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);border-radius:10px;color:#69f0ae">${t.ticker} +${(t.pnl||0).toFixed(1)}%</span>`).join('')}
+                  </div>
+                </div>` : ''}
+                ${(wr.worst_trades||[]).length > 0 ? `
+                <div style="margin-bottom:.35rem">
+                  <div style="font-size:6px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem">Worst Trades This Week</div>
+                  <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+                    ${(wr.worst_trades||[]).map(t=>`<span style="font-size:6.5px;padding:2px 7px;background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.3);border-radius:10px;color:#ef9a9a">${t.ticker} ${(t.pnl||0).toFixed(1)}%</span>`).join('')}
+                  </div>
+                </div>` : ''}
+                ${(wr.top_neurons||[]).length > 0 ? `
+                <div style="margin-bottom:.35rem">
+                  <div style="font-size:6px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.25rem">Top Firing Neurons</div>
+                  <div style="display:flex;flex-direction:column;gap:.2rem">
+                    ${(wr.top_neurons||[]).slice(0,5).map(n=>{
+                      const nCol = n.win_rate >= 65 ? '#69f0ae' : n.win_rate >= 50 ? '#ffd54f' : '#ef9a9a';
+                      return `<div style="display:flex;align-items:center;gap:.4rem">
+                        <div style="font-size:6.5px;color:#aaa;flex:1">${n.neuron}</div>
+                        <div style="font-size:6px;color:#666">best: ${n.best_state}</div>
+                        <div style="font-size:7px;font-weight:700;color:${nCol}">${n.win_rate}%WR</div>
+                        <div style="font-size:5.5px;color:#444">(${n.samples})</div>
+                      </div>`;
+                    }).join('')}
+                  </div>
+                </div>` : ''}
+                ${(wr.learn_log||[]).length > 0 ? `
+                <div>
+                  <div style="font-size:6px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.2rem">Recent Learning</div>
+                  ${(wr.learn_log||[]).slice(-3).map(l=>`<div style="font-size:5.5px;color:rgba(255,255,255,.35);margin-bottom:.1rem;padding-left:.4rem;border-left:2px solid #333">${l}</div>`).join('')}
+                </div>` : ''}
+              </div>
+            </details>`;
+          }
+        }
+      } catch(e) { /* weekly_report.json not yet generated — skip silently */ }
+
       // ── Macro Context Strip ──────────────────────────────────────────────────
       {
         const reg = data.regime || {};
