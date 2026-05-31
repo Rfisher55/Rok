@@ -56334,8 +56334,8 @@ async function renderPerfChart() {
     const peakVal    = equityData?.peak_value || portVal;
     const drawdownPct = peakVal > 0 ? ((portVal - peakVal) / peakVal * 100) : 0;
 
-    // Position P&L bars (top 6, sorted by abs P&L)
-    const sortedPos = [...positions].sort((a, b) => Math.abs(b.pnl_usd||0) - Math.abs(a.pnl_usd||0)).slice(0, 6);
+    // Position P&L bars — enhanced with stop level, entry score, hold time
+    const sortedPos = [...positions].sort((a, b) => Math.abs(b.pnl_usd||0) - Math.abs(a.pnl_usd||0)).slice(0, 8);
     const maxAbsPnl = sortedPos.length ? Math.max(...sortedPos.map(p => Math.abs(p.pnl_usd||0)), 1) : 1;
     const posBars = sortedPos.map(p => {
       const pct = p.pnl_pct || 0;
@@ -56343,13 +56343,35 @@ async function renderPerfChart() {
       const c   = pct >= 0 ? '#00ff88' : '#ef5350';
       const barW = Math.round(Math.abs(usd) / maxAbsPnl * 100);
       const liveP = (window._livePrices && window._livePrices[p.ticker]) ? window._livePrices[p.ticker].price : p.price;
-      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-        <span style="color:#aaa;font-size:.7rem;font-weight:700;width:42px;flex-shrink:0">${p.ticker}</span>
-        <div style="flex:1;height:7px;background:#0a1a2a;border-radius:3px;overflow:hidden">
-          <div style="height:100%;width:${barW}%;background:${c};border-radius:3px;transition:width .5s"></div>
+      const stopP = p.trail_stop_price || p.stop_price || 0;
+      const entryScore = p.entry_score || p.score || 0;
+      const holdDays = p.days_held != null ? (+p.days_held).toFixed(1) : '—';
+      const catalyst = p.entry_thesis || p.catalyst || '';
+      const mktVal = p.market_val || 0;
+      const distToStop = stopP > 0 && liveP > 0 ? ((liveP - stopP) / liveP * 100) : 0;
+      const stopCol = distToStop < 1 ? '#ef5350' : distToStop < 2.5 ? '#ff9800' : '#555';
+      const pctBig = pct >= 15 ? '🚀' : pct >= 8 ? '✅' : pct >= 3 ? '↑' : pct >= 0 ? '→' : pct >= -3 ? '↓' : pct >= -7 ? '⚠' : '🔴';
+      return `<div style="margin-bottom:.4rem;padding:.3rem .45rem;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-left:3px solid ${c};border-radius:0 7px 7px 0">
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+          <span style="font-size:9px">${pctBig}</span>
+          <span style="color:#e0e0e0;font-size:.78rem;font-weight:800;flex-shrink:0">${p.ticker}</span>
+          <span style="color:${c};font-size:.75rem;font-weight:900;margin-left:auto">${pct>=0?'+':''}${pct.toFixed(2)}%</span>
+          ${usd !== 0 ? `<span style="color:${c};font-size:.65rem;font-weight:700">(${usd>=0?'+':''}$${Math.round(Math.abs(usd))})</span>` : ''}
         </div>
-        <span style="color:${c};font-size:.7rem;font-weight:800;width:52px;text-align:right;flex-shrink:0">${pct>=0?'+':''}${pct.toFixed(2)}%</span>
-        <span style="color:#445;font-size:.65rem;width:40px;text-align:right;flex-shrink:0">$${Math.round(liveP||p.price||0)}</span>
+        <div style="display:flex;align-items:center;gap:3px;margin-bottom:3px">
+          <div style="flex:1;height:5px;background:#0a1a2a;border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${barW}%;background:${c}66;border-radius:3px;transition:width .5s"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <span style="font-size:5.5px;color:#555">Price: <span style="color:#aaa">$${(+(liveP||p.price||0)).toFixed(2)}</span></span>
+          <span style="font-size:5.5px;color:#555">Cost: <span style="color:#aaa">$${(p.cost||0).toFixed(2)}</span></span>
+          ${stopP > 0 ? `<span style="font-size:5.5px;color:${stopCol}">Stop: $${stopP.toFixed(2)} (${distToStop.toFixed(1)}% away)</span>` : ''}
+          ${holdDays !== '—' ? `<span style="font-size:5.5px;color:#555">Held: <span style="color:#aaa">${holdDays}d</span></span>` : ''}
+          ${entryScore > 0 ? `<span style="font-size:5.5px;color:#555">Score: <span style="color:#82b1ff">${entryScore}</span></span>` : ''}
+          ${mktVal > 0 ? `<span style="font-size:5.5px;color:#555">Val: <span style="color:#aaa">$${Math.round(mktVal).toLocaleString()}</span></span>` : ''}
+        </div>
+        ${catalyst ? `<div style="font-size:5px;color:rgba(255,255,255,.25);margin-top:2px;line-height:1.3">${catalyst}</div>` : ''}
       </div>`;
     }).join('');
 
