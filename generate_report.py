@@ -285,6 +285,16 @@ def _build_weekly_bot_report(docs_dir):
         "trend_acceleration_perf": "N268 Trend Acceleration",
         "sector_breadth_perf": "N269 Sector Breadth",
         "time_since_last_trade_perf": "N270 Trade Pace",
+        "market_internals_trend_perf": "N271 Internals Trend",
+        "news_volume_perf": "N272 News Volume",
+        "spy_distance_from_52w_high_perf": "N273 SPY 52w Hi Dist",
+        "position_concentration_perf": "N274 Position Conc",
+        "regime_duration_perf": "N275 Regime Duration",
+        "crypto_correlation_perf": "N276 Crypto Correlation",
+        "intraday_trend_persistence_perf": "N277 Intraday Persist",
+        "entry_quality_score_perf": "N278 Entry Quality",
+        "sector_momentum_rank_perf": "N279 Sector Rank",
+        "fed_meeting_week_perf": "N280 Fed Week",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
