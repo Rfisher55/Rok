@@ -345,6 +345,16 @@ def _build_weekly_bot_report(docs_dir):
         "psar_bull_entry_perf": "N328 PSAR Entry",
         "adx_trend_strength_perf": "N329 ADX Strength",
         "volume_trend_3d_perf": "N330 Volume Trend",
+        "sector_rotation_signal_perf": "N331 Sector Rotation",
+        "spy_above_200ma_perf": "N332 SPY vs 200MA",
+        "fear_greed_bucket_perf": "N333 Fear/Greed",
+        "short_float_bucket_perf": "N334 Short Float",
+        "iv_rank_bucket_perf": "N335 IV Rank",
+        "catalyst_type_perf": "N336 Catalyst Type",
+        "trend_age_bucket_perf": "N337 Trend Age",
+        "index_divergence_perf": "N338 Index Divergence",
+        "opening_gap_follow_perf": "N339 Gap Follow",
+        "earnings_revision_perf": "N340 EPS Revision",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
