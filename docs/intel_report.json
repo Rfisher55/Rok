@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-30T23:44:02.765932+00:00",
+  "generated_at": "2026-05-31T06:21:02.122597+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -1080,75 +1080,75 @@
     ],
     [
       "COM",
-      260
+      213
     ],
     [
       "HTTPS",
-      259
+      213
     ],
     [
       "HREF",
-      258
+      212
     ],
     [
       "WWW",
-      224
+      179
     ],
     [
       "BR",
-      192
+      154
     ],
     [
       "LINK",
-      191
+      151
     ],
     [
       "SPAN",
-      187
-    ],
-    [
-      "USER",
-      186
-    ],
-    [
-      "CLASS",
-      182
-    ],
-    [
-      "MD",
-      180
-    ],
-    [
-      "DIV",
-      179
-    ],
-    [
-      "SC",
-      179
-    ],
-    [
-      "AMP",
       148
     ],
     [
-      "AS",
-      106
+      "USER",
+      147
     ],
     [
-      "IMG",
-      101
+      "CLASS",
+      145
+    ],
+    [
+      "MD",
+      143
+    ],
+    [
+      "DIV",
+      142
+    ],
+    [
+      "SC",
+      142
+    ],
+    [
+      "AMP",
+      129
+    ],
+    [
+      "AS",
+      100
+    ],
+    [
+      "TABLE",
+      80
     ],
     [
       "TITLE",
-      101
-    ],
-    [
-      "SRC",
-      101
+      80
     ],
     [
       "WIDTH",
-      101
+      79
+    ],
+    [
+      "IMG",
+      79
     ]
   ],
   "stocktwits_trending": [],
@@ -1159,14 +1159,6 @@
       "sell_count": 0,
       "member_count": 1,
       "members_preview": "Gilbert Cisneros",
-      "latest_date": "2026-04-29"
-    },
-    {
-      "ticker": "TDG",
-      "buy_count": 4,
-      "sell_count": 0,
-      "member_count": 1,
-      "members_preview": "April Mcclain Delaney",
       "latest_date": "2026-04-29"
     },
     {
@@ -1192,6 +1184,14 @@
       "member_count": 2,
       "members_preview": "April Mcclain Delaney, Gilbert Cisneros",
       "latest_date": "2026-05-01"
+    },
+    {
+      "ticker": "TDG",
+      "buy_count": 3,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "April Mcclain Delaney",
+      "latest_date": "2026-04-29"
     },
     {
       "ticker": "MEDP",
@@ -1264,67 +1264,6 @@
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-05-30",
-      "timestamp": "2026-05-30T15:37:52.541935",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-05-30",
       "timestamp": "2026-05-30T16:44:20.872466",
@@ -1751,223 +1690,284 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-05-31",
+      "timestamp": "2026-05-31T06:21:01.547264",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": null,
+          "target": null
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
     {
-      "title": "Every Big Tech Company Is Solving AI the Same Way. This Stock Is Solving It Differently.",
+      "title": "SpaceX awarded $6.45B in Space Force contracts ahead of IPO",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/every-big-tech-company-solving-232000438.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/spacex-awarded-6-45b-space-222138253.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Galaxy Digital (GLXY): Leopold Aschenbrenner Is Bearish on This Stock",
+      "title": "Cotton Closes Mixed on Friday",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/galaxy-digital-glxy-leopold-aschenbrenner-195727813.html",
+      "url": "https://finance.yahoo.com/markets/commodities/articles/cotton-closes-mixed-friday-215954585.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Corn Faces Month End and Outside Pressure on Friday",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/commodities/articles/corn-faces-month-end-outside-215954113.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Soybeans Slip Lower into Month End",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/commodities/articles/soybeans-slip-lower-month-end-215954237.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Wheat Falls into the End of the Month",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/commodities/articles/wheat-falls-end-month-215954716.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Visa vs. Mastercard Stock: Using Barchart Data to Pick the Best Payments Giant Now",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/visa-vs-mastercard-stock-using-230002922.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "NVDL ETF Explained: Leveraged Nvidia, Decay Risk, and Who Should Actually Own It",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/options/articles/nvdl-etf-explained-leveraged-nvidia-233313764.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Social media companies pay $27 million to settle Kentucky school district\u2019s lawsuit over social media harms, records show",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/meta-paid-9-million-settle-234825076.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Liberty Energy Inc. (LBRT): Leopold Aschenbrenner Sells Position",
+      "title": "Social media companies to pay $27 million to settle Kentucky school district's lawsuit, records show",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/liberty-energy-inc-lbrt-leopold-195548949.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Hut 8 Corp. (HUT): Leopold Aschenbrenner Sells Holding",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/hut-8-corp-hut-leopold-195346935.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Kilroy Realty Corporation (KRC): Leopold Aschenbrenner Has Bearish Stance on This Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/kilroy-realty-corporation-krc-leopold-195138449.html",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/meta-paid-9-million-settle-234825372.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "XLU Investors: Watch PJM\u2019s March 2027 Data Center Framework Decision",
+      "title": "Will Solana (SOL) Make You a Millionaire?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/xlu-investors-watch-pjm-march-231828392.html",
+      "url": "https://finance.yahoo.com/markets/crypto/articles/solana-sol-millionaire-223918455.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Coherent Corp. (COHR): Leopold Aschenbrenner Changes Bullish Stance",
+      "title": "Morgan Stanley Trims CMS Energy (CMS) Target While Keeping Equal Weight Rating",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/coherent-corp-cohr-leopold-aschenbrenner-194931692.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-lowers-radnet-rdnt-price-010940219.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "EQT Corporation (EQT): Leopold Aschenbrenner Is No Longer Bullish",
+      "title": "Strategy Bitcoin Transfer Puts Saylor\u2019s Treasury Model Back Under Pressure",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/eqt-corporation-eqt-leopold-aschenbrenner-194800862.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Cipher Digital Inc. (CIFR): Leopold Aschenbrenner Sells Stake in Data Center Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/cipher-digital-inc-cifr-leopold-194150376.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Lumentum Holdings Inc. (LITE): Leopold Aschenbrenner Registers Bearish Activity",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/lumentum-holdings-inc-lite-leopold-194045577.html",
+      "url": "https://finance.yahoo.com/markets/crypto/articles/strategy-bitcoin-transfer-puts-saylor-011300880.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Cathie Wood sells $12 million in surging stock",
+      "title": "Barclays Says Honeywell (HON) Has Clear Catalysts as Spinoffs Near",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/cathie-wood-sells-12-million-231010930.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-says-honeywell-hon-clear-012708272.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "HIVE Digital Technologies Ltd. (HIVE): Leopold Aschenbrenner Opens New Position",
+      "title": "Is Smurfit Westrock (SW) One of the Best Stocks to Buy from Billionaire George Soros\u2019 Stock Portfolio?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/hive-digital-technologies-ltd-hive-193643662.html",
-      "sentiment": 0.0,
+      "url": "https://finance.yahoo.com/markets/stocks/articles/smurfit-westrock-sw-one-best-013013463.html",
+      "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Infosys Limited (INFY): Leopold Aschenbrenner Is Bearish on This Firm",
+      "title": "62-Year-Old Retiree\u2019s $2.4M Portfolio Could Drop to $1.1M by 80 in the Wrong Market",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/infosys-limited-infy-leopold-aschenbrenner-193525731.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/62-old-retiree-2-4m-213253801.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "ProPetro Holding Corp. (PUMP): Leopold Aschenbrenner Remains Bullish",
+      "title": "Electronic Arts (EA) \u2013 Among the 10 Best Stocks to Buy from Billionaire George Soros\u2019 Stock Portfolio",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/propetro-holding-corp-pump-leopold-193420035.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/electronic-arts-ea-among-10-013229874.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "SharonAI Holdings Inc. (SHAZ): Leopold Aschenbrenner Declares New Position",
+      "title": "This Analyst Just Downgraded ASTS Stock, and Blue Origin May Be to Blame",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/sharonai-holdings-inc-shaz-leopold-193307274.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Marathon Digital Bets Its Bitcoin Mining Power Assets Can Fuel AI Data Center Growth",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/marathon-digital-bets-bitcoin-mining-230225331.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Babcock & Wilcox Enterprises, Inc. (BW): Leopold Aschenbrenner Likes This Energy Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/babcock-wilcox-enterprises-inc-bw-193143112.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "WhiteFiber, Inc. (WYFI): Leopold Aschenbrenner Discloses New Bet",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/whitefiber-inc-wyfi-leopold-aschenbrenner-192949977.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Power Solutions International (PSIX): Leopold Aschenbrenner Admires This Power Firm",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/power-solutions-international-psix-leopold-192823825.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Bitdeer Technologies Group (BTDR): Leopold Aschenbrenner Is Loading Up on This Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/bitdeer-technologies-group-btdr-leopold-192616662.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "The Dividend ETF Built for Whatever the Market Does Next",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/dividend-etf-built-whatever-market-230100826.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Sandisk Corporation (SNDK): Renaissance Technologies Trims Stake",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/sandisk-corporation-sndk-renaissance-technologies-191055514.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Micron Technology (MU): Renaissance Technologies Is Selling This Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/micron-technology-mu-renaissance-technologies-191025719.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/analyst-just-downgraded-asts-stock-210320461.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "SoftBank to build up AI data centres in France with major investment",
+      "title": "Northland Trims Salesforce (CRM) Valuation Following Earnings Report",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/softbank-build-ai-data-centres-190150588.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/northland-trims-salesforce-crm-valuation-013849252.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Dow Jones Futures: Iran Deal Or No, Market Hits Highs; Nvidia, Tesla Lead 5 Titans Near Buy Points",
+      "title": "Barclays Lowers RadNet (RDNT) Price Target, Says Imaging Business Continues to Outperform",
       "source": "Yahoo Finance",
-      "url": "https://www.investors.com/market-trend/stock-market-today/dow-jones-futures-iran-hopes-nvidia-tesla-stocks-near-buy-points/?src=A00220&yptr=yahoo",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-lowers-radnet-rdnt-price-014247376.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Skip XRP and Buy This Top Cryptocurrency Instead",
+      "title": "CVC to Buy IFF\u2019s Food-Ingredients Unit in $4.3 Billion Deal",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/skip-xrp-buy-top-cryptocurrency-223900574.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/cvc-buy-iff-food-ingredients-115200369.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "HYPE Token Hits Record as CFTC Perpetuals Approval Lifts Hyperliquid",
+      "title": "Jamie Dimon Says JPMorgan (JPM) Could Spend Up to $20 Billion on an Acquisition",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/hype-token-hits-record-cftc-181900302.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/jamie-dimon-says-jpmorgan-jpm-014441157.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Salaries are growing faster than hourly wages. Here's why that matters.",
+      "title": "Unusual Machines Stock Looks Like a Winner as Trump Backs Drone Makers",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/economy/article/salaries-are-growing-faster-than-hourly-wages-heres-why-that-matters-151404124.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "These gas deals could make summer road trips a lot cheaper",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/these-gas-deals-could-make-summer-road-trips-a-lot-cheaper-194922927.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/unusual-machines-stock-looks-winner-205728091.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Best CD rates today, Saturday, May 30, 2026: Best account provides 4% APY",
+      "title": "Susquehanna Bullish on Woodward (WWD) as Aerospace Demand Supports Long-Term Growth",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-cd-rates-today-saturday-may-30-2026-100000443.html",
-      "sentiment": -1.0,
+      "url": "https://finance.yahoo.com/markets/stocks/articles/susquehanna-bullish-woodward-wwd-aerospace-014759852.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Truist Lowers Xcel Energy (XEL) Price Target, Sees Utilities Benefiting From Data Center Growth",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/energy/articles/truist-lowers-xcel-energy-xel-015043841.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Michael Saylor Says Bitcoin Has No Competition: 'There's No Second Best Crypto Asset'",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/crypto/articles/michael-saylor-says-bitcoin-no-233214644.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Piper Sandler Reaffirms Overweight on Corebridge Financial (CRBG) Despite Lower Price Target",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/piper-sandler-reaffirms-overweight-corebridge-015301093.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "PLTR Stock Alert: Why Palantir Is Getting a Boost from Dell Earnings",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/pltr-stock-alert-why-palantir-204408942.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Stocks Rally on Easing Geopolitical Tensions and AI Enthusiasm",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/stocks-rally-easing-geopolitical-tensions-203401276.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Western Digital Is Making the Right Moves Amid Fierce Momentum for Memory Stocks",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/western-digital-making-moves-amid-201816720.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Stride Stock Is Down 40% This Past Year. Here's Why One Investor Added $58 Million",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/stride-stock-down-40-past-000833273.html",
+      "sentiment": 0.0,
       "tickers": []
     }
   ],
   "source_stats": {
-    "reddit": 221,
-    "news": 243,
+    "reddit": 177,
+    "news": 247,
     "stocks": 37,
     "sec": 40,
     "earnings_upcoming": 25,
@@ -1989,7 +1989,16 @@
       "pnl_pct": -0.259,
       "side": "long",
       "entry_date": "2026-05-30",
-      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00",
+      "trail_stop_price": 170.57,
+      "target_price": 227.42,
+      "risk_reward": 2.0,
+      "sector": "Crypto/Fintech",
+      "entry_thesis": "Bitcoin ETF flows + crypto momentum \u2014 riding institutional wave",
+      "grade": "B",
+      "score": 72,
+      "days_held": 1,
+      "dist_from_trail": 9.8
     },
     {
       "ticker": "MSFT",
@@ -2001,7 +2010,16 @@
       "pnl_pct": 1.399,
       "side": "long",
       "entry_date": "2026-05-30",
-      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00",
+      "trail_stop_price": 399.63,
+      "target_price": 532.84,
+      "risk_reward": 2.0,
+      "sector": "Technology",
+      "entry_thesis": "Azure AI revenue +35% YoY \u2014 Copilot adoption accelerating fast",
+      "grade": "A",
+      "score": 75,
+      "days_held": 1,
+      "dist_from_trail": 11.2
     },
     {
       "ticker": "MSTR",
@@ -2013,7 +2031,16 @@
       "pnl_pct": -0.625,
       "side": "long",
       "entry_date": "2026-05-30",
-      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00",
+      "trail_stop_price": 144.08,
+      "target_price": 192.11,
+      "risk_reward": 2.0,
+      "sector": "Crypto/Software",
+      "entry_thesis": "Bitcoin treasury proxy \u2014 592K BTC held, leverage amplifies BTC upside",
+      "grade": "B",
+      "score": 68,
+      "days_held": 1,
+      "dist_from_trail": 9.4
     },
     {
       "ticker": "PLTR",
@@ -2025,7 +2052,16 @@
       "pnl_pct": 0.104,
       "side": "long",
       "entry_date": "2026-05-30",
-      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00",
+      "trail_stop_price": 140.74,
+      "target_price": 187.65,
+      "risk_reward": 2.0,
+      "sector": "AI/Defense",
+      "entry_thesis": "Government AI contracts \u2014 US military uses PLTR for every major AI system",
+      "grade": "A",
+      "score": 78,
+      "days_held": 1,
+      "dist_from_trail": 10.1
     },
     {
       "ticker": "SOFI",
@@ -2037,7 +2073,16 @@
       "pnl_pct": -1.051,
       "side": "long",
       "entry_date": "2026-05-30",
-      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00",
+      "trail_stop_price": 16.57,
+      "target_price": 22.1,
+      "risk_reward": 2.0,
+      "sector": "Fintech/Banking",
+      "entry_thesis": "Student loan resumption + neobank growth \u2014 low PE vs fintech peers",
+      "grade": "C",
+      "score": 62,
+      "days_held": 1,
+      "dist_from_trail": 9.1
     },
     {
       "ticker": "TSLA",
@@ -2049,7 +2094,16 @@
       "pnl_pct": -0.489,
       "side": "long",
       "entry_date": "2026-05-30",
-      "entry_ts": "2026-05-30T16:44:57.438213+00:00"
+      "entry_ts": "2026-05-30T16:44:57.438213+00:00",
+      "trail_stop_price": 394.14,
+      "target_price": 525.52,
+      "risk_reward": 2.0,
+      "sector": "EV/Auto/Energy",
+      "entry_thesis": "FSD v13 deployment + energy storage record quarter",
+      "grade": "B",
+      "score": 70,
+      "days_held": 1,
+      "dist_from_trail": 9.5
     }
   ],
   "position_analysis": [],
