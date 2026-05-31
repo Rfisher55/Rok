@@ -365,6 +365,16 @@ def _build_weekly_bot_report(docs_dir):
         "sector_breadth_perf": "N348 Sector Breadth",
         "volatility_contraction_perf": "N349 Vol Contraction",
         "time_since_last_trade_perf": "N350 Time Since Trade",
+        "float_size_bucket_perf": "N351 Float Size",
+        "news_velocity_perf": "N352 News Velocity",
+        "relative_pe_perf": "N353 Relative PE",
+        "intraday_reversal_perf": "N354 Intraday Reversal",
+        "market_breadth_score_perf": "N355 Market Breadth Score",
+        "multi_timeframe_trend_perf": "N356 Multi-TF Trend",
+        "smart_money_indicator_perf": "N357 Smart Money",
+        "entry_price_vs_vwap_perf": "N358 Entry vs VWAP",
+        "catalyst_recency_perf": "N359 Catalyst Recency",
+        "sector_momentum_quality_perf": "N360 Sector Momentum",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
