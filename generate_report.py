@@ -195,6 +195,16 @@ def _build_weekly_bot_report(docs_dir):
         "trade_cadence_perf": "N178 Trade Cadence",
         "spy_intraday_perf": "N179 SPY Intraday",
         "entry_score_decile_perf": "N180 Score Decile",
+        "atr_pct_perf": "N181 ATR Percent",
+        "spy_200d_position_perf": "N182 SPY 200d Pos",
+        "volume_surge_state_perf": "N183 RVOL Surge",
+        "float_size_perf": "N184 Float Size",
+        "momentum_quality_perf": "N185 Mom Quality",
+        "sector_news_flow_perf": "N186 Sector News",
+        "morning_star_time_perf": "N187 Morning Star",
+        "support_quality_perf": "N188 Support Qual",
+        "relative_perf_1w_perf": "N189 Rel Perf 1W",
+        "pre_market_action_perf": "N190 Pre-Market",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])

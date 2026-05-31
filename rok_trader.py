@@ -3593,6 +3593,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N181: ATR % of Price at Entry ────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n181 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n181_field = _buy_n181.get("atr_pct_state", "normal_atr") if _buy_n181 else "normal_atr"
+            _n181_perf = tlog.setdefault("atr_pct_perf", {})
+            _n181p = _n181_perf.setdefault(_n181_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n181_field})
+            _n181p["total"] += 1; _n181p["total_pnl"] = round(_n181p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n181p["wins"] += 1
+            else:        _n181p["losses"] += 1
+            _n181p["win_rate"] = round(_n181p["wins"] / _n181p["total"] * 100, 1)
+            _n181p["avg_pnl"]  = round(_n181p["total_pnl"] / _n181p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N182: SPY Above/Below 200-Day MA ─────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n182 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n182_field = _buy_n182.get("spy_200d_position", "spy_above_200d") if _buy_n182 else "spy_above_200d"
+            _n182_perf = tlog.setdefault("spy_200d_position_perf", {})
+            _n182p = _n182_perf.setdefault(_n182_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n182_field})
+            _n182p["total"] += 1; _n182p["total_pnl"] = round(_n182p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n182p["wins"] += 1
+            else:        _n182p["losses"] += 1
+            _n182p["win_rate"] = round(_n182p["wins"] / _n182p["total"] * 100, 1)
+            _n182p["avg_pnl"]  = round(_n182p["total_pnl"] / _n182p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N183: Volume Surge State (RVOL) ──────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n183 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n183_field = _buy_n183.get("volume_surge_state", "rvol_normal") if _buy_n183 else "rvol_normal"
+            _n183_perf = tlog.setdefault("volume_surge_state_perf", {})
+            _n183p = _n183_perf.setdefault(_n183_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n183_field})
+            _n183p["total"] += 1; _n183p["total_pnl"] = round(_n183p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n183p["wins"] += 1
+            else:        _n183p["losses"] += 1
+            _n183p["win_rate"] = round(_n183p["wins"] / _n183p["total"] * 100, 1)
+            _n183p["avg_pnl"]  = round(_n183p["total_pnl"] / _n183p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N184: Float Size ──────────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n184 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n184_field = _buy_n184.get("float_size_state", "mid_float") if _buy_n184 else "mid_float"
+            _n184_perf = tlog.setdefault("float_size_perf", {})
+            _n184p = _n184_perf.setdefault(_n184_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n184_field})
+            _n184p["total"] += 1; _n184p["total_pnl"] = round(_n184p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n184p["wins"] += 1
+            else:        _n184p["losses"] += 1
+            _n184p["win_rate"] = round(_n184p["wins"] / _n184p["total"] * 100, 1)
+            _n184p["avg_pnl"]  = round(_n184p["total_pnl"] / _n184p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N185: Momentum Quality Score ──────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n185 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n185_field = _buy_n185.get("momentum_quality_state", "momentum_moderate") if _buy_n185 else "momentum_moderate"
+            _n185_perf = tlog.setdefault("momentum_quality_perf", {})
+            _n185p = _n185_perf.setdefault(_n185_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n185_field})
+            _n185p["total"] += 1; _n185p["total_pnl"] = round(_n185p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n185p["wins"] += 1
+            else:        _n185p["losses"] += 1
+            _n185p["win_rate"] = round(_n185p["wins"] / _n185p["total"] * 100, 1)
+            _n185p["avg_pnl"]  = round(_n185p["total_pnl"] / _n185p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N186: Sector News Flow ────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n186 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n186_field = _buy_n186.get("sector_news_flow_state", "sector_normal") if _buy_n186 else "sector_normal"
+            _n186_perf = tlog.setdefault("sector_news_flow_perf", {})
+            _n186p = _n186_perf.setdefault(_n186_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n186_field})
+            _n186p["total"] += 1; _n186p["total_pnl"] = round(_n186p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n186p["wins"] += 1
+            else:        _n186p["losses"] += 1
+            _n186p["win_rate"] = round(_n186p["wins"] / _n186p["total"] * 100, 1)
+            _n186p["avg_pnl"]  = round(_n186p["total_pnl"] / _n186p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N187: Morning Star Time ───────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n187 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n187_field = _buy_n187.get("morning_star_time_state", "rest_of_day") if _buy_n187 else "rest_of_day"
+            _n187_perf = tlog.setdefault("morning_star_time_perf", {})
+            _n187p = _n187_perf.setdefault(_n187_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n187_field})
+            _n187p["total"] += 1; _n187p["total_pnl"] = round(_n187p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n187p["wins"] += 1
+            else:        _n187p["losses"] += 1
+            _n187p["win_rate"] = round(_n187p["wins"] / _n187p["total"] * 100, 1)
+            _n187p["avg_pnl"]  = round(_n187p["total_pnl"] / _n187p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N188: Support Quality ─────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n188 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n188_field = _buy_n188.get("support_quality_state", "moderate_support") if _buy_n188 else "moderate_support"
+            _n188_perf = tlog.setdefault("support_quality_perf", {})
+            _n188p = _n188_perf.setdefault(_n188_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n188_field})
+            _n188p["total"] += 1; _n188p["total_pnl"] = round(_n188p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n188p["wins"] += 1
+            else:        _n188p["losses"] += 1
+            _n188p["win_rate"] = round(_n188p["wins"] / _n188p["total"] * 100, 1)
+            _n188p["avg_pnl"]  = round(_n188p["total_pnl"] / _n188p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N189: Relative 1-Week Performance vs Market ───────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n189 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n189_field = _buy_n189.get("relative_perf_1w_state", "in_line") if _buy_n189 else "in_line"
+            _n189_perf = tlog.setdefault("relative_perf_1w_perf", {})
+            _n189p = _n189_perf.setdefault(_n189_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n189_field})
+            _n189p["total"] += 1; _n189p["total_pnl"] = round(_n189p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n189p["wins"] += 1
+            else:        _n189p["losses"] += 1
+            _n189p["win_rate"] = round(_n189p["wins"] / _n189p["total"] * 100, 1)
+            _n189p["avg_pnl"]  = round(_n189p["total_pnl"] / _n189p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N190: Pre-Market Action ───────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n190 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n190_field = _buy_n190.get("pre_market_action_state", "quiet_premarket") if _buy_n190 else "quiet_premarket"
+            _n190_perf = tlog.setdefault("pre_market_action_perf", {})
+            _n190p = _n190_perf.setdefault(_n190_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n190_field})
+            _n190p["total"] += 1; _n190p["total_pnl"] = round(_n190p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n190p["wins"] += 1
+            else:        _n190p["losses"] += 1
+            _n190p["win_rate"] = round(_n190p["wins"] / _n190p["total"] * 100, 1)
+            _n190p["avg_pnl"]  = round(_n190p["total_pnl"] / _n190p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10368,7 +10518,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 140
+            _n_total = tlog.get("neurons_total") or 150
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -14192,6 +14342,107 @@ def run():
                         _buy_signals_merged["entry_score_decile"] = _sd
                     except Exception:
                         _buy_signals_merged["entry_score_decile"] = "score_65_75"
+                    # N181: ATR % of price at entry
+                    try:
+                        _n181_atr   = float(_d_buy.get("atr", 0) or 0)
+                        _n181_price = float(_d_buy.get("price", 1) or 1)
+                        _n181_atr_pct = _n181_atr / _n181_price * 100 if _n181_price > 0 else 0
+                        if _n181_atr_pct < 1.5:   _n181_s = "tight_atr"
+                        elif _n181_atr_pct < 3.0:  _n181_s = "normal_atr"
+                        elif _n181_atr_pct < 5.0:  _n181_s = "wide_atr"
+                        else:                      _n181_s = "very_wide_atr"
+                        _buy_signals_merged["atr_pct_state"] = _n181_s
+                    except Exception:
+                        _buy_signals_merged["atr_pct_state"] = "normal_atr"
+                    # N182: SPY above or below 200-day MA
+                    try:
+                        _spy_d_n182  = live.get("SPY", {})
+                        _spy_price   = float(_spy_d_n182.get("price", 0) or 0)
+                        _spy_ma200   = float(_spy_d_n182.get("ma200", 0) or 0)
+                        if _spy_ma200 > 0:
+                            _n182_s = "spy_above_200d" if _spy_price >= _spy_ma200 else "spy_below_200d"
+                        else:
+                            _n182_s = "spy_above_200d" if _spy_d_n182.get("above_200d", True) else "spy_below_200d"
+                        _buy_signals_merged["spy_200d_position"] = _n182_s
+                    except Exception:
+                        _buy_signals_merged["spy_200d_position"] = "spy_above_200d"
+                    # N183: relative volume surge state
+                    try:
+                        _n183_rvol = float(_d_buy.get("rvol", 1) or 1)
+                        if _n183_rvol > 3:    _n183_s = "rvol_extreme"
+                        elif _n183_rvol > 2:  _n183_s = "rvol_high"
+                        elif _n183_rvol >= 1: _n183_s = "rvol_normal"
+                        else:                 _n183_s = "rvol_low"
+                        _buy_signals_merged["volume_surge_state"] = _n183_s
+                    except Exception:
+                        _buy_signals_merged["volume_surge_state"] = "rvol_normal"
+                    # N184: float size
+                    try:
+                        _n184_float = float(_d_buy.get("float_shares", 0) or 0)
+                        if _n184_float < 10:       _n184_s = "nano_float"
+                        elif _n184_float < 50:     _n184_s = "small_float"
+                        elif _n184_float < 200:    _n184_s = "mid_float"
+                        else:                      _n184_s = "large_float"
+                        _buy_signals_merged["float_size_state"] = _n184_s
+                    except Exception:
+                        _buy_signals_merged["float_size_state"] = "mid_float"
+                    # N185: momentum quality (count of premium momentum signals)
+                    try:
+                        _n185_sigs = ["vcp","cup_handle","at_breakout","mtf_triple",
+                                      "ttm_squeeze_fired","gap_and_hold","orb_breakout","rvol_surge"]
+                        _n185_ct = sum(1 for _s in _n185_sigs if _d_buy.get(_s))
+                        if _n185_ct >= 4:   _n185_s = "momentum_strong"
+                        elif _n185_ct >= 2: _n185_s = "momentum_moderate"
+                        else:               _n185_s = "momentum_weak"
+                        _buy_signals_merged["momentum_quality_state"] = _n185_s
+                    except Exception:
+                        _buy_signals_merged["momentum_quality_state"] = "momentum_moderate"
+                    # N186: sector news flow (catalyst/news key count in signal dict)
+                    try:
+                        _n186_keys = [k for k in _d_buy if "catalyst" in k.lower() or "news" in k.lower()]
+                        _n186_ct   = len([k for k in _n186_keys if _d_buy.get(k)])
+                        if _n186_ct > 2:   _n186_s = "sector_hot"
+                        elif _n186_ct > 0: _n186_s = "sector_normal"
+                        else:              _n186_s = "sector_quiet"
+                        _buy_signals_merged["sector_news_flow_state"] = _n186_s
+                    except Exception:
+                        _buy_signals_merged["sector_news_flow_state"] = "sector_normal"
+                    # N187: morning star time (first 90 min of trading)
+                    try:
+                        import zoneinfo as _zi_n187
+                        _n187_et_hr = datetime.now(_zi_n187.ZoneInfo("America/New_York")).hour
+                        _n187_s = "morning_star" if _n187_et_hr < 11 else "rest_of_day"
+                        _buy_signals_merged["morning_star_time_state"] = _n187_s
+                    except Exception:
+                        _buy_signals_merged["morning_star_time_state"] = "rest_of_day"
+                    # N188: support quality (count of support confluences)
+                    try:
+                        _n188_sigs = ["near_52wl","at_ma50","at_ma200","at_vwap","at_support_level"]
+                        _n188_ct = sum(1 for _s in _n188_sigs if _d_buy.get(_s))
+                        if _n188_ct >= 3:   _n188_s = "strong_support"
+                        elif _n188_ct >= 1: _n188_s = "moderate_support"
+                        else:               _n188_s = "weak_support"
+                        _buy_signals_merged["support_quality_state"] = _n188_s
+                    except Exception:
+                        _buy_signals_merged["support_quality_state"] = "moderate_support"
+                    # N189: relative 1-week performance vs market
+                    try:
+                        _n189_chg1w   = float(_d_buy.get("chg1w", 0) or 0)
+                        _n189_spy_1w  = float(live.get("SPY", {}).get("chg1w", 0) or 0)
+                        _n189_rel     = _n189_chg1w - _n189_spy_1w
+                        if _n189_rel > 3:    _n189_s = "outperforming"
+                        elif _n189_rel < -3: _n189_s = "underperforming"
+                        else:                _n189_s = "in_line"
+                        _buy_signals_merged["relative_perf_1w_state"] = _n189_s
+                    except Exception:
+                        _buy_signals_merged["relative_perf_1w_state"] = "in_line"
+                    # N190: pre-market action
+                    try:
+                        _n190_pm_chg = float(_d_buy.get("pm_change_pct", 0) or 0)
+                        _n190_s = "active_premarket" if abs(_n190_pm_chg) > 0.5 else "quiet_premarket"
+                        _buy_signals_merged["pre_market_action_state"] = _n190_s
+                    except Exception:
+                        _buy_signals_merged["pre_market_action_state"] = "quiet_premarket"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -17594,6 +17845,116 @@ def run():
             if len(_n180_insights) >= 2:
                 _learn_log.append(f"N180 score decile: best={_best_sd['state']}({_best_sd['win_rate']:.0f}%) worst={_worst_sd['state']}({_worst_sd['win_rate']:.0f}%)")
 
+        # ── N181: ATR % of Price tuner ────────────────────────────────────────────────
+        _n181_raw = tlog.get("atr_pct_perf", {})
+        _n181_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n181_raw.items() if v.get("total", 0) >= 2]
+        if _n181_insights:
+            _best_n181 = max(_n181_insights, key=lambda x: x["win_rate"])
+            _worst_n181 = min(_n181_insights, key=lambda x: x["win_rate"])
+            if len(_n181_insights) >= 2:
+                _learn_log.append(f"N181 ATR%: best={_best_n181['state']}({_best_n181['win_rate']:.0f}%) worst={_worst_n181['state']}({_worst_n181['win_rate']:.0f}%)")
+
+        # ── N182: SPY 200d Position tuner ─────────────────────────────────────────────
+        _n182_raw = tlog.get("spy_200d_position_perf", {})
+        _n182_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n182_raw.items() if v.get("total", 0) >= 2]
+        if _n182_insights:
+            _up_n182 = next((s for s in _n182_insights if s["state"] == "spy_above_200d"), None)
+            _dn_n182 = next((s for s in _n182_insights if s["state"] == "spy_below_200d"), None)
+            if _up_n182 and _dn_n182:
+                _learn_log.append(f"N182 SPY 200d: above={_up_n182['win_rate']:.0f}% below={_dn_n182['win_rate']:.0f}%WR")
+
+        # ── N183: Volume Surge State tuner ────────────────────────────────────────────
+        _n183_raw = tlog.get("volume_surge_state_perf", {})
+        _n183_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n183_raw.items() if v.get("total", 0) >= 2]
+        if _n183_insights:
+            _best_n183 = max(_n183_insights, key=lambda x: x["win_rate"])
+            _worst_n183 = min(_n183_insights, key=lambda x: x["win_rate"])
+            if len(_n183_insights) >= 2:
+                _learn_log.append(f"N183 RVOL: best={_best_n183['state']}({_best_n183['win_rate']:.0f}%) worst={_worst_n183['state']}({_worst_n183['win_rate']:.0f}%)")
+
+        # ── N184: Float Size tuner ────────────────────────────────────────────────────
+        _n184_raw = tlog.get("float_size_perf", {})
+        _n184_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n184_raw.items() if v.get("total", 0) >= 2]
+        if _n184_insights:
+            _best_n184 = max(_n184_insights, key=lambda x: x["win_rate"])
+            _worst_n184 = min(_n184_insights, key=lambda x: x["win_rate"])
+            if len(_n184_insights) >= 2:
+                _learn_log.append(f"N184 float: best={_best_n184['state']}({_best_n184['win_rate']:.0f}%) worst={_worst_n184['state']}({_worst_n184['win_rate']:.0f}%)")
+
+        # ── N185: Momentum Quality tuner ──────────────────────────────────────────────
+        _n185_raw = tlog.get("momentum_quality_perf", {})
+        _n185_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n185_raw.items() if v.get("total", 0) >= 2]
+        if _n185_insights:
+            _best_n185 = max(_n185_insights, key=lambda x: x["win_rate"])
+            _worst_n185 = min(_n185_insights, key=lambda x: x["win_rate"])
+            if len(_n185_insights) >= 2:
+                _learn_log.append(f"N185 momentum quality: best={_best_n185['state']}({_best_n185['win_rate']:.0f}%) worst={_worst_n185['state']}({_worst_n185['win_rate']:.0f}%)")
+
+        # ── N186: Sector News Flow tuner ──────────────────────────────────────────────
+        _n186_raw = tlog.get("sector_news_flow_perf", {})
+        _n186_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n186_raw.items() if v.get("total", 0) >= 2]
+        if _n186_insights:
+            _best_n186 = max(_n186_insights, key=lambda x: x["win_rate"])
+            _worst_n186 = min(_n186_insights, key=lambda x: x["win_rate"])
+            if len(_n186_insights) >= 2:
+                _learn_log.append(f"N186 sector news: best={_best_n186['state']}({_best_n186['win_rate']:.0f}%) worst={_worst_n186['state']}({_worst_n186['win_rate']:.0f}%)")
+
+        # ── N187: Morning Star Time tuner ─────────────────────────────────────────────
+        _n187_raw = tlog.get("morning_star_time_perf", {})
+        _n187_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n187_raw.items() if v.get("total", 0) >= 2]
+        if _n187_insights:
+            _ms_n187 = next((s for s in _n187_insights if s["state"] == "morning_star"), None)
+            _rod_n187 = next((s for s in _n187_insights if s["state"] == "rest_of_day"), None)
+            if _ms_n187 and _rod_n187:
+                _learn_log.append(f"N187 morning star: morning={_ms_n187['win_rate']:.0f}% rest={_rod_n187['win_rate']:.0f}%WR")
+
+        # ── N188: Support Quality tuner ───────────────────────────────────────────────
+        _n188_raw = tlog.get("support_quality_perf", {})
+        _n188_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n188_raw.items() if v.get("total", 0) >= 2]
+        if _n188_insights:
+            _best_n188 = max(_n188_insights, key=lambda x: x["win_rate"])
+            _worst_n188 = min(_n188_insights, key=lambda x: x["win_rate"])
+            if len(_n188_insights) >= 2:
+                _learn_log.append(f"N188 support quality: best={_best_n188['state']}({_best_n188['win_rate']:.0f}%) worst={_worst_n188['state']}({_worst_n188['win_rate']:.0f}%)")
+
+        # ── N189: Relative 1-Week Performance tuner ───────────────────────────────────
+        _n189_raw = tlog.get("relative_perf_1w_perf", {})
+        _n189_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n189_raw.items() if v.get("total", 0) >= 2]
+        if _n189_insights:
+            _best_n189 = max(_n189_insights, key=lambda x: x["win_rate"])
+            _worst_n189 = min(_n189_insights, key=lambda x: x["win_rate"])
+            if len(_n189_insights) >= 2:
+                _learn_log.append(f"N189 rel 1w perf: best={_best_n189['state']}({_best_n189['win_rate']:.0f}%) worst={_worst_n189['state']}({_worst_n189['win_rate']:.0f}%)")
+
+        # ── N190: Pre-Market Action tuner ─────────────────────────────────────────────
+        _n190_raw = tlog.get("pre_market_action_perf", {})
+        _n190_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n190_raw.items() if v.get("total", 0) >= 2]
+        if _n190_insights:
+            _act_n190 = next((s for s in _n190_insights if s["state"] == "active_premarket"), None)
+            _qui_n190 = next((s for s in _n190_insights if s["state"] == "quiet_premarket"), None)
+            if _act_n190 and _qui_n190:
+                _learn_log.append(f"N190 pre-market: active={_act_n190['win_rate']:.0f}% quiet={_qui_n190['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -18061,6 +18422,16 @@ def run():
             "trade_cadence_perf":    _n178_insights,          # N178: trade cadence (frequency) vs outcome
             "spy_intraday_perf":     _n179_insights,          # N179: SPY 5-min intraday trend vs outcome
             "entry_score_decile_perf": _n180_insights,        # N180: entry score decile vs outcome
+            "atr_pct_perf":          _n181_insights,          # N181: ATR% at entry vs outcome
+            "spy_200d_position_perf": _n182_insights,         # N182: SPY above/below 200d MA vs outcome
+            "volume_surge_state_perf": _n183_insights,        # N183: relative volume surge state vs outcome
+            "float_size_perf":       _n184_insights,          # N184: float size at entry vs outcome
+            "momentum_quality_perf": _n185_insights,          # N185: momentum quality score vs outcome
+            "sector_news_flow_perf": _n186_insights,          # N186: sector news flow vs outcome
+            "morning_star_time_perf": _n187_insights,         # N187: morning star time window vs outcome
+            "support_quality_perf":  _n188_insights,          # N188: support quality confluences vs outcome
+            "relative_perf_1w_perf": _n189_insights,          # N189: 1-week relative performance vs outcome
+            "pre_market_action_perf": _n190_insights,         # N190: pre-market action vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -18212,6 +18583,10 @@ def run():
             "consec_loss_perf","open_gap_perf","opex_week_perf",
             "sector_rs_phase_perf","trade_cadence_perf",
             "spy_intraday_perf","entry_score_decile_perf",
+            "atr_pct_perf", "spy_200d_position_perf", "volume_surge_state_perf",
+            "float_size_perf", "momentum_quality_perf", "sector_news_flow_perf",
+            "morning_star_time_perf", "support_quality_perf", "relative_perf_1w_perf",
+            "pre_market_action_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -18219,9 +18594,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 140              # total tracked neuron dimensions (N103-N180 complete)
+        tlog["neurons_total"]     = 150              # total tracked neuron dimensions (N103-N190 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/140 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/150 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
