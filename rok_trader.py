@@ -3743,6 +3743,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N191: Fed Week Performance ────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n191 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n191_field = _buy_n191.get("fed_week", "normal_week") if _buy_n191 else "normal_week"
+            _n191_perf = tlog.setdefault("fed_week_perf", {})
+            _n191p = _n191_perf.setdefault(_n191_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n191_field})
+            _n191p["total"] += 1; _n191p["total_pnl"] = round(_n191p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n191p["wins"] += 1
+            else:        _n191p["losses"] += 1
+            _n191p["win_rate"] = round(_n191p["wins"] / _n191p["total"] * 100, 1)
+            _n191p["avg_pnl"]  = round(_n191p["total_pnl"] / _n191p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N192: Earnings Season Phase ───────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n192 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n192_field = _buy_n192.get("earnings_season_phase", "off_season") if _buy_n192 else "off_season"
+            _n192_perf = tlog.setdefault("earnings_season_perf", {})
+            _n192p = _n192_perf.setdefault(_n192_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n192_field})
+            _n192p["total"] += 1; _n192p["total_pnl"] = round(_n192p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n192p["wins"] += 1
+            else:        _n192p["losses"] += 1
+            _n192p["win_rate"] = round(_n192p["wins"] / _n192p["total"] * 100, 1)
+            _n192p["avg_pnl"]  = round(_n192p["total_pnl"] / _n192p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N193: SPY RSI Zone ────────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n193 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n193_field = _buy_n193.get("spy_rsi_zone", "neutral") if _buy_n193 else "neutral"
+            _n193_perf = tlog.setdefault("spy_rsi_zone_perf", {})
+            _n193p = _n193_perf.setdefault(_n193_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n193_field})
+            _n193p["total"] += 1; _n193p["total_pnl"] = round(_n193p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n193p["wins"] += 1
+            else:        _n193p["losses"] += 1
+            _n193p["win_rate"] = round(_n193p["wins"] / _n193p["total"] * 100, 1)
+            _n193p["avg_pnl"]  = round(_n193p["total_pnl"] / _n193p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N194: Volume vs 30-Day Average ────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n194 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n194_field = _buy_n194.get("vol_vs_avg30", "below_avg") if _buy_n194 else "below_avg"
+            _n194_perf = tlog.setdefault("volume_vs_avg30_perf", {})
+            _n194p = _n194_perf.setdefault(_n194_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n194_field})
+            _n194p["total"] += 1; _n194p["total_pnl"] = round(_n194p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n194p["wins"] += 1
+            else:        _n194p["losses"] += 1
+            _n194p["win_rate"] = round(_n194p["wins"] / _n194p["total"] * 100, 1)
+            _n194p["avg_pnl"]  = round(_n194p["total_pnl"] / _n194p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N195: Stock Beta Tier ─────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n195 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n195_field = _buy_n195.get("beta_tier", "normal_beta") if _buy_n195 else "normal_beta"
+            _n195_perf = tlog.setdefault("stock_beta_tier_perf", {})
+            _n195p = _n195_perf.setdefault(_n195_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n195_field})
+            _n195p["total"] += 1; _n195p["total_pnl"] = round(_n195p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n195p["wins"] += 1
+            else:        _n195p["losses"] += 1
+            _n195p["win_rate"] = round(_n195p["wins"] / _n195p["total"] * 100, 1)
+            _n195p["avg_pnl"]  = round(_n195p["total_pnl"] / _n195p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N196: Price vs VWAP ───────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n196 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n196_field = _buy_n196.get("price_vs_vwap_state", "at_vwap") if _buy_n196 else "at_vwap"
+            _n196_perf = tlog.setdefault("price_vs_vwap_perf", {})
+            _n196p = _n196_perf.setdefault(_n196_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n196_field})
+            _n196p["total"] += 1; _n196p["total_pnl"] = round(_n196p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n196p["wins"] += 1
+            else:        _n196p["losses"] += 1
+            _n196p["win_rate"] = round(_n196p["wins"] / _n196p["total"] * 100, 1)
+            _n196p["avg_pnl"]  = round(_n196p["total_pnl"] / _n196p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N197: Seasonal Month ──────────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n197 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n197_field = _buy_n197.get("seasonal_month", "other") if _buy_n197 else "other"
+            _n197_perf = tlog.setdefault("seasonal_month_perf", {})
+            _n197p = _n197_perf.setdefault(_n197_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n197_field})
+            _n197p["total"] += 1; _n197p["total_pnl"] = round(_n197p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n197p["wins"] += 1
+            else:        _n197p["losses"] += 1
+            _n197p["win_rate"] = round(_n197p["wins"] / _n197p["total"] * 100, 1)
+            _n197p["avg_pnl"]  = round(_n197p["total_pnl"] / _n197p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N198: Market Breadth Level ────────────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n198 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n198_field = _buy_n198.get("breadth_level_state", "moderate") if _buy_n198 else "moderate"
+            _n198_perf = tlog.setdefault("market_breadth_level_perf", {})
+            _n198p = _n198_perf.setdefault(_n198_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n198_field})
+            _n198p["total"] += 1; _n198p["total_pnl"] = round(_n198p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n198p["wins"] += 1
+            else:        _n198p["losses"] += 1
+            _n198p["win_rate"] = round(_n198p["wins"] / _n198p["total"] * 100, 1)
+            _n198p["avg_pnl"]  = round(_n198p["total_pnl"] / _n198p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N199: SPY Gap vs Stock Gap Divergence ─────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n199 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n199_field = _buy_n199.get("gap_diverge_state", "both_flat") if _buy_n199 else "both_flat"
+            _n199_perf = tlog.setdefault("spy_gap_vs_stock_perf", {})
+            _n199p = _n199_perf.setdefault(_n199_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n199_field})
+            _n199p["total"] += 1; _n199p["total_pnl"] = round(_n199p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n199p["wins"] += 1
+            else:        _n199p["losses"] += 1
+            _n199p["win_rate"] = round(_n199p["wins"] / _n199p["total"] * 100, 1)
+            _n199p["avg_pnl"]  = round(_n199p["total_pnl"] / _n199p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N200: Institutional Quality Tier ─────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n200 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n200_field = _buy_n200.get("institutional_tier", "retail_grade") if _buy_n200 else "retail_grade"
+            _n200_perf = tlog.setdefault("institutional_quality_perf", {})
+            _n200p = _n200_perf.setdefault(_n200_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n200_field})
+            _n200p["total"] += 1; _n200p["total_pnl"] = round(_n200p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n200p["wins"] += 1
+            else:        _n200p["losses"] += 1
+            _n200p["win_rate"] = round(_n200p["wins"] / _n200p["total"] * 100, 1)
+            _n200p["avg_pnl"]  = round(_n200p["total_pnl"] / _n200p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10691,13 +10841,43 @@ def run():
         try:
             _cm_act = tlog.get("bot_activity_log", [])
             _cm_positions = tlog.get("positions", [])
+            _cm_pnl_sum = sum(float(p.get("pnl_usd", 0) or 0) for p in _cm_positions)
+            _cm_pnl_str = f"{'+' if _cm_pnl_sum >= 0 else ''}{_cm_pnl_sum:,.0f}"
+            _cm_is_crypto = tlog.get("status", "") == "crypto-only"
             _cm_entry = {
                 "ts": run_start.isoformat(),
                 "type": "CLOSED",
-                "icon": "🌙",
-                "msg": f"Market closed — monitoring {len(_cm_positions)} position{'s' if len(_cm_positions) != 1 else ''} | portfolio ${portfolio_val:,.0f}",
+                "icon": "🪙" if _cm_is_crypto else "🌙",
+                "msg": f"{'Crypto-only run' if _cm_is_crypto else 'Market closed'} — {len(_cm_positions)} position{'s' if len(_cm_positions) != 1 else ''} | P&L ${_cm_pnl_str} | portfolio ${portfolio_val:,.0f}",
             }
             tlog["bot_activity_log"] = [_cm_entry] + _cm_act[:29]
+        except Exception:
+            pass
+        # Generate weekend/off-hours smart alerts
+        try:
+            _cm_alerts_prev = list(tlog.get("smart_alerts", []))
+            _sa_now_cm = datetime.now(timezone.utc).isoformat()
+            _cm_new_alerts = []
+            _cm_new_alerts.append({"type":"performance","priority":"low",
+                "title": "✅ AUTO TRADING ACTIVE",
+                "body": f"Bot running 24/7 — {len(tlog.get('positions',[]))} positions via Alpaca paper account. Crypto runs every 15 min. Stocks resume Mon 9:30 AM ET.",
+                "ts": _sa_now_cm})
+            for _pc_sa in tlog.get("positions", []):
+                _pk_sa = float(_pc_sa.get("pnl_pct", 0) or 0)
+                _pt_sa = _pc_sa.get("ticker", "")
+                if _pk_sa <= -5:
+                    _cm_new_alerts.append({"type":"risk","priority":"high",
+                        "title": f"⚠ {_pt_sa} DOWN {abs(_pk_sa):.1f}%",
+                        "body": f"{_pt_sa} down {abs(_pk_sa):.1f}% — stop-loss protecting downside. Will execute if stop breached at market open.",
+                        "ts": _sa_now_cm})
+                elif _pk_sa >= 10:
+                    _cm_new_alerts.append({"type":"win","priority":"medium",
+                        "title": f"🚀 {_pt_sa} UP {_pk_sa:.1f}%",
+                        "body": f"{_pt_sa} up {_pk_sa:.1f}% — trailing stop protecting gains. Plan partial exit for Monday open.",
+                        "ts": _sa_now_cm})
+            _exist_t = {a.get("title","") for a in _cm_new_alerts}
+            _kept_cm = [a for a in _cm_alerts_prev if a.get("title","") not in _exist_t]
+            tlog["smart_alerts"] = (_cm_new_alerts + _kept_cm)[:8]
         except Exception:
             pass
         _save_equity_snapshot(tlog)
@@ -14443,6 +14623,114 @@ def run():
                         _buy_signals_merged["pre_market_action_state"] = _n190_s
                     except Exception:
                         _buy_signals_merged["pre_market_action_state"] = "quiet_premarket"
+                    # N191: fed meeting week (FOMC — within 3 days of 3rd Wednesday of month)
+                    try:
+                        import calendar as _cal191
+                        _now_et_n191 = datetime.now(ZoneInfo("America/New_York"))
+                        _wednesdays = [d for d in range(1, 32)
+                                       if _now_et_n191.replace(day=d).weekday() == 2
+                                       if d <= _cal191.monthrange(_now_et_n191.year, _now_et_n191.month)[1]]
+                        _fomc_wed = _wednesdays[2] if len(_wednesdays) >= 3 else _wednesdays[-1]
+                        _days_to_fomc = abs(_fomc_wed - _now_et_n191.day)
+                        _n191_s = "fed_meeting_week" if _days_to_fomc <= 3 else "normal_week"
+                        _buy_signals_merged["fed_week"] = _n191_s
+                    except Exception:
+                        _buy_signals_merged["fed_week"] = "normal_week"
+                    # N192: earnings season phase
+                    try:
+                        _n192_month = datetime.now(ZoneInfo("America/New_York")).month
+                        if _n192_month in (1, 4, 7, 10):   _n192_s = "peak_season"
+                        elif _n192_month in (2, 5, 8, 11): _n192_s = "shoulder"
+                        else:                               _n192_s = "off_season"
+                        _buy_signals_merged["earnings_season_phase"] = _n192_s
+                    except Exception:
+                        _buy_signals_merged["earnings_season_phase"] = "off_season"
+                    # N193: SPY RSI zone at entry
+                    try:
+                        _n193_rsi = float(live.get("SPY", {}).get("rsi", 55) or 55)
+                        if _n193_rsi > 70:   _n193_s = "overbought"
+                        elif _n193_rsi < 40: _n193_s = "oversold"
+                        else:                _n193_s = "neutral"
+                        _buy_signals_merged["spy_rsi_zone"] = _n193_s
+                    except Exception:
+                        _buy_signals_merged["spy_rsi_zone"] = "neutral"
+                    # N194: volume vs 30-day average
+                    try:
+                        _n194_vr = float(_d_buy.get("vol_ratio", 1) or 1)
+                        if _n194_vr > 2:   _n194_s = "surge_volume"
+                        elif _n194_vr >= 1: _n194_s = "above_avg"
+                        else:              _n194_s = "below_avg"
+                        _buy_signals_merged["vol_vs_avg30"] = _n194_s
+                    except Exception:
+                        _buy_signals_merged["vol_vs_avg30"] = "below_avg"
+                    # N195: stock beta tier
+                    try:
+                        _n195_beta = float(_d_buy.get("beta", 1.2) or 1.2)
+                        if _n195_beta > 1.5:   _n195_s = "high_beta"
+                        elif _n195_beta >= 0.8: _n195_s = "normal_beta"
+                        else:                   _n195_s = "low_beta"
+                        _buy_signals_merged["beta_tier"] = _n195_s
+                    except Exception:
+                        _buy_signals_merged["beta_tier"] = "normal_beta"
+                    # N196: price vs VWAP at entry
+                    try:
+                        _n196_dist = float(_d_buy.get("dist_vwap_pct", 0) or 0)
+                        if _n196_dist > 0.2:    _n196_s = "above_vwap"
+                        elif _n196_dist < -0.2: _n196_s = "below_vwap"
+                        else:                   _n196_s = "at_vwap"
+                        _buy_signals_merged["price_vs_vwap_state"] = _n196_s
+                    except Exception:
+                        _buy_signals_merged["price_vs_vwap_state"] = "at_vwap"
+                    # N197: seasonal month
+                    try:
+                        _n197_month = datetime.now(ZoneInfo("America/New_York")).month
+                        if _n197_month == 1:                 _n197_s = "jan_effect"
+                        elif _n197_month in (4, 5):          _n197_s = "spring_run"
+                        elif _n197_month in (6, 7, 8):       _n197_s = "summer_doldrums"
+                        elif _n197_month in (9, 10):         _n197_s = "fall_fear"
+                        elif _n197_month in (11, 12):        _n197_s = "year_end_rally"
+                        else:                                _n197_s = "other"
+                        _buy_signals_merged["seasonal_month"] = _n197_s
+                    except Exception:
+                        _buy_signals_merged["seasonal_month"] = "other"
+                    # N198: market breadth level at entry
+                    try:
+                        _n198_breadth = float(live.get("SPY", {}).get("breadth_adv_pct", 55) or 55)
+                        if _n198_breadth <= 0 or _n198_breadth >= 100:
+                            _n198_breadth = float(breadth.get("adv_pct", 55) or 55)
+                        if _n198_breadth > 70:   _n198_s = "strong_breadth"
+                        elif _n198_breadth > 50: _n198_s = "moderate"
+                        elif _n198_breadth > 30: _n198_s = "weak"
+                        else:                    _n198_s = "very_weak"
+                        _buy_signals_merged["breadth_level_state"] = _n198_s
+                    except Exception:
+                        _buy_signals_merged["breadth_level_state"] = "moderate"
+                    # N199: SPY gap vs stock gap divergence at open
+                    try:
+                        _n199_spy_chg = float(live.get("SPY", {}).get("chg_pct", 0) or 0)
+                        _n199_stk_chg = float(_d_buy.get("chg_pct", 0) or 0)
+                        if _n199_spy_chg >= 0.5 and _n199_stk_chg >= 0.5:     _n199_s = "both_gap_up"
+                        elif _n199_spy_chg <= -0.5 and _n199_stk_chg >= 0.5:  _n199_s = "spy_down_stock_up"
+                        elif _n199_spy_chg <= -0.5 and _n199_stk_chg <= -0.5: _n199_s = "both_gap_down"
+                        elif _n199_spy_chg >= 0.5 and abs(_n199_stk_chg) < 0.5: _n199_s = "spy_up_stock_flat"
+                        else:                                                    _n199_s = "both_flat"
+                        _buy_signals_merged["gap_diverge_state"] = _n199_s
+                    except Exception:
+                        _buy_signals_merged["gap_diverge_state"] = "both_flat"
+                    # N200: institutional quality tier
+                    try:
+                        _n200_float_m  = float(_d_buy.get("float_shares_m", 0) or 0)
+                        _n200_vol_r    = float(_d_buy.get("vol_ratio", 1) or 1)
+                        _n200_mcap     = float(_d_buy.get("market_cap_b", 0) or 0)
+                        if _n200_float_m > 50 and _n200_vol_r > 1.5 and _n200_mcap > 5:
+                            _n200_s = "tier1_institutional"
+                        elif _n200_mcap > 1 and _n200_vol_r >= 1.0:
+                            _n200_s = "tier2_institutional"
+                        else:
+                            _n200_s = "retail_grade"
+                        _buy_signals_merged["institutional_tier"] = _n200_s
+                    except Exception:
+                        _buy_signals_merged["institutional_tier"] = "retail_grade"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
