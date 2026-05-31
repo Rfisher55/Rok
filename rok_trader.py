@@ -3325,6 +3325,91 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N166: Estimate Revision Trend at Entry ───────────────────────────────────
+    # Are analyst EPS estimates being revised up or down before earnings? Leading indicator.
+    # revising_up / stable_estimates / revising_down
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n166 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n166_est = _buy_n166.get("estimate_revision_trend", "stable_estimates") if _buy_n166 else "stable_estimates"
+            _n166_perf = tlog.setdefault("estimate_revision_perf", {})
+            _n166p = _n166_perf.setdefault(_n166_est, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n166_est})
+            _n166p["total"] += 1; _n166p["total_pnl"] = round(_n166p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n166p["wins"] += 1
+            else:        _n166p["losses"] += 1
+            _n166p["win_rate"] = round(_n166p["wins"] / _n166p["total"] * 100, 1)
+            _n166p["avg_pnl"]  = round(_n166p["total_pnl"] / _n166p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N167: News Sentiment Momentum at Entry ───────────────────────────────────
+    # Is the stock's news sentiment improving (building narrative) or weakening?
+    # sentiment_rising / sentiment_stable / sentiment_falling
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n167 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n167_sm = _buy_n167.get("news_sent_momentum", "sentiment_stable") if _buy_n167 else "sentiment_stable"
+            _n167_perf = tlog.setdefault("news_sent_mom_perf", {})
+            _n167p = _n167_perf.setdefault(_n167_sm, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n167_sm})
+            _n167p["total"] += 1; _n167p["total_pnl"] = round(_n167p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n167p["wins"] += 1
+            else:        _n167p["losses"] += 1
+            _n167p["win_rate"] = round(_n167p["wins"] / _n167p["total"] * 100, 1)
+            _n167p["avg_pnl"]  = round(_n167p["total_pnl"] / _n167p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N168: Technical Level Confluence at Entry ────────────────────────────────
+    # How many key technical levels is price at simultaneously? More = stronger signal
+    # high_confluence(4+) / medium(2-3) / low(1) / none(0)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n168 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n168_tc = _buy_n168.get("tech_level_confluence", "low") if _buy_n168 else "low"
+            _n168_perf = tlog.setdefault("tech_confluence_perf", {})
+            _n168p = _n168_perf.setdefault(_n168_tc, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n168_tc})
+            _n168p["total"] += 1; _n168p["total_pnl"] = round(_n168p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n168p["wins"] += 1
+            else:        _n168p["losses"] += 1
+            _n168p["win_rate"] = round(_n168p["wins"] / _n168p["total"] * 100, 1)
+            _n168p["avg_pnl"]  = round(_n168p["total_pnl"] / _n168p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N169: Market Breadth Direction (improving/worsening) at Entry ────────────
+    # Is market breadth improving into our entry or deteriorating?
+    # breadth_improving / breadth_stable / breadth_worsening
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n169 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n169_bd = _buy_n169.get("breadth_direction", "breadth_stable") if _buy_n169 else "breadth_stable"
+            _n169_perf = tlog.setdefault("breadth_direction_perf", {})
+            _n169p = _n169_perf.setdefault(_n169_bd, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n169_bd})
+            _n169p["total"] += 1; _n169p["total_pnl"] = round(_n169p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n169p["wins"] += 1
+            else:        _n169p["losses"] += 1
+            _n169p["win_rate"] = round(_n169p["wins"] / _n169p["total"] * 100, 1)
+            _n169p["avg_pnl"]  = round(_n169p["total_pnl"] / _n169p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N170: Risk-On vs Risk-Off Rotation Signal at Entry ──────────────────────
+    # Is institutional money flowing into risk-on (growth/small-cap) or risk-off (bonds/gold/staples)?
+    # risk_on / neutral_rotation / risk_off
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n170 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n170_ro = _buy_n170.get("risk_rotation", "neutral_rotation") if _buy_n170 else "neutral_rotation"
+            _n170_perf = tlog.setdefault("risk_rotation_perf", {})
+            _n170p = _n170_perf.setdefault(_n170_ro, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n170_ro})
+            _n170p["total"] += 1; _n170p["total_pnl"] = round(_n170p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n170p["wins"] += 1
+            else:        _n170p["losses"] += 1
+            _n170p["win_rate"] = round(_n170p["wins"] / _n170p["total"] * 100, 1)
+            _n170p["avg_pnl"]  = round(_n170p["total_pnl"] / _n170p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -12339,6 +12424,35 @@ def run():
                     _avg5_ng164    = _sec_5d_ng164 / 5 if _sec_5d_ng164 != 0 else 0
                     if _sec_1d_ng164 < _avg5_ng164 - 0.2:
                         _ng_strikes += 1; _ng_reasons.append(f"sector {_sec_etf_ng164} momentum decelerating({_n164_ng.get('decelerating',50):.0f}%WR)")
+                # N166: estimate revision up = green; down = strike
+                _n166_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("estimate_revision_perf",[])}
+                if _n166_ng.get("revising_down", 100) < 38:
+                    _est_t_ng166 = str(live.get(tk, {}).get("eps_estimate_trend", "stable") or "stable").lower()
+                    if "down" in _est_t_ng166 or "cut" in _est_t_ng166:
+                        _ng_strikes += 1; _ng_reasons.append(f"estimate being revised down historically fails({_n166_ng.get('revising_down',50):.0f}%WR)")
+                if _n166_ng.get("revising_up", 0) >= 65:
+                    _est_t_ng166b = str(live.get(tk, {}).get("eps_estimate_trend", "stable") or "stable").lower()
+                    if "up" in _est_t_ng166b or "raise" in _est_t_ng166b:
+                        _ng_green_lights += 1
+                # N169: breadth worsening = strike; improving = green
+                _n169_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("breadth_direction_perf",[])}
+                if _n169_ng.get("breadth_worsening", 100) < 38:
+                    _brd_hist_ng = tlog.get("breadth_history", [])
+                    if len(_brd_hist_ng) >= 3:
+                        _brd_now_ng = float(_brd_hist_ng[-1].get("adv_pct", 50) or 50)
+                        _brd_avg3_ng = sum(float(h.get("adv_pct",50) or 50) for h in _brd_hist_ng[-4:-1]) / 3
+                        if _brd_now_ng < _brd_avg3_ng - 5:
+                            _ng_strikes += 1; _ng_reasons.append(f"breadth worsening({_brd_now_ng:.0f}% vs avg {_brd_avg3_ng:.0f}%) historically fails")
+                # N170: risk_off environment = strike when buying longs
+                _n170_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("risk_rotation_perf",[])}
+                if _n170_ng.get("risk_off", 100) < 35:
+                    _qqq_now_ng170 = float(live.get("QQQ", {}).get("chg1d", 0) or 0)
+                    _iwm_now_ng170 = float(live.get("IWM", {}).get("chg1d", 0) or 0)
+                    _xlp_now_ng170 = float(live.get("XLP", {}).get("chg1d", 0) or 0)
+                    _xlu_now_ng170 = float(live.get("XLU", {}).get("chg1d", 0) or 0)
+                    _ro_diff_ng170 = ((_qqq_now_ng170 + _iwm_now_ng170) / 2) - ((_xlp_now_ng170 + _xlu_now_ng170) / 2)
+                    if _ro_diff_ng170 <= -0.5:
+                        _ng_strikes += 1; _ng_reasons.append(f"risk_off rotation historically fails longs({_n170_ng.get('risk_off',50):.0f}%WR)")
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -13697,6 +13811,75 @@ def run():
                         _buy_signals_merged["market_correl_tier"] = _corr_tier
                     except Exception:
                         _buy_signals_merged["market_correl_tier"] = "medium"
+                    # N166: estimate revision trend (from eps_estimate_trend field)
+                    try:
+                        _est_trend_n166 = str(live.get(tk, {}).get("eps_estimate_trend", "stable") or "stable").lower()
+                        if "up" in _est_trend_n166 or "raise" in _est_trend_n166 or "increas" in _est_trend_n166:
+                            _est_tier = "revising_up"
+                        elif "down" in _est_trend_n166 or "cut" in _est_trend_n166 or "decreas" in _est_trend_n166:
+                            _est_tier = "revising_down"
+                        else:
+                            _est_tier = "stable_estimates"
+                        _buy_signals_merged["estimate_revision_trend"] = _est_tier
+                    except Exception:
+                        _buy_signals_merged["estimate_revision_trend"] = "stable_estimates"
+                    # N167: news sentiment momentum (compare ai_sentiment now vs recent avg)
+                    try:
+                        _sent_now_n167 = float(sent or 0)
+                        _hist_sents = [t.get("signals", {}).get("ai_sentiment", 0)
+                                       for t in tlog.get("trades", [])
+                                       if t.get("ticker") == tk and t.get("action") == "BUY"][-3:]
+                        if _hist_sents:
+                            _avg_sent_hist = sum(_hist_sents) / len(_hist_sents)
+                            if _sent_now_n167 > _avg_sent_hist + 0.2:  _sm = "sentiment_rising"
+                            elif _sent_now_n167 < _avg_sent_hist - 0.2: _sm = "sentiment_falling"
+                            else:                                         _sm = "sentiment_stable"
+                        else:
+                            _sm = "sentiment_stable"
+                        _buy_signals_merged["news_sent_momentum"] = _sm
+                    except Exception:
+                        _buy_signals_merged["news_sent_momentum"] = "sentiment_stable"
+                    # N168: technical level confluence (how many key levels price is at)
+                    try:
+                        _tc_fields = ["at_pivot", "at_vwap", "at_ema21", "at_ema50", "at_support",
+                                      "at_breakout", "pocket_pivot", "orb_breakout", "at_52wh"]
+                        _tc_count = sum(1 for f in _tc_fields if live.get(tk, {}).get(f))
+                        if _tc_count >= 4:    _tc_level = "high_confluence"
+                        elif _tc_count >= 2:  _tc_level = "medium"
+                        elif _tc_count >= 1:  _tc_level = "low"
+                        else:                 _tc_level = "none"
+                        _buy_signals_merged["tech_level_confluence"] = _tc_level
+                    except Exception:
+                        _buy_signals_merged["tech_level_confluence"] = "low"
+                    # N169: market breadth direction (is it improving or worsening vs yesterday?)
+                    try:
+                        _adv_pct_now = float(breadth.get("adv_pct", 50) or 50)
+                        _breadth_hist = [h.get("adv_pct", 50) for h in tlog.get("breadth_history", []) if h.get("adv_pct")]
+                        if _breadth_hist:
+                            _avg_bread = sum(_breadth_hist[-3:]) / len(_breadth_hist[-3:])
+                            if _adv_pct_now > _avg_bread + 5:   _bd = "breadth_improving"
+                            elif _adv_pct_now < _avg_bread - 5: _bd = "breadth_worsening"
+                            else:                                _bd = "breadth_stable"
+                        else:
+                            _bd = "breadth_stable"
+                        _buy_signals_merged["breadth_direction"] = _bd
+                    except Exception:
+                        _buy_signals_merged["breadth_direction"] = "breadth_stable"
+                    # N170: risk-on vs risk-off rotation (QQQ+IWM vs XLP+TLT)
+                    try:
+                        _qqq_1d_n170 = float(live.get("QQQ", {}).get("chg1d", 0) or 0)
+                        _iwm_1d_n170 = float(live.get("IWM", {}).get("chg1d", 0) or 0)
+                        _xlp_1d_n170 = float(live.get("XLP", {}).get("chg1d", 0) or 0)
+                        _xlu_1d_n170 = float(live.get("XLU", {}).get("chg1d", 0) or 0)
+                        _risk_on_score  = (_qqq_1d_n170 + _iwm_1d_n170) / 2
+                        _risk_off_score = (_xlp_1d_n170 + _xlu_1d_n170) / 2
+                        _ro_diff = _risk_on_score - _risk_off_score
+                        if _ro_diff >= 0.5:    _ro = "risk_on"
+                        elif _ro_diff <= -0.5: _ro = "risk_off"
+                        else:                  _ro = "neutral_rotation"
+                        _buy_signals_merged["risk_rotation"] = _ro
+                    except Exception:
+                        _buy_signals_merged["risk_rotation"] = "neutral_rotation"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -14898,6 +15081,13 @@ def run():
     tlog["win_rate"]        = round(win_rate, 3)
     tlog["portfolio_peak"]  = round(_peak_port, 2)
     tlog["market_breadth"]  = breadth
+    # N169: rolling breadth history (last 12 snapshots for direction detection)
+    try:
+        _bh_list = tlog.get("breadth_history", [])
+        _bh_list.append({"adv_pct": float(breadth.get("adv_pct", 50) or 50), "t": now_utc.isoformat()})
+        tlog["breadth_history"] = _bh_list[-12:]
+    except Exception:
+        pass
     # SPY/QQQ today's returns — live market context for dashboard
     try:
         _spy_perf = _fetch_spy_perf()
@@ -16913,6 +17103,87 @@ def run():
                 _best_corr = max(_n165_insights, key=lambda x: x["win_rate"])
                 _learn_log.append(f"N165 market correlation: best={_best_corr['state']}({_best_corr['win_rate']:.0f}%WR)")
 
+        # ── N166: Estimate Revision Trend tuner ──────────────────────────────────────
+        _n166_raw = tlog.get("estimate_revision_perf", {})
+        _n166_insights = []
+        for _n66k, _n66d in _n166_raw.items():
+            if _n66d.get("total", 0) >= 2:
+                _n166_insights.append({"state": _n66k, "win_rate": _n66d.get("win_rate", 50),
+                                       "avg_pnl": _n66d.get("avg_pnl", 0), "total": _n66d.get("total", 0)})
+        if _n166_insights:
+            _up_est = next((s for s in _n166_insights if s["state"] == "revising_up"), None)
+            _dn_est = next((s for s in _n166_insights if s["state"] == "revising_down"), None)
+            if _up_est and _up_est["win_rate"] >= 60:
+                _learn_log.append(f"N166 upward estimate revisions: {_up_est['win_rate']:.0f}%WR — green-light upgrades")
+            if _dn_est and _dn_est["win_rate"] < 40:
+                _learn_log.append(f"N166 AVOID downward revisions ({_dn_est['win_rate']:.0f}%WR) — estimates cut = trouble")
+            elif _n166_insights:
+                _best_est = max(_n166_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N166 estimate revision: best={_best_est['state']}({_best_est['win_rate']:.0f}%WR)")
+
+        # ── N167: News Sentiment Momentum tuner ──────────────────────────────────────
+        _n167_raw = tlog.get("news_sent_mom_perf", {})
+        _n167_insights = []
+        for _n67k, _n67d in _n167_raw.items():
+            if _n67d.get("total", 0) >= 2:
+                _n167_insights.append({"state": _n67k, "win_rate": _n67d.get("win_rate", 50),
+                                       "avg_pnl": _n67d.get("avg_pnl", 0), "total": _n67d.get("total", 0)})
+        if _n167_insights:
+            _rise_sm = next((s for s in _n167_insights if s["state"] == "sentiment_rising"), None)
+            _fall_sm = next((s for s in _n167_insights if s["state"] == "sentiment_falling"), None)
+            if _rise_sm and _fall_sm:
+                _learn_log.append(f"N167 sentiment momentum: rising={_rise_sm['win_rate']:.0f}%WR falling={_fall_sm['win_rate']:.0f}%WR")
+            elif _n167_insights:
+                _best_sm = max(_n167_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N167 news sentiment momentum: best={_best_sm['state']}({_best_sm['win_rate']:.0f}%WR)")
+
+        # ── N168: Technical Confluence tuner ─────────────────────────────────────────
+        _n168_raw = tlog.get("tech_confluence_perf", {})
+        _n168_insights = []
+        for _n68k, _n68d in _n168_raw.items():
+            if _n68d.get("total", 0) >= 2:
+                _n168_insights.append({"state": _n68k, "win_rate": _n68d.get("win_rate", 50),
+                                       "avg_pnl": _n68d.get("avg_pnl", 0), "total": _n68d.get("total", 0)})
+        if _n168_insights:
+            _hc_n168 = next((s for s in _n168_insights if s["state"] == "high_confluence"), None)
+            if _hc_n168 and _hc_n168["win_rate"] >= 60:
+                _learn_log.append(f"N168 high technical confluence: {_hc_n168['win_rate']:.0f}%WR — multiple levels = stronger entries")
+            elif _n168_insights:
+                _best_tc = max(_n168_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N168 tech confluence: best={_best_tc['state']}({_best_tc['win_rate']:.0f}%WR)")
+
+        # ── N169: Breadth Direction tuner ────────────────────────────────────────────
+        _n169_raw = tlog.get("breadth_direction_perf", {})
+        _n169_insights = []
+        for _n69k, _n69d in _n169_raw.items():
+            if _n69d.get("total", 0) >= 2:
+                _n169_insights.append({"state": _n69k, "win_rate": _n69d.get("win_rate", 50),
+                                       "avg_pnl": _n69d.get("avg_pnl", 0), "total": _n69d.get("total", 0)})
+        if _n169_insights:
+            _imp_n169 = next((s for s in _n169_insights if s["state"] == "breadth_improving"), None)
+            _wrs_n169 = next((s for s in _n169_insights if s["state"] == "breadth_worsening"), None)
+            if _imp_n169 and _wrs_n169 and _imp_n169["win_rate"] - _wrs_n169["win_rate"] >= 10:
+                _learn_log.append(f"N169 breadth direction: improving={_imp_n169['win_rate']:.0f}%WR worsening={_wrs_n169['win_rate']:.0f}%WR — buy into improving breadth")
+            elif _n169_insights:
+                _best_bd = max(_n169_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N169 breadth direction: best={_best_bd['state']}({_best_bd['win_rate']:.0f}%WR)")
+
+        # ── N170: Risk Rotation Signal tuner ─────────────────────────────────────────
+        _n170_raw = tlog.get("risk_rotation_perf", {})
+        _n170_insights = []
+        for _n70k, _n70d in _n170_raw.items():
+            if _n70d.get("total", 0) >= 2:
+                _n170_insights.append({"state": _n70k, "win_rate": _n70d.get("win_rate", 50),
+                                       "avg_pnl": _n70d.get("avg_pnl", 0), "total": _n70d.get("total", 0)})
+        if _n170_insights:
+            _ron = next((s for s in _n170_insights if s["state"] == "risk_on"), None)
+            _roff = next((s for s in _n170_insights if s["state"] == "risk_off"), None)
+            if _ron and _roff:
+                _learn_log.append(f"N170 risk rotation: risk_on={_ron['win_rate']:.0f}%WR risk_off={_roff['win_rate']:.0f}%WR")
+            elif _n170_insights:
+                _best_ro = max(_n170_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N170 risk rotation: best={_best_ro['state']}({_best_ro['win_rate']:.0f}%WR)")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -17365,6 +17636,11 @@ def run():
             "score_regime_align_perf": _n163_insights,        # N163: score-regime alignment vs outcome
             "sector_mom_accel_perf": _n164_insights,          # N164: sector momentum acceleration vs outcome
             "market_correl_perf":    _n165_insights,          # N165: stock-market correlation tier vs outcome
+            "estimate_revision_perf": _n166_insights,         # N166: analyst estimate revision trend vs outcome
+            "news_sent_mom_perf":    _n167_insights,          # N167: news sentiment momentum vs outcome
+            "tech_confluence_perf":  _n168_insights,          # N168: technical level confluence at entry vs outcome
+            "breadth_direction_perf": _n169_insights,         # N169: market breadth direction vs outcome
+            "risk_rotation_perf":    _n170_insights,          # N170: risk-on/risk-off rotation signal vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -17510,6 +17786,8 @@ def run():
             "regime_duration_perf","orb_quality_perf","catalyst_type_perf",
             "spy_52wh_zone_perf","breakout_age_perf","dollar_vol_perf",
             "streak_state_perf","score_regime_align_perf","sector_mom_accel_perf","market_correl_perf",
+            "estimate_revision_perf","news_sent_mom_perf","tech_confluence_perf",
+            "breadth_direction_perf","risk_rotation_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -17517,7 +17795,7 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 125              # total tracked neuron dimensions (N103-N165 complete)
+        tlog["neurons_total"]     = 130              # total tracked neuron dimensions (N103-N170 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
         logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/106 neurons active")
     except Exception as _ce:
