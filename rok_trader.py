@@ -2901,6 +2901,56 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N141: Intraday Momentum State ────────────────────────────────────────────
+    # Was the stock in a strong intraday uptrend at entry? Tracks VWAP position +
+    # daily move: strong_bull(above VWAP + up >1%), weak_bull, flat, weak_bear, strong_bear
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n141 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n141_state = _buy_n141.get("intraday_momentum_state", "flat") if _buy_n141 else "flat"
+            _n141_perf = tlog.setdefault("intraday_momentum_perf", {})
+            _n141p = _n141_perf.setdefault(_n141_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n141_state})
+            _n141p["total"] += 1; _n141p["total_pnl"] = round(_n141p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n141p["wins"] += 1
+            else:        _n141p["losses"] += 1
+            _n141p["win_rate"] = round(_n141p["wins"] / _n141p["total"] * 100, 1)
+            _n141p["avg_pnl"]  = round(_n141p["total_pnl"] / _n141p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N142: Options Open Interest Skew ─────────────────────────────────────────
+    # Tracks win rates by put/call OI skew at entry: heavy_calls/calls_lean/balanced/puts_lean/heavy_puts
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n142 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n142_oi = _buy_n142.get("oi_skew_state", "balanced") if _buy_n142 else "balanced"
+            _n142_perf = tlog.setdefault("oi_skew_perf", {})
+            _n142p = _n142_perf.setdefault(_n142_oi, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n142_oi})
+            _n142p["total"] += 1; _n142p["total_pnl"] = round(_n142p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n142p["wins"] += 1
+            else:        _n142p["losses"] += 1
+            _n142p["win_rate"] = round(_n142p["wins"] / _n142p["total"] * 100, 1)
+            _n142p["avg_pnl"]  = round(_n142p["total_pnl"] / _n142p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N143: Earnings Surprise History ──────────────────────────────────────────
+    # Tracks how stocks with good vs bad earnings surprise history perform.
+    # consistent_beats(3+), mixed, misser(2+ misses recently)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n143 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n143_eps = _buy_n143.get("eps_surprise_history", "mixed") if _buy_n143 else "mixed"
+            _n143_perf = tlog.setdefault("eps_surprise_perf", {})
+            _n143p = _n143_perf.setdefault(_n143_eps, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n143_eps})
+            _n143p["total"] += 1; _n143p["total_pnl"] = round(_n143p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n143p["wins"] += 1
+            else:        _n143p["losses"] += 1
+            _n143p["win_rate"] = round(_n143p["wins"] / _n143p["total"] * 100, 1)
+            _n143p["avg_pnl"]  = round(_n143p["total_pnl"] / _n143p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11761,6 +11811,21 @@ def run():
                     _sh_ng2 = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
                     if len(_sh_ng2) >= 3 and _sh_ng2[-1] < _sh_ng2[0] - 5:
                         _ng_strikes += 1; _ng_reasons.append(f"declining score trend historically fails({_n138_ng.get('declining',50):.0f}%WR)")
+                # N141 strike: entering stocks below VWAP on down day historically bad
+                _n141_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("intraday_momentum_perf",[])}
+                if _n141_ng.get("strong_bear", 50) < 35 and len(_n141_ng) >= 3:
+                    _vwap_ng = float(live.get(tk, {}).get("vwap", 0) or 0)
+                    _px_ng = float(live.get(tk, {}).get("price", 0) or 0)
+                    _c1d_ng141 = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    if _px_ng > 0 and _vwap_ng > 0 and _px_ng < _vwap_ng and _c1d_ng141 <= -1.0:
+                        _ng_strikes += 1; _ng_reasons.append(f"below VWAP on down day historically fails({_n141_ng.get('strong_bear',50):.0f}%WR)")
+                # N141 green: above VWAP on strong up day historically best
+                if _n141_ng.get("strong_bull", 0) >= 65:
+                    _vwap_ng2 = float(live.get(tk, {}).get("vwap", 0) or 0)
+                    _px_ng2 = float(live.get(tk, {}).get("price", 0) or 0)
+                    _c1d_ng2 = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    if _px_ng2 > 0 and _vwap_ng2 > 0 and _px_ng2 > _vwap_ng2 and _c1d_ng2 >= 1.0:
+                        _ng_green_lights += 1
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -12685,6 +12750,41 @@ def run():
                         _buy_signals_merged["rs_rating_at_entry"] = 50
                     # N128: entry score value (already set as tech_sc/score before this block)
                     _buy_signals_merged["score"] = tech_sc
+                    # N141: intraday momentum state at entry
+                    try:
+                        _vwap_n141 = float(live.get(tk, {}).get("vwap", 0) or 0)
+                        _px_n141 = float(live.get(tk, {}).get("price", 0) or 0)
+                        _chg1d_n141 = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        _above_vwap = _px_n141 > _vwap_n141 if _px_n141 > 0 and _vwap_n141 > 0 else False
+                        if _above_vwap and _chg1d_n141 >= 1.0:      _im_state = "strong_bull"
+                        elif _above_vwap and _chg1d_n141 >= 0.3:    _im_state = "weak_bull"
+                        elif not _above_vwap and _chg1d_n141 <= -1.0: _im_state = "strong_bear"
+                        elif not _above_vwap and _chg1d_n141 <= -0.3: _im_state = "weak_bear"
+                        else:                                          _im_state = "flat"
+                        _buy_signals_merged["intraday_momentum_state"] = _im_state
+                    except Exception:
+                        _buy_signals_merged["intraday_momentum_state"] = "flat"
+                    # N142: options OI skew (put/call open interest ratio)
+                    try:
+                        _pcr_n142 = float(live.get(tk, {}).get("options_pcr", 1.0) or 1.0)
+                        if _pcr_n142 <= 0.5:   _oi_skew = "heavy_calls"
+                        elif _pcr_n142 <= 0.8: _oi_skew = "calls_lean"
+                        elif _pcr_n142 <= 1.2: _oi_skew = "balanced"
+                        elif _pcr_n142 <= 1.6: _oi_skew = "puts_lean"
+                        else:                   _oi_skew = "heavy_puts"
+                        _buy_signals_merged["oi_skew_state"] = _oi_skew
+                    except Exception:
+                        _buy_signals_merged["oi_skew_state"] = "balanced"
+                    # N143: earnings surprise history
+                    try:
+                        _eps_beats = int(live.get(tk, {}).get("eps_beats_last4", 0) or 0)
+                        _eps_misses = int(live.get(tk, {}).get("eps_misses_last4", 0) or 0)
+                        if _eps_beats >= 3:    _eps_hist = "consistent_beats"
+                        elif _eps_misses >= 2: _eps_hist = "misser"
+                        else:                  _eps_hist = "mixed"
+                        _buy_signals_merged["eps_surprise_history"] = _eps_hist
+                    except Exception:
+                        _buy_signals_merged["eps_surprise_history"] = "mixed"
                     # N130: stock stability at entry (max drawdown last month as %)
                     try:
                         _dd1m = float(live.get(tk, {}).get("max_drawdown_1m", 0) or 0)
@@ -15692,6 +15792,52 @@ def run():
             _best_vel = max(_n125_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N125 news velocity: best={_best_vel['state']}({_best_vel['win_rate']:.0f}%WR) hot news {'helps' if _best_vel['state']=='hot' else 'not always best'}")
 
+        # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
+        _n141_raw = tlog.get("intraday_momentum_perf", {})
+        _n141_insights = []
+        for _n41k, _n41d in _n141_raw.items():
+            if _n41d.get("total", 0) >= 2:
+                _n141_insights.append({"state": _n41k, "win_rate": _n41d.get("win_rate", 50),
+                                       "avg_pnl": _n41d.get("avg_pnl", 0), "total": _n41d.get("total", 0)})
+        if _n141_insights:
+            _sbull = next((s for s in _n141_insights if s["state"] == "strong_bull"), None)
+            if _sbull:
+                _learn_log.append(f"N141 strong_bull VWAP entries: {_sbull['win_rate']:.0f}%WR avg={_sbull['avg_pnl']:+.2f}%")
+            else:
+                _best_im = max(_n141_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N141 intraday momentum: best={_best_im['state']}({_best_im['win_rate']:.0f}%WR)")
+
+        # ── N142: Options OI Skew (multi-tier) ──────────────────────────────────────
+        _n142_raw = tlog.get("oi_skew_perf", {})
+        _n142_insights = []
+        for _n42k, _n42d in _n142_raw.items():
+            if _n42d.get("total", 0) >= 2:
+                _n142_insights.append({"state": _n42k, "win_rate": _n42d.get("win_rate", 50),
+                                       "avg_pnl": _n42d.get("avg_pnl", 0), "total": _n42d.get("total", 0)})
+        if _n142_insights:
+            _hc_oi = next((s for s in _n142_insights if s["state"] == "heavy_calls"), None)
+            _hp_oi = next((s for s in _n142_insights if s["state"] == "heavy_puts"), None)
+            if _hc_oi and _hp_oi:
+                _learn_log.append(f"N142 OI skew: heavy_calls={_hc_oi['win_rate']:.0f}%WR heavy_puts={_hp_oi['win_rate']:.0f}%WR")
+            elif _n142_insights:
+                _best_oi = max(_n142_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N142 OI skew: best={_best_oi['state']}({_best_oi['win_rate']:.0f}%WR)")
+
+        # ── N143: Earnings Surprise History (multi-tier) ─────────────────────────────
+        _n143_raw = tlog.get("eps_surprise_perf", {})
+        _n143_insights = []
+        for _n43k, _n43d in _n143_raw.items():
+            if _n43d.get("total", 0) >= 2:
+                _n143_insights.append({"state": _n43k, "win_rate": _n43d.get("win_rate", 50),
+                                       "avg_pnl": _n43d.get("avg_pnl", 0), "total": _n43d.get("total", 0)})
+        if _n143_insights:
+            _beats_eps = next((s for s in _n143_insights if s["state"] == "consistent_beats"), None)
+            _miss_eps = next((s for s in _n143_insights if s["state"] == "misser"), None)
+            if _beats_eps:
+                _learn_log.append(f"N143 consistent EPS beaters: {_beats_eps['win_rate']:.0f}%WR")
+            if _miss_eps and _miss_eps["win_rate"] < 40:
+                _learn_log.append(f"N143 AVOID: EPS missers ({_miss_eps['win_rate']:.0f}%WR)")
+
         # ── N126: Gap-Up Entry Quality (multi-tier) ────────────────────────────────
         _n126_raw = tlog.get("gap_entry_perf", {})
         _n126_insights = []
@@ -16076,6 +16222,9 @@ def run():
             "pcr_entry_perf":       _n120_insights,          # N120: options put/call ratio bracket at entry vs outcome
             "si_squeeze_perf":      _n121_insights,          # N121: short interest / squeeze setup vs outcome
             "dist_200ema_perf":     _n122_insights,          # N122: distance from 200 EMA at entry vs outcome
+            "intraday_momentum_perf": _n141_insights,        # N141: intraday momentum state (VWAP+chg1d) vs outcome
+            "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
+            "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
             "sector_etf_strength_perf": _n123_insights,     # N123: sector ETF 5d momentum at entry vs outcome
             "spy_alignment_perf":   _n124_insights,          # N124: stock intraday alignment vs SPY direction
             "news_velocity_perf":   _n125_insights,          # N125: pre-entry news velocity (fresh headlines)
@@ -16203,6 +16352,7 @@ def run():
             "hold_duration_perf","mktcap_tier_perf","float_tier_perf",
             "vts_perf","consec_red_entry_perf","macro_hold_perf",
             "pcr_entry_perf","si_squeeze_perf","dist_200ema_perf",
+            "intraday_momentum_perf","oi_skew_perf","eps_surprise_perf",
             "sector_etf_strength_perf","spy_alignment_perf","news_velocity_perf",
             "gap_entry_perf","rs_tier_entry_perf","entry_score_tier_perf",
             "exit_trigger_perf","stock_stability_perf",
@@ -16217,9 +16367,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 100              # total tracked neuron dimensions (N103-N140 added)
+        tlog["neurons_total"]     = 103              # total tracked neuron dimensions (N103-N143 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/100 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/103 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
