@@ -16789,6 +16789,84 @@ def run():
     except Exception as _mh_news_e:
         logger.debug(f"Market-hours news: {_mh_news_e}")
 
+    # ── Smart Alert System ────────────────────────────────────────────────────────
+    # Generates real-time actionable alerts that appear on the dashboard.
+    # Each alert has: type, priority(critical/high/medium/low), title, body, ts
+    try:
+        _smart_alerts = list(tlog.get("smart_alerts", []))  # preserve existing alerts
+        _sa_now = datetime.now(timezone.utc).isoformat()
+        _new_alerts = []
+
+        # 1. Drawdown alert
+        _dd_sa = float(tlog.get("drawdown_pct", 0) or 0)
+        if _dd_sa >= 10:
+            _new_alerts.append({"type":"risk","priority":"critical","title":"⛔ DEEP DRAWDOWN",
+                "body":f"Portfolio down {_dd_sa:.1f}% from peak. Bot in max-defensive mode. No new buys until recovery.",
+                "ts": _sa_now})
+        elif _dd_sa >= 5:
+            _new_alerts.append({"type":"risk","priority":"high","title":"⚠ DRAWDOWN ALERT",
+                "body":f"Portfolio down {_dd_sa:.1f}%. Bot has raised entry bar and cut position sizes. Focus on quality exits.",
+                "ts": _sa_now})
+
+        # 2. Cross-asset risk-off alert
+        if tlog.get("cross_asset_risk_off"):
+            _new_alerts.append({"type":"macro","priority":"high","title":"🔴 N110 RISK-OFF ACTIVE",
+                "body":f"Bonds+VIX surging simultaneously (score={tlog.get('risk_off_score',0)}). Institutions exiting equities. Bot blocking new buys.",
+                "ts": _sa_now})
+
+        # 3. Neural consensus bearish
+        _nv_sa = tlog.get("neural_consensus_vote", {})
+        if _nv_sa.get("net", 0) <= -3:
+            _new_alerts.append({"type":"macro","priority":"high","title":"🧠 NEURAL CONSENSUS BEARISH",
+                "body":f"{_nv_sa.get('neg',0)} neuron dimensions voting bearish vs {_nv_sa.get('pos',0)} bullish. Market conditions historically unfavorable.",
+                "ts": _sa_now})
+        elif _nv_sa.get("net", 0) >= 3:
+            _new_alerts.append({"type":"opportunity","priority":"medium","title":"🟢 NEURAL CONSENSUS BULLISH",
+                "body":f"{_nv_sa.get('pos',0)} neuron dimensions voting bullish. Historical conditions favorable for entries.",
+                "ts": _sa_now})
+
+        # 4. Rotation flip alert
+        _rot_sa = tlog.get("rotation_flip_sectors", [])
+        if _rot_sa:
+            _new_alerts.append({"type":"opportunity","priority":"medium","title":"↗ SECTOR ROTATION FLIP",
+                "body":f"Sectors pivoting laggard→leader: {', '.join(_rot_sa)}. Bot giving +10 score bonus to these sectors.",
+                "ts": _sa_now})
+
+        # 5. Large position profit alert (any position >15% gain)
+        for _pos_sa in tlog.get("positions", []):
+            _pos_pnl = float(_pos_sa.get("pnl_pct", 0) or 0)
+            _pos_tk = _pos_sa.get("ticker", "")
+            if _pos_pnl >= 20:
+                _new_alerts.append({"type":"win","priority":"high","title":f"🚀 {_pos_tk} UP {_pos_pnl:.1f}%",
+                    "body":f"{_pos_tk} is up {_pos_pnl:.1f}% — trailing stop active protecting gains. Consider partial exit if target reached.",
+                    "ts": _sa_now})
+            elif _pos_pnl >= 10:
+                _new_alerts.append({"type":"win","priority":"medium","title":f"✅ {_pos_tk} UP {_pos_pnl:.1f}%",
+                    "body":f"{_pos_tk} hit {_pos_pnl:.1f}% gain. Bot watching for trailing stop signals.",
+                    "ts": _sa_now})
+
+        # 6. Recent win streak
+        _lp_sa = tlog.get("bot_learned_params", {})
+        _wr_sa = float(_lp_sa.get("recent_wr", 0) or 0)
+        _ta_sa = int(_lp_sa.get("trades_analyzed", 0) or 0)
+        if _wr_sa >= 0.70 and _ta_sa >= 10:
+            _new_alerts.append({"type":"performance","priority":"medium","title":"🔥 HOT STREAK",
+                "body":f"Bot win rate: {_wr_sa*100:.0f}% over last 20 trades ({_ta_sa} total analyzed). Neural learning is working.",
+                "ts": _sa_now})
+
+        # 7. Recovery mode entry
+        if tlog.get("recovery_mode"):
+            _new_alerts.append({"type":"risk","priority":"high","title":"🛡 RECOVERY MODE ACTIVE",
+                "body":"Win rate dropped below 40% + portfolio in drawdown. Bot reduced sizes 40% and raised entry bar until conditions improve.",
+                "ts": _sa_now})
+
+        # Merge: keep most recent 10 alerts (prefer new alerts for same type)
+        _existing_types = {a.get("title","") for a in _new_alerts}
+        _kept = [a for a in _smart_alerts if a.get("title","") not in _existing_types]
+        tlog["smart_alerts"] = (_new_alerts + _kept)[:10]
+    except Exception as _sa_e:
+        logger.debug(f"Smart alerts error: {_sa_e}")
+
     _save_equity_snapshot(tlog)
     _save_prices_json(tlog, live if 'live' in dir() else None)
     _save(TRADES_FILE, tlog)
