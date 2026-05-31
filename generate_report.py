@@ -415,6 +415,16 @@ def _build_weekly_bot_report(docs_dir):
         "vol_expansion_at_entry_perf": "N398 Vol Expansion at Entry",
         "news_age_quality_perf": "N399 News Age Quality",
         "technical_score_quality_perf": "N400 Technical Score Quality",
+        "relative_strength_vs_market_perf": "N401 Relative Strength vs Market",
+        "sector_rotation_phase_perf": "N402 Sector Rotation Phase",
+        "morning_momentum_quality_perf": "N403 Morning Momentum Quality",
+        "volume_profile_entry_perf": "N404 Volume Profile Entry",
+        "institutional_flow_quality_perf": "N405 Institutional Flow Quality",
+        "gap_quality_context_perf": "N406 Gap Quality Context",
+        "support_confluence_quality_perf": "N407 Support Confluence Quality",
+        "catalyst_quality_tier_perf": "N408 Catalyst Quality Tier",
+        "pre_market_volume_quality_perf": "N409 Pre-Market Volume Quality",
+        "conviction_score_tier_perf": "N410 Conviction Score Tier",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
