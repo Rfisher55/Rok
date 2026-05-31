@@ -8136,11 +8136,14 @@ body.beginner-mode #beginner-banner { display:block }
     const nPct = nT > 0 ? Math.round(nA / nT * 100) : 0;
     const nCol = nA >= 50 ? '#00e676' : nA >= 25 ? '#00e5ff' : nA >= 10 ? '#ffd54f' : '#546e7a';
 
-    // 10×10 neuron grid (displayed as 20 cols × 5 rows)
-    const neuronGrid = Array.from({length:100}, (_,i) => {
-      const active = i < nA;
-      const col = active ? (i < 20 ? '#00ff88' : i < 50 ? '#00e5ff' : '#82b1ff') : 'rgba(255,255,255,.06)';
-      const glow = active ? `box-shadow:0 0 4px ${col}55;` : '';
+    // Dynamic neuron grid — show up to 200 dots representing nT neurons
+    const gridCells = Math.min(nT, 200);
+    const activeRatio = nT > 0 ? nA / nT : 0;
+    const neuronGrid = Array.from({length:gridCells}, (_,i) => {
+      const active = i < Math.round(activeRatio * gridCells);
+      const pct = i / gridCells;
+      const col = active ? (pct < 0.15 ? '#00ff88' : pct < 0.4 ? '#00e5ff' : pct < 0.7 ? '#82b1ff' : '#ce93d8') : 'rgba(255,255,255,.05)';
+      const glow = active ? `box-shadow:0 0 3px ${col}44;` : '';
       return `<div style="width:100%;aspect-ratio:1;border-radius:50%;background:${col};${glow}"></div>`;
     }).join('');
 
@@ -8178,7 +8181,7 @@ body.beginner-mode #beginner-banner { display:block }
         </div>
         <div style="text-align:right">
           <div style="font-size:8px;font-weight:700;color:#ffd54f">Market opens in ${countStr}</div>
-          <div style="font-size:7px;color:#3a4a5a">100-neuron AI · continuously learning</div>
+          <div style="font-size:7px;color:#3a4a5a">${nT}-neuron AI · continuously learning</div>
         </div>
       </div>
 
