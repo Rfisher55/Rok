@@ -6012,6 +6012,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N341: Pre-Market Gap Performance ─────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n341 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n341_field = _buy_n341.get("pre_market_gap_perf", "flat_open") if _buy_n341 else "flat_open"
+            _n341_perf = tlog.setdefault("pre_market_gap_perf", {})
+            _n341p = _n341_perf.setdefault(_n341_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n341_field})
+            _n341p["total"] += 1; _n341p["total_pnl"] = round(_n341p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n341p["wins"] += 1
+            else:        _n341p["losses"] += 1
+            _n341p["win_rate"] = round(_n341p["wins"] / _n341p["total"] * 100, 1)
+            _n341p["avg_pnl"]  = round(_n341p["total_pnl"] / _n341p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N342: Regime Transition Performance ───────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n342 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n342_field = _buy_n342.get("regime_transition_perf", "stable_regime") if _buy_n342 else "stable_regime"
+            _n342_perf = tlog.setdefault("regime_transition_perf", {})
+            _n342p = _n342_perf.setdefault(_n342_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n342_field})
+            _n342p["total"] += 1; _n342p["total_pnl"] = round(_n342p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n342p["wins"] += 1
+            else:        _n342p["losses"] += 1
+            _n342p["win_rate"] = round(_n342p["wins"] / _n342p["total"] * 100, 1)
+            _n342p["avg_pnl"]  = round(_n342p["total_pnl"] / _n342p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N343: Ticker Age Bucket Performance ───────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n343 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n343_field = _buy_n343.get("ticker_age_bucket_perf", "small_micro_cap") if _buy_n343 else "small_micro_cap"
+            _n343_perf = tlog.setdefault("ticker_age_bucket_perf", {})
+            _n343p = _n343_perf.setdefault(_n343_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n343_field})
+            _n343p["total"] += 1; _n343p["total_pnl"] = round(_n343p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n343p["wins"] += 1
+            else:        _n343p["losses"] += 1
+            _n343p["win_rate"] = round(_n343p["wins"] / _n343p["total"] * 100, 1)
+            _n343p["avg_pnl"]  = round(_n343p["total_pnl"] / _n343p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N344: SPY Options OI Performance ──────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n344 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n344_field = _buy_n344.get("spy_options_oi_perf", "neutral_flow") if _buy_n344 else "neutral_flow"
+            _n344_perf = tlog.setdefault("spy_options_oi_perf", {})
+            _n344p = _n344_perf.setdefault(_n344_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n344_field})
+            _n344p["total"] += 1; _n344p["total_pnl"] = round(_n344p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n344p["wins"] += 1
+            else:        _n344p["losses"] += 1
+            _n344p["win_rate"] = round(_n344p["wins"] / _n344p["total"] * 100, 1)
+            _n344p["avg_pnl"]  = round(_n344p["total_pnl"] / _n344p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N345: Breakout Confirmation Performance ────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n345 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n345_field = _buy_n345.get("breakout_confirmation_perf", "failed_breakout") if _buy_n345 else "failed_breakout"
+            _n345_perf = tlog.setdefault("breakout_confirmation_perf", {})
+            _n345p = _n345_perf.setdefault(_n345_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n345_field})
+            _n345p["total"] += 1; _n345p["total_pnl"] = round(_n345p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n345p["wins"] += 1
+            else:        _n345p["losses"] += 1
+            _n345p["win_rate"] = round(_n345p["wins"] / _n345p["total"] * 100, 1)
+            _n345p["avg_pnl"]  = round(_n345p["total_pnl"] / _n345p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N346: Portfolio Heat Performance ──────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n346 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n346_field = _buy_n346.get("portfolio_heat_perf", "low_heat") if _buy_n346 else "low_heat"
+            _n346_perf = tlog.setdefault("portfolio_heat_perf", {})
+            _n346p = _n346_perf.setdefault(_n346_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n346_field})
+            _n346p["total"] += 1; _n346p["total_pnl"] = round(_n346p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n346p["wins"] += 1
+            else:        _n346p["losses"] += 1
+            _n346p["win_rate"] = round(_n346p["wins"] / _n346p["total"] * 100, 1)
+            _n346p["avg_pnl"]  = round(_n346p["total_pnl"] / _n346p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N347: Earnings Momentum Performance ───────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n347 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n347_field = _buy_n347.get("earnings_momentum_perf", "no_earnings_driver") if _buy_n347 else "no_earnings_driver"
+            _n347_perf = tlog.setdefault("earnings_momentum_perf", {})
+            _n347p = _n347_perf.setdefault(_n347_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n347_field})
+            _n347p["total"] += 1; _n347p["total_pnl"] = round(_n347p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n347p["wins"] += 1
+            else:        _n347p["losses"] += 1
+            _n347p["win_rate"] = round(_n347p["wins"] / _n347p["total"] * 100, 1)
+            _n347p["avg_pnl"]  = round(_n347p["total_pnl"] / _n347p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N348: Sector Breadth Performance ──────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n348 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n348_field = _buy_n348.get("sector_breadth_perf", "sector_middle") if _buy_n348 else "sector_middle"
+            _n348_perf = tlog.setdefault("sector_breadth_perf", {})
+            _n348p = _n348_perf.setdefault(_n348_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n348_field})
+            _n348p["total"] += 1; _n348p["total_pnl"] = round(_n348p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n348p["wins"] += 1
+            else:        _n348p["losses"] += 1
+            _n348p["win_rate"] = round(_n348p["wins"] / _n348p["total"] * 100, 1)
+            _n348p["avg_pnl"]  = round(_n348p["total_pnl"] / _n348p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N349: Volatility Contraction Performance ───────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n349 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n349_field = _buy_n349.get("volatility_contraction_perf", "normal_vol") if _buy_n349 else "normal_vol"
+            _n349_perf = tlog.setdefault("volatility_contraction_perf", {})
+            _n349p = _n349_perf.setdefault(_n349_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n349_field})
+            _n349p["total"] += 1; _n349p["total_pnl"] = round(_n349p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n349p["wins"] += 1
+            else:        _n349p["losses"] += 1
+            _n349p["win_rate"] = round(_n349p["wins"] / _n349p["total"] * 100, 1)
+            _n349p["avg_pnl"]  = round(_n349p["total_pnl"] / _n349p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N350: Time Since Last Trade Performance ────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n350 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n350_field = _buy_n350.get("time_since_last_trade_perf", "day_plus_apart") if _buy_n350 else "day_plus_apart"
+            _n350_perf = tlog.setdefault("time_since_last_trade_perf", {})
+            _n350p = _n350_perf.setdefault(_n350_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n350_field})
+            _n350p["total"] += 1; _n350p["total_pnl"] = round(_n350p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n350p["wins"] += 1
+            else:        _n350p["losses"] += 1
+            _n350p["win_rate"] = round(_n350p["wins"] / _n350p["total"] * 100, 1)
+            _n350p["avg_pnl"]  = round(_n350p["total_pnl"] / _n350p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -12787,7 +12937,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 300
+            _n_total = tlog.get("neurons_total") or 310
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -18367,6 +18517,139 @@ def run():
                         _buy_signals_merged["earnings_revision_perf"] = _n340_s
                     except Exception:
                         _buy_signals_merged["earnings_revision_perf"] = "no_revision"
+                    # N341: Pre-market gap at entry
+                    try:
+                        _n341_gap = float(d.get("pre_market_chg", 0) or 0)
+                        if _n341_gap > 2:
+                            _n341_s = "strong_gap_up"
+                        elif _n341_gap >= 0.5:
+                            _n341_s = "mild_gap"
+                        elif _n341_gap >= -0.5:
+                            _n341_s = "flat_open"
+                        else:
+                            _n341_s = "gap_down"
+                        _buy_signals_merged["pre_market_gap_perf"] = _n341_s
+                    except Exception:
+                        _buy_signals_merged["pre_market_gap_perf"] = "flat_open"
+                    # N342: Regime transition at entry
+                    try:
+                        _n342_rq = float(d.get("regime_quality", 0) or 0)
+                        _n342_rq_prior = float(d.get("regime_quality_prior", 0) or 0)
+                        if _n342_rq > _n342_rq_prior:
+                            _n342_s = "improving_regime"
+                        elif _n342_rq < _n342_rq_prior:
+                            _n342_s = "deteriorating_regime"
+                        else:
+                            _n342_s = "stable_regime"
+                        _buy_signals_merged["regime_transition_perf"] = _n342_s
+                    except Exception:
+                        _buy_signals_merged["regime_transition_perf"] = "stable_regime"
+                    # N343: Ticker age bucket at entry
+                    try:
+                        _n343_mc = float(d.get("market_cap", 0) or 0)
+                        if _n343_mc > 50:
+                            _n343_s = "established_stock"
+                        elif _n343_mc >= 5:
+                            _n343_s = "mid_cap_growth"
+                        else:
+                            _n343_s = "small_micro_cap"
+                        _buy_signals_merged["ticker_age_bucket_perf"] = _n343_s
+                    except Exception:
+                        _buy_signals_merged["ticker_age_bucket_perf"] = "small_micro_cap"
+                    # N344: SPY options OI at entry
+                    try:
+                        _n344_pcr = float(d.get("put_call_ratio", 1.0) or 1.0)
+                        if _n344_pcr < 0.7:
+                            _n344_s = "bullish_flow"
+                        elif _n344_pcr <= 1.1:
+                            _n344_s = "neutral_flow"
+                        else:
+                            _n344_s = "bearish_flow"
+                        _buy_signals_merged["spy_options_oi_perf"] = _n344_s
+                    except Exception:
+                        _buy_signals_merged["spy_options_oi_perf"] = "neutral_flow"
+                    # N345: Breakout confirmation at entry
+                    try:
+                        _n345_bo = bool(d.get("at_breakout", False))
+                        _n345_vr = float(d.get("vol_ratio", 0) or 0)
+                        if _n345_bo and _n345_vr > 1.5:
+                            _n345_s = "confirmed_breakout"
+                        elif _n345_bo:
+                            _n345_s = "unconfirmed"
+                        else:
+                            _n345_s = "failed_breakout"
+                        _buy_signals_merged["breakout_confirmation_perf"] = _n345_s
+                    except Exception:
+                        _buy_signals_merged["breakout_confirmation_perf"] = "failed_breakout"
+                    # N346: Portfolio heat at entry
+                    try:
+                        _n346_dd = abs(float(tlog.get("drawdown_pct", 0) or 0))
+                        if _n346_dd < 1:
+                            _n346_s = "low_heat"
+                        elif _n346_dd <= 5:
+                            _n346_s = "medium_heat"
+                        else:
+                            _n346_s = "high_heat"
+                        _buy_signals_merged["portfolio_heat_perf"] = _n346_s
+                    except Exception:
+                        _buy_signals_merged["portfolio_heat_perf"] = "low_heat"
+                    # N347: Earnings momentum at entry
+                    try:
+                        _n347_beat = bool(d.get("earnings_beat", False))
+                        _n347_pc = int(d.get("persist_count", 0) or 0)
+                        if _n347_beat and _n347_pc >= 2:
+                            _n347_s = "strong_earnings_tail"
+                        elif _n347_beat:
+                            _n347_s = "fading_earnings"
+                        else:
+                            _n347_s = "no_earnings_driver"
+                        _buy_signals_merged["earnings_momentum_perf"] = _n347_s
+                    except Exception:
+                        _buy_signals_merged["earnings_momentum_perf"] = "no_earnings_driver"
+                    # N348: Sector breadth at entry
+                    try:
+                        _n348_rs = float(d.get("rs_sector", 0) or 0)
+                        if _n348_rs > 5:
+                            _n348_s = "sector_leading"
+                        elif _n348_rs >= -2:
+                            _n348_s = "sector_middle"
+                        else:
+                            _n348_s = "sector_lagging"
+                        _buy_signals_merged["sector_breadth_perf"] = _n348_s
+                    except Exception:
+                        _buy_signals_merged["sector_breadth_perf"] = "sector_middle"
+                    # N349: Volatility contraction at entry
+                    try:
+                        _n349_atr = float(d.get("atr_pct", 0) or 0)
+                        _n349_avg = float(d.get("atr_20d_avg", 0) or 0)
+                        if _n349_avg > 0 and _n349_atr < _n349_avg * 0.7:
+                            _n349_s = "contracting_vol"
+                        elif _n349_avg > 0 and _n349_atr > _n349_avg * 1.3:
+                            _n349_s = "expanding_vol"
+                        else:
+                            _n349_s = "normal_vol"
+                        _buy_signals_merged["volatility_contraction_perf"] = _n349_s
+                    except Exception:
+                        _buy_signals_merged["volatility_contraction_perf"] = "normal_vol"
+                    # N350: Time since last trade at entry
+                    try:
+                        _n350_trades = tlog.get("trades", [])
+                        _n350_prior = next((t for t in reversed(_n350_trades) if t.get("action") == "BUY" and t.get("ticker") != tk), None)
+                        if _n350_prior and _n350_prior.get("time"):
+                            import dateutil.parser as _dp350
+                            _n350_dt = _dp350.parse(_n350_prior["time"])
+                            _n350_hrs = (now_utc - _n350_dt).total_seconds() / 3600
+                            if _n350_hrs < 4:
+                                _n350_s = "same_session"
+                            elif _n350_hrs < 24:
+                                _n350_s = "hours_apart"
+                            else:
+                                _n350_s = "day_plus_apart"
+                        else:
+                            _n350_s = "day_plus_apart"
+                        _buy_signals_merged["time_since_last_trade_perf"] = _n350_s
+                    except Exception:
+                        _buy_signals_merged["time_since_last_trade_perf"] = "day_plus_apart"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -23515,6 +23798,116 @@ def run():
             if _rh_n340 and _rl_n340:
                 _learn_log.append(f"N340 eps revision: higher={_rh_n340['win_rate']:.0f}% lower={_rl_n340['win_rate']:.0f}%WR")
 
+        # ── N341: Pre-Market Gap tuner ───────────────────────────────────────────────────
+        _n341_raw = tlog.get("pre_market_gap_perf", {})
+        _n341_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n341_raw.items() if v.get("total", 0) >= 2]
+        if _n341_insights:
+            _sg_n341 = next((s for s in _n341_insights if s["state"] == "strong_gap_up"), None)
+            _gd_n341 = next((s for s in _n341_insights if s["state"] == "gap_down"), None)
+            if _sg_n341 and _gd_n341:
+                _learn_log.append(f"N341 pre-mkt gap: strong_up={_sg_n341['win_rate']:.0f}% gap_dn={_gd_n341['win_rate']:.0f}%WR")
+
+        # ── N342: Regime Transition tuner ───────────────────────────────────────────────
+        _n342_raw = tlog.get("regime_transition_perf", {})
+        _n342_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n342_raw.items() if v.get("total", 0) >= 2]
+        if _n342_insights:
+            _im_n342 = next((s for s in _n342_insights if s["state"] == "improving_regime"), None)
+            _dt_n342 = next((s for s in _n342_insights if s["state"] == "deteriorating_regime"), None)
+            if _im_n342 and _dt_n342:
+                _learn_log.append(f"N342 regime transition: improving={_im_n342['win_rate']:.0f}% deteriorating={_dt_n342['win_rate']:.0f}%WR")
+
+        # ── N343: Ticker Age Bucket tuner ────────────────────────────────────────────────
+        _n343_raw = tlog.get("ticker_age_bucket_perf", {})
+        _n343_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n343_raw.items() if v.get("total", 0) >= 2]
+        if _n343_insights:
+            _es_n343 = next((s for s in _n343_insights if s["state"] == "established_stock"), None)
+            _sm_n343 = next((s for s in _n343_insights if s["state"] == "small_micro_cap"), None)
+            if _es_n343 and _sm_n343:
+                _learn_log.append(f"N343 mktcap bucket: established={_es_n343['win_rate']:.0f}% small_micro={_sm_n343['win_rate']:.0f}%WR")
+
+        # ── N344: SPY Options OI tuner ───────────────────────────────────────────────────
+        _n344_raw = tlog.get("spy_options_oi_perf", {})
+        _n344_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n344_raw.items() if v.get("total", 0) >= 2]
+        if _n344_insights:
+            _bf_n344 = next((s for s in _n344_insights if s["state"] == "bullish_flow"), None)
+            _br_n344 = next((s for s in _n344_insights if s["state"] == "bearish_flow"), None)
+            if _bf_n344 and _br_n344:
+                _learn_log.append(f"N344 SPY OI: bullish={_bf_n344['win_rate']:.0f}% bearish={_br_n344['win_rate']:.0f}%WR")
+
+        # ── N345: Breakout Confirmation tuner ───────────────────────────────────────────
+        _n345_raw = tlog.get("breakout_confirmation_perf", {})
+        _n345_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n345_raw.items() if v.get("total", 0) >= 2]
+        if _n345_insights:
+            _cb_n345 = next((s for s in _n345_insights if s["state"] == "confirmed_breakout"), None)
+            _fb_n345 = next((s for s in _n345_insights if s["state"] == "failed_breakout"), None)
+            if _cb_n345 and _fb_n345:
+                _learn_log.append(f"N345 breakout: confirmed={_cb_n345['win_rate']:.0f}% failed={_fb_n345['win_rate']:.0f}%WR")
+
+        # ── N346: Portfolio Heat tuner ───────────────────────────────────────────────────
+        _n346_raw = tlog.get("portfolio_heat_perf", {})
+        _n346_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n346_raw.items() if v.get("total", 0) >= 2]
+        if _n346_insights:
+            _lh_n346 = next((s for s in _n346_insights if s["state"] == "low_heat"), None)
+            _hh_n346 = next((s for s in _n346_insights if s["state"] == "high_heat"), None)
+            if _lh_n346 and _hh_n346:
+                _learn_log.append(f"N346 portfolio heat: low={_lh_n346['win_rate']:.0f}% high={_hh_n346['win_rate']:.0f}%WR")
+
+        # ── N347: Earnings Momentum tuner ────────────────────────────────────────────────
+        _n347_raw = tlog.get("earnings_momentum_perf", {})
+        _n347_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n347_raw.items() if v.get("total", 0) >= 2]
+        if _n347_insights:
+            _se_n347 = next((s for s in _n347_insights if s["state"] == "strong_earnings_tail"), None)
+            _ne_n347 = next((s for s in _n347_insights if s["state"] == "no_earnings_driver"), None)
+            if _se_n347 and _ne_n347:
+                _learn_log.append(f"N347 earnings momentum: strong={_se_n347['win_rate']:.0f}% none={_ne_n347['win_rate']:.0f}%WR")
+
+        # ── N348: Sector Breadth tuner ───────────────────────────────────────────────────
+        _n348_raw = tlog.get("sector_breadth_perf", {})
+        _n348_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n348_raw.items() if v.get("total", 0) >= 2]
+        if _n348_insights:
+            _sl_n348 = next((s for s in _n348_insights if s["state"] == "sector_leading"), None)
+            _sg_n348 = next((s for s in _n348_insights if s["state"] == "sector_lagging"), None)
+            if _sl_n348 and _sg_n348:
+                _learn_log.append(f"N348 sector breadth: leading={_sl_n348['win_rate']:.0f}% lagging={_sg_n348['win_rate']:.0f}%WR")
+
+        # ── N349: Volatility Contraction tuner ──────────────────────────────────────────
+        _n349_raw = tlog.get("volatility_contraction_perf", {})
+        _n349_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n349_raw.items() if v.get("total", 0) >= 2]
+        if _n349_insights:
+            _cv_n349 = next((s for s in _n349_insights if s["state"] == "contracting_vol"), None)
+            _ev_n349 = next((s for s in _n349_insights if s["state"] == "expanding_vol"), None)
+            if _cv_n349 and _ev_n349:
+                _learn_log.append(f"N349 vol contraction: contracting={_cv_n349['win_rate']:.0f}% expanding={_ev_n349['win_rate']:.0f}%WR")
+
+        # ── N350: Time Since Last Trade tuner ───────────────────────────────────────────
+        _n350_raw = tlog.get("time_since_last_trade_perf", {})
+        _n350_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n350_raw.items() if v.get("total", 0) >= 2]
+        if _n350_insights:
+            _ss_n350 = next((s for s in _n350_insights if s["state"] == "same_session"), None)
+            _dp_n350 = next((s for s in _n350_insights if s["state"] == "day_plus_apart"), None)
+            if _ss_n350 and _dp_n350:
+                _learn_log.append(f"N350 trade spacing: same_session={_ss_n350['win_rate']:.0f}% day_plus={_dp_n350['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -24142,6 +24535,16 @@ def run():
             "index_divergence_perf":            _n338_insights,   # N338: index divergence at entry vs outcome
             "opening_gap_follow_perf":          _n339_insights,   # N339: opening gap follow at entry vs outcome
             "earnings_revision_perf":           _n340_insights,   # N340: earnings revision at entry vs outcome
+            "pre_market_gap_perf":              _n341_insights,   # N341: pre-market gap at entry vs outcome
+            "regime_transition_perf":           _n342_insights,   # N342: regime transition (improving/stable/deteriorating) vs outcome
+            "ticker_age_bucket_perf":           _n343_insights,   # N343: ticker market cap bucket at entry vs outcome
+            "spy_options_oi_perf":              _n344_insights,   # N344: SPY options put/call flow at entry vs outcome
+            "breakout_confirmation_perf":       _n345_insights,   # N345: breakout confirmation (vol+at_breakout) vs outcome
+            "portfolio_heat_perf":              _n346_insights,   # N346: portfolio drawdown heat at entry vs outcome
+            "earnings_momentum_perf":           _n347_insights,   # N347: earnings beat+persistence momentum vs outcome
+            "sector_breadth_perf":              _n348_insights,   # N348: sector RS breadth at entry vs outcome
+            "volatility_contraction_perf":      _n349_insights,   # N349: ATR contraction/expansion at entry vs outcome
+            "time_since_last_trade_perf":       _n350_insights,   # N350: time spacing between trades vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -24368,6 +24771,10 @@ def run():
             "iv_rank_bucket_perf", "catalyst_type_perf",
             "trend_age_bucket_perf", "index_divergence_perf",
             "opening_gap_follow_perf", "earnings_revision_perf",
+            "pre_market_gap_perf", "regime_transition_perf",
+            "ticker_age_bucket_perf", "spy_options_oi_perf",
+            "breakout_confirmation_perf", "portfolio_heat_perf",
+            "earnings_momentum_perf", "volatility_contraction_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -24375,9 +24782,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 300              # total tracked neuron dimensions (N103-N340 complete)
+        tlog["neurons_total"]     = 310              # total tracked neuron dimensions (N103-N350 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/300 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/310 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
