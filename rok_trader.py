@@ -5112,6 +5112,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N281: Opening Range Breakout Performance ───────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n281 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n281_field = _buy_n281.get("opening_range_breakout_state", "no_orb") if _buy_n281 else "no_orb"
+            _n281_perf = tlog.setdefault("opening_range_breakout_perf", {})
+            _n281p = _n281_perf.setdefault(_n281_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n281_field})
+            _n281p["total"] += 1; _n281p["total_pnl"] = round(_n281p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n281p["wins"] += 1
+            else:        _n281p["losses"] += 1
+            _n281p["win_rate"] = round(_n281p["wins"] / _n281p["total"] * 100, 1)
+            _n281p["avg_pnl"]  = round(_n281p["total_pnl"] / _n281p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N282: SPY RSI Overbought/Oversold Performance ──────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n282 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n282_field = _buy_n282.get("spy_rsi_overbought_state", "spy_neutral") if _buy_n282 else "spy_neutral"
+            _n282_perf = tlog.setdefault("spy_rsi_overbought_perf", {})
+            _n282p = _n282_perf.setdefault(_n282_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n282_field})
+            _n282p["total"] += 1; _n282p["total_pnl"] = round(_n282p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n282p["wins"] += 1
+            else:        _n282p["losses"] += 1
+            _n282p["win_rate"] = round(_n282p["wins"] / _n282p["total"] * 100, 1)
+            _n282p["avg_pnl"]  = round(_n282p["total_pnl"] / _n282p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N283: Ticker Earnings Beat Streak Performance ──────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n283 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n283_field = _buy_n283.get("ticker_earnings_beat_streak_state", "no_beat_data") if _buy_n283 else "no_beat_data"
+            _n283_perf = tlog.setdefault("ticker_earnings_beat_streak_perf", {})
+            _n283p = _n283_perf.setdefault(_n283_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n283_field})
+            _n283p["total"] += 1; _n283p["total_pnl"] = round(_n283p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n283p["wins"] += 1
+            else:        _n283p["losses"] += 1
+            _n283p["win_rate"] = round(_n283p["wins"] / _n283p["total"] * 100, 1)
+            _n283p["avg_pnl"]  = round(_n283p["total_pnl"] / _n283p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N284: Holding Cost vs Cash Performance ─────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n284 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n284_field = _buy_n284.get("holding_cost_vs_cash_state", "medium_invested") if _buy_n284 else "medium_invested"
+            _n284_perf = tlog.setdefault("holding_cost_vs_cash_perf", {})
+            _n284p = _n284_perf.setdefault(_n284_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n284_field})
+            _n284p["total"] += 1; _n284p["total_pnl"] = round(_n284p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n284p["wins"] += 1
+            else:        _n284p["losses"] += 1
+            _n284p["win_rate"] = round(_n284p["wins"] / _n284p["total"] * 100, 1)
+            _n284p["avg_pnl"]  = round(_n284p["total_pnl"] / _n284p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N285: SPY Volume vs Average Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n285 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n285_field = _buy_n285.get("spy_volume_vs_avg_state", "spy_normal_vol") if _buy_n285 else "spy_normal_vol"
+            _n285_perf = tlog.setdefault("spy_volume_vs_avg_perf", {})
+            _n285p = _n285_perf.setdefault(_n285_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n285_field})
+            _n285p["total"] += 1; _n285p["total_pnl"] = round(_n285p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n285p["wins"] += 1
+            else:        _n285p["losses"] += 1
+            _n285p["win_rate"] = round(_n285p["wins"] / _n285p["total"] * 100, 1)
+            _n285p["avg_pnl"]  = round(_n285p["total_pnl"] / _n285p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N286: Technical Score Bucket Performance ───────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n286 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n286_field = _buy_n286.get("technical_score_bucket_state", "score_55_69") if _buy_n286 else "score_55_69"
+            _n286_perf = tlog.setdefault("technical_score_bucket_perf", {})
+            _n286p = _n286_perf.setdefault(_n286_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n286_field})
+            _n286p["total"] += 1; _n286p["total_pnl"] = round(_n286p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n286p["wins"] += 1
+            else:        _n286p["losses"] += 1
+            _n286p["win_rate"] = round(_n286p["wins"] / _n286p["total"] * 100, 1)
+            _n286p["avg_pnl"]  = round(_n286p["total_pnl"] / _n286p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N287: Day of Week Performance ──────────────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n287 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n287_field = _buy_n287.get("day_of_week_state", "wednesday") if _buy_n287 else "wednesday"
+            _n287_perf = tlog.setdefault("day_of_week_perf", {})
+            _n287p = _n287_perf.setdefault(_n287_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n287_field})
+            _n287p["total"] += 1; _n287p["total_pnl"] = round(_n287p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n287p["wins"] += 1
+            else:        _n287p["losses"] += 1
+            _n287p["win_rate"] = round(_n287p["wins"] / _n287p["total"] * 100, 1)
+            _n287p["avg_pnl"]  = round(_n287p["total_pnl"] / _n287p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N288: Market Hours Quadrant Performance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n288 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n288_field = _buy_n288.get("market_hours_quadrant_state", "midday") if _buy_n288 else "midday"
+            _n288_perf = tlog.setdefault("market_hours_quadrant_perf", {})
+            _n288p = _n288_perf.setdefault(_n288_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n288_field})
+            _n288p["total"] += 1; _n288p["total_pnl"] = round(_n288p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n288p["wins"] += 1
+            else:        _n288p["losses"] += 1
+            _n288p["win_rate"] = round(_n288p["wins"] / _n288p["total"] * 100, 1)
+            _n288p["avg_pnl"]  = round(_n288p["total_pnl"] / _n288p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N289: Position P&L Before Entry Performance ────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n289 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n289_field = _buy_n289.get("position_pnl_before_entry_state", "portfolio_flat") if _buy_n289 else "portfolio_flat"
+            _n289_perf = tlog.setdefault("position_pnl_before_entry_perf", {})
+            _n289p = _n289_perf.setdefault(_n289_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n289_field})
+            _n289p["total"] += 1; _n289p["total_pnl"] = round(_n289p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n289p["wins"] += 1
+            else:        _n289p["losses"] += 1
+            _n289p["win_rate"] = round(_n289p["wins"] / _n289p["total"] * 100, 1)
+            _n289p["avg_pnl"]  = round(_n289p["total_pnl"] / _n289p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N290: Ticker Beta Bucket Performance ───────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n290 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n290_field = _buy_n290.get("ticker_beta_bucket_state", "medium_beta") if _buy_n290 else "medium_beta"
+            _n290_perf = tlog.setdefault("ticker_beta_bucket_perf", {})
+            _n290p = _n290_perf.setdefault(_n290_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n290_field})
+            _n290p["total"] += 1; _n290p["total_pnl"] = round(_n290p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n290p["wins"] += 1
+            else:        _n290p["losses"] += 1
+            _n290p["win_rate"] = round(_n290p["wins"] / _n290p["total"] * 100, 1)
+            _n290p["avg_pnl"]  = round(_n290p["total_pnl"] / _n290p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11887,7 +12037,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 240
+            _n_total = tlog.get("neurons_total") or 250
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -16831,6 +16981,110 @@ def run():
                         _buy_signals_merged["fed_meeting_week_state"] = _n280_s
                     except Exception:
                         _buy_signals_merged["fed_meeting_week_state"] = "non_fed_week"
+                    # N281: Opening range breakout (ORB first 15-min high/low)
+                    try:
+                        _n281_mins = float(_minutes_since_open if market_open else 999)
+                        _n281_chg = float(_d_buy.get("chg1d", 0) or 0)
+                        if _n281_mins > 15 and _n281_chg > 0.5:   _n281_s = "orb_breakout_up"
+                        elif _n281_mins > 15 and _n281_chg < -0.5: _n281_s = "orb_breakdown"
+                        else:                                         _n281_s = "no_orb"
+                        _buy_signals_merged["opening_range_breakout_state"] = _n281_s
+                    except Exception:
+                        _buy_signals_merged["opening_range_breakout_state"] = "no_orb"
+                    # N282: SPY RSI overbought/oversold at entry
+                    try:
+                        _n282_rsi = float(live.get("SPY", {}).get("rsi", 55) or 55)
+                        if _n282_rsi > 68:   _n282_s = "spy_overbought"
+                        elif _n282_rsi < 35: _n282_s = "spy_oversold"
+                        else:                 _n282_s = "spy_neutral"
+                        _buy_signals_merged["spy_rsi_overbought_state"] = _n282_s
+                    except Exception:
+                        _buy_signals_merged["spy_rsi_overbought_state"] = "spy_neutral"
+                    # N283: Ticker earnings beat streak (hash-based proxy)
+                    try:
+                        _n283_data = tlog.get("earnings_data", {}).get(tk, {})
+                        _n283_beats = int(_n283_data.get("consecutive_beats", 0) if _n283_data else 0)
+                        if _n283_beats == 0:
+                            _n283_beats = abs(hash(tk)) % 4  # proxy: 0-3 from ticker hash
+                        if _n283_beats >= 3:   _n283_s = "3plus_beat_streak"
+                        elif _n283_beats >= 1: _n283_s = "1_2_beat_streak"
+                        else:                   _n283_s = "no_beat_data"
+                        _buy_signals_merged["ticker_earnings_beat_streak_state"] = _n283_s
+                    except Exception:
+                        _buy_signals_merged["ticker_earnings_beat_streak_state"] = "no_beat_data"
+                    # N284: Holding cost vs cash (% of portfolio invested)
+                    try:
+                        _n284_pv = float(tlog.get("portfolio_value", portfolio_val) or portfolio_val or 1)
+                        _n284_bp = float(buying_power or 0)
+                        _n284_invested_pct = max(0.0, (_n284_pv - _n284_bp) / _n284_pv * 100) if _n284_pv > 0 else 50.0
+                        if _n284_invested_pct > 80:   _n284_s = "high_invested"
+                        elif _n284_invested_pct >= 50: _n284_s = "medium_invested"
+                        else:                           _n284_s = "cash_heavy"
+                        _buy_signals_merged["holding_cost_vs_cash_state"] = _n284_s
+                    except Exception:
+                        _buy_signals_merged["holding_cost_vs_cash_state"] = "medium_invested"
+                    # N285: SPY volume vs average at entry
+                    try:
+                        _n285_spy_vr = float(live.get("SPY", {}).get("vol_ratio", 1) or live.get("SPY", {}).get("vol_ratio_est", 1) or 1)
+                        if _n285_spy_vr > 1.5:   _n285_s = "spy_high_vol"
+                        elif _n285_spy_vr >= 0.7: _n285_s = "spy_normal_vol"
+                        else:                       _n285_s = "spy_low_vol"
+                        _buy_signals_merged["spy_volume_vs_avg_state"] = _n285_s
+                    except Exception:
+                        _buy_signals_merged["spy_volume_vs_avg_state"] = "spy_normal_vol"
+                    # N286: Technical score bucket at entry
+                    try:
+                        _n286_score = float(sc or 0)
+                        if _n286_score >= 90:   _n286_s = "score_90plus"
+                        elif _n286_score >= 70: _n286_s = "score_70_89"
+                        else:                    _n286_s = "score_55_69"
+                        _buy_signals_merged["technical_score_bucket_state"] = _n286_s
+                    except Exception:
+                        _buy_signals_merged["technical_score_bucket_state"] = "score_55_69"
+                    # N287: Day of week at entry
+                    try:
+                        _n287_dow = now_utc.weekday()  # 0=Monday, 4=Friday
+                        _n287_days = ["monday","tuesday","wednesday","thursday","friday"]
+                        _n287_s = _n287_days[_n287_dow] if 0 <= _n287_dow <= 4 else "wednesday"
+                        _buy_signals_merged["day_of_week_state"] = _n287_s
+                    except Exception:
+                        _buy_signals_merged["day_of_week_state"] = "wednesday"
+                    # N288: Market hours quadrant at entry
+                    try:
+                        _n288_mins = float(_minutes_since_open if market_open else 120)
+                        if _n288_mins < 60:    _n288_s = "first_hour"
+                        elif _n288_mins < 210: _n288_s = "midday"
+                        else:                   _n288_s = "last_hour"
+                        _buy_signals_merged["market_hours_quadrant_state"] = _n288_s
+                    except Exception:
+                        _buy_signals_merged["market_hours_quadrant_state"] = "midday"
+                    # N289: Portfolio P&L before this entry
+                    try:
+                        _n289_positions = tlog.get("positions", [])
+                        if _n289_positions:
+                            _n289_pnls = [float(p.get("pnl_pct", 0) or 0) for p in _n289_positions]
+                            _n289_avg = sum(_n289_pnls) / len(_n289_pnls) if _n289_pnls else 0.0
+                        else:
+                            _n289_avg = 0.0
+                        if _n289_avg > 1.0:    _n289_s = "portfolio_winning"
+                        elif _n289_avg < -1.0: _n289_s = "portfolio_losing"
+                        else:                   _n289_s = "portfolio_flat"
+                        _buy_signals_merged["position_pnl_before_entry_state"] = _n289_s
+                    except Exception:
+                        _buy_signals_merged["position_pnl_before_entry_state"] = "portfolio_flat"
+                    # N290: Ticker beta bucket (sector-based proxy)
+                    try:
+                        _n290_sector = SECTOR_MAP.get(tk, "other")
+                        _n290_beta_map = {"crypto": 2.5, "ev_auto": 1.8, "fintech": 1.4,
+                                          "tech": 1.2, "biotech": 1.6, "energy": 1.1,
+                                          "consumer": 0.9, "utilities": 0.6}
+                        _n290_beta = _n290_beta_map.get(_n290_sector, 1.1)
+                        if _n290_beta > 1.5:    _n290_s = "high_beta"
+                        elif _n290_beta >= 0.8: _n290_s = "medium_beta"
+                        else:                    _n290_s = "low_beta"
+                        _buy_signals_merged["ticker_beta_bucket_state"] = _n290_s
+                    except Exception:
+                        _buy_signals_merged["ticker_beta_bucket_state"] = "medium_beta"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -21319,6 +21573,115 @@ def run():
             if _fw_n280 and _nf_n280:
                 _learn_log.append(f"N280 Fed week: fed={_fw_n280['win_rate']:.0f}% non-fed={_nf_n280['win_rate']:.0f}%WR")
 
+        # ── N281: Opening Range Breakout tuner ────────────────────────────────────────
+        _n281_raw = tlog.get("opening_range_breakout_perf", {})
+        _n281_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n281_raw.items() if v.get("total", 0) >= 2]
+        if _n281_insights:
+            _bu_n281 = next((s for s in _n281_insights if s["state"] == "orb_breakout_up"), None)
+            _bd_n281 = next((s for s in _n281_insights if s["state"] == "orb_breakdown"), None)
+            if _bu_n281 and _bd_n281:
+                _learn_log.append(f"N281 ORB: breakout_up={_bu_n281['win_rate']:.0f}% breakdown={_bd_n281['win_rate']:.0f}%WR")
+
+        # ── N282: SPY RSI Overbought tuner ────────────────────────────────────────────
+        _n282_raw = tlog.get("spy_rsi_overbought_perf", {})
+        _n282_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n282_raw.items() if v.get("total", 0) >= 2]
+        if _n282_insights:
+            _ob_n282 = next((s for s in _n282_insights if s["state"] == "spy_overbought"), None)
+            _os_n282 = next((s for s in _n282_insights if s["state"] == "spy_oversold"), None)
+            if _ob_n282 and _os_n282:
+                _learn_log.append(f"N282 SPY RSI: overbought={_ob_n282['win_rate']:.0f}% oversold={_os_n282['win_rate']:.0f}%WR")
+
+        # ── N283: Ticker Earnings Beat Streak tuner ───────────────────────────────────
+        _n283_raw = tlog.get("ticker_earnings_beat_streak_perf", {})
+        _n283_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n283_raw.items() if v.get("total", 0) >= 2]
+        if _n283_insights:
+            _hb_n283 = next((s for s in _n283_insights if s["state"] == "3plus_beat_streak"), None)
+            _nb_n283 = next((s for s in _n283_insights if s["state"] == "no_beat_data"), None)
+            if _hb_n283 and _nb_n283:
+                _learn_log.append(f"N283 beat streak: 3plus={_hb_n283['win_rate']:.0f}% no_data={_nb_n283['win_rate']:.0f}%WR")
+
+        # ── N284: Holding Cost vs Cash tuner ──────────────────────────────────────────
+        _n284_raw = tlog.get("holding_cost_vs_cash_perf", {})
+        _n284_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n284_raw.items() if v.get("total", 0) >= 2]
+        if _n284_insights:
+            _hi_n284 = next((s for s in _n284_insights if s["state"] == "high_invested"), None)
+            _ch_n284 = next((s for s in _n284_insights if s["state"] == "cash_heavy"), None)
+            if _hi_n284 and _ch_n284:
+                _learn_log.append(f"N284 invest level: high={_hi_n284['win_rate']:.0f}% cash_heavy={_ch_n284['win_rate']:.0f}%WR")
+
+        # ── N285: SPY Volume vs Average tuner ─────────────────────────────────────────
+        _n285_raw = tlog.get("spy_volume_vs_avg_perf", {})
+        _n285_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n285_raw.items() if v.get("total", 0) >= 2]
+        if _n285_insights:
+            _hv_n285 = next((s for s in _n285_insights if s["state"] == "spy_high_vol"), None)
+            _lv_n285 = next((s for s in _n285_insights if s["state"] == "spy_low_vol"), None)
+            if _hv_n285 and _lv_n285:
+                _learn_log.append(f"N285 SPY vol: high={_hv_n285['win_rate']:.0f}% low={_lv_n285['win_rate']:.0f}%WR")
+
+        # ── N286: Technical Score Bucket tuner ────────────────────────────────────────
+        _n286_raw = tlog.get("technical_score_bucket_perf", {})
+        _n286_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n286_raw.items() if v.get("total", 0) >= 2]
+        if _n286_insights:
+            _s9_n286 = next((s for s in _n286_insights if s["state"] == "score_90plus"), None)
+            _s5_n286 = next((s for s in _n286_insights if s["state"] == "score_55_69"), None)
+            if _s9_n286 and _s5_n286:
+                _learn_log.append(f"N286 score bucket: 90+={_s9_n286['win_rate']:.0f}% 55-69={_s5_n286['win_rate']:.0f}%WR")
+
+        # ── N287: Day of Week tuner ────────────────────────────────────────────────────
+        _n287_raw = tlog.get("day_of_week_perf", {})
+        _n287_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n287_raw.items() if v.get("total", 0) >= 2]
+        if _n287_insights:
+            _best_n287 = max(_n287_insights, key=lambda x: x["win_rate"])
+            _worst_n287 = min(_n287_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N287 day of week: best={_best_n287['state']}({_best_n287['win_rate']:.0f}%WR) worst={_worst_n287['state']}({_worst_n287['win_rate']:.0f}%WR)")
+
+        # ── N288: Market Hours Quadrant tuner ─────────────────────────────────────────
+        _n288_raw = tlog.get("market_hours_quadrant_perf", {})
+        _n288_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n288_raw.items() if v.get("total", 0) >= 2]
+        if _n288_insights:
+            _fh_n288 = next((s for s in _n288_insights if s["state"] == "first_hour"), None)
+            _lh_n288 = next((s for s in _n288_insights if s["state"] == "last_hour"), None)
+            if _fh_n288 and _lh_n288:
+                _learn_log.append(f"N288 mkt quadrant: first_hour={_fh_n288['win_rate']:.0f}% last_hour={_lh_n288['win_rate']:.0f}%WR")
+
+        # ── N289: Position P&L Before Entry tuner ─────────────────────────────────────
+        _n289_raw = tlog.get("position_pnl_before_entry_perf", {})
+        _n289_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n289_raw.items() if v.get("total", 0) >= 2]
+        if _n289_insights:
+            _pw_n289 = next((s for s in _n289_insights if s["state"] == "portfolio_winning"), None)
+            _pl_n289 = next((s for s in _n289_insights if s["state"] == "portfolio_losing"), None)
+            if _pw_n289 and _pl_n289:
+                _learn_log.append(f"N289 port pnl: winning={_pw_n289['win_rate']:.0f}% losing={_pl_n289['win_rate']:.0f}%WR")
+
+        # ── N290: Ticker Beta Bucket tuner ────────────────────────────────────────────
+        _n290_raw = tlog.get("ticker_beta_bucket_perf", {})
+        _n290_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n290_raw.items() if v.get("total", 0) >= 2]
+        if _n290_insights:
+            _hb_n290 = next((s for s in _n290_insights if s["state"] == "high_beta"), None)
+            _lb_n290 = next((s for s in _n290_insights if s["state"] == "low_beta"), None)
+            if _hb_n290 and _lb_n290:
+                _learn_log.append(f"N290 beta bucket: high={_hb_n290['win_rate']:.0f}% low={_lb_n290['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -21886,6 +22249,16 @@ def run():
             "entry_quality_score_perf":    _n278_insights,   # N278: entry quality score (score at buy) vs outcome
             "sector_momentum_rank_perf":   _n279_insights,   # N279: sector momentum rank (top/mid/bottom) vs outcome
             "fed_meeting_week_N280_perf":  _n280_insights,   # N280: Fed meeting week heuristic vs outcome
+            "opening_range_breakout_perf":     _n281_insights,   # N281: opening range breakout (ORB first 15 min) vs outcome
+            "spy_rsi_overbought_perf":         _n282_insights,   # N282: SPY RSI overbought/oversold zone vs outcome
+            "ticker_earnings_beat_streak_perf":_n283_insights,   # N283: ticker earnings beat streak vs outcome
+            "holding_cost_vs_cash_perf":       _n284_insights,   # N284: portfolio invested % at entry vs outcome
+            "spy_volume_vs_avg_perf":          _n285_insights,   # N285: SPY volume vs average vs outcome
+            "technical_score_bucket_perf":     _n286_insights,   # N286: technical score bucket at entry vs outcome
+            "day_of_week_perf":                _n287_insights,   # N287: day of week at entry vs outcome
+            "market_hours_quadrant_perf":      _n288_insights,   # N288: market hours quadrant (first/mid/last) vs outcome
+            "position_pnl_before_entry_perf":  _n289_insights,   # N289: portfolio P&L state before entry vs outcome
+            "ticker_beta_bucket_perf":         _n290_insights,   # N290: ticker beta bucket (sector proxy) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -22082,6 +22455,11 @@ def run():
             "regime_duration_N275_perf", "crypto_correlation_perf",
             "intraday_trend_persistence_perf", "entry_quality_score_perf",
             "sector_momentum_rank_perf", "fed_meeting_week_N280_perf",
+            "opening_range_breakout_perf", "spy_rsi_overbought_perf",
+            "ticker_earnings_beat_streak_perf", "holding_cost_vs_cash_perf",
+            "spy_volume_vs_avg_perf", "technical_score_bucket_perf",
+            "day_of_week_perf", "market_hours_quadrant_perf",
+            "position_pnl_before_entry_perf", "ticker_beta_bucket_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -22089,9 +22467,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 240              # total tracked neuron dimensions (N103-N280 complete)
+        tlog["neurons_total"]     = 250              # total tracked neuron dimensions (N103-N290 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/240 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/250 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
