@@ -2729,6 +2729,108 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N131: Pre-Earnings Proximity ──────────────────────────────────────────────
+    # Tracks win rates by how close to earnings report the entry was made.
+    # imminent(<3d), near(3-7d), approaching(8-21d), safe(>21d or unknown)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n131 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n131_days = float(_buy_n131.get("days_to_earnings_at_entry", 99) or 99) if _buy_n131 else 99
+            _n131_bkt = ("imminent" if _n131_days < 3 else "near" if _n131_days < 7 else
+                         "approaching" if _n131_days < 21 else "safe")
+            _n131_perf = tlog.setdefault("earnings_proximity_perf", {})
+            _n131p = _n131_perf.setdefault(_n131_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n131_bkt})
+            _n131p["total"] += 1; _n131p["total_pnl"] = round(_n131p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n131p["wins"] += 1
+            else:        _n131p["losses"] += 1
+            _n131p["win_rate"] = round(_n131p["wins"] / _n131p["total"] * 100, 1)
+            _n131p["avg_pnl"]  = round(_n131p["total_pnl"] / _n131p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N132: Analyst Rating Momentum at Entry ────────────────────────────────────
+    # Tracks win rates by recent analyst action: upgraded/downgraded/unchanged
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n132 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n132_rating = _buy_n132.get("analyst_rating_momentum", "unchanged") if _buy_n132 else "unchanged"
+            _n132_perf = tlog.setdefault("analyst_momentum_perf", {})
+            _n132p = _n132_perf.setdefault(_n132_rating, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n132_rating})
+            _n132p["total"] += 1; _n132p["total_pnl"] = round(_n132p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n132p["wins"] += 1
+            else:        _n132p["losses"] += 1
+            _n132p["win_rate"] = round(_n132p["wins"] / _n132p["total"] * 100, 1)
+            _n132p["avg_pnl"]  = round(_n132p["total_pnl"] / _n132p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N133: Stock Beta Tier at Entry ───────────────────────────────────────────
+    # Tracks win rates by how high-beta the stock was: high_beta(>1.5), normal, defensive(<0.8)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n133 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n133_beta = float(_buy_n133.get("beta_at_entry", 1.0) or 1.0) if _buy_n133 else 1.0
+            _n133_bkt = ("high_beta" if _n133_beta >= 1.5 else "normal" if _n133_beta >= 0.8 else "defensive")
+            _n133_perf = tlog.setdefault("beta_tier_perf", {})
+            _n133p = _n133_perf.setdefault(_n133_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n133_bkt})
+            _n133p["total"] += 1; _n133p["total_pnl"] = round(_n133p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n133p["wins"] += 1
+            else:        _n133p["losses"] += 1
+            _n133p["win_rate"] = round(_n133p["wins"] / _n133p["total"] * 100, 1)
+            _n133p["avg_pnl"]  = round(_n133p["total_pnl"] / _n133p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N134: Sector Leadership Tier at Entry ─────────────────────────────────────
+    # Tracks win rates based on whether stock's sector was in top/mid/bottom tier
+    # when we entered. Sector leaders outperform in bull markets.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n134 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n134_tier = _buy_n134.get("sector_leadership_tier", "mid") if _buy_n134 else "mid"
+            _n134_perf = tlog.setdefault("sector_leadership_perf", {})
+            _n134p = _n134_perf.setdefault(_n134_tier, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n134_tier})
+            _n134p["total"] += 1; _n134p["total_pnl"] = round(_n134p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n134p["wins"] += 1
+            else:        _n134p["losses"] += 1
+            _n134p["win_rate"] = round(_n134p["wins"] / _n134p["total"] * 100, 1)
+            _n134p["avg_pnl"]  = round(_n134p["total_pnl"] / _n134p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N135: Pre-Market Volume Surge ─────────────────────────────────────────────
+    # Tracks win rates by pre-market volume relative to typical volume.
+    # surge(>3x PM), elevated(>1.5x), normal
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n135 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n135_pm = _buy_n135.get("pm_volume_tier", "normal") if _buy_n135 else "normal"
+            _n135_perf = tlog.setdefault("pm_volume_perf", {})
+            _n135p = _n135_perf.setdefault(_n135_pm, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n135_pm})
+            _n135p["total"] += 1; _n135p["total_pnl"] = round(_n135p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n135p["wins"] += 1
+            else:        _n135p["losses"] += 1
+            _n135p["win_rate"] = round(_n135p["wins"] / _n135p["total"] * 100, 1)
+            _n135p["avg_pnl"]  = round(_n135p["total_pnl"] / _n135p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N136: Accumulation/Distribution State at Entry ────────────────────────────
+    # Tracks win rates by A/D line direction: accumulation vs distribution vs neutral
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n136 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n136_ad = _buy_n136.get("accum_distrib_state", "neutral") if _buy_n136 else "neutral"
+            _n136_perf = tlog.setdefault("accum_distrib_perf", {})
+            _n136p = _n136_perf.setdefault(_n136_ad, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n136_ad})
+            _n136p["total"] += 1; _n136p["total_pnl"] = round(_n136p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n136p["wins"] += 1
+            else:        _n136p["losses"] += 1
+            _n136p["win_rate"] = round(_n136p["wins"] / _n136p["total"] * 100, 1)
+            _n136p["avg_pnl"]  = round(_n136p["total_pnl"] / _n136p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11430,6 +11532,57 @@ def run():
                 if _n128_ng.get("borderline", 50) < 35 and len(_n128_ng) >= 3:
                     if tech_sc < 50:
                         _ng_strikes += 1; _ng_reasons.append(f"borderline score({tech_sc:.0f}) historically fails({_n128_ng.get('borderline',50):.0f}%WR)")
+                # N131 strike: imminent earnings historically bad AND <3 days to earnings
+                _n131_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("earnings_proximity_perf",[])}
+                if _n131_ng.get("imminent", 50) < 35 and len(_n131_ng) >= 2:
+                    _d2e_ng = float(live.get(tk, {}).get("days_to_earnings", 99) or 99)
+                    if _d2e_ng < 3:
+                        _ng_strikes += 1; _ng_reasons.append(f"earnings in {_d2e_ng:.0f}d historically fails({_n131_ng.get('imminent',50):.0f}%WR)")
+                # N132 strike: buying after analyst downgrade historically bad
+                _n132_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("analyst_momentum_perf",[])}
+                if _n132_ng.get("downgraded", 50) < 35 and len(_n132_ng) >= 2:
+                    _analyst_ng = str(live.get(tk, {}).get("analyst_action", "") or "").lower()
+                    if "downgrade" in _analyst_ng or "cut" in _analyst_ng:
+                        _ng_strikes += 1; _ng_reasons.append(f"analyst downgrade historically fails({_n132_ng.get('downgraded',50):.0f}%WR)")
+                # N132 green: analyst upgrade historically outperforms
+                if _n132_ng.get("upgraded", 0) >= 65:
+                    _analyst_ng = str(live.get(tk, {}).get("analyst_action", "") or "").lower()
+                    if "upgrade" in _analyst_ng or "initiat" in _analyst_ng:
+                        _ng_green_lights += 1
+                # N134 strike: sector laggards historically bad
+                _n134_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("sector_leadership_perf",[])}
+                if _n134_ng.get("laggard", 50) < 35 and len(_n134_ng) >= 2:
+                    _buy_signals_merged_ng = {"sector_leadership_tier": "mid"}  # default
+                    if _n134_ng.get("laggard", 50) < 35:
+                        _sec_etf_ng = _tk_sig.get("sector_etf", "SPY")
+                        _all_ng_secs = ["XLK","XLV","XLF","XLE","XLI","XLY","XLP","XLU","XLB","XLRE","XLC"]
+                        _ng_sec_vals = sorted([float(live.get(s,{}).get("chg5d",0) or 0) for s in _all_ng_secs], reverse=True)
+                        _this_sec_ng = float(live.get(_sec_etf_ng,{}).get("chg5d",0) or 0)
+                        _q3_val = _ng_sec_vals[max(0, len(_ng_sec_vals)*3//4)] if _ng_sec_vals else -999
+                        if _this_sec_ng <= _q3_val:
+                            _ng_strikes += 1; _ng_reasons.append(f"sector laggard({_sec_etf_ng} {_this_sec_ng:.1f}%/5d) historically fails")
+                # N134 green: sector leaders historically best
+                if _n134_ng.get("leader", 0) >= 65:
+                    _sec_etf_ng2 = _tk_sig.get("sector_etf", "SPY")
+                    _all_ng_secs2 = ["XLK","XLV","XLF","XLE","XLI","XLY","XLP","XLU","XLB","XLRE","XLC"]
+                    _ng_sec_vals2 = sorted([float(live.get(s,{}).get("chg5d",0) or 0) for s in _all_ng_secs2], reverse=True)
+                    _this_sec_ng2 = float(live.get(_sec_etf_ng2,{}).get("chg5d",0) or 0)
+                    _q1_val2 = _ng_sec_vals2[max(0, len(_ng_sec_vals2)//4)] if _ng_sec_vals2 else 999
+                    if _this_sec_ng2 >= _q1_val2:
+                        _ng_green_lights += 1
+                # N136 strike: distribution phase entries historically bad
+                _n136_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("accum_distrib_perf",[])}
+                if _n136_ng.get("distribution", 50) < 35 and len(_n136_ng) >= 2:
+                    _obv_tr = live.get(tk, {}).get("obv_trend", "neutral")
+                    _ad_state_ng = str(live.get(tk, {}).get("accum_distrib", "neutral") or "neutral").lower()
+                    if "distrib" in _ad_state_ng or _obv_tr == "falling":
+                        _ng_strikes += 1; _ng_reasons.append(f"distribution phase historically fails({_n136_ng.get('distribution',50):.0f}%WR)")
+                # N136 green: accumulation phase historically best
+                if _n136_ng.get("accumulation", 0) >= 65:
+                    _ad_state_ng2 = str(live.get(tk, {}).get("accum_distrib", "neutral") or "neutral").lower()
+                    _obv_tr2 = live.get(tk, {}).get("obv_trend", "neutral")
+                    if "accum" in _ad_state_ng2 or _obv_tr2 == "rising":
+                        _ng_green_lights += 1
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -12322,6 +12475,70 @@ def run():
                         _buy_signals_merged["max_drawdown_1m_at_entry"] = round(abs(_dd1m), 2)
                     except Exception:
                         _buy_signals_merged["max_drawdown_1m_at_entry"] = 0
+                    # N131: days to next earnings at entry
+                    try:
+                        _d2e = float(live.get(tk, {}).get("days_to_earnings", 99) or 99)
+                        _buy_signals_merged["days_to_earnings_at_entry"] = round(_d2e, 1)
+                    except Exception:
+                        _buy_signals_merged["days_to_earnings_at_entry"] = 99
+                    # N132: analyst rating momentum at entry (upgraded/downgraded/unchanged)
+                    try:
+                        _analyst_action = str(live.get(tk, {}).get("analyst_action", "unchanged") or "unchanged").lower()
+                        if "upgrade" in _analyst_action or "buy" in _analyst_action:
+                            _rating_mom = "upgraded"
+                        elif "downgrade" in _analyst_action or "sell" in _analyst_action or "cut" in _analyst_action:
+                            _rating_mom = "downgraded"
+                        else:
+                            _rating_mom = "unchanged"
+                        _buy_signals_merged["analyst_rating_momentum"] = _rating_mom
+                    except Exception:
+                        _buy_signals_merged["analyst_rating_momentum"] = "unchanged"
+                    # N133: stock beta tier at entry
+                    try:
+                        _beta_now = float(live.get(tk, {}).get("beta", 1.0) or 1.0)
+                        _buy_signals_merged["beta_at_entry"] = round(_beta_now, 2)
+                    except Exception:
+                        _buy_signals_merged["beta_at_entry"] = 1.0
+                    # N134: sector leadership tier (top/mid/bottom by comparing sector ETF rank)
+                    try:
+                        _sec_etf_n134 = _tk_sig.get("sector_etf", "SPY")
+                        _all_sec_etfs = ["XLK","XLV","XLF","XLE","XLI","XLY","XLP","XLU","XLB","XLRE","XLC"]
+                        _sec_5d_vals = {s: float(live.get(s,{}).get("chg5d", 0) or 0) for s in _all_sec_etfs}
+                        _sorted_secs = sorted(_sec_5d_vals.values(), reverse=True)
+                        _this_sec_val = _sec_5d_vals.get(_sec_etf_n134, 0)
+                        _n_secs = len(_sorted_secs)
+                        if _n_secs >= 3 and _this_sec_val >= _sorted_secs[max(0, _n_secs // 4)]:
+                            _sec_tier = "leader"
+                        elif _this_sec_val <= _sorted_secs[min(_n_secs - 1, (_n_secs * 3) // 4)]:
+                            _sec_tier = "laggard"
+                        else:
+                            _sec_tier = "mid"
+                        _buy_signals_merged["sector_leadership_tier"] = _sec_tier
+                    except Exception:
+                        _buy_signals_merged["sector_leadership_tier"] = "mid"
+                    # N135: pre-market volume tier
+                    try:
+                        _pm_vol = float(live.get(tk, {}).get("pm_volume", 0) or 0)
+                        _avg_vol = float(live.get(tk, {}).get("avg_volume", 1) or 1)
+                        _pm_ratio = _pm_vol / _avg_vol * 10 if _avg_vol > 0 else 0  # PM vol is fraction of full day
+                        _pm_tier = ("surge" if _pm_ratio >= 0.3 else "elevated" if _pm_ratio >= 0.15 else "normal")
+                        _buy_signals_merged["pm_volume_tier"] = _pm_tier
+                    except Exception:
+                        _buy_signals_merged["pm_volume_tier"] = "normal"
+                    # N136: accumulation/distribution state at entry
+                    try:
+                        _ad_state = str(live.get(tk, {}).get("accum_distrib", "neutral") or "neutral").lower()
+                        if "accum" in _ad_state or "buy" in _ad_state:
+                            _ad_bkt = "accumulation"
+                        elif "distrib" in _ad_state or "sell" in _ad_state:
+                            _ad_bkt = "distribution"
+                        else:
+                            # Estimate from chaikin or OBV trend if available
+                            _obv_trend = live.get(tk, {}).get("obv_trend", "neutral")
+                            _ad_bkt = "accumulation" if _obv_trend == "rising" else "distribution" if _obv_trend == "falling" else "neutral"
+                        _buy_signals_merged["accum_distrib_state"] = _ad_bkt
+                    except Exception:
+                        _buy_signals_merged["accum_distrib_state"] = "neutral"
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -15280,6 +15497,90 @@ def run():
             if _heavy_dd and _heavy_dd["win_rate"] < 40:
                 _learn_log.append(f"N130 AVOID: heavy-drawdown stocks ({_heavy_dd['win_rate']:.0f}%WR)")
 
+        # ── N131: Pre-Earnings Proximity (multi-tier) ────────────────────────────────
+        _n131_raw = tlog.get("earnings_proximity_perf", {})
+        _n131_insights = []
+        for _n31k, _n31d in _n131_raw.items():
+            if _n31d.get("total", 0) >= 2:
+                _n131_insights.append({"state": _n31k, "win_rate": _n31d.get("win_rate", 50),
+                                       "avg_pnl": _n31d.get("avg_pnl", 0), "total": _n31d.get("total", 0)})
+        if _n131_insights:
+            _imm = next((s for s in _n131_insights if s["state"] == "imminent"), None)
+            _safe_e = next((s for s in _n131_insights if s["state"] == "safe"), None)
+            if _imm and _safe_e and _imm["win_rate"] < _safe_e["win_rate"] - 10:
+                _learn_log.append(f"N131 CAUTION: imminent earnings entries ({_imm['win_rate']:.0f}%WR) vs safe ({_safe_e['win_rate']:.0f}%WR)")
+            else:
+                _best_e = max(_n131_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N131 earnings proximity: best={_best_e['state']}({_best_e['win_rate']:.0f}%WR)")
+
+        # ── N132: Analyst Rating Momentum (multi-tier) ───────────────────────────────
+        _n132_raw = tlog.get("analyst_momentum_perf", {})
+        _n132_insights = []
+        for _n32k, _n32d in _n132_raw.items():
+            if _n32d.get("total", 0) >= 2:
+                _n132_insights.append({"state": _n32k, "win_rate": _n32d.get("win_rate", 50),
+                                       "avg_pnl": _n32d.get("avg_pnl", 0), "total": _n32d.get("total", 0)})
+        if _n132_insights:
+            _upg = next((s for s in _n132_insights if s["state"] == "upgraded"), None)
+            _dwn = next((s for s in _n132_insights if s["state"] == "downgraded"), None)
+            if _upg:
+                _learn_log.append(f"N132 analyst upgrades: {_upg['win_rate']:.0f}%WR ({_upg['total']} trades)")
+            if _dwn and _dwn["win_rate"] < 40:
+                _learn_log.append(f"N132 AVOID: buying downgraded stocks ({_dwn['win_rate']:.0f}%WR)")
+
+        # ── N133: Stock Beta Tier (multi-tier) ───────────────────────────────────────
+        _n133_raw = tlog.get("beta_tier_perf", {})
+        _n133_insights = []
+        for _n33k, _n33d in _n133_raw.items():
+            if _n33d.get("total", 0) >= 2:
+                _n133_insights.append({"state": _n33k, "win_rate": _n33d.get("win_rate", 50),
+                                       "avg_pnl": _n33d.get("avg_pnl", 0), "total": _n33d.get("total", 0)})
+        if _n133_insights:
+            _best_beta = max(_n133_insights, key=lambda x: x["win_rate"])
+            _beta_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _n133_insights)
+            _learn_log.append(f"N133 beta tiers: {_beta_sum}")
+
+        # ── N134: Sector Leadership Tier (multi-tier) ────────────────────────────────
+        _n134_raw = tlog.get("sector_leadership_perf", {})
+        _n134_insights = []
+        for _n34k, _n34d in _n134_raw.items():
+            if _n34d.get("total", 0) >= 2:
+                _n134_insights.append({"state": _n34k, "win_rate": _n34d.get("win_rate", 50),
+                                       "avg_pnl": _n34d.get("avg_pnl", 0), "total": _n34d.get("total", 0)})
+        if _n134_insights:
+            _lead = next((s for s in _n134_insights if s["state"] == "leader"), None)
+            _lag = next((s for s in _n134_insights if s["state"] == "laggard"), None)
+            _n134_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _n134_insights)
+            _learn_log.append(f"N134 sector leadership: {_n134_sum}")
+            if _lead and _lag and _lead["win_rate"] > _lag["win_rate"] + 10:
+                _learn_log.append(f"N134 INSIGHT: sector leaders significantly outperform laggards ({_lead['win_rate']:.0f}% vs {_lag['win_rate']:.0f}%WR)")
+
+        # ── N135: Pre-Market Volume Surge (multi-tier) ───────────────────────────────
+        _n135_raw = tlog.get("pm_volume_perf", {})
+        _n135_insights = []
+        for _n35k, _n35d in _n135_raw.items():
+            if _n35d.get("total", 0) >= 2:
+                _n135_insights.append({"state": _n35k, "win_rate": _n35d.get("win_rate", 50),
+                                       "avg_pnl": _n35d.get("avg_pnl", 0), "total": _n35d.get("total", 0)})
+        if _n135_insights:
+            _best_pm = max(_n135_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N135 PM volume: best={_best_pm['state']}({_best_pm['win_rate']:.0f}%WR)")
+
+        # ── N136: Accumulation/Distribution State (multi-tier) ──────────────────────
+        _n136_raw = tlog.get("accum_distrib_perf", {})
+        _n136_insights = []
+        for _n36k, _n36d in _n136_raw.items():
+            if _n36d.get("total", 0) >= 2:
+                _n136_insights.append({"state": _n36k, "win_rate": _n36d.get("win_rate", 50),
+                                       "avg_pnl": _n36d.get("avg_pnl", 0), "total": _n36d.get("total", 0)})
+        if _n136_insights:
+            _acc = next((s for s in _n136_insights if s["state"] == "accumulation"), None)
+            _dist = next((s for s in _n136_insights if s["state"] == "distribution"), None)
+            if _acc:
+                _learn_log.append(f"N136 accumulation entries: {_acc['win_rate']:.0f}%WR")
+            if _dist and _dist["win_rate"] < 40:
+                _learn_log.append(f"N136 AVOID: distribution phase entries ({_dist['win_rate']:.0f}%WR)")
+
         # ── N119: Macro Event Holding (multi-tier) ─────────────────────────────────
         _n119_raw = tlog.get("macro_hold_perf", {})
         _n119_insights = []
@@ -15471,6 +15772,12 @@ def run():
             "entry_score_tier_perf":_n128_insights,          # N128: entry score tier vs outcome
             "exit_trigger_perf":    _n129_insights,          # N129: exit trigger type (stop/target/trail/time)
             "stock_stability_perf": _n130_insights,          # N130: stock max drawdown last month at entry
+            "earnings_proximity_perf": _n131_insights,       # N131: days to earnings at entry vs outcome
+            "analyst_momentum_perf": _n132_insights,         # N132: analyst rating momentum at entry vs outcome
+            "beta_tier_perf":       _n133_insights,          # N133: stock beta tier at entry vs outcome
+            "sector_leadership_perf": _n134_insights,        # N134: sector leadership tier at entry vs outcome
+            "pm_volume_perf":       _n135_insights,          # N135: pre-market volume surge tier vs outcome
+            "accum_distrib_perf":   _n136_insights,          # N136: accumulation/distribution state vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -15583,6 +15890,8 @@ def run():
             "sector_etf_strength_perf","spy_alignment_perf","news_velocity_perf",
             "gap_entry_perf","rs_tier_entry_perf","entry_score_tier_perf",
             "exit_trigger_perf","stock_stability_perf",
+            "earnings_proximity_perf","analyst_momentum_perf","beta_tier_perf",
+            "sector_leadership_perf","pm_volume_perf","accum_distrib_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -15590,9 +15899,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 90               # total tracked neuron dimensions (N103-N130 added)
+        tlog["neurons_total"]     = 96               # total tracked neuron dimensions (N103-N136 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/90 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/96 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
