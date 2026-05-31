@@ -564,8 +564,18 @@ def _run():
                 "htf_stocks":      [{"ticker": e["ticker"], "htf_consec": e.get("htf_consec", 0)} for e in _htf_stocks],
                 "tt8_stocks":      _tt8_stocks,
                 "tt_leaders":      [{"ticker": e["ticker"], "trend_template": e.get("trend_template", 0)} for e in _tt_leaders],
+                "weekend_watchlist": td.get("weekend_watchlist", [])[:10],
+                "bot_conviction":   td.get("bot_conviction", 0),
+                "strategy_mode":    td.get("strategy_mode", ""),
+                "neurons_active":   td.get("neurons_active", 0),
+                "neurons_total":    td.get("neurons_total", 270),
+                "last_decision":    td.get("last_decision", ""),
+                "next_run_utc":     td.get("next_run_utc", ""),
+                "bot_brain_summary": td.get("bot_brain_summary", ""),
+                "regime_name":      td.get("regime", {}).get("regime", "neutral"),
+                "vix":              td.get("regime", {}).get("vix", 0),
             }
-            logger.info(f"Loaded {len(current_positions)} positions and {len(last_scan_top)} scan candidates from trades.json")
+            logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:
         logger.warning(f"Could not load trades.json: {_te}")
 

@@ -549,6 +549,28 @@ def build_prompt(
         lmc_lines.append(f"  10-Year Yield (TNX): {tnx:.2f}% — {tnx_signal}")
     lmc_str = "\n".join(lmc_lines) if lmc_lines else "  No live context available"
 
+    # Build weekend watchlist section
+    wl = lmc.get("weekend_watchlist") or []
+    wl_str = ""
+    if wl:
+        wl_lines = []
+        for w in wl[:8]:
+            tk = w.get("ticker", "")
+            wc = w.get("week_chg", 0)
+            sc = w.get("score", 0)
+            cat = w.get("catalyst", "")[:60]
+            wl_lines.append(f"  ${tk}: score={sc} week={wc:+.1f}% | {cat}")
+        wl_str = "\n".join(wl_lines)
+    # Build brain summary section
+    conv = lmc.get("bot_conviction", 0)
+    strat = lmc.get("strategy_mode", "")
+    nA = lmc.get("neurons_active", 0)
+    nT = lmc.get("neurons_total", 270)
+    last_dec = lmc.get("last_decision", "")[:150]
+    brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
+    if last_dec:
+        brain_str += f"\n  Last decision: {last_dec}"
+
     # Append live trading context so AI can give position-specific guidance
     return base + f"""
 
@@ -556,6 +578,9 @@ def build_prompt(
 
 LIVE MARKET CONDITIONS:
 {lmc_str}
+
+ROK BOT BRAIN STATUS:
+{brain_str}
 
 OPEN POSITIONS WITH LIVE TECHNICAL SIGNALS:
 {positions_str}
@@ -567,7 +592,10 @@ HIGH_SHORT=short squeeze fuel, NEWS_ACCELERATING=catalyst building, ↓DEG=score
 
 LAST SCAN TOP CANDIDATES (bot's freshest buy ideas):
 {scan_str}
-
+{f'''
+WEEKEND WATCHLIST — STOCKS BOT IS WATCHING FOR MONDAY:
+{wl_str}
+''' if wl_str else ''}
 CRITICAL INSTRUCTIONS:
 1. For EACH open position, generate a position_analysis entry with: action (HOLD/TRIM/SELL/STRONG_HOLD),
    confidence (1-10), thesis (why hold or exit), risk (biggest threat), and target (price target or exit level)
@@ -575,7 +603,8 @@ CRITICAL INSTRUCTIONS:
 3. Flag any position with TRIPLE_TF_ALIGNED + STRONG_ACCUMULATION as strong hold
 4. Adjust advice for day type: on TREND day favor momentum plays; on RANGE day favor mean-reversion exits
 5. Mention specific held tickers by name in rok_message — users see this as their pocket guide
-6. Include top scan candidates as new buy ideas if they have strong signals
+6. Include top scan candidates and weekend watchlist as new buy ideas if they have strong signals
+7. The user checks this dashboard as their pocket trading guide — make rok_message actionable and specific
 """
 
 
