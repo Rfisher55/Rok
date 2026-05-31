@@ -2831,6 +2831,76 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N137: Volume-Price Trend Confirmation ─────────────────────────────────────
+    # Was volume confirming price direction at entry? Smart money moves with volume.
+    # high_vol_up (best), high_vol_down (avoid), low_vol_up (weak), low_vol_down
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n137 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n137_vpt = _buy_n137.get("vol_price_confirm", "low_vol_up") if _buy_n137 else "low_vol_up"
+            _n137_perf = tlog.setdefault("vol_price_confirm_perf", {})
+            _n137p = _n137_perf.setdefault(_n137_vpt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n137_vpt})
+            _n137p["total"] += 1; _n137p["total_pnl"] = round(_n137p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n137p["wins"] += 1
+            else:        _n137p["losses"] += 1
+            _n137p["win_rate"] = round(_n137p["wins"] / _n137p["total"] * 100, 1)
+            _n137p["avg_pnl"]  = round(_n137p["total_pnl"] / _n137p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N138: Score Persistence Tier ──────────────────────────────────────────────
+    # Was this stock consistently high-scoring across multiple bot scans?
+    # persistent_strong, rising, new_entry, declining — from score_history
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n138 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n138_persist = _buy_n138.get("score_persistence", "new_entry") if _buy_n138 else "new_entry"
+            _n138_perf = tlog.setdefault("score_persistence_perf", {})
+            _n138p = _n138_perf.setdefault(_n138_persist, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n138_persist})
+            _n138p["total"] += 1; _n138p["total_pnl"] = round(_n138p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n138p["wins"] += 1
+            else:        _n138p["losses"] += 1
+            _n138p["win_rate"] = round(_n138p["wins"] / _n138p["total"] * 100, 1)
+            _n138p["avg_pnl"]  = round(_n138p["total_pnl"] / _n138p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N139: Overnight Gap Volatility ────────────────────────────────────────────
+    # How volatile are this stock's overnight gaps historically?
+    # volatile(avg>2%), moderate(1-2%), stable(<1%)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n139 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n139_gap = float(_buy_n139.get("overnight_gap_vol", 0) or 0) if _buy_n139 else 0
+            _n139_bkt = ("volatile" if _n139_gap >= 2 else "moderate" if _n139_gap >= 1 else "stable")
+            _n139_perf = tlog.setdefault("overnight_gap_vol_perf", {})
+            _n139p = _n139_perf.setdefault(_n139_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n139_bkt})
+            _n139p["total"] += 1; _n139p["total_pnl"] = round(_n139p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n139p["wins"] += 1
+            else:        _n139p["losses"] += 1
+            _n139p["win_rate"] = round(_n139p["wins"] / _n139p["total"] * 100, 1)
+            _n139p["avg_pnl"]  = round(_n139p["total_pnl"] / _n139p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N140: Market Microstructure Quality ───────────────────────────────────────
+    # Bid-ask spread quality: tight spread = liquid stock, wide = illiquid friction
+    # tight(<0.05%), normal(0.05-0.2%), wide(>0.2%)
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n140 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n140_spread = float(_buy_n140.get("bid_ask_spread_pct", 0.1) or 0.1) if _buy_n140 else 0.1
+            _n140_bkt = ("tight" if _n140_spread < 0.05 else "wide" if _n140_spread >= 0.2 else "normal")
+            _n140_perf = tlog.setdefault("microstructure_perf", {})
+            _n140p = _n140_perf.setdefault(_n140_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n140_bkt})
+            _n140p["total"] += 1; _n140p["total_pnl"] = round(_n140p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n140p["wins"] += 1
+            else:        _n140p["losses"] += 1
+            _n140p["win_rate"] = round(_n140p["wins"] / _n140p["total"] * 100, 1)
+            _n140p["avg_pnl"]  = round(_n140p["total_pnl"] / _n140p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11583,6 +11653,30 @@ def run():
                     _obv_tr2 = live.get(tk, {}).get("obv_trend", "neutral")
                     if "accum" in _ad_state_ng2 or _obv_tr2 == "rising":
                         _ng_green_lights += 1
+                # N137 strike: high vol down days historically bad entries
+                _n137_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("vol_price_confirm_perf",[])}
+                if _n137_ng.get("high_vol_down", 50) < 35 and len(_n137_ng) >= 3:
+                    _rvol_ng = float(live.get(tk, {}).get("rvol", 1.0) or 1.0)
+                    _c1d_ng = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    if _rvol_ng >= 1.5 and _c1d_ng < -0.3:
+                        _ng_strikes += 1; _ng_reasons.append(f"high-vol down day historically fails({_n137_ng.get('high_vol_down',50):.0f}%WR)")
+                # N137 green: high vol up days historically best
+                if _n137_ng.get("high_vol_up", 0) >= 65:
+                    _rvol_ng = float(live.get(tk, {}).get("rvol", 1.0) or 1.0)
+                    _c1d_ng = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                    if _rvol_ng >= 1.5 and _c1d_ng > 0.3:
+                        _ng_green_lights += 1
+                # N138 green: persistent strong score history historically best entry
+                _n138_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("score_persistence_perf",[])}
+                if _n138_ng.get("persistent_strong", 0) >= 65:
+                    _sh_ng = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    if len(_sh_ng) >= 3 and sum(_sh_ng) / len(_sh_ng) >= 65 and _sh_ng[-1] >= 65:
+                        _ng_green_lights += 1
+                # N138 strike: declining score entries historically bad
+                if _n138_ng.get("declining", 50) < 35 and len(_n138_ng) >= 3:
+                    _sh_ng2 = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    if len(_sh_ng2) >= 3 and _sh_ng2[-1] < _sh_ng2[0] - 5:
+                        _ng_strikes += 1; _ng_reasons.append(f"declining score trend historically fails({_n138_ng.get('declining',50):.0f}%WR)")
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -12533,12 +12627,54 @@ def run():
                         elif "distrib" in _ad_state or "sell" in _ad_state:
                             _ad_bkt = "distribution"
                         else:
-                            # Estimate from chaikin or OBV trend if available
                             _obv_trend = live.get(tk, {}).get("obv_trend", "neutral")
                             _ad_bkt = "accumulation" if _obv_trend == "rising" else "distribution" if _obv_trend == "falling" else "neutral"
                         _buy_signals_merged["accum_distrib_state"] = _ad_bkt
                     except Exception:
                         _buy_signals_merged["accum_distrib_state"] = "neutral"
+                    # N137: volume-price trend confirmation at entry
+                    try:
+                        _rvol_n137 = float(live.get(tk, {}).get("rvol", 1.0) or 1.0)
+                        _chg1d_n137 = float(live.get(tk, {}).get("chg1d", 0) or 0)
+                        _high_vol = _rvol_n137 >= 1.5
+                        _up_day = _chg1d_n137 > 0.3
+                        if _high_vol and _up_day:       _vpt = "high_vol_up"
+                        elif _high_vol and not _up_day: _vpt = "high_vol_down"
+                        elif not _high_vol and _up_day: _vpt = "low_vol_up"
+                        else:                            _vpt = "low_vol_down"
+                        _buy_signals_merged["vol_price_confirm"] = _vpt
+                    except Exception:
+                        _buy_signals_merged["vol_price_confirm"] = "low_vol_up"
+                    # N138: score persistence across scans (how consistently strong was the score?)
+                    try:
+                        _sh_n138 = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                        if len(_sh_n138) >= 3:
+                            _avg_sh = sum(_sh_n138) / len(_sh_n138)
+                            _last_sh = _sh_n138[-1]
+                            _first_sh = _sh_n138[0]
+                            if _avg_sh >= 65 and _last_sh >= 65:       _persist = "persistent_strong"
+                            elif _last_sh > _first_sh + 5:              _persist = "rising"
+                            elif _last_sh < _first_sh - 5:              _persist = "declining"
+                            else:                                        _persist = "stable"
+                        elif len(_sh_n138) >= 1:
+                            _persist = "new_entry"
+                        else:
+                            _persist = "new_entry"
+                        _buy_signals_merged["score_persistence"] = _persist
+                    except Exception:
+                        _buy_signals_merged["score_persistence"] = "new_entry"
+                    # N139: overnight gap volatility (avg abs gap from live data)
+                    try:
+                        _gap_vol = float(live.get(tk, {}).get("avg_overnight_gap", 0) or 0)
+                        _buy_signals_merged["overnight_gap_vol"] = round(abs(_gap_vol), 2)
+                    except Exception:
+                        _buy_signals_merged["overnight_gap_vol"] = 0
+                    # N140: bid-ask spread quality at entry
+                    try:
+                        _ba_spread = float(live.get(tk, {}).get("bid_ask_spread_pct", 0.1) or 0.1)
+                        _buy_signals_merged["bid_ask_spread_pct"] = round(_ba_spread, 3)
+                    except Exception:
+                        _buy_signals_merged["bid_ask_spread_pct"] = 0.1
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -15581,6 +15717,60 @@ def run():
             if _dist and _dist["win_rate"] < 40:
                 _learn_log.append(f"N136 AVOID: distribution phase entries ({_dist['win_rate']:.0f}%WR)")
 
+        # ── N137: Volume-Price Trend Confirmation (multi-tier) ──────────────────────
+        _n137_raw = tlog.get("vol_price_confirm_perf", {})
+        _n137_insights = []
+        for _n37k, _n37d in _n137_raw.items():
+            if _n37d.get("total", 0) >= 2:
+                _n137_insights.append({"state": _n37k, "win_rate": _n37d.get("win_rate", 50),
+                                       "avg_pnl": _n37d.get("avg_pnl", 0), "total": _n37d.get("total", 0)})
+        if _n137_insights:
+            _hvup = next((s for s in _n137_insights if s["state"] == "high_vol_up"), None)
+            _hvdn = next((s for s in _n137_insights if s["state"] == "high_vol_down"), None)
+            if _hvup:
+                _learn_log.append(f"N137 high-vol-up entries: {_hvup['win_rate']:.0f}%WR avg={_hvup['avg_pnl']:+.2f}%")
+            if _hvdn and _hvdn["win_rate"] < 40:
+                _learn_log.append(f"N137 AVOID: buying on high vol down days ({_hvdn['win_rate']:.0f}%WR)")
+
+        # ── N138: Score Persistence Tier (multi-tier) ────────────────────────────────
+        _n138_raw = tlog.get("score_persistence_perf", {})
+        _n138_insights = []
+        for _n38k, _n38d in _n138_raw.items():
+            if _n38d.get("total", 0) >= 2:
+                _n138_insights.append({"state": _n38k, "win_rate": _n38d.get("win_rate", 50),
+                                       "avg_pnl": _n38d.get("avg_pnl", 0), "total": _n38d.get("total", 0)})
+        if _n138_insights:
+            _best_persist = max(_n138_insights, key=lambda x: x["win_rate"])
+            _persist_sum = " | ".join(f"{s['state']}:{s['win_rate']:.0f}%WR" for s in _n138_insights)
+            _learn_log.append(f"N138 score persistence: {_persist_sum}")
+
+        # ── N139: Overnight Gap Volatility (multi-tier) ──────────────────────────────
+        _n139_raw = tlog.get("overnight_gap_vol_perf", {})
+        _n139_insights = []
+        for _n39k, _n39d in _n139_raw.items():
+            if _n39d.get("total", 0) >= 2:
+                _n139_insights.append({"state": _n39k, "win_rate": _n39d.get("win_rate", 50),
+                                       "avg_pnl": _n39d.get("avg_pnl", 0), "total": _n39d.get("total", 0)})
+        if _n139_insights:
+            _best_gap = max(_n139_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N139 overnight gap volatility: best={_best_gap['state']}({_best_gap['win_rate']:.0f}%WR)")
+
+        # ── N140: Market Microstructure Quality (multi-tier) ─────────────────────────
+        _n140_raw = tlog.get("microstructure_perf", {})
+        _n140_insights = []
+        for _n40k, _n40d in _n140_raw.items():
+            if _n40d.get("total", 0) >= 2:
+                _n140_insights.append({"state": _n40k, "win_rate": _n40d.get("win_rate", 50),
+                                       "avg_pnl": _n40d.get("avg_pnl", 0), "total": _n40d.get("total", 0)})
+        if _n140_insights:
+            _tight_ms = next((s for s in _n140_insights if s["state"] == "tight"), None)
+            _wide_ms = next((s for s in _n140_insights if s["state"] == "wide"), None)
+            if _tight_ms and _wide_ms and _tight_ms["win_rate"] > _wide_ms["win_rate"] + 10:
+                _learn_log.append(f"N140 INSIGHT: tight spread stocks outperform ({_tight_ms['win_rate']:.0f}%WR vs {_wide_ms['win_rate']:.0f}%WR wide)")
+            elif _n140_insights:
+                _best_ms = max(_n140_insights, key=lambda x: x["win_rate"])
+                _learn_log.append(f"N140 microstructure: best={_best_ms['state']}({_best_ms['win_rate']:.0f}%WR)")
+
         # ── N119: Macro Event Holding (multi-tier) ─────────────────────────────────
         _n119_raw = tlog.get("macro_hold_perf", {})
         _n119_insights = []
@@ -15778,6 +15968,10 @@ def run():
             "sector_leadership_perf": _n134_insights,        # N134: sector leadership tier at entry vs outcome
             "pm_volume_perf":       _n135_insights,          # N135: pre-market volume surge tier vs outcome
             "accum_distrib_perf":   _n136_insights,          # N136: accumulation/distribution state vs outcome
+            "vol_price_confirm_perf": _n137_insights,        # N137: volume-price trend confirmation at entry
+            "score_persistence_perf": _n138_insights,        # N138: score persistence across scans vs outcome
+            "overnight_gap_vol_perf": _n139_insights,        # N139: overnight gap volatility of stock
+            "microstructure_perf":  _n140_insights,          # N140: bid-ask spread quality at entry
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -15892,6 +16086,8 @@ def run():
             "exit_trigger_perf","stock_stability_perf",
             "earnings_proximity_perf","analyst_momentum_perf","beta_tier_perf",
             "sector_leadership_perf","pm_volume_perf","accum_distrib_perf",
+            "vol_price_confirm_perf","score_persistence_perf",
+            "overnight_gap_vol_perf","microstructure_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -15899,9 +16095,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 96               # total tracked neuron dimensions (N103-N136 added)
+        tlog["neurons_total"]     = 100              # total tracked neuron dimensions (N103-N140 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/96 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/100 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
