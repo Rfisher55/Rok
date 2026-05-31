@@ -255,6 +255,16 @@ def _build_weekly_bot_report(docs_dir):
         "earnings_proximity_perf": "N238 Earnings Prox",
         "stop_distance_pct_perf": "N239 Stop Distance",
         "premarket_gap_direction_perf": "N240 PreMkt Gap Dir",
+        "vol_contraction_entry_perf": "N241 Vol Contraction",
+        "prior_week_trend_perf": "N242 Prior Wk Trend",
+        "market_phase_perf": "N243 Market Phase",
+        "intraday_reversal_perf": "N244 Intraday Reversal",
+        "sector_etf_vs_spy_perf": "N245 Sector vs SPY",
+        "adv_decline_ratio_today_perf": "N246 A/D Ratio Today",
+        "entry_near_high_low_perf": "N247 Entry Near Hi/Lo",
+        "catalyst_sector_match_perf": "N248 Catalyst Sector",
+        "recent_buy_count_perf": "N249 Recent Buy Count",
+        "macro_stress_index_perf": "N250 Macro Stress",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
