@@ -375,6 +375,16 @@ def _build_weekly_bot_report(docs_dir):
         "entry_price_vs_vwap_perf": "N358 Entry vs VWAP",
         "catalyst_recency_perf": "N359 Catalyst Recency",
         "sector_momentum_quality_perf": "N360 Sector Momentum",
+        "liquidity_tier_perf": "N361 Liquidity Tier",
+        "trend_reversal_signal_perf": "N362 Trend Reversal",
+        "gap_size_bucket_perf": "N363 Gap Size",
+        "sector_etf_vs_spy_today_perf": "N364 Sector vs SPY",
+        "price_acceleration_perf": "N365 Price Acceleration",
+        "opening_strength_perf": "N366 Opening Strength",
+        "vwap_reclaim_perf": "N367 VWAP Reclaim",
+        "institutional_size_entry_perf": "N368 Institutional Size",
+        "earnings_drift_perf": "N369 Earnings Drift",
+        "regime_momentum_sync_perf": "N370 Regime Sync",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
