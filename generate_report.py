@@ -325,6 +325,16 @@ def _build_weekly_bot_report(docs_dir):
         "entry_after_halt_perf": "N308 Post-Halt Entry",
         "macro_day_risk_perf": "N309 Macro Day Risk",
         "regime_quality_combined_perf": "N310 Regime Quality",
+        "entry_rank_in_session_perf": "N311 Session Entry Rank",
+        "vwap_distance_pct_perf": "N312 VWAP Distance",
+        "atr_multiple_gain_potential_perf": "N313 ATR Reward Risk",
+        "mfi_zone_N314_perf": "N314 MFI Zone",
+        "recent_market_breadth_perf": "N315 Market Breadth",
+        "price_gap_size_perf": "N316 Gap Size",
+        "sector_strength_score_perf": "N317 Sector Strength",
+        "earnings_distance_perf": "N318 Earnings Distance",
+        "portfolio_win_rate_trend_perf": "N319 Win Rate Trend",
+        "position_size_bucket_perf": "N320 Position Size",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
