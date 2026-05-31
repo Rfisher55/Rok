@@ -305,6 +305,16 @@ def _build_weekly_bot_report(docs_dir):
         "market_hours_quadrant_perf": "N288 Market Quadrant",
         "position_pnl_before_entry_perf": "N289 Port P&L State",
         "ticker_beta_bucket_perf": "N290 Beta Bucket",
+        "relative_volume_quality_perf": "N291 Rel Volume",
+        "price_above_200ma_perf": "N292 Price vs 200MA",
+        "spy_trend_strength_perf": "N293 SPY Trend",
+        "rsi_at_entry_perf": "N294 RSI at Entry",
+        "gap_overnight_direction_perf": "N295 Gap Direction",
+        "vix_level_perf": "N296 VIX Level",
+        "ticker_momentum_perf": "N297 Ticker Momentum",
+        "atr_as_pct_price_perf": "N298 ATR % Price",
+        "consecutive_win_streak_perf": "N299 Win Streak",
+        "open_position_count_perf": "N300 Position Count",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
