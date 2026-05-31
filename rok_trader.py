@@ -11288,6 +11288,71 @@ def run():
     tlog["cross_asset_risk_off"] = _cross_asset_risk_off
     tlog["risk_off_score"] = _risk_off_score
 
+    # ── Composite Neural Consensus Adjustment ────────────────────────────────────
+    # All 100 neurons vote: count how many learned dimensions currently show
+    # historically favorable conditions vs unfavorable. Net vote adjusts threshold.
+    # This is the "brain synthesis" step — neurons working together, not individually.
+    try:
+        _lp_cons = tlog.get("bot_learned_params", {})
+        _neural_vote_pos = 0  # neurons saying "conditions are historically good"
+        _neural_vote_neg = 0  # neurons saying "conditions are historically bad"
+
+        # VIX bracket (N103)
+        _vix_cons = float(regime.get("vix", 20) or 20)
+        _vbkt = ("extreme_fear" if _vix_cons >= 35 else "high_fear" if _vix_cons >= 25 else
+                 "elevated" if _vix_cons >= 20 else "normal" if _vix_cons >= 15 else "low")
+        _n103c = {s.get("state",""):s.get("win_rate",50) for s in _lp_cons.get("vix_entry_perf",[])}
+        if _n103c.get(_vbkt, 50) >= 58: _neural_vote_pos += 1
+        elif _n103c.get(_vbkt, 50) <= 42: _neural_vote_neg += 1
+
+        # Breadth (N105)
+        _brd_cons = float(breadth.get("adv_pct", 50) or 50)
+        _bbkt = ("strong" if _brd_cons >= 65 else "moderate" if _brd_cons >= 50 else "weak" if _brd_cons >= 35 else "very_weak")
+        _n105c = {s.get("state",""):s.get("win_rate",50) for s in _lp_cons.get("breadth_entry_perf",[])}
+        if _n105c.get(_bbkt, 50) >= 58: _neural_vote_pos += 1
+        elif _n105c.get(_bbkt, 50) <= 42: _neural_vote_neg += 1
+
+        # VIX term structure (N117)
+        _vts_cons = regime.get("vts_regime", "contango")
+        _n117c = {s.get("state",""):s.get("win_rate",50) for s in _lp_cons.get("vts_perf",[])}
+        if _n117c.get(_vts_cons, 50) >= 58: _neural_vote_pos += 1
+        elif _n117c.get(_vts_cons, 50) <= 42: _neural_vote_neg += 1
+
+        # SPY alignment (N124)
+        _spy_c1d_cons = float(liveprices.get("SPY", {}).get("chg1d", 0) if isinstance(liveprices, dict) else 0)
+        _spy_vwap_c = float(liveprices.get("SPY", {}).get("vwap", 0) if isinstance(liveprices, dict) else 0)
+        _spy_px_c = float(liveprices.get("SPY", {}).get("price", 0) if isinstance(liveprices, dict) else 0)
+        _n111c = {s.get("state",""):s.get("win_rate",50) for s in _lp_cons.get("spy_vwap_entry_perf",[])}
+        if _spy_px_c > 0 and _spy_vwap_c > 0:
+            _spy_vwap_bkt = ("well_above" if (_spy_px_c-_spy_vwap_c)/_spy_vwap_c*100 >= 0.5 else
+                             "well_below" if (_spy_px_c-_spy_vwap_c)/_spy_vwap_c*100 <= -0.5 else "neutral")
+            if _n111c.get(_spy_vwap_bkt, 50) >= 58: _neural_vote_pos += 1
+            elif _n111c.get(_spy_vwap_bkt, 50) <= 42: _neural_vote_neg += 1
+
+        # Macro event (N119)
+        _macro_cons = "none" if not macro_day else macro_day
+        _n119c = {s.get("state",""):s.get("win_rate",50) for s in _lp_cons.get("macro_hold_perf",[])}
+        if _n119c.get(_macro_cons, 50) >= 58: _neural_vote_pos += 1
+        elif _n119c.get(_macro_cons, 50) <= 42: _neural_vote_neg += 1
+
+        # Net vote: apply composite adjustment
+        _net_vote = _neural_vote_pos - _neural_vote_neg
+        if _net_vote >= 3:
+            _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 4)
+            logger.info(f"Neural consensus BULLISH (+{_neural_vote_pos}/-{_neural_vote_neg} votes) → threshold -4 → {_eff_min_score}")
+        elif _net_vote >= 2:
+            _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 2)
+            logger.info(f"Neural consensus mildly bullish — threshold -2 → {_eff_min_score}")
+        elif _net_vote <= -3:
+            _eff_min_score += 6
+            logger.info(f"Neural consensus BEARISH (+{_neural_vote_pos}/-{_neural_vote_neg} votes) → threshold +6 → {_eff_min_score}")
+        elif _net_vote <= -2:
+            _eff_min_score += 3
+            logger.info(f"Neural consensus mildly bearish — threshold +3 → {_eff_min_score}")
+        tlog["neural_consensus_vote"] = {"pos": _neural_vote_pos, "neg": _neural_vote_neg, "net": _net_vote}
+    except Exception:
+        pass
+
     # ── Portfolio Risk Limit Guard ─────────────────────────────────────────────
     # If total stop-loss exposure > 9% of portfolio, halt new buys.
     # This prevents the bot from piling on risk when all positions are at risk simultaneously.

@@ -61171,6 +61171,7 @@ window.renderPositionNews = renderPositionNews;
         const recentWR = (data.bot_learned_params || {}).recent_wr || 0;
         const recentAvgPnl = (data.bot_learned_params || {}).recent_avg_pnl || 0;
         const tradesAnalyzed = (data.bot_learned_params || {}).trades_analyzed || 0;
+        const neuralVote = data.neural_consensus_vote || null;
         if (conv != null || nA > 0) {
           const convCol = conv == null ? '#555' : conv >= 75 ? '#00e676' : conv >= 60 ? '#69f0ae' : conv >= 45 ? '#ffd54f' : conv >= 30 ? '#ff9800' : '#ef5350';
           const nCol = nA >= 50 ? '#00e676' : nA >= 30 ? '#ffd54f' : '#ff9800';
@@ -61230,6 +61231,20 @@ window.renderPositionNews = renderPositionNews;
                 <div style="display:flex;gap:.3rem;flex-wrap:wrap">${rotFlips.map(s => `<span style="font-size:6.5px;font-weight:800;color:#00ff88;background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.3);border-radius:4px;padding:1px 5px">${s}</span>`).join('')}</div>
                 <div style="font-size:5.5px;color:rgba(255,255,255,.3);margin-top:2px">These sectors flipped from lagging → leading this week. Bot gives +10 score to stocks in these sectors.</div>
               </div>` : ''}
+              ${neuralVote ? (() => {
+                const nv = neuralVote;
+                const nvNet = nv.net || 0;
+                const nvCol = nvNet >= 2 ? '#00e676' : nvNet >= 1 ? '#69f0ae' : nvNet <= -2 ? '#ef5350' : nvNet <= -1 ? '#ff9800' : '#888';
+                const nvIcon = nvNet >= 2 ? '🟢' : nvNet >= 1 ? '🟡' : nvNet <= -2 ? '🔴' : nvNet <= -1 ? '🟠' : '⚪';
+                const nvLabel = nvNet >= 3 ? 'STRONG BULLISH' : nvNet >= 2 ? 'BULLISH' : nvNet >= 1 ? 'MILD BULLISH' : nvNet <= -3 ? 'STRONG BEARISH' : nvNet <= -2 ? 'BEARISH' : nvNet <= -1 ? 'MILD BEARISH' : 'NEUTRAL';
+                return `<div style="margin-bottom:.35rem;padding:.3rem .5rem;background:${nvCol}10;border:1px solid ${nvCol}30;border-radius:6px;display:flex;align-items:center;gap:.5rem">
+                  <span style="font-size:10px">${nvIcon}</span>
+                  <div>
+                    <div style="font-size:6px;font-weight:800;color:${nvCol};letter-spacing:.05em">NEURAL CONSENSUS: ${nvLabel}</div>
+                    <div style="font-size:5.5px;color:rgba(255,255,255,.35)">${nv.pos} neuron dimensions bullish · ${nv.neg} bearish · net ${nvNet >= 0 ? '+' : ''}${nvNet}</div>
+                  </div>
+                </div>`;
+              })() : ''}
               ${bestSess && bestSess.win_rate > 0 ? `<div style="margin-bottom:.3rem;display:flex;gap:.35rem;flex-wrap:wrap">
                 <span style="font-size:6px;color:#ffd54f">Best entry session learned: <strong style="color:#00e676">${bestSess.state||'—'}</strong> (${(bestSess.win_rate||0).toFixed(0)}% WR)</span>
                 ${bestVix ? `<span style="font-size:6px;color:#ffd54f"> · Best VIX bracket: <strong style="color:#00e676">${bestVix.state||'—'}</strong> (${(bestVix.win_rate||0).toFixed(0)}% WR)</span>` : ''}
