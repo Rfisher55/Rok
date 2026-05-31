@@ -396,76 +396,76 @@ def _save_prices_json(tlog: dict, live: dict | None = None) -> None:
     """Write docs/prices.json with live prices for every position + major indices.
     This is the primary price source for the GitHub Pages site — replaces CORS-blocked
     Yahoo Finance browser calls with bot-side fetches committed every 5 minutes.
+    Index ETFs (SPY/QQQ/DIA/IWM/VIX) are ALWAYS fetched and written first.
     """
     try:
-        existing = _load(PRICES_FILE, {})
-        now_iso  = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Start FRESH each run — only keep index ETFs + positions (avoid stale scan garbage)
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        fresh: dict = {}
 
-        # ── Index ETFs — always include from SPY perf cache ──────────────────
-        _spy_cache = _fetch_spy_perf()
-        _spy_closes = _spy_cache.get("closes", [])
-        if _spy_closes:
-            # Fetch live ETF prices via yfinance for indices
-            try:
-                import yfinance as _yf_px
-                _idx_tickers = ["SPY", "QQQ", "DIA", "IWM"]
-                _idx_df = _yf_px.download(
-                    " ".join(_idx_tickers), period="2d", interval="1d",
-                    auto_adjust=True, progress=False, group_by="ticker"
-                )
-                for _tk in _idx_tickers:
-                    try:
-                        if len(_idx_tickers) > 1:
-                            _closes_s = _idx_df[_tk]["Close"].dropna()
-                        else:
-                            _closes_s = _idx_df["Close"].dropna()
-                        if len(_closes_s) >= 2:
-                            _px = float(_closes_s.iloc[-1])
-                            _prev = float(_closes_s.iloc[-2])
-                            _chg = round((_px - _prev) / _prev * 100, 2) if _prev else 0
-                            existing[_tk] = {"price": round(_px, 2), "change_pct": _chg, "updated": now_iso}
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-
-        # ── VIX from yfinance ─────────────────────────────────────────────────
+        # ── Index ETFs — ALWAYS fetch regardless of SPY cache state ──────────
         try:
-            import yfinance as _yf_vix
-            _vix_df = _yf_vix.download("^VIX", period="2d", interval="1d", progress=False)
-            _vix_cls = _vix_df["Close"].dropna()
-            if len(_vix_cls) >= 1:
-                _vix_val = float(_vix_cls.iloc[-1])
-                _vix_prev = float(_vix_cls.iloc[-2]) if len(_vix_cls) >= 2 else _vix_val
-                _vix_chg = round((_vix_val - _vix_prev) / _vix_prev * 100, 2) if _vix_prev else 0
-                existing["^VIX"] = {"price": round(_vix_val, 2), "change_pct": _vix_chg, "updated": now_iso}
-                existing["VIX"]  = existing["^VIX"]   # alias
+            import yfinance as _yf_px
+            _idx_tickers = ["SPY", "QQQ", "DIA", "IWM"]
+            _idx_df = _yf_px.download(
+                _idx_tickers, period="5d", interval="1d",
+                auto_adjust=True, progress=False, group_by="ticker", threads=False
+            )
+            for _tk in _idx_tickers:
+                try:
+                    if hasattr(_idx_df.columns, "levels"):
+                        _closes_s = _idx_df[_tk]["Close"].dropna()
+                    else:
+                        _closes_s = _idx_df["Close"].dropna()
+                    if len(_closes_s) >= 1:
+                        _px   = float(_closes_s.iloc[-1])
+                        _prev = float(_closes_s.iloc[-2]) if len(_closes_s) >= 2 else _px
+                        _chg  = round((_px - _prev) / _prev * 100, 2) if _prev else 0
+                        fresh[_tk] = {"price": round(_px, 2), "change_pct": _chg, "updated": now_iso}
+                except Exception:
+                    pass
         except Exception:
             pass
 
-        # ── Current positions from Alpaca (real-time prices) ─────────────────
+        # ── VIX ───────────────────────────────────────────────────────────────
+        try:
+            import yfinance as _yf_vix
+            _vix_data = _yf_vix.download("^VIX", period="5d", interval="1d",
+                                          auto_adjust=True, progress=False, threads=False)
+            _vix_cls = _vix_data["Close"].dropna() if not _vix_data.empty else []
+            if len(_vix_cls) >= 1:
+                _vix_val  = float(_vix_cls.iloc[-1])
+                _vix_prev = float(_vix_cls.iloc[-2]) if len(_vix_cls) >= 2 else _vix_val
+                _vix_chg  = round((_vix_val - _vix_prev) / _vix_prev * 100, 2) if _vix_prev else 0
+                fresh["^VIX"] = {"price": round(_vix_val, 2), "change_pct": _vix_chg, "updated": now_iso}
+                fresh["VIX"]  = fresh["^VIX"]
+        except Exception:
+            pass
+
+        # ── Current Alpaca positions (real market prices from Alpaca API) ─────
         for pos in tlog.get("positions", []):
             tk = pos.get("ticker")
             if not tk:
                 continue
-            existing[tk] = {
-                "price":      round(float(pos.get("price", 0)), 2),
-                "change_pct": round(float(pos.get("pnl_pct", 0)), 2),
+            fresh[tk] = {
+                "price":      round(float(pos.get("price", 0) or 0), 2),
+                "change_pct": round(float(pos.get("pnl_pct", 0) or 0), 2),
                 "updated":    now_iso,
             }
 
-        # ── Live signal data (scan universe) ─────────────────────────────────
+        # ── Live signal data (scan universe) — only top-scored stocks ─────────
         if live:
             for tk, sig in live.items():
-                if not tk or not sig:
+                if not tk or not sig or len(tk) > 5:   # skip malformed tickers
                     continue
-                _p = sig.get("price", 0) or 0
-                _c = sig.get("chg_pct", 0) or 0
-                if _p > 0 and tk not in existing:
-                    existing[tk] = {"price": round(float(_p), 2), "change_pct": round(float(_c), 2), "updated": now_iso}
+                _p = float(sig.get("price", 0) or 0)
+                _c = float(sig.get("chg_pct", 0) or 0)
+                if _p > 0 and tk not in fresh:
+                    fresh[tk] = {"price": round(_p, 2), "change_pct": round(_c, 2), "updated": now_iso}
 
-        _save(PRICES_FILE, existing)
-        logger.info(f"prices.json updated — {len(existing)} tickers including indices")
+        _save(PRICES_FILE, fresh)
+        _idx_found = [k for k in ("SPY","QQQ","DIA","IWM","^VIX") if k in fresh]
+        logger.info(f"prices.json: {len(fresh)} tickers, indices={_idx_found}")
     except Exception as _pe:
         logger.debug(f"prices.json save failed: {_pe}")
 
@@ -10361,6 +10361,7 @@ def run():
         except Exception:
             pass
         _save_equity_snapshot(tlog)
+        _save_prices_json(tlog)   # always refresh index ETF prices even off-hours
         _save(TRADES_FILE, tlog)
         return
 
