@@ -2460,6 +2460,62 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N117: VIX Term Structure at Entry ─────────────────────────────────────────
+    # VIX backwardation (spot > 1m > 3m futures) = acute fear = often a buy signal
+    # for mean-reversion specialists. Contango = normal = trend-following works.
+    # Bot learns: does buying during VIX backwardation (panic) outperform contango entries?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n117 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _vts_state = (_buy_n117 or {}).get("vts_regime_at_entry", "contango")
+            _n117_perf = tlog.setdefault("vts_perf", {})
+            _n117p = _n117_perf.setdefault(_vts_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_vts_state})
+            _n117p["total"] += 1; _n117p["total_pnl"] = round(_n117p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n117p["wins"] += 1
+            else:        _n117p["losses"] += 1
+            _n117p["win_rate"] = round(_n117p["wins"] / _n117p["total"] * 100, 1)
+            _n117p["avg_pnl"]  = round(_n117p["total_pnl"] / _n117p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N118: Consecutive Red Days on Entry ────────────────────────────────────────
+    # How many consecutive red days (negative closes) has the stock had when we buy?
+    # 0-1 red days = normal. 2-3 red days = pullback entry. 4+ = knife-catching.
+    # Bot learns: are pullback entries (2-3 red days) actually better than buying on green days?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n118 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _red_days = int((_buy_n118 or {}).get("consec_red_days_at_entry", 0) or 0)
+            _red_bkt = ("green_run" if _red_days == 0 else "pullback_1" if _red_days == 1 else
+                        "pullback_2_3" if _red_days <= 3 else "knife_catch")
+            _n118_perf = tlog.setdefault("consec_red_entry_perf", {})
+            _n118p = _n118_perf.setdefault(_red_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_red_bkt})
+            _n118p["total"] += 1; _n118p["total_pnl"] = round(_n118p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n118p["wins"] += 1
+            else:        _n118p["losses"] += 1
+            _n118p["win_rate"] = round(_n118p["wins"] / _n118p["total"] * 100, 1)
+            _n118p["avg_pnl"]  = round(_n118p["total_pnl"] / _n118p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N119: Holding During FOMC/CPI/NFP Events ──────────────────────────────────
+    # Macro events create binary outcomes. Bot learns: is it better to be flat going
+    # into major events (FOMC decision, CPI print, NFP), or does holding through them
+    # produce better outcomes when the position is already well-positioned?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n119 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _macro_at_entry = (_buy_n119 or {}).get("macro_event_at_entry", "none")
+            _n119_perf = tlog.setdefault("macro_hold_perf", {})
+            _n119p = _n119_perf.setdefault(_macro_at_entry, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_macro_at_entry})
+            _n119p["total"] += 1; _n119p["total_pnl"] = round(_n119p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n119p["wins"] += 1
+            else:        _n119p["losses"] += 1
+            _n119p["win_rate"] = round(_n119p["wins"] / _n119p["total"] * 100, 1)
+            _n119p["avg_pnl"]  = round(_n119p["total_pnl"] / _n119p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -11936,6 +11992,17 @@ def run():
                     _buy_signals_merged["market_cap_b"] = float(live.get(tk, {}).get("market_cap_b", 0) or 0)
                     # N116: float shares at entry (in millions)
                     _buy_signals_merged["float_shares_m"] = float(live.get(tk, {}).get("float_shares_m", 200) or 200)
+                    # N117: VIX term structure at entry
+                    _buy_signals_merged["vts_regime_at_entry"] = regime.get("vts_regime", "contango")
+                    # N118: consecutive red days on the stock at entry
+                    try:
+                        _hl_d = live.get(tk, {})
+                        _crd = int(_hl_d.get("consec_red_days", 0) or 0)
+                        _buy_signals_merged["consec_red_days_at_entry"] = _crd
+                    except Exception:
+                        _buy_signals_merged["consec_red_days_at_entry"] = 0
+                    # N119: macro event happening on entry day (FOMC/CPI/NFP)
+                    _buy_signals_merged["macro_event_at_entry"] = "none" if not macro_day else macro_day
                     # Score Trend Neuron (Neuron 25)
                     try:
                         _sh_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
@@ -14739,6 +14806,43 @@ def run():
             _best_fl = max(_n116_insights, key=lambda x: x["win_rate"])
             _learn_log.append(f"N116 best float tier: {_best_fl['state']} ({_best_fl['win_rate']:.0f}%WR)")
 
+        # ── N117: VIX Term Structure (multi-tier) ──────────────────────────────────
+        _n117_raw = tlog.get("vts_perf", {})
+        _n117_insights = []
+        for _n17k, _n17d in _n117_raw.items():
+            if _n17d.get("total", 0) >= 2:
+                _n117_insights.append({"state": _n17k, "win_rate": _n17d.get("win_rate", 50),
+                                       "avg_pnl": _n17d.get("avg_pnl", 0), "total": _n17d.get("total", 0)})
+        if _n117_insights:
+            _best_vts = max(_n117_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N117 best VIX term structure: {_best_vts['state']} ({_best_vts['win_rate']:.0f}%WR)")
+
+        # ── N118: Consecutive Red Days Entry (multi-tier) ─────────────────────────
+        _n118_raw = tlog.get("consec_red_entry_perf", {})
+        _n118_insights = []
+        for _n18k, _n18d in _n118_raw.items():
+            if _n18d.get("total", 0) >= 2:
+                _n118_insights.append({"state": _n18k, "win_rate": _n18d.get("win_rate", 50),
+                                       "avg_pnl": _n18d.get("avg_pnl", 0), "total": _n18d.get("total", 0)})
+        if _n118_insights:
+            _best_red = max(_n118_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N118 best entry setup: {_best_red['state']} ({_best_red['win_rate']:.0f}%WR vs red days)")
+
+        # ── N119: Macro Event Holding (multi-tier) ─────────────────────────────────
+        _n119_raw = tlog.get("macro_hold_perf", {})
+        _n119_insights = []
+        for _n19k, _n19d in _n119_raw.items():
+            if _n19d.get("total", 0) >= 2:
+                _n119_insights.append({"state": _n19k, "win_rate": _n19d.get("win_rate", 50),
+                                       "avg_pnl": _n19d.get("avg_pnl", 0), "total": _n19d.get("total", 0)})
+        if _n119_insights:
+            _macro_none_wr = next((s["win_rate"] for s in _n119_insights if s["state"] == "none"), 50)
+            _macro_event_s = [s for s in _n119_insights if s["state"] != "none"]
+            if _macro_event_s:
+                _worst_macro = min(_macro_event_s, key=lambda x: x["win_rate"])
+                if _worst_macro["win_rate"] < _macro_none_wr - 10:
+                    _learn_log.append(f"N119 AVOID: {_worst_macro['state']} macro day entries ({_worst_macro['win_rate']:.0f}%WR vs {_macro_none_wr:.0f}% normal)")
+
         # ── 98. Earnings Growth Tier (multi-tier) ────────────────────────────────
         _eg_raw = tlog.get("eg_tier_perf", {})
         _eg_insights = []
@@ -14901,6 +15005,9 @@ def run():
             "hold_duration_perf":   _n114_insights,          # N114: hold duration (scalp/intraday/swing/pos) vs outcome
             "mktcap_tier_perf":     _n115_insights,          # N115: market cap tier vs outcome
             "float_tier_perf":      _n116_insights,          # N116: float size tier vs outcome
+            "vts_perf":             _n117_insights,          # N117: VIX term structure (contango/backwardation) vs outcome
+            "consec_red_entry_perf":_n118_insights,          # N118: consecutive red days on stock at entry vs outcome
+            "macro_hold_perf":      _n119_insights,          # N119: macro event day (FOMC/CPI/NFP) at entry vs outcome
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
@@ -15008,6 +15115,7 @@ def run():
             "catalyst_age_perf","trend_template_tier_perf","rvol_entry_tier_perf",
             "spy_vwap_entry_perf","signal_density_perf","ai_sentiment_tier_perf",
             "hold_duration_perf","mktcap_tier_perf","float_tier_perf",
+            "vts_perf","consec_red_entry_perf","macro_hold_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -15015,9 +15123,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 75               # total tracked neuron dimensions (N103-N116 added)
+        tlog["neurons_total"]     = 78               # total tracked neuron dimensions (N103-N119 added)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/75 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/78 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
