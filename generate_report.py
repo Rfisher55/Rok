@@ -275,6 +275,16 @@ def _build_weekly_bot_report(docs_dir):
         "gap_fill_tendency_perf": "N258 Gap Fill",
         "earnings_season_phase_perf": "N259 Earnings Season",
         "liquidity_score_perf": "N260 Liquidity Score",
+        "spy_close_vs_open_perf": "N261 SPY Close vs Open",
+        "atr_regime_perf": "N262 ATR Regime",
+        "consecutive_spy_up_perf": "N263 Consec SPY Up",
+        "vwap_position_perf": "N264 VWAP Position",
+        "weekly_rs_trend_perf": "N265 Weekly RS Trend",
+        "pre_market_volume_perf": "N266 Pre-Market Vol",
+        "market_cap_tier_perf": "N267 Market Cap Tier",
+        "trend_acceleration_perf": "N268 Trend Acceleration",
+        "sector_breadth_perf": "N269 Sector Breadth",
+        "time_since_last_trade_perf": "N270 Trade Pace",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
