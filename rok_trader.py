@@ -26381,6 +26381,11 @@ def run():
             "entry_vs_52w_high_perf", "spy_morning_action_perf",
             "position_overlap_perf", "news_impact_direction_perf",
             "rsi_vs_sector_rsi_perf", "pre_entry_rvol_quality_perf",
+            "trend_quality_score_perf", "option_flow_imbalance_perf",
+            "sector_leadership_quality_perf", "entry_candle_quality_perf",
+            "macro_backdrop_perf", "price_vs_ma20_perf",
+            "breakout_volume_quality_perf", "regime_spy_alignment_perf",
+            "entry_time_quality_perf", "position_risk_reward_entry_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
