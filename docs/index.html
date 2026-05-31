@@ -61328,7 +61328,31 @@ window.renderPositionNews = renderPositionNews;
                 const streakPerf = lp.streak_state_perf || [];
                 const hotStreak = streakPerf.find(s=>s.state==='hot_streak');
                 const coldStreak = streakPerf.find(s=>s.state==='cold_streak');
-                const hasAnyData = vixTrendPerf.length>0 || riskRotPerf.length>0 || dowPerf.length>0;
+                // N175 open gap
+                const gapPerf = lp.open_gap_perf || [];
+                const gapUp = gapPerf.find(s=>s.state==='gap_up');
+                const gapDown = gapPerf.find(s=>s.state==='gap_down');
+                // N176 OPEX week
+                const opexPerf = lp.opex_week_perf || [];
+                const opexWk = opexPerf.find(s=>s.state==='opex_week');
+                const normWk = opexPerf.find(s=>s.state==='normal_week');
+                // N193 SPY RSI zone
+                const spyRsiPerf = lp.spy_rsi_zone_perf || [];
+                const spyOB = spyRsiPerf.find(s=>s.state==='overbought');
+                const spyOS = spyRsiPerf.find(s=>s.state==='oversold');
+                // N217 yield curve
+                const ycPerf = lp.yield_curve_perf || [];
+                const ycInv = ycPerf.find(s=>s.state==='inverted');
+                const ycSteep = ycPerf.find(s=>s.state==='steepening');
+                // N225 VIX regime (new)
+                const vixRegPerf = lp.vix_regime_perf || [];
+                const vixLow = vixRegPerf.find(s=>s.state==='low');
+                const vixFear = vixRegPerf.find(s=>s.state==='fear');
+                // N224 SPY 5d trend (new)
+                const spy5dPerf = lp.spy_5d_trend_perf || [];
+                const spyUpWk = spy5dPerf.find(s=>s.state==='spy_up_week');
+                const spyDnWk = spy5dPerf.find(s=>s.state==='spy_down_week');
+                const hasAnyData = vixTrendPerf.length>0 || riskRotPerf.length>0 || dowPerf.length>0 || gapPerf.length>0 || vixRegPerf.length>0;
                 if (!hasAnyData) return '';
                 const cells = [];
                 if (vixFall && vixRise) cells.push({label:'VIX TREND', good:`↓ fall=${vixFall.win_rate.toFixed(0)}%WR`, bad:`↑ rise=${vixRise.win_rate.toFixed(0)}%WR`, col: vixFall.win_rate > vixRise.win_rate ? '#00e676' : '#ff9800'});
@@ -61338,6 +61362,12 @@ window.renderPositionNews = renderPositionNews;
                 if (bestCat) cells.push({label:'CATALYST', good:bestCat.state+'='+bestCat.win_rate?.toFixed(0)+'%WR', bad:'', col:'#82b1ff'});
                 if (bkDay1 && bkDay1.win_rate>=55) cells.push({label:'BREAKOUT AGE', good:`day1=${bkDay1.win_rate.toFixed(0)}%WR`, bad:'buy fresh', col:'#00e676'});
                 if (hotStreak && coldStreak) cells.push({label:'BOT STREAK', good:`hot=${hotStreak.win_rate.toFixed(0)}%WR`, bad:`cold=${coldStreak.win_rate.toFixed(0)}%WR`, col: hotStreak.win_rate>coldStreak.win_rate?'#00e676':'#ff9800'});
+                if (gapUp && gapDown) cells.push({label:'OPEN GAP', good:`gap_up=${gapUp.win_rate.toFixed(0)}%WR`, bad:`gap_dn=${gapDown.win_rate.toFixed(0)}%WR`, col: gapUp.win_rate>gapDown.win_rate?'#00e676':'#ff9800'});
+                if (opexWk && normWk) cells.push({label:'OPEX WEEK', good:`opex=${opexWk.win_rate.toFixed(0)}%WR`, bad:`normal=${normWk.win_rate.toFixed(0)}%WR`, col: opexWk.win_rate>normWk.win_rate?'#00e676':'#ff9800'});
+                if (spyOB && spyOS) cells.push({label:'SPY RSI', good:`OS=${spyOS.win_rate.toFixed(0)}%WR`, bad:`OB=${spyOB.win_rate.toFixed(0)}%WR`, col: spyOS.win_rate>spyOB.win_rate?'#00e676':'#ff9800'});
+                if (ycSteep && ycInv) cells.push({label:'YIELD CURVE', good:`steep=${ycSteep.win_rate.toFixed(0)}%WR`, bad:`inverted=${ycInv.win_rate.toFixed(0)}%WR`, col: ycSteep.win_rate>ycInv.win_rate?'#00e676':'#ff9800'});
+                if (vixLow && vixFear) cells.push({label:'VIX REGIME', good:`low=${vixLow.win_rate.toFixed(0)}%WR`, bad:`fear=${vixFear.win_rate.toFixed(0)}%WR`, col: vixLow.win_rate>vixFear.win_rate?'#00e676':'#ff9800'});
+                if (spyUpWk && spyDnWk) cells.push({label:'SPY 5D TREND', good:`up=${spyUpWk.win_rate.toFixed(0)}%WR`, bad:`dn=${spyDnWk.win_rate.toFixed(0)}%WR`, col: spyUpWk.win_rate>spyDnWk.win_rate?'#00e676':'#ff9800'});
                 if (cells.length === 0) return '';
                 return `<div style="margin-bottom:.4rem">
                   <div style="font-size:5.5px;font-weight:700;color:rgba(124,131,245,.6);letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px">MARKET INTELLIGENCE (${cells.length} neural insights)</div>
@@ -61357,14 +61387,16 @@ window.renderPositionNews = renderPositionNews;
               <!-- Neuron Growth Progress Bar -->
               <div style="margin-top:.35rem;margin-bottom:.2rem">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-                  <span style="font-size:5.5px;color:rgba(124,131,245,.6);font-weight:700;letter-spacing:.07em;text-transform:uppercase">BRAIN GROWTH — N103 → N${nT+3} NEURONS</span>
+                  <span style="font-size:5.5px;color:rgba(124,131,245,.6);font-weight:700;letter-spacing:.07em;text-transform:uppercase">BRAIN GROWTH — ${nT} NEURAL DIMENSIONS</span>
                   <span style="font-size:5.5px;color:${nCol};font-weight:800">${nA} ACTIVE / ${nT} TOTAL</span>
                 </div>
-                <div style="background:rgba(0,0,0,.4);border-radius:4px;height:5px;overflow:hidden;position:relative">
-                  <div style="width:${Math.min(100,Math.round(nA/Math.max(nT,1)*100))}%;height:100%;background:linear-gradient(90deg,${nCol},${nCol}99);border-radius:4px;transition:width .5s ease"></div>
-                  <div style="position:absolute;top:0;right:0;width:${Math.min(100,Math.round((nT-nA)/Math.max(nT,1)*100))}%;height:100%;background:rgba(255,255,255,.04)"></div>
+                <div style="background:rgba(0,0,0,.4);border-radius:4px;height:6px;overflow:hidden;position:relative">
+                  <div style="width:${Math.min(100,Math.round(nA/Math.max(nT,1)*100))}%;height:100%;background:linear-gradient(90deg,${nCol},${nCol}cc);border-radius:4px;transition:width .5s ease;box-shadow:0 0 6px ${nCol}55"></div>
                 </div>
-                <div style="font-size:4.5px;color:rgba(255,255,255,.2);margin-top:2px">Each neuron tracks a market context dimension — more trades = smarter entries</div>
+                <div style="display:flex;justify-content:space-between;margin-top:2px">
+                  <span style="font-size:4.5px;color:rgba(255,255,255,.2)">Each dimension tracks a market context — more trades = smarter AI</span>
+                  <span style="font-size:4.5px;color:rgba(124,131,245,.5);font-weight:700">${Math.round(nA/Math.max(nT,1)*100)}% learned</span>
+                </div>
               </div>
               <div style="font-size:5.5px;color:rgba(255,255,255,.18);margin-top:.35rem">
                 ${recentAvgPnl !== 0 ? `Avg P&L last 20 trades: <span style="color:${recentAvgPnl>=0?'#69f0ae':'#ef9a9a'}">${recentAvgPnl>=0?'+':''}${recentAvgPnl.toFixed(1)}%</span> · ` : ''}
