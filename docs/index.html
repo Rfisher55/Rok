@@ -59607,6 +59607,43 @@ window.renderPositionNews = renderPositionNews;
           <div style="font-size:9px;color:#82b1ff;line-height:1.5">${data.last_decision}</div>
         </div>`;
       }
+      // ── Next Entry Conditions Checklist ──────────────────────────────────────
+      // Shows what conditions need to be true for the bot to place the next buy
+      {
+        const nec = data.next_entry_conditions;
+        if (nec && nec.conditions && nec.conditions.length > 0) {
+          const allMet = nec.ready;
+          const metCount = nec.met || 0;
+          const totalCount = nec.total || nec.conditions.length;
+          const pct = Math.round(metCount / Math.max(totalCount, 1) * 100);
+          const barCol = allMet ? '#00e676' : pct >= 70 ? '#ffd54f' : '#ff9800';
+          const hdrLabel = allMet ? '✅ ALL CONDITIONS MET — BOT READY TO BUY' : `⏳ WAITING FOR ${totalCount - metCount} MORE CONDITION${totalCount - metCount !== 1 ? 'S' : ''}`;
+          const hdrCol = allMet ? '#00e676' : '#ffd54f';
+          html += `<div style="margin-bottom:.65rem;background:rgba(0,0,0,.3);border:1px solid rgba(255,215,0,.12);border-radius:9px;padding:.5rem .7rem">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;flex-wrap:wrap">
+              <span style="font-size:7px;font-weight:900;color:${hdrCol};letter-spacing:.07em;text-transform:uppercase">${hdrLabel}</span>
+              <span style="margin-left:auto;font-size:6.5px;color:#555">${metCount}/${totalCount} met</span>
+            </div>
+            <div style="background:rgba(255,255,255,.06);border-radius:3px;height:3px;margin-bottom:.4rem;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${barCol};border-radius:3px;transition:width .4s ease"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.22rem">
+              ${nec.conditions.map(c => {
+                const cCol = c.ok ? '#00e676' : '#ef5350';
+                const cIcon = c.ok ? '✓' : '✗';
+                return `<div style="display:flex;align-items:flex-start;gap:.3rem;padding:.2rem .35rem;background:${c.ok?'rgba(0,230,118,.06)':'rgba(255,34,85,.05)'};border-radius:5px;border-left:2px solid ${cCol}55">
+                  <span style="font-size:8px;color:${cCol};font-weight:900;flex-shrink:0;line-height:1.4">${cIcon}</span>
+                  <div>
+                    <div style="font-size:5.5px;color:rgba(255,255,255,.35);font-weight:800;text-transform:uppercase;letter-spacing:.05em">${c.label}</div>
+                    <div style="font-size:6.5px;color:${c.ok?'#c8e6c9':'#ef9a9a'};font-weight:700">${c.value}</div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+            ${nec.top_candidate ? `<div style="margin-top:.3rem;font-size:6.5px;color:#555">Top candidate: <span style="color:#ffd54f;font-weight:700">$${nec.top_candidate}</span> score ${nec.top_score} (need ${nec.threshold})</div>` : ''}
+          </div>`;
+        }
+      }
       // Today's trade summary banner
       if (data.trade_summary_today) {
         const ts = data.trade_summary_today;

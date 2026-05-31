@@ -245,6 +245,16 @@ def _build_weekly_bot_report(docs_dir):
         "market_open_momentum_perf": "N228 Open Momentum",
         "spy_vs_vix_diverge_perf": "N229 SPY/VIX Div",
         "ticker_prior_day_gap_perf": "N230 Prior Day Gap",
+        "spy_rsi_5d_change_perf": "N231 SPY RSI 5d",
+        "market_internals_score_perf": "N232 Internals Score",
+        "position_age_at_exit_perf": "N233 Hold Duration",
+        "ticker_rs_rating_tier_perf": "N234 RS Rating Tier",
+        "spy_50d_vs_200d_perf": "N235 SPY 50/200d",
+        "sector_rotation_strength_perf": "N236 Sector Rotation",
+        "news_catalyst_urgency_perf": "N237 Catalyst Urgency",
+        "earnings_proximity_perf": "N238 Earnings Prox",
+        "stop_distance_pct_perf": "N239 Stop Distance",
+        "premarket_gap_direction_perf": "N240 PreMkt Gap Dir",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
