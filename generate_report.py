@@ -315,6 +315,16 @@ def _build_weekly_bot_report(docs_dir):
         "atr_as_pct_price_perf": "N298 ATR % Price",
         "consecutive_win_streak_perf": "N299 Win Streak",
         "open_position_count_perf": "N300 Position Count",
+        "spread_vs_atr_perf": "N301 Spread vs ATR",
+        "price_vs_open_perf": "N302 Price vs Open",
+        "sector_vs_spy_today_perf": "N303 Sector vs SPY",
+        "portfolio_drawdown_perf": "N304 Port Drawdown",
+        "buy_score_vs_threshold_perf": "N305 Score vs Threshold",
+        "time_of_day_bucket_perf": "N306 Time of Day",
+        "spy_vs_qqq_divergence_perf": "N307 SPY vs QQQ",
+        "entry_after_halt_perf": "N308 Post-Halt Entry",
+        "macro_day_risk_perf": "N309 Macro Day Risk",
+        "regime_quality_combined_perf": "N310 Regime Quality",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
