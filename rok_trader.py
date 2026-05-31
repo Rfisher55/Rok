@@ -3410,6 +3410,189 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N171: Hold Time Performance ──────────────────────────────────────────────
+    # Does holding for short/medium/long/overnight periods improve outcomes?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n171 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _buy_n171:
+                _entry_ts = _buy_n171.get("ts", "") or ""
+                _hold_mins = 0
+                try:
+                    from datetime import datetime as _dt171
+                    _entry_dt = _dt171.fromisoformat(_entry_ts.replace("Z", "+00:00"))
+                    _hold_mins = int((now_utc - _entry_dt).total_seconds() / 60)
+                except Exception:
+                    pass
+                if _hold_mins < 60:          _hold_bucket = "scalp"
+                elif _hold_mins < 240:       _hold_bucket = "intraday"
+                elif _hold_mins < 1440:      _hold_bucket = "swing_short"
+                else:                        _hold_bucket = "multi_day"
+            else:
+                _hold_bucket = "unknown"
+            _n171_perf = tlog.setdefault("hold_time_perf", {})
+            _n171p = _n171_perf.setdefault(_hold_bucket, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_hold_bucket})
+            _n171p["total"] += 1; _n171p["total_pnl"] = round(_n171p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n171p["wins"] += 1
+            else:        _n171p["losses"] += 1
+            _n171p["win_rate"] = round(_n171p["wins"] / _n171p["total"] * 100, 1)
+            _n171p["avg_pnl"]  = round(_n171p["total_pnl"] / _n171p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N172: Exit Trigger Type Performance ───────────────────────────────────────
+    # What triggered the exit — trailing stop, profit target, signal flip, etc.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _exit_reason = reason or ""
+            if "trail" in _exit_reason.lower() or "stop" in _exit_reason.lower():
+                _n172_trigger = "trailing_stop"
+            elif "target" in _exit_reason.lower() or "profit" in _exit_reason.lower():
+                _n172_trigger = "profit_target"
+            elif "signal" in _exit_reason.lower() or "flip" in _exit_reason.lower() or "score" in _exit_reason.lower():
+                _n172_trigger = "signal_flip"
+            elif "time" in _exit_reason.lower() or "eod" in _exit_reason.lower():
+                _n172_trigger = "time_exit"
+            else:
+                _n172_trigger = "manual"
+            _n172_perf = tlog.setdefault("exit_trigger_perf", {})
+            _n172p = _n172_perf.setdefault(_n172_trigger, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n172_trigger})
+            _n172p["total"] += 1; _n172p["total_pnl"] = round(_n172p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n172p["wins"] += 1
+            else:        _n172p["losses"] += 1
+            _n172p["win_rate"] = round(_n172p["wins"] / _n172p["total"] * 100, 1)
+            _n172p["avg_pnl"]  = round(_n172p["total_pnl"] / _n172p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N173: Position Size Tier Performance ──────────────────────────────────────
+    # Does position size relative to portfolio affect outcomes?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n173 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n173_size = _buy_n173.get("pos_size_tier", "normal") if _buy_n173 else "normal"
+            _n173_perf = tlog.setdefault("pos_size_tier_perf", {})
+            _n173p = _n173_perf.setdefault(_n173_size, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n173_size})
+            _n173p["total"] += 1; _n173p["total_pnl"] = round(_n173p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n173p["wins"] += 1
+            else:        _n173p["losses"] += 1
+            _n173p["win_rate"] = round(_n173p["wins"] / _n173p["total"] * 100, 1)
+            _n173p["avg_pnl"]  = round(_n173p["total_pnl"] / _n173p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N174: Consecutive Loss State at Entry Performance ─────────────────────────
+    # Are outcomes worse when entering after recent losses? Loss aversion detection.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n174 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n174_loss_state = _buy_n174.get("consec_loss_state", "no_loss") if _buy_n174 else "no_loss"
+            _n174_perf = tlog.setdefault("consec_loss_perf", {})
+            _n174p = _n174_perf.setdefault(_n174_loss_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n174_loss_state})
+            _n174p["total"] += 1; _n174p["total_pnl"] = round(_n174p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n174p["wins"] += 1
+            else:        _n174p["losses"] += 1
+            _n174p["win_rate"] = round(_n174p["wins"] / _n174p["total"] * 100, 1)
+            _n174p["avg_pnl"]  = round(_n174p["total_pnl"] / _n174p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N175: Market Open Gap Behavior at Entry Performance ───────────────────────
+    # Trades entered on gap-up vs flat vs gap-down open — does it matter?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n175 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n175_gap = _buy_n175.get("open_gap_state", "flat_open") if _buy_n175 else "flat_open"
+            _n175_perf = tlog.setdefault("open_gap_perf", {})
+            _n175p = _n175_perf.setdefault(_n175_gap, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n175_gap})
+            _n175p["total"] += 1; _n175p["total_pnl"] = round(_n175p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n175p["wins"] += 1
+            else:        _n175p["losses"] += 1
+            _n175p["win_rate"] = round(_n175p["wins"] / _n175p["total"] * 100, 1)
+            _n175p["avg_pnl"]  = round(_n175p["total_pnl"] / _n175p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N176: Options Expiry Week Performance ────────────────────────────────────
+    # OpEx weeks (3rd Friday) can cause unusual volatility — does it affect win rate?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n176 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n176_opex = _buy_n176.get("opex_week", "normal_week") if _buy_n176 else "normal_week"
+            _n176_perf = tlog.setdefault("opex_week_perf", {})
+            _n176p = _n176_perf.setdefault(_n176_opex, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n176_opex})
+            _n176p["total"] += 1; _n176p["total_pnl"] = round(_n176p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n176p["wins"] += 1
+            else:        _n176p["losses"] += 1
+            _n176p["win_rate"] = round(_n176p["wins"] / _n176p["total"] * 100, 1)
+            _n176p["avg_pnl"]  = round(_n176p["total_pnl"] / _n176p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N177: Sector Relative Strength Phase at Entry ────────────────────────────
+    # Is the stock's sector outperforming, in-line, or underperforming SPY?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n177 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n177_sec_rs = _buy_n177.get("sector_rs_phase", "neutral_rs") if _buy_n177 else "neutral_rs"
+            _n177_perf = tlog.setdefault("sector_rs_phase_perf", {})
+            _n177p = _n177_perf.setdefault(_n177_sec_rs, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n177_sec_rs})
+            _n177p["total"] += 1; _n177p["total_pnl"] = round(_n177p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n177p["wins"] += 1
+            else:        _n177p["losses"] += 1
+            _n177p["win_rate"] = round(_n177p["wins"] / _n177p["total"] * 100, 1)
+            _n177p["avg_pnl"]  = round(_n177p["total_pnl"] / _n177p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N178: Time Since Last Bot Trade at Entry ─────────────────────────────────
+    # Fresh bot (just started trading) vs ongoing vs resting — does trading frequency affect quality?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n178 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n178_cadence = _buy_n178.get("trade_cadence", "moderate_cadence") if _buy_n178 else "moderate_cadence"
+            _n178_perf = tlog.setdefault("trade_cadence_perf", {})
+            _n178p = _n178_perf.setdefault(_n178_cadence, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n178_cadence})
+            _n178p["total"] += 1; _n178p["total_pnl"] = round(_n178p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n178p["wins"] += 1
+            else:        _n178p["losses"] += 1
+            _n178p["win_rate"] = round(_n178p["wins"] / _n178p["total"] * 100, 1)
+            _n178p["avg_pnl"]  = round(_n178p["total_pnl"] / _n178p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N179: SPY Intraday Trend at Entry ───────────────────────────────────────
+    # Is SPY trending up/flat/down on the 5-min chart at the moment of entry?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n179 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n179_spy_trend = _buy_n179.get("spy_intraday_trend", "spy_flat") if _buy_n179 else "spy_flat"
+            _n179_perf = tlog.setdefault("spy_intraday_perf", {})
+            _n179p = _n179_perf.setdefault(_n179_spy_trend, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n179_spy_trend})
+            _n179p["total"] += 1; _n179p["total_pnl"] = round(_n179p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n179p["wins"] += 1
+            else:        _n179p["losses"] += 1
+            _n179p["win_rate"] = round(_n179p["wins"] / _n179p["total"] * 100, 1)
+            _n179p["avg_pnl"]  = round(_n179p["total_pnl"] / _n179p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N180: Entry Score Decile Performance ────────────────────────────────────
+    # Do trades scoring 55-60 underperform vs 70-80 vs 80+? Learn score reliability.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n180 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n180_score_decile = _buy_n180.get("entry_score_decile", "score_60_70") if _buy_n180 else "score_60_70"
+            _n180_perf = tlog.setdefault("entry_score_decile_perf", {})
+            _n180p = _n180_perf.setdefault(_n180_score_decile, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n180_score_decile})
+            _n180p["total"] += 1; _n180p["total_pnl"] = round(_n180p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n180p["wins"] += 1
+            else:        _n180p["losses"] += 1
+            _n180p["win_rate"] = round(_n180p["wins"] / _n180p["total"] * 100, 1)
+            _n180p["avg_pnl"]  = round(_n180p["total_pnl"] / _n180p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -10185,9 +10368,16 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 60
+            _n_total = tlog.get("neurons_total") or 140
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
+            # Preserve key display fields so dashboard shows data during off-hours
+            if not tlog.get("bot_conviction"):
+                tlog["bot_conviction"] = 50
+            if not tlog.get("strategy_mode"):
+                tlog["strategy_mode"] = "MARKET_CLOSED"
+            if not tlog.get("effective_min_score"):
+                tlog["effective_min_score"] = 60
 
             # Bot brain summary for the frontend
             tlog["bot_brain_summary"] = {
@@ -12454,6 +12644,26 @@ def run():
                     _ro_diff_ng170 = ((_qqq_now_ng170 + _iwm_now_ng170) / 2) - ((_xlp_now_ng170 + _xlu_now_ng170) / 2)
                     if _ro_diff_ng170 <= -0.5:
                         _ng_strikes += 1; _ng_reasons.append(f"risk_off rotation historically fails longs({_n170_ng.get('risk_off',50):.0f}%WR)")
+                # N174: consecutive losses = strike if historically bad
+                _n174_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("consec_loss_perf",[])}
+                if _n174_ng.get("two_plus_loss", 100) < 35:
+                    _recent_xt = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","SELL_HALF","COVER")][-5:]
+                    _loss_run_ng = 0
+                    for _rtx in reversed(_recent_xt):
+                        if (_rtx.get("pnl") or 0) < 0: _loss_run_ng += 1
+                        else: break
+                    if _loss_run_ng >= 2:
+                        _ng_strikes += 1; _ng_reasons.append(f"trading after 2+ losses historically fails({_n174_ng.get('two_plus_loss',50):.0f}%WR)")
+                # N179: SPY trending down at entry = strike if historically bad
+                _n179_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("spy_intraday_perf",[])}
+                if _n179_ng.get("spy_trending_down", 100) < 38:
+                    _spy_5m_ng = float(live.get("SPY", {}).get("chg5m", 0) or 0)
+                    if _spy_5m_ng <= -0.1:
+                        _ng_strikes += 1; _ng_reasons.append(f"SPY trending down intraday historically fails({_n179_ng.get('spy_trending_down',50):.0f}%WR)")
+                # N180: entry score decile green light
+                _n180_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("entry_score_decile_perf",[])}
+                if tech_sc >= 85 and _n180_ng.get("score_85_plus", 0) >= 70:
+                    _ng_green_lights += 1
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -13881,6 +14091,107 @@ def run():
                         _buy_signals_merged["risk_rotation"] = _ro
                     except Exception:
                         _buy_signals_merged["risk_rotation"] = "neutral_rotation"
+                    # N171: (hold time computed at exit — no entry tag needed)
+                    # N172: (exit trigger computed at exit — no entry tag needed)
+                    # N173: position size tier at entry
+                    try:
+                        _port_val_n173 = tlog.get("portfolio_value", 100000) or 100000
+                        _pos_pct = (notional / _port_val_n173 * 100) if _port_val_n173 > 0 else 2.0
+                        if _pos_pct < 1.5:      _pst = "small_pos"
+                        elif _pos_pct < 4.0:    _pst = "normal_pos"
+                        else:                   _pst = "large_pos"
+                        _buy_signals_merged["pos_size_tier"] = _pst
+                    except Exception:
+                        _buy_signals_merged["pos_size_tier"] = "normal_pos"
+                    # N174: consecutive loss state before this trade
+                    try:
+                        _recent_t = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","SELL_HALF","COVER")][-5:]
+                        _loss_run = 0
+                        for _rt in reversed(_recent_t):
+                            if (_rt.get("pnl") or 0) < 0: _loss_run += 1
+                            else: break
+                        if _loss_run == 0:   _cls = "no_loss"
+                        elif _loss_run == 1: _cls = "one_loss"
+                        else:               _cls = "two_plus_loss"
+                        _buy_signals_merged["consec_loss_state"] = _cls
+                    except Exception:
+                        _buy_signals_merged["consec_loss_state"] = "no_loss"
+                    # N175: market open gap behavior (SPY gap at open)
+                    try:
+                        _spy_gap_n175 = float(live.get("SPY", {}).get("chg_pct", 0) or 0)
+                        if _spy_gap_n175 >= 0.5:    _gap_s = "gap_up_open"
+                        elif _spy_gap_n175 <= -0.5: _gap_s = "gap_down_open"
+                        else:                       _gap_s = "flat_open"
+                        _buy_signals_merged["open_gap_state"] = _gap_s
+                    except Exception:
+                        _buy_signals_merged["open_gap_state"] = "flat_open"
+                    # N176: options expiry week (3rd Friday of month)
+                    try:
+                        import calendar as _cal176
+                        _now_et_n176 = datetime.now(ZoneInfo("America/New_York"))
+                        _fridays = [d for d in range(1, 32) if _now_et_n176.replace(day=d).weekday() == 4
+                                    if d <= _cal176.monthrange(_now_et_n176.year, _now_et_n176.month)[1]]
+                        _opex_fri = _fridays[2] if len(_fridays) >= 3 else _fridays[-1]
+                        _days_to_opex = abs(_opex_fri - _now_et_n176.day)
+                        _opex_s = "opex_week" if _days_to_opex <= 4 else "normal_week"
+                        _buy_signals_merged["opex_week"] = _opex_s
+                    except Exception:
+                        _buy_signals_merged["opex_week"] = "normal_week"
+                    # N177: sector relative strength phase vs SPY
+                    try:
+                        _sec_n177  = str(_d_buy.get("sector", "unknown") or "unknown").lower()
+                        _sec_etf_map = {"technology":"XLK","healthcare":"XLV","financials":"XLF",
+                                        "energy":"XLE","consumer discretionary":"XLY",
+                                        "industrials":"XLI","utilities":"XLU","materials":"XLB",
+                                        "real estate":"XLRE","communication services":"XLC",
+                                        "consumer staples":"XLP"}
+                        _sec_etf = next((v for k,v in _sec_etf_map.items() if k in _sec_n177), None)
+                        if _sec_etf and _sec_etf in live:
+                            _sec_chg  = float(live[_sec_etf].get("chg_pct", 0) or 0)
+                            _spy_chg  = float(live.get("SPY", {}).get("chg_pct", 0) or 0)
+                            _rs_diff  = _sec_chg - _spy_chg
+                            if _rs_diff >= 0.5:   _sec_rs = "sector_leading"
+                            elif _rs_diff <= -0.5: _sec_rs = "sector_lagging"
+                            else:                  _sec_rs = "neutral_rs"
+                        else:
+                            _sec_rs = "neutral_rs"
+                        _buy_signals_merged["sector_rs_phase"] = _sec_rs
+                    except Exception:
+                        _buy_signals_merged["sector_rs_phase"] = "neutral_rs"
+                    # N178: trade cadence — how many bot trades in last 60 min
+                    try:
+                        _tlog_t_n178 = tlog.get("trades", [])
+                        _recent_buys = [t for t in _tlog_t_n178
+                                        if t.get("action") == "BUY" and
+                                        (now_utc - datetime.fromisoformat(
+                                            t.get("ts","1970").replace("Z","+00:00")
+                                        )).total_seconds() < 3600]
+                        _cadence_ct = len(_recent_buys)
+                        if _cadence_ct == 0:     _cad = "first_trade"
+                        elif _cadence_ct <= 2:   _cad = "moderate_cadence"
+                        else:                    _cad = "high_cadence"
+                        _buy_signals_merged["trade_cadence"] = _cad
+                    except Exception:
+                        _buy_signals_merged["trade_cadence"] = "moderate_cadence"
+                    # N179: SPY intraday trend at entry (comparing SPY 5-min trend)
+                    try:
+                        _spy_d_n179 = live.get("SPY", {})
+                        _spy_chg5m  = float(_spy_d_n179.get("chg5m", 0) or 0)
+                        if _spy_chg5m >= 0.1:    _spy_it = "spy_trending_up"
+                        elif _spy_chg5m <= -0.1: _spy_it = "spy_trending_down"
+                        else:                    _spy_it = "spy_flat"
+                        _buy_signals_merged["spy_intraday_trend"] = _spy_it
+                    except Exception:
+                        _buy_signals_merged["spy_intraday_trend"] = "spy_flat"
+                    # N180: entry score decile
+                    try:
+                        if sc >= 85:        _sd = "score_85_plus"
+                        elif sc >= 75:      _sd = "score_75_85"
+                        elif sc >= 65:      _sd = "score_65_75"
+                        else:               _sd = "score_55_65"
+                        _buy_signals_merged["entry_score_decile"] = _sd
+                    except Exception:
+                        _buy_signals_merged["entry_score_decile"] = "score_65_75"
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -17185,6 +17496,104 @@ def run():
                 _best_ro = max(_n170_insights, key=lambda x: x["win_rate"])
                 _learn_log.append(f"N170 risk rotation: best={_best_ro['state']}({_best_ro['win_rate']:.0f}%WR)")
 
+        # ── N171: Hold Time tuner ────────────────────────────────────────────────────
+        _n171_raw = tlog.get("hold_time_perf", {})
+        _n171_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n171_raw.items() if v.get("total", 0) >= 2]
+        if _n171_insights:
+            _best_ht = max(_n171_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N171 hold time: best={_best_ht['state']}({_best_ht['win_rate']:.0f}%WR avg={_best_ht['avg_pnl']:+.2f}%)")
+
+        # ── N172: Exit Trigger tuner ─────────────────────────────────────────────────
+        _n172_raw = tlog.get("exit_trigger_perf", {})
+        _n172_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n172_raw.items() if v.get("total", 0) >= 2]
+        if _n172_insights:
+            _best_et = max(_n172_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N172 exit trigger: best={_best_et['state']}({_best_et['win_rate']:.0f}%WR)")
+
+        # ── N173: Position Size Tier tuner ───────────────────────────────────────────
+        _n173_raw = tlog.get("pos_size_tier_perf", {})
+        _n173_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n173_raw.items() if v.get("total", 0) >= 2]
+        if _n173_insights:
+            _best_ps = max(_n173_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N173 pos size: {_best_ps['state']}={_best_ps['win_rate']:.0f}%WR avg={_best_ps['avg_pnl']:+.2f}%")
+
+        # ── N174: Consecutive Loss State tuner ───────────────────────────────────────
+        _n174_raw = tlog.get("consec_loss_perf", {})
+        _n174_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n174_raw.items() if v.get("total", 0) >= 2]
+        if _n174_insights:
+            _twoplus = next((s for s in _n174_insights if s["state"] == "two_plus_loss"), None)
+            if _twoplus and _twoplus["win_rate"] < 40:
+                _learn_log.append(f"N174 ALERT: trading after 2+ losses has {_twoplus['win_rate']:.0f}%WR — tighten gate")
+
+        # ── N175: Open Gap Behavior tuner ─────────────────────────────────────────────
+        _n175_raw = tlog.get("open_gap_perf", {})
+        _n175_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n175_raw.items() if v.get("total", 0) >= 2]
+        if _n175_insights:
+            _best_gap = max(_n175_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N175 open gap: best={_best_gap['state']}({_best_gap['win_rate']:.0f}%WR)")
+
+        # ── N176: OpEx Week tuner ─────────────────────────────────────────────────────
+        _n176_raw = tlog.get("opex_week_perf", {})
+        _n176_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n176_raw.items() if v.get("total", 0) >= 2]
+        if _n176_insights:
+            _opex_w = next((s for s in _n176_insights if s["state"] == "opex_week"), None)
+            _norm_w = next((s for s in _n176_insights if s["state"] == "normal_week"), None)
+            if _opex_w and _norm_w:
+                _learn_log.append(f"N176 opex: opex_week={_opex_w['win_rate']:.0f}% normal={_norm_w['win_rate']:.0f}%WR")
+
+        # ── N177: Sector RS Phase tuner ───────────────────────────────────────────────
+        _n177_raw = tlog.get("sector_rs_phase_perf", {})
+        _n177_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n177_raw.items() if v.get("total", 0) >= 2]
+        if _n177_insights:
+            _best_sr = max(_n177_insights, key=lambda x: x["win_rate"])
+            _learn_log.append(f"N177 sector RS: {_best_sr['state']}={_best_sr['win_rate']:.0f}%WR")
+
+        # ── N178: Trade Cadence tuner ─────────────────────────────────────────────────
+        _n178_raw = tlog.get("trade_cadence_perf", {})
+        _n178_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n178_raw.items() if v.get("total", 0) >= 2]
+        if _n178_insights:
+            _hicad = next((s for s in _n178_insights if s["state"] == "high_cadence"), None)
+            if _hicad and _hicad["win_rate"] < 40:
+                _learn_log.append(f"N178 ALERT: high trade cadence = {_hicad['win_rate']:.0f}%WR — pace too fast")
+
+        # ── N179: SPY Intraday Trend tuner ────────────────────────────────────────────
+        _n179_raw = tlog.get("spy_intraday_perf", {})
+        _n179_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n179_raw.items() if v.get("total", 0) >= 2]
+        if _n179_insights:
+            _up_spy = next((s for s in _n179_insights if s["state"] == "spy_trending_up"), None)
+            _dn_spy = next((s for s in _n179_insights if s["state"] == "spy_trending_down"), None)
+            if _up_spy and _dn_spy:
+                _learn_log.append(f"N179 SPY trend: up={_up_spy['win_rate']:.0f}% down={_dn_spy['win_rate']:.0f}%WR")
+
+        # ── N180: Entry Score Decile tuner ────────────────────────────────────────────
+        _n180_raw = tlog.get("entry_score_decile_perf", {})
+        _n180_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
+                           "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
+                          for k, v in _n180_raw.items() if v.get("total", 0) >= 2]
+        if _n180_insights:
+            _best_sd = max(_n180_insights, key=lambda x: x["win_rate"])
+            _worst_sd = min(_n180_insights, key=lambda x: x["win_rate"])
+            if len(_n180_insights) >= 2:
+                _learn_log.append(f"N180 score decile: best={_best_sd['state']}({_best_sd['win_rate']:.0f}%) worst={_worst_sd['state']}({_worst_sd['win_rate']:.0f}%)")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -17642,6 +18051,16 @@ def run():
             "tech_confluence_perf":  _n168_insights,          # N168: technical level confluence at entry vs outcome
             "breadth_direction_perf": _n169_insights,         # N169: market breadth direction vs outcome
             "risk_rotation_perf":    _n170_insights,          # N170: risk-on/risk-off rotation signal vs outcome
+            "hold_time_perf":        _n171_insights,          # N171: hold time bucket vs outcome
+            "exit_trigger_perf":     _n172_insights,          # N172: exit trigger type vs outcome
+            "pos_size_tier_perf":    _n173_insights,          # N173: position size tier vs outcome
+            "consec_loss_perf":      _n174_insights,          # N174: consecutive losses before entry vs outcome
+            "open_gap_perf":         _n175_insights,          # N175: SPY open gap at entry vs outcome
+            "opex_week_perf":        _n176_insights,          # N176: options expiry week vs outcome
+            "sector_rs_phase_perf":  _n177_insights,          # N177: sector relative strength phase vs outcome
+            "trade_cadence_perf":    _n178_insights,          # N178: trade cadence (frequency) vs outcome
+            "spy_intraday_perf":     _n179_insights,          # N179: SPY 5-min intraday trend vs outcome
+            "entry_score_decile_perf": _n180_insights,        # N180: entry score decile vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -17789,6 +18208,10 @@ def run():
             "streak_state_perf","score_regime_align_perf","sector_mom_accel_perf","market_correl_perf",
             "estimate_revision_perf","news_sent_mom_perf","tech_confluence_perf",
             "breadth_direction_perf","risk_rotation_perf",
+            "hold_time_perf","exit_trigger_perf","pos_size_tier_perf",
+            "consec_loss_perf","open_gap_perf","opex_week_perf",
+            "sector_rs_phase_perf","trade_cadence_perf",
+            "spy_intraday_perf","entry_score_decile_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -17796,9 +18219,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 130              # total tracked neuron dimensions (N103-N170 complete)
+        tlog["neurons_total"]     = 140              # total tracked neuron dimensions (N103-N180 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/106 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/140 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

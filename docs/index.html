@@ -61217,11 +61217,12 @@ window.renderPositionNews = renderPositionNews;
         const recentAvgPnl = (data.bot_learned_params || {}).recent_avg_pnl || 0;
         const tradesAnalyzed = (data.bot_learned_params || {}).trades_analyzed || 0;
         const neuralVote = data.neural_consensus_vote || null;
-        if (conv != null || nA > 0) {
+        const isCryptoOnly = (data.status || '').toLowerCase().includes('crypto') || stratMode === 'MARKET_CLOSED';
+        if (conv != null || nA > 0 || isCryptoOnly) {
           const convCol = conv == null ? '#555' : conv >= 75 ? '#00e676' : conv >= 60 ? '#69f0ae' : conv >= 45 ? '#ffd54f' : conv >= 30 ? '#ff9800' : '#ef5350';
-          const nCol = nA >= 50 ? '#00e676' : nA >= 30 ? '#ffd54f' : '#ff9800';
+          const nCol = isCryptoOnly ? '#7c83f5' : nA >= 50 ? '#00e676' : nA >= 30 ? '#ffd54f' : '#ff9800';
           const wrCol = recentWR >= 0.6 ? '#00e676' : recentWR >= 0.5 ? '#ffd54f' : recentWR >= 0.4 ? '#ff9800' : '#ef5350';
-          const modeIcon = stratMode.includes('AGGRESSIVE') ? '⚡' : stratMode.includes('MOMENTUM') ? '↑' : stratMode.includes('SELECTIVE') ? '~' : stratMode.includes('DEFENSIVE') ? '⬇' : '⏸';
+          const modeIcon = isCryptoOnly ? '🌙' : stratMode.includes('AGGRESSIVE') ? '⚡' : stratMode.includes('MOMENTUM') ? '↑' : stratMode.includes('SELECTIVE') ? '~' : stratMode.includes('DEFENSIVE') ? '⬇' : '⏸';
           // Learning observations from the last tuning run
           const learnItems = learnLog.slice(0, 6).map(l =>
             `<div style="font-size:6px;color:rgba(255,255,255,.4);padding:1px 0;border-left:2px solid rgba(0,229,255,.2);padding-left:.4rem;margin-bottom:1px">${l}</div>`
@@ -61236,7 +61237,8 @@ window.renderPositionNews = renderPositionNews;
             <summary style="padding:.45rem .75rem;cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
               <div style="width:7px;height:7px;border-radius:50%;background:${nCol};animation:livePulse 2s ease infinite;flex-shrink:0"></div>
               <span style="font-size:7.5px;font-weight:900;color:${nCol};letter-spacing:.07em;text-transform:uppercase;flex-shrink:0">AI BRAIN</span>
-              <span style="font-size:7px;font-weight:800;color:${convCol};flex-shrink:0">${modeIcon} ${stratMode}</span>
+              <span style="font-size:7px;font-weight:800;color:${convCol};flex-shrink:0">${modeIcon} ${isCryptoOnly ? 'MARKET CLOSED' : stratMode}</span>
+              ${isCryptoOnly ? `<span style="font-size:6px;font-weight:900;color:#7c83f5;background:rgba(124,131,245,.15);border-radius:4px;padding:1px 5px;flex-shrink:0">🪙 CRYPTO MODE</span>` : ''}
               ${recMode ? `<span style="font-size:6px;font-weight:900;color:#ef5350;background:rgba(239,83,80,.15);border-radius:4px;padding:1px 5px;flex-shrink:0">RECOVERY</span>` : ''}
               ${rotFlips.length > 0 ? `<span style="font-size:6px;font-weight:700;color:#00ff88;background:rgba(0,255,136,.12);border-radius:4px;padding:1px 5px;flex-shrink:0">↗ SECTOR FLIP</span>` : ''}
               <span style="font-size:6.5px;color:rgba(255,255,255,.3);margin-left:auto">${nA}/${nT} neurons · tap for details</span>

@@ -185,6 +185,16 @@ def _build_weekly_bot_report(docs_dir):
         "tech_confluence_perf": "N168 Tech Confluence",
         "breadth_direction_perf": "N169 Breadth Dir",
         "risk_rotation_perf": "N170 Risk Rotation",
+        "hold_time_perf": "N171 Hold Time",
+        "exit_trigger_perf": "N172 Exit Trigger",
+        "pos_size_tier_perf": "N173 Position Size",
+        "consec_loss_perf": "N174 Consec Losses",
+        "open_gap_perf": "N175 Open Gap",
+        "opex_week_perf": "N176 OpEx Week",
+        "sector_rs_phase_perf": "N177 Sector RS",
+        "trade_cadence_perf": "N178 Trade Cadence",
+        "spy_intraday_perf": "N179 SPY Intraday",
+        "entry_score_decile_perf": "N180 Score Decile",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
