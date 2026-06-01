@@ -21206,7 +21206,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 return ((wr - 50) * 0.07 + avg * 0.012) * w
 
             # N580: VIX-based market regime (macro risk level at entry)
-            _nsl_vix = d.get("vix", 20) or 20
+            _nsl_vix = float(d.get("vix", 20) or 20)
             _nsl_vix_s = ("extreme_vix_regime" if _nsl_vix >= 35 else
                           "high_vix_regime" if _nsl_vix >= 25 else
                           "low_vix_regime" if _nsl_vix < 15 else "normal_vix_regime")
@@ -21238,7 +21238,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nsl_edge("entry_session_quality_perf", _nsl_sess_s)
 
             # N599: Weekly trend alignment (higher timeframe context)
-            _nsl_w_chg = d.get("week_chg", d.get("chg5d", 0)) or 0
+            _nsl_w_chg = float(d.get("week_chg", d.get("chg5d", 0)) or 0)
             _nsl_wtrend_s = ("strong_weekly_uptrend" if _nsl_w_chg >= 3 else
                              "weekly_downtrend" if _nsl_w_chg <= -1 else "weak_weekly_trend")
             _nsl_adj += _nsl_edge("weekly_trend_alignment_perf", _nsl_wtrend_s)
@@ -21255,7 +21255,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nsl_edge("prior_day_close_relation_perf", _nsl_priorday_s)
 
             # N603: Sector rotation (hot vs cold sector at entry)
-            _nsl_sec_pct = d.get("sector_etf_1d", d.get("sector_day_pct", 0)) or 0
+            _nsl_sec_pct = float(d.get("sector_etf_1d", d.get("sector_day_pct", 0)) or 0)
             _nsl_sec_s = ("hot_sector" if _nsl_sec_pct >= 1 else
                           "cold_sector" if _nsl_sec_pct <= -1 else "neutral_sector")
             _nsl_adj += _nsl_edge("sector_rotation_perf", _nsl_sec_s)
@@ -21269,7 +21269,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nde("rsi_at_entry_perf", _fb_rsi_z)
 
             # VIX bracket (N127)
-            _fb_vix = d.get("vix", _nsl_vix) or _nsl_vix
+            _fb_vix = float(d.get("vix", _nsl_vix) or _nsl_vix)
             _fb_vix_b = ("low" if _fb_vix < 15 else "normal" if _fb_vix < 25 else "high" if _fb_vix < 35 else "extreme")
             _nsl_adj += _nde("vix_bracket_performance", _fb_vix_b)
 
@@ -21377,9 +21377,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nde("vix_direction_perf", _fb_vix_dir)
 
             # N893: ET hour
-            _fb_et_hr = d.get("et_hour", -1)
+            _fb_et_hr = int(d.get("et_hour", -1) or -1)
             if _fb_et_hr >= 0:
-                _fb_et_min = d.get("et_min", 0) or 0
+                _fb_et_min = int(d.get("et_min", 0) or 0)
                 _fb_et_bkt = f"{_fb_et_hr:02d}:{'30' if _fb_et_min >= 30 else '00'}"
                 _nsl_adj += _nde("et_hour_perf", _fb_et_bkt)
 
@@ -21954,7 +21954,7 @@ def run():
                     "technical_pattern_quality_perf", "market_open_strength_perf",
                     "options_iv_rank_perf", "smart_money_flow_perf",
                 ]
-                for _pos in _positions_data:
+                for _pos in _cm_positions:
                     _tk = _pos.get("ticker", "")
                     if not _tk:
                         continue
@@ -22014,7 +22014,7 @@ def run():
                             _exs_tk = _exs.get("ticker", "")
                             if not _exs_tk:
                                 continue
-                            _exs_pos = next((p for p in _positions_data if p.get("ticker") == _exs_tk), None)
+                            _exs_pos = next((p for p in _cm_positions if p.get("ticker") == _exs_tk), None)
                             _exs_qty = abs(int(float((_exs_pos or {}).get("qty", 0) or 0)))
                             if _exs_qty <= 0:
                                 continue
@@ -22526,13 +22526,13 @@ def run():
                          if (t.get("time") or "")[:10] == _today_str_run
                          and t.get("action") in ("SELL", "COVER")
                          and t.get("pnl_pct") is not None]
-    _today_wins_run  = sum(1 for t in _closed_today_run if (t.get("pnl_pct") or 0) > 0)
-    _today_losses_run = sum(1 for t in _closed_today_run if (t.get("pnl_pct") or 0) <= 0)
+    _today_wins_run  = sum(1 for t in _closed_today_run if float(t.get("pnl_pct") or 0) > 0)
+    _today_losses_run = sum(1 for t in _closed_today_run if float(t.get("pnl_pct") or 0) <= 0)
     _today_total_run = _today_wins_run + _today_losses_run
     # Detect consecutive losses at end of today's closed trades (loss streak)
     _loss_streak = 0
     for _t in reversed(_closed_today_run):
-        if (_t.get("pnl_pct") or 0) <= 0:
+        if float(_t.get("pnl_pct") or 0) <= 0:
             _loss_streak += 1
         else:
             break
@@ -22596,8 +22596,8 @@ def run():
 
     # Internal scan breadth: how many of our scanned stocks are trending up?
     # This is a proprietary advance/decline ratio for our universe
-    _scan_up   = sum(1 for sig in live.values() if (sig.get("change_pct", 0) or 0) > 0.3)
-    _scan_down = sum(1 for sig in live.values() if (sig.get("change_pct", 0) or 0) < -0.3)
+    _scan_up   = sum(1 for sig in live.values() if float(sig.get("change_pct") or 0) > 0.3)
+    _scan_down = sum(1 for sig in live.values() if float(sig.get("change_pct") or 0) < -0.3)
     _scan_total = max(1, _scan_up + _scan_down)
     _scan_adv_pct = round(_scan_up / _scan_total * 100, 1)
     logger.info(f"Internal scan breadth: {_scan_up}/{_scan_total} ({_scan_adv_pct}%) advancing")
@@ -22606,8 +22606,8 @@ def run():
 
     # New 52W Highs vs Lows (from our scan universe): a genuine market health gauge.
     # High new_highs / low new_lows = healthy bull market with broad leadership.
-    _new_52wh = sum(1 for sig in live.values() if sig.get("w52_range_pos", 0) >= 95)
-    _new_52wl = sum(1 for sig in live.values() if sig.get("w52_range_pos", 0) <= 5)
+    _new_52wh = sum(1 for sig in live.values() if float(sig.get("w52_range_pos") or 0) >= 95)
+    _new_52wl = sum(1 for sig in live.values() if float(sig.get("w52_range_pos") or 0) <= 5)
     _nhl_ratio = round(_new_52wh / max(_new_52wl, 1), 1)  # high/low ratio (>2 = healthy)
     logger.info(f"New 52W Highs:{_new_52wh} Lows:{_new_52wl} ratio:{_nhl_ratio:.1f}")
 
@@ -22784,12 +22784,12 @@ def run():
     global _LEARNED_SPY_DOWN_PENALTY
     _spy_day_learned = _learned.get("spy_day_perf", [])
     _spy_down_learned = next((s for s in _spy_day_learned if s.get("bucket") == "down"), None)
-    _LEARNED_SPY_DOWN_PENALTY = bool(_spy_down_learned and _spy_down_learned.get("win_rate", 50) < 40 and _spy_down_learned.get("total", 0) >= 5)
+    _LEARNED_SPY_DOWN_PENALTY = bool(_spy_down_learned and float(_spy_down_learned.get("win_rate", 50) or 50) < 40 and int(_spy_down_learned.get("total", 0) or 0) >= 5)
     # Score trend penalty: True when falling-score entries consistently underperform
     global _LEARNED_FALLING_SCORE_PENALTY
     _st_learned = _learned.get("score_trend_perf", [])
     _falling_learned = next((s for s in _st_learned if s.get("trend") == "falling"), None)
-    _LEARNED_FALLING_SCORE_PENALTY = bool(_falling_learned and _falling_learned.get("win_rate", 50) < 40 and _falling_learned.get("total", 0) >= 5)
+    _LEARNED_FALLING_SCORE_PENALTY = bool(_falling_learned and float(_falling_learned.get("win_rate", 50) or 50) < 40 and int(_falling_learned.get("total", 0) or 0) >= 5)
     # ATR stop multiplier: learned from ATR bracket performance
     global _LEARNED_ATR_MULTIPLIER
     _LEARNED_ATR_MULTIPLIER = float(_learned.get("atr_mult_learned", 2.5) or 2.5)
@@ -24168,21 +24168,24 @@ def run():
             logger.info(f"Persistent signal candidates: {' | '.join(f'{tk}({_curr_persist.get(tk,0)}runs)' for tk in sorted(_persistent_cands))}")
 
         # Technical pass — include sector rotation + gap + squeeze + earnings + mean-rev bonuses
-        tech_scores = {
-            tk: score(tk, live[tk],
-                      regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
-                                + (10 if tk in gap_ups else 0)
-                                + (12 if tk in squeeze_cands else 0)
-                                + (11 if tk in vol_surge_cands else 0)
-                                + (8  if tk in recent_sells else 0)
-                                + _persist_bonus(tk)                       # 0/9/13/17 by run count
-                                + (14 if tk in bullish_options else 0)
-                                + (18 if tk in earnings_beats else 0)
-                                + (12 if tk in pre_earn_cands else 0)      # pre-earnings drift
-                                + (10 if tk in mean_rev_cands else 0)      # mean reversion bounce
-                                + (15 if tk in breakout_52w_cands else 0)) # 52-week high breakout
-            for tk in live if tk not in held
-        }
+        def _safe_score(tk):
+            try:
+                return score(tk, live[tk],
+                             regime_adj=regime_adj + sector_adjs.get(SECTOR_MAP.get(tk, "other"), 0)
+                                       + (10 if tk in gap_ups else 0)
+                                       + (12 if tk in squeeze_cands else 0)
+                                       + (11 if tk in vol_surge_cands else 0)
+                                       + (8  if tk in recent_sells else 0)
+                                       + _persist_bonus(tk)
+                                       + (14 if tk in bullish_options else 0)
+                                       + (18 if tk in earnings_beats else 0)
+                                       + (12 if tk in pre_earn_cands else 0)
+                                       + (10 if tk in mean_rev_cands else 0)
+                                       + (15 if tk in breakout_52w_cands else 0))
+            except Exception as _se:
+                logger.warning(f"score() crash for {tk}: {_se}")
+                return 0
+        tech_scores = {tk: _safe_score(tk) for tk in live if tk not in held}
         candidates_buy = sorted(
             [(tk, sc) for tk, sc in tech_scores.items() if sc >= _eff_min_score - 5],
             key=lambda x: -x[1],
@@ -36007,11 +36010,12 @@ def run():
 
     # Compute profit factor, Sharpe-like ratio, and max drawdown from trade history
     _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
-    _gross_wins  = sum(t["pnl_pct"] for t in _closed if t["pnl_pct"] > 0) or 0
-    _gross_losses= abs(sum(t["pnl_pct"] for t in _closed if t["pnl_pct"] < 0)) or 1
+    _closed_pnl = [(t, float(t["pnl_pct"] or 0)) for t in _closed]
+    _gross_wins  = sum(p for _, p in _closed_pnl if p > 0) or 0
+    _gross_losses= abs(sum(p for _, p in _closed_pnl if p < 0)) or 1
     _profit_factor = round(_gross_wins / _gross_losses, 2) if _closed else None
-    _avg_win  = round(_gross_wins  / max(1, sum(1 for t in _closed if t["pnl_pct"] > 0)), 2) if _closed else None
-    _avg_loss = round(_gross_losses/ max(1, sum(1 for t in _closed if t["pnl_pct"] < 0)), 2) if _closed else None
+    _avg_win  = round(_gross_wins  / max(1, sum(1 for _, p in _closed_pnl if p > 0)), 2) if _closed else None
+    _avg_loss = round(_gross_losses/ max(1, sum(1 for _, p in _closed_pnl if p < 0)), 2) if _closed else None
 
     # Signal attribution analytics: which reason-tags correlate with wins vs losses
     _signal_analytics = {}
@@ -36021,8 +36025,8 @@ def run():
         for tag in _signal_tags:
             _trades_with = [t for t in _closed if tag in (t.get("reason", "") or "")]
             if len(_trades_with) >= 2:
-                _wins_with   = [t for t in _trades_with if t["pnl_pct"] > 0]
-                _avg_pnl_tag = round(sum(t["pnl_pct"] for t in _trades_with) / len(_trades_with), 2)
+                _wins_with   = [t for t in _trades_with if float(t["pnl_pct"] or 0) > 0]
+                _avg_pnl_tag = round(sum(float(t["pnl_pct"] or 0) for t in _trades_with) / len(_trades_with), 2)
                 _signal_analytics[tag] = {
                     "trades":  len(_trades_with),
                     "wins":    len(_wins_with),
@@ -46184,11 +46188,14 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except Exception as _fatal:
+        import traceback as _tb
+        _tb_str = _tb.format_exc()
         logger.exception(f"FATAL ERROR in run(): {_fatal}")
         try:
             diag = _load(TRADES_FILE, {})
             diag["last_updated"] = datetime.now(timezone.utc).isoformat()
             diag["error"] = f"Bot crashed: {_fatal}"
+            diag["traceback"] = _tb_str[-3000:]  # save last 3000 chars of traceback
             _save(TRADES_FILE, diag)
         except Exception:
             pass
