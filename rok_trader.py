@@ -36972,6 +36972,35 @@ def run():
     try:
         _prev_learned = tlog.get("bot_learned_params", {})
         _learn_log    = []   # human-readable log of what the bot learned this cycle
+        # Initialize all neuron insight vars to safe defaults — prevents NameError in dict assembly
+        _n128_insights = _prev_learned.get("entry_score_tier_perf", [])
+        _n129_insights = _prev_learned.get("exit_trigger_perf", [])
+        _n130_insights = _prev_learned.get("stock_stability_perf", [])
+        _n131_insights = _prev_learned.get("earnings_proximity_perf", [])
+        _n132_insights = _prev_learned.get("analyst_momentum_perf", [])
+        _n133_insights = _prev_learned.get("beta_tier_perf", [])
+        _n134_insights = _prev_learned.get("sector_leadership_perf", [])
+        _n135_insights = _prev_learned.get("pm_volume_perf", [])
+        _n136_insights = _prev_learned.get("accum_distrib_perf", [])
+        _n137_insights = _prev_learned.get("vol_price_confirm_perf", [])
+        _n138_insights = _prev_learned.get("score_persistence_perf", [])
+        _n139_insights = _prev_learned.get("overnight_gap_vol_perf", [])
+        _n140_insights = _prev_learned.get("microstructure_perf", [])
+        _eg_insights   = _prev_learned.get("eg_tier_perf", [])
+        _stg_insights  = _prev_learned.get("st_gap_perf", [])
+        _pt_insights   = _prev_learned.get("premium_tier_perf", [])
+        _top_synapses_list = _prev_learned.get("top_synapses", [])
+        _top_triplets_list = _prev_learned.get("top_triplets", [])
+        _optimal_hold_days = _prev_learned.get("optimal_hold_period", "short")
+        _ticker_score_adjs = _prev_learned.get("ticker_score_adjs", {})
+        _best_halfhours = _prev_learned.get("best_halfhours_utc", [])
+        _worst_halfhours = _prev_learned.get("worst_halfhours_utc", [])
+        _vix_bracket_insights = _prev_learned.get("vix_bracket_perf", [])
+        _earn_insights = _prev_learned.get("earnings_prox_perf", [])
+        _rvol_insights = _prev_learned.get("rvol_perf", [])
+        _mq_insights   = _prev_learned.get("mkt_quality_perf", [])
+        _grade_insights = _prev_learned.get("grade_perf", [])
+        _tier_insights  = _prev_learned.get("price_tier_perf", [])
 
         # ── 1. Recent win rate → score threshold adjustment ──────────────
         _recent_20 = [t for t in _closed[-20:]]  # last 20 closed trades
