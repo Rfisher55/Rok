@@ -7662,6 +7662,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N451: Gap Fill Tendency Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n451 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n451_field = _buy_n451.get("gap_fill_tendency_perf", "sometimes") if _buy_n451 else "sometimes"
+            _n451_perf = tlog.setdefault("gap_fill_tendency_perf", {})
+            _n451p = _n451_perf.setdefault(_n451_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n451_field})
+            _n451p["total"] += 1; _n451p["total_pnl"] = round(_n451p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n451p["wins"] += 1
+            else:        _n451p["losses"] += 1
+            _n451p["win_rate"] = round(_n451p["wins"] / _n451p["total"] * 100, 1)
+            _n451p["avg_pnl"]  = round(_n451p["total_pnl"] / _n451p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N452: Volume Trend 3D Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n452 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n452_field = _buy_n452.get("volume_trend_3d_perf", "steady") if _buy_n452 else "steady"
+            _n452_perf = tlog.setdefault("volume_trend_3d_perf", {})
+            _n452p = _n452_perf.setdefault(_n452_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n452_field})
+            _n452p["total"] += 1; _n452p["total_pnl"] = round(_n452p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n452p["wins"] += 1
+            else:        _n452p["losses"] += 1
+            _n452p["win_rate"] = round(_n452p["wins"] / _n452p["total"] * 100, 1)
+            _n452p["avg_pnl"]  = round(_n452p["total_pnl"] / _n452p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N453: Institutional Activity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n453 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n453_field = _buy_n453.get("institutional_activity_perf", "moderate") if _buy_n453 else "moderate"
+            _n453_perf = tlog.setdefault("institutional_activity_perf", {})
+            _n453p = _n453_perf.setdefault(_n453_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n453_field})
+            _n453p["total"] += 1; _n453p["total_pnl"] = round(_n453p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n453p["wins"] += 1
+            else:        _n453p["losses"] += 1
+            _n453p["win_rate"] = round(_n453p["wins"] / _n453p["total"] * 100, 1)
+            _n453p["avg_pnl"]  = round(_n453p["total_pnl"] / _n453p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N454: TTM Squeeze Setup Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n454 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n454_field = _buy_n454.get("squeeze_setup_perf", "no_squeeze") if _buy_n454 else "no_squeeze"
+            _n454_perf = tlog.setdefault("squeeze_setup_perf", {})
+            _n454p = _n454_perf.setdefault(_n454_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n454_field})
+            _n454p["total"] += 1; _n454p["total_pnl"] = round(_n454p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n454p["wins"] += 1
+            else:        _n454p["losses"] += 1
+            _n454p["win_rate"] = round(_n454p["wins"] / _n454p["total"] * 100, 1)
+            _n454p["avg_pnl"]  = round(_n454p["total_pnl"] / _n454p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N455: Price Discovery Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n455 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n455_field = _buy_n455.get("price_discovery_perf", "consolidating") if _buy_n455 else "consolidating"
+            _n455_perf = tlog.setdefault("price_discovery_perf", {})
+            _n455p = _n455_perf.setdefault(_n455_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n455_field})
+            _n455p["total"] += 1; _n455p["total_pnl"] = round(_n455p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n455p["wins"] += 1
+            else:        _n455p["losses"] += 1
+            _n455p["win_rate"] = round(_n455p["wins"] / _n455p["total"] * 100, 1)
+            _n455p["avg_pnl"]  = round(_n455p["total_pnl"] / _n455p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N456: Catalyst Freshness Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n456 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n456_field = _buy_n456.get("catalyst_freshness_perf", "recent") if _buy_n456 else "recent"
+            _n456_perf = tlog.setdefault("catalyst_freshness_perf", {})
+            _n456p = _n456_perf.setdefault(_n456_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n456_field})
+            _n456p["total"] += 1; _n456p["total_pnl"] = round(_n456p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n456p["wins"] += 1
+            else:        _n456p["losses"] += 1
+            _n456p["win_rate"] = round(_n456p["wins"] / _n456p["total"] * 100, 1)
+            _n456p["avg_pnl"]  = round(_n456p["total_pnl"] / _n456p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N457: Options Unusual Activity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n457 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n457_field = _buy_n457.get("options_unusualness_perf", "normal_options") if _buy_n457 else "normal_options"
+            _n457_perf = tlog.setdefault("options_unusualness_perf", {})
+            _n457p = _n457_perf.setdefault(_n457_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n457_field})
+            _n457p["total"] += 1; _n457p["total_pnl"] = round(_n457p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n457p["wins"] += 1
+            else:        _n457p["losses"] += 1
+            _n457p["win_rate"] = round(_n457p["wins"] / _n457p["total"] * 100, 1)
+            _n457p["avg_pnl"]  = round(_n457p["total_pnl"] / _n457p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N458: Relative Volume Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n458 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n458_field = _buy_n458.get("relative_volume_entry_perf", "normal_vol") if _buy_n458 else "normal_vol"
+            _n458_perf = tlog.setdefault("relative_volume_entry_perf", {})
+            _n458p = _n458_perf.setdefault(_n458_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n458_field})
+            _n458p["total"] += 1; _n458p["total_pnl"] = round(_n458p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n458p["wins"] += 1
+            else:        _n458p["losses"] += 1
+            _n458p["win_rate"] = round(_n458p["wins"] / _n458p["total"] * 100, 1)
+            _n458p["avg_pnl"]  = round(_n458p["total_pnl"] / _n458p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N459: VWAP Position Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n459 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n459_field = _buy_n459.get("vwap_position_entry_perf", "below_vwap") if _buy_n459 else "below_vwap"
+            _n459_perf = tlog.setdefault("vwap_position_entry_perf", {})
+            _n459p = _n459_perf.setdefault(_n459_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n459_field})
+            _n459p["total"] += 1; _n459p["total_pnl"] = round(_n459p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n459p["wins"] += 1
+            else:        _n459p["losses"] += 1
+            _n459p["win_rate"] = round(_n459p["wins"] / _n459p["total"] * 100, 1)
+            _n459p["avg_pnl"]  = round(_n459p["total_pnl"] / _n459p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N460: Daily Range Quality Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n460 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n460_field = _buy_n460.get("daily_range_quality_perf", "weak_up") if _buy_n460 else "weak_up"
+            _n460_perf = tlog.setdefault("daily_range_quality_perf", {})
+            _n460p = _n460_perf.setdefault(_n460_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n460_field})
+            _n460p["total"] += 1; _n460p["total_pnl"] = round(_n460p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n460p["wins"] += 1
+            else:        _n460p["losses"] += 1
+            _n460p["win_rate"] = round(_n460p["wins"] / _n460p["total"] * 100, 1)
+            _n460p["avg_pnl"]  = round(_n460p["total_pnl"] / _n460p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -14456,7 +14606,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 400
+            _n_total = tlog.get("neurons_total") or 410
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -14505,6 +14655,80 @@ def run():
                     if _wp.get("target_price"): _item["target_price"] = _wp["target_price"]
                     _week_prep.append(_item)
                 tlog["week_ahead_prep"] = _week_prep
+
+            # ── Market Open Action Plan ────────────────────────────────────
+            # Compute a specific per-position action plan for when market opens.
+            # This gives the dashboard a concrete "briefing" view.
+            if _cm_positions:
+                _mop_actions = []
+                for _mop in _cm_positions:
+                    _mop_sym   = _mop.get("ticker", "")
+                    _mop_pnl   = float(_mop.get("pnl_pct", 0) or 0)
+                    _mop_cost  = float(_mop.get("cost", 0) or 0)
+                    _mop_stop  = float(_mop.get("stop_price") or _mop.get("trail_stop_price") or 0)
+                    _mop_tgt   = float(_mop.get("target_price", 0) or 0)
+                    _mop_grade = _mop.get("grade", "B")
+                    _mop_score = int(_mop.get("score", 65) or 65)
+                    _mop_days  = int(_mop.get("days_held", 1) or 1)
+                    # Compute stop and target distances
+                    _mop_cur   = float(_mop.get("price", _mop_cost) or _mop_cost)
+                    _mop_stopdist = round((_mop_cur - _mop_stop) / _mop_cur * 100, 1) if (_mop_cur > 0 and _mop_stop > 0) else 99
+                    _mop_tgtdist  = round((_mop_tgt - _mop_cur) / _mop_cur * 100, 1) if (_mop_cur > 0 and _mop_tgt > 0) else 0
+                    # Risk:Reward at current prices
+                    _mop_rr = round(_mop_tgtdist / abs(_mop_stopdist), 2) if _mop_stopdist > 0 else 0
+                    # Determine action priority and plan
+                    if _mop_pnl <= -(STOP_LOSS_PCT * 100 * 0.8):
+                        _mop_action   = "SELL_OPEN"
+                        _mop_priority = 1
+                        _mop_reason   = f"Stop approach: {_mop_pnl:+.1f}% — exit at market open to protect capital"
+                    elif _mop_grade == "C" and _mop_pnl < -2.0:
+                        _mop_action   = "REVIEW_SELL"
+                        _mop_priority = 2
+                        _mop_reason   = f"Grade C + {_mop_pnl:+.1f}% — consider cutting if no early strength"
+                    elif _mop_pnl >= PROFIT_TARGET_PCT * 100 * 0.85:
+                        _mop_action   = "LOCK_GAINS"
+                        _mop_priority = 2
+                        _mop_reason   = f"Near target {_mop_pnl:+.1f}% — tighten stop or take partial profits"
+                    elif _mop_stopdist < 3.0 and _mop_stopdist > 0:
+                        _mop_action   = "TIGHTEN_STOP"
+                        _mop_priority = 2
+                        _mop_reason   = f"Only {_mop_stopdist:.1f}% from stop — trail tighter after open"
+                    elif _mop_pnl > 1.5 and _mop_rr < 1.0:
+                        _mop_action   = "CONSIDER_TRIM"
+                        _mop_priority = 3
+                        _mop_reason   = f"Good gain {_mop_pnl:+.1f}% but R:R degrading ({_mop_rr:.1f}x) — partial trim option"
+                    elif _mop_days >= 5 and _mop_pnl < 0:
+                        _mop_action   = "REASSESS"
+                        _mop_priority = 3
+                        _mop_reason   = f"Held {_mop_days}d with {_mop_pnl:+.1f}% — re-evaluate thesis at open"
+                    else:
+                        _mop_action   = "HOLD"
+                        _mop_priority = 4
+                        _mop_reason   = f"Position on track (score {_mop_score}, {_mop_pnl:+.1f}%) — hold per plan"
+                    _mop_actions.append({
+                        "ticker":    _mop_sym,
+                        "action":    _mop_action,
+                        "priority":  _mop_priority,
+                        "reason":    _mop_reason,
+                        "pnl_pct":   round(_mop_pnl, 2),
+                        "stop_dist": _mop_stopdist,
+                        "tgt_dist":  _mop_tgtdist,
+                        "rr":        _mop_rr,
+                        "grade":     _mop_grade,
+                        "score":     _mop_score,
+                        "days_held": _mop_days,
+                    })
+                _mop_actions.sort(key=lambda x: x["priority"])
+                _urgent = [a for a in _mop_actions if a["priority"] <= 2]
+                tlog["market_open_plan"] = {
+                    "generated_at": _now_ts.isoformat(),
+                    "next_open":    tlog.get("next_market_open", ""),
+                    "total_positions": len(_mop_actions),
+                    "urgent_count":    len(_urgent),
+                    "summary": f"{len(_urgent)} urgent action(s) at open" if _urgent else f"All {len(_mop_actions)} positions on track",
+                    "actions": _mop_actions,
+                }
+                logger.info(f"Market open plan: {len(_mop_actions)} positions, {len(_urgent)} urgent")
 
             # Weekend Watchlist: fast scan of top stocks for Monday prep
             # Only run if we haven't scanned in the last 90 min to avoid repeated slow downloads
@@ -21479,6 +21703,107 @@ def run():
                     except Exception:
                         _n450_s = "sector_neutral"
                     _buy_signals_merged["sector_relative_strength_perf"] = _n450_s
+                    # N451: gap fill tendency at entry
+                    try:
+                        _n451_gfr = float(live.get(tk, {}).get('gap_fill_rate', 0) or 0)
+                        if _n451_gfr > 0.65:
+                            _n451_s = "gap_filler"
+                        elif _n451_gfr < 0.35:
+                            _n451_s = "gap_holder"
+                        else:
+                            _n451_s = "sometimes"
+                    except Exception:
+                        _n451_s = "sometimes"
+                    _buy_signals_merged["gap_fill_tendency_perf"] = _n451_s
+                    # N452: 3-day volume trend at entry
+                    try:
+                        _n452_vt = float(live.get(tk, {}).get('vol_trend_3d', 1.0) or 1.0)
+                        if _n452_vt > 1.3:
+                            _n452_s = "surging"
+                        elif _n452_vt < 0.8:
+                            _n452_s = "drying_up"
+                        else:
+                            _n452_s = "steady"
+                    except Exception:
+                        _n452_s = "steady"
+                    _buy_signals_merged["volume_trend_3d_perf"] = _n452_s
+                    # N453: institutional activity (dark pool index) at entry
+                    try:
+                        _n453_dp = float(live.get(tk, {}).get('dark_pool_index', 50) or 50)
+                        if _n453_dp > 65:
+                            _n453_s = "heavy_inst"
+                        elif _n453_dp < 40:
+                            _n453_s = "light_inst"
+                        else:
+                            _n453_s = "moderate"
+                    except Exception:
+                        _n453_s = "moderate"
+                    _buy_signals_merged["institutional_activity_perf"] = _n453_s
+                    # N454: TTM squeeze setup at entry
+                    try:
+                        _n454_sq = bool(live.get(tk, {}).get('ttm_squeeze', False))
+                        _n454_s = "in_squeeze" if _n454_sq else "no_squeeze"
+                    except Exception:
+                        _n454_s = "no_squeeze"
+                    _buy_signals_merged["squeeze_setup_perf"] = _n454_s
+                    # N455: price discovery (52-week breakout) at entry
+                    try:
+                        _n455_pd = bool(live.get(tk, {}).get('breakout_52w', False))
+                        _n455_s = "price_discovery" if _n455_pd else "consolidating"
+                    except Exception:
+                        _n455_s = "consolidating"
+                    _buy_signals_merged["price_discovery_perf"] = _n455_s
+                    # N456: catalyst freshness at entry
+                    try:
+                        _n456_cd = int(live.get(tk, {}).get('catalyst_days_ago', 30) or 30)
+                        if _n456_cd < 3:
+                            _n456_s = "fresh_catalyst"
+                        elif _n456_cd <= 14:
+                            _n456_s = "recent"
+                        else:
+                            _n456_s = "stale"
+                    except Exception:
+                        _n456_s = "recent"
+                    _buy_signals_merged["catalyst_freshness_perf"] = _n456_s
+                    # N457: unusual options activity at entry
+                    try:
+                        _n457_of = bool(live.get(tk, {}).get('options_flow', False))
+                        _n457_s = "unusual_options" if _n457_of else "normal_options"
+                    except Exception:
+                        _n457_s = "normal_options"
+                    _buy_signals_merged["options_unusualness_perf"] = _n457_s
+                    # N458: relative volume at entry
+                    try:
+                        _n458_vr = float(live.get(tk, {}).get('vol_ratio', 1.0) or 1.0)
+                        if _n458_vr > 2.0:
+                            _n458_s = "high_rvol"
+                        elif _n458_vr >= 1.3:
+                            _n458_s = "elevated"
+                        else:
+                            _n458_s = "normal_vol"
+                    except Exception:
+                        _n458_s = "normal_vol"
+                    _buy_signals_merged["relative_volume_entry_perf"] = _n458_s
+                    # N459: VWAP position at entry
+                    try:
+                        _n459_vp = bool(live.get(tk, {}).get('vwap_reclaim', False))
+                        _n459_s = "above_vwap" if _n459_vp else "below_vwap"
+                    except Exception:
+                        _n459_s = "below_vwap"
+                    _buy_signals_merged["vwap_position_entry_perf"] = _n459_s
+                    # N460: daily range quality at entry
+                    try:
+                        _n460_chg = float(live.get(tk, {}).get('chg_pct', 0) or 0)
+                        _n460_vr = float(live.get(tk, {}).get('vol_ratio', 1) or 1)
+                        if _n460_chg > 0.5 and _n460_vr > 1.2:
+                            _n460_s = "quality_up_day"
+                        elif _n460_chg > 0:
+                            _n460_s = "weak_up"
+                        else:
+                            _n460_s = "down_day"
+                    except Exception:
+                        _n460_s = "weak_up"
+                    _buy_signals_merged["daily_range_quality_perf"] = _n460_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (

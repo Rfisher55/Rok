@@ -708,12 +708,15 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 270),
+                "neurons_total":    td.get("neurons_total", 410),
                 "last_decision":    td.get("last_decision", ""),
                 "next_run_utc":     td.get("next_run_utc", ""),
                 "bot_brain_summary": td.get("bot_brain_summary", ""),
                 "regime_name":      td.get("regime", {}).get("regime", "neutral"),
                 "vix":              td.get("regime", {}).get("vix", 0),
+                "market_open_plan": td.get("market_open_plan", {}),
+                "next_market_open": td.get("next_market_open", ""),
+                "position_news":    td.get("position_news", {}),
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:
@@ -964,12 +967,15 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 390),
+            "neurons_total":   live_market_context.get("neurons_total", 410),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
         },
         "weekend_watchlist": live_market_context.get("weekend_watchlist", []),
+        "market_open_plan":  live_market_context.get("market_open_plan", {}),
+        "next_market_open":  live_market_context.get("next_market_open", ""),
+        "position_news":     live_market_context.get("position_news", {}),
     }
 
     # Sanitize all datetime objects before JSON serialization
