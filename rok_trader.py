@@ -13990,6 +13990,186 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N871: Order Flow Imbalance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_871 = tlog.get("order_flow_imbalance_perf", {})
+            _sf_871_state = held.get(sym, {}).get("order_flow_imbalance_state", "balanced_flow")
+            _sf_871_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_871_entry:
+                _sf_871_state = _sf_871_entry.get("order_flow_imbalance_state", _sf_871_state)
+            if _sf_871_state and _sf_871_state not in ("", None):
+                _sf_871_rec = _n_sf_871.setdefault(_sf_871_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_871_rec["total"] += 1
+                if pnl_pct > 0: _sf_871_rec["wins"] += 1
+                else:           _sf_871_rec["losses"] += 1
+                _sf_871_rec["win_rate"] = round(_sf_871_rec["wins"] / max(_sf_871_rec["total"], 1) * 100, 1)
+                tlog["order_flow_imbalance_perf"] = _n_sf_871
+        except Exception:
+            pass
+
+    # ── N872: Time-Weighted Momentum ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_872 = tlog.get("time_weighted_momentum_perf", {})
+            _sf_872_state = held.get(sym, {}).get("time_weighted_momentum_state", "flat")
+            _sf_872_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_872_entry:
+                _sf_872_state = _sf_872_entry.get("time_weighted_momentum_state", _sf_872_state)
+            if _sf_872_state and _sf_872_state not in ("", None):
+                _sf_872_rec = _n_sf_872.setdefault(_sf_872_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_872_rec["total"] += 1
+                if pnl_pct > 0: _sf_872_rec["wins"] += 1
+                else:           _sf_872_rec["losses"] += 1
+                _sf_872_rec["win_rate"] = round(_sf_872_rec["wins"] / max(_sf_872_rec["total"], 1) * 100, 1)
+                tlog["time_weighted_momentum_perf"] = _n_sf_872
+        except Exception:
+            pass
+
+    # ── N873: Relative Volume Burst ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_873 = tlog.get("relative_volume_burst_perf", {})
+            _sf_873_state = held.get(sym, {}).get("relative_volume_burst_state", "normal_vol")
+            _sf_873_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_873_entry:
+                _sf_873_state = _sf_873_entry.get("relative_volume_burst_state", _sf_873_state)
+            if _sf_873_state and _sf_873_state not in ("", None):
+                _sf_873_rec = _n_sf_873.setdefault(_sf_873_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_873_rec["total"] += 1
+                if pnl_pct > 0: _sf_873_rec["wins"] += 1
+                else:           _sf_873_rec["losses"] += 1
+                _sf_873_rec["win_rate"] = round(_sf_873_rec["wins"] / max(_sf_873_rec["total"], 1) * 100, 1)
+                tlog["relative_volume_burst_perf"] = _n_sf_873
+        except Exception:
+            pass
+
+    # ── N874: Catalyst Timing ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_874 = tlog.get("catalyst_timing_perf", {})
+            _sf_874_state = held.get(sym, {}).get("catalyst_timing_state", "stale_catalyst")
+            _sf_874_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_874_entry:
+                _sf_874_state = _sf_874_entry.get("catalyst_timing_state", _sf_874_state)
+            if _sf_874_state and _sf_874_state not in ("", None):
+                _sf_874_rec = _n_sf_874.setdefault(_sf_874_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_874_rec["total"] += 1
+                if pnl_pct > 0: _sf_874_rec["wins"] += 1
+                else:           _sf_874_rec["losses"] += 1
+                _sf_874_rec["win_rate"] = round(_sf_874_rec["wins"] / max(_sf_874_rec["total"], 1) * 100, 1)
+                tlog["catalyst_timing_perf"] = _n_sf_874
+        except Exception:
+            pass
+
+    # ── N875: Multi-Timeframe Alignment ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_875 = tlog.get("multi_timeframe_alignment_perf", {})
+            _sf_875_state = held.get(sym, {}).get("multi_timeframe_alignment_state", "mixed_signals")
+            _sf_875_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_875_entry:
+                _sf_875_state = _sf_875_entry.get("multi_timeframe_alignment_state", _sf_875_state)
+            if _sf_875_state and _sf_875_state not in ("", None):
+                _sf_875_rec = _n_sf_875.setdefault(_sf_875_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_875_rec["total"] += 1
+                if pnl_pct > 0: _sf_875_rec["wins"] += 1
+                else:           _sf_875_rec["losses"] += 1
+                _sf_875_rec["win_rate"] = round(_sf_875_rec["wins"] / max(_sf_875_rec["total"], 1) * 100, 1)
+                tlog["multi_timeframe_alignment_perf"] = _n_sf_875
+        except Exception:
+            pass
+
+    # ── N876: Market Maker Activity ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_876 = tlog.get("market_maker_activity_perf", {})
+            _sf_876_state = held.get(sym, {}).get("market_maker_activity_state", "mm_normal")
+            _sf_876_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_876_entry:
+                _sf_876_state = _sf_876_entry.get("market_maker_activity_state", _sf_876_state)
+            if _sf_876_state and _sf_876_state not in ("", None):
+                _sf_876_rec = _n_sf_876.setdefault(_sf_876_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_876_rec["total"] += 1
+                if pnl_pct > 0: _sf_876_rec["wins"] += 1
+                else:           _sf_876_rec["losses"] += 1
+                _sf_876_rec["win_rate"] = round(_sf_876_rec["wins"] / max(_sf_876_rec["total"], 1) * 100, 1)
+                tlog["market_maker_activity_perf"] = _n_sf_876
+        except Exception:
+            pass
+
+    # ── N877: Alpha Decay Risk ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_877 = tlog.get("alpha_decay_risk_perf", {})
+            _sf_877_state = held.get(sym, {}).get("alpha_decay_risk_state", "mid_alpha")
+            _sf_877_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_877_entry:
+                _sf_877_state = _sf_877_entry.get("alpha_decay_risk_state", _sf_877_state)
+            if _sf_877_state and _sf_877_state not in ("", None):
+                _sf_877_rec = _n_sf_877.setdefault(_sf_877_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_877_rec["total"] += 1
+                if pnl_pct > 0: _sf_877_rec["wins"] += 1
+                else:           _sf_877_rec["losses"] += 1
+                _sf_877_rec["win_rate"] = round(_sf_877_rec["wins"] / max(_sf_877_rec["total"], 1) * 100, 1)
+                tlog["alpha_decay_risk_perf"] = _n_sf_877
+        except Exception:
+            pass
+
+    # ── N878: Price Discovery Phase ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_878 = tlog.get("price_discovery_phase_perf", {})
+            _sf_878_state = held.get(sym, {}).get("price_discovery_phase_state", "continuation")
+            _sf_878_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_878_entry:
+                _sf_878_state = _sf_878_entry.get("price_discovery_phase_state", _sf_878_state)
+            if _sf_878_state and _sf_878_state not in ("", None):
+                _sf_878_rec = _n_sf_878.setdefault(_sf_878_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_878_rec["total"] += 1
+                if pnl_pct > 0: _sf_878_rec["wins"] += 1
+                else:           _sf_878_rec["losses"] += 1
+                _sf_878_rec["win_rate"] = round(_sf_878_rec["wins"] / max(_sf_878_rec["total"], 1) * 100, 1)
+                tlog["price_discovery_phase_perf"] = _n_sf_878
+        except Exception:
+            pass
+
+    # ── N879: Smart Money Divergence ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_879 = tlog.get("smart_money_divergence_perf", {})
+            _sf_879_state = held.get(sym, {}).get("smart_money_divergence_state", "neutral_flow")
+            _sf_879_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_879_entry:
+                _sf_879_state = _sf_879_entry.get("smart_money_divergence_state", _sf_879_state)
+            if _sf_879_state and _sf_879_state not in ("", None):
+                _sf_879_rec = _n_sf_879.setdefault(_sf_879_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_879_rec["total"] += 1
+                if pnl_pct > 0: _sf_879_rec["wins"] += 1
+                else:           _sf_879_rec["losses"] += 1
+                _sf_879_rec["win_rate"] = round(_sf_879_rec["wins"] / max(_sf_879_rec["total"], 1) * 100, 1)
+                tlog["smart_money_divergence_perf"] = _n_sf_879
+        except Exception:
+            pass
+
+    # ── N880: Volatility Regime Shift ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _n_sf_880 = tlog.get("volatility_regime_shift_perf", {})
+            _sf_880_state = held.get(sym, {}).get("volatility_regime_shift_state", "stable_low")
+            _sf_880_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _sf_880_entry:
+                _sf_880_state = _sf_880_entry.get("volatility_regime_shift_state", _sf_880_state)
+            if _sf_880_state and _sf_880_state not in ("", None):
+                _sf_880_rec = _n_sf_880.setdefault(_sf_880_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                _sf_880_rec["total"] += 1
+                if pnl_pct > 0: _sf_880_rec["wins"] += 1
+                else:           _sf_880_rec["losses"] += 1
+                _sf_880_rec["win_rate"] = round(_sf_880_rec["wins"] / max(_sf_880_rec["total"], 1) * 100, 1)
+                tlog["volatility_regime_shift_perf"] = _n_sf_880
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -34187,6 +34367,158 @@ def run():
                         _buy_signals_merged["signal_freshness_perf"] = _n870_s
                     except Exception:
                         pass
+
+                    # N871 — Order Flow Imbalance
+                    try:
+                        _n871_vol = sc.get("vol_ratio", 1.0) or 1.0
+                        _n871_chg = sc.get("chg_pct", 0.0) or 0.0
+                        if   _n871_vol > 3.0 and _n871_chg > 1.0:   _n871_state = "heavy_buy_pressure"
+                        elif _n871_vol > 2.0 and _n871_chg > 0.5:   _n871_state = "light_buy_pressure"
+                        elif _n871_vol > 2.0 and _n871_chg < -0.5:  _n871_state = "light_sell_pressure"
+                        elif _n871_vol > 3.0 and _n871_chg < -1.0:  _n871_state = "heavy_sell_pressure"
+                        else:                                         _n871_state = "balanced_flow"
+                        _n871_perf = tlog.setdefault("order_flow_imbalance_perf", {})
+                        _n871_perf.setdefault(_n871_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["order_flow_imbalance_perf"] = _n871_state
+                    except Exception:
+                        pass
+
+                    # N872 — Time-Weighted Momentum
+                    try:
+                        _n872_roc5 = sc.get("roc5", 0.0) or 0.0
+                        _n872_rsi  = sc.get("rsi", 50.0) or 50.0
+                        if   _n872_roc5 > 5.0 and _n872_rsi > 60:   _n872_state = "strong_up_momentum"
+                        elif _n872_roc5 > 2.0 and _n872_rsi > 50:   _n872_state = "moderate_up"
+                        elif _n872_roc5 < -5.0 and _n872_rsi < 40:  _n872_state = "strong_down_momentum"
+                        elif _n872_roc5 < -2.0 and _n872_rsi < 50:  _n872_state = "moderate_down"
+                        else:                                         _n872_state = "flat"
+                        _n872_perf = tlog.setdefault("time_weighted_momentum_perf", {})
+                        _n872_perf.setdefault(_n872_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["time_weighted_momentum_perf"] = _n872_state
+                    except Exception:
+                        pass
+
+                    # N873 — Relative Volume Burst
+                    try:
+                        _n873_vol_ratio = sc.get("vol_ratio", 1.0) or 1.0
+                        if   _n873_vol_ratio > 3.0:  _n873_state = "extreme_burst"
+                        elif _n873_vol_ratio > 2.0:  _n873_state = "strong_burst"
+                        elif _n873_vol_ratio > 1.5:  _n873_state = "moderate_surge"
+                        elif _n873_vol_ratio > 0.8:  _n873_state = "normal_vol"
+                        else:                        _n873_state = "low_vol_day"
+                        _n873_perf = tlog.setdefault("relative_volume_burst_perf", {})
+                        _n873_perf.setdefault(_n873_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["relative_volume_burst_perf"] = _n873_state
+                    except Exception:
+                        pass
+
+                    # N874 — Catalyst Timing
+                    try:
+                        _n874_news = sc.get("news_count", 0) or 0
+                        _n874_chg  = abs(sc.get("chg_pct", 0.0) or 0.0)
+                        if   _n874_news > 5 and _n874_chg > 2.0:    _n874_state = "same_day_catalyst"
+                        elif _n874_news > 2 and _n874_chg > 1.0:    _n874_state = "yesterday_catalyst"
+                        elif _n874_news > 0:                         _n874_state = "week_old_catalyst"
+                        else:                                        _n874_state = "stale_catalyst"
+                        _n874_perf = tlog.setdefault("catalyst_timing_perf", {})
+                        _n874_perf.setdefault(_n874_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["catalyst_timing_perf"] = _n874_state
+                    except Exception:
+                        pass
+
+                    # N875 — Multi-Timeframe Alignment
+                    try:
+                        _n875_rsi  = sc.get("rsi", 50.0) or 50.0
+                        _n875_rs63 = sc.get("rs63", 0.0) or 0.0
+                        _n875_rs21 = sc.get("rs21", 0.0) or 0.0
+                        if   _n875_rs63 > 3 and _n875_rs21 > 2 and _n875_rsi > 55:   _n875_state = "all_aligned_up"
+                        elif _n875_rs63 > 0 and _n875_rs21 > 0:                       _n875_state = "daily_weekly_up"
+                        elif _n875_rs63 < -3 and _n875_rs21 < -2 and _n875_rsi < 45: _n875_state = "all_aligned_down"
+                        elif _n875_rs63 < 0 and _n875_rs21 < 0:                       _n875_state = "daily_weekly_down"
+                        else:                                                           _n875_state = "mixed_signals"
+                        _n875_perf = tlog.setdefault("multi_timeframe_alignment_perf", {})
+                        _n875_perf.setdefault(_n875_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["multi_timeframe_alignment_perf"] = _n875_state
+                    except Exception:
+                        pass
+
+                    # N876 — Market Maker Activity
+                    try:
+                        _n876_vol   = sc.get("vol_ratio", 1.0) or 1.0
+                        _n876_chg   = abs(sc.get("chg_pct", 0.0) or 0.0)
+                        if   _n876_vol > 3.0 and _n876_chg > 2.0:   _n876_state = "mm_very_active"
+                        elif _n876_vol > 2.0 and _n876_chg > 1.0:   _n876_state = "mm_active"
+                        elif _n876_vol > 1.5:                        _n876_state = "mm_normal"
+                        else:                                        _n876_state = "mm_inactive"
+                        _n876_perf = tlog.setdefault("market_maker_activity_perf", {})
+                        _n876_perf.setdefault(_n876_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["market_maker_activity_perf"] = _n876_state
+                    except Exception:
+                        pass
+
+                    # N877 — Alpha Decay Risk
+                    try:
+                        _n877_persist = sc.get("persist_count", 0) or 0
+                        if   _n877_persist == 0:   _n877_state = "fresh_alpha"
+                        elif _n877_persist <= 2:   _n877_state = "early_alpha"
+                        elif _n877_persist <= 5:   _n877_state = "mid_alpha"
+                        elif _n877_persist <= 10:  _n877_state = "late_alpha"
+                        else:                      _n877_state = "stale_alpha"
+                        _n877_perf = tlog.setdefault("alpha_decay_risk_perf", {})
+                        _n877_perf.setdefault(_n877_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["alpha_decay_risk_perf"] = _n877_state
+                    except Exception:
+                        pass
+
+                    # N878 — Price Discovery Phase
+                    try:
+                        _n878_at_brk = sc.get("at_breakout", False)
+                        _n878_brk52  = sc.get("breakout_52w", False)
+                        _n878_vwap   = sc.get("vwap_reclaim", False)
+                        _n878_chg    = sc.get("chg_pct", 0.0) or 0.0
+                        if   _n878_brk52:                           _n878_state = "new_breakout"
+                        elif _n878_at_brk and _n878_vwap:           _n878_state = "continuation"
+                        elif _n878_vwap and _n878_chg < 0.5:        _n878_state = "consolidating"
+                        elif not _n878_vwap and _n878_chg < -1.0:   _n878_state = "distribution"
+                        elif not _n878_vwap and _n878_chg < -2.5:   _n878_state = "reversal"
+                        else:                                        _n878_state = "continuation"
+                        _n878_perf = tlog.setdefault("price_discovery_phase_perf", {})
+                        _n878_perf.setdefault(_n878_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["price_discovery_phase_perf"] = _n878_state
+                    except Exception:
+                        pass
+
+                    # N879 — Smart Money Divergence
+                    try:
+                        _n879_opt  = sc.get("options_flow", False)
+                        _n879_vol  = sc.get("vol_ratio", 1.0) or 1.0
+                        _n879_sent = sc.get("sentiment_score", 5.0) or 5.0
+                        if   _n879_opt and _n879_vol > 2.0 and _n879_sent < 6.0:   _n879_state = "smart_buying_retail_selling"
+                        elif _n879_opt and _n879_vol > 1.5:                          _n879_state = "both_buying"
+                        elif not _n879_opt and _n879_vol < 0.8 and _n879_sent > 7:  _n879_state = "smart_selling_retail_buying"
+                        elif _n879_vol < 0.6:                                        _n879_state = "both_selling"
+                        else:                                                        _n879_state = "neutral_flow"
+                        _n879_perf = tlog.setdefault("smart_money_divergence_perf", {})
+                        _n879_perf.setdefault(_n879_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["smart_money_divergence_perf"] = _n879_state
+                    except Exception:
+                        pass
+
+                    # N880 — Volatility Regime Shift
+                    try:
+                        _n880_vix  = live.get("SPY", {}).get("vix", 18.0) or 18.0
+                        _n880_roc  = sc.get("roc5", 0.0) or 0.0
+                        if   _n880_vix < 13:                         _n880_state = "vol_compression"
+                        elif _n880_vix < 18:                         _n880_state = "stable_low"
+                        elif _n880_vix < 25:                         _n880_state = "rising_vol"
+                        elif _n880_vix < 35:                         _n880_state = "vol_spike"
+                        else:                                        _n880_state = "vol_extreme"
+                        _n880_perf = tlog.setdefault("volatility_regime_shift_perf", {})
+                        _n880_perf.setdefault(_n880_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                        _buy_signals_merged["volatility_regime_shift_perf"] = _n880_state
+                    except Exception:
+                        pass
+
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -42770,6 +43102,16 @@ def run():
             ("technical_setup_combo_perf",      "technical_setup_combo"),
             ("risk_reward_at_entry_perf",       "risk_reward_at_entry"),
             ("signal_freshness_perf",           "signal_freshness"),
+            ("order_flow_imbalance_perf",    "order_flow_imbalance"),
+            ("time_weighted_momentum_perf",  "time_weighted_momentum"),
+            ("relative_volume_burst_perf",   "relative_volume_burst"),
+            ("catalyst_timing_perf",         "catalyst_timing"),
+            ("multi_timeframe_alignment_perf","multi_timeframe_alignment"),
+            ("market_maker_activity_perf",   "market_maker_activity"),
+            ("alpha_decay_risk_perf",        "alpha_decay_risk"),
+            ("price_discovery_phase_perf",   "price_discovery_phase"),
+            ("smart_money_divergence_perf",  "smart_money_divergence"),
+            ("volatility_regime_shift_perf", "volatility_regime_shift"),
         ]:
             _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
             if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
@@ -43931,6 +44273,16 @@ def run():
             "technical_setup_combo_perf":      [],
             "risk_reward_at_entry_perf":       [],
             "signal_freshness_perf":           [],
+            "order_flow_imbalance_perf":    [],
+            "time_weighted_momentum_perf":  [],
+            "relative_volume_burst_perf":   [],
+            "catalyst_timing_perf":         [],
+            "multi_timeframe_alignment_perf": [],
+            "market_maker_activity_perf":   [],
+            "alpha_decay_risk_perf":        [],
+            "price_discovery_phase_perf":   [],
+            "smart_money_divergence_perf":  [],
+            "volatility_regime_shift_perf": [],
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -44258,9 +44610,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 830              # total tracked neuron dimensions (N103-N870 complete)
+        tlog["neurons_total"]     = 840              # total tracked neuron dimensions (N103-N880 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/830 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/840 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

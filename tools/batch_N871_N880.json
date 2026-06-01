@@ -1,0 +1,16 @@
+{
+  "batch": "N871-N880",
+  "neurons_total": 840,
+  "neurons": [
+    {"id":"N871","key":"order_flow_imbalance_perf","name":"Order Flow Imbalance","states":["heavy_buy_pressure","light_buy_pressure","balanced_flow","light_sell_pressure","heavy_sell_pressure"]},
+    {"id":"N872","key":"time_weighted_momentum_perf","name":"Time-Weighted Momentum","states":["strong_up_momentum","moderate_up","flat","moderate_down","strong_down_momentum"]},
+    {"id":"N873","key":"relative_volume_burst_perf","name":"Relative Volume Burst","states":["extreme_burst","strong_burst","moderate_surge","normal_vol","low_vol_day"]},
+    {"id":"N874","key":"catalyst_timing_perf","name":"Catalyst Timing","states":["same_day_catalyst","yesterday_catalyst","week_old_catalyst","stale_catalyst"]},
+    {"id":"N875","key":"multi_timeframe_alignment_perf","name":"Multi-TF Alignment","states":["all_aligned_up","daily_weekly_up","mixed_signals","daily_weekly_down","all_aligned_down"]},
+    {"id":"N876","key":"market_maker_activity_perf","name":"Market Maker Activity","states":["mm_very_active","mm_active","mm_normal","mm_inactive"]},
+    {"id":"N877","key":"alpha_decay_risk_perf","name":"Alpha Decay Risk","states":["fresh_alpha","early_alpha","mid_alpha","late_alpha","stale_alpha"]},
+    {"id":"N878","key":"price_discovery_phase_perf","name":"Price Discovery Phase","states":["new_breakout","continuation","consolidating","distribution","reversal"]},
+    {"id":"N879","key":"smart_money_divergence_perf","name":"Smart Money Divergence","states":["smart_buying_retail_selling","both_buying","neutral_flow","smart_selling_retail_buying","both_selling"]},
+    {"id":"N880","key":"volatility_regime_shift_perf","name":"Volatility Regime Shift","states":["vol_compression","stable_low","rising_vol","vol_spike","vol_extreme"]}
+  ]
+}
