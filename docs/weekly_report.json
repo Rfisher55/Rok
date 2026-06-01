@@ -1,18 +1,31 @@
 {
-  "generated_at": "2026-06-01T12:23:23.812106+00:00",
+  "generated_at": "2026-06-01T18:25:19.686958+00:00",
   "period": "Last 7 days",
   "week_start": "2026-05-25",
   "week_end": "2026-06-01",
-  "trades_total": 0,
+  "trades_total": 10,
   "trades_wins": 0,
-  "trades_losses": 0,
-  "win_rate": 0,
+  "trades_losses": 10,
+  "win_rate": 0.0,
   "total_pnl": 0,
-  "avg_pnl_per_trade": 0,
-  "best_trades": [],
+  "avg_pnl_per_trade": 0.0,
+  "best_trades": [
+    {
+      "ticker": "ORCL",
+      "pnl": null
+    },
+    {
+      "ticker": "DDOG",
+      "pnl": null
+    },
+    {
+      "ticker": "SPCE",
+      "pnl": null
+    }
+  ],
   "worst_trades": [],
-  "neurons_active": 52,
-  "neurons_total": 680,
+  "neurons_active": 0,
+  "neurons_total": 860,
   "top_neurons": [],
   "equity_curve": [],
   "strategy_insights": {
@@ -21,12 +34,25 @@
     "key_combos": []
   },
   "learn_log": [],
-  "strategy_mode": "MARKET_CLOSED",
+  "strategy_mode": "MOMENTUM",
   "recovery_mode": false,
-  "effective_min_score": 65,
+  "effective_min_score": 5,
   "cross_asset_risk_off": false,
-  "portfolio_value": 100124.84,
-  "drawdown_pct": 0.11,
-  "profit_factor": null,
-  "brain_analytics": {}
+  "portfolio_value": 99122.21,
+  "drawdown_pct": 0.09,
+  "profit_factor": 11.85,
+  "brain_analytics": {
+    "best_entry_hour": {
+      "hour_et": 13,
+      "win_rate": 78,
+      "samples": 9
+    },
+    "hourly_win_rates": [
+      {
+        "hour": 13,
+        "win_rate": 78,
+        "samples": 9
+      }
+    ]
+  }
 }
