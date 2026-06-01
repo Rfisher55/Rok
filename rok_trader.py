@@ -22670,23 +22670,41 @@ def run():
                     _exit_perf[_cat].append(float(_s["pnl_pct"]))
 
                 _ep_summary = {}
-                _best_cat, _best_avg = None, -999
+                _lp = tlog.setdefault("bot_learned_params", {})
+
+                # Merge today's exits into cumulative cross-day totals
+                _cum = _lp.setdefault("cumulative_exit_perf", {})
                 for _cat, _pnls in _exit_perf.items():
                     _avg = sum(_pnls) / len(_pnls)
                     _wr = sum(1 for p in _pnls if p > 0) / len(_pnls) * 100
                     _ep_summary[_cat] = {"n": len(_pnls), "avg_pnl": round(_avg, 3), "win_rate": round(_wr, 1)}
-                    if _avg > _best_avg and _cat not in ("stop_loss",):
-                        _best_avg, _best_cat = _avg, _cat
+                    # Accumulate into rolling cross-day totals
+                    _ce = _cum.setdefault(_cat, {"n": 0, "total_pnl": 0.0, "wins": 0})
+                    _ce["n"]         += len(_pnls)
+                    _ce["total_pnl"] = round(_ce["total_pnl"] + sum(_pnls), 4)
+                    _ce["wins"]      += sum(1 for p in _pnls if p > 0)
+                    _ce["avg_pnl"]   = round(_ce["total_pnl"] / _ce["n"], 3)
+                    _ce["win_rate"]  = round(_ce["wins"] / _ce["n"] * 100, 1)
 
-                _lp = tlog.setdefault("bot_learned_params", {})
-                _lp["exit_strategy_perf"]  = _ep_summary
-                _lp["best_exit_strategy"]  = _best_cat or _lp.get("best_exit_strategy")
-                _lp["trades_analyzed"]     = len(_oh_sells)
+                # Bayesian-weighted best: shrink low-n categories toward 0 using prior of 5 trades at 0%
+                _PRIOR_N = 5
+                _best_cat, _best_score = None, -999
+                for _cat, _ce in _cum.items():
+                    if _cat in ("stop_loss", "other"):
+                        continue
+                    _bayes_score = (_ce["total_pnl"]) / (_ce["n"] + _PRIOR_N)
+                    if _bayes_score > _best_score:
+                        _best_score, _best_cat = _bayes_score, _cat
+
+                _lp["exit_strategy_perf"]      = _ep_summary
+                _lp["best_exit_strategy"]       = _best_cat or _lp.get("best_exit_strategy")
+                _lp["trades_analyzed"]          = len(_oh_sells)
+                _lp["best_exit_bayes_score"]    = round(_best_score, 3) if _best_score > -999 else None
 
                 # Update daily trade count to include off-hours crypto
                 _all_today = [t for t in _oh_trades if t.get("time", "").startswith(_oh_today)]
                 tlog["daily_trade_count"] = len(_all_today)
-                logger.info(f"Off-hours brain: {len(_oh_sells)} sells analyzed | best_exit={_best_cat} avg={_best_avg:+.2f}% | total_today={len(_all_today)}")
+                logger.info(f"Off-hours brain: {len(_oh_sells)} sells analyzed | best_exit={_best_cat} bayes={_best_score:+.3f} | total_today={len(_all_today)}")
         except Exception as _oe:
             logger.debug(f"Off-hours brain update: {_oe}")
 
