@@ -249,7 +249,7 @@
       "dist_from_trail": 9.5
     }
   ],
-  "last_updated": "2026-06-01T15:37:14.368560+00:00",
+  "last_updated": "2026-06-01T16:26:08.830730+00:00",
   "portfolio_value": 100124.84,
   "buying_power": 128124.84,
   "status": "crypto-only",
@@ -913,5 +913,6 @@
       "target_price": 525.52
     }
   ],
-  "error": "Bot crashed: '>' not supported between instances of 'str' and 'int'"
+  "error": "Bot crashed: '>' not supported between instances of 'str' and 'int'",
+  "traceback": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 46187, in <module>\n    run()\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 35448, in run\n    if _h_cost > 0 and _h_price > 0:\n       ^^^^^^^^^^^\nTypeError: '>' not supported between instances of 'str' and 'int'\n"
 }
