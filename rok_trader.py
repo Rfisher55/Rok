@@ -336,14 +336,34 @@ class _NumpySafeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 def _sanitize_json(obj):
-    """Recursively convert any non-JSON-serializable types (numpy etc) to native Python."""
+    """Recursively convert any non-JSON-serializable types to native Python."""
     if isinstance(obj, dict):
         return {k: _sanitize_json(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [_sanitize_json(v) for v in obj]
-    if type(obj).__module__ == 'numpy' or (hasattr(obj, 'item') and not isinstance(obj, (int, float, bool, str))):
+    # Fast path: native JSON-safe primitives
+    if obj is None or obj is True or obj is False:
+        return obj
+    if type(obj) in (int, float, str):
+        return obj
+    # numpy/pandas scalars and arrays
+    _mod = type(obj).__module__ or ''
+    if _mod == 'numpy' or _mod.startswith('numpy.'):
         try: return obj.item()
         except Exception: return str(obj)
+    if _mod.startswith('pandas.'):
+        try: return str(obj)
+        except Exception: return None
+    # Any object with .item() (generic numpy-like scalar)
+    if hasattr(obj, 'item'):
+        try: return obj.item()
+        except Exception: return str(obj)
+    # datetime/date → ISO string
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    # Fallback: if not a known JSON primitive, stringify
+    if not isinstance(obj, (int, float, bool, str, type(None))):
+        return str(obj)
     return obj
 
 def _save(path, data):
@@ -15044,6 +15064,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 _sdp2["avg_pnl"]  = round(_sdp2["total_pnl"] / _sdp2["total"], 2)
         except Exception:
             pass
+
+    # Persist every trade immediately — prevents data loss if final save crashes
+    try:
+        _save(TRADES_FILE, tlog)
+    except Exception:
+        pass
 
 
 # ── Technical indicators ──────────────────────────────────────────────────────
