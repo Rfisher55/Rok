@@ -18708,16 +18708,28 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                         # Position already gone (settled / previously closed) — treat as success
                         logger.info(f"Position {_raw_sym} already gone (404) — removing from tracking")
                     else:
-                        # DELETE rejected — fall back to order-based sell
-                        import math as _math
-                        _sell_qty = _math.floor(qty * 1e8) / 1e8
-                        if _sell_qty > 0:
-                            alpaca_post("/v2/orders", {
-                                "symbol": _raw_sym, "qty": str(_sell_qty),
-                                "side": "sell", "type": "market", "time_in_force": "gtc",
-                            })
+                        # Check if the position is a sub-minimum residual we can't trade
+                        _del_body = _del_r.text[:300] if _del_r.text else ""
+                        _is_residual = (
+                            "minimal qty" in _del_body.lower()
+                            or "qty must be" in _del_body.lower()
+                            or '"code":40310000' in _del_body
+                            or '"code":40010001' in _del_body
+                        )
+                        if _is_residual:
+                            # Sub-minimum residual position — untradeable, treat as gone
+                            logger.info(f"Position {_raw_sym} is sub-minimum residual — removing from tracking | body={_del_body[:80]}")
                         else:
-                            raise requests.HTTPError(response=_del_r)
+                            # DELETE rejected for other reason — fall back to order-based sell
+                            import math as _math
+                            _sell_qty = _math.floor(qty * 1e8) / 1e8
+                            if _sell_qty > 0:
+                                alpaca_post("/v2/orders", {
+                                    "symbol": _raw_sym, "qty": str(_sell_qty),
+                                    "side": "sell", "type": "market", "time_in_force": "gtc",
+                                })
+                            else:
+                                raise requests.HTTPError(response=_del_r)
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
                     made_trades_ref.append(True)
                     peaks.pop(sym, None)
