@@ -1,0 +1,87 @@
+{
+  "batch": "N501-N510",
+  "neurons_total_before": 460,
+  "neurons_total_after": 470,
+  "neurons": [
+    {
+      "id": "N501",
+      "key": "elder_ray_entry_perf",
+      "field": "elder_ray",
+      "description": "Elder Ray bull/bear power at entry",
+      "states": ["bull_power_pos", "bull_power_neg", "bear_power"],
+      "logic": "bull_power_pos / bear_power / bull_power_neg based on elder_ray field"
+    },
+    {
+      "id": "N502",
+      "key": "aroon_signal_entry_perf",
+      "field": "aroon_signal",
+      "description": "Aroon oscillator signal at entry",
+      "states": ["aroon_strong_up", "aroon_neutral", "aroon_strong_down"],
+      "logic": "aroon_strong_up / aroon_strong_down / aroon_neutral based on aroon_signal field"
+    },
+    {
+      "id": "N503",
+      "key": "chande_momentum_entry_perf",
+      "field": "chande_momentum",
+      "description": "Chande Momentum Oscillator state at entry",
+      "states": ["strong_bullish_cmo", "neutral_cmo", "strong_bearish_cmo"],
+      "logic": "strong_bullish_cmo / strong_bearish_cmo / neutral_cmo based on chande_momentum field"
+    },
+    {
+      "id": "N504",
+      "key": "dpo_signal_entry_perf",
+      "field": "dpo_signal",
+      "description": "Detrended Price Oscillator signal at entry",
+      "states": ["dpo_above_zero", "dpo_zero_cross", "dpo_below_zero"],
+      "logic": "dpo_above_zero / dpo_zero_cross / dpo_below_zero based on dpo_signal field"
+    },
+    {
+      "id": "N505",
+      "key": "price_vs_vwap_deviation_perf",
+      "field": "vwap_dev_pct",
+      "description": "Price deviation from VWAP percentage at entry",
+      "states": ["far_above_vwap", "near_vwap", "far_below_vwap"],
+      "logic": "far_above_vwap if vwap_dev_pct > 2.0, far_below_vwap if vwap_dev_pct < -2.0, else near_vwap"
+    },
+    {
+      "id": "N506",
+      "key": "accumulation_dist_perf",
+      "field": "ad_trend",
+      "description": "Accumulation/Distribution line trend at entry",
+      "states": ["ad_rising", "ad_flat", "ad_falling"],
+      "logic": "ad_rising / ad_falling / ad_flat based on ad_trend field"
+    },
+    {
+      "id": "N507",
+      "key": "chandelier_exit_entry_perf",
+      "field": "chandelier_bull",
+      "description": "Chandelier exit position at entry",
+      "states": ["above_chandelier", "at_chandelier", "below_chandelier"],
+      "logic": "above_chandelier / at_chandelier / below_chandelier based on chandelier_bull field"
+    },
+    {
+      "id": "N508",
+      "key": "ppo_signal_entry_perf",
+      "field": "ppo_signal",
+      "description": "Percentage Price Oscillator signal at entry",
+      "states": ["ppo_positive_cross", "ppo_positive", "ppo_negative"],
+      "logic": "ppo_positive_cross / ppo_positive / ppo_negative based on ppo_signal field"
+    },
+    {
+      "id": "N509",
+      "key": "coppock_curve_entry_perf",
+      "field": "coppock_curve",
+      "description": "Coppock Curve state at entry",
+      "states": ["coppock_rising_pos", "coppock_rising_neg", "coppock_falling"],
+      "logic": "coppock_rising_pos / coppock_rising_neg / coppock_falling based on coppock_curve field"
+    },
+    {
+      "id": "N510",
+      "key": "hull_ma_entry_perf",
+      "field": "hull_ma_signal",
+      "description": "Hull Moving Average signal at entry",
+      "states": ["hull_bullish", "hull_neutral", "hull_bearish"],
+      "logic": "hull_bullish / hull_bearish / hull_neutral based on hull_ma_signal field"
+    }
+  ]
+}

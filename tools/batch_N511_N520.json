@@ -1,0 +1,87 @@
+{
+  "batch": "N511-N520",
+  "neurons_total_before": 470,
+  "neurons_total_after": 480,
+  "neurons": [
+    {
+      "id": "N511",
+      "key": "market_internals_entry_perf",
+      "field": "market_internals",
+      "description": "Market internals quality at entry",
+      "states": ["strong_internals", "neutral_internals", "weak_internals"],
+      "logic": "strong_internals / weak_internals / neutral_internals based on market_internals field"
+    },
+    {
+      "id": "N512",
+      "key": "tape_speed_entry_perf",
+      "field": "tape_speed",
+      "description": "Tape speed (order flow pace) at entry",
+      "states": ["fast_tape", "normal_tape", "slow_tape"],
+      "logic": "fast_tape / slow_tape / normal_tape based on tape_speed field"
+    },
+    {
+      "id": "N513",
+      "key": "options_skew_entry_perf",
+      "field": "options_skew",
+      "description": "Options skew (call vs put bias) at entry",
+      "states": ["call_skew", "neutral_skew", "put_skew"],
+      "logic": "call_skew / put_skew / neutral_skew based on options_skew field"
+    },
+    {
+      "id": "N514",
+      "key": "dark_pool_entry_perf",
+      "field": "dark_pool_activity",
+      "description": "Dark pool activity level at entry",
+      "states": ["high_dark_pool", "normal_dark_pool", "low_dark_pool"],
+      "logic": "high_dark_pool / low_dark_pool / normal_dark_pool based on dark_pool_activity field"
+    },
+    {
+      "id": "N515",
+      "key": "institutional_ownership_perf",
+      "field": "inst_ownership",
+      "description": "Institutional ownership percentage at entry",
+      "states": ["high_inst_own", "medium_inst_own", "low_inst_own"],
+      "logic": "high_inst_own if inst_ownership > 70%, low_inst_own if inst_ownership < 20%, else medium_inst_own"
+    },
+    {
+      "id": "N516",
+      "key": "float_rotation_entry_perf",
+      "field": "float_rotation",
+      "description": "Float rotation speed at entry",
+      "states": ["fast_rotation", "normal_rotation", "slow_rotation"],
+      "logic": "fast_rotation / slow_rotation / normal_rotation based on float_rotation field"
+    },
+    {
+      "id": "N517",
+      "key": "news_sentiment_score_perf",
+      "field": "news_sentiment_score",
+      "description": "News sentiment score tier at entry",
+      "states": ["very_positive", "slightly_positive", "negative"],
+      "logic": "very_positive / negative / slightly_positive based on news_sentiment_score field"
+    },
+    {
+      "id": "N518",
+      "key": "social_momentum_entry_perf",
+      "field": "social_momentum",
+      "description": "Social media momentum at entry",
+      "states": ["viral_trending", "moderate_buzz", "no_social_signal"],
+      "logic": "viral_trending / moderate_buzz / no_social_signal based on social_momentum field"
+    },
+    {
+      "id": "N519",
+      "key": "earnings_surprise_entry_perf",
+      "field": "earnings_surprise",
+      "description": "Most recent earnings surprise magnitude at entry",
+      "states": ["big_beat", "small_beat", "miss"],
+      "logic": "big_beat / miss / small_beat based on earnings_surprise field"
+    },
+    {
+      "id": "N520",
+      "key": "guidance_revision_entry_perf",
+      "field": "guidance_direction",
+      "description": "Management guidance revision direction at entry",
+      "states": ["raised_guidance", "maintained", "lowered_guidance"],
+      "logic": "raised_guidance / lowered_guidance / maintained based on guidance_direction field"
+    }
+  ]
+}

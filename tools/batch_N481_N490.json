@@ -1,0 +1,97 @@
+{
+  "batch": "N481-N490",
+  "neurons_before": 440,
+  "neurons_after": 450,
+  "neurons": [
+    {
+      "id": "N481",
+      "name": "obv_slope_entry_perf",
+      "description": "OBV slope strength at entry — does strong OBV accumulation (>10% slope) produce better outcomes?",
+      "field": "obv_slope_pct",
+      "states": ["strong_obv_rise", "moderate_obv_rise", "obv_flat_fall"],
+      "thresholds": {"strong_obv_rise": "obv_slope_pct >= 10.0", "moderate_obv_rise": "obv_slope_pct >= 2.0", "obv_flat_fall": "obv_slope_pct < 2.0"},
+      "default": "obv_flat_fall"
+    },
+    {
+      "id": "N482",
+      "name": "macd_slope_entry_perf",
+      "description": "MACD histogram slope direction at entry — does rising MACD momentum predict better trade outcomes?",
+      "field": "macd_slope",
+      "states": ["rising_macd", "falling_macd"],
+      "thresholds": {"rising_macd": "macd_slope > 0", "falling_macd": "macd_slope <= 0"},
+      "default": "falling_macd"
+    },
+    {
+      "id": "N483",
+      "name": "price_vs_200ema_entry_perf",
+      "description": "Price gap above/below 200-day EMA at entry — are entries far above 200 EMA overextended vs near/below?",
+      "field": "price_vs_ema200",
+      "states": ["far_above_200", "near_200", "below_200"],
+      "thresholds": {"far_above_200": "price_vs_ema200 >= 10.0", "near_200": "0 <= price_vs_ema200 < 10.0", "below_200": "price_vs_ema200 < 0"},
+      "default": "near_200"
+    },
+    {
+      "id": "N484",
+      "name": "higher_lows_entry_perf",
+      "description": "Higher lows price structure at entry — do entries with confirmed ascending support (HH/HL) outperform?",
+      "field": "higher_lows",
+      "states": ["hh_hl", "no_hh_hl"],
+      "thresholds": {"hh_hl": "higher_lows == True", "no_hh_hl": "higher_lows == False"},
+      "default": "no_hh_hl"
+    },
+    {
+      "id": "N485",
+      "name": "adx_strength_entry_perf",
+      "description": "ADX trend strength at entry — do strong-trend entries (ADX>=30) vs weak/choppy markets produce better outcomes?",
+      "field": "adx",
+      "states": ["strong_trend", "moderate_trend", "weak_trend"],
+      "thresholds": {"strong_trend": "adx >= 30", "moderate_trend": "20 <= adx < 30", "weak_trend": "adx < 20"},
+      "default": "weak_trend"
+    },
+    {
+      "id": "N486",
+      "name": "lr_trend_quality_entry_perf",
+      "description": "Linear regression R² trend quality at entry — do high-linearity trend entries (R²>=0.75) outperform noisy/choppy entries?",
+      "field": "lr_r2",
+      "states": ["high_quality", "medium_quality", "low_quality"],
+      "thresholds": {"high_quality": "lr_r2 >= 0.75", "medium_quality": "0.40 <= lr_r2 < 0.75", "low_quality": "lr_r2 < 0.40"},
+      "default": "low_quality"
+    },
+    {
+      "id": "N487",
+      "name": "stoch_position_entry_perf",
+      "description": "Stochastic %K position at entry — do oversold entries (stoch<=25) recover better than overbought entries?",
+      "field": "stoch_k",
+      "states": ["stoch_oversold", "stoch_mid", "stoch_overbought"],
+      "thresholds": {"stoch_oversold": "stoch_k <= 25", "stoch_mid": "25 < stoch_k < 75", "stoch_overbought": "stoch_k >= 75"},
+      "default": "stoch_mid"
+    },
+    {
+      "id": "N488",
+      "name": "pe_ratio_tier_entry_perf",
+      "description": "P/E ratio valuation tier at entry — do value entries (low P/E) outperform growth entries (high P/E) in this bot's style?",
+      "field": "pe_ratio",
+      "states": ["no_pe", "low_pe", "fair_pe", "high_pe"],
+      "thresholds": {"no_pe": "pe_ratio <= 0", "low_pe": "0 < pe_ratio <= 20", "fair_pe": "20 < pe_ratio <= 50", "high_pe": "pe_ratio > 50"},
+      "default": "no_pe"
+    },
+    {
+      "id": "N489",
+      "name": "analyst_upgrade_entry_perf",
+      "description": "Analyst upgrade presence at entry — do stocks with fresh analyst upgrades (last 14 days) outperform those without?",
+      "field": "analyst_upgrade",
+      "states": ["upgraded", "not_upgraded"],
+      "thresholds": {"upgraded": "analyst_upgrade == True", "not_upgraded": "analyst_upgrade == False"},
+      "default": "not_upgraded"
+    },
+    {
+      "id": "N490",
+      "name": "short_squeeze_entry_perf",
+      "description": "Short squeeze potential at entry — do high short-float stocks (>=20%) with momentum produce better squeeze-driven gains?",
+      "field": "short_float",
+      "states": ["high_squeeze", "moderate_squeeze", "low_squeeze"],
+      "thresholds": {"high_squeeze": "short_float*100 >= 20.0", "moderate_squeeze": "10.0 <= short_float*100 < 20.0", "low_squeeze": "short_float*100 < 10.0"},
+      "default": "low_squeeze"
+    }
+  ]
+}

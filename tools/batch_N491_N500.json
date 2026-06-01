@@ -1,0 +1,87 @@
+{
+  "batch": "N491-N500",
+  "neurons_total_before": 450,
+  "neurons_total_after": 460,
+  "neurons": [
+    {
+      "id": "N491",
+      "key": "cci_level_entry_perf",
+      "field": "cci",
+      "description": "CCI commodity channel index level at entry",
+      "states": ["cci_oversold", "cci_neutral", "cci_overbought"],
+      "logic": "cci_oversold if cci < -100, cci_overbought if cci > 100, else cci_neutral"
+    },
+    {
+      "id": "N492",
+      "key": "williams_r_entry_perf",
+      "field": "williams_r",
+      "description": "Williams %R level at entry",
+      "states": ["wr_oversold", "wr_mid", "wr_overbought"],
+      "logic": "wr_oversold if williams_r < -80, wr_overbought if williams_r > -20, else wr_mid"
+    },
+    {
+      "id": "N493",
+      "key": "pivot_point_entry_perf",
+      "field": "pivot_position",
+      "description": "Price position relative to daily pivot point at entry",
+      "states": ["above_r1", "between_pivot_r1", "below_pivot"],
+      "logic": "above_r1 / between_pivot_r1 / below_pivot based on pivot_position field"
+    },
+    {
+      "id": "N494",
+      "key": "mfi_level_entry_perf",
+      "field": "mfi",
+      "description": "Money Flow Index level at entry",
+      "states": ["mfi_oversold", "mfi_neutral", "mfi_overbought"],
+      "logic": "mfi_oversold if mfi < 20, mfi_overbought if mfi > 80, else mfi_neutral"
+    },
+    {
+      "id": "N495",
+      "key": "roc_momentum_entry_perf",
+      "field": "roc",
+      "description": "Rate of Change momentum at entry",
+      "states": ["strong_roc", "moderate_roc", "negative_roc"],
+      "logic": "strong_roc if roc > 10, negative_roc if roc < 0, else moderate_roc"
+    },
+    {
+      "id": "N496",
+      "key": "keltner_position_entry_perf",
+      "field": "keltner_pos",
+      "description": "Keltner channel position at entry",
+      "states": ["above_upper", "within_channel", "below_lower"],
+      "logic": "above_upper / below_lower / within_channel based on keltner_pos field"
+    },
+    {
+      "id": "N497",
+      "key": "donchian_breakout_entry_perf",
+      "field": "donchian_breakout",
+      "description": "Donchian channel breakout state at entry",
+      "states": ["new_high_breakout", "new_low_breakout", "mid_channel"],
+      "logic": "new_high_breakout / new_low_breakout / mid_channel based on donchian_breakout field"
+    },
+    {
+      "id": "N498",
+      "key": "cmf_entry_perf",
+      "field": "cmf",
+      "description": "Chaikin Money Flow at entry",
+      "states": ["strong_buying_pressure", "neutral", "selling_pressure"],
+      "logic": "strong_buying_pressure if cmf > 0.2, selling_pressure if cmf < -0.2, else neutral"
+    },
+    {
+      "id": "N499",
+      "key": "dmi_cross_entry_perf",
+      "field": "dmi_cross",
+      "description": "DMI crossover signal at entry",
+      "states": ["dmi_bullish_cross", "dmi_bearish_cross", "no_cross"],
+      "logic": "dmi_bullish_cross / dmi_bearish_cross / no_cross based on dmi_cross field"
+    },
+    {
+      "id": "N500",
+      "key": "ichimoku_cloud_entry_perf",
+      "field": "ichimoku_pos",
+      "description": "Ichimoku cloud position at entry",
+      "states": ["above_cloud", "in_cloud", "below_cloud"],
+      "logic": "above_cloud / below_cloud / in_cloud based on ichimoku_pos field"
+    }
+  ]
+}
