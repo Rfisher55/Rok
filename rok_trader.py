@@ -7812,6 +7812,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N461: Opening Drive Quality Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n461 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n461_field = _buy_n461.get("opening_drive_quality_perf", "weak_open") if _buy_n461 else "weak_open"
+            _n461_perf = tlog.setdefault("opening_drive_quality_perf", {})
+            _n461p = _n461_perf.setdefault(_n461_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n461_field})
+            _n461p["total"] += 1; _n461p["total_pnl"] = round(_n461p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n461p["wins"] += 1
+            else:        _n461p["losses"] += 1
+            _n461p["win_rate"] = round(_n461p["wins"] / _n461p["total"] * 100, 1)
+            _n461p["avg_pnl"]  = round(_n461p["total_pnl"] / _n461p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N462: Price vs EMA50 Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n462 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n462_field = _buy_n462.get("price_vs_ema50_entry_perf", "just_above_50") if _buy_n462 else "just_above_50"
+            _n462_perf = tlog.setdefault("price_vs_ema50_entry_perf", {})
+            _n462p = _n462_perf.setdefault(_n462_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n462_field})
+            _n462p["total"] += 1; _n462p["total_pnl"] = round(_n462p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n462p["wins"] += 1
+            else:        _n462p["losses"] += 1
+            _n462p["win_rate"] = round(_n462p["wins"] / _n462p["total"] * 100, 1)
+            _n462p["avg_pnl"]  = round(_n462p["total_pnl"] / _n462p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N463: Consecutive Green Days Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n463 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n463_field = _buy_n463.get("consec_green_days_perf", "one_or_less") if _buy_n463 else "one_or_less"
+            _n463_perf = tlog.setdefault("consec_green_days_perf", {})
+            _n463p = _n463_perf.setdefault(_n463_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n463_field})
+            _n463p["total"] += 1; _n463p["total_pnl"] = round(_n463p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n463p["wins"] += 1
+            else:        _n463p["losses"] += 1
+            _n463p["win_rate"] = round(_n463p["wins"] / _n463p["total"] * 100, 1)
+            _n463p["avg_pnl"]  = round(_n463p["total_pnl"] / _n463p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N464: Weekly Trend Quality Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n464 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n464_field = _buy_n464.get("weekly_trend_quality_perf", "weekly_neutral") if _buy_n464 else "weekly_neutral"
+            _n464_perf = tlog.setdefault("weekly_trend_quality_perf", {})
+            _n464p = _n464_perf.setdefault(_n464_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n464_field})
+            _n464p["total"] += 1; _n464p["total_pnl"] = round(_n464p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n464p["wins"] += 1
+            else:        _n464p["losses"] += 1
+            _n464p["win_rate"] = round(_n464p["wins"] / _n464p["total"] * 100, 1)
+            _n464p["avg_pnl"]  = round(_n464p["total_pnl"] / _n464p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N465: Distance from 52-Week High Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n465 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n465_field = _buy_n465.get("dist_from_52w_high_perf", "mid_range") if _buy_n465 else "mid_range"
+            _n465_perf = tlog.setdefault("dist_from_52w_high_perf", {})
+            _n465p = _n465_perf.setdefault(_n465_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n465_field})
+            _n465p["total"] += 1; _n465p["total_pnl"] = round(_n465p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n465p["wins"] += 1
+            else:        _n465p["losses"] += 1
+            _n465p["win_rate"] = round(_n465p["wins"] / _n465p["total"] * 100, 1)
+            _n465p["avg_pnl"]  = round(_n465p["total_pnl"] / _n465p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N466: SPY vs Sector Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n466 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n466_field = _buy_n466.get("spy_vs_sector_entry_perf", "sector_neutral") if _buy_n466 else "sector_neutral"
+            _n466_perf = tlog.setdefault("spy_vs_sector_entry_perf", {})
+            _n466p = _n466_perf.setdefault(_n466_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n466_field})
+            _n466p["total"] += 1; _n466p["total_pnl"] = round(_n466p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n466p["wins"] += 1
+            else:        _n466p["losses"] += 1
+            _n466p["win_rate"] = round(_n466p["wins"] / _n466p["total"] * 100, 1)
+            _n466p["avg_pnl"]  = round(_n466p["total_pnl"] / _n466p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N467: ATR Expansion Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n467 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n467_field = _buy_n467.get("atr_vol_expansion_perf", "stable_vol") if _buy_n467 else "stable_vol"
+            _n467_perf = tlog.setdefault("atr_vol_expansion_perf", {})
+            _n467p = _n467_perf.setdefault(_n467_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n467_field})
+            _n467p["total"] += 1; _n467p["total_pnl"] = round(_n467p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n467p["wins"] += 1
+            else:        _n467p["losses"] += 1
+            _n467p["win_rate"] = round(_n467p["wins"] / _n467p["total"] * 100, 1)
+            _n467p["avg_pnl"]  = round(_n467p["total_pnl"] / _n467p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N468: Multi-Day Breakout Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n468 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n468_field = _buy_n468.get("multi_day_breakout_perf", "single_day") if _buy_n468 else "single_day"
+            _n468_perf = tlog.setdefault("multi_day_breakout_perf", {})
+            _n468p = _n468_perf.setdefault(_n468_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n468_field})
+            _n468p["total"] += 1; _n468p["total_pnl"] = round(_n468p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n468p["wins"] += 1
+            else:        _n468p["losses"] += 1
+            _n468p["win_rate"] = round(_n468p["wins"] / _n468p["total"] * 100, 1)
+            _n468p["avg_pnl"]  = round(_n468p["total_pnl"] / _n468p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N469: Inside Bar Resolution Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n469 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n469_field = _buy_n469.get("inside_bar_resolution_perf", "normal_bar") if _buy_n469 else "normal_bar"
+            _n469_perf = tlog.setdefault("inside_bar_resolution_perf", {})
+            _n469p = _n469_perf.setdefault(_n469_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n469_field})
+            _n469p["total"] += 1; _n469p["total_pnl"] = round(_n469p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n469p["wins"] += 1
+            else:        _n469p["losses"] += 1
+            _n469p["win_rate"] = round(_n469p["wins"] / _n469p["total"] * 100, 1)
+            _n469p["avg_pnl"]  = round(_n469p["total_pnl"] / _n469p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N470: Earnings Drift Days Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n470 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n470_field = _buy_n470.get("earnings_drift_days_perf", "stale_no_drift") if _buy_n470 else "stale_no_drift"
+            _n470_perf = tlog.setdefault("earnings_drift_days_perf", {})
+            _n470p = _n470_perf.setdefault(_n470_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n470_field})
+            _n470p["total"] += 1; _n470p["total_pnl"] = round(_n470p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n470p["wins"] += 1
+            else:        _n470p["losses"] += 1
+            _n470p["win_rate"] = round(_n470p["wins"] / _n470p["total"] * 100, 1)
+            _n470p["avg_pnl"]  = round(_n470p["total_pnl"] / _n470p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -14606,7 +14756,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 420
+            _n_total = tlog.get("neurons_total") or 430
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -14778,6 +14928,30 @@ def run():
                             _last_vol = float(_sym_vol.iloc[-1]) if not _sym_vol.empty else 0
                             _vol_rat  = _last_vol / _avg_vol if _avg_vol > 0 else 1
                             _is_held  = any(p.get("ticker") == _sym for p in _cm_positions)
+                            # Momentum score: combination of week change, volume, and trend
+                            _wd_score = 50  # start neutral
+                            # Week return signal (strongest factor)
+                            if _wk_chg >= 5:    _wd_score += 20
+                            elif _wk_chg >= 2:  _wd_score += 12
+                            elif _wk_chg >= 0.5: _wd_score += 6
+                            elif _wk_chg < -5:  _wd_score -= 20
+                            elif _wk_chg < -2:  _wd_score -= 12
+                            elif _wk_chg < 0:   _wd_score -= 5
+                            # Volume confirmation (buying vs selling pressure)
+                            if _vol_rat >= 2.0:  _wd_score += 10
+                            elif _vol_rat >= 1.5: _wd_score += 6
+                            elif _vol_rat >= 1.2: _wd_score += 3
+                            elif _vol_rat < 0.7:  _wd_score -= 5
+                            # Trend: last day vs rest of week
+                            if len(_sym_close) >= 3:
+                                _wk_mid = float(_sym_close.iloc[1])
+                                if _cur_px > _wk_mid > _wk_start:  _wd_score += 8  # accelerating
+                                elif _cur_px < _wk_mid < _wk_start: _wd_score -= 8  # decelerating
+                            # Held position bonus — we know it qualifies
+                            if _is_held: _wd_score += 5
+                            # Skip SPY/QQQ (ETFs don't need a score)
+                            if _sym in ("SPY","QQQ"): _wd_score = 50
+                            _wd_sector = SECTOR_MAP.get(_sym, "other")
                             _wd_watchlist.append({
                                 "ticker": _sym,
                                 "price": round(_cur_px, 2),
@@ -14785,15 +14959,62 @@ def run():
                                 "week_chg": round(_wk_chg, 2),
                                 "vol_ratio": round(_vol_rat, 2),
                                 "held": _is_held,
+                                "sector": _wd_sector,
+                                "score": min(100, max(0, _wd_score)),
                             })
                         except Exception:
                             continue
-                    _wd_watchlist.sort(key=lambda x: -abs(x.get("week_chg", 0)))
+                    # Sort by score descending, held positions first
+                    _wd_watchlist.sort(key=lambda x: (-(1 if x.get("held") else 0), -x.get("score", 50)))
                     tlog["weekend_watchlist"] = _wd_watchlist
                     tlog["weekend_watchlist_ts"] = _now_ts.isoformat()
                     logger.info(f"Weekend watchlist: {len(_wd_watchlist)} stocks analyzed")
                 except Exception as _wd_e:
                     logger.debug(f"Weekend watchlist scan: {_wd_e}")
+
+            # ── Portfolio Attribution Summary ─────────────────────────────
+            # Compute per-position and per-sector attribution for the dashboard
+            try:
+                if _cm_positions:
+                    _total_mval = sum(float(p.get("market_val", 0) or 0) for p in _cm_positions)
+                    _sector_pnl = {}
+                    _sector_mval = {}
+                    _attribution = []
+                    for _ap in _cm_positions:
+                        _a_sym  = _ap.get("ticker", "")
+                        _a_pnl  = float(_ap.get("pnl_usd", 0) or 0)
+                        _a_pct  = float(_ap.get("pnl_pct", 0) or 0)
+                        _a_mval = float(_ap.get("market_val", 0) or 0)
+                        _a_wt   = round(_a_mval / _total_mval * 100, 1) if _total_mval > 0 else 0
+                        _a_sec  = SECTOR_MAP.get(_a_sym, "other")
+                        _attribution.append({
+                            "ticker": _a_sym, "pnl_usd": round(_a_pnl, 2),
+                            "pnl_pct": round(_a_pct, 2), "weight": _a_wt,
+                            "sector": _a_sec,
+                        })
+                        _sector_pnl[_a_sec]  = _sector_pnl.get(_a_sec, 0) + _a_pnl
+                        _sector_mval[_a_sec] = _sector_mval.get(_a_sec, 0) + _a_mval
+                    _attribution.sort(key=lambda x: -abs(x["pnl_usd"]))
+                    _sector_attr = sorted(
+                        [{"sector": s, "pnl_usd": round(v, 2),
+                          "weight": round(_sector_mval.get(s, 0) / _total_mval * 100, 1) if _total_mval > 0 else 0}
+                         for s, v in _sector_pnl.items()],
+                        key=lambda x: -abs(x["pnl_usd"])
+                    )
+                    _total_pnl_usd = round(sum(_a["pnl_usd"] for _a in _attribution), 2)
+                    _best = max(_attribution, key=lambda x: x["pnl_usd"], default=None)
+                    _worst = min(_attribution, key=lambda x: x["pnl_usd"], default=None)
+                    tlog["portfolio_attribution"] = {
+                        "generated_at":  _now_ts.isoformat(),
+                        "total_pnl_usd": _total_pnl_usd,
+                        "total_market_val": round(_total_mval, 2),
+                        "best_performer": _best["ticker"] if _best else "",
+                        "worst_performer": _worst["ticker"] if _worst else "",
+                        "by_position": _attribution,
+                        "by_sector": _sector_attr,
+                    }
+            except Exception as _attr_e:
+                logger.debug(f"Portfolio attribution: {_attr_e}")
 
             # ── News headlines for held positions ─────────────────────────
             # Fetch recent headlines via yfinance and store in tlog for the dashboard
@@ -21804,6 +22025,117 @@ def run():
                     except Exception:
                         _n460_s = "weak_up"
                     _buy_signals_merged["daily_range_quality_perf"] = _n460_s
+                    # N461: opening drive quality at entry
+                    try:
+                        _n461_orb = bool(live.get(tk, {}).get('orb_breakout', False))
+                        _n461_gah = bool(live.get(tk, {}).get('gap_and_hold', False))
+                        _n461_s = "strong_open" if (_n461_orb or _n461_gah) else "weak_open"
+                    except Exception:
+                        _n461_s = "weak_open"
+                    _buy_signals_merged["opening_drive_quality_perf"] = _n461_s
+                    # N462: price vs EMA50 at entry
+                    try:
+                        _n462_dist = float(live.get(tk, {}).get('price_vs_ema50', 0) or 0)
+                        if _n462_dist > 10:
+                            _n462_s = "extended_above_50"
+                        elif _n462_dist >= 0:
+                            _n462_s = "just_above_50"
+                        else:
+                            _n462_s = "below_50"
+                    except Exception:
+                        _n462_s = "just_above_50"
+                    _buy_signals_merged["price_vs_ema50_entry_perf"] = _n462_s
+                    # N463: consecutive green days at entry
+                    try:
+                        _n463_cg = int(live.get(tk, {}).get('consec_green', 0) or 0)
+                        if _n463_cg >= 3:
+                            _n463_s = "strong_run_3plus"
+                        elif _n463_cg == 2:
+                            _n463_s = "two_green"
+                        else:
+                            _n463_s = "one_or_less"
+                    except Exception:
+                        _n463_s = "one_or_less"
+                    _buy_signals_merged["consec_green_days_perf"] = _n463_s
+                    # N464: weekly trend quality at entry
+                    try:
+                        _n464_rs = float(live.get(tk, {}).get('rs63', 0) or 0)
+                        if _n464_rs > 1.2:
+                            _n464_s = "weekly_strong"
+                        elif _n464_rs >= 0.8:
+                            _n464_s = "weekly_neutral"
+                        else:
+                            _n464_s = "weekly_weak"
+                    except Exception:
+                        _n464_s = "weekly_neutral"
+                    _buy_signals_merged["weekly_trend_quality_perf"] = _n464_s
+                    # N465: distance from 52-week high at entry
+                    try:
+                        _n465_d52 = float(live.get(tk, {}).get('dist_from_52w_high', 50) or 50)
+                        if _n465_d52 < 5:
+                            _n465_s = "near_high"
+                        elif _n465_d52 <= 20:
+                            _n465_s = "mid_range"
+                        else:
+                            _n465_s = "deep_correction"
+                    except Exception:
+                        _n465_s = "mid_range"
+                    _buy_signals_merged["dist_from_52w_high_perf"] = _n465_s
+                    # N466: SPY vs sector at entry
+                    try:
+                        _n466_sc = float(live.get(tk, {}).get('sector_5d_chg', 0) or 0)
+                        if _n466_sc > 2:
+                            _n466_s = "sector_hot"
+                        elif _n466_sc >= 0:
+                            _n466_s = "sector_neutral"
+                        else:
+                            _n466_s = "sector_cold"
+                    except Exception:
+                        _n466_s = "sector_neutral"
+                    _buy_signals_merged["spy_vs_sector_entry_perf"] = _n466_s
+                    # N467: ATR expansion at entry
+                    try:
+                        _n467_vr = float(live.get(tk, {}).get('vol_ratio', 1.0) or 1.0)
+                        if _n467_vr > 1.5:
+                            _n467_s = "atr_expanding"
+                        elif _n467_vr >= 0.8:
+                            _n467_s = "stable_vol"
+                        else:
+                            _n467_s = "contracting"
+                    except Exception:
+                        _n467_s = "stable_vol"
+                    _buy_signals_merged["atr_vol_expansion_perf"] = _n467_s
+                    # N468: multi-day breakout at entry
+                    try:
+                        _n468_pc = int(live.get(tk, {}).get('persist_count', 0) or 0)
+                        if _n468_pc >= 3:
+                            _n468_s = "multi_day_break"
+                        elif _n468_pc >= 1:
+                            _n468_s = "emerging"
+                        else:
+                            _n468_s = "single_day"
+                    except Exception:
+                        _n468_s = "single_day"
+                    _buy_signals_merged["multi_day_breakout_perf"] = _n468_s
+                    # N469: inside bar resolution at entry
+                    try:
+                        _n469_ib = bool(live.get(tk, {}).get('inside_bar', False))
+                        _n469_s = "inside_bar_setup" if _n469_ib else "normal_bar"
+                    except Exception:
+                        _n469_s = "normal_bar"
+                    _buy_signals_merged["inside_bar_resolution_perf"] = _n469_s
+                    # N470: earnings drift at entry
+                    try:
+                        _n470_dse = int(live.get(tk, {}).get('days_since_earnings', 30) or 30)
+                        if 1 <= _n470_dse <= 10:
+                            _n470_s = "early_drift"
+                        elif _n470_dse <= 30:
+                            _n470_s = "mid_drift"
+                        else:
+                            _n470_s = "stale_no_drift"
+                    except Exception:
+                        _n470_s = "stale_no_drift"
+                    _buy_signals_merged["earnings_drift_days_perf"] = _n470_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -28062,6 +28394,86 @@ def run():
         if _n460_list:
             _learn_log.append(f"N460 Daily Range Quality: quality_up_day={_a_n460['win_rate']:.0f}% down_day={_b_n460['win_rate']:.0f}%WR")
 
+        # ── N461: opening drive quality tuner ────────────────────
+        _n461_raw = tlog.get("opening_drive_quality_perf", {})
+        _n461_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n461_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n461 = next((s for s in _n461_list if s.get("state")=="strong_open"), _n461_list[0] if _n461_list else {"win_rate":50})
+        _b_n461 = next((s for s in _n461_list if s.get("state")=="weak_open"), _n461_list[-1] if _n461_list else {"win_rate":50})
+        if _n461_list:
+            _learn_log.append(f"N461 Opening Drive Quality: strong_open={_a_n461['win_rate']:.0f}% weak_open={_b_n461['win_rate']:.0f}%WR")
+
+        # ── N462: price vs EMA50 entry tuner ────────────────────
+        _n462_raw = tlog.get("price_vs_ema50_entry_perf", {})
+        _n462_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n462_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n462 = next((s for s in _n462_list if s.get("state")=="just_above_50"), _n462_list[0] if _n462_list else {"win_rate":50})
+        _b_n462 = next((s for s in _n462_list if s.get("state")=="below_50"), _n462_list[-1] if _n462_list else {"win_rate":50})
+        if _n462_list:
+            _learn_log.append(f"N462 Price vs EMA50 Entry: just_above_50={_a_n462['win_rate']:.0f}% below_50={_b_n462['win_rate']:.0f}%WR")
+
+        # ── N463: consecutive green days tuner ────────────────────
+        _n463_raw = tlog.get("consec_green_days_perf", {})
+        _n463_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n463_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n463 = next((s for s in _n463_list if s.get("state")=="strong_run_3plus"), _n463_list[0] if _n463_list else {"win_rate":50})
+        _b_n463 = next((s for s in _n463_list if s.get("state")=="one_or_less"), _n463_list[-1] if _n463_list else {"win_rate":50})
+        if _n463_list:
+            _learn_log.append(f"N463 Consecutive Green Days: strong_run_3plus={_a_n463['win_rate']:.0f}% one_or_less={_b_n463['win_rate']:.0f}%WR")
+
+        # ── N464: weekly trend quality tuner ────────────────────
+        _n464_raw = tlog.get("weekly_trend_quality_perf", {})
+        _n464_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n464_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n464 = next((s for s in _n464_list if s.get("state")=="weekly_strong"), _n464_list[0] if _n464_list else {"win_rate":50})
+        _b_n464 = next((s for s in _n464_list if s.get("state")=="weekly_weak"), _n464_list[-1] if _n464_list else {"win_rate":50})
+        if _n464_list:
+            _learn_log.append(f"N464 Weekly Trend Quality: weekly_strong={_a_n464['win_rate']:.0f}% weekly_weak={_b_n464['win_rate']:.0f}%WR")
+
+        # ── N465: distance from 52-week high tuner ────────────────────
+        _n465_raw = tlog.get("dist_from_52w_high_perf", {})
+        _n465_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n465_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n465 = next((s for s in _n465_list if s.get("state")=="near_high"), _n465_list[0] if _n465_list else {"win_rate":50})
+        _b_n465 = next((s for s in _n465_list if s.get("state")=="deep_correction"), _n465_list[-1] if _n465_list else {"win_rate":50})
+        if _n465_list:
+            _learn_log.append(f"N465 Distance from 52W High: near_high={_a_n465['win_rate']:.0f}% deep_correction={_b_n465['win_rate']:.0f}%WR")
+
+        # ── N466: SPY vs sector entry tuner ────────────────────
+        _n466_raw = tlog.get("spy_vs_sector_entry_perf", {})
+        _n466_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n466_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n466 = next((s for s in _n466_list if s.get("state")=="sector_hot"), _n466_list[0] if _n466_list else {"win_rate":50})
+        _b_n466 = next((s for s in _n466_list if s.get("state")=="sector_cold"), _n466_list[-1] if _n466_list else {"win_rate":50})
+        if _n466_list:
+            _learn_log.append(f"N466 SPY vs Sector Entry: sector_hot={_a_n466['win_rate']:.0f}% sector_cold={_b_n466['win_rate']:.0f}%WR")
+
+        # ── N467: ATR expansion entry tuner ────────────────────
+        _n467_raw = tlog.get("atr_expansion_entry_perf", {})
+        _n467_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n467_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n467 = next((s for s in _n467_list if s.get("state")=="atr_expanding"), _n467_list[0] if _n467_list else {"win_rate":50})
+        _b_n467 = next((s for s in _n467_list if s.get("state")=="contracting"), _n467_list[-1] if _n467_list else {"win_rate":50})
+        if _n467_list:
+            _learn_log.append(f"N467 ATR Expansion Entry: atr_expanding={_a_n467['win_rate']:.0f}% contracting={_b_n467['win_rate']:.0f}%WR")
+
+        # ── N468: multi-day breakout tuner ────────────────────
+        _n468_raw = tlog.get("multi_day_breakout_perf", {})
+        _n468_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n468_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n468 = next((s for s in _n468_list if s.get("state")=="multi_day_break"), _n468_list[0] if _n468_list else {"win_rate":50})
+        _b_n468 = next((s for s in _n468_list if s.get("state")=="single_day"), _n468_list[-1] if _n468_list else {"win_rate":50})
+        if _n468_list:
+            _learn_log.append(f"N468 Multi-Day Breakout: multi_day_break={_a_n468['win_rate']:.0f}% single_day={_b_n468['win_rate']:.0f}%WR")
+
+        # ── N469: inside bar resolution tuner ────────────────────
+        _n469_raw = tlog.get("inside_bar_resolution_perf", {})
+        _n469_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n469_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n469 = next((s for s in _n469_list if s.get("state")=="inside_bar_setup"), _n469_list[0] if _n469_list else {"win_rate":50})
+        _b_n469 = next((s for s in _n469_list if s.get("state")=="normal_bar"), _n469_list[-1] if _n469_list else {"win_rate":50})
+        if _n469_list:
+            _learn_log.append(f"N469 Inside Bar Resolution: inside_bar_setup={_a_n469['win_rate']:.0f}% normal_bar={_b_n469['win_rate']:.0f}%WR")
+
+        # ── N470: earnings drift days tuner ────────────────────
+        _n470_raw = tlog.get("earnings_drift_days_perf", {})
+        _n470_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n470_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n470 = next((s for s in _n470_list if s.get("state")=="early_drift"), _n470_list[0] if _n470_list else {"win_rate":50})
+        _b_n470 = next((s for s in _n470_list if s.get("state")=="stale_no_drift"), _n470_list[-1] if _n470_list else {"win_rate":50})
+        if _n470_list:
+            _learn_log.append(f"N470 Earnings Drift: early_drift={_a_n470['win_rate']:.0f}% stale_no_drift={_b_n470['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -28809,6 +29221,16 @@ def run():
             "relative_volume_entry_perf": _n458_list,  # N458: relative volume at entry vs outcome
             "vwap_position_entry_perf": _n459_list,  # N459: VWAP position at entry vs outcome
             "daily_range_quality_perf": _n460_list,  # N460: daily range quality at entry vs outcome
+            "opening_drive_quality_perf": _n461_list,  # N461: opening drive quality at entry vs outcome
+            "price_vs_ema50_entry_perf": _n462_list,  # N462: price vs EMA50 at entry vs outcome
+            "consec_green_days_perf": _n463_list,  # N463: consecutive green days at entry vs outcome
+            "weekly_trend_quality_perf": _n464_list,  # N464: weekly trend quality at entry vs outcome
+            "dist_from_52w_high_perf": _n465_list,  # N465: distance from 52-week high at entry vs outcome
+            "spy_vs_sector_entry_perf": _n466_list,  # N466: SPY vs sector at entry vs outcome
+            "atr_expansion_entry_perf": _n467_list,  # N467: ATR expansion at entry vs outcome
+            "multi_day_breakout_perf": _n468_list,  # N468: multi-day breakout at entry vs outcome
+            "inside_bar_resolution_perf": _n469_list,  # N469: inside bar resolution at entry vs outcome
+            "earnings_drift_days_perf": _n470_list,  # N470: earnings drift days at entry vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -29094,6 +29516,11 @@ def run():
             "price_discovery_perf", "catalyst_freshness_perf",
             "options_unusualness_perf", "relative_volume_entry_perf",
             "vwap_position_entry_perf", "daily_range_quality_perf",
+            "opening_drive_quality_perf", "price_vs_ema50_entry_perf",
+            "consec_green_days_perf", "weekly_trend_quality_perf",
+            "dist_from_52w_high_perf", "spy_vs_sector_entry_perf",
+            "atr_expansion_entry_perf", "multi_day_breakout_perf",
+            "inside_bar_resolution_perf", "earnings_drift_days_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -29101,9 +29528,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 420              # total tracked neuron dimensions (N103-N460 complete)
+        tlog["neurons_total"]     = 430              # total tracked neuron dimensions (N103-N470 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/420 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/430 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

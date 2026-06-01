@@ -475,6 +475,16 @@ def _build_weekly_bot_report(docs_dir):
         "relative_volume_entry_perf":     "N458 Relative Volume Entry",
         "vwap_position_entry_perf":       "N459 VWAP Position Entry",
         "daily_range_quality_perf":       "N460 Daily Range Quality",
+        "opening_drive_quality_perf":     "N461 Opening Drive Quality",
+        "price_vs_ema50_entry_perf":      "N462 Price vs EMA50 Entry",
+        "consec_green_days_perf":         "N463 Consecutive Green Days",
+        "weekly_trend_quality_perf":      "N464 Weekly Trend Quality",
+        "dist_from_52w_high_perf":        "N465 Distance from 52W High",
+        "spy_vs_sector_entry_perf":       "N466 SPY vs Sector Entry",
+        "atr_expansion_entry_perf":       "N467 ATR Expansion Entry",
+        "multi_day_breakout_perf":        "N468 Multi-Day Breakout",
+        "inside_bar_resolution_perf":     "N469 Inside Bar Resolution",
+        "earnings_drift_days_perf":       "N470 Earnings Drift Days",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -718,15 +728,17 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 410),
+                "neurons_total":    td.get("neurons_total", 430),
                 "last_decision":    td.get("last_decision", ""),
                 "next_run_utc":     td.get("next_run_utc", ""),
                 "bot_brain_summary": td.get("bot_brain_summary", ""),
                 "regime_name":      td.get("regime", {}).get("regime", "neutral"),
                 "vix":              td.get("regime", {}).get("vix", 0),
-                "market_open_plan": td.get("market_open_plan", {}),
-                "next_market_open": td.get("next_market_open", ""),
-                "position_news":    td.get("position_news", {}),
+                "market_open_plan":        td.get("market_open_plan", {}),
+                "next_market_open":         td.get("next_market_open", ""),
+                "position_news":            td.get("position_news", {}),
+                "portfolio_attribution":    td.get("portfolio_attribution", {}),
+                "weekend_watchlist_scored": [w for w in td.get("weekend_watchlist", []) if w.get("score")],
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:

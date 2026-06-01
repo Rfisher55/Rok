@@ -1,0 +1,102 @@
+[
+  {
+    "id": "N461",
+    "key": "opening_drive_quality_perf",
+    "name": "Opening Drive Quality",
+    "description": "Was the opening 15-min candle a quality drive or weak? Uses orb_breakout and gap_and_hold from live data.",
+    "live_fields": ["orb_breakout", "gap_and_hold"],
+    "states": ["strong_open", "weak_open"],
+    "state_logic": "strong_open if orb_breakout OR gap_and_hold is True, otherwise weak_open",
+    "default_state": "weak_open"
+  },
+  {
+    "id": "N462",
+    "key": "price_vs_ema50_entry_perf",
+    "name": "Price vs EMA50 Entry",
+    "description": "Price distance from EMA50 at entry (% above/below). Uses price_vs_ema50 from live data.",
+    "live_field": "price_vs_ema50",
+    "states": ["extended_above_50", "just_above_50", "below_50"],
+    "state_logic": "extended_above_50 if price_vs_ema50 > 10, below_50 if < 0, otherwise just_above_50",
+    "default_state": "just_above_50"
+  },
+  {
+    "id": "N463",
+    "key": "consec_green_days_perf",
+    "name": "Consecutive Green Days",
+    "description": "Number of consecutive up days before entry. Uses consec_green from live data.",
+    "live_field": "consec_green",
+    "states": ["strong_run_3plus", "two_green", "one_or_less"],
+    "state_logic": "strong_run_3plus if consec_green >= 3, two_green if == 2, otherwise one_or_less",
+    "default_state": "one_or_less"
+  },
+  {
+    "id": "N464",
+    "key": "weekly_trend_quality_perf",
+    "name": "Weekly Trend Quality",
+    "description": "Is the weekly chart in an uptrend? Uses rs63 (63-day RS) as proxy from live data.",
+    "live_field": "rs63",
+    "states": ["weekly_strong", "weekly_neutral", "weekly_weak"],
+    "state_logic": "weekly_strong if rs63 > 1.2, weekly_weak if < 0.8, otherwise weekly_neutral",
+    "default_state": "weekly_neutral"
+  },
+  {
+    "id": "N465",
+    "key": "dist_from_52w_high_perf",
+    "name": "Distance from 52-Week High",
+    "description": "How far below the 52-week high is the stock? Uses dist_from_52w_high (%) from live data.",
+    "live_field": "dist_from_52w_high",
+    "states": ["near_high", "mid_range", "deep_correction"],
+    "state_logic": "near_high if dist < 5%, deep_correction if > 20%, otherwise mid_range",
+    "default_state": "mid_range"
+  },
+  {
+    "id": "N466",
+    "key": "spy_vs_sector_entry_perf",
+    "name": "SPY vs Sector Entry",
+    "description": "Is the stock's sector hot or cold at entry? Uses sector_5d_chg (%) from live data.",
+    "live_field": "sector_5d_chg",
+    "states": ["sector_hot", "sector_neutral", "sector_cold"],
+    "state_logic": "sector_hot if sector_5d_chg > 2, sector_cold if < 0, otherwise sector_neutral",
+    "default_state": "sector_neutral"
+  },
+  {
+    "id": "N467",
+    "key": "atr_expansion_entry_perf",
+    "name": "ATR Expansion Entry",
+    "description": "Is Average True Range expanding at entry (vol_ratio proxy)? Uses vol_ratio from live data.",
+    "live_field": "vol_ratio",
+    "states": ["atr_expanding", "stable_vol", "contracting"],
+    "state_logic": "atr_expanding if vol_ratio > 1.5, contracting if < 0.8, otherwise stable_vol",
+    "default_state": "stable_vol"
+  },
+  {
+    "id": "N468",
+    "key": "multi_day_breakout_perf",
+    "name": "Multi-Day Breakout",
+    "description": "Is this a multi-day breakout building over several days? Uses persist_count from live data.",
+    "live_field": "persist_count",
+    "states": ["multi_day_break", "emerging", "single_day"],
+    "state_logic": "multi_day_break if persist_count >= 3, emerging if 1-2, otherwise single_day",
+    "default_state": "single_day"
+  },
+  {
+    "id": "N469",
+    "key": "inside_bar_resolution_perf",
+    "name": "Inside Bar Resolution",
+    "description": "Was there an inside bar followed by expansion at entry? Uses inside_bar bool from live data.",
+    "live_field": "inside_bar",
+    "states": ["inside_bar_setup", "normal_bar"],
+    "state_logic": "inside_bar_setup if inside_bar is True, otherwise normal_bar",
+    "default_state": "normal_bar"
+  },
+  {
+    "id": "N470",
+    "key": "earnings_drift_days_perf",
+    "name": "Earnings Drift Days",
+    "description": "Post-earnings momentum drift: how many days since earnings catalyst. Uses days_since_earnings from live data.",
+    "live_field": "days_since_earnings",
+    "states": ["early_drift", "mid_drift", "stale_no_drift"],
+    "state_logic": "early_drift if 1-10 days since earnings, mid_drift if 10-30, otherwise stale_no_drift",
+    "default_state": "stale_no_drift"
+  }
+]
