@@ -47,10 +47,10 @@ STOP_LOSS_PCT      = 0.07    # hard stop: sell if down 7%
 PROFIT_TARGET_PCT  = 0.20    # take full profit at +20%
 PARTIAL_PROFIT_PCT = 0.10    # take half profit at +10%
 TRAILING_STOP_PCT  = 0.05    # trailing stop: sell if falls 5% from peak
-MIN_BUY_SCORE      = 18      # minimum composite score to enter long
+MIN_BUY_SCORE      = 15      # minimum composite score to enter long
 MIN_SHORT_SCORE    = 18      # min bearish score to enter short
 MAX_HOLD_DAYS      = 5       # exit stale positions after N days
-MAX_SECTOR_LONGS   = 3       # max long positions per sector
+MAX_SECTOR_LONGS   = 4       # max long positions per sector
 ENABLE_SHORTS      = True    # enable short selling in bear/neutral regime
 VIX_HIGH_THRESH    = 30      # reduce position sizes when VIX above this
 VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
@@ -131,7 +131,9 @@ SECTOR_MAP = {
     "RTX":"industrial","GE":"industrial","UPS":"industrial","ETN":"industrial",
     "LMT":"industrial","NOC":"industrial","ACN":"industrial",
     # Crypto / Speculative
-    "COIN":"crypto","MSTR":"crypto","SOFI":"crypto","IBIT":"crypto","RIVN":"crypto",
+    "COIN":"crypto","MSTR":"crypto","IBIT":"crypto","BTBT":"crypto","CLSK":"crypto",
+    # Fintech
+    "SOFI":"fintech","AFRM":"fintech","UPST":"fintech","LC":"fintech","OPEN":"fintech",
     # Utilities
     "NEE":"utilities","DUK":"utilities","SO":"utilities","D":"utilities",
     "AEP":"utilities","EXC":"utilities","SRE":"utilities","PCG":"utilities",
@@ -20746,8 +20748,8 @@ def run():
         _et_hour, _et_min = _now_et.hour - 4, _now_et.minute  # rough UTC-4
     _minutes_since_open = (_et_hour - 9) * 60 + (_et_min - 30) if market_open else 999
     _minutes_to_close   = (16 * 60) - (_et_hour * 60 + _et_min) if market_open else 999
-    # Avoid new buys in first 10 min (wild open volatility) or last 20 min (end-of-day moves)
-    _open_guard  = market_open and _minutes_since_open < 10
+    # Avoid new buys in first 3 min (initial price discovery) or last 20 min (end-of-day moves)
+    _open_guard  = market_open and _minutes_since_open < 3
     _close_guard = market_open and _minutes_to_close < 20
     # Market close cleanup: last 8 min before close, liquidate losing positions > -3%
     _close_cleanup = market_open and _minutes_to_close < 8
