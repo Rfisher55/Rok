@@ -18583,10 +18583,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
 
     now_utc = datetime.now(timezone.utc)
     crypto_data = fetch_crypto_data()
-    if not crypto_data:
-        return buying_power
 
-    # Get current crypto positions from Alpaca
+    # Get current crypto positions from Alpaca (independent of data fetch success)
     try:
         all_pos   = alpaca_get("/v2/positions")
         held_crypto = {}
@@ -18685,6 +18683,10 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
 
     # ── Buy crypto ──────────────────────────────────────────────────────
     open_slots = MAX_CRYPTO_POS - len(held_crypto)
+    # Skip buying if no market data, but always process sells above
+    if not crypto_data:
+        logger.warning("CRYPTO: no market data — skipping new buys, sells already processed above")
+        return buying_power
     if open_slots <= 0:
         return buying_power
 
