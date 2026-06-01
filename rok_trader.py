@@ -10833,6 +10833,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N661: Trend Age Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n661 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n661_field = _buy_n661.get("trend_age_perf", "established_trend") if _buy_n661 else "established_trend"
+            _n661_perf = tlog.setdefault("trend_age_perf", {})
+            _n661p = _n661_perf.setdefault(_n661_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n661_field})
+            _n661p["total"] += 1; _n661p["total_pnl"] = round(_n661p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n661p["wins"] += 1
+            else:        _n661p["losses"] += 1
+            _n661p["win_rate"] = round(_n661p["wins"] / _n661p["total"] * 100, 1)
+            _n661p["avg_pnl"]  = round(_n661p["total_pnl"] / _n661p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N662: Reversal Candle Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n662 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n662_field = _buy_n662.get("reversal_candle_perf", "no_reversal_pattern") if _buy_n662 else "no_reversal_pattern"
+            _n662_perf = tlog.setdefault("reversal_candle_perf", {})
+            _n662p = _n662_perf.setdefault(_n662_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n662_field})
+            _n662p["total"] += 1; _n662p["total_pnl"] = round(_n662p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n662p["wins"] += 1
+            else:        _n662p["losses"] += 1
+            _n662p["win_rate"] = round(_n662p["wins"] / _n662p["total"] * 100, 1)
+            _n662p["avg_pnl"]  = round(_n662p["total_pnl"] / _n662p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N663: Weekly Momentum Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n663 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n663_field = _buy_n663.get("weekly_momentum_perf", "flat_weekly") if _buy_n663 else "flat_weekly"
+            _n663_perf = tlog.setdefault("weekly_momentum_perf", {})
+            _n663p = _n663_perf.setdefault(_n663_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n663_field})
+            _n663p["total"] += 1; _n663p["total_pnl"] = round(_n663p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n663p["wins"] += 1
+            else:        _n663p["losses"] += 1
+            _n663p["win_rate"] = round(_n663p["wins"] / _n663p["total"] * 100, 1)
+            _n663p["avg_pnl"]  = round(_n663p["total_pnl"] / _n663p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N664: Relative Strength Rank Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n664 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n664_field = _buy_n664.get("relative_strength_rank_perf", "average_rs") if _buy_n664 else "average_rs"
+            _n664_perf = tlog.setdefault("relative_strength_rank_perf", {})
+            _n664p = _n664_perf.setdefault(_n664_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n664_field})
+            _n664p["total"] += 1; _n664p["total_pnl"] = round(_n664p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n664p["wins"] += 1
+            else:        _n664p["losses"] += 1
+            _n664p["win_rate"] = round(_n664p["wins"] / _n664p["total"] * 100, 1)
+            _n664p["avg_pnl"]  = round(_n664p["total_pnl"] / _n664p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N665: Catalyst Freshness Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n665 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n665_field = _buy_n665.get("catalyst_freshness_perf", "no_recent_catalyst") if _buy_n665 else "no_recent_catalyst"
+            _n665_perf = tlog.setdefault("catalyst_freshness_perf", {})
+            _n665p = _n665_perf.setdefault(_n665_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n665_field})
+            _n665p["total"] += 1; _n665p["total_pnl"] = round(_n665p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n665p["wins"] += 1
+            else:        _n665p["losses"] += 1
+            _n665p["win_rate"] = round(_n665p["wins"] / _n665p["total"] * 100, 1)
+            _n665p["avg_pnl"]  = round(_n665p["total_pnl"] / _n665p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N666: Institutional Accumulation Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n666 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n666_field = _buy_n666.get("institutional_accumulation_perf", "neutral_flow") if _buy_n666 else "neutral_flow"
+            _n666_perf = tlog.setdefault("institutional_accumulation_perf", {})
+            _n666p = _n666_perf.setdefault(_n666_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n666_field})
+            _n666p["total"] += 1; _n666p["total_pnl"] = round(_n666p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n666p["wins"] += 1
+            else:        _n666p["losses"] += 1
+            _n666p["win_rate"] = round(_n666p["wins"] / _n666p["total"] * 100, 1)
+            _n666p["avg_pnl"]  = round(_n666p["total_pnl"] / _n666p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N667: Breakout Volume Confirmation Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n667 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n667_field = _buy_n667.get("breakout_volume_confirmation_perf", "no_breakout") if _buy_n667 else "no_breakout"
+            _n667_perf = tlog.setdefault("breakout_volume_confirmation_perf", {})
+            _n667p = _n667_perf.setdefault(_n667_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n667_field})
+            _n667p["total"] += 1; _n667p["total_pnl"] = round(_n667p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n667p["wins"] += 1
+            else:        _n667p["losses"] += 1
+            _n667p["win_rate"] = round(_n667p["wins"] / _n667p["total"] * 100, 1)
+            _n667p["avg_pnl"]  = round(_n667p["total_pnl"] / _n667p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N668: ADX Trend Strength Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n668 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n668_field = _buy_n668.get("adx_trend_strength_perf", "no_trend") if _buy_n668 else "no_trend"
+            _n668_perf = tlog.setdefault("adx_trend_strength_perf", {})
+            _n668p = _n668_perf.setdefault(_n668_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n668_field})
+            _n668p["total"] += 1; _n668p["total_pnl"] = round(_n668p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n668p["wins"] += 1
+            else:        _n668p["losses"] += 1
+            _n668p["win_rate"] = round(_n668p["wins"] / _n668p["total"] * 100, 1)
+            _n668p["avg_pnl"]  = round(_n668p["total_pnl"] / _n668p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N669: Risk Reward Ratio Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n669 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n669_field = _buy_n669.get("risk_reward_ratio_perf", "poor_rr") if _buy_n669 else "poor_rr"
+            _n669_perf = tlog.setdefault("risk_reward_ratio_perf", {})
+            _n669p = _n669_perf.setdefault(_n669_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n669_field})
+            _n669p["total"] += 1; _n669p["total_pnl"] = round(_n669p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n669p["wins"] += 1
+            else:        _n669p["losses"] += 1
+            _n669p["win_rate"] = round(_n669p["wins"] / _n669p["total"] * 100, 1)
+            _n669p["avg_pnl"]  = round(_n669p["total_pnl"] / _n669p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N670: Sector ETF Momentum Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n670 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n670_field = _buy_n670.get("sector_etf_momentum_perf", "sector_inline") if _buy_n670 else "sector_inline"
+            _n670_perf = tlog.setdefault("sector_etf_momentum_perf", {})
+            _n670p = _n670_perf.setdefault(_n670_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n670_field})
+            _n670p["total"] += 1; _n670p["total_pnl"] = round(_n670p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n670p["wins"] += 1
+            else:        _n670p["losses"] += 1
+            _n670p["win_rate"] = round(_n670p["wins"] / _n670p["total"] * 100, 1)
+            _n670p["avg_pnl"]  = round(_n670p["total_pnl"] / _n670p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -18840,6 +18990,31 @@ def run():
                 except Exception as e:
                     logger.warning(f"Partial sell failed {sym}: {e}")
                 continue
+
+            # ── Second partial exit: sell another quarter at 2× first target ──
+            # After the first half is locked, the remaining half runs to 2× the first
+            # target. Then sell half of that (a quarter of original), keeping a quarter
+            # as a free-ride into a potential multi-bagger.
+            _second_out = peaks[sym].get("second_out", False)
+            if half_out and not _second_out:
+                _second_target = round(_partial_target * 2.0, 1)
+                _second_target = max(_second_target, 18.0)
+                _quarter_qty   = round(qty / 2, 4)
+                _quarter_val   = current * _quarter_qty
+                if pnl_pct >= _second_target and _quarter_val >= 50:
+                    logger.info(f"SELL_QUARTER {sym} — 2nd partial at {pnl_pct:+.1f}% (target={_second_target:.0f}%)")
+                    try:
+                        alpaca_post("/v2/orders", {
+                            "symbol": sym, "qty": str(_quarter_qty),
+                            "side": "sell", "type": "market", "time_in_force": "day",
+                        })
+                        log_trade(tlog, "SELL_HALF", sym, current, _quarter_qty,
+                                  pnl=pnl_pct, reason=f"2nd partial profit ({pnl_pct:+.1f}%, target={_second_target:.0f}%)")
+                        peaks[sym]["second_out"] = True
+                        made_trades = True
+                    except Exception as _se2:
+                        logger.warning(f"2nd partial sell failed {sym}: {_se2}")
+                    continue
 
             # ── Catastrophic news exit: immediate full exit on fraud/SEC/bankruptcy ──
             # These keywords indicate terminal risk — no stop-loss protects against halts.
@@ -27677,6 +27852,152 @@ def run():
                     except Exception:
                         _n650_s = "normal_premarket"
                     _buy_signals_merged["premarket_volume_perf"] = _n650_s
+                    # N651: Consecutive up days
+                    try:
+                        _n651_cg = int(d.get("consec_green", d.get("consec_up", 0)) or 0)
+                        _n651_chg = float(d.get("change_pct", 0) or 0)
+                        if _n651_cg >= 3:
+                            _n651_s = "multi_day_run"
+                        elif _n651_cg >= 1:
+                            _n651_s = "fresh_momentum"
+                        elif _n651_chg < 0:
+                            _n651_s = "after_down_day"
+                        else:
+                            _n651_s = "choppy_action"
+                    except Exception:
+                        _n651_s = "choppy_action"
+                    _buy_signals_merged["consecutive_up_days_perf"] = _n651_s
+                    # N652: Market cap momentum
+                    try:
+                        _n652_mc = float(d.get("market_cap", d.get("mktcap", 0)) or 0)
+                        _n652_chg = float(d.get("chg_pct", d.get("change_pct", 0)) or 0)
+                        if _n652_mc > 200e9:
+                            _n652_s = "mega_cap_defensive"
+                        elif _n652_mc > 50e9 and _n652_chg > 0:
+                            _n652_s = "large_cap_leading"
+                        elif 2e9 <= _n652_mc <= 50e9:
+                            _n652_s = "mid_cap_breakout"
+                        elif _n652_mc > 0 and _n652_mc < 2e9:
+                            _n652_s = "small_cap_momentum"
+                        else:
+                            _n652_s = "mid_cap_breakout"
+                    except Exception:
+                        _n652_s = "mid_cap_breakout"
+                    _buy_signals_merged["market_cap_momentum_perf"] = _n652_s
+                    # N653: Institutional ownership
+                    try:
+                        _n653_io = float(d.get("inst_own_pct", d.get("institutional_pct", -1)) or -1)
+                        if _n653_io < 0:
+                            _n653_s = "moderate_institutional"
+                        elif _n653_io > 70:
+                            _n653_s = "high_institutional"
+                        elif _n653_io >= 40:
+                            _n653_s = "moderate_institutional"
+                        else:
+                            _n653_s = "low_institutional"
+                    except Exception:
+                        _n653_s = "moderate_institutional"
+                    _buy_signals_merged["institutional_ownership_perf"] = _n653_s
+                    # N654: Analyst revision
+                    try:
+                        _n654_rev = float(d.get("eps_revision_pct", d.get("est_revision", 0)) or 0)
+                        if _n654_rev > 2.0:
+                            _n654_s = "estimates_rising"
+                        elif _n654_rev >= -2.0:
+                            _n654_s = "estimates_stable"
+                        elif _n654_rev < -2.0:
+                            _n654_s = "estimates_falling"
+                        else:
+                            _n654_s = "no_estimate_data"
+                    except Exception:
+                        _n654_s = "no_estimate_data"
+                    _buy_signals_merged["analyst_revision_perf"] = _n654_s
+                    # N655: Relative volume trend
+                    try:
+                        _n655_rvol = float(d.get("vol_ratio", d.get("rvol", 1)) or 1)
+                        _n655_vt = float(d.get("vol_trend_3d", 0) or 0)
+                        if _n655_vt > 0 and _n655_rvol > 1.0:
+                            _n655_s = "accelerating_volume"
+                        elif _n655_rvol >= 1.5:
+                            _n655_s = "sustained_volume"
+                        elif _n655_vt < 0:
+                            _n655_s = "fading_volume"
+                        else:
+                            _n655_s = "normal_volume"
+                    except Exception:
+                        _n655_s = "normal_volume"
+                    _buy_signals_merged["relative_volume_trend_perf"] = _n655_s
+                    # N656: Price vs SMA200
+                    try:
+                        _n656_pct = float(d.get("price_vs_sma200", d.get("pct_above_200", 0)) or 0)
+                        if _n656_pct > 10:
+                            _n656_s = "well_above_200sma"
+                        elif _n656_pct >= 0:
+                            _n656_s = "just_above_200sma"
+                        elif _n656_pct < 0 and d.get("sma200_cross_days", 99) <= 5:
+                            _n656_s = "reclaiming_200sma"
+                        else:
+                            _n656_s = "below_200sma"
+                    except Exception:
+                        _n656_s = "just_above_200sma"
+                    _buy_signals_merged["price_vs_sma200_perf"] = _n656_s
+                    # N657: Earnings revision direction
+                    try:
+                        _n657_surp = float(d.get("earnings_surprise_pct", d.get("eps_surprise", 0)) or 0)
+                        _n657_raised = bool(d.get("guidance_raised", False))
+                        if _n657_surp > 0 and _n657_raised:
+                            _n657_s = "beat_and_raised"
+                        elif _n657_surp > 0:
+                            _n657_s = "beat_held"
+                        elif _n657_surp < 0:
+                            _n657_s = "miss_lowered"
+                        else:
+                            _n657_s = "inline_guidance"
+                    except Exception:
+                        _n657_s = "inline_guidance"
+                    _buy_signals_merged["earnings_revision_direction_perf"] = _n657_s
+                    # N658: Premarket gap size
+                    try:
+                        _n658_gap = float(d.get("premarket_gap_pct", d.get("pm_gap", 0)) or 0)
+                        if _n658_gap > 3.0:
+                            _n658_s = "large_gap_up"
+                        elif _n658_gap >= 0.5:
+                            _n658_s = "small_gap_up"
+                        elif _n658_gap >= -0.5:
+                            _n658_s = "flat_open"
+                        else:
+                            _n658_s = "gap_down"
+                    except Exception:
+                        _n658_s = "flat_open"
+                    _buy_signals_merged["premarket_gap_size_perf"] = _n658_s
+                    # N659: Social sentiment velocity
+                    try:
+                        _n659_vel = float(d.get("mention_velocity", d.get("buzz_velocity", 0)) or 0)
+                        if _n659_vel > 200:
+                            _n659_s = "viral_acceleration"
+                        elif _n659_vel >= 50:
+                            _n659_s = "steady_buzz"
+                        elif _n659_vel < 0:
+                            _n659_s = "fading_buzz"
+                        else:
+                            _n659_s = "no_social_signal"
+                    except Exception:
+                        _n659_s = "no_social_signal"
+                    _buy_signals_merged["social_sentiment_velocity_perf"] = _n659_s
+                    # N660: Option implied move
+                    try:
+                        _n660_ivhv = float(d.get("iv_vs_hv_ratio", d.get("iv_hv_ratio", 1.0)) or 1.0)
+                        if _n660_ivhv > 2.0:
+                            _n660_s = "high_iv_premium"
+                        elif _n660_ivhv >= 1.3:
+                            _n660_s = "elevated_iv"
+                        elif _n660_ivhv >= 0.8:
+                            _n660_s = "fair_iv"
+                        else:
+                            _n660_s = "low_iv_opportunity"
+                    except Exception:
+                        _n660_s = "fair_iv"
+                    _buy_signals_merged["option_implied_move_perf"] = _n660_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -35470,6 +35791,86 @@ def run():
         if _n650_list:
             _learn_log.append(f"N650 PMVol: elevated_premarket={_a_n650['win_rate']:.0f}% low_premarket={_b_n650['win_rate']:.0f}%WR")
 
+        # ── N651: Consecutive Up Days entry tuner ────────────────────
+        _n651_raw = tlog.get("consecutive_up_days_perf", {})
+        _n651_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n651_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n651 = next((s for s in _n651_list if s.get("state")=="multi_day_run"), _n651_list[0] if _n651_list else {"win_rate":50})
+        _b_n651 = next((s for s in _n651_list if s.get("state")=="choppy_action"), _n651_list[-1] if _n651_list else {"win_rate":50})
+        if _n651_list:
+            _learn_log.append(f"N651 ConsecUp: multi_day_run={_a_n651['win_rate']:.0f}% choppy_action={_b_n651['win_rate']:.0f}%WR")
+
+        # ── N652: Market Cap Momentum entry tuner ────────────────────
+        _n652_raw = tlog.get("market_cap_momentum_perf", {})
+        _n652_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n652_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n652 = next((s for s in _n652_list if s.get("state")=="large_cap_leading"), _n652_list[0] if _n652_list else {"win_rate":50})
+        _b_n652 = next((s for s in _n652_list if s.get("state")=="mega_cap_defensive"), _n652_list[-1] if _n652_list else {"win_rate":50})
+        if _n652_list:
+            _learn_log.append(f"N652 MktCapMom: large_cap_leading={_a_n652['win_rate']:.0f}% mega_cap_defensive={_b_n652['win_rate']:.0f}%WR")
+
+        # ── N653: Institutional Ownership entry tuner ────────────────────
+        _n653_raw = tlog.get("institutional_ownership_perf", {})
+        _n653_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n653_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n653 = next((s for s in _n653_list if s.get("state")=="high_institutional"), _n653_list[0] if _n653_list else {"win_rate":50})
+        _b_n653 = next((s for s in _n653_list if s.get("state")=="low_institutional"), _n653_list[-1] if _n653_list else {"win_rate":50})
+        if _n653_list:
+            _learn_log.append(f"N653 InstOwn: high_institutional={_a_n653['win_rate']:.0f}% low_institutional={_b_n653['win_rate']:.0f}%WR")
+
+        # ── N654: Analyst Revision entry tuner ────────────────────
+        _n654_raw = tlog.get("analyst_revision_perf", {})
+        _n654_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n654_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n654 = next((s for s in _n654_list if s.get("state")=="estimates_rising"), _n654_list[0] if _n654_list else {"win_rate":50})
+        _b_n654 = next((s for s in _n654_list if s.get("state")=="estimates_falling"), _n654_list[-1] if _n654_list else {"win_rate":50})
+        if _n654_list:
+            _learn_log.append(f"N654 AnalystRev: estimates_rising={_a_n654['win_rate']:.0f}% estimates_falling={_b_n654['win_rate']:.0f}%WR")
+
+        # ── N655: Relative Volume Trend entry tuner ────────────────────
+        _n655_raw = tlog.get("relative_volume_trend_perf", {})
+        _n655_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n655_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n655 = next((s for s in _n655_list if s.get("state")=="accelerating_volume"), _n655_list[0] if _n655_list else {"win_rate":50})
+        _b_n655 = next((s for s in _n655_list if s.get("state")=="fading_volume"), _n655_list[-1] if _n655_list else {"win_rate":50})
+        if _n655_list:
+            _learn_log.append(f"N655 RVolTrend: accelerating_volume={_a_n655['win_rate']:.0f}% fading_volume={_b_n655['win_rate']:.0f}%WR")
+
+        # ── N656: Price vs SMA200 entry tuner ────────────────────
+        _n656_raw = tlog.get("price_vs_sma200_perf", {})
+        _n656_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n656_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n656 = next((s for s in _n656_list if s.get("state")=="well_above_200sma"), _n656_list[0] if _n656_list else {"win_rate":50})
+        _b_n656 = next((s for s in _n656_list if s.get("state")=="below_200sma"), _n656_list[-1] if _n656_list else {"win_rate":50})
+        if _n656_list:
+            _learn_log.append(f"N656 PxSMA200: well_above_200sma={_a_n656['win_rate']:.0f}% below_200sma={_b_n656['win_rate']:.0f}%WR")
+
+        # ── N657: Earnings Revision Direction entry tuner ────────────────────
+        _n657_raw = tlog.get("earnings_revision_direction_perf", {})
+        _n657_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n657_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n657 = next((s for s in _n657_list if s.get("state")=="beat_and_raised"), _n657_list[0] if _n657_list else {"win_rate":50})
+        _b_n657 = next((s for s in _n657_list if s.get("state")=="miss_lowered"), _n657_list[-1] if _n657_list else {"win_rate":50})
+        if _n657_list:
+            _learn_log.append(f"N657 EarnRevDir: beat_and_raised={_a_n657['win_rate']:.0f}% miss_lowered={_b_n657['win_rate']:.0f}%WR")
+
+        # ── N658: Premarket Gap Size entry tuner ────────────────────
+        _n658_raw = tlog.get("premarket_gap_size_perf", {})
+        _n658_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n658_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n658 = next((s for s in _n658_list if s.get("state")=="large_gap_up"), _n658_list[0] if _n658_list else {"win_rate":50})
+        _b_n658 = next((s for s in _n658_list if s.get("state")=="gap_down"), _n658_list[-1] if _n658_list else {"win_rate":50})
+        if _n658_list:
+            _learn_log.append(f"N658 PMGapSize: large_gap_up={_a_n658['win_rate']:.0f}% gap_down={_b_n658['win_rate']:.0f}%WR")
+
+        # ── N659: Social Sentiment Velocity entry tuner ────────────────────
+        _n659_raw = tlog.get("social_sentiment_velocity_perf", {})
+        _n659_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n659_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n659 = next((s for s in _n659_list if s.get("state")=="viral_acceleration"), _n659_list[0] if _n659_list else {"win_rate":50})
+        _b_n659 = next((s for s in _n659_list if s.get("state")=="fading_buzz"), _n659_list[-1] if _n659_list else {"win_rate":50})
+        if _n659_list:
+            _learn_log.append(f"N659 SocialVel: viral_acceleration={_a_n659['win_rate']:.0f}% fading_buzz={_b_n659['win_rate']:.0f}%WR")
+
+        # ── N660: Option Implied Move entry tuner ────────────────────
+        _n660_raw = tlog.get("option_implied_move_perf", {})
+        _n660_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n660_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n660 = next((s for s in _n660_list if s.get("state")=="low_iv_opportunity"), _n660_list[0] if _n660_list else {"win_rate":50})
+        _b_n660 = next((s for s in _n660_list if s.get("state")=="high_iv_premium"), _n660_list[-1] if _n660_list else {"win_rate":50})
+        if _n660_list:
+            _learn_log.append(f"N660 OptImpMove: low_iv_opportunity={_a_n660['win_rate']:.0f}% high_iv_premium={_b_n660['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -36408,6 +36809,16 @@ def run():
             "day_of_week_perf": _n648_list,  # N648: day of week (monday/tuesday/wednesday/thursday/friday_entry) vs outcome
             "market_breadth_perf": _n649_list,  # N649: market breadth (strong_breadth/positive_breadth/negative_breadth/neutral_breadth) vs outcome
             "premarket_volume_perf": _n650_list,  # N650: pre-market volume (elevated/above_avg/normal/low_premarket) vs outcome
+            "consecutive_up_days_perf": _n651_list,  # N651: consecutive up days (multi_day_run/fresh_momentum/after_down_day/choppy_action) vs outcome
+            "market_cap_momentum_perf": _n652_list,  # N652: market cap momentum (large_cap_leading/mid_cap_breakout/small_cap_momentum/mega_cap_defensive) vs outcome
+            "institutional_ownership_perf": _n653_list,  # N653: institutional ownership (high/moderate/low/rising_institutional) vs outcome
+            "analyst_revision_perf": _n654_list,  # N654: analyst revision (estimates_rising/estimates_stable/estimates_falling/no_estimate_data) vs outcome
+            "relative_volume_trend_perf": _n655_list,  # N655: relative volume trend (accelerating/sustained/fading/normal_volume) vs outcome
+            "price_vs_sma200_perf": _n656_list,  # N656: price vs SMA200 (well_above/just_above/below/reclaiming_200sma) vs outcome
+            "earnings_revision_direction_perf": _n657_list,  # N657: earnings revision direction (beat_and_raised/beat_held/miss_lowered/inline_guidance) vs outcome
+            "premarket_gap_size_perf": _n658_list,  # N658: premarket gap size (large_gap_up/small_gap_up/flat_open/gap_down) vs outcome
+            "social_sentiment_velocity_perf": _n659_list,  # N659: social sentiment velocity (viral_acceleration/steady_buzz/fading_buzz/no_social_signal) vs outcome
+            "option_implied_move_perf": _n660_list,  # N660: option implied move (high_iv_premium/elevated_iv/fair_iv/low_iv_opportunity) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -36735,9 +37146,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 610              # total tracked neuron dimensions (N103-N650 complete)
+        tlog["neurons_total"]     = 620              # total tracked neuron dimensions (N103-N660 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/610 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/620 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

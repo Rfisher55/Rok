@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 610)
+    neurons_total = td.get("neurons_total", 620)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -663,6 +663,16 @@ def _build_weekly_bot_report(docs_dir):
         "day_of_week_perf":                "N648 Day of Week",
         "market_breadth_perf":             "N649 Market Breadth",
         "premarket_volume_perf":           "N650 Pre-Market Volume",
+        "consecutive_up_days_perf":        "N651 Consecutive Up Days",
+        "market_cap_momentum_perf":        "N652 Market Cap Momentum",
+        "institutional_ownership_perf":    "N653 Institutional Ownership",
+        "analyst_revision_perf":           "N654 Analyst Revision",
+        "relative_volume_trend_perf":      "N655 Relative Volume Trend",
+        "price_vs_sma200_perf":            "N656 Price vs SMA200",
+        "earnings_revision_direction_perf":"N657 Earnings Revision Direction",
+        "premarket_gap_size_perf":         "N658 Pre-Market Gap Size",
+        "social_sentiment_velocity_perf":  "N659 Social Sentiment Velocity",
+        "option_implied_move_perf":        "N660 Option Implied Move",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -702,6 +712,99 @@ def _build_weekly_bot_report(docs_dir):
     # Learn log highlights
     learn_log = lp.get("learn_log", [])[-10:]
 
+    # ── Brain Analytics: synthesize neuron performance across all dimensions ──
+    # Find best states for key timing/regime neurons (for the "when to trade" insight)
+    def _best_state(key, min_samples=3):
+        data = lp.get(key, [])
+        if not isinstance(data, list):
+            return None
+        qualified = [x for x in data if isinstance(x, dict) and x.get("total", 0) >= min_samples]
+        if not qualified:
+            return None
+        return max(qualified, key=lambda x: x.get("win_rate", 50))
+
+    brain_analytics = {}
+    # Best day of week to trade
+    dow_best = _best_state("day_of_week_perf")
+    if dow_best:
+        brain_analytics["best_day_of_week"] = {
+            "state": dow_best.get("state", ""),
+            "win_rate": dow_best.get("win_rate", 0),
+            "samples": dow_best.get("total", 0),
+        }
+    # Best session (morning/midday/afternoon)
+    sess_best = _best_state("entry_session_quality_perf")
+    if sess_best:
+        brain_analytics["best_session"] = {
+            "state": sess_best.get("state", ""),
+            "win_rate": sess_best.get("win_rate", 0),
+            "samples": sess_best.get("total", 0),
+        }
+    # Best momentum state
+    mom_best = _best_state("momentum_score_bucket_perf")
+    if mom_best:
+        brain_analytics["best_momentum_state"] = {
+            "state": mom_best.get("state", ""),
+            "win_rate": mom_best.get("win_rate", 0),
+            "samples": mom_best.get("total", 0),
+        }
+    # Best volume state
+    vol_best = _best_state("volume_surge_perf", min_samples=3)
+    if not vol_best:
+        vol_best = _best_state("volume_consistency_perf", min_samples=3)
+    if vol_best:
+        brain_analytics["best_volume_state"] = {
+            "state": vol_best.get("state", ""),
+            "win_rate": vol_best.get("win_rate", 0),
+            "samples": vol_best.get("total", 0),
+        }
+    # Best VIX regime
+    vix_best = _best_state("market_regime_vix_perf")
+    if vix_best:
+        brain_analytics["best_vix_regime"] = {
+            "state": vix_best.get("state", ""),
+            "win_rate": vix_best.get("win_rate", 0),
+            "samples": vix_best.get("total", 0),
+        }
+    # Top 3 neurons with highest learned edge (best_wr > 65%, min 5 samples)
+    top_edge_neurons = sorted(
+        [n for n in top_neurons if n.get("win_rate", 0) >= 65 and n.get("samples", 0) >= 5],
+        key=lambda x: -x["win_rate"]
+    )[:3]
+    if top_edge_neurons:
+        brain_analytics["top_edge_neurons"] = top_edge_neurons
+
+    # Win rate by hour-of-day (from trade log, based on entry time)
+    hour_wr = {}
+    for t in all_trades:
+        if t.get("action") not in ("SELL", "COVER"):
+            continue
+        entry_time_str = t.get("entry_time") or t.get("time") or ""
+        pnl_t = t.get("pnl_pct")
+        if not entry_time_str or pnl_t is None:
+            continue
+        try:
+            from zoneinfo import ZoneInfo
+            et = datetime.fromisoformat(entry_time_str.replace("Z", "+00:00"))
+            hr = et.astimezone(ZoneInfo("America/New_York")).hour
+            hour_wr.setdefault(hr, {"wins": 0, "total": 0})
+            hour_wr[hr]["total"] += 1
+            if pnl_t > 0:
+                hour_wr[hr]["wins"] += 1
+        except Exception:
+            pass
+    if hour_wr:
+        best_hour = max(hour_wr.items(), key=lambda x: x[1]["wins"] / max(x[1]["total"], 1) if x[1]["total"] >= 2 else 0)
+        brain_analytics["best_entry_hour"] = {
+            "hour_et": best_hour[0],
+            "win_rate": round(best_hour[1]["wins"] / best_hour[1]["total"] * 100),
+            "samples": best_hour[1]["total"],
+        }
+        brain_analytics["hourly_win_rates"] = [
+            {"hour": h, "win_rate": round(v["wins"] / v["total"] * 100), "samples": v["total"]}
+            for h, v in sorted(hour_wr.items()) if v["total"] >= 2
+        ]
+
     return {
         "generated_at": now.isoformat(),
         "period": "Last 7 days",
@@ -727,6 +830,7 @@ def _build_weekly_bot_report(docs_dir):
         "portfolio_value": td.get("portfolio_value"),
         "drawdown_pct": td.get("drawdown_pct"),
         "profit_factor": td.get("profit_factor"),
+        "brain_analytics": brain_analytics,
     }
 
 
@@ -906,7 +1010,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 610),
+                "neurons_total":    td.get("neurons_total", 620),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -948,6 +1052,28 @@ def _run():
                      for k, v in lp.items() if isinstance(v,list) and any(isinstance(x,dict) and x.get("total",0)>=3 for x in v)],
                     key=lambda x: -x["win_rate"]
                 )[:15],
+                # Brain analytics: timing, momentum, regime insights from learned neurons
+                "brain_analytics": {
+                    k: {
+                        "best_state": v.get("state", ""),
+                        "win_rate": v.get("win_rate", 0),
+                        "samples": v.get("samples", v.get("total", 0)),
+                    } if isinstance(v, dict) and "state" in v else v
+                    for k, v in {
+                        "best_day_of_week":   next(
+                            ({"state": x.get("state"), "win_rate": x.get("win_rate",0), "samples": x.get("total",0)}
+                             for x in sorted([x for x in lp.get("day_of_week_perf",[]) if isinstance(x,dict) and x.get("total",0)>=3],
+                                             key=lambda x: -x.get("win_rate",0))[:1]), None),
+                        "best_session":       next(
+                            ({"state": x.get("state"), "win_rate": x.get("win_rate",0), "samples": x.get("total",0)}
+                             for x in sorted([x for x in lp.get("entry_session_quality_perf",[]) if isinstance(x,dict) and x.get("total",0)>=3],
+                                             key=lambda x: -x.get("win_rate",0))[:1]), None),
+                        "best_vix_regime":    next(
+                            ({"state": x.get("state"), "win_rate": x.get("win_rate",0), "samples": x.get("total",0)}
+                             for x in sorted([x for x in lp.get("market_regime_vix_perf",[]) if isinstance(x,dict) and x.get("total",0)>=3],
+                                             key=lambda x: -x.get("win_rate",0))[:1]), None),
+                    }.items() if v is not None
+                },
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:
@@ -1198,7 +1324,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 610),
+            "neurons_total":   live_market_context.get("neurons_total", 620),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
