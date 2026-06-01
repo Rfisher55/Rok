@@ -247,6 +247,37 @@ def _fmt_technical(ta_data: dict) -> str:
     return "\n".join(lines) or "  No data"
 
 
+def _build_exit_intel_str(lmc: dict) -> str:
+    ei = lmc.get("exit_intelligence") or {}
+    positions = ei.get("positions") or []
+    if not positions:
+        return "  No exit intelligence data yet (runs after first closed trades)"
+    lines = []
+    for p in positions[:8]:
+        grade = p.get("grade", "NEUTRAL")
+        score = p.get("score", 50)
+        pnl   = p.get("pnl_pct", 0)
+        stop_tight = " [stop tightened]" if p.get("stop_tightened") else ""
+        lines.append(f"  {p.get('ticker','')}: score={score} grade={grade} P&L={pnl:+.1f}%{stop_tight}")
+    if ei.get("exit_count", 0) > 0:
+        lines.append(f"  *** {ei['exit_count']} EXIT SIGNAL(s) detected — brain sees weakness ***")
+    return "\n".join(lines) or "  All positions showing continuation"
+
+
+def _build_sector_wr_str(lmc: dict) -> str:
+    sp = lmc.get("sector_performance") or {}
+    if not sp:
+        return "  No sector data yet"
+    sorted_secs = sorted(sp.items(), key=lambda x: -(x[1].get("win_rate", 0)))
+    lines = []
+    for sec, v in sorted_secs[:6]:
+        wr  = v.get("win_rate", 0)
+        tot = v.get("total", 0)
+        label = "🔥 HOT" if wr >= 65 else "❄ COLD" if wr < 40 else ""
+        lines.append(f"  {sec}: {wr:.0f}% WR ({tot} trades) {label}")
+    return "\n".join(lines) or "  No sector data"
+
+
 def build_prompt(
     ticker_mentions=None, reddit_posts=None, news_articles=None,
     stock_data=None, sec_filings=None, fear_greed=None,
@@ -596,15 +627,23 @@ LAST SCAN TOP CANDIDATES (bot's freshest buy ideas):
 WEEKEND WATCHLIST — STOCKS BOT IS WATCHING FOR MONDAY:
 {wl_str}
 ''' if wl_str else ''}
+NEURAL EXIT INTELLIGENCE (brain's pattern-learned continuation scores per position):
+{_build_exit_intel_str(lmc)}
+
+SECTOR WIN RATES (brain's learned performance by sector):
+{_build_sector_wr_str(lmc)}
+
 CRITICAL INSTRUCTIONS:
 1. For EACH open position, generate a position_analysis entry with: action (HOLD/TRIM/SELL/STRONG_HOLD),
    confidence (1-10), thesis (why hold or exit), risk (biggest threat), and target (price target or exit level)
 2. Flag any position with PSAR_FLIPPED_BEARISH + SUPERTREND_BEARISH + negative P&L as urgent sell
 3. Flag any position with TRIPLE_TF_ALIGNED + STRONG_ACCUMULATION as strong hold
-4. Adjust advice for day type: on TREND day favor momentum plays; on RANGE day favor mean-reversion exits
-5. Mention specific held tickers by name in rok_message — users see this as their pocket guide
-6. Include top scan candidates and weekend watchlist as new buy ideas if they have strong signals
-7. The user checks this dashboard as their pocket trading guide — make rok_message actionable and specific
+4. If Neural Exit Intelligence shows EXIT_SIGNAL for a position, strongly consider recommending exit
+5. If a position's sector has <40% win rate in Sector Win Rates, add extra caution
+6. Adjust advice for day type: on TREND day favor momentum plays; on RANGE day favor mean-reversion exits
+7. Mention specific held tickers by name in rok_message — users see this as their pocket guide
+8. Include top scan candidates and weekend watchlist as new buy ideas if they have strong signals
+9. The user checks this dashboard as their pocket trading guide — make rok_message actionable and specific
 """
 
 
