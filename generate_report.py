@@ -435,6 +435,16 @@ def _build_weekly_bot_report(docs_dir):
         "pre_breakout_compression_perf": "N418 Pre-Breakout Compression",
         "sector_vs_spx_week_perf": "N419 Sector vs SPX Week",
         "position_size_quality_perf": "N420 Position Size Quality",
+        "atr_expansion_entry_perf": "N421 ATR Expansion Entry",
+        "relative_volume_surge_perf": "N422 Relative Volume Surge",
+        "price_vs_vwap_distance_perf": "N423 Price vs VWAP Distance",
+        "market_regime_duration_perf": "N424 Market Regime Duration",
+        "entry_day_of_month_perf": "N425 Entry Day of Month",
+        "sector_breadth_quality_perf": "N426 Sector Breadth Quality",
+        "consecutive_green_entry_perf": "N427 Consecutive Green Entry",
+        "bollinger_position_entry_perf": "N428 Bollinger Position Entry",
+        "earnings_window_entry_perf": "N429 Earnings Window Entry",
+        "liquidity_dollar_volume_perf": "N430 Liquidity Dollar Volume",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
