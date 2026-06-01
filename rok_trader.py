@@ -22516,16 +22516,34 @@ def run():
 
             # Position age
             age_days = 0
+            age_minutes = 0
             try:
-                et       = datetime.fromisoformat(entry_time.replace("Z", "+00:00"))
-                age_days = (now_utc - et).total_seconds() / 86400
+                et          = datetime.fromisoformat(entry_time.replace("Z", "+00:00"))
+                age_days    = (now_utc - et).total_seconds() / 86400
+                age_minutes = (now_utc - et).total_seconds() / 60
             except Exception:
                 pass
+
+            # ── Intraday Scalp Exit: 90-minute max hold for fast learning cycles ──
+            # Positions held 30-90 min: exit at ±1.5% to cycle capital quickly.
+            # This drives ~4 cycles per position slot per day = 100+ trades/day target.
+            # half_out initialized here (used in scalp logic and partial exit below)
+            half_out = peaks[sym].get("half_out", False)
+
+            _scalp_exit_reason = None
+            if 30 <= age_minutes:
+                if pnl_pct >= 2.0 and age_minutes <= 120 and not half_out:
+                    _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
+                elif pnl_pct <= -1.5 and age_minutes >= 30:
+                    _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
+                elif age_minutes >= 90 and pnl_pct > 0 and not half_out:
+                    _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}%)"
+                elif age_minutes >= 120 and abs(pnl_pct) < 0.5:
+                    _scalp_exit_reason = f"stale scalp exit (flat {pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
             # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
             # so we raise the bar. Bear regime: take gains sooner.
-            half_out = peaks[sym].get("half_out", False)
             _half_value = current * (qty / 2)  # value of half position
             _atr_entry = float(peaks.get(sym, {}).get("atr_at_entry", 0) or 0)
             _atr_pct   = (_atr_entry / current * 100) if (current > 0 and _atr_entry > 0) else 2.0
@@ -22838,6 +22856,12 @@ def run():
 
             # ── Full exit conditions ──
             reason = None
+
+            # ── Intraday scalp exit (fires first — overrides all other logic) ──
+            # Drive 100+ trades/day: cycle positions quickly for maximum learning data.
+            if _scalp_exit_reason and not reason:
+                reason = _scalp_exit_reason
+
             # ── N102: Dynamic Support Level Exit ─────────────────────────────────
             # Exit when price violates key technical support rather than waiting for stop.
             # Cutting at structure break saves money vs waiting for the full trailing stop.
@@ -23545,6 +23569,35 @@ def run():
         logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj + _spy_tape_score_adj)
 
+    # ── Daily Trade Counter: dynamic threshold to hit 100 trades/day target ───
+    # Count trades placed today (UTC date). If behind the hourly pace needed for 100/day,
+    # reduce effective min score to generate more entries. Learning requires volume.
+    DAILY_TRADE_TARGET = 100
+    _today_str = now_utc.strftime("%Y-%m-%d")
+    _all_trades_today = [t for t in tlog.get("trades", [])
+                         if t.get("time", "")[:10] == _today_str]
+    _trades_today_count = len(_all_trades_today)
+    # Hours elapsed today (market portion: 6.5h total)
+    _hours_market_elapsed = min(6.5, max(0, _minutes_since_open / 60.0)) if market_open else 0
+    _paced_target = int(DAILY_TRADE_TARGET * (_hours_market_elapsed / 6.5)) if _hours_market_elapsed > 0 else 0
+    _trade_deficit = max(0, _paced_target - _trades_today_count)
+    if _trade_deficit >= 20:
+        _pace_adj = -8  # far behind: aggressively lower threshold
+        logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 8")
+    elif _trade_deficit >= 10:
+        _pace_adj = -5
+        logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 5")
+    elif _trade_deficit >= 5:
+        _pace_adj = -3
+        logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — lowering threshold by 3")
+    else:
+        _pace_adj = 0
+    _eff_min_score = max(5, _eff_min_score + _pace_adj)
+    tlog["daily_trade_count"]  = _trades_today_count
+    tlog["daily_trade_target"] = DAILY_TRADE_TARGET
+    tlog["daily_trade_pace"]   = _paced_target
+    logger.info(f"Daily trades: {_trades_today_count}/{DAILY_TRADE_TARGET} | effective threshold: {_eff_min_score}")
+
     # ── N110: Cross-Asset Risk-Off Guard ────────────────────────────────────────
     # When multiple defensive assets are surging simultaneously (bonds ↑ + gold ↑ +
     # VIX ↑), institutions are rotating OUT of equities. This is the clearest signal
@@ -23659,9 +23712,9 @@ def run():
         # Loss cooldown: stocks sold for >2% loss within 48h are blocked from re-entry
         # Avoids "falling knife" repeats — same thesis that broke is unlikely to immediately recover
         _loss_cooldown: set = set()
-        _loss_cutoff = now_utc - timedelta(hours=48)
+        _loss_cutoff = now_utc - timedelta(hours=2)  # 2h cooldown: allow fast re-entry for scalp cycling
         for t in tlog.get("trades", []):
-            if t.get("action") in ("SELL", "COVER") and (t.get("pnl_pct") or 0) < -2:
+            if t.get("action") in ("SELL", "COVER") and (t.get("pnl_pct") or 0) < -3:  # only block on bigger losses
                 try:
                     if datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > _loss_cutoff:
                         _loss_cooldown.add(t.get("ticker", ""))
@@ -23713,7 +23766,7 @@ def run():
         candidates_buy = sorted(
             [(tk, sc) for tk, sc in tech_scores.items() if sc >= _eff_min_score - 5],
             key=lambda x: -x[1],
-        )[:15]
+        )[:50]  # expanded: fill all available slots every run for maximum learning volume
 
         logger.info(
             f"Tech long candidates ({len(candidates_buy)}): "
@@ -35964,7 +36017,6 @@ def run():
     tlog["daily_risk_mult"] = _daily_risk_mult
     # Next expected run: 5 minutes from now during market hours
     try:
-        from datetime import timedelta
         _next_run = now_utc + timedelta(minutes=5)
         tlog["next_run_utc"] = _next_run.isoformat()
     except Exception:
