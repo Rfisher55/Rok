@@ -18690,14 +18690,37 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 except requests.HTTPError as _he:
                     _resp_body = _he.response.text[:300] if hasattr(_he, "response") and _he.response is not None else "no body"
                     logger.warning(f"Crypto sell HTTP {sym}: {_he} | body={_resp_body}")
+                    tlog.setdefault("crypto_sell_errors", []).append({
+                        "ts": now_utc.isoformat(), "sym": sym, "reason": reason,
+                        "http_err": str(_he)[:80], "body": _resp_body[:200],
+                    })
+                    tlog["crypto_sell_errors"] = tlog["crypto_sell_errors"][-10:]
                 except Exception as _se:
                     import traceback as _ctb
-                    logger.warning(f"Crypto sell error {sym}: {_se} | {_ctb.format_exc()[:400]}")
+                    _se_tb = _ctb.format_exc()[:300]
+                    logger.warning(f"Crypto sell error {sym}: {_se} | {_se_tb}")
+                    tlog.setdefault("crypto_sell_errors", []).append({
+                        "ts": now_utc.isoformat(), "sym": sym, "reason": reason,
+                        "err": str(_se)[:80], "tb": _se_tb,
+                    })
+                    tlog["crypto_sell_errors"] = tlog["crypto_sell_errors"][-10:]
             else:
                 logger.info(f"HOLD {sym} — {pnl_pct:+.1f}% | age={_crypto_age_min:.0f}min peak=${peak:,.0f} trail={trail_drop:.1f}% thr={c_trail:.0f}%")
+                # Record HOLD decision in tlog for debugging (visible in trades.json)
+                tlog.setdefault("crypto_hold_log", []).append({
+                    "ts": now_utc.isoformat(), "sym": sym,
+                    "pnl": round(pnl_pct, 2), "age_min": round(_crypto_age_min, 0),
+                    "cost": round(cost, 4), "cur": round(current, 4),
+                })
+                tlog["crypto_hold_log"] = tlog["crypto_hold_log"][-20:]  # keep last 20
         except Exception as e:
             import traceback as _tb
-            logger.warning(f"Crypto sell outer error {sym}: {e} | {_tb.format_exc()[:400]}")
+            _tb_str = _tb.format_exc()[:300]
+            logger.warning(f"Crypto sell outer error {sym}: {e} | {_tb_str}")
+            tlog.setdefault("crypto_errors", []).append({
+                "ts": now_utc.isoformat(), "sym": sym, "err": str(e)[:100], "tb": _tb_str,
+            })
+            tlog["crypto_errors"] = tlog["crypto_errors"][-10:]
 
     # ── Buy crypto ──────────────────────────────────────────────────────
     open_slots = MAX_CRYPTO_POS - len(held_crypto)
