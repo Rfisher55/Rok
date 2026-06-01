@@ -624,6 +624,31 @@ def build_prompt(
     if nec_top:
         nec_str += f" | Top pick: {nec_top} (score {nec_score})"
 
+    # Build portfolio correlation risk summary
+    corr_lines = []
+    if current_positions:
+        # Group by sector and detect crypto correlation
+        sector_groups = {}
+        crypto_tickers = []
+        CRYPTO_PROXY = {"COIN", "MSTR", "RIOT", "MARA", "CLSK", "HUT", "BTBT", "BITO", "GBTC"}
+        for p in current_positions:
+            sec = p.get("sector", "Unknown")
+            tk = p.get("ticker", "")
+            sector_groups.setdefault(sec, []).append(tk)
+            if tk in CRYPTO_PROXY or "Crypto" in sec or "Bitcoin" in sec:
+                crypto_tickers.append(tk)
+        # High-concentration sectors
+        for sec, tks in sorted(sector_groups.items(), key=lambda x: -len(x[1])):
+            if len(tks) >= 2:
+                corr_lines.append(f"  {sec}: {', '.join(tks)} ({len(tks)} positions)")
+        if crypto_tickers:
+            corr_lines.append(f"  ⚠ Crypto-correlated cluster: {', '.join(crypto_tickers)} — move together with BTC")
+        total_pos = len(current_positions)
+        max_cluster = max((len(v) for v in sector_groups.values()), default=0)
+        if max_cluster / max(total_pos, 1) > 0.5:
+            corr_lines.append(f"  ⚠ HIGH CONCENTRATION: {max_cluster}/{total_pos} positions in same sector — sector selloff would hit all")
+    corr_str = "\n".join(corr_lines) if corr_lines else "  No concentration risk detected"
+
     # Append live trading context so AI can give position-specific guidance
     return base + f"""
 
@@ -664,11 +689,14 @@ TOP LEARNED SIGNAL PAIRS (synapse memory — when these 2 signals fire together,
 TOP LEARNED 3-SIGNAL COMBOS (strongest neural triplets by historical win rate):
 {tri_str}
 
+PORTFOLIO CORRELATION RISK:
+{corr_str}
+
 CRITICAL INSTRUCTIONS:
-1. For EACH open position, generate a position_analysis entry with: action (HOLD/TRIM/SELL/STRONG_HOLD),
+1. For EACH open position, generate a position_analysis entry with: action (HOLD/TRIM/SELL/STRONG_HOLD/ADD),
    confidence (1-10), thesis (why hold or exit), risk (biggest threat), and target (price target or exit level)
 2. Flag any position with PSAR_FLIPPED_BEARISH + SUPERTREND_BEARISH + negative P&L as urgent sell
-3. Flag any position with TRIPLE_TF_ALIGNED + STRONG_ACCUMULATION as strong hold
+3. Flag any position with TRIPLE_TF_ALIGNED + STRONG_ACCUMULATION as strong hold — consider adding
 4. If Neural Exit Intelligence shows EXIT_SIGNAL for a position, strongly consider recommending exit
 5. If a position's sector has <40% win rate in Sector Win Rates, add extra caution
 6. Adjust advice for day type: on TREND day favor momentum plays; on RANGE day favor mean-reversion exits
@@ -676,6 +704,9 @@ CRITICAL INSTRUCTIONS:
 8. Include top scan candidates and weekend watchlist as new buy ideas if they have strong signals
 9. The user checks this dashboard as their pocket trading guide — make rok_message actionable and specific
 10. If top learned signal pairs show high-WR patterns matching current positions, reference this in thesis
+11. CORRELATION WARNING: If portfolio has 3+ positions in crypto/same sector, warn about concentrated risk in rok_message
+12. When market is closed (weekend/after-hours), focus on Monday preparation — what to watch, what to set stops on
+13. ADD signal: if a position is up 5%+ with strong technical signals and still has room to target, suggest adding shares
 """
 
 
