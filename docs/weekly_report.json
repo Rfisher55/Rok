@@ -1,25 +1,25 @@
 {
-  "generated_at": "2026-06-01T18:25:19.686958+00:00",
+  "generated_at": "2026-06-01T21:50:41.093469+00:00",
   "period": "Last 7 days",
   "week_start": "2026-05-25",
   "week_end": "2026-06-01",
-  "trades_total": 10,
+  "trades_total": 43,
   "trades_wins": 0,
-  "trades_losses": 10,
+  "trades_losses": 43,
   "win_rate": 0.0,
   "total_pnl": 0,
   "avg_pnl_per_trade": 0.0,
   "best_trades": [
     {
-      "ticker": "ORCL",
+      "ticker": "ETH/USD",
       "pnl": null
     },
     {
-      "ticker": "DDOG",
+      "ticker": "DOT/USD",
       "pnl": null
     },
     {
-      "ticker": "SPCE",
+      "ticker": "LTC/USD",
       "pnl": null
     }
   ],
@@ -31,16 +31,53 @@
   "strategy_insights": {
     "top_alpha": [],
     "top_drag": [],
-    "key_combos": []
+    "key_combos": [
+      {
+        "pair": "ichimoku_above+mom_accel",
+        "win_rate": 100.0,
+        "samples": 5,
+        "avg_pnl": 0.7
+      },
+      {
+        "pair": "at_breakout+higher_lows",
+        "win_rate": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.88
+      },
+      {
+        "pair": "ema_stacked_bull+higher_lows",
+        "win_rate": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.88
+      },
+      {
+        "pair": "higher_lows+kc_breakout",
+        "win_rate": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.88
+      },
+      {
+        "pair": "higher_lows+mom_accel",
+        "win_rate": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.88
+      },
+      {
+        "pair": "higher_lows+mtf_aligned",
+        "win_rate": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.88
+      }
+    ]
   },
   "learn_log": [],
   "strategy_mode": "MOMENTUM",
   "recovery_mode": false,
-  "effective_min_score": 5,
+  "effective_min_score": 15,
   "cross_asset_risk_off": false,
-  "portfolio_value": 99122.21,
-  "drawdown_pct": 0.09,
-  "profit_factor": 11.85,
+  "portfolio_value": 98973.16,
+  "drawdown_pct": 0.27,
+  "profit_factor": 3.21,
   "brain_analytics": {
     "best_entry_hour": {
       "hour_et": 13,
@@ -52,6 +89,16 @@
         "hour": 13,
         "win_rate": 78,
         "samples": 9
+      },
+      {
+        "hour": 15,
+        "win_rate": 60,
+        "samples": 30
+      },
+      {
+        "hour": 17,
+        "win_rate": 67,
+        "samples": 3
       }
     ]
   }
