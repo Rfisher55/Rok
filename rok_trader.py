@@ -109,7 +109,7 @@ CRYPTO_UNIVERSE  = {
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Learning phase: lower score gates so the brain gets real data fast
-CRYPTO_MIN_SCORE = 8        # minimum technical score to consider
+CRYPTO_MIN_SCORE = 5        # minimum technical score (score starts at 8; 5 allows flat/mildly bearish)
 CRYPTO_MIN_COMBINED = -5    # AI score is a bonus not a gate — allow negative AI but positive tech
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
@@ -18699,10 +18699,25 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
 
         if sc >= _effective_crypto_min:
             scored.append((alpaca_sym, sc, sig))
+    # Track all scored for force-buy fallback
+    _all_scored = [(alpaca_sym, sc, sig) for alpaca_sym, sig in crypto_data.items()
+                   if alpaca_sym not in held_crypto]
+    _all_scored.sort(key=lambda x: -crypto_score(x[2]))
     scored.sort(key=lambda x: -x[1])
     logger.info(f"Crypto candidates above threshold: {[(s, sc) for s,sc,_ in scored]}")
 
-    for alpaca_sym, sc, sig in scored[:open_slots]:
+    # Force-buy fallback: if nothing scored above threshold but we have empty slots,
+    # buy the top 2 highest-scoring coins anyway (ensures crypto always cycling)
+    _buy_list = scored[:open_slots]
+    if not scored and open_slots > 0 and len(held_crypto) == 0:
+        _fallback = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
+                     if sym not in held_crypto and crypto_score(sig) > 0]
+        _fallback.sort(key=lambda x: -x[1])
+        if _fallback:
+            _buy_list = _fallback[:2]
+            logger.info(f"Crypto force-buy: no coins above threshold; buying top {len(_buy_list)} by score")
+
+    for alpaca_sym, sc, sig in _buy_list:
         try:
             coin_name = alpaca_sym.split("/")[0]
             ai_score  = ai_crypto_sentiment(coin_name, signals=sig)
