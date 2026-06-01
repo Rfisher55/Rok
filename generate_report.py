@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 530)
+    neurons_total = td.get("neurons_total", 540)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -295,7 +295,7 @@ def _build_weekly_bot_report(docs_dir):
         "entry_quality_score_perf": "N278 Entry Quality",
         "sector_momentum_rank_perf": "N279 Sector Rank",
         "fed_meeting_week_perf": "N280 Fed Week",
-        "opening_range_breakout_perf_v1": "N281 ORB Breakout",
+        "orb_15min_perf":                 "N281 ORB Breakout",
         "spy_rsi_overbought_perf": "N282 SPY RSI OB/OS",
         "ticker_earnings_beat_streak_perf": "N283 Earnings Streak",
         "holding_cost_vs_cash_perf": "N284 Cash vs Invested",
@@ -355,7 +355,7 @@ def _build_weekly_bot_report(docs_dir):
         "index_divergence_perf": "N338 Index Divergence",
         "opening_gap_follow_perf": "N339 Gap Follow",
         "earnings_revision_perf": "N340 EPS Revision",
-        "pre_market_gap_perf_v1": "N341 Pre-Market Gap",
+        "pm_gap_v1_perf":         "N341 Pre-Market Gap",
         "regime_transition_perf": "N342 Regime Transition",
         "ticker_age_bucket_perf": "N343 Ticker Age",
         "spy_options_oi_perf": "N344 SPY Options Flow",
@@ -529,7 +529,7 @@ def _build_weekly_bot_report(docs_dir):
         "tape_speed_entry_perf":          "N512 Tape Speed Entry",
         "options_skew_entry_perf":        "N513 Options Skew Entry",
         "dark_pool_entry_perf":           "N514 Dark Pool Activity",
-        "institutional_ownership_perf_v1":   "N515 Institutional Ownership",
+        "inst_own_v1_perf":                  "N515 Institutional Ownership",
         "float_rotation_entry_perf":      "N516 Float Rotation Entry",
         "news_sentiment_v2_perf":         "N517 News Sentiment Score v2",
         "social_momentum_entry_perf":     "N518 Social Momentum Entry",
@@ -585,6 +585,16 @@ def _build_weekly_bot_report(docs_dir):
         "insider_purchase_signal_perf":   "N568 Insider Purchase Signal",
         "social_buzz_velocity_perf":      "N569 Social Buzz Velocity",
         "earnings_beat_streak_perf":      "N570 Earnings Beat Streak",
+        "options_iv_rank_perf":           "N571 Options IV Rank",
+        "call_volume_surge_perf":         "N572 Call Volume Surge",
+        "dark_pool_flow_perf":            "N573 Dark Pool Flow",
+        "smart_money_flow_perf":          "N574 Smart Money Flow",
+        "trending_sector_rotation_perf":  "N575 Trending Sector Rotation",
+        "squeeze_momentum_perf":          "N576 Squeeze Momentum",
+        "put_wall_proximity_perf":        "N577 Put Wall Proximity",
+        "weekly_options_expiry_perf":     "N578 Weekly Options Expiry",
+        "gamma_exposure_perf":            "N579 Gamma Exposure",
+        "market_regime_vix_perf":         "N580 Market Regime VIX",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -828,7 +838,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 530),
+                "neurons_total":    td.get("neurons_total", 540),
                 "last_decision":    td.get("last_decision", ""),
                 "next_run_utc":     td.get("next_run_utc", ""),
                 "bot_brain_summary": td.get("bot_brain_summary", ""),
@@ -1108,7 +1118,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 530),
+            "neurons_total":   live_market_context.get("neurons_total", 540),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),

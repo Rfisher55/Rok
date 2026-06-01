@@ -5137,7 +5137,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n281 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n281_field = _buy_n281.get("opening_range_breakout_state", "no_orb") if _buy_n281 else "no_orb"
-            _n281_perf = tlog.setdefault("opening_range_breakout_perf", {})
+            _n281_perf = tlog.setdefault("orb_15min_perf", {})
             _n281p = _n281_perf.setdefault(_n281_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n281_field})
             _n281p["total"] += 1; _n281p["total_pnl"] = round(_n281p["total_pnl"] + pnl, 2)
             if pnl > 0: _n281p["wins"] += 1
@@ -6036,8 +6036,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n341 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n341_field = _buy_n341.get("pre_market_gap_perf", "flat_open") if _buy_n341 else "flat_open"
-            _n341_perf = tlog.setdefault("pre_market_gap_perf", {})
+            _n341_field = _buy_n341.get("pm_gap_v1_perf", "flat_open") if _buy_n341 else "flat_open"
+            _n341_perf = tlog.setdefault("pm_gap_v1_perf", {})
             _n341p = _n341_perf.setdefault(_n341_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n341_field})
             _n341p["total"] += 1; _n341p["total_pnl"] = round(_n341p["total_pnl"] + pnl, 2)
             if pnl > 0: _n341p["wins"] += 1
@@ -8646,8 +8646,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n515 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n515_field = _buy_n515.get("institutional_ownership_perf", "medium_inst_own") if _buy_n515 else "medium_inst_own"
-            _n515_perf = tlog.setdefault("institutional_ownership_perf", {})
+            _n515_field = _buy_n515.get("inst_own_v1_perf", "medium_inst_own") if _buy_n515 else "medium_inst_own"
+            _n515_perf = tlog.setdefault("inst_own_v1_perf", {})
             _n515p = _n515_perf.setdefault(_n515_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n515_field})
             _n515p["total"] += 1; _n515p["total_pnl"] = round(_n515p["total_pnl"] + pnl, 2)
             if pnl > 0: _n515p["wins"] += 1
@@ -9479,6 +9479,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             else:        _n570p["losses"] += 1
             _n570p["win_rate"] = round(_n570p["wins"] / _n570p["total"] * 100, 1)
             _n570p["avg_pnl"]  = round(_n570p["total_pnl"] / _n570p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N571: Options IV Rank Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n571 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n571_field = _buy_n571.get("options_iv_rank_perf", "mid_iv_rank") if _buy_n571 else "mid_iv_rank"
+            _n571_perf = tlog.setdefault("options_iv_rank_perf", {})
+            _n571p = _n571_perf.setdefault(_n571_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n571_field})
+            _n571p["total"] += 1; _n571p["total_pnl"] = round(_n571p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n571p["wins"] += 1
+            else:        _n571p["losses"] += 1
+            _n571p["win_rate"] = round(_n571p["wins"] / _n571p["total"] * 100, 1)
+            _n571p["avg_pnl"]  = round(_n571p["total_pnl"] / _n571p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N572: Call Volume Surge Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n572 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n572_field = _buy_n572.get("call_volume_surge_perf", "normal_calls") if _buy_n572 else "normal_calls"
+            _n572_perf = tlog.setdefault("call_volume_surge_perf", {})
+            _n572p = _n572_perf.setdefault(_n572_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n572_field})
+            _n572p["total"] += 1; _n572p["total_pnl"] = round(_n572p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n572p["wins"] += 1
+            else:        _n572p["losses"] += 1
+            _n572p["win_rate"] = round(_n572p["wins"] / _n572p["total"] * 100, 1)
+            _n572p["avg_pnl"]  = round(_n572p["total_pnl"] / _n572p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N573: Dark Pool Flow Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n573 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n573_field = _buy_n573.get("dark_pool_flow_perf", "moderate_dark_pool") if _buy_n573 else "moderate_dark_pool"
+            _n573_perf = tlog.setdefault("dark_pool_flow_perf", {})
+            _n573p = _n573_perf.setdefault(_n573_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n573_field})
+            _n573p["total"] += 1; _n573p["total_pnl"] = round(_n573p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n573p["wins"] += 1
+            else:        _n573p["losses"] += 1
+            _n573p["win_rate"] = round(_n573p["wins"] / _n573p["total"] * 100, 1)
+            _n573p["avg_pnl"]  = round(_n573p["total_pnl"] / _n573p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N574: Smart Money Flow Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n574 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n574_field = _buy_n574.get("smart_money_flow_perf", "neutral_smart_money") if _buy_n574 else "neutral_smart_money"
+            _n574_perf = tlog.setdefault("smart_money_flow_perf", {})
+            _n574p = _n574_perf.setdefault(_n574_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n574_field})
+            _n574p["total"] += 1; _n574p["total_pnl"] = round(_n574p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n574p["wins"] += 1
+            else:        _n574p["losses"] += 1
+            _n574p["win_rate"] = round(_n574p["wins"] / _n574p["total"] * 100, 1)
+            _n574p["avg_pnl"]  = round(_n574p["total_pnl"] / _n574p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N575: Trending Sector Rotation Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n575 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n575_field = _buy_n575.get("trending_sector_rotation_perf", "stable_sector") if _buy_n575 else "stable_sector"
+            _n575_perf = tlog.setdefault("trending_sector_rotation_perf", {})
+            _n575p = _n575_perf.setdefault(_n575_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n575_field})
+            _n575p["total"] += 1; _n575p["total_pnl"] = round(_n575p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n575p["wins"] += 1
+            else:        _n575p["losses"] += 1
+            _n575p["win_rate"] = round(_n575p["wins"] / _n575p["total"] * 100, 1)
+            _n575p["avg_pnl"]  = round(_n575p["total_pnl"] / _n575p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N576: Squeeze Momentum Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n576 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n576_field = _buy_n576.get("squeeze_momentum_perf", "no_squeeze") if _buy_n576 else "no_squeeze"
+            _n576_perf = tlog.setdefault("squeeze_momentum_perf", {})
+            _n576p = _n576_perf.setdefault(_n576_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n576_field})
+            _n576p["total"] += 1; _n576p["total_pnl"] = round(_n576p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n576p["wins"] += 1
+            else:        _n576p["losses"] += 1
+            _n576p["win_rate"] = round(_n576p["wins"] / _n576p["total"] * 100, 1)
+            _n576p["avg_pnl"]  = round(_n576p["total_pnl"] / _n576p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N577: Put Wall Proximity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n577 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n577_field = _buy_n577.get("put_wall_proximity_perf", "near_put_wall") if _buy_n577 else "near_put_wall"
+            _n577_perf = tlog.setdefault("put_wall_proximity_perf", {})
+            _n577p = _n577_perf.setdefault(_n577_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n577_field})
+            _n577p["total"] += 1; _n577p["total_pnl"] = round(_n577p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n577p["wins"] += 1
+            else:        _n577p["losses"] += 1
+            _n577p["win_rate"] = round(_n577p["wins"] / _n577p["total"] * 100, 1)
+            _n577p["avg_pnl"]  = round(_n577p["total_pnl"] / _n577p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N578: Weekly Options Expiry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n578 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n578_field = _buy_n578.get("weekly_options_expiry_perf", "post_expiry") if _buy_n578 else "post_expiry"
+            _n578_perf = tlog.setdefault("weekly_options_expiry_perf", {})
+            _n578p = _n578_perf.setdefault(_n578_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n578_field})
+            _n578p["total"] += 1; _n578p["total_pnl"] = round(_n578p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n578p["wins"] += 1
+            else:        _n578p["losses"] += 1
+            _n578p["win_rate"] = round(_n578p["wins"] / _n578p["total"] * 100, 1)
+            _n578p["avg_pnl"]  = round(_n578p["total_pnl"] / _n578p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N579: Gamma Exposure Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n579 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n579_field = _buy_n579.get("gamma_exposure_perf", "positive_gex") if _buy_n579 else "positive_gex"
+            _n579_perf = tlog.setdefault("gamma_exposure_perf", {})
+            _n579p = _n579_perf.setdefault(_n579_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n579_field})
+            _n579p["total"] += 1; _n579p["total_pnl"] = round(_n579p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n579p["wins"] += 1
+            else:        _n579p["losses"] += 1
+            _n579p["win_rate"] = round(_n579p["wins"] / _n579p["total"] * 100, 1)
+            _n579p["avg_pnl"]  = round(_n579p["total_pnl"] / _n579p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N580: Market Regime VIX Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n580 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n580_field = _buy_n580.get("market_regime_vix_perf", "normal_vix_regime") if _buy_n580 else "normal_vix_regime"
+            _n580_perf = tlog.setdefault("market_regime_vix_perf", {})
+            _n580p = _n580_perf.setdefault(_n580_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n580_field})
+            _n580p["total"] += 1; _n580p["total_pnl"] = round(_n580p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n580p["wins"] += 1
+            else:        _n580p["losses"] += 1
+            _n580p["win_rate"] = round(_n580p["wins"] / _n580p["total"] * 100, 1)
+            _n580p["avg_pnl"]  = round(_n580p["total_pnl"] / _n580p["total"], 2)
         except Exception:
             pass
 
@@ -16276,7 +16426,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 530
+            _n_total = tlog.get("neurons_total") or 540
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -22306,9 +22456,9 @@ def run():
                             _n341_s = "flat_open"
                         else:
                             _n341_s = "gap_down"
-                        _buy_signals_merged["pre_market_gap_perf"] = _n341_s
+                        _buy_signals_merged["pm_gap_v1_perf"] = _n341_s
                     except Exception:
-                        _buy_signals_merged["pre_market_gap_perf"] = "flat_open"
+                        _buy_signals_merged["pm_gap_v1_perf"] = "flat_open"
                     # N342: Regime transition at entry
                     try:
                         _n342_rq = float(d.get("regime_quality", 0) or 0)
@@ -24412,7 +24562,7 @@ def run():
                             _n515_s = "medium_inst_own"
                     except Exception:
                         _n515_s = "medium_inst_own"
-                    _buy_signals_merged["institutional_ownership_perf"] = _n515_s
+                    _buy_signals_merged["inst_own_v1_perf"] = _n515_s
                     # N516: Float rotation at entry
                     try:
                         _n516_fr = str(live.get(tk, {}).get('float_rotation', '') or '')
@@ -25115,6 +25265,127 @@ def run():
                     except Exception:
                         _n570_s = "occasional_beater"
                     _buy_signals_merged["earnings_beat_streak_perf"] = _n570_s
+                    # N571: Options IV rank at entry
+                    try:
+                        _n571_ivr = float(d.get("iv_rank", d.get("ivr", 50)) or 50)
+                        if _n571_ivr > 70:
+                            _n571_s = "high_iv_rank"
+                        elif _n571_ivr >= 30:
+                            _n571_s = "mid_iv_rank"
+                        else:
+                            _n571_s = "low_iv_rank"
+                    except Exception:
+                        _n571_s = "mid_iv_rank"
+                    _buy_signals_merged["options_iv_rank_perf"] = _n571_s
+                    # N572: Call volume surge at entry
+                    try:
+                        _n572_cvr = float(d.get("call_vol_ratio", d.get("unusual_calls", 1.0)) or 1.0)
+                        if _n572_cvr >= 3.0:
+                            _n572_s = "call_surge"
+                        elif _n572_cvr >= 1.5:
+                            _n572_s = "elevated_calls"
+                        else:
+                            _n572_s = "normal_calls"
+                    except Exception:
+                        _n572_s = "normal_calls"
+                    _buy_signals_merged["call_volume_surge_perf"] = _n572_s
+                    # N573: Dark pool activity at entry
+                    try:
+                        _n573_dp = float(d.get("dark_pool_pct", d.get("dp_pct", 0)) or 0)
+                        if _n573_dp > 40:
+                            _n573_s = "heavy_dark_pool"
+                        elif _n573_dp >= 20:
+                            _n573_s = "moderate_dark_pool"
+                        else:
+                            _n573_s = "light_dark_pool"
+                    except Exception:
+                        _n573_s = "moderate_dark_pool"
+                    _buy_signals_merged["dark_pool_flow_perf"] = _n573_s
+                    # N574: Smart money flow at entry
+                    try:
+                        _n574_smf = float(d.get("smart_money_flow", d.get("smf", 0)) or 0)
+                        if _n574_smf > 10:
+                            _n574_s = "positive_smart_money"
+                        elif _n574_smf < -10:
+                            _n574_s = "negative_smart_money"
+                        else:
+                            _n574_s = "neutral_smart_money"
+                    except Exception:
+                        _n574_s = "neutral_smart_money"
+                    _buy_signals_merged["smart_money_flow_perf"] = _n574_s
+                    # N575: Sector rotation signal at entry
+                    try:
+                        _n575_sf = float(d.get("sector_flow_3d", d.get("sector_rotation_signal", 0)) or 0)
+                        if _n575_sf > 0:
+                            _n575_s = "rotating_in"
+                        elif _n575_sf < 0:
+                            _n575_s = "rotating_out"
+                        else:
+                            _n575_s = "stable_sector"
+                    except Exception:
+                        _n575_s = "stable_sector"
+                    _buy_signals_merged["trending_sector_rotation_perf"] = _n575_s
+                    # N576: TTM Squeeze state at entry
+                    try:
+                        _n576_fired = bool(d.get("squeeze_fired", d.get("ttm_squeeze", False)))
+                        _n576_in    = bool(d.get("in_squeeze", False))
+                        if _n576_fired:
+                            _n576_s = "squeeze_fired"
+                        elif _n576_in:
+                            _n576_s = "in_squeeze"
+                        else:
+                            _n576_s = "no_squeeze"
+                    except Exception:
+                        _n576_s = "no_squeeze"
+                    _buy_signals_merged["squeeze_momentum_perf"] = _n576_s
+                    # N577: Put wall proximity at entry
+                    try:
+                        _n577_pw = float(d.get("put_wall_pct", d.get("put_wall_distance", 5)) or 5)
+                        if _n577_pw > 5:
+                            _n577_s = "above_put_wall"
+                        elif _n577_pw >= 0:
+                            _n577_s = "near_put_wall"
+                        else:
+                            _n577_s = "below_put_wall"
+                    except Exception:
+                        _n577_s = "near_put_wall"
+                    _buy_signals_merged["put_wall_proximity_perf"] = _n577_s
+                    # N578: Weekly options expiry proximity at entry
+                    try:
+                        _n578_dte = float(tlog.get("days_to_opex", d.get("days_to_opex", 7)) or 7)
+                        if _n578_dte <= 2:
+                            _n578_s = "expiry_week"
+                        elif _n578_dte <= 5:
+                            _n578_s = "pre_expiry"
+                        else:
+                            _n578_s = "post_expiry"
+                    except Exception:
+                        _n578_s = "post_expiry"
+                    _buy_signals_merged["weekly_options_expiry_perf"] = _n578_s
+                    # N579: Net gamma exposure at entry
+                    try:
+                        _n579_gex = float(d.get("gex_sign", d.get("net_gex", 0)) or 0)
+                        if _n579_gex >= 0:
+                            _n579_s = "positive_gex"
+                        else:
+                            _n579_s = "negative_gex"
+                    except Exception:
+                        _n579_s = "positive_gex"
+                    _buy_signals_merged["gamma_exposure_perf"] = _n579_s
+                    # N580: VIX-based market regime at entry
+                    try:
+                        _n580_vix = float(tlog.get("vix_level", d.get("vix", d.get("vix_level", 20))) or 20)
+                        if _n580_vix < 15:
+                            _n580_s = "low_vix_regime"
+                        elif _n580_vix < 25:
+                            _n580_s = "normal_vix_regime"
+                        elif _n580_vix < 35:
+                            _n580_s = "high_vix_regime"
+                        else:
+                            _n580_s = "extreme_vix_regime"
+                    except Exception:
+                        _n580_s = "normal_vix_regime"
+                    _buy_signals_merged["market_regime_vix_perf"] = _n580_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -29615,7 +29886,7 @@ def run():
                 _learn_log.append(f"N280 Fed week: fed={_fw_n280['win_rate']:.0f}% non-fed={_nf_n280['win_rate']:.0f}%WR")
 
         # ── N281: Opening Range Breakout tuner ────────────────────────────────────────
-        _n281_raw = tlog.get("opening_range_breakout_perf", {})
+        _n281_raw = tlog.get("orb_15min_perf", {})
         _n281_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n281_raw.items() if v.get("total", 0) >= 2]
@@ -30275,7 +30546,7 @@ def run():
                 _learn_log.append(f"N340 eps revision: higher={_rh_n340['win_rate']:.0f}% lower={_rl_n340['win_rate']:.0f}%WR")
 
         # ── N341: Pre-Market Gap tuner ───────────────────────────────────────────────────
-        _n341_raw = tlog.get("pre_market_gap_perf", {})
+        _n341_raw = tlog.get("pm_gap_v1_perf", {})
         _n341_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n341_raw.items() if v.get("total", 0) >= 2]
@@ -31817,7 +32088,7 @@ def run():
             _learn_log.append(f"N514 Dark Pool: high_dark_pool={_a_n514['win_rate']:.0f}% low_dark_pool={_b_n514['win_rate']:.0f}%WR")
 
         # ── N515: Institutional Ownership tuner ────────────────────
-        _n515_raw = tlog.get("institutional_ownership_perf", {})
+        _n515_raw = tlog.get("inst_own_v1_perf", {})
         _n515_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n515_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n515 = next((s for s in _n515_list if s.get("state")=="high_inst_own"), _n515_list[0] if _n515_list else {"win_rate":50})
         _b_n515 = next((s for s in _n515_list if s.get("state")=="low_inst_own"), _n515_list[-1] if _n515_list else {"win_rate":50})
@@ -32263,6 +32534,86 @@ def run():
         _b_n570 = next((s for s in _n570_list if s.get("state")=="miss_history"), _n570_list[-1] if _n570_list else {"win_rate":50})
         if _n570_list:
             _learn_log.append(f"N570 EPS Beat Streak: consistent_beater={_a_n570['win_rate']:.0f}% miss_history={_b_n570['win_rate']:.0f}%WR")
+
+        # ── N571: Options IV Rank entry tuner ────────────────────
+        _n571_raw = tlog.get("options_iv_rank_perf", {})
+        _n571_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n571_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n571 = next((s for s in _n571_list if s.get("state")=="high_iv_rank"), _n571_list[0] if _n571_list else {"win_rate":50})
+        _b_n571 = next((s for s in _n571_list if s.get("state")=="low_iv_rank"), _n571_list[-1] if _n571_list else {"win_rate":50})
+        if _n571_list:
+            _learn_log.append(f"N571 IV Rank: high_iv_rank={_a_n571['win_rate']:.0f}% low_iv_rank={_b_n571['win_rate']:.0f}%WR")
+
+        # ── N572: Call Volume Surge entry tuner ────────────────────
+        _n572_raw = tlog.get("call_volume_surge_perf", {})
+        _n572_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n572_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n572 = next((s for s in _n572_list if s.get("state")=="call_surge"), _n572_list[0] if _n572_list else {"win_rate":50})
+        _b_n572 = next((s for s in _n572_list if s.get("state")=="normal_calls"), _n572_list[-1] if _n572_list else {"win_rate":50})
+        if _n572_list:
+            _learn_log.append(f"N572 Call Vol Surge: call_surge={_a_n572['win_rate']:.0f}% normal_calls={_b_n572['win_rate']:.0f}%WR")
+
+        # ── N573: Dark Pool Flow entry tuner ────────────────────
+        _n573_raw = tlog.get("dark_pool_flow_perf", {})
+        _n573_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n573_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n573 = next((s for s in _n573_list if s.get("state")=="heavy_dark_pool"), _n573_list[0] if _n573_list else {"win_rate":50})
+        _b_n573 = next((s for s in _n573_list if s.get("state")=="light_dark_pool"), _n573_list[-1] if _n573_list else {"win_rate":50})
+        if _n573_list:
+            _learn_log.append(f"N573 Dark Pool: heavy_dark_pool={_a_n573['win_rate']:.0f}% light_dark_pool={_b_n573['win_rate']:.0f}%WR")
+
+        # ── N574: Smart Money Flow entry tuner ────────────────────
+        _n574_raw = tlog.get("smart_money_flow_perf", {})
+        _n574_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n574_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n574 = next((s for s in _n574_list if s.get("state")=="positive_smart_money"), _n574_list[0] if _n574_list else {"win_rate":50})
+        _b_n574 = next((s for s in _n574_list if s.get("state")=="negative_smart_money"), _n574_list[-1] if _n574_list else {"win_rate":50})
+        if _n574_list:
+            _learn_log.append(f"N574 Smart Money: positive_smart_money={_a_n574['win_rate']:.0f}% negative_smart_money={_b_n574['win_rate']:.0f}%WR")
+
+        # ── N575: Trending Sector Rotation entry tuner ────────────────────
+        _n575_raw = tlog.get("trending_sector_rotation_perf", {})
+        _n575_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n575_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n575 = next((s for s in _n575_list if s.get("state")=="rotating_in"), _n575_list[0] if _n575_list else {"win_rate":50})
+        _b_n575 = next((s for s in _n575_list if s.get("state")=="rotating_out"), _n575_list[-1] if _n575_list else {"win_rate":50})
+        if _n575_list:
+            _learn_log.append(f"N575 Sector Rotation: rotating_in={_a_n575['win_rate']:.0f}% rotating_out={_b_n575['win_rate']:.0f}%WR")
+
+        # ── N576: Squeeze Momentum entry tuner ────────────────────
+        _n576_raw = tlog.get("squeeze_momentum_perf", {})
+        _n576_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n576_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n576 = next((s for s in _n576_list if s.get("state")=="squeeze_fired"), _n576_list[0] if _n576_list else {"win_rate":50})
+        _b_n576 = next((s for s in _n576_list if s.get("state")=="no_squeeze"), _n576_list[-1] if _n576_list else {"win_rate":50})
+        if _n576_list:
+            _learn_log.append(f"N576 TTM Squeeze: squeeze_fired={_a_n576['win_rate']:.0f}% no_squeeze={_b_n576['win_rate']:.0f}%WR")
+
+        # ── N577: Put Wall Proximity entry tuner ────────────────────
+        _n577_raw = tlog.get("put_wall_proximity_perf", {})
+        _n577_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n577_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n577 = next((s for s in _n577_list if s.get("state")=="above_put_wall"), _n577_list[0] if _n577_list else {"win_rate":50})
+        _b_n577 = next((s for s in _n577_list if s.get("state")=="below_put_wall"), _n577_list[-1] if _n577_list else {"win_rate":50})
+        if _n577_list:
+            _learn_log.append(f"N577 Put Wall: above_put_wall={_a_n577['win_rate']:.0f}% below_put_wall={_b_n577['win_rate']:.0f}%WR")
+
+        # ── N578: Weekly Options Expiry entry tuner ────────────────────
+        _n578_raw = tlog.get("weekly_options_expiry_perf", {})
+        _n578_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n578_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n578 = next((s for s in _n578_list if s.get("state")=="expiry_week"), _n578_list[0] if _n578_list else {"win_rate":50})
+        _b_n578 = next((s for s in _n578_list if s.get("state")=="post_expiry"), _n578_list[-1] if _n578_list else {"win_rate":50})
+        if _n578_list:
+            _learn_log.append(f"N578 Opex Proximity: expiry_week={_a_n578['win_rate']:.0f}% post_expiry={_b_n578['win_rate']:.0f}%WR")
+
+        # ── N579: Gamma Exposure entry tuner ────────────────────
+        _n579_raw = tlog.get("gamma_exposure_perf", {})
+        _n579_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n579_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n579 = next((s for s in _n579_list if s.get("state")=="positive_gex"), _n579_list[0] if _n579_list else {"win_rate":50})
+        _b_n579 = next((s for s in _n579_list if s.get("state")=="negative_gex"), _n579_list[-1] if _n579_list else {"win_rate":50})
+        if _n579_list:
+            _learn_log.append(f"N579 GEX: positive_gex={_a_n579['win_rate']:.0f}% negative_gex={_b_n579['win_rate']:.0f}%WR")
+
+        # ── N580: Market Regime VIX entry tuner ────────────────────
+        _n580_raw = tlog.get("market_regime_vix_perf", {})
+        _n580_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n580_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n580 = next((s for s in _n580_list if s.get("state")=="low_vix_regime"), _n580_list[0] if _n580_list else {"win_rate":50})
+        _b_n580 = next((s for s in _n580_list if s.get("state")=="extreme_vix_regime"), _n580_list[-1] if _n580_list else {"win_rate":50})
+        if _n580_list:
+            _learn_log.append(f"N580 VIX Regime: low_vix_regime={_a_n580['win_rate']:.0f}% extreme_vix_regime={_b_n580['win_rate']:.0f}%WR")
 
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
@@ -32832,7 +33183,7 @@ def run():
             "entry_quality_score_perf":    _n278_insights,   # N278: entry quality score (score at buy) vs outcome
             "sector_momentum_rank_perf":   _n279_insights,   # N279: sector momentum rank (top/mid/bottom) vs outcome
             "fed_meeting_week_N280_perf":  _n280_insights,   # N280: Fed meeting week heuristic vs outcome
-            "opening_range_breakout_perf":     _n281_insights,   # N281: opening range breakout (ORB first 15 min) vs outcome
+            "orb_15min_perf":                  _n281_insights,   # N281: opening range breakout (ORB first 15 min) vs outcome
             "spy_rsi_overbought_perf":         _n282_insights,   # N282: SPY RSI overbought/oversold zone vs outcome
             "ticker_earnings_beat_streak_perf":_n283_insights,   # N283: ticker earnings beat streak vs outcome
             "holding_cost_vs_cash_perf":       _n284_insights,   # N284: portfolio invested % at entry vs outcome
@@ -32892,7 +33243,7 @@ def run():
             "index_divergence_perf":            _n338_insights,   # N338: index divergence at entry vs outcome
             "opening_gap_follow_perf":          _n339_insights,   # N339: opening gap follow at entry vs outcome
             "earnings_revision_perf":           _n340_insights,   # N340: earnings revision at entry vs outcome
-            "pre_market_gap_perf":              _n341_insights,   # N341: pre-market gap at entry vs outcome
+            "pm_gap_v1_perf":                   _n341_insights,   # N341: pre-market gap at entry vs outcome
             "regime_transition_perf":           _n342_insights,   # N342: regime transition (improving/stable/deteriorating) vs outcome
             "ticker_age_bucket_perf":           _n343_insights,   # N343: ticker market cap bucket at entry vs outcome
             "spy_options_oi_perf":              _n344_insights,   # N344: SPY options put/call flow at entry vs outcome
@@ -33066,7 +33417,7 @@ def run():
             "tape_speed_entry_perf": _n512_list,  # N512: tape speed at entry vs outcome
             "options_skew_entry_perf": _n513_list,  # N513: options skew at entry vs outcome
             "dark_pool_entry_perf": _n514_list,  # N514: dark pool activity at entry vs outcome
-            "institutional_ownership_perf": _n515_list,  # N515: institutional ownership at entry vs outcome
+            "inst_own_v1_perf":             _n515_list,  # N515: institutional ownership at entry vs outcome
             "float_rotation_entry_perf": _n516_list,  # N516: float rotation at entry vs outcome
             "news_sentiment_v2_perf": _n517_list,  # N517: news sentiment score at entry vs outcome
             "social_momentum_entry_perf": _n518_list,  # N518: social momentum at entry vs outcome
@@ -33122,6 +33473,16 @@ def run():
             "insider_purchase_signal_perf": _n568_list,  # N568: insider purchase signal (strong/single/no_insider_buy) at entry vs outcome
             "social_buzz_velocity_perf": _n569_list,  # N569: social buzz velocity (viral/rising/normal_buzz) at entry vs outcome
             "earnings_beat_streak_perf": _n570_list,  # N570: earnings beat streak (consistent/occasional_beater/miss_history) vs outcome
+            "options_iv_rank_perf": _n571_list,  # N571: options IV rank (high_iv_rank/mid_iv_rank/low_iv_rank) at entry vs outcome
+            "call_volume_surge_perf": _n572_list,  # N572: call volume surge (call_surge/elevated_calls/normal_calls) at entry vs outcome
+            "dark_pool_flow_perf": _n573_list,  # N573: dark pool activity (heavy/moderate/light_dark_pool) at entry vs outcome
+            "smart_money_flow_perf": _n574_list,  # N574: smart money flow (positive/neutral/negative_smart_money) at entry vs outcome
+            "trending_sector_rotation_perf": _n575_list,  # N575: sector rotation (rotating_in/stable_sector/rotating_out) at entry vs outcome
+            "squeeze_momentum_perf": _n576_list,  # N576: TTM squeeze state (squeeze_fired/in_squeeze/no_squeeze) at entry vs outcome
+            "put_wall_proximity_perf": _n577_list,  # N577: put wall proximity (above/near/below_put_wall) at entry vs outcome
+            "weekly_options_expiry_perf": _n578_list,  # N578: opex proximity (expiry_week/pre_expiry/post_expiry) at entry vs outcome
+            "gamma_exposure_perf": _n579_list,  # N579: net gamma exposure (positive_gex/negative_gex) at entry vs outcome
+            "market_regime_vix_perf": _n580_list,  # N580: VIX regime (low/normal/high/extreme_vix_regime) at entry vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -33318,7 +33679,7 @@ def run():
             "regime_duration_N275_perf", "crypto_correlation_perf",
             "intraday_trend_persistence_perf", "entry_quality_score_perf",
             "sector_momentum_rank_perf", "fed_meeting_week_N280_perf",
-            "opening_range_breakout_perf", "spy_rsi_overbought_perf",
+            "orb_15min_perf", "spy_rsi_overbought_perf",
             "ticker_earnings_beat_streak_perf", "holding_cost_vs_cash_perf",
             "spy_volume_vs_avg_perf", "technical_score_bucket_perf",
             "day_of_week_perf", "market_hours_quadrant_perf",
@@ -33348,7 +33709,7 @@ def run():
             "iv_rank_bucket_perf", "catalyst_type_perf",
             "trend_age_bucket_perf", "index_divergence_perf",
             "opening_gap_follow_perf", "earnings_revision_perf",
-            "pre_market_gap_perf", "regime_transition_perf",
+            "pm_gap_v1_perf", "regime_transition_perf",
             "ticker_age_bucket_perf", "spy_options_oi_perf",
             "breakout_confirmation_perf", "portfolio_heat_perf",
             "earnings_momentum_perf", "volatility_contraction_perf",
@@ -33429,7 +33790,7 @@ def run():
             "dmi_cross_entry_perf", "ichimoku_cloud_entry_perf",
             "market_internals_entry_perf", "tape_speed_entry_perf",
             "options_skew_entry_perf", "dark_pool_entry_perf",
-            "institutional_ownership_perf", "float_rotation_entry_perf",
+            "inst_own_v1_perf", "float_rotation_entry_perf",
             "news_sentiment_score_perf", "social_momentum_entry_perf",
             "earnings_surprise_entry_perf", "guidance_revision_entry_perf",
             "short_interest_ratio_perf", "float_rotation_perf",
@@ -33449,9 +33810,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 530              # total tracked neuron dimensions (N103-N570 complete)
+        tlog["neurons_total"]     = 540              # total tracked neuron dimensions (N103-N580 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/530 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/540 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

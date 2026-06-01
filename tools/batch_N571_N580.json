@@ -1,0 +1,87 @@
+{
+  "batch": "N571-N580",
+  "neurons": [
+    {
+      "id": "N571",
+      "key": "options_iv_rank_perf",
+      "description": "Options IV rank at entry",
+      "values": ["high_iv_rank", "mid_iv_rank", "low_iv_rank"],
+      "source_field": "d.get('iv_rank', d.get('ivr', 50))",
+      "thresholds": ">70% = high_iv_rank, 30-70% = mid_iv_rank, <30% = low_iv_rank"
+    },
+    {
+      "id": "N572",
+      "key": "call_volume_surge_perf",
+      "description": "Unusual call buying relative to average at entry",
+      "values": ["call_surge", "elevated_calls", "normal_calls"],
+      "source_field": "d.get('call_vol_ratio', d.get('unusual_calls', 1.0))",
+      "thresholds": ">=3x avg = call_surge, 1.5-3x = elevated_calls, <1.5x = normal_calls"
+    },
+    {
+      "id": "N573",
+      "key": "dark_pool_flow_perf",
+      "description": "Dark pool activity as % of total volume at entry",
+      "values": ["heavy_dark_pool", "moderate_dark_pool", "light_dark_pool"],
+      "source_field": "d.get('dark_pool_pct', d.get('dp_pct', 0))",
+      "thresholds": ">40% = heavy_dark_pool, 20-40% = moderate_dark_pool, <20% = light_dark_pool"
+    },
+    {
+      "id": "N574",
+      "key": "smart_money_flow_perf",
+      "description": "Smart money flow index at entry",
+      "values": ["positive_smart_money", "neutral_smart_money", "negative_smart_money"],
+      "source_field": "d.get('smart_money_flow', d.get('smf', 0))",
+      "thresholds": ">+10% = positive_smart_money, -10% to +10% = neutral_smart_money, <-10% = negative_smart_money"
+    },
+    {
+      "id": "N575",
+      "key": "trending_sector_rotation_perf",
+      "description": "Capital rotation direction into this sector (3-day sector flows) at entry",
+      "values": ["rotating_in", "stable_sector", "rotating_out"],
+      "source_field": "d.get('sector_flow_3d', d.get('sector_rotation_signal', 0))",
+      "thresholds": ">0 = rotating_in, ==0 = stable_sector, <0 = rotating_out"
+    },
+    {
+      "id": "N576",
+      "key": "squeeze_momentum_perf",
+      "description": "TTM Squeeze state at entry",
+      "values": ["squeeze_fired", "in_squeeze", "no_squeeze"],
+      "source_field": "d.get('squeeze_fired', d.get('ttm_squeeze', False)) and d.get('in_squeeze', False)",
+      "thresholds": "squeeze_fired=True = squeeze_fired, in_squeeze=True = in_squeeze, else = no_squeeze"
+    },
+    {
+      "id": "N577",
+      "key": "put_wall_proximity_perf",
+      "description": "Distance of price above/below major put wall/support at entry",
+      "values": ["above_put_wall", "near_put_wall", "below_put_wall"],
+      "source_field": "d.get('put_wall_pct', d.get('put_wall_distance', 5))",
+      "thresholds": ">5% above = above_put_wall, 0-5% above = near_put_wall, below = below_put_wall"
+    },
+    {
+      "id": "N578",
+      "key": "weekly_options_expiry_perf",
+      "description": "Days to nearest weekly options expiry at entry",
+      "values": ["expiry_week", "pre_expiry", "post_expiry"],
+      "source_field": "tlog.get('days_to_opex', d.get('days_to_opex', 7))",
+      "thresholds": "0-2 days = expiry_week, 3-5 days = pre_expiry, >5 days = post_expiry"
+    },
+    {
+      "id": "N579",
+      "key": "gamma_exposure_perf",
+      "description": "Net gamma exposure (GEX) sign at entry",
+      "values": ["positive_gex", "negative_gex"],
+      "source_field": "d.get('gex_sign', d.get('net_gex', 0))",
+      "thresholds": ">=0 = positive_gex (dealers long gamma, dampening), <0 = negative_gex (dealers short gamma, amplifying)"
+    },
+    {
+      "id": "N580",
+      "key": "market_regime_vix_perf",
+      "description": "VIX-based market regime at entry",
+      "values": ["low_vix_regime", "normal_vix_regime", "high_vix_regime", "extreme_vix_regime"],
+      "source_field": "tlog.get('vix_level', d.get('vix', d.get('vix_level', 20)))",
+      "thresholds": "<15 = low_vix_regime (trending), 15-25 = normal_vix_regime, 25-35 = high_vix_regime, >35 = extreme_vix_regime"
+    }
+  ],
+  "neurons_total": 540,
+  "status": "complete"
+}
