@@ -27998,6 +27998,153 @@ def run():
                     except Exception:
                         _n660_s = "fair_iv"
                     _buy_signals_merged["option_implied_move_perf"] = _n660_s
+                    # N661: Trend age
+                    try:
+                        _n661_age = float(d.get("trend_age_weeks", d.get("trend_weeks", 0)) or 0)
+                        if _n661_age < 4:
+                            _n661_s = "fresh_trend"
+                        elif _n661_age < 12:
+                            _n661_s = "established_trend"
+                        elif _n661_age < 26:
+                            _n661_s = "mature_trend"
+                        else:
+                            _n661_s = "extended_trend"
+                    except Exception:
+                        _n661_s = "established_trend"
+                    _buy_signals_merged["trend_age_perf"] = _n661_s
+                    # N662: Reversal candle
+                    try:
+                        _n662_pat = str(d.get("reversal_pattern", d.get("candle_pattern", "none")) or "none").lower()
+                        if "engulfing" in _n662_pat or "bullish_engulfing" in _n662_pat:
+                            _n662_s = "bullish_engulfing"
+                        elif "hammer" in _n662_pat:
+                            _n662_s = "hammer_reversal"
+                        elif "morning" in _n662_pat or "morning_star" in _n662_pat:
+                            _n662_s = "morning_star"
+                        else:
+                            _n662_s = "no_reversal_pattern"
+                    except Exception:
+                        _n662_s = "no_reversal_pattern"
+                    _buy_signals_merged["reversal_candle_perf"] = _n662_s
+                    # N663: Weekly momentum
+                    try:
+                        _n663_wchg = float(d.get("week_chg", d.get("chg5d", 0)) or 0)
+                        if _n663_wchg > 3.0:
+                            _n663_s = "strong_weekly_up"
+                        elif _n663_wchg > 0.5:
+                            _n663_s = "mild_weekly_up"
+                        elif _n663_wchg >= -0.5:
+                            _n663_s = "flat_weekly"
+                        else:
+                            _n663_s = "weekly_downtrend"
+                    except Exception:
+                        _n663_s = "flat_weekly"
+                    _buy_signals_merged["weekly_momentum_perf"] = _n663_s
+                    # N664: Relative strength rank
+                    try:
+                        _n664_rs = float(d.get("rs_rating", d.get("ibd_rs", 50)) or 50)
+                        if _n664_rs >= 95:
+                            _n664_s = "elite_rs"
+                        elif _n664_rs >= 80:
+                            _n664_s = "strong_rs"
+                        elif _n664_rs >= 50:
+                            _n664_s = "average_rs"
+                        else:
+                            _n664_s = "weak_rs"
+                    except Exception:
+                        _n664_s = "average_rs"
+                    _buy_signals_merged["relative_strength_rank_perf"] = _n664_s
+                    # N665: Catalyst freshness
+                    try:
+                        _n665_age = float(d.get("catalyst_age_hours", d.get("news_age_h", 999)) or 999)
+                        if _n665_age < 24:
+                            _n665_s = "fresh_catalyst"
+                        elif _n665_age < 72:
+                            _n665_s = "recent_catalyst"
+                        elif _n665_age < 168:
+                            _n665_s = "stale_catalyst"
+                        else:
+                            _n665_s = "no_recent_catalyst"
+                    except Exception:
+                        _n665_s = "no_recent_catalyst"
+                    _buy_signals_merged["catalyst_freshness_perf"] = _n665_s
+                    # N666: Institutional accumulation
+                    try:
+                        _n666_acc = float(d.get("accum_score", d.get("inst_accum", 4)) or 4)
+                        if _n666_acc >= 8:
+                            _n666_s = "heavy_accumulation"
+                        elif _n666_acc >= 5:
+                            _n666_s = "moderate_accumulation"
+                        elif _n666_acc < 3:
+                            _n666_s = "distribution"
+                        else:
+                            _n666_s = "neutral_flow"
+                    except Exception:
+                        _n666_s = "neutral_flow"
+                    _buy_signals_merged["institutional_accumulation_perf"] = _n666_s
+                    # N667: Breakout volume confirmation
+                    try:
+                        _n667_vr = float(d.get("breakout_vol_ratio", d.get("vol_ratio", 1.0)) or 1.0)
+                        _n667_at = bool(d.get("at_breakout", False))
+                        if not _n667_at:
+                            _n667_s = "no_breakout"
+                        elif _n667_vr > 2.0:
+                            _n667_s = "strong_breakout_vol"
+                        elif _n667_vr >= 1.5:
+                            _n667_s = "confirmed_breakout"
+                        else:
+                            _n667_s = "low_vol_breakout"
+                    except Exception:
+                        _n667_s = "no_breakout"
+                    _buy_signals_merged["breakout_volume_confirmation_perf"] = _n667_s
+                    # N668: ADX trend strength
+                    try:
+                        _n668_adx = float(d.get("adx", d.get("adx14", 0)) or 0)
+                        if _n668_adx >= 30:
+                            _n668_s = "strong_trend"
+                        elif _n668_adx >= 20:
+                            _n668_s = "moderate_trend"
+                        elif _n668_adx >= 15:
+                            _n668_s = "weak_trend"
+                        else:
+                            _n668_s = "no_trend"
+                    except Exception:
+                        _n668_s = "no_trend"
+                    _buy_signals_merged["adx_trend_strength_perf"] = _n668_s
+                    # N669: Risk reward ratio
+                    try:
+                        _n669_rr = float(d.get("risk_reward", d.get("rr_ratio", 0)) or 0)
+                        if _n669_rr == 0:
+                            _n669_price = float(d.get("price", 1) or 1)
+                            _n669_target = float(d.get("price_target", 0) or 0)
+                            _n669_stop = float(d.get("stop_price", _n669_price * 0.97) or _n669_price * 0.97)
+                            _n669_rr = (_n669_target - _n669_price) / max(_n669_price - _n669_stop, 0.01) if _n669_target > _n669_price else 0
+                        if _n669_rr >= 3.0:
+                            _n669_s = "excellent_rr"
+                        elif _n669_rr >= 2.0:
+                            _n669_s = "good_rr"
+                        elif _n669_rr >= 1.5:
+                            _n669_s = "acceptable_rr"
+                        else:
+                            _n669_s = "poor_rr"
+                    except Exception:
+                        _n669_s = "poor_rr"
+                    _buy_signals_merged["risk_reward_ratio_perf"] = _n669_s
+                    # N670: Sector ETF momentum
+                    try:
+                        _n670_sec1d = float(d.get("sector_etf_1d", d.get("sector_day_pct", 0)) or 0)
+                        _n670_vs_spy = float(d.get("sector_vs_spy_5d", 0) or 0)
+                        if _n670_vs_spy > 1.0:
+                            _n670_s = "sector_outperforming"
+                        elif _n670_vs_spy >= -1.0:
+                            _n670_s = "sector_inline"
+                        elif _n670_sec1d < 0 and _n670_vs_spy < -1.0:
+                            _n670_s = "sector_counter_trend"
+                        else:
+                            _n670_s = "sector_lagging"
+                    except Exception:
+                        _n670_s = "sector_inline"
+                    _buy_signals_merged["sector_etf_momentum_perf"] = _n670_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -35871,6 +36018,86 @@ def run():
         if _n660_list:
             _learn_log.append(f"N660 OptImpMove: low_iv_opportunity={_a_n660['win_rate']:.0f}% high_iv_premium={_b_n660['win_rate']:.0f}%WR")
 
+        # ── N661: Trend Age entry tuner ────────────────────
+        _n661_raw = tlog.get("trend_age_perf", {})
+        _n661_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n661_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n661 = next((s for s in _n661_list if s.get("state")=="fresh_trend"), _n661_list[0] if _n661_list else {"win_rate":50})
+        _b_n661 = next((s for s in _n661_list if s.get("state")=="extended_trend"), _n661_list[-1] if _n661_list else {"win_rate":50})
+        if _n661_list:
+            _learn_log.append(f"N661 TrendAge: fresh_trend={_a_n661['win_rate']:.0f}% extended_trend={_b_n661['win_rate']:.0f}%WR")
+
+        # ── N662: Reversal Candle entry tuner ────────────────────
+        _n662_raw = tlog.get("reversal_candle_perf", {})
+        _n662_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n662_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n662 = next((s for s in _n662_list if s.get("state")=="bullish_engulfing"), _n662_list[0] if _n662_list else {"win_rate":50})
+        _b_n662 = next((s for s in _n662_list if s.get("state")=="no_reversal_pattern"), _n662_list[-1] if _n662_list else {"win_rate":50})
+        if _n662_list:
+            _learn_log.append(f"N662 ReversalCandle: bullish_engulfing={_a_n662['win_rate']:.0f}% no_reversal_pattern={_b_n662['win_rate']:.0f}%WR")
+
+        # ── N663: Weekly Momentum entry tuner ────────────────────
+        _n663_raw = tlog.get("weekly_momentum_perf", {})
+        _n663_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n663_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n663 = next((s for s in _n663_list if s.get("state")=="strong_weekly_up"), _n663_list[0] if _n663_list else {"win_rate":50})
+        _b_n663 = next((s for s in _n663_list if s.get("state")=="weekly_downtrend"), _n663_list[-1] if _n663_list else {"win_rate":50})
+        if _n663_list:
+            _learn_log.append(f"N663 WeeklyMom: strong_weekly_up={_a_n663['win_rate']:.0f}% weekly_downtrend={_b_n663['win_rate']:.0f}%WR")
+
+        # ── N664: Relative Strength Rank entry tuner ────────────────────
+        _n664_raw = tlog.get("relative_strength_rank_perf", {})
+        _n664_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n664_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n664 = next((s for s in _n664_list if s.get("state")=="elite_rs"), _n664_list[0] if _n664_list else {"win_rate":50})
+        _b_n664 = next((s for s in _n664_list if s.get("state")=="weak_rs"), _n664_list[-1] if _n664_list else {"win_rate":50})
+        if _n664_list:
+            _learn_log.append(f"N664 RSRank: elite_rs={_a_n664['win_rate']:.0f}% weak_rs={_b_n664['win_rate']:.0f}%WR")
+
+        # ── N665: Catalyst Freshness entry tuner ────────────────────
+        _n665_raw = tlog.get("catalyst_freshness_perf", {})
+        _n665_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n665_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n665 = next((s for s in _n665_list if s.get("state")=="fresh_catalyst"), _n665_list[0] if _n665_list else {"win_rate":50})
+        _b_n665 = next((s for s in _n665_list if s.get("state")=="no_recent_catalyst"), _n665_list[-1] if _n665_list else {"win_rate":50})
+        if _n665_list:
+            _learn_log.append(f"N665 CatalystFresh: fresh_catalyst={_a_n665['win_rate']:.0f}% no_recent_catalyst={_b_n665['win_rate']:.0f}%WR")
+
+        # ── N666: Institutional Accumulation entry tuner ────────────────────
+        _n666_raw = tlog.get("institutional_accumulation_perf", {})
+        _n666_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n666_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n666 = next((s for s in _n666_list if s.get("state")=="heavy_accumulation"), _n666_list[0] if _n666_list else {"win_rate":50})
+        _b_n666 = next((s for s in _n666_list if s.get("state")=="distribution"), _n666_list[-1] if _n666_list else {"win_rate":50})
+        if _n666_list:
+            _learn_log.append(f"N666 InstAccum: heavy_accumulation={_a_n666['win_rate']:.0f}% distribution={_b_n666['win_rate']:.0f}%WR")
+
+        # ── N667: Breakout Volume Confirmation entry tuner ────────────────────
+        _n667_raw = tlog.get("breakout_volume_confirmation_perf", {})
+        _n667_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n667_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n667 = next((s for s in _n667_list if s.get("state")=="strong_breakout_vol"), _n667_list[0] if _n667_list else {"win_rate":50})
+        _b_n667 = next((s for s in _n667_list if s.get("state")=="no_breakout"), _n667_list[-1] if _n667_list else {"win_rate":50})
+        if _n667_list:
+            _learn_log.append(f"N667 BreakoutVol: strong_breakout_vol={_a_n667['win_rate']:.0f}% no_breakout={_b_n667['win_rate']:.0f}%WR")
+
+        # ── N668: ADX Trend Strength entry tuner ────────────────────
+        _n668_raw = tlog.get("adx_trend_strength_perf", {})
+        _n668_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n668_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n668 = next((s for s in _n668_list if s.get("state")=="strong_trend"), _n668_list[0] if _n668_list else {"win_rate":50})
+        _b_n668 = next((s for s in _n668_list if s.get("state")=="no_trend"), _n668_list[-1] if _n668_list else {"win_rate":50})
+        if _n668_list:
+            _learn_log.append(f"N668 ADXStrength: strong_trend={_a_n668['win_rate']:.0f}% no_trend={_b_n668['win_rate']:.0f}%WR")
+
+        # ── N669: Risk Reward Ratio entry tuner ────────────────────
+        _n669_raw = tlog.get("risk_reward_ratio_perf", {})
+        _n669_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n669_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n669 = next((s for s in _n669_list if s.get("state")=="excellent_rr"), _n669_list[0] if _n669_list else {"win_rate":50})
+        _b_n669 = next((s for s in _n669_list if s.get("state")=="poor_rr"), _n669_list[-1] if _n669_list else {"win_rate":50})
+        if _n669_list:
+            _learn_log.append(f"N669 RiskReward: excellent_rr={_a_n669['win_rate']:.0f}% poor_rr={_b_n669['win_rate']:.0f}%WR")
+
+        # ── N670: Sector ETF Momentum entry tuner ────────────────────
+        _n670_raw = tlog.get("sector_etf_momentum_perf", {})
+        _n670_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n670_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n670 = next((s for s in _n670_list if s.get("state")=="sector_outperforming"), _n670_list[0] if _n670_list else {"win_rate":50})
+        _b_n670 = next((s for s in _n670_list if s.get("state")=="sector_counter_trend"), _n670_list[-1] if _n670_list else {"win_rate":50})
+        if _n670_list:
+            _learn_log.append(f"N670 SectorETFMom: sector_outperforming={_a_n670['win_rate']:.0f}% sector_counter_trend={_b_n670['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -36819,6 +37046,16 @@ def run():
             "premarket_gap_size_perf": _n658_list,  # N658: premarket gap size (large_gap_up/small_gap_up/flat_open/gap_down) vs outcome
             "social_sentiment_velocity_perf": _n659_list,  # N659: social sentiment velocity (viral_acceleration/steady_buzz/fading_buzz/no_social_signal) vs outcome
             "option_implied_move_perf": _n660_list,  # N660: option implied move (high_iv_premium/elevated_iv/fair_iv/low_iv_opportunity) vs outcome
+            "trend_age_perf": _n661_list,  # N661: trend age (fresh_trend/established_trend/mature_trend/extended_trend) vs outcome
+            "reversal_candle_perf": _n662_list,  # N662: reversal candle (bullish_engulfing/hammer_reversal/morning_star/no_reversal_pattern) vs outcome
+            "weekly_momentum_perf": _n663_list,  # N663: weekly momentum (strong_weekly_up/mild_weekly_up/flat_weekly/weekly_downtrend) vs outcome
+            "relative_strength_rank_perf": _n664_list,  # N664: relative strength rank (elite_rs/strong_rs/average_rs/weak_rs) vs outcome
+            "catalyst_freshness_perf": _n665_list,  # N665: catalyst freshness (fresh_catalyst/recent_catalyst/stale_catalyst/no_recent_catalyst) vs outcome
+            "institutional_accumulation_perf": _n666_list,  # N666: institutional accumulation (heavy_accumulation/moderate_accumulation/distribution/neutral_flow) vs outcome
+            "breakout_volume_confirmation_perf": _n667_list,  # N667: breakout volume confirmation (strong_breakout_vol/confirmed_breakout/low_vol_breakout/no_breakout) vs outcome
+            "adx_trend_strength_perf": _n668_list,  # N668: ADX trend strength (strong_trend/moderate_trend/weak_trend/no_trend) vs outcome
+            "risk_reward_ratio_perf": _n669_list,  # N669: risk reward ratio (excellent_rr/good_rr/acceptable_rr/poor_rr) vs outcome
+            "sector_etf_momentum_perf": _n670_list,  # N670: sector ETF momentum (sector_outperforming/sector_inline/sector_lagging/sector_counter_trend) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -37146,9 +37383,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 620              # total tracked neuron dimensions (N103-N660 complete)
+        tlog["neurons_total"]     = 630              # total tracked neuron dimensions (N103-N670 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/620 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/630 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
