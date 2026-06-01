@@ -34131,6 +34131,86 @@ def run():
         if _n610_list:
             _learn_log.append(f"N610 TimeDay: prime_window={_a_n610['win_rate']:.0f}% avoid_window={_b_n610['win_rate']:.0f}%WR")
 
+        # ── N611: Consolidation Length entry tuner ────────────────────
+        _n611_raw = tlog.get("consolidation_length_perf", {})
+        _n611_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n611_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n611 = next((s for s in _n611_list if s.get("state")=="tight_consolidation"), _n611_list[0] if _n611_list else {"win_rate":50})
+        _b_n611 = next((s for s in _n611_list if s.get("state")=="stale_consolidation"), _n611_list[-1] if _n611_list else {"win_rate":50})
+        if _n611_list:
+            _learn_log.append(f"N611 Consol: tight_consolidation={_a_n611['win_rate']:.0f}% stale_consolidation={_b_n611['win_rate']:.0f}%WR")
+
+        # ── N612: Catalyst Type Detail entry tuner ────────────────────
+        _n612_raw = tlog.get("catalyst_type_detail_perf", {})
+        _n612_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n612_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n612 = next((s for s in _n612_list if s.get("state")=="earnings_catalyst"), _n612_list[0] if _n612_list else {"win_rate":50})
+        _b_n612 = next((s for s in _n612_list if s.get("state")=="technical_catalyst"), _n612_list[-1] if _n612_list else {"win_rate":50})
+        if _n612_list:
+            _learn_log.append(f"N612 CatalystDetail: earnings_catalyst={_a_n612['win_rate']:.0f}% technical_catalyst={_b_n612['win_rate']:.0f}%WR")
+
+        # ── N613: Price Action Quality entry tuner ────────────────────
+        _n613_raw = tlog.get("price_action_quality_perf", {})
+        _n613_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n613_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n613 = next((s for s in _n613_list if s.get("state")=="smooth_uptrend"), _n613_list[0] if _n613_list else {"win_rate":50})
+        _b_n613 = next((s for s in _n613_list if s.get("state")=="choppy_action"), _n613_list[-1] if _n613_list else {"win_rate":50})
+        if _n613_list:
+            _learn_log.append(f"N613 PriceAction: smooth_uptrend={_a_n613['win_rate']:.0f}% choppy_action={_b_n613['win_rate']:.0f}%WR")
+
+        # ── N614: Market Cap Tier entry tuner ────────────────────
+        _n614_raw = tlog.get("market_cap_tier_perf", {})
+        _n614_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n614_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n614 = next((s for s in _n614_list if s.get("state")=="small_cap"), _n614_list[0] if _n614_list else {"win_rate":50})
+        _b_n614 = next((s for s in _n614_list if s.get("state")=="nano_cap"), _n614_list[-1] if _n614_list else {"win_rate":50})
+        if _n614_list:
+            _learn_log.append(f"N614 MktCap: small_cap={_a_n614['win_rate']:.0f}% nano_cap={_b_n614['win_rate']:.0f}%WR")
+
+        # ── N615: Options Flow Signal entry tuner ────────────────────
+        _n615_raw = tlog.get("options_flow_signal_perf", {})
+        _n615_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n615_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n615 = next((s for s in _n615_list if s.get("state")=="bullish_sweep"), _n615_list[0] if _n615_list else {"win_rate":50})
+        _b_n615 = next((s for s in _n615_list if s.get("state")=="put_buying"), _n615_list[-1] if _n615_list else {"win_rate":50})
+        if _n615_list:
+            _learn_log.append(f"N615 OptFlow: bullish_sweep={_a_n615['win_rate']:.0f}% put_buying={_b_n615['win_rate']:.0f}%WR")
+
+        # ── N616: Institutional Filing entry tuner ────────────────────
+        _n616_raw = tlog.get("institutional_filing_perf", {})
+        _n616_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n616_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n616 = next((s for s in _n616_list if s.get("state")=="new_inst_position"), _n616_list[0] if _n616_list else {"win_rate":50})
+        _b_n616 = next((s for s in _n616_list if s.get("state")=="decreased_inst"), _n616_list[-1] if _n616_list else {"win_rate":50})
+        if _n616_list:
+            _learn_log.append(f"N616 InstFiling: new_inst_position={_a_n616['win_rate']:.0f}% decreased_inst={_b_n616['win_rate']:.0f}%WR")
+
+        # ── N617: Relative Strength vs SPY entry tuner ────────────────────
+        _n617_raw = tlog.get("relative_strength_vs_spy_perf", {})
+        _n617_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n617_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n617 = next((s for s in _n617_list if s.get("state")=="strong_rs"), _n617_list[0] if _n617_list else {"win_rate":50})
+        _b_n617 = next((s for s in _n617_list if s.get("state")=="weak_rs"), _n617_list[-1] if _n617_list else {"win_rate":50})
+        if _n617_list:
+            _learn_log.append(f"N617 RSvsSPY: strong_rs={_a_n617['win_rate']:.0f}% weak_rs={_b_n617['win_rate']:.0f}%WR")
+
+        # ── N618: Gap Fill Proximity entry tuner ────────────────────
+        _n618_raw = tlog.get("gap_fill_proximity_perf", {})
+        _n618_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n618_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n618 = next((s for s in _n618_list if s.get("state")=="gap_fill_done"), _n618_list[0] if _n618_list else {"win_rate":50})
+        _b_n618 = next((s for s in _n618_list if s.get("state")=="approaching_gap_fill"), _n618_list[-1] if _n618_list else {"win_rate":50})
+        if _n618_list:
+            _learn_log.append(f"N618 GapFill: gap_fill_done={_a_n618['win_rate']:.0f}% approaching_gap_fill={_b_n618['win_rate']:.0f}%WR")
+
+        # ── N619: Multi-Timeframe RSI entry tuner ────────────────────
+        _n619_raw = tlog.get("multi_timeframe_rsi_perf", {})
+        _n619_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n619_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n619 = next((s for s in _n619_list if s.get("state")=="bullish_all_tf"), _n619_list[0] if _n619_list else {"win_rate":50})
+        _b_n619 = next((s for s in _n619_list if s.get("state")=="bearish_all_tf"), _n619_list[-1] if _n619_list else {"win_rate":50})
+        if _n619_list:
+            _learn_log.append(f"N619 MTF_RSI: bullish_all_tf={_a_n619['win_rate']:.0f}% bearish_all_tf={_b_n619['win_rate']:.0f}%WR")
+
+        # ── N620: Earnings Quality entry tuner ────────────────────
+        _n620_raw = tlog.get("earnings_quality_perf", {})
+        _n620_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n620_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n620 = next((s for s in _n620_list if s.get("state")=="strong_beat"), _n620_list[0] if _n620_list else {"win_rate":50})
+        _b_n620 = next((s for s in _n620_list if s.get("state")=="miss_earnings"), _n620_list[-1] if _n620_list else {"win_rate":50})
+        if _n620_list:
+            _learn_log.append(f"N620 EarnQual: strong_beat={_a_n620['win_rate']:.0f}% miss_earnings={_b_n620['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -35029,6 +35109,16 @@ def run():
             "resistance_proximity_perf": _n608_list,  # N608: resistance proximity (clear_above/approaching/far_from_resistance) vs outcome
             "market_breadth_perf": _n609_list,  # N609: market breadth (strong/neutral/weak_breadth) vs outcome
             "time_of_day_score_perf": _n610_list,  # N610: time-of-day score bucket (prime/good/avoid_window) vs outcome
+            "consolidation_length_perf": _n611_list,  # N611: consolidation length before breakout (tight/extended/stale_consolidation) vs outcome
+            "catalyst_type_detail_perf": _n612_list,  # N612: detailed catalyst type (earnings/product/upgrade/news/technical_catalyst) vs outcome
+            "price_action_quality_perf": _n613_list,  # N613: price action quality at entry (smooth_uptrend/recovering_action/choppy_action) vs outcome
+            "market_cap_tier_perf": _n614_list,  # N614: market cap tier (nano/micro/small/mid_cap) vs outcome
+            "options_flow_signal_perf": _n615_list,  # N615: unusual options flow (bullish_sweep/call_buying/neutral_flow/put_buying) vs outcome
+            "institutional_filing_perf": _n616_list,  # N616: 13F institutional filing signal (new_inst_position/increased/no_change/decreased_inst) vs outcome
+            "relative_strength_vs_spy_perf": _n617_list,  # N617: RS vs SPY on entry day (strong_rs/inline_rs/weak_rs) vs outcome
+            "gap_fill_proximity_perf": _n618_list,  # N618: distance to gap fill level (approaching_gap_fill/gap_fill_done/far_from_gap) vs outcome
+            "multi_timeframe_rsi_perf": _n619_list,  # N619: multi-timeframe RSI agreement (bullish_all_tf/mixed_tf/bearish_all_tf) vs outcome
+            "earnings_quality_perf": _n620_list,  # N620: most recent earnings quality (strong_beat/modest_beat/inline_earnings/miss_earnings) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -35356,9 +35446,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 570              # total tracked neuron dimensions (N103-N610 complete)
+        tlog["neurons_total"]     = 580              # total tracked neuron dimensions (N103-N620 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/570 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/580 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
