@@ -602,6 +602,17 @@ def build_prompt(
     if last_dec:
         brain_str += f"\n  Last decision: {last_dec}"
 
+    # Build top neurons section (high-performing learned signal dimensions)
+    top_neurons_lines = []
+    for n in (lmc.get("top_neurons") or [])[:8]:
+        label = n.get("neuron", n.get("key", "")).replace("_perf", "").replace("_", " ")
+        wr = n.get("win_rate", 0)
+        best = n.get("best_state", "")
+        tot = n.get("total", 0)
+        if tot >= 3:
+            top_neurons_lines.append(f"  {label}: {wr:.0f}% WR when {best} ({tot} trades)")
+    top_neurons_str = "\n".join(top_neurons_lines) if top_neurons_lines else "  Not enough trade history yet"
+
     # Build top signal synergies section
     syn_lines = []
     for s in (lmc.get("top_synapses") or [])[:6]:
@@ -682,6 +693,9 @@ NEURAL EXIT INTELLIGENCE (brain's pattern-learned continuation scores per positi
 
 SECTOR WIN RATES (brain's learned performance by sector):
 {_build_sector_wr_str(lmc)}
+
+TOP PERFORMING BRAIN NEURONS (highest win-rate signal dimensions — what the brain has learned works best):
+{top_neurons_str}
 
 TOP LEARNED SIGNAL PAIRS (synapse memory — when these 2 signals fire together, high win rate):
 {syn_str}
