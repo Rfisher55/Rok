@@ -21989,7 +21989,7 @@ def run():
                         "grade":     _nei_grade,
                         "signals":   _signal_cnt,
                         "top_signal": max(_signal_breakdown, key=lambda x: abs(x["win_rate"]-50), default={}).get("key", ""),
-                        "pnl_pct":   round(_pos.get("unrealized_plpc", 0), 2),
+                        "pnl_pct":   round(float(_pos.get("unrealized_plpc", 0) or 0), 2),
                     })
                 _nei_positions.sort(key=lambda x: x["score"], reverse=True)
                 _exit_signals = [p for p in _nei_positions if p["grade"] == "EXIT_SIGNAL"]
@@ -35443,8 +35443,8 @@ def run():
             _sh.append({"s": _h_sc, "t": now_utc.isoformat()})
             peaks[_h_sym]["score_history"] = _sh[-24:]  # keep last 24 scans (~2hrs)
             # P&L history — track unrealized return so we can show sparkline in dashboard
-            _h_cost = held[_h_sym].get("avg_entry_price", 0) or 0
-            _h_price = _h_sig.get("price", 0) or 0
+            _h_cost = float(held[_h_sym].get("avg_entry_price", 0) or 0)
+            _h_price = float(_h_sig.get("price", 0) or 0)
             if _h_cost > 0 and _h_price > 0:
                 _h_pnl = round((_h_price - _h_cost) / _h_cost * 100, 2)
                 _ph = peaks[_h_sym].setdefault("pnl_history", [])
