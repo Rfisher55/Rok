@@ -322,9 +322,22 @@ def _load(path, default):
     except Exception:
         return default
 
+class _NumpySafeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        try:
+            import numpy as _np
+            if isinstance(obj, _np.integer): return int(obj)
+            if isinstance(obj, _np.floating): return float(obj)
+            if isinstance(obj, _np.bool_): return bool(obj)
+            if isinstance(obj, _np.ndarray): return obj.tolist()
+        except ImportError:
+            pass
+        if hasattr(obj, 'item'): return obj.item()  # any numpy scalar
+        return super().default(obj)
+
 def _save(path, data):
     path.parent.mkdir(exist_ok=True)
-    path.write_text(json.dumps(data, indent=2))
+    path.write_text(json.dumps(data, indent=2, cls=_NumpySafeEncoder))
 
 
 def _save_equity_snapshot(tlog: dict) -> None:
