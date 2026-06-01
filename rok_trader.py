@@ -18312,7 +18312,13 @@ def _alpaca_crypto_snapshot(symbols: list) -> dict:
             return {}
         data = r.json().get("snapshots", {})
         result = {}
+        # Build a reverse-lookup from no-slash to slash: "BTCUSD" → "BTC/USD"
+        _sym_map = {}
+        for s in symbols:
+            _sym_map[s.replace("/", "")] = s  # "BTCUSD" → "BTC/USD"
         for sym, snap in data.items():
+            # Normalize Alpaca response key back to slash format (e.g. "BTCUSD" → "BTC/USD")
+            normalized_sym = _sym_map.get(sym, sym)
             try:
                 price = float(snap.get("latestTrade", {}).get("p", 0) or
                               snap.get("latestQuote", {}).get("ap", 0))
@@ -18322,7 +18328,7 @@ def _alpaca_crypto_snapshot(symbols: list) -> dict:
                 vr = (float(daily_bar.get("v", 0)) /
                       max(float(snap.get("prevDailyBar", {}).get("v", 1) or 1), 1))
                 if price > 0:
-                    result[sym] = {
+                    result[normalized_sym] = {
                         "price": price, "change_pct": chg, "intraday": chg,
                         "vol_ratio": min(vr, 5.0), "rsi": 50, "ema_cross": 0,
                         "macd": 0.1 if chg > 0 else -0.1,
@@ -18529,10 +18535,17 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     # Get current crypto positions from Alpaca
     try:
         all_pos   = alpaca_get("/v2/positions")
-        held_crypto = {
-            p["symbol"]: p for p in all_pos
-            if "/" in p.get("symbol", "")
-        }
+        held_crypto = {}
+        for p in all_pos:
+            raw_sym = p.get("symbol", "")
+            # Normalize: Alpaca sometimes returns "BTCUSD" instead of "BTC/USD"
+            if "/" in raw_sym:
+                norm_sym = raw_sym
+            elif raw_sym.endswith("USD") and len(raw_sym) > 3:
+                norm_sym = raw_sym[:-3] + "/USD"
+            else:
+                continue  # not a crypto position
+            held_crypto[norm_sym] = p
     except Exception as e:
         logger.warning(f"Crypto positions fetch failed: {e}")
         return buying_power
@@ -18540,6 +18553,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     # ── Sell / manage open crypto positions ──────────────────────────────
     for sym, pos in list(held_crypto.items()):
         try:
+            # Use Alpaca's raw symbol for orders (may differ from our normalized sym)
+            _raw_sym = pos.get("symbol", sym)
             cost     = float(pos.get("avg_entry_price", 0))
             qty      = abs(float(pos.get("qty", 0)))
             sig      = crypto_data.get(sym, {})
@@ -18570,7 +18585,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 logger.info(f"SELL_HALF {sym} — crypto partial at {pnl_pct:+.1f}%")
                 try:
                     alpaca_post("/v2/orders", {
-                        "symbol": sym, "qty": str(half_qty),
+                        "symbol": _raw_sym, "qty": str(half_qty),
                         "side": "sell", "type": "market", "time_in_force": "gtc",
                     })
                     log_trade(tlog, "SELL_HALF", sym, current, half_qty,
@@ -18595,15 +18610,15 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 reason = f"crypto profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -c_trail and pnl_pct > 0:
                 reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
-            elif _crypto_age_min >= 240 and pnl_pct >= -1.0:
-                reason = f"crypto 4h cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 120 and pnl_pct >= 0.5:
-                reason = f"crypto 2h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 120 and pnl_pct >= -2.0:
+                reason = f"crypto 2h cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 60 and pnl_pct >= 0.5:
+                reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
                 logger.info(f"SELL {sym} — {reason}")
                 alpaca_post("/v2/orders", {
-                    "symbol": sym, "qty": str(qty),
+                    "symbol": _raw_sym, "qty": str(round(qty, 8)),
                     "side": "sell", "type": "market", "time_in_force": "gtc",
                 })
                 log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
@@ -22688,10 +22703,17 @@ def run():
     # Positions + peaks
     positions = alpaca_get("/v2/positions")
     held      = {p["symbol"]: p for p in positions}
-    # Separate longs and shorts
-    longs  = {s: p for s, p in held.items() if float(p.get("qty", 0)) > 0}
-    shorts = {s: p for s, p in held.items() if float(p.get("qty", 0)) < 0}
+    # Separate longs and shorts — exclude crypto (slash symbols) from equity loop
+    # Crypto is managed exclusively by run_crypto_trades with gtc orders
+    longs  = {s: p for s, p in held.items() if float(p.get("qty", 0)) > 0 and "/" not in s and "USD" not in s[-3:]}
+    shorts = {s: p for s, p in held.items() if float(p.get("qty", 0)) < 0 and "/" not in s and "USD" not in s[-3:]}
     peaks  = _load(PEAK_FILE, {})
+    # Clean up no-slash crypto ghost entries from peaks (e.g. "DOGEUSD" → remove)
+    _ghost_peaks = [k for k in list(peaks.keys())
+                    if isinstance(k, str) and k.endswith("USD") and "/" not in k and len(k) > 3]
+    for _gk in _ghost_peaks:
+        peaks.pop(_gk, None)
+        logger.info(f"Removed ghost crypto peak entry: {_gk}")
     logger.info(f"Longs ({len(longs)}): {', '.join(longs) or 'none'}")
     logger.info(f"Shorts ({len(shorts)}): {', '.join(shorts) or 'none'}")
 
@@ -22997,7 +23019,55 @@ def run():
                        or cost)
             if cost <= 0 or qty <= 0:
                 continue
+            # Skip ghost positions with negligible notional (< $0.50)
+            if current * qty < 0.50:
+                logger.info(f"SKIP ghost position {sym}: notional=${current*qty:.4f}")
+                peaks.pop(sym, None)
+                continue
             pnl_pct = (current - cost) / cost * 100
+
+            # ── FAST-CYCLE EXIT: check position age FIRST before any other logic ──
+            # If position is >= 60 min old, exit immediately to cycle capital.
+            # This runs BEFORE all other checks to guarantee capital recycling.
+            _fast_entry_time = (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or order_entry_times.get(sym, "") or now_utc.isoformat()
+            _fast_age_min = 0
+            try:
+                _fast_et = datetime.fromisoformat(_fast_entry_time.replace("Z", "+00:00"))
+                _fast_age_min = (now_utc - _fast_et).total_seconds() / 60
+            except Exception:
+                pass
+            _fast_half_out = peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False
+
+            if _fast_age_min >= 90:
+                # 90min unconditional exit — force capital recycling
+                _fast_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+                logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                try:
+                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                    made_trades = True
+                    del longs[sym]
+                    del held[sym]
+                    peaks.pop(sym, None)
+                except Exception as _fe:
+                    logger.warning(f"Fast sell failed {sym}: {_fe}")
+                continue
+            elif _fast_age_min >= 60 and not _fast_half_out:
+                # 60min hard exit — unconditional capital cycle
+                _fast_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
+                logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                try:
+                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                    made_trades = True
+                    del longs[sym]
+                    del held[sym]
+                    peaks.pop(sym, None)
+                except Exception as _fe:
+                    logger.warning(f"Fast sell failed {sym}: {_fe}")
+                continue
 
             # ── Position rebalancing: trim oversized positions ──────────────
             # If a position has grown to >1.5× MAX_POSITION_PCT of portfolio (due to appreciation),
