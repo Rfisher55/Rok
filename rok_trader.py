@@ -16276,7 +16276,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 520
+            _n_total = tlog.get("neurons_total") or 530
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -32184,6 +32184,86 @@ def run():
         if _n560_list:
             _learn_log.append(f"N560 Dividend Yield: high_yield={_a_n560['win_rate']:.0f}% no_yield={_b_n560['win_rate']:.0f}%WR")
 
+        # ── N561: Price Acceleration 1d entry tuner ────────────────────
+        _n561_raw = tlog.get("price_acceleration_1d_perf", {})
+        _n561_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n561_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n561 = next((s for s in _n561_list if s.get("state")=="strong_accel"), _n561_list[0] if _n561_list else {"win_rate":50})
+        _b_n561 = next((s for s in _n561_list if s.get("state")=="decel_flat"), _n561_list[-1] if _n561_list else {"win_rate":50})
+        if _n561_list:
+            _learn_log.append(f"N561 Price Accel 1d: strong_accel={_a_n561['win_rate']:.0f}% decel_flat={_b_n561['win_rate']:.0f}%WR")
+
+        # ── N562: Market Breadth Entry tuner ────────────────────
+        _n562_raw = tlog.get("market_breadth_entry_perf", {})
+        _n562_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n562_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n562 = next((s for s in _n562_list if s.get("state")=="strong_breadth_entry"), _n562_list[0] if _n562_list else {"win_rate":50})
+        _b_n562 = next((s for s in _n562_list if s.get("state")=="weak_breadth_entry"), _n562_list[-1] if _n562_list else {"win_rate":50})
+        if _n562_list:
+            _learn_log.append(f"N562 Market Breadth: strong_breadth={_a_n562['win_rate']:.0f}% weak_breadth={_b_n562['win_rate']:.0f}%WR")
+
+        # ── N563: SPY Intraday Trend entry tuner ────────────────────
+        _n563_raw = tlog.get("spy_intraday_trend_perf", {})
+        _n563_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n563_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n563 = next((s for s in _n563_list if s.get("state")=="spy_uptrend"), _n563_list[0] if _n563_list else {"win_rate":50})
+        _b_n563 = next((s for s in _n563_list if s.get("state")=="spy_downtrend"), _n563_list[-1] if _n563_list else {"win_rate":50})
+        if _n563_list:
+            _learn_log.append(f"N563 SPY Intraday: spy_uptrend={_a_n563['win_rate']:.0f}% spy_downtrend={_b_n563['win_rate']:.0f}%WR")
+
+        # ── N564: Volume vs 50d Average entry tuner ────────────────────
+        _n564_raw = tlog.get("volume_vs_50d_avg_perf", {})
+        _n564_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n564_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n564 = next((s for s in _n564_list if s.get("state")=="extreme_vol"), _n564_list[0] if _n564_list else {"win_rate":50})
+        _b_n564 = next((s for s in _n564_list if s.get("state")=="low_vol"), _n564_list[-1] if _n564_list else {"win_rate":50})
+        if _n564_list:
+            _learn_log.append(f"N564 Vol vs 50d: extreme_vol={_a_n564['win_rate']:.0f}% low_vol={_b_n564['win_rate']:.0f}%WR")
+
+        # ── N565: Gap and Go Quality entry tuner ────────────────────
+        _n565_raw = tlog.get("gap_and_go_quality_perf", {})
+        _n565_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n565_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n565 = next((s for s in _n565_list if s.get("state")=="clean_gap_and_go"), _n565_list[0] if _n565_list else {"win_rate":50})
+        _b_n565 = next((s for s in _n565_list if s.get("state")=="no_gap"), _n565_list[-1] if _n565_list else {"win_rate":50})
+        if _n565_list:
+            _learn_log.append(f"N565 Gap&Go Quality: clean_gap_and_go={_a_n565['win_rate']:.0f}% no_gap={_b_n565['win_rate']:.0f}%WR")
+
+        # ── N566: Sector ETF 5d Momentum entry tuner ────────────────────
+        _n566_raw = tlog.get("sector_etf_5d_momentum_perf", {})
+        _n566_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n566_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n566 = next((s for s in _n566_list if s.get("state")=="sector_etf_strong"), _n566_list[0] if _n566_list else {"win_rate":50})
+        _b_n566 = next((s for s in _n566_list if s.get("state")=="sector_etf_weak"), _n566_list[-1] if _n566_list else {"win_rate":50})
+        if _n566_list:
+            _learn_log.append(f"N566 Sector ETF 5d: sector_etf_strong={_a_n566['win_rate']:.0f}% sector_etf_weak={_b_n566['win_rate']:.0f}%WR")
+
+        # ── N567: Congressional Buy Signal entry tuner ────────────────────
+        _n567_raw = tlog.get("congressional_buy_signal_perf", {})
+        _n567_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n567_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n567 = next((s for s in _n567_list if s.get("state")=="recent_congress_buy"), _n567_list[0] if _n567_list else {"win_rate":50})
+        _b_n567 = next((s for s in _n567_list if s.get("state")=="no_congress_activity"), _n567_list[-1] if _n567_list else {"win_rate":50})
+        if _n567_list:
+            _learn_log.append(f"N567 Congress Buy: recent_congress_buy={_a_n567['win_rate']:.0f}% no_congress_activity={_b_n567['win_rate']:.0f}%WR")
+
+        # ── N568: Insider Purchase Signal entry tuner ────────────────────
+        _n568_raw = tlog.get("insider_purchase_signal_perf", {})
+        _n568_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n568_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n568 = next((s for s in _n568_list if s.get("state")=="strong_insider_buy"), _n568_list[0] if _n568_list else {"win_rate":50})
+        _b_n568 = next((s for s in _n568_list if s.get("state")=="no_insider_buy"), _n568_list[-1] if _n568_list else {"win_rate":50})
+        if _n568_list:
+            _learn_log.append(f"N568 Insider Buy: strong_insider_buy={_a_n568['win_rate']:.0f}% no_insider_buy={_b_n568['win_rate']:.0f}%WR")
+
+        # ── N569: Social Buzz Velocity entry tuner ────────────────────
+        _n569_raw = tlog.get("social_buzz_velocity_perf", {})
+        _n569_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n569_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n569 = next((s for s in _n569_list if s.get("state")=="viral_velocity"), _n569_list[0] if _n569_list else {"win_rate":50})
+        _b_n569 = next((s for s in _n569_list if s.get("state")=="normal_buzz"), _n569_list[-1] if _n569_list else {"win_rate":50})
+        if _n569_list:
+            _learn_log.append(f"N569 Social Buzz: viral_velocity={_a_n569['win_rate']:.0f}% normal_buzz={_b_n569['win_rate']:.0f}%WR")
+
+        # ── N570: Earnings Beat Streak entry tuner ────────────────────
+        _n570_raw = tlog.get("earnings_beat_streak_perf", {})
+        _n570_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n570_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n570 = next((s for s in _n570_list if s.get("state")=="consistent_beater"), _n570_list[0] if _n570_list else {"win_rate":50})
+        _b_n570 = next((s for s in _n570_list if s.get("state")=="miss_history"), _n570_list[-1] if _n570_list else {"win_rate":50})
+        if _n570_list:
+            _learn_log.append(f"N570 EPS Beat Streak: consistent_beater={_a_n570['win_rate']:.0f}% miss_history={_b_n570['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -33032,6 +33112,16 @@ def run():
             "debt_to_equity_perf": _n558_list,  # N558: debt-to-equity ratio (low/moderate/high) at entry vs outcome
             "buyback_activity_perf": _n559_list,  # N559: share buyback activity (active/minimal/diluting) at entry vs outcome
             "dividend_yield_entry_perf": _n560_list,  # N560: dividend yield at entry (high/moderate/no_yield) vs outcome
+            "price_acceleration_1d_perf": _n561_list,  # N561: 1-day price acceleration (strong_accel/mild_accel/decel_flat) at entry vs outcome
+            "market_breadth_entry_perf": _n562_list,  # N562: market breadth at entry (strong/mixed/weak breadth) vs outcome
+            "spy_intraday_trend_perf": _n563_list,  # N563: SPY intraday trend (spy_uptrend/spy_flat/spy_downtrend) at entry vs outcome
+            "volume_vs_50d_avg_perf": _n564_list,  # N564: volume vs 50d average (extreme/above_avg/normal/low_vol) at entry vs outcome
+            "gap_and_go_quality_perf": _n565_list,  # N565: gap-and-go quality (clean/weak/no_gap) at entry vs outcome
+            "sector_etf_5d_momentum_perf": _n566_list,  # N566: sector ETF 5d momentum (strong/flat/weak) at entry vs outcome
+            "congressional_buy_signal_perf": _n567_list,  # N567: congressional buy signal (recent_congress_buy/no_congress_activity) vs outcome
+            "insider_purchase_signal_perf": _n568_list,  # N568: insider purchase signal (strong/single/no_insider_buy) at entry vs outcome
+            "social_buzz_velocity_perf": _n569_list,  # N569: social buzz velocity (viral/rising/normal_buzz) at entry vs outcome
+            "earnings_beat_streak_perf": _n570_list,  # N570: earnings beat streak (consistent/occasional_beater/miss_history) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -33359,9 +33449,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 520              # total tracked neuron dimensions (N103-N560 complete)
+        tlog["neurons_total"]     = 530              # total tracked neuron dimensions (N103-N570 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/520 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/530 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

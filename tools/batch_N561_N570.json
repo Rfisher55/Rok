@@ -1,0 +1,87 @@
+{
+  "batch": "N561-N570",
+  "neurons": [
+    {
+      "id": "N561",
+      "key": "price_acceleration_1d_perf",
+      "description": "1-day price acceleration at entry",
+      "values": ["strong_accel", "mild_accel", "decel_flat"],
+      "source_field": "d.get('chg1d', d.get('chg_pct', 0))",
+      "thresholds": ">=+3% = strong_accel, +0.5% to +3% = mild_accel, <+0.5% = decel_flat"
+    },
+    {
+      "id": "N562",
+      "key": "market_breadth_entry_perf",
+      "description": "Market breadth (advance/decline %) at entry",
+      "values": ["strong_breadth_entry", "mixed_breadth_entry", "weak_breadth_entry"],
+      "source_field": "tlog.get('advance_pct', d.get('advance_pct', 50))",
+      "thresholds": ">65% advancing = strong_breadth_entry, 35-65% = mixed_breadth_entry, <35% = weak_breadth_entry"
+    },
+    {
+      "id": "N563",
+      "key": "spy_intraday_trend_perf",
+      "description": "SPY intraday trend from open at entry",
+      "values": ["spy_uptrend", "spy_flat", "spy_downtrend"],
+      "source_field": "tlog.get('spy_chg_open', d.get('spy_chg_open', 0)) or proxy via tlog.get('spy_rsi', 50)",
+      "thresholds": ">+0.3% = spy_uptrend, -0.3% to +0.3% = spy_flat, <-0.3% = spy_downtrend"
+    },
+    {
+      "id": "N564",
+      "key": "volume_vs_50d_avg_perf",
+      "description": "Volume relative to 50-day average at entry",
+      "values": ["extreme_vol", "above_avg_vol", "normal_vol", "low_vol"],
+      "source_field": "d.get('rvol50', d.get('rvol', 1.0))",
+      "thresholds": ">3x = extreme_vol, 1.5-3x = above_avg_vol, 0.75-1.5x = normal_vol, <0.75x = low_vol"
+    },
+    {
+      "id": "N565",
+      "key": "gap_and_go_quality_perf",
+      "description": "Gap-and-go pattern quality at entry",
+      "values": ["clean_gap_and_go", "weak_gap_and_go", "no_gap"],
+      "source_field": "d.get('gap_pct', 0) and d.get('gap_and_hold', False) and d.get('rvol', 1.0)",
+      "thresholds": "gap>=1% AND gap_and_hold AND rvol>=1.5 = clean_gap_and_go, gap>=0.5% = weak_gap_and_go, else = no_gap"
+    },
+    {
+      "id": "N566",
+      "key": "sector_etf_5d_momentum_perf",
+      "description": "Sector ETF 5-day momentum at entry",
+      "values": ["sector_etf_strong", "sector_etf_flat", "sector_etf_weak"],
+      "source_field": "d.get('sector_etf_5d', d.get('sector_etf_chg5d', 0))",
+      "thresholds": ">+3% = sector_etf_strong, -3% to +3% = sector_etf_flat, <-3% = sector_etf_weak"
+    },
+    {
+      "id": "N567",
+      "key": "congressional_buy_signal_perf",
+      "description": "Congressional insider buying in last 30 days at entry",
+      "values": ["recent_congress_buy", "no_congress_activity"],
+      "source_field": "d.get('congress_bought', d.get('congress_buy_recent', False))",
+      "thresholds": "True = recent_congress_buy, False = no_congress_activity"
+    },
+    {
+      "id": "N568",
+      "key": "insider_purchase_signal_perf",
+      "description": "Recent insider purchase count (last 30 days) at entry",
+      "values": ["strong_insider_buy", "single_insider_buy", "no_insider_buy"],
+      "source_field": "d.get('insider_buys_30d', d.get('insider_buy_count', 0))",
+      "thresholds": ">=2 = strong_insider_buy, ==1 = single_insider_buy, 0 = no_insider_buy"
+    },
+    {
+      "id": "N569",
+      "key": "social_buzz_velocity_perf",
+      "description": "Social media mention velocity relative to average at entry",
+      "values": ["viral_velocity", "rising_buzz", "normal_buzz"],
+      "source_field": "d.get('mention_velocity', d.get('social_momentum', 1.0))",
+      "thresholds": ">=3x avg = viral_velocity, 1.5-3x = rising_buzz, <1.5x = normal_buzz"
+    },
+    {
+      "id": "N570",
+      "key": "earnings_beat_streak_perf",
+      "description": "Historical earnings beat streak (consecutive quarters beat) at entry",
+      "values": ["consistent_beater", "occasional_beater", "miss_history"],
+      "source_field": "d.get('eps_beat_streak', d.get('earnings_beat_count', 0))",
+      "thresholds": ">=3 = consistent_beater, 1-2 = occasional_beater, 0 = miss_history"
+    }
+  ],
+  "neurons_total": 530,
+  "status": "complete"
+}
