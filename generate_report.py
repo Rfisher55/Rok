@@ -878,6 +878,14 @@ def _run():
                 "next_entry_conditions": td.get("next_entry_conditions", {}),
                 "smart_alerts": td.get("smart_alerts", []),
                 "last_scan_top": td.get("last_scan_top", [])[:9],
+                # Top performing neurons (for Brain heatmap in dashboard)
+                "top_neurons": sorted(
+                    [{"neuron": neuron_map.get(k, k), "key": k, "win_rate": max(itm.get("win_rate",0) for itm in v) if isinstance(v,list) and v else 0,
+                      "best_state": (max(v, key=lambda x: x.get("win_rate",0)) if isinstance(v,list) and v else {}).get("state",""),
+                      "total": sum(itm.get("total",0) for itm in v) if isinstance(v,list) else 0}
+                     for k, v in lp.items() if isinstance(v,list) and any(isinstance(x,dict) and x.get("total",0)>=3 for x in v)],
+                    key=lambda x: -x["win_rate"]
+                )[:15],
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:
@@ -1145,6 +1153,7 @@ def _run():
         "next_entry_conditions": live_market_context.get("next_entry_conditions", {}),
         "smart_alerts":       live_market_context.get("smart_alerts", []),
         "last_scan_top":      live_market_context.get("last_scan_top", []),
+        "top_neurons":        live_market_context.get("top_neurons", []),
     }
 
     # Sanitize all datetime objects before JSON serialization

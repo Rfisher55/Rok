@@ -9783,6 +9783,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N591: Entry Session Quality Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n591 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n591_field = _buy_n591.get("entry_session_quality_perf", "midday_session") if _buy_n591 else "midday_session"
+            _n591_perf = tlog.setdefault("entry_session_quality_perf", {})
+            _n591p = _n591_perf.setdefault(_n591_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n591_field})
+            _n591p["total"] += 1; _n591p["total_pnl"] = round(_n591p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n591p["wins"] += 1
+            else:        _n591p["losses"] += 1
+            _n591p["win_rate"] = round(_n591p["wins"] / _n591p["total"] * 100, 1)
+            _n591p["avg_pnl"]  = round(_n591p["total_pnl"] / _n591p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N592: VWAP Deviation Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n592 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n592_field = _buy_n592.get("vwap_deviation_entry_perf", "slightly_above_vwap") if _buy_n592 else "slightly_above_vwap"
+            _n592_perf = tlog.setdefault("vwap_deviation_entry_perf", {})
+            _n592p = _n592_perf.setdefault(_n592_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n592_field})
+            _n592p["total"] += 1; _n592p["total_pnl"] = round(_n592p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n592p["wins"] += 1
+            else:        _n592p["losses"] += 1
+            _n592p["win_rate"] = round(_n592p["wins"] / _n592p["total"] * 100, 1)
+            _n592p["avg_pnl"]  = round(_n592p["total_pnl"] / _n592p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N593: Prior Day Close Relation Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n593 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n593_field = _buy_n593.get("prior_day_close_relation_perf", "near_prior_close") if _buy_n593 else "near_prior_close"
+            _n593_perf = tlog.setdefault("prior_day_close_relation_perf", {})
+            _n593p = _n593_perf.setdefault(_n593_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n593_field})
+            _n593p["total"] += 1; _n593p["total_pnl"] = round(_n593p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n593p["wins"] += 1
+            else:        _n593p["losses"] += 1
+            _n593p["win_rate"] = round(_n593p["wins"] / _n593p["total"] * 100, 1)
+            _n593p["avg_pnl"]  = round(_n593p["total_pnl"] / _n593p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N594: Intraday High Proximity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n594 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n594_field = _buy_n594.get("intraday_high_proximity_perf", "mid_range_intraday") if _buy_n594 else "mid_range_intraday"
+            _n594_perf = tlog.setdefault("intraday_high_proximity_perf", {})
+            _n594p = _n594_perf.setdefault(_n594_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n594_field})
+            _n594p["total"] += 1; _n594p["total_pnl"] = round(_n594p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n594p["wins"] += 1
+            else:        _n594p["losses"] += 1
+            _n594p["win_rate"] = round(_n594p["wins"] / _n594p["total"] * 100, 1)
+            _n594p["avg_pnl"]  = round(_n594p["total_pnl"] / _n594p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N595: Float Size Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n595 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n595_field = _buy_n595.get("float_size_perf", "small_float") if _buy_n595 else "small_float"
+            _n595_perf = tlog.setdefault("float_size_perf", {})
+            _n595p = _n595_perf.setdefault(_n595_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n595_field})
+            _n595p["total"] += 1; _n595p["total_pnl"] = round(_n595p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n595p["wins"] += 1
+            else:        _n595p["losses"] += 1
+            _n595p["win_rate"] = round(_n595p["wins"] / _n595p["total"] * 100, 1)
+            _n595p["avg_pnl"]  = round(_n595p["total_pnl"] / _n595p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N596: Short Squeeze Velocity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n596 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n596_field = _buy_n596.get("short_squeeze_velocity_perf", "no_squeeze") if _buy_n596 else "no_squeeze"
+            _n596_perf = tlog.setdefault("short_squeeze_velocity_perf", {})
+            _n596p = _n596_perf.setdefault(_n596_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n596_field})
+            _n596p["total"] += 1; _n596p["total_pnl"] = round(_n596p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n596p["wins"] += 1
+            else:        _n596p["losses"] += 1
+            _n596p["win_rate"] = round(_n596p["wins"] / _n596p["total"] * 100, 1)
+            _n596p["avg_pnl"]  = round(_n596p["total_pnl"] / _n596p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N597: Tape Reading Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n597 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n597_field = _buy_n597.get("tape_reading_entry_perf", "neutral_tape") if _buy_n597 else "neutral_tape"
+            _n597_perf = tlog.setdefault("tape_reading_entry_perf", {})
+            _n597p = _n597_perf.setdefault(_n597_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n597_field})
+            _n597p["total"] += 1; _n597p["total_pnl"] = round(_n597p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n597p["wins"] += 1
+            else:        _n597p["losses"] += 1
+            _n597p["win_rate"] = round(_n597p["wins"] / _n597p["total"] * 100, 1)
+            _n597p["avg_pnl"]  = round(_n597p["total_pnl"] / _n597p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N598: Options Open Interest Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n598 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n598_field = _buy_n598.get("options_open_interest_perf", "medium_oi_ticker") if _buy_n598 else "medium_oi_ticker"
+            _n598_perf = tlog.setdefault("options_open_interest_perf", {})
+            _n598p = _n598_perf.setdefault(_n598_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n598_field})
+            _n598p["total"] += 1; _n598p["total_pnl"] = round(_n598p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n598p["wins"] += 1
+            else:        _n598p["losses"] += 1
+            _n598p["win_rate"] = round(_n598p["wins"] / _n598p["total"] * 100, 1)
+            _n598p["avg_pnl"]  = round(_n598p["total_pnl"] / _n598p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N599: Weekly Trend Alignment Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n599 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n599_field = _buy_n599.get("weekly_trend_alignment_perf", "neutral_alignment") if _buy_n599 else "neutral_alignment"
+            _n599_perf = tlog.setdefault("weekly_trend_alignment_perf", {})
+            _n599p = _n599_perf.setdefault(_n599_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n599_field})
+            _n599p["total"] += 1; _n599p["total_pnl"] = round(_n599p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n599p["wins"] += 1
+            else:        _n599p["losses"] += 1
+            _n599p["win_rate"] = round(_n599p["wins"] / _n599p["total"] * 100, 1)
+            _n599p["avg_pnl"]  = round(_n599p["total_pnl"] / _n599p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N600: Momentum Score Bucket Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n600 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n600_field = _buy_n600.get("momentum_score_bucket_perf", "moderate_momentum") if _buy_n600 else "moderate_momentum"
+            _n600_perf = tlog.setdefault("momentum_score_bucket_perf", {})
+            _n600p = _n600_perf.setdefault(_n600_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n600_field})
+            _n600p["total"] += 1; _n600p["total_pnl"] = round(_n600p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n600p["wins"] += 1
+            else:        _n600p["losses"] += 1
+            _n600p["win_rate"] = round(_n600p["wins"] / _n600p["total"] * 100, 1)
+            _n600p["avg_pnl"]  = round(_n600p["total_pnl"] / _n600p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -25712,6 +25862,136 @@ def run():
                     except Exception:
                         _n590_s = "mid_range"
                     _buy_signals_merged["price_range_percentile_perf"] = _n590_s
+                    # N591: Trading session quality at entry
+                    try:
+                        _n591_h = datetime.now().hour
+                        if 9 <= _n591_h < 11:
+                            _n591_s = "morning_session"
+                        elif 14 <= _n591_h <= 16:
+                            _n591_s = "afternoon_session"
+                        else:
+                            _n591_s = "midday_session"
+                    except Exception:
+                        _n591_s = "midday_session"
+                    _buy_signals_merged["entry_session_quality_perf"] = _n591_s
+                    # N592: VWAP deviation at entry
+                    try:
+                        _n592_vd = float(d.get("vwap_pos", d.get("vwap_distance_pct", 0)) or 0)
+                        if _n592_vd > 2.0:
+                            _n592_s = "extended_above_vwap"
+                        elif _n592_vd >= 0:
+                            _n592_s = "slightly_above_vwap"
+                        else:
+                            _n592_s = "below_vwap"
+                    except Exception:
+                        _n592_s = "slightly_above_vwap"
+                    _buy_signals_merged["vwap_deviation_entry_perf"] = _n592_s
+                    # N593: Price relative to prior day close
+                    try:
+                        _n593_chg = float(d.get("change_pct", d.get("chg1d", 0)) or 0)
+                        if _n593_chg > 0.5:
+                            _n593_s = "above_prior_close"
+                        elif _n593_chg >= -0.5:
+                            _n593_s = "near_prior_close"
+                        else:
+                            _n593_s = "below_prior_close"
+                    except Exception:
+                        _n593_s = "near_prior_close"
+                    _buy_signals_merged["prior_day_close_relation_perf"] = _n593_s
+                    # N594: Intraday high proximity at entry
+                    try:
+                        _n594_tq = float(d.get("intraday_tq", d.get("intra_tq", 0.5)) or 0.5)
+                        if _n594_tq >= 0.9:
+                            _n594_s = "near_intraday_high"
+                        elif _n594_tq <= 0.1:
+                            _n594_s = "near_intraday_low"
+                        else:
+                            _n594_s = "mid_range_intraday"
+                    except Exception:
+                        _n594_s = "mid_range_intraday"
+                    _buy_signals_merged["intraday_high_proximity_perf"] = _n594_s
+                    # N595: Float size at entry
+                    try:
+                        _n595_fl = float(d.get("float_shares", d.get("float", 50e6)) or 50e6)
+                        if _n595_fl < 10e6:
+                            _n595_s = "micro_float"
+                        elif _n595_fl <= 50e6:
+                            _n595_s = "small_float"
+                        else:
+                            _n595_s = "large_float"
+                    except Exception:
+                        _n595_s = "small_float"
+                    _buy_signals_merged["float_size_perf"] = _n595_s
+                    # N596: Short squeeze velocity signal
+                    try:
+                        _n596_sf  = float(d.get("short_float", 0) or 0)
+                        _n596_rv  = float(d.get("rvol", 1) or 1)
+                        _n596_chg = float(d.get("chg1d", 0) or 0)
+                        if _n596_sf > 20 and _n596_rv > 3 and _n596_chg >= 2:
+                            _n596_s = "explosive_squeeze_setup"
+                        elif _n596_sf > 10 or (_n596_rv > 2 and _n596_chg >= 1):
+                            _n596_s = "moderate_squeeze"
+                        else:
+                            _n596_s = "no_squeeze"
+                    except Exception:
+                        _n596_s = "no_squeeze"
+                    _buy_signals_merged["short_squeeze_velocity_perf"] = _n596_s
+                    # N597: Tape reading / order flow quality at entry
+                    try:
+                        _n597_ur = float(d.get("uptick_ratio", d.get("tape_quality", 0.5)) or 0.5)
+                        if _n597_ur > 0.6:
+                            _n597_s = "heavy_buying_tape"
+                        elif _n597_ur < 0.4:
+                            _n597_s = "heavy_selling_tape"
+                        else:
+                            _n597_s = "neutral_tape"
+                    except Exception:
+                        _n597_s = "neutral_tape"
+                    _buy_signals_merged["tape_reading_entry_perf"] = _n597_s
+                    # N598: Options open interest context
+                    try:
+                        _n598_oi = float(d.get("options_oi", d.get("put_call_oi", 0)) or 0)
+                        if _n598_oi > 10000:
+                            _n598_s = "high_oi_ticker"
+                        elif _n598_oi > 0:
+                            _n598_s = "medium_oi_ticker"
+                        else:
+                            _n598_s = "low_oi_ticker"
+                    except Exception:
+                        _n598_s = "medium_oi_ticker"
+                    _buy_signals_merged["options_open_interest_perf"] = _n598_s
+                    # N599: Weekly trend alignment with daily
+                    try:
+                        _n599_wt = float(d.get("weekly_trend", d.get("wk_trend", 0)) or 0)
+                        _n599_dt = float(d.get("daily_trend", 0) or 0)
+                        if _n599_wt > 0 and _n599_dt > 0:
+                            _n599_s = "weekly_daily_aligned"
+                        elif (_n599_wt > 0 and _n599_dt < 0) or (_n599_wt < 0 and _n599_dt > 0):
+                            _n599_s = "weekly_daily_conflict"
+                        else:
+                            _n599_s = "neutral_alignment"
+                    except Exception:
+                        _n599_s = "neutral_alignment"
+                    _buy_signals_merged["weekly_trend_alignment_perf"] = _n599_s
+                    # N600: Composite momentum score bucket
+                    try:
+                        _n600_rv  = float(d.get("rvol", 1) or 1)
+                        _n600_rs  = float(d.get("rs_rating", d.get("rs", 50)) or 50)
+                        _n600_chg = float(d.get("chg1d", 0) or 0)
+                        _n600_sc  = float(sc or 50)
+                        _n600_mom = (_n600_rv * 10 + _n600_rs * 0.3 + max(0, _n600_chg) * 5 + _n600_sc * 0.2)
+                        _n600_mom = min(100, _n600_mom)
+                        if _n600_mom >= 80:
+                            _n600_s = "elite_momentum"
+                        elif _n600_mom >= 65:
+                            _n600_s = "strong_momentum"
+                        elif _n600_mom >= 50:
+                            _n600_s = "moderate_momentum"
+                        else:
+                            _n600_s = "weak_momentum"
+                    except Exception:
+                        _n600_s = "moderate_momentum"
+                    _buy_signals_merged["momentum_score_bucket_perf"] = _n600_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
