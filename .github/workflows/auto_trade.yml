@@ -10,12 +10,18 @@ on:
     - cron: '30,35,40,45,50,55 13 * * 1-5'
     # 10 AM - 4 PM ET = 14:00-20:00 UTC (every 5 min)
     - cron: '*/5 14,15,16,17,18,19 * * 1-5'
-    # 4:00-4:05 PM ET = 20:00-20:05 UTC
-    - cron: '0,5 20 * * 1-5'
-    # Crypto 24/7 — every 10 min weekends, every 10 min weekday off-hours
+    # 4:00-4:30 PM ET = 20:00-20:30 UTC (close cleanup + after-hours crypto)
+    - cron: '*/5 20 * * 1-5'
+    # Crypto 24/7 — every 10 min all off-hours and weekends
+    - cron: '*/10 21,22,23 * * 1-5'
+    - cron: '*/10 0,1,2,3,4,5,6,7,8,9,10,11,12 * * 1-5'
     - cron: '*/10 * * * 0,6'
-    - cron: '*/10 0-12,21-23 * * 1-5'
   workflow_dispatch:  # manual trigger anytime
+
+# Prevent simultaneous runs — queue rather than cancel so no trade is lost
+concurrency:
+  group: trade-bot
+  cancel-in-progress: false
 
 permissions:
   contents: write

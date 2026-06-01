@@ -106,8 +106,8 @@ CRYPTO_UNIVERSE  = {
     "DOT/USD":  "DOT-USD",
     "UNI/USD":  "UNI-USD",
 }
-CRYPTO_STOP_PCT  = 0.08     # 8% stop — tighter for faster learning cycles
-CRYPTO_TARGET_PCT= 0.12     # 12% target — faster turnover = more trades = more learning
+CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
+CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Learning phase: lower score gates so the brain gets real data fast
 CRYPTO_MIN_SCORE = 8        # minimum technical score to consider
 CRYPTO_MIN_COMBINED = -5    # AI score is a bonus not a gate — allow negative AI but positive tech
@@ -18581,19 +18581,24 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                     logger.warning(f"Crypto partial sell failed {sym}: {e}")
                 continue
 
+            # Age-based cycle exit: crypto holds max 4 hours then recycles
+            _crypto_entry_ts = peaks.get(sym, {}).get("time", now_utc.isoformat()) if isinstance(peaks.get(sym), dict) else now_utc.isoformat()
+            try:
+                _crypto_age_min = (now_utc - datetime.fromisoformat(_crypto_entry_ts.replace("Z", "+00:00"))).total_seconds() / 60
+            except Exception:
+                _crypto_age_min = 0
+
             reason = None
             if pnl_pct <= -(CRYPTO_STOP_PCT * 100):
                 reason = f"crypto stop loss ({pnl_pct:+.1f}%)"
             elif pnl_pct >= (CRYPTO_TARGET_PCT * 100):
-                # Check if momentum is still strong for extension to 35%
-                c_macd = sig.get("macd_slope", 0) or 0
-                c_roc5 = sig.get("roc5", 0) or 0
-                if c_macd > 0 and c_roc5 > 3 and pnl_pct < 35:
-                    logger.info(f"HOLD {sym} — crypto extending to 35% (macd={c_macd:.3f}, roc5={c_roc5:.1f}%)")
-                else:
-                    reason = f"crypto profit target ({pnl_pct:+.1f}%)"
+                reason = f"crypto profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -c_trail and pnl_pct > 0:
                 reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
+            elif _crypto_age_min >= 240 and pnl_pct >= -1.0:
+                reason = f"crypto 4h cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 120 and pnl_pct >= 0.5:
+                reason = f"crypto 2h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
                 logger.info(f"SELL {sym} — {reason}")
@@ -23549,17 +23554,8 @@ def run():
                 m_slope_age = live_sig_age.get("macd_slope", 0) or 0
                 roc5_age    = live_sig_age.get("roc5", 0) or 0
                 # Adaptive max hold: momentum-based, then refined by learned hold period preference
+                # adaptive_max is HARD CAPPED at MAX_HOLD_DAYS — no overrides
                 adaptive_max = MAX_HOLD_DAYS
-                if m_slope_age > 0 and roc5_age > 2:
-                    adaptive_max = 8   # strong uptrend: let it run
-                elif m_slope_age < 0 and roc5_age < 0:
-                    adaptive_max = 3   # weak momentum: exit sooner
-                # Apply learned hold period preference: if history shows short holds work best, tighten
-                _opt_hold = _learned.get("optimal_hold_period") if _learned else None
-                if _opt_hold == "short" and adaptive_max > 2:
-                    adaptive_max = min(adaptive_max, 2)   # learned: quick exits work better
-                elif _opt_hold == "long" and adaptive_max < 7:
-                    adaptive_max = max(adaptive_max, 7)   # learned: let winners run longer
                 if age_days >= adaptive_max:
                     reason = f"stale position ({age_days:.0f}d, {pnl_pct:+.1f}%)"
             elif peaks.get(sym, {}).get("ever_hit_5pct") and pnl_pct <= 0.5:
@@ -24253,13 +24249,17 @@ def run():
     except Exception:
         pass
 
+    # ── FINAL score floor: pace emergency overrides ALL other adjustments ─────────
+    if _trade_deficit >= 15:
+        _eff_min_score = min(_eff_min_score, 5)
+        logger.info(f"PACE OVERRIDE: deficit={_trade_deficit} — final threshold capped at {_eff_min_score}")
+
     # ── Portfolio Risk Limit Guard ─────────────────────────────────────────────
-    # If total stop-loss exposure > 9% of portfolio, halt new buys.
-    # This prevents the bot from piling on risk when all positions are at risk simultaneously.
+    # If total stop-loss exposure > 25% of portfolio, halt new buys.
     _total_risk_pct_now = float(tlog.get("total_risk_pct", 0) or 0)
-    _risk_limit_halt = _total_risk_pct_now > 9.0
+    _risk_limit_halt = _total_risk_pct_now > 25.0  # raised: 9% too tight for 35 active positions
     if _risk_limit_halt:
-        logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 9% — no new buys")
+        logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 25% — no new buys")
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses and not _drawdown_halt and not _risk_limit_halt:
         # Sector counts for diversification
