@@ -1084,6 +1084,26 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                         if len(_syn_perf) > 60:
                             _syn_sorted = sorted(_syn_perf.items(), key=lambda x: -x[1]["total"])
                             tlog["signal_synergy"] = dict(_syn_sorted[:50])
+                        # ── 3-signal TRIPLE synergy (deepens pattern learning) ──────────
+                        if len(_sorted_sigs) >= 3:
+                            _tri_perf = tlog.setdefault("signal_triplets", {})
+                            for _i2 in range(len(_sorted_sigs)):
+                                for _j2 in range(_i2+1, len(_sorted_sigs)):
+                                    for _k2 in range(_j2+1, len(_sorted_sigs)):
+                                        _tri_key = f"{_sorted_sigs[_i2]}+{_sorted_sigs[_j2]}+{_sorted_sigs[_k2]}"
+                                        _tri = _tri_perf.setdefault(_tri_key, {
+                                            "wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0
+                                        })
+                                        _tri["total"] += 1
+                                        _tri["total_pnl"] = round(_tri["total_pnl"] + pnl, 2)
+                                        if pnl > 0: _tri["wins"] += 1
+                                        else:       _tri["losses"] += 1
+                                        _tri["win_rate"] = round(_tri["wins"] / _tri["total"] * 100, 1)
+                                        _tri["avg_pnl"]  = round(_tri["total_pnl"] / _tri["total"], 2)
+                            # Keep top 40 triplets by frequency
+                            if len(_tri_perf) > 50:
+                                _tri_sorted = sorted(_tri_perf.items(), key=lambda x: -x[1]["total"])
+                                tlog["signal_triplets"] = dict(_tri_sorted[:40])
                     except Exception:
                         pass
                 break
@@ -7959,6 +7979,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             else:        _n470p["losses"] += 1
             _n470p["win_rate"] = round(_n470p["wins"] / _n470p["total"] * 100, 1)
             _n470p["avg_pnl"]  = round(_n470p["total_pnl"] / _n470p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N471: Pre-Market Gap Size Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n471 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n471_field = _buy_n471.get("premarket_gap_size_perf", "flat_open") if _buy_n471 else "flat_open"
+            _n471_perf = tlog.setdefault("premarket_gap_size_perf", {})
+            _n471p = _n471_perf.setdefault(_n471_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n471_field})
+            _n471p["total"] += 1; _n471p["total_pnl"] = round(_n471p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n471p["wins"] += 1
+            else:        _n471p["losses"] += 1
+            _n471p["win_rate"] = round(_n471p["wins"] / _n471p["total"] * 100, 1)
+            _n471p["avg_pnl"]  = round(_n471p["total_pnl"] / _n471p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N472: Stock Put/Call Ratio Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n472 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n472_field = _buy_n472.get("stock_pcr_entry_perf", "neutral_pcr") if _buy_n472 else "neutral_pcr"
+            _n472_perf = tlog.setdefault("stock_pcr_entry_perf", {})
+            _n472p = _n472_perf.setdefault(_n472_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n472_field})
+            _n472p["total"] += 1; _n472p["total_pnl"] = round(_n472p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n472p["wins"] += 1
+            else:        _n472p["losses"] += 1
+            _n472p["win_rate"] = round(_n472p["wins"] / _n472p["total"] * 100, 1)
+            _n472p["avg_pnl"]  = round(_n472p["total_pnl"] / _n472p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N473: Monthly Price Momentum Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n473 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n473_field = _buy_n473.get("monthly_momentum_perf", "flat_month") if _buy_n473 else "flat_month"
+            _n473_perf = tlog.setdefault("monthly_momentum_perf", {})
+            _n473p = _n473_perf.setdefault(_n473_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n473_field})
+            _n473p["total"] += 1; _n473p["total_pnl"] = round(_n473p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n473p["wins"] += 1
+            else:        _n473p["losses"] += 1
+            _n473p["win_rate"] = round(_n473p["wins"] / _n473p["total"] * 100, 1)
+            _n473p["avg_pnl"]  = round(_n473p["total_pnl"] / _n473p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N474: 52-Week Breakout Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n474 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n474_field = _buy_n474.get("breakout_52w_entry_perf", "mid_range_52w") if _buy_n474 else "mid_range_52w"
+            _n474_perf = tlog.setdefault("breakout_52w_entry_perf", {})
+            _n474p = _n474_perf.setdefault(_n474_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n474_field})
+            _n474p["total"] += 1; _n474p["total_pnl"] = round(_n474p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n474p["wins"] += 1
+            else:        _n474p["losses"] += 1
+            _n474p["win_rate"] = round(_n474p["wins"] / _n474p["total"] * 100, 1)
+            _n474p["avg_pnl"]  = round(_n474p["total_pnl"] / _n474p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N475: Historical Volatility Level Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n475 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n475_field = _buy_n475.get("hist_vol_level_perf", "normal_vol") if _buy_n475 else "normal_vol"
+            _n475_perf = tlog.setdefault("hist_vol_level_perf", {})
+            _n475p = _n475_perf.setdefault(_n475_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n475_field})
+            _n475p["total"] += 1; _n475p["total_pnl"] = round(_n475p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n475p["wins"] += 1
+            else:        _n475p["losses"] += 1
+            _n475p["win_rate"] = round(_n475p["wins"] / _n475p["total"] * 100, 1)
+            _n475p["avg_pnl"]  = round(_n475p["total_pnl"] / _n475p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N476: AVWAP Distance Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n476 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n476_field = _buy_n476.get("avwap_dist_entry_perf", "near_avwap") if _buy_n476 else "near_avwap"
+            _n476_perf = tlog.setdefault("avwap_dist_entry_perf", {})
+            _n476p = _n476_perf.setdefault(_n476_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n476_field})
+            _n476p["total"] += 1; _n476p["total_pnl"] = round(_n476p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n476p["wins"] += 1
+            else:        _n476p["losses"] += 1
+            _n476p["win_rate"] = round(_n476p["wins"] / _n476p["total"] * 100, 1)
+            _n476p["avg_pnl"]  = round(_n476p["total_pnl"] / _n476p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N477: 52-Week Range Position Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n477 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n477_field = _buy_n477.get("w52_range_position_perf", "upper_half_52w") if _buy_n477 else "upper_half_52w"
+            _n477_perf = tlog.setdefault("w52_range_position_perf", {})
+            _n477p = _n477_perf.setdefault(_n477_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n477_field})
+            _n477p["total"] += 1; _n477p["total_pnl"] = round(_n477p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n477p["wins"] += 1
+            else:        _n477p["losses"] += 1
+            _n477p["win_rate"] = round(_n477p["wins"] / _n477p["total"] * 100, 1)
+            _n477p["avg_pnl"]  = round(_n477p["total_pnl"] / _n477p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N478: RS Line New High Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n478 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n478_field = _buy_n478.get("rs_line_new_high_perf", "rs_not_new_high") if _buy_n478 else "rs_not_new_high"
+            _n478_perf = tlog.setdefault("rs_line_new_high_perf", {})
+            _n478p = _n478_perf.setdefault(_n478_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n478_field})
+            _n478p["total"] += 1; _n478p["total_pnl"] = round(_n478p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n478p["wins"] += 1
+            else:        _n478p["losses"] += 1
+            _n478p["win_rate"] = round(_n478p["wins"] / _n478p["total"] * 100, 1)
+            _n478p["avg_pnl"]  = round(_n478p["total_pnl"] / _n478p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N479: RS Line Trend Direction Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n479 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n479_field = _buy_n479.get("rs_line_trending_perf", "rs_line_flat") if _buy_n479 else "rs_line_flat"
+            _n479_perf = tlog.setdefault("rs_line_trending_perf", {})
+            _n479p = _n479_perf.setdefault(_n479_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n479_field})
+            _n479p["total"] += 1; _n479p["total_pnl"] = round(_n479p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n479p["wins"] += 1
+            else:        _n479p["losses"] += 1
+            _n479p["win_rate"] = round(_n479p["wins"] / _n479p["total"] * 100, 1)
+            _n479p["avg_pnl"]  = round(_n479p["total_pnl"] / _n479p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N480: Sector Alpha Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n480 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n480_field = _buy_n480.get("sector_alpha_entry_perf", "neutral_sector_alpha") if _buy_n480 else "neutral_sector_alpha"
+            _n480_perf = tlog.setdefault("sector_alpha_entry_perf", {})
+            _n480p = _n480_perf.setdefault(_n480_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n480_field})
+            _n480p["total"] += 1; _n480p["total_pnl"] = round(_n480p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n480p["wins"] += 1
+            else:        _n480p["losses"] += 1
+            _n480p["win_rate"] = round(_n480p["wins"] / _n480p["total"] * 100, 1)
+            _n480p["avg_pnl"]  = round(_n480p["total_pnl"] / _n480p["total"], 2)
         except Exception:
             pass
 
@@ -22202,6 +22372,121 @@ def run():
                     except Exception:
                         _n470_s = "stale_no_drift"
                     _buy_signals_merged["earnings_drift_days_perf"] = _n470_s
+                    # N471: pre-market gap size at entry
+                    try:
+                        _n471_gap = float(live.get(tk, {}).get('pm_gap_pct', 0) or 0)
+                        if _n471_gap > 3.0:
+                            _n471_s = "large_gap_up"
+                        elif _n471_gap >= 0.5:
+                            _n471_s = "small_gap_up"
+                        elif _n471_gap >= -0.5:
+                            _n471_s = "flat_open"
+                        else:
+                            _n471_s = "gap_down"
+                    except Exception:
+                        _n471_s = "flat_open"
+                    _buy_signals_merged["premarket_gap_size_perf"] = _n471_s
+                    # N472: stock put/call ratio at entry
+                    try:
+                        _n472_pcr = float(live.get(tk, {}).get('options_pcr', 1.0) or 1.0)
+                        if _n472_pcr < 0.7:
+                            _n472_s = "bullish_pcr"
+                        elif _n472_pcr > 1.3:
+                            _n472_s = "bearish_pcr"
+                        else:
+                            _n472_s = "neutral_pcr"
+                    except Exception:
+                        _n472_s = "neutral_pcr"
+                    _buy_signals_merged["stock_pcr_entry_perf"] = _n472_s
+                    # N473: monthly price momentum at entry
+                    try:
+                        _n473_chg = float(live.get(tk, {}).get('chg20d', 0) or 0)
+                        if _n473_chg > 15.0:
+                            _n473_s = "strong_up_month"
+                        elif _n473_chg >= 3.0:
+                            _n473_s = "moderate_up_month"
+                        elif _n473_chg >= -3.0:
+                            _n473_s = "flat_month"
+                        else:
+                            _n473_s = "down_month"
+                    except Exception:
+                        _n473_s = "flat_month"
+                    _buy_signals_merged["monthly_momentum_perf"] = _n473_s
+                    # N474: 52-week breakout entry
+                    try:
+                        _n474_bo = bool(live.get(tk, {}).get('breakout_52w', False))
+                        _n474_dist = float(live.get(tk, {}).get('dist_from_52w_high', 20) or 20)
+                        if _n474_bo:
+                            _n474_s = "at_52w_break"
+                        elif _n474_dist < 5.0:
+                            _n474_s = "near_52w_high"
+                        else:
+                            _n474_s = "mid_range_52w"
+                    except Exception:
+                        _n474_s = "mid_range_52w"
+                    _buy_signals_merged["breakout_52w_entry_perf"] = _n474_s
+                    # N475: historical volatility level at entry
+                    try:
+                        _n475_hv = float(live.get(tk, {}).get('hv20', 30) or 30)
+                        if _n475_hv > 50.0:
+                            _n475_s = "high_realized_vol"
+                        elif _n475_hv < 20.0:
+                            _n475_s = "low_compressed_vol"
+                        else:
+                            _n475_s = "normal_vol"
+                    except Exception:
+                        _n475_s = "normal_vol"
+                    _buy_signals_merged["hist_vol_level_perf"] = _n475_s
+                    # N476: AVWAP distance at entry
+                    try:
+                        _n476_avd = float(live.get(tk, {}).get('avwap_dist_pct', 0) or 0)
+                        if _n476_avd > 10.0:
+                            _n476_s = "extended_above_avwap"
+                        elif _n476_avd < 0.0:
+                            _n476_s = "below_avwap"
+                        else:
+                            _n476_s = "near_avwap"
+                    except Exception:
+                        _n476_s = "near_avwap"
+                    _buy_signals_merged["avwap_dist_entry_perf"] = _n476_s
+                    # N477: 52-week range position at entry
+                    try:
+                        _n477_rp = float(live.get(tk, {}).get('w52_range_pos', 50) or 50)
+                        if _n477_rp > 75.0:
+                            _n477_s = "top_quartile_52w"
+                        elif _n477_rp >= 50.0:
+                            _n477_s = "upper_half_52w"
+                        else:
+                            _n477_s = "lower_half_52w"
+                    except Exception:
+                        _n477_s = "upper_half_52w"
+                    _buy_signals_merged["w52_range_position_perf"] = _n477_s
+                    # N478: RS line new high at entry
+                    try:
+                        _n478_nh = bool(live.get(tk, {}).get('rs_line_new_high', False))
+                        _n478_s = "rs_at_new_high" if _n478_nh else "rs_not_new_high"
+                    except Exception:
+                        _n478_s = "rs_not_new_high"
+                    _buy_signals_merged["rs_line_new_high_perf"] = _n478_s
+                    # N479: RS line trending direction at entry
+                    try:
+                        _n479_rt = bool(live.get(tk, {}).get('rs_line_trending', False))
+                        _n479_s = "rs_line_rising" if _n479_rt else "rs_line_flat"
+                    except Exception:
+                        _n479_s = "rs_line_flat"
+                    _buy_signals_merged["rs_line_trending_perf"] = _n479_s
+                    # N480: sector alpha at entry
+                    try:
+                        _n480_sa = float(live.get(tk, {}).get('sector_alpha', 0) or 0)
+                        if _n480_sa > 2.0:
+                            _n480_s = "high_sector_alpha"
+                        elif _n480_sa < 0.0:
+                            _n480_s = "negative_sector_alpha"
+                        else:
+                            _n480_s = "neutral_sector_alpha"
+                    except Exception:
+                        _n480_s = "neutral_sector_alpha"
+                    _buy_signals_merged["sector_alpha_entry_perf"] = _n480_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -23711,6 +23996,17 @@ def run():
                                for k, v in _top_synapses if v.get("win_rate", 0) >= 60]
         if _top_synapses_list:
             _learn_log.append(f"Top signal synergies: {' | '.join(s['pair']+'='+str(s['wr'])+'%' for s in _top_synapses_list[:3])}")
+
+        # Triplet synergy analysis (3-signal combinations)
+        _tri_all = tlog.get("signal_triplets", {})
+        _top_triplets = sorted(
+            [(k, v) for k, v in _tri_all.items() if v.get("total", 0) >= 2],
+            key=lambda x: (-x[1].get("win_rate", 0), -x[1].get("avg_pnl", 0))
+        )[:4]
+        _top_triplets_list = [{"combo": k, "wr": v["win_rate"], "avg_pnl": v["avg_pnl"], "n": v["total"]}
+                               for k, v in _top_triplets if v.get("win_rate", 0) >= 65]
+        if _top_triplets_list:
+            _learn_log.append(f"Top 3-signal combos: {' | '.join(s['combo'][:30]+'='+str(s['wr'])+'%' for s in _top_triplets_list[:2])}")
 
         # ── 8. Hold period optimization from outcomes ─────────────────────
         _hold_data = [(t.get("pnl_pct", 0), t.get("hold_hrs", 0)) for t in _closed
@@ -28855,7 +29151,8 @@ def run():
             "worst_hours_utc":     _worst_hours[:4],
             "positive_buckets":    _positive_buckets,
             "bucket_insights":     _bucket_insights,
-            "top_synapses":        _top_synapses_list,   # best signal combinations
+            "top_synapses":        _top_synapses_list,   # best 2-signal combinations
+            "top_triplets":        _top_triplets_list,   # best 3-signal combinations
             "optimal_hold_period": _optimal_hold_days,   # short / medium / long
             "ticker_score_adjs":   _ticker_score_adjs,   # per-ticker score modifiers
             "best_halfhours_utc":  _best_halfhours[:4],  # top 30-min entry windows
