@@ -592,6 +592,22 @@ def build_prompt(
             cat = w.get("catalyst", "")[:60]
             wl_lines.append(f"  ${tk}: score={sc} week={wc:+.1f}% | {cat}")
         wl_str = "\n".join(wl_lines)
+    # Build intraday performance context
+    iw = lmc.get("intraday_wins", 0)
+    il = lmc.get("intraday_losses", 0)
+    lstreak = lmc.get("loss_streak", 0)
+    drisk = lmc.get("daily_risk_mult", 1.0)
+    intraday_lines = []
+    if iw + il > 0:
+        intraday_lines.append(f"  Today's trades: {iw}W / {il}L")
+        if lstreak >= 2:
+            intraday_lines.append(f"  ⚠ LOSS STREAK: {lstreak} consecutive losses — risk reduced to {round(drisk*100)}%")
+        elif iw > 0 and il == 0:
+            intraday_lines.append(f"  Clean day so far: {iw} wins, 0 losses")
+    elif drisk < 1.0:
+        intraday_lines.append(f"  Risk budget reduced to {round(drisk*100)}% (loss streak protection active)")
+    intraday_str = "\n".join(intraday_lines) if intraday_lines else "  No trades taken today yet"
+
     # Build brain summary section
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
@@ -674,6 +690,9 @@ ROK BOT BRAIN STATUS:
 ENTRY GATE STATUS:
 {nec_str}
 
+INTRADAY PERFORMANCE:
+{intraday_str}
+
 OPEN POSITIONS WITH LIVE TECHNICAL SIGNALS:
 {positions_str}
 
@@ -721,6 +740,8 @@ CRITICAL INSTRUCTIONS:
 11. CORRELATION WARNING: If portfolio has 3+ positions in crypto/same sector, warn about concentrated risk in rok_message
 12. When market is closed (weekend/after-hours), focus on Monday preparation — what to watch, what to set stops on
 13. ADD signal: if a position is up 5%+ with strong technical signals and still has room to target, suggest adding shares
+14. INTRADAY RISK: if loss_streak >= 2 in Intraday Performance, emphasize capital preservation in rok_message — suggest being selective and sizing down
+15. If the brain's top neurons show a specific state with high win rate (e.g., "morning_session: 78% WR"), reference this timing context for entries
 """
 
 

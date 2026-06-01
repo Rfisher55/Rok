@@ -10233,6 +10233,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N621: Momentum Divergence Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n621 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n621_field = _buy_n621.get("momentum_divergence_perf", "no_divergence") if _buy_n621 else "no_divergence"
+            _n621_perf = tlog.setdefault("momentum_divergence_perf", {})
+            _n621p = _n621_perf.setdefault(_n621_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n621_field})
+            _n621p["total"] += 1; _n621p["total_pnl"] = round(_n621p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n621p["wins"] += 1
+            else:        _n621p["losses"] += 1
+            _n621p["win_rate"] = round(_n621p["wins"] / _n621p["total"] * 100, 1)
+            _n621p["avg_pnl"]  = round(_n621p["total_pnl"] / _n621p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N622: ATR Expansion at Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n622 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n622_field = _buy_n622.get("atr_expansion_at_entry_perf", "stable_atr") if _buy_n622 else "stable_atr"
+            _n622_perf = tlog.setdefault("atr_expansion_at_entry_perf", {})
+            _n622p = _n622_perf.setdefault(_n622_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n622_field})
+            _n622p["total"] += 1; _n622p["total_pnl"] = round(_n622p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n622p["wins"] += 1
+            else:        _n622p["losses"] += 1
+            _n622p["win_rate"] = round(_n622p["wins"] / _n622p["total"] * 100, 1)
+            _n622p["avg_pnl"]  = round(_n622p["total_pnl"] / _n622p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N623: SPY Alignment Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n623 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n623_field = _buy_n623.get("spy_alignment_perf", "spy_neutral") if _buy_n623 else "spy_neutral"
+            _n623_perf = tlog.setdefault("spy_alignment_perf", {})
+            _n623p = _n623_perf.setdefault(_n623_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n623_field})
+            _n623p["total"] += 1; _n623p["total_pnl"] = round(_n623p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n623p["wins"] += 1
+            else:        _n623p["losses"] += 1
+            _n623p["win_rate"] = round(_n623p["wins"] / _n623p["total"] * 100, 1)
+            _n623p["avg_pnl"]  = round(_n623p["total_pnl"] / _n623p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N624: Opening Range Position Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n624 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n624_field = _buy_n624.get("opening_range_position_perf", "within_opening_range") if _buy_n624 else "within_opening_range"
+            _n624_perf = tlog.setdefault("opening_range_position_perf", {})
+            _n624p = _n624_perf.setdefault(_n624_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n624_field})
+            _n624p["total"] += 1; _n624p["total_pnl"] = round(_n624p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n624p["wins"] += 1
+            else:        _n624p["losses"] += 1
+            _n624p["win_rate"] = round(_n624p["wins"] / _n624p["total"] * 100, 1)
+            _n624p["avg_pnl"]  = round(_n624p["total_pnl"] / _n624p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N625: Sector Relative Strength Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n625 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n625_field = _buy_n625.get("sector_relative_strength_perf", "sector_inline") if _buy_n625 else "sector_inline"
+            _n625_perf = tlog.setdefault("sector_relative_strength_perf", {})
+            _n625p = _n625_perf.setdefault(_n625_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n625_field})
+            _n625p["total"] += 1; _n625p["total_pnl"] = round(_n625p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n625p["wins"] += 1
+            else:        _n625p["losses"] += 1
+            _n625p["win_rate"] = round(_n625p["wins"] / _n625p["total"] * 100, 1)
+            _n625p["avg_pnl"]  = round(_n625p["total_pnl"] / _n625p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N626: Volume Price Trend Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n626 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n626_field = _buy_n626.get("volume_price_trend_perf", "vpt_flat") if _buy_n626 else "vpt_flat"
+            _n626_perf = tlog.setdefault("volume_price_trend_perf", {})
+            _n626p = _n626_perf.setdefault(_n626_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n626_field})
+            _n626p["total"] += 1; _n626p["total_pnl"] = round(_n626p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n626p["wins"] += 1
+            else:        _n626p["losses"] += 1
+            _n626p["win_rate"] = round(_n626p["wins"] / _n626p["total"] * 100, 1)
+            _n626p["avg_pnl"]  = round(_n626p["total_pnl"] / _n626p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N627: Gap to Close Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n627 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n627_field = _buy_n627.get("gap_to_close_performance_perf", "no_gap_trade") if _buy_n627 else "no_gap_trade"
+            _n627_perf = tlog.setdefault("gap_to_close_performance_perf", {})
+            _n627p = _n627_perf.setdefault(_n627_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n627_field})
+            _n627p["total"] += 1; _n627p["total_pnl"] = round(_n627p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n627p["wins"] += 1
+            else:        _n627p["losses"] += 1
+            _n627p["win_rate"] = round(_n627p["wins"] / _n627p["total"] * 100, 1)
+            _n627p["avg_pnl"]  = round(_n627p["total_pnl"] / _n627p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N628: Fear Greed Index Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n628 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n628_field = _buy_n628.get("fear_greed_index_perf", "neutral") if _buy_n628 else "neutral"
+            _n628_perf = tlog.setdefault("fear_greed_index_perf", {})
+            _n628p = _n628_perf.setdefault(_n628_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n628_field})
+            _n628p["total"] += 1; _n628p["total_pnl"] = round(_n628p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n628p["wins"] += 1
+            else:        _n628p["losses"] += 1
+            _n628p["win_rate"] = round(_n628p["wins"] / _n628p["total"] * 100, 1)
+            _n628p["avg_pnl"]  = round(_n628p["total_pnl"] / _n628p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N629: Breakout Retest Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n629 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n629_field = _buy_n629.get("breakout_retest_perf", "fresh_breakout") if _buy_n629 else "fresh_breakout"
+            _n629_perf = tlog.setdefault("breakout_retest_perf", {})
+            _n629p = _n629_perf.setdefault(_n629_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n629_field})
+            _n629p["total"] += 1; _n629p["total_pnl"] = round(_n629p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n629p["wins"] += 1
+            else:        _n629p["losses"] += 1
+            _n629p["win_rate"] = round(_n629p["wins"] / _n629p["total"] * 100, 1)
+            _n629p["avg_pnl"]  = round(_n629p["total_pnl"] / _n629p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N630: Trend Line Proximity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n630 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n630_field = _buy_n630.get("trend_line_proximity_perf", "far_from_trendline") if _buy_n630 else "far_from_trendline"
+            _n630_perf = tlog.setdefault("trend_line_proximity_perf", {})
+            _n630p = _n630_perf.setdefault(_n630_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n630_field})
+            _n630p["total"] += 1; _n630p["total_pnl"] = round(_n630p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n630p["wins"] += 1
+            else:        _n630p["losses"] += 1
+            _n630p["win_rate"] = round(_n630p["wins"] / _n630p["total"] * 100, 1)
+            _n630p["avg_pnl"]  = round(_n630p["total_pnl"] / _n630p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -26658,6 +26808,141 @@ def run():
                     except Exception:
                         _n620_s = "inline_earnings"
                     _buy_signals_merged["earnings_quality_perf"] = _n620_s
+                    # N621: Price vs momentum divergence at entry
+                    try:
+                        _n621_bull = bool(d.get("rsi_bull_divergence", False))
+                        _n621_bear = bool(d.get("rsi_bear_divergence", False))
+                        if _n621_bull:
+                            _n621_s = "bullish_divergence"
+                        elif _n621_bear:
+                            _n621_s = "bearish_divergence"
+                        else:
+                            _n621_s = "no_divergence"
+                    except Exception:
+                        _n621_s = "no_divergence"
+                    _buy_signals_merged["momentum_divergence_perf"] = _n621_s
+                    # N622: ATR expanding or contracting at entry
+                    try:
+                        _n622_hv5 = float(d.get("hv5", 0) or 0)
+                        _n622_hv20 = float(d.get("hv20", 0) or 0)
+                        if _n622_hv20 > 0 and _n622_hv5 > _n622_hv20 * 1.20:
+                            _n622_s = "expanding_atr"
+                        elif _n622_hv20 > 0 and _n622_hv5 < _n622_hv20 * 0.80:
+                            _n622_s = "contracting_atr"
+                        else:
+                            _n622_s = "stable_atr"
+                    except Exception:
+                        _n622_s = "stable_atr"
+                    _buy_signals_merged["atr_expansion_at_entry_perf"] = _n622_s
+                    # N623: SPY trend alignment with trade
+                    try:
+                        _n623_spy = float(d.get("spy_chg_1d", d.get("spy_day_chg", 0)) or 0)
+                        if _n623_spy >= 0.5:
+                            _n623_s = "spy_strongly_bullish"
+                        elif _n623_spy <= -0.5:
+                            _n623_s = "spy_bearish"
+                        else:
+                            _n623_s = "spy_neutral"
+                    except Exception:
+                        _n623_s = "spy_neutral"
+                    _buy_signals_merged["spy_alignment_perf"] = _n623_s
+                    # N624: Price position relative to opening range
+                    try:
+                        _n624_orb = float(d.get("price_vs_orb", d.get("orb_position", 0)) or 0)
+                        if _n624_orb > 0:
+                            _n624_s = "above_opening_range"
+                        elif _n624_orb < 0:
+                            _n624_s = "below_opening_range"
+                        else:
+                            _n624_s = "within_opening_range"
+                    except Exception:
+                        _n624_s = "within_opening_range"
+                    _buy_signals_merged["opening_range_position_perf"] = _n624_s
+                    # N625: Sector vs market relative strength
+                    try:
+                        _n625_sec = float(d.get("sector_etf_1d", 0) or 0)
+                        _n625_spy = float(d.get("spy_day_chg", 0) or 0)
+                        _n625_diff = _n625_sec - _n625_spy
+                        if _n625_diff >= 1.0:
+                            _n625_s = "sector_outperforming"
+                        elif _n625_diff <= -1.0:
+                            _n625_s = "sector_underperforming"
+                        else:
+                            _n625_s = "sector_inline"
+                    except Exception:
+                        _n625_s = "sector_inline"
+                    _buy_signals_merged["sector_relative_strength_perf"] = _n625_s
+                    # N626: Volume Price Trend (VPT) signal
+                    try:
+                        _n626_vpt = float(d.get("vpt_trend", d.get("obv_slope", 0)) or 0)
+                        if _n626_vpt > 0:
+                            _n626_s = "vpt_rising"
+                        elif _n626_vpt < 0:
+                            _n626_s = "vpt_declining"
+                        else:
+                            _n626_s = "vpt_flat"
+                    except Exception:
+                        _n626_s = "vpt_flat"
+                    _buy_signals_merged["volume_price_trend_perf"] = _n626_s
+                    # N627: Gap type vs closing position
+                    try:
+                        _n627_gap = float(d.get("pm_gap_pct", 0) or 0)
+                        _n627_intra = float(d.get("intraday", 0) or 0)
+                        if abs(_n627_gap) < 0.1:
+                            _n627_s = "no_gap_trade"
+                        elif _n627_gap > 0 and _n627_intra >= 0:
+                            _n627_s = "gap_with_follow_through"
+                        else:
+                            _n627_s = "gap_fade"
+                    except Exception:
+                        _n627_s = "no_gap_trade"
+                    _buy_signals_merged["gap_to_close_performance_perf"] = _n627_s
+                    # N628: Market Fear & Greed proxy at entry
+                    try:
+                        _n628_vix = float(d.get("vix", 20) or 20)
+                        _n628_breadth = float(d.get("breadth_pct", d.get("adv_dec_pct", 50)) or 50)
+                        if _n628_vix > 30 and _n628_breadth < 30:
+                            _n628_s = "extreme_fear"
+                        elif _n628_vix >= 25:
+                            _n628_s = "fear"
+                        elif _n628_vix < 15 and _n628_breadth > 70:
+                            _n628_s = "extreme_greed"
+                        elif _n628_vix < 15:
+                            _n628_s = "greed"
+                        else:
+                            _n628_s = "neutral"
+                    except Exception:
+                        _n628_s = "neutral"
+                    _buy_signals_merged["fear_greed_index_perf"] = _n628_s
+                    # N629: Breakout entry timing
+                    try:
+                        _n629_fresh = bool(d.get("at_breakout", False))
+                        _n629_retest = bool(d.get("breakout_retest", False))
+                        _n629_price = float(d.get("price", d.get("last", 0)) or 0)
+                        _n629_level = float(d.get("breakout_level", 0) or 0)
+                        if _n629_retest:
+                            _n629_s = "retest_bounce"
+                        elif _n629_fresh:
+                            _n629_s = "fresh_breakout"
+                        elif _n629_level > 0 and _n629_price > _n629_level * 1.03:
+                            _n629_s = "extended_breakout"
+                        else:
+                            _n629_s = "fresh_breakout"
+                    except Exception:
+                        _n629_s = "fresh_breakout"
+                    _buy_signals_merged["breakout_retest_perf"] = _n629_s
+                    # N630: Distance to trend line
+                    try:
+                        _n630_dist = float(d.get("trendline_dist_pct", d.get("trend_support_dist", 3)) or 3)
+                        if _n630_dist <= 0.25:
+                            _n630_s = "at_trendline"
+                        elif _n630_dist <= 1.0:
+                            _n630_s = "near_trendline"
+                        else:
+                            _n630_s = "far_from_trendline"
+                    except Exception:
+                        _n630_s = "far_from_trendline"
+                    _buy_signals_merged["trend_line_proximity_perf"] = _n630_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -34211,6 +34496,86 @@ def run():
         if _n620_list:
             _learn_log.append(f"N620 EarnQual: strong_beat={_a_n620['win_rate']:.0f}% miss_earnings={_b_n620['win_rate']:.0f}%WR")
 
+        # ── N621: Momentum Divergence entry tuner ────────────────────
+        _n621_raw = tlog.get("momentum_divergence_perf", {})
+        _n621_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n621_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n621 = next((s for s in _n621_list if s.get("state")=="bullish_divergence"), _n621_list[0] if _n621_list else {"win_rate":50})
+        _b_n621 = next((s for s in _n621_list if s.get("state")=="bearish_divergence"), _n621_list[-1] if _n621_list else {"win_rate":50})
+        if _n621_list:
+            _learn_log.append(f"N621 MomDiverg: bullish_divergence={_a_n621['win_rate']:.0f}% bearish_divergence={_b_n621['win_rate']:.0f}%WR")
+
+        # ── N622: ATR Expansion at Entry entry tuner ────────────────────
+        _n622_raw = tlog.get("atr_expansion_at_entry_perf", {})
+        _n622_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n622_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n622 = next((s for s in _n622_list if s.get("state")=="expanding_atr"), _n622_list[0] if _n622_list else {"win_rate":50})
+        _b_n622 = next((s for s in _n622_list if s.get("state")=="contracting_atr"), _n622_list[-1] if _n622_list else {"win_rate":50})
+        if _n622_list:
+            _learn_log.append(f"N622 ATRExpand: expanding_atr={_a_n622['win_rate']:.0f}% contracting_atr={_b_n622['win_rate']:.0f}%WR")
+
+        # ── N623: SPY Alignment entry tuner ────────────────────
+        _n623_raw = tlog.get("spy_alignment_perf", {})
+        _n623_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n623_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n623 = next((s for s in _n623_list if s.get("state")=="spy_strongly_bullish"), _n623_list[0] if _n623_list else {"win_rate":50})
+        _b_n623 = next((s for s in _n623_list if s.get("state")=="spy_bearish"), _n623_list[-1] if _n623_list else {"win_rate":50})
+        if _n623_list:
+            _learn_log.append(f"N623 SPYAlign: spy_strongly_bullish={_a_n623['win_rate']:.0f}% spy_bearish={_b_n623['win_rate']:.0f}%WR")
+
+        # ── N624: Opening Range Position entry tuner ────────────────────
+        _n624_raw = tlog.get("opening_range_position_perf", {})
+        _n624_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n624_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n624 = next((s for s in _n624_list if s.get("state")=="above_opening_range"), _n624_list[0] if _n624_list else {"win_rate":50})
+        _b_n624 = next((s for s in _n624_list if s.get("state")=="below_opening_range"), _n624_list[-1] if _n624_list else {"win_rate":50})
+        if _n624_list:
+            _learn_log.append(f"N624 ORBPos: above_opening_range={_a_n624['win_rate']:.0f}% below_opening_range={_b_n624['win_rate']:.0f}%WR")
+
+        # ── N625: Sector Relative Strength entry tuner ────────────────────
+        _n625_raw = tlog.get("sector_relative_strength_perf", {})
+        _n625_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n625_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n625 = next((s for s in _n625_list if s.get("state")=="sector_outperforming"), _n625_list[0] if _n625_list else {"win_rate":50})
+        _b_n625 = next((s for s in _n625_list if s.get("state")=="sector_underperforming"), _n625_list[-1] if _n625_list else {"win_rate":50})
+        if _n625_list:
+            _learn_log.append(f"N625 SectorRS: sector_outperforming={_a_n625['win_rate']:.0f}% sector_underperforming={_b_n625['win_rate']:.0f}%WR")
+
+        # ── N626: Volume Price Trend entry tuner ────────────────────
+        _n626_raw = tlog.get("volume_price_trend_perf", {})
+        _n626_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n626_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n626 = next((s for s in _n626_list if s.get("state")=="vpt_rising"), _n626_list[0] if _n626_list else {"win_rate":50})
+        _b_n626 = next((s for s in _n626_list if s.get("state")=="vpt_declining"), _n626_list[-1] if _n626_list else {"win_rate":50})
+        if _n626_list:
+            _learn_log.append(f"N626 VPTrend: vpt_rising={_a_n626['win_rate']:.0f}% vpt_declining={_b_n626['win_rate']:.0f}%WR")
+
+        # ── N627: Gap to Close Performance entry tuner ────────────────────
+        _n627_raw = tlog.get("gap_to_close_performance_perf", {})
+        _n627_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n627_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n627 = next((s for s in _n627_list if s.get("state")=="gap_with_follow_through"), _n627_list[0] if _n627_list else {"win_rate":50})
+        _b_n627 = next((s for s in _n627_list if s.get("state")=="gap_fade"), _n627_list[-1] if _n627_list else {"win_rate":50})
+        if _n627_list:
+            _learn_log.append(f"N627 GapClose: gap_with_follow_through={_a_n627['win_rate']:.0f}% gap_fade={_b_n627['win_rate']:.0f}%WR")
+
+        # ── N628: Fear Greed Index entry tuner ────────────────────
+        _n628_raw = tlog.get("fear_greed_index_perf", {})
+        _n628_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n628_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n628 = next((s for s in _n628_list if s.get("state")=="greed"), _n628_list[0] if _n628_list else {"win_rate":50})
+        _b_n628 = next((s for s in _n628_list if s.get("state")=="extreme_fear"), _n628_list[-1] if _n628_list else {"win_rate":50})
+        if _n628_list:
+            _learn_log.append(f"N628 FearGreed: greed={_a_n628['win_rate']:.0f}% extreme_fear={_b_n628['win_rate']:.0f}%WR")
+
+        # ── N629: Breakout Retest entry tuner ────────────────────
+        _n629_raw = tlog.get("breakout_retest_perf", {})
+        _n629_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n629_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n629 = next((s for s in _n629_list if s.get("state")=="retest_bounce"), _n629_list[0] if _n629_list else {"win_rate":50})
+        _b_n629 = next((s for s in _n629_list if s.get("state")=="extended_breakout"), _n629_list[-1] if _n629_list else {"win_rate":50})
+        if _n629_list:
+            _learn_log.append(f"N629 BrkRetest: retest_bounce={_a_n629['win_rate']:.0f}% extended_breakout={_b_n629['win_rate']:.0f}%WR")
+
+        # ── N630: Trend Line Proximity entry tuner ────────────────────
+        _n630_raw = tlog.get("trend_line_proximity_perf", {})
+        _n630_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n630_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n630 = next((s for s in _n630_list if s.get("state")=="at_trendline"), _n630_list[0] if _n630_list else {"win_rate":50})
+        _b_n630 = next((s for s in _n630_list if s.get("state")=="far_from_trendline"), _n630_list[-1] if _n630_list else {"win_rate":50})
+        if _n630_list:
+            _learn_log.append(f"N630 TrendLine: at_trendline={_a_n630['win_rate']:.0f}% far_from_trendline={_b_n630['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -35119,6 +35484,16 @@ def run():
             "gap_fill_proximity_perf": _n618_list,  # N618: distance to gap fill level (approaching_gap_fill/gap_fill_done/far_from_gap) vs outcome
             "multi_timeframe_rsi_perf": _n619_list,  # N619: multi-timeframe RSI agreement (bullish_all_tf/mixed_tf/bearish_all_tf) vs outcome
             "earnings_quality_perf": _n620_list,  # N620: most recent earnings quality (strong_beat/modest_beat/inline_earnings/miss_earnings) vs outcome
+            "momentum_divergence_perf": _n621_list,  # N621: price vs momentum divergence (bullish_divergence/no_divergence/bearish_divergence) vs outcome
+            "atr_expansion_at_entry_perf": _n622_list,  # N622: ATR expanding or contracting at entry (expanding_atr/stable_atr/contracting_atr) vs outcome
+            "spy_alignment_perf": _n623_list,  # N623: SPY trend alignment (spy_strongly_bullish/spy_neutral/spy_bearish) vs outcome
+            "opening_range_position_perf": _n624_list,  # N624: price position relative to opening range (above/within/below_opening_range) vs outcome
+            "sector_relative_strength_perf": _n625_list,  # N625: sector vs market RS (sector_outperforming/sector_inline/sector_underperforming) vs outcome
+            "volume_price_trend_perf": _n626_list,  # N626: VPT signal (vpt_rising/vpt_flat/vpt_declining) vs outcome
+            "gap_to_close_performance_perf": _n627_list,  # N627: gap type vs closing position (gap_with_follow_through/gap_fade/no_gap_trade) vs outcome
+            "fear_greed_index_perf": _n628_list,  # N628: market fear & greed proxy (extreme_fear/fear/neutral/greed/extreme_greed) vs outcome
+            "breakout_retest_perf": _n629_list,  # N629: breakout entry timing (fresh_breakout/retest_bounce/extended_breakout) vs outcome
+            "trend_line_proximity_perf": _n630_list,  # N630: distance to trend line (at_trendline/near_trendline/far_from_trendline) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -35446,9 +35821,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 580              # total tracked neuron dimensions (N103-N620 complete)
+        tlog["neurons_total"]     = 590              # total tracked neuron dimensions (N103-N630 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/580 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/590 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
