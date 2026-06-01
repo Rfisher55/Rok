@@ -27925,7 +27925,7 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 390              # total tracked neuron dimensions (N103-N420 complete)
+        tlog["neurons_total"]     = 390              # total tracked neuron dimensions (N103-N430 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
         logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/390 neurons active")
     except Exception as _ce:
