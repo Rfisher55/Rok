@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 660)
+    neurons_total = td.get("neurons_total", 670)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -714,6 +714,16 @@ def _build_weekly_bot_report(docs_dir):
         "breadth_thrust_entry_perf":       "N698 Breadth Thrust Entry",
         "fear_greed_entry_perf":           "N699 Fear/Greed Entry",
         "composite_technical_score_perf":  "N700 Composite Technical Score",
+        "parabolic_extension_perf":         "N701 Parabolic Extension",
+        "volume_climax_perf":               "N702 Volume Climax",
+        "trend_exhaustion_perf":            "N703 Trend Exhaustion",
+        "institutional_footprint_perf":     "N704 Institutional Footprint",
+        "smart_stop_placement_perf":        "N705 Smart Stop Placement",
+        "risk_adjusted_return_perf":        "N706 Risk-Adjusted Return",
+        "catalyst_duration_perf":           "N707 Catalyst Duration",
+        "position_maturity_perf":           "N708 Position Maturity",
+        "sector_cycle_phase_perf":          "N709 Sector Cycle Phase",
+        "macro_tailwind_perf":              "N710 Macro Tailwind",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -1095,7 +1105,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 660),
+                "neurons_total":    td.get("neurons_total", 670),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -1127,6 +1137,7 @@ def _run():
                 )[:8],
                 # Next entry conditions and regime state
                 "next_entry_conditions": td.get("next_entry_conditions", {}),
+                "last_scan_rejected": td.get("last_scan_rejected", [])[:8],
                 "smart_alerts": td.get("smart_alerts", []),
                 "last_scan_top": td.get("last_scan_top", [])[:9],
                 # Top performing neurons (for Brain heatmap in dashboard)
@@ -1409,7 +1420,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 660),
+            "neurons_total":   live_market_context.get("neurons_total", 670),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
@@ -1428,6 +1439,7 @@ def _run():
         "top_triplets":       live_market_context.get("top_triplets", []),
         "sector_performance": live_market_context.get("sector_performance", {}),
         "next_entry_conditions": live_market_context.get("next_entry_conditions", {}),
+        "last_scan_rejected": live_market_context.get("last_scan_rejected", []),
         "smart_alerts":       live_market_context.get("smart_alerts", []),
         "last_scan_top":      live_market_context.get("last_scan_top", []),
         "top_neurons":        live_market_context.get("top_neurons", []),

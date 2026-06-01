@@ -462,6 +462,15 @@ def build_prompt(
     else:
         positions_str = "  No open positions"
 
+    # Rejected candidates (why bot passed on certain stocks this scan)
+    rejected_str = ""
+    _rejected = lmc.get("last_scan_rejected") or []
+    if _rejected:
+        rej_lines = []
+        for r in _rejected[:6]:
+            rej_lines.append(f"  ${r.get('ticker','')} score={r.get('score',0)} — SKIPPED: {r.get('reason','')}")
+        rejected_str = "\n".join(rej_lines)
+
     # Last scan top candidates context
     scan_str = ""
     if scan_top:
@@ -619,7 +628,7 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 660)
+    nT = lmc.get("neurons_total", 670)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:
@@ -759,6 +768,10 @@ HIGH_SHORT=short squeeze fuel, NEWS_ACCELERATING=catalyst building, ↓DEG=score
 LAST SCAN TOP CANDIDATES (bot's freshest buy ideas):
 {scan_str}
 {f'''
+STOCKS BOT CONSIDERED BUT REJECTED THIS SCAN:
+{rejected_str}
+''' if rejected_str else ''}
+{f'''
 WEEKEND WATCHLIST — STOCKS BOT IS WATCHING FOR MONDAY:
 {wl_str}
 ''' if wl_str else ''}
@@ -799,6 +812,7 @@ CRITICAL INSTRUCTIONS:
 15. If the brain's top neurons show a specific state with high win rate (e.g., "morning_session: 78% WR"), reference this timing context for entries
 16. morning_game_plan: generate a concrete 3-step action plan. step1/step2 must name specific tickers. best_entry_window = "9:30-10:30 AM ET" for trend days, "10:30-11:30 AM ET" for range/choppy. max_new_positions: 1-2 if loss_streak or bear regime; 3-4 if strong_bull and clean day
 17. Brain's Top 3 Picks: if any of these match buy signals in other data sources, elevate their signal_strength by +1 in buy_signals and mention the brain's score in reasons
+18. Rejected Candidates: review STOCKS BOT CONSIDERED BUT REJECTED — if any were rejected only for minor reasons (sector full, thin vol) but have strong signals, mention them as alternative watches in rok_message
 """
 
 
