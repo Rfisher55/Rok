@@ -15743,6 +15743,52 @@ def run():
             except Exception as _attr_e:
                 logger.debug(f"Portfolio attribution: {_attr_e}")
 
+            # ── Portfolio Stress Test ─────────────────────────────────────
+            # Simulate portfolio P&L under SPY drawdown scenarios.
+            # Uses position beta (or sector-implied beta) to estimate impact.
+            try:
+                _st_positions = tlog.get("positions", [])
+                if _st_positions:
+                    _SECTOR_BETA = {  # typical beta by sector vs SPY
+                        "Tech": 1.3, "Growth": 1.4, "Crypto/Fintech": 1.8,
+                        "Fins": 1.1, "Health": 0.7, "Energy": 1.0,
+                        "Consumer": 0.9, "Industrials": 1.0, "Utilities": 0.4,
+                        "Staples": 0.5, "RE": 0.8, "Materials": 1.0,
+                        "Biotech": 1.5, "Momentum": 1.4, "other": 1.0,
+                    }
+                    _SPY_SCENARIOS = [-20, -15, -10, -5, 5, 10]
+                    _stress_results = {}
+                    _total_mval_st = sum(float(p.get("market_val", 0) or 0) for p in _st_positions)
+                    for _spy_chg in _SPY_SCENARIOS:
+                        _scenario_pnl = 0.0
+                        for _stp in _st_positions:
+                            _stp_sym = _stp.get("ticker", "")
+                            _stp_mval = float(_stp.get("market_val", 0) or 0)
+                            _stp_sec = SECTOR_MAP.get(_stp_sym, "other")
+                            _stp_beta = _SECTOR_BETA.get(_stp_sec, 1.0)
+                            _est_chg = _spy_chg * _stp_beta
+                            _scenario_pnl += _est_chg / 100 * _stp_mval
+                        _stress_results[str(_spy_chg)] = {
+                            "spy_chg": _spy_chg,
+                            "est_pnl_usd": round(_scenario_pnl, 2),
+                            "est_pnl_pct": round(_scenario_pnl / _total_mval_st * 100, 1) if _total_mval_st > 0 else 0,
+                            "label": (f"Bull +{_spy_chg}%" if _spy_chg > 0 else
+                                      f"Mild -{abs(_spy_chg)}%" if abs(_spy_chg) <= 5 else
+                                      f"Correction -{abs(_spy_chg)}%" if abs(_spy_chg) <= 15 else
+                                      f"Crash -{abs(_spy_chg)}%"),
+                        }
+                    _worst_case = _stress_results.get("-20", {}).get("est_pnl_usd", 0)
+                    tlog["portfolio_stress_test"] = {
+                        "generated_at": _now_ts.isoformat(),
+                        "scenarios":    _stress_results,
+                        "worst_case_usd": _worst_case,
+                        "total_market_val": round(_total_mval_st, 2),
+                        "n_positions": len(_st_positions),
+                    }
+                    logger.info(f"Stress test: worst case (SPY -20%) ≈ ${_worst_case:+,.0f}")
+            except Exception as _st_e:
+                logger.debug(f"Stress test: {_st_e}")
+
             # ── News headlines for held positions ─────────────────────────
             # Fetch recent headlines via yfinance and store in tlog for the dashboard
             try:

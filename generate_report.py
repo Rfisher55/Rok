@@ -778,6 +778,8 @@ def _run():
                 "next_market_open":         td.get("next_market_open", ""),
                 "position_news":            td.get("position_news", {}),
                 "portfolio_attribution":    td.get("portfolio_attribution", {}),
+                "portfolio_stress_test":    td.get("portfolio_stress_test", {}),
+                "morning_brief":            td.get("morning_brief", {}),
                 "exit_intelligence":        td.get("exit_intelligence", {}),
                 "sector_performance":       {k: {"win_rate": v.get("win_rate",0), "total": v.get("total",0), "avg_pnl": v.get("avg_pnl",0)} for k, v in td.get("sector_performance", {}).items() if v.get("total",0) >= 2},
                 "weekend_watchlist_scored": [w for w in td.get("weekend_watchlist", []) if w.get("score")],
