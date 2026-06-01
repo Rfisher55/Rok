@@ -18686,6 +18686,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
                     made_trades_ref.append(True)
                     peaks.pop(sym, None)
+                    held_crypto.pop(sym, None)  # free slot so buy section can refill immediately
                 except requests.HTTPError as _he:
                     _resp_body = _he.response.text[:300] if hasattr(_he, "response") and _he.response is not None else "no body"
                     logger.warning(f"Crypto sell HTTP {sym}: {_he} | body={_resp_body}")
