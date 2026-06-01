@@ -1,0 +1,25 @@
+{
+  "batch": "N801-N810",
+  "date": "2026-06-01",
+  "total_neurons_after": 770,
+  "neurons": [
+    {"id": "N801", "key": "macro_regime_perf", "name": "Macro Regime"},
+    {"id": "N802", "key": "fed_policy_stance_perf", "name": "Fed Policy Stance"},
+    {"id": "N803", "key": "earnings_proximity_perf", "name": "Earnings Proximity"},
+    {"id": "N804", "key": "post_earnings_drift_perf", "name": "Post Earnings Drift"},
+    {"id": "N805", "key": "sector_etf_flow_perf", "name": "Sector ETF Flow"},
+    {"id": "N806", "key": "position_concentration_perf", "name": "Position Concentration"},
+    {"id": "N807", "key": "intraday_structure_perf", "name": "Intraday Structure"},
+    {"id": "N808", "key": "gap_size_perf", "name": "Gap Size"},
+    {"id": "N809", "key": "short_squeeze_risk_perf", "name": "Short Squeeze Risk"},
+    {"id": "N810", "key": "institutional_flow_perf", "name": "Institutional Flow"}
+  ],
+  "sections_modified": [
+    "SELL tracker block (~line 12936)",
+    "BUY signal classifier block (~line 32037)",
+    "N791-N800 Tuners block (~line 40551)",
+    "bot_learned_params [] entries (~line 41641)",
+    "neurons_total counter (760 -> 770)",
+    "neurons active logger string (760 -> 770)"
+  ]
+}

@@ -644,7 +644,7 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 760)
+    nT = lmc.get("neurons_total", 770)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:

@@ -12933,6 +12933,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N801: Macro Regime ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n801 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n801_field = _buy_n801.get("macro_regime_perf", "neutral_range") if _buy_n801 else "neutral_range"
+            _n801_perf = tlog.setdefault("macro_regime_perf", {})
+            _n801p = _n801_perf.setdefault(_n801_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n801_field})
+            _n801p["total"] += 1; _n801p["total_pnl"] = round(_n801p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n801p["wins"] += 1
+            else:        _n801p["losses"] += 1
+            _n801p["win_rate"] = round(_n801p["wins"] / _n801p["total"] * 100, 1)
+            _n801p["avg_pnl"]  = round(_n801p["total_pnl"] / _n801p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N802: Fed Policy Stance ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n802 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n802_field = _buy_n802.get("fed_policy_stance_perf", "neutral_policy") if _buy_n802 else "neutral_policy"
+            _n802_perf = tlog.setdefault("fed_policy_stance_perf", {})
+            _n802p = _n802_perf.setdefault(_n802_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n802_field})
+            _n802p["total"] += 1; _n802p["total_pnl"] = round(_n802p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n802p["wins"] += 1
+            else:        _n802p["losses"] += 1
+            _n802p["win_rate"] = round(_n802p["wins"] / _n802p["total"] * 100, 1)
+            _n802p["avg_pnl"]  = round(_n802p["total_pnl"] / _n802p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N803: Earnings Proximity ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n803 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n803_field = _buy_n803.get("earnings_proximity_perf", "safe_zone") if _buy_n803 else "safe_zone"
+            _n803_perf = tlog.setdefault("earnings_proximity_perf", {})
+            _n803p = _n803_perf.setdefault(_n803_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n803_field})
+            _n803p["total"] += 1; _n803p["total_pnl"] = round(_n803p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n803p["wins"] += 1
+            else:        _n803p["losses"] += 1
+            _n803p["win_rate"] = round(_n803p["wins"] / _n803p["total"] * 100, 1)
+            _n803p["avg_pnl"]  = round(_n803p["total_pnl"] / _n803p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N804: Post Earnings Drift ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n804 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n804_field = _buy_n804.get("post_earnings_drift_perf", "no_move_yet") if _buy_n804 else "no_move_yet"
+            _n804_perf = tlog.setdefault("post_earnings_drift_perf", {})
+            _n804p = _n804_perf.setdefault(_n804_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n804_field})
+            _n804p["total"] += 1; _n804p["total_pnl"] = round(_n804p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n804p["wins"] += 1
+            else:        _n804p["losses"] += 1
+            _n804p["win_rate"] = round(_n804p["wins"] / _n804p["total"] * 100, 1)
+            _n804p["avg_pnl"]  = round(_n804p["total_pnl"] / _n804p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N805: Sector ETF Flow ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n805 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n805_field = _buy_n805.get("sector_etf_flow_perf", "neutral_flow") if _buy_n805 else "neutral_flow"
+            _n805_perf = tlog.setdefault("sector_etf_flow_perf", {})
+            _n805p = _n805_perf.setdefault(_n805_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n805_field})
+            _n805p["total"] += 1; _n805p["total_pnl"] = round(_n805p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n805p["wins"] += 1
+            else:        _n805p["losses"] += 1
+            _n805p["win_rate"] = round(_n805p["wins"] / _n805p["total"] * 100, 1)
+            _n805p["avg_pnl"]  = round(_n805p["total_pnl"] / _n805p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N806: Position Concentration ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n806 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n806_field = _buy_n806.get("position_concentration_perf", "diversified") if _buy_n806 else "diversified"
+            _n806_perf = tlog.setdefault("position_concentration_perf", {})
+            _n806p = _n806_perf.setdefault(_n806_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n806_field})
+            _n806p["total"] += 1; _n806p["total_pnl"] = round(_n806p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n806p["wins"] += 1
+            else:        _n806p["losses"] += 1
+            _n806p["win_rate"] = round(_n806p["wins"] / _n806p["total"] * 100, 1)
+            _n806p["avg_pnl"]  = round(_n806p["total_pnl"] / _n806p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N807: Intraday Structure ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n807 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n807_field = _buy_n807.get("intraday_structure_perf", "undefined_structure") if _buy_n807 else "undefined_structure"
+            _n807_perf = tlog.setdefault("intraday_structure_perf", {})
+            _n807p = _n807_perf.setdefault(_n807_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n807_field})
+            _n807p["total"] += 1; _n807p["total_pnl"] = round(_n807p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n807p["wins"] += 1
+            else:        _n807p["losses"] += 1
+            _n807p["win_rate"] = round(_n807p["wins"] / _n807p["total"] * 100, 1)
+            _n807p["avg_pnl"]  = round(_n807p["total_pnl"] / _n807p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N808: Gap Size ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n808 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n808_field = _buy_n808.get("gap_size_perf", "flat_open") if _buy_n808 else "flat_open"
+            _n808_perf = tlog.setdefault("gap_size_perf", {})
+            _n808p = _n808_perf.setdefault(_n808_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n808_field})
+            _n808p["total"] += 1; _n808p["total_pnl"] = round(_n808p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n808p["wins"] += 1
+            else:        _n808p["losses"] += 1
+            _n808p["win_rate"] = round(_n808p["wins"] / _n808p["total"] * 100, 1)
+            _n808p["avg_pnl"]  = round(_n808p["total_pnl"] / _n808p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N809: Short Squeeze Risk ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n809 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n809_field = _buy_n809.get("short_squeeze_risk_perf", "low_si") if _buy_n809 else "low_si"
+            _n809_perf = tlog.setdefault("short_squeeze_risk_perf", {})
+            _n809p = _n809_perf.setdefault(_n809_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n809_field})
+            _n809p["total"] += 1; _n809p["total_pnl"] = round(_n809p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n809p["wins"] += 1
+            else:        _n809p["losses"] += 1
+            _n809p["win_rate"] = round(_n809p["wins"] / _n809p["total"] * 100, 1)
+            _n809p["avg_pnl"]  = round(_n809p["total_pnl"] / _n809p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N810: Institutional Flow ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n810 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n810_field = _buy_n810.get("institutional_flow_perf", "retail_dominated") if _buy_n810 else "retail_dominated"
+            _n810_perf = tlog.setdefault("institutional_flow_perf", {})
+            _n810p = _n810_perf.setdefault(_n810_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n810_field})
+            _n810p["total"] += 1; _n810p["total_pnl"] = round(_n810p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n810p["wins"] += 1
+            else:        _n810p["losses"] += 1
+            _n810p["win_rate"] = round(_n810p["wins"] / _n810p["total"] * 100, 1)
+            _n810p["avg_pnl"]  = round(_n810p["total_pnl"] / _n810p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -32035,6 +32185,138 @@ def run():
                     except Exception:
                         _n800_s = "no_composite_signal"
                     _buy_signals_merged["composite_signal_strength_perf"] = _n800_s
+                    # N801: Macro Regime
+                    try:
+                        _n801_s = "neutral_range"
+                        _n801_regime = sc.get("market_regime", "")
+                        if "bull" in _n801_regime:
+                            _n801_s = "bull_trending"
+                        elif "bear" in _n801_regime:
+                            _n801_s = "bear_trending"
+                        elif "volatile" in _n801_regime or "chop" in _n801_regime:
+                            _n801_s = "volatile_chop"
+                        _buy_signals_merged["macro_regime_perf"] = _n801_s
+                    except Exception:
+                        pass
+                    # N802: Fed Policy Stance
+                    try:
+                        _n802_s = "neutral_policy"
+                        _n802_tone = sc.get("macro_tone", "")
+                        if "dovish" in _n802_tone or "cut" in _n802_tone:
+                            _n802_s = "dovish_tailwind"
+                        elif "hawkish" in _n802_tone or "hike" in _n802_tone:
+                            _n802_s = "hawkish_headwind"
+                        elif "uncertain" in _n802_tone:
+                            _n802_s = "uncertain_flux"
+                        _buy_signals_merged["fed_policy_stance_perf"] = _n802_s
+                    except Exception:
+                        pass
+                    # N803: Earnings Proximity
+                    try:
+                        _n803_s = "safe_zone"
+                        _n803_dte = sc.get("days_to_earnings", 99)
+                        if _n803_dte < 7:
+                            _n803_s = "danger_zone"
+                        elif _n803_dte < 14:
+                            _n803_s = "caution_window"
+                        elif _n803_dte < 30:
+                            _n803_s = "aware_window"
+                        _buy_signals_merged["earnings_proximity_perf"] = _n803_s
+                    except Exception:
+                        pass
+                    # N804: Post Earnings Drift
+                    try:
+                        _n804_s = "no_move_yet"
+                        _n804_move = sc.get("earnings_move_pct", 0.0)
+                        if _n804_move > 5:
+                            _n804_s = "strong_gap_up"
+                        elif _n804_move >= 1:
+                            _n804_s = "faded_gap"
+                        elif _n804_move < -1:
+                            _n804_s = "gap_down"
+                        _buy_signals_merged["post_earnings_drift_perf"] = _n804_s
+                    except Exception:
+                        pass
+                    # N805: Sector ETF Flow
+                    try:
+                        _n805_s = "neutral_flow"
+                        _n805_rs = sc.get("sector_rs_pct", 0.0)
+                        if _n805_rs > 2:
+                            _n805_s = "strong_inflow"
+                        elif _n805_rs >= 0.5:
+                            _n805_s = "mild_inflow"
+                        elif _n805_rs < -2:
+                            _n805_s = "strong_outflow"
+                        elif _n805_rs <= -0.5:
+                            _n805_s = "mild_outflow"
+                        _buy_signals_merged["sector_etf_flow_perf"] = _n805_s
+                    except Exception:
+                        pass
+                    # N806: Position Concentration
+                    try:
+                        _n806_s = "diversified"
+                        _n806_cnt = sc.get("portfolio_sector_count", 0)
+                        if _n806_cnt == 1:
+                            _n806_s = "single_sector"
+                        elif _n806_cnt == 2:
+                            _n806_s = "duo_sector"
+                        elif _n806_cnt == 3:
+                            _n806_s = "tri_sector"
+                        _buy_signals_merged["position_concentration_perf"] = _n806_s
+                    except Exception:
+                        pass
+                    # N807: Intraday Structure
+                    try:
+                        _n807_s = "undefined_structure"
+                        _n807_trend = sc.get("intraday_trend", "")
+                        if "bull" in _n807_trend or "higher_low" in _n807_trend:
+                            _n807_s = "bullish_structure"
+                        elif "bear" in _n807_trend or "lower_high" in _n807_trend:
+                            _n807_s = "bearish_structure"
+                        elif "chop" in _n807_trend or "range" in _n807_trend:
+                            _n807_s = "choppy_range"
+                        _buy_signals_merged["intraday_structure_perf"] = _n807_s
+                    except Exception:
+                        pass
+                    # N808: Gap Size
+                    try:
+                        _n808_s = "flat_open"
+                        _n808_gap = sc.get("gap_pct", 0.0)
+                        if _n808_gap > 3:
+                            _n808_s = "large_gap_up"
+                        elif _n808_gap >= 1:
+                            _n808_s = "medium_gap_up"
+                        elif _n808_gap < -1:
+                            _n808_s = "gap_down_open"
+                        _buy_signals_merged["gap_size_perf"] = _n808_s
+                    except Exception:
+                        pass
+                    # N809: Short Squeeze Risk
+                    try:
+                        _n809_s = "low_si"
+                        _n809_sf = sc.get("short_float_pct", 0.0)
+                        if _n809_sf > 20:
+                            _n809_s = "extreme_squeeze"
+                        elif _n809_sf >= 10:
+                            _n809_s = "high_si"
+                        elif _n809_sf >= 5:
+                            _n809_s = "moderate_si"
+                        _buy_signals_merged["short_squeeze_risk_perf"] = _n809_s
+                    except Exception:
+                        pass
+                    # N810: Institutional Flow
+                    try:
+                        _n810_s = "retail_dominated"
+                        _n810_inst = sc.get("inst_ownership_pct", 0.0)
+                        if _n810_inst > 70:
+                            _n810_s = "heavy_inst"
+                        elif _n810_inst >= 40:
+                            _n810_s = "moderate_inst"
+                        elif _n810_inst >= 20:
+                            _n810_s = "light_inst"
+                        _buy_signals_merged["institutional_flow_perf"] = _n810_s
+                    except Exception:
+                        pass
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -40548,6 +40830,16 @@ def run():
             ("catalyst_magnitude_perf",         "catalyst_magnitude"),
             ("expected_value_score_perf",       "expected_value_score"),
             ("composite_signal_strength_perf",  "composite_signal_strength"),
+            ("macro_regime_perf",               "macro_regime"),
+            ("fed_policy_stance_perf",          "fed_policy_stance"),
+            ("earnings_proximity_perf",         "earnings_proximity"),
+            ("post_earnings_drift_perf",        "post_earnings_drift"),
+            ("sector_etf_flow_perf",            "sector_etf_flow"),
+            ("position_concentration_perf",     "position_concentration"),
+            ("intraday_structure_perf",         "intraday_structure"),
+            ("gap_size_perf",                   "gap_size"),
+            ("short_squeeze_risk_perf",         "short_squeeze_risk"),
+            ("institutional_flow_perf",         "institutional_flow"),
         ]:
             _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
             if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
@@ -41639,6 +41931,16 @@ def run():
             "catalyst_magnitude_perf":         [],
             "expected_value_score_perf":       [],
             "composite_signal_strength_perf":  [],
+            "macro_regime_perf":               [],
+            "fed_policy_stance_perf":          [],
+            "earnings_proximity_perf":         [],
+            "post_earnings_drift_perf":        [],
+            "sector_etf_flow_perf":            [],
+            "position_concentration_perf":     [],
+            "intraday_structure_perf":         [],
+            "gap_size_perf":                   [],
+            "short_squeeze_risk_perf":         [],
+            "institutional_flow_perf":         [],
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -41966,9 +42268,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 760              # total tracked neuron dimensions (N103-N800 complete)
+        tlog["neurons_total"]     = 770              # total tracked neuron dimensions (N103-N810 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/760 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/770 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
