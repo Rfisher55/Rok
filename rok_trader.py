@@ -18654,7 +18654,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
 
             # Partial profit at +15% (sell half) before full exit
             if pnl_pct >= 15 and not _half_out and qty > 0.001:
-                half_qty = round(qty / 2, 8)
+                import math as _math
+                half_qty = _math.floor(qty / 2 * 1e8) / 1e8  # floor-truncate to avoid oversell
                 logger.info(f"SELL_HALF {sym} — crypto partial at {pnl_pct:+.1f}%")
                 try:
                     alpaca_post("/v2/orders", {
@@ -18695,10 +18696,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
-                logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
+                # Floor-truncate qty to avoid "insufficient balance" from round-up exceeding available
+                import math as _math
+                _sell_qty = _math.floor(qty * 1e8) / 1e8  # truncate at 8dp (never round up)
+                logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={_sell_qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
                 try:
                     alpaca_post("/v2/orders", {
-                        "symbol": _raw_sym, "qty": str(round(qty, 8)),
+                        "symbol": _raw_sym, "qty": str(_sell_qty),
                         "side": "sell", "type": "market", "time_in_force": "gtc",
                     })
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
