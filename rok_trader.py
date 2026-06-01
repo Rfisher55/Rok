@@ -335,9 +335,20 @@ class _NumpySafeEncoder(json.JSONEncoder):
         if hasattr(obj, 'item'): return obj.item()  # any numpy scalar
         return super().default(obj)
 
+def _sanitize_json(obj):
+    """Recursively convert any non-JSON-serializable types (numpy etc) to native Python."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_json(v) for v in obj]
+    if type(obj).__module__ == 'numpy' or (hasattr(obj, 'item') and not isinstance(obj, (int, float, bool, str))):
+        try: return obj.item()
+        except Exception: return str(obj)
+    return obj
+
 def _save(path, data):
     path.parent.mkdir(exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, cls=_NumpySafeEncoder))
+    path.write_text(json.dumps(_sanitize_json(data), indent=2))
 
 
 def _save_equity_snapshot(tlog: dict) -> None:
@@ -25114,11 +25125,11 @@ def run():
                     "premium_signal_count": sum(bool(live.get(tk, {}).get(k)) for k in (
                         "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
                         "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising")),
-                    "at_breakout":   live.get(tk, {}).get("at_breakout", False),
-                    "mtf_triple":    live.get(tk, {}).get("mtf_triple", False),
-                    "vcp":           live.get(tk, {}).get("vcp", False),
-                    "rvol_surge":    live.get(tk, {}).get("rvol_surge", False),
-                    "supertrend_bull": live.get(tk, {}).get("supertrend_bull", False),
+                    "at_breakout":   bool(live.get(tk, {}).get("at_breakout", False)),
+                    "mtf_triple":    bool(live.get(tk, {}).get("mtf_triple", False)),
+                    "vcp":           bool(live.get(tk, {}).get("vcp", False)),
+                    "rvol_surge":    bool(live.get(tk, {}).get("rvol_surge", False)),
+                    "supertrend_bull": bool(live.get(tk, {}).get("supertrend_bull", False)),
                     "earnings_days": get_earnings_days(tk),
                 }
                 for tk, sc in _nm_all
