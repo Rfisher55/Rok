@@ -20897,45 +20897,38 @@ def run():
         _save(TRADES_FILE, diag)
         return  # let git commit step run
 
-    # Market clock
-    market_open = False
-    next_close_str = ""
+    # Market clock — use LOCAL ET TIME as primary gate (Alpaca clock unreliable for paper accounts)
     clock = {}
+    next_close_str = ""
     try:
         clock = alpaca_get("/v2/clock")
-        market_open    = bool(clock.get("is_open"))
         next_close_str = clock.get("next_close", "")
-        if market_open:
-            logger.info(f"Market OPEN — next close: {next_close_str}")
-        else:
-            logger.info(f"Market closed (Alpaca clock). Next open: {clock.get('next_open', '?')}")
+        logger.info(f"Alpaca clock: is_open={clock.get('is_open')} next_open={clock.get('next_open','?')}")
     except Exception as e:
-        logger.error(f"Alpaca unreachable: {e}")
+        logger.error(f"Alpaca clock unreachable: {e}")
         diag = _load(TRADES_FILE, {})
         diag["last_updated"] = run_start.isoformat()
         diag["error"] = f"Cannot reach Alpaca API: {e}"
         _save(TRADES_FILE, diag)
-        return  # let git commit step run
+        return
 
-    # NYSE time-based fallback: if Alpaca clock glitches and says closed during
-    # actual NYSE hours, override so the equity pipeline runs correctly.
+    # Determine market_open from ET local time — more reliable than Alpaca clock for paper accounts
+    # NYSE hours: Mon–Fri 9:30 AM – 4:00 PM ET
+    _now_utc_gate = datetime.now(timezone.utc)
     try:
-        from zoneinfo import ZoneInfo as _ZI_fb
-        _et_fb = datetime.now(timezone.utc).astimezone(_ZI_fb("America/New_York"))
-        _nyse_open = (
-            _et_fb.weekday() < 5
-            and (_et_fb.hour > 9 or (_et_fb.hour == 9 and _et_fb.minute >= 30))
-            and _et_fb.hour < 16
+        from zoneinfo import ZoneInfo as _ZI_gate
+        _et_gate = _now_utc_gate.astimezone(_ZI_gate("America/New_York"))
+        _is_weekday = _et_gate.weekday() < 5
+        _past_open  = _et_gate.hour > 9 or (_et_gate.hour == 9 and _et_gate.minute >= 30)
+        _before_close = _et_gate.hour < 16
+        market_open = bool(_is_weekday and _past_open and _before_close)
+        logger.info(
+            f"Market {'OPEN' if market_open else 'CLOSED'} — ET time {_et_gate.strftime('%H:%M')} "
+            f"weekday={_is_weekday} past_open={_past_open} before_close={_before_close}"
         )
-        if not market_open and _nyse_open:
-            logger.warning(
-                f"Alpaca says CLOSED but NYSE hours active "
-                f"({_et_fb.strftime('%H:%M ET')} weekday={_et_fb.weekday()}) — "
-                f"forcing market_open=True"
-            )
-            market_open = True
-    except Exception as _fb_e:
-        logger.debug(f"NYSE fallback check: {_fb_e}")
+    except Exception as _gate_e:
+        logger.error(f"ET time check failed: {_gate_e} — defaulting closed")
+        market_open = False
 
     # Time-of-day flags (ET) — derived from next_close timestamp
     _now_et   = datetime.now(timezone.utc).astimezone()
