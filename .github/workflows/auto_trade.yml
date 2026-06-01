@@ -1,17 +1,20 @@
 name: ROK Auto Trader
 
 on:
+  # ── Trigger immediately on every push to main (guarantees a run right now) ──
+  push:
+    branches: [main]
+  # ── Scheduled: equity every 5 min market hours, crypto every 10 min 24/7 ──
   schedule:
-    # ── US Equity market hours: every 5 min, Mon-Fri, 9:30 AM - 4:05 PM ET ──
     # 9:30-10 AM ET = 13:30-14:00 UTC
-    - cron: '30,33,36,39,42,45,48,51,54,57 13 * * 1-5'
-    # 10 AM - 4 PM ET = 14:00-20:00 UTC (every 3 min)
-    - cron: '*/3 14,15,16,17,18,19 * * 1-5'
+    - cron: '30,35,40,45,50,55 13 * * 1-5'
+    # 10 AM - 4 PM ET = 14:00-20:00 UTC (every 5 min)
+    - cron: '*/5 14,15,16,17,18,19 * * 1-5'
     # 4:00-4:05 PM ET = 20:00-20:05 UTC
     - cron: '0,5 20 * * 1-5'
-    # ── Crypto: runs every 10 min 24/7 including weekends ───────────────────
-    - cron: '*/10 * * * 0,6'          # Saturday + Sunday every 10 min
-    - cron: '*/10 0-12,21-23 * * 1-5' # Weekday off-hours (before 9 AM / after 4 PM ET)
+    # Crypto 24/7 — every 10 min weekends, every 10 min weekday off-hours
+    - cron: '*/10 * * * 0,6'
+    - cron: '*/10 0-12,21-23 * * 1-5'
   workflow_dispatch:  # manual trigger anytime
 
 permissions:
@@ -52,9 +55,9 @@ jobs:
           git config user.email "rok-trader@users.noreply.github.com"
           for f in docs/trades.json docs/peaks.json docs/equity.json docs/prices.json; do [ -f "$f" ] && git add "$f" || true; done
           git diff --staged --quiet || git commit -m "Trade log — $(date -u +'%b %d %H:%M UTC')"
-          # Retry push up to 6 times with exponential backoff to handle concurrent code commits
+          # Retry push up to 6 times with exponential backoff
           for attempt in 1 2 3 4 5 6; do
-            git fetch origin main && git rebase origin/main && git push origin HEAD:main && echo "Push succeeded on attempt $attempt" && break
+            git fetch origin main && git rebase origin/main && git push origin HEAD:main && echo "Push OK attempt $attempt" && break
             echo "Push attempt $attempt failed, retrying..."
             sleep $((attempt * 2))
             git rebase --abort 2>/dev/null || true
