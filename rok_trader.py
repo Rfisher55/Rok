@@ -10083,6 +10083,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N611: Consolidation Length Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n611 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n611_field = _buy_n611.get("consolidation_length_perf", "tight_consolidation") if _buy_n611 else "tight_consolidation"
+            _n611_perf = tlog.setdefault("consolidation_length_perf", {})
+            _n611p = _n611_perf.setdefault(_n611_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n611_field})
+            _n611p["total"] += 1; _n611p["total_pnl"] = round(_n611p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n611p["wins"] += 1
+            else:        _n611p["losses"] += 1
+            _n611p["win_rate"] = round(_n611p["wins"] / _n611p["total"] * 100, 1)
+            _n611p["avg_pnl"]  = round(_n611p["total_pnl"] / _n611p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N612: Catalyst Type Detail Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n612 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n612_field = _buy_n612.get("catalyst_type_detail_perf", "technical_catalyst") if _buy_n612 else "technical_catalyst"
+            _n612_perf = tlog.setdefault("catalyst_type_detail_perf", {})
+            _n612p = _n612_perf.setdefault(_n612_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n612_field})
+            _n612p["total"] += 1; _n612p["total_pnl"] = round(_n612p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n612p["wins"] += 1
+            else:        _n612p["losses"] += 1
+            _n612p["win_rate"] = round(_n612p["wins"] / _n612p["total"] * 100, 1)
+            _n612p["avg_pnl"]  = round(_n612p["total_pnl"] / _n612p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N613: Price Action Quality Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n613 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n613_field = _buy_n613.get("price_action_quality_perf", "choppy_action") if _buy_n613 else "choppy_action"
+            _n613_perf = tlog.setdefault("price_action_quality_perf", {})
+            _n613p = _n613_perf.setdefault(_n613_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n613_field})
+            _n613p["total"] += 1; _n613p["total_pnl"] = round(_n613p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n613p["wins"] += 1
+            else:        _n613p["losses"] += 1
+            _n613p["win_rate"] = round(_n613p["wins"] / _n613p["total"] * 100, 1)
+            _n613p["avg_pnl"]  = round(_n613p["total_pnl"] / _n613p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N614: Market Cap Tier Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n614 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n614_field = _buy_n614.get("market_cap_tier_perf", "small_cap") if _buy_n614 else "small_cap"
+            _n614_perf = tlog.setdefault("market_cap_tier_perf", {})
+            _n614p = _n614_perf.setdefault(_n614_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n614_field})
+            _n614p["total"] += 1; _n614p["total_pnl"] = round(_n614p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n614p["wins"] += 1
+            else:        _n614p["losses"] += 1
+            _n614p["win_rate"] = round(_n614p["wins"] / _n614p["total"] * 100, 1)
+            _n614p["avg_pnl"]  = round(_n614p["total_pnl"] / _n614p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N615: Options Flow Signal Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n615 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n615_field = _buy_n615.get("options_flow_signal_perf", "neutral_flow") if _buy_n615 else "neutral_flow"
+            _n615_perf = tlog.setdefault("options_flow_signal_perf", {})
+            _n615p = _n615_perf.setdefault(_n615_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n615_field})
+            _n615p["total"] += 1; _n615p["total_pnl"] = round(_n615p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n615p["wins"] += 1
+            else:        _n615p["losses"] += 1
+            _n615p["win_rate"] = round(_n615p["wins"] / _n615p["total"] * 100, 1)
+            _n615p["avg_pnl"]  = round(_n615p["total_pnl"] / _n615p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N616: Institutional Filing Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n616 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n616_field = _buy_n616.get("institutional_filing_perf", "no_change") if _buy_n616 else "no_change"
+            _n616_perf = tlog.setdefault("institutional_filing_perf", {})
+            _n616p = _n616_perf.setdefault(_n616_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n616_field})
+            _n616p["total"] += 1; _n616p["total_pnl"] = round(_n616p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n616p["wins"] += 1
+            else:        _n616p["losses"] += 1
+            _n616p["win_rate"] = round(_n616p["wins"] / _n616p["total"] * 100, 1)
+            _n616p["avg_pnl"]  = round(_n616p["total_pnl"] / _n616p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N617: Relative Strength vs SPY Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n617 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n617_field = _buy_n617.get("relative_strength_vs_spy_perf", "inline_rs") if _buy_n617 else "inline_rs"
+            _n617_perf = tlog.setdefault("relative_strength_vs_spy_perf", {})
+            _n617p = _n617_perf.setdefault(_n617_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n617_field})
+            _n617p["total"] += 1; _n617p["total_pnl"] = round(_n617p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n617p["wins"] += 1
+            else:        _n617p["losses"] += 1
+            _n617p["win_rate"] = round(_n617p["wins"] / _n617p["total"] * 100, 1)
+            _n617p["avg_pnl"]  = round(_n617p["total_pnl"] / _n617p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N618: Gap Fill Proximity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n618 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n618_field = _buy_n618.get("gap_fill_proximity_perf", "far_from_gap") if _buy_n618 else "far_from_gap"
+            _n618_perf = tlog.setdefault("gap_fill_proximity_perf", {})
+            _n618p = _n618_perf.setdefault(_n618_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n618_field})
+            _n618p["total"] += 1; _n618p["total_pnl"] = round(_n618p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n618p["wins"] += 1
+            else:        _n618p["losses"] += 1
+            _n618p["win_rate"] = round(_n618p["wins"] / _n618p["total"] * 100, 1)
+            _n618p["avg_pnl"]  = round(_n618p["total_pnl"] / _n618p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N619: Multi-Timeframe RSI Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n619 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n619_field = _buy_n619.get("multi_timeframe_rsi_perf", "mixed_tf") if _buy_n619 else "mixed_tf"
+            _n619_perf = tlog.setdefault("multi_timeframe_rsi_perf", {})
+            _n619p = _n619_perf.setdefault(_n619_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n619_field})
+            _n619p["total"] += 1; _n619p["total_pnl"] = round(_n619p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n619p["wins"] += 1
+            else:        _n619p["losses"] += 1
+            _n619p["win_rate"] = round(_n619p["wins"] / _n619p["total"] * 100, 1)
+            _n619p["avg_pnl"]  = round(_n619p["total_pnl"] / _n619p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N620: Earnings Quality Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n620 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n620_field = _buy_n620.get("earnings_quality_perf", "inline_earnings") if _buy_n620 else "inline_earnings"
+            _n620_perf = tlog.setdefault("earnings_quality_perf", {})
+            _n620p = _n620_perf.setdefault(_n620_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n620_field})
+            _n620p["total"] += 1; _n620p["total_pnl"] = round(_n620p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n620p["wins"] += 1
+            else:        _n620p["losses"] += 1
+            _n620p["win_rate"] = round(_n620p["wins"] / _n620p["total"] * 100, 1)
+            _n620p["avg_pnl"]  = round(_n620p["total_pnl"] / _n620p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -26365,6 +26515,149 @@ def run():
                     except Exception:
                         _n610_s = "good_window"
                     _buy_signals_merged["time_of_day_score_perf"] = _n610_s
+                    # N611: Consolidation length before breakout
+                    try:
+                        _n611_cd = float(d.get("consolidation_days", d.get("base_length", 0)) or 0)
+                        if _n611_cd <= 10:
+                            _n611_s = "tight_consolidation"
+                        elif _n611_cd <= 20:
+                            _n611_s = "extended_consolidation"
+                        else:
+                            _n611_s = "stale_consolidation"
+                    except Exception:
+                        _n611_s = "tight_consolidation"
+                    _buy_signals_merged["consolidation_length_perf"] = _n611_s
+                    # N612: Detailed catalyst type at entry
+                    try:
+                        _n612_ct = str(d.get("catalyst_type", "none") or "none").lower()
+                        if any(x in _n612_ct for x in ("earnings", "eps", "guidance")):
+                            _n612_s = "earnings_catalyst"
+                        elif any(x in _n612_ct for x in ("fda", "product", "launch", "approval")):
+                            _n612_s = "product_catalyst"
+                        elif any(x in _n612_ct for x in ("upgrade", "analyst")):
+                            _n612_s = "upgrade_catalyst"
+                        elif any(x in _n612_ct for x in ("partnership", "contract", "news")):
+                            _n612_s = "news_catalyst"
+                        else:
+                            _n612_s = "technical_catalyst"
+                    except Exception:
+                        _n612_s = "technical_catalyst"
+                    _buy_signals_merged["catalyst_type_detail_perf"] = _n612_s
+                    # N613: Price action quality going into entry
+                    try:
+                        _n613_paq = d.get("price_action_quality", d.get("hh_hl_score", 0))
+                        if isinstance(_n613_paq, str):
+                            _n613_paq_s = _n613_paq.lower()
+                            if any(x in _n613_paq_s for x in ("smooth", "uptrend", "clean")):
+                                _n613_s = "smooth_uptrend"
+                            elif any(x in _n613_paq_s for x in ("recover", "bounce", "pullback")):
+                                _n613_s = "recovering_action"
+                            else:
+                                _n613_s = "choppy_action"
+                        else:
+                            _n613_v = float(_n613_paq or 0)
+                            if _n613_v >= 2:
+                                _n613_s = "smooth_uptrend"
+                            elif _n613_v >= 1:
+                                _n613_s = "recovering_action"
+                            else:
+                                _n613_s = "choppy_action"
+                    except Exception:
+                        _n613_s = "choppy_action"
+                    _buy_signals_merged["price_action_quality_perf"] = _n613_s
+                    # N614: Market cap tier at entry
+                    try:
+                        _n614_mc = float(d.get("market_cap", d.get("mktcap", 0)) or 0)
+                        if _n614_mc < 300e6:
+                            _n614_s = "nano_cap"
+                        elif _n614_mc < 2e9:
+                            _n614_s = "micro_cap"
+                        elif _n614_mc < 10e9:
+                            _n614_s = "small_cap"
+                        else:
+                            _n614_s = "mid_cap"
+                    except Exception:
+                        _n614_s = "small_cap"
+                    _buy_signals_merged["market_cap_tier_perf"] = _n614_s
+                    # N615: Unusual options flow signal at entry
+                    try:
+                        _n615_of = str(d.get("options_flow", d.get("unusual_options", "neutral_flow")) or "neutral_flow").lower()
+                        if any(x in _n615_of for x in ("bullish_sweep", "sweep")):
+                            _n615_s = "bullish_sweep"
+                        elif any(x in _n615_of for x in ("call_buy", "call buying")):
+                            _n615_s = "call_buying"
+                        elif any(x in _n615_of for x in ("put_buy", "put buying")):
+                            _n615_s = "put_buying"
+                        else:
+                            _n615_s = "neutral_flow"
+                    except Exception:
+                        _n615_s = "neutral_flow"
+                    _buy_signals_merged["options_flow_signal_perf"] = _n615_s
+                    # N616: 13F institutional filing signal at entry
+                    try:
+                        _n616_if = str(d.get("inst_filing", d.get("13f_change", "no_change")) or "no_change").lower()
+                        if any(x in _n616_if for x in ("new_inst", "new position", "opened")):
+                            _n616_s = "new_inst_position"
+                        elif any(x in _n616_if for x in ("increased", "added", "bought")):
+                            _n616_s = "increased_inst"
+                        elif any(x in _n616_if for x in ("decreased", "reduced", "sold", "cut")):
+                            _n616_s = "decreased_inst"
+                        else:
+                            _n616_s = "no_change"
+                    except Exception:
+                        _n616_s = "no_change"
+                    _buy_signals_merged["institutional_filing_perf"] = _n616_s
+                    # N617: Relative strength vs SPY on entry day
+                    try:
+                        _n617_rs = float(d.get("rs_vs_spy", d.get("rs_day", 0)) or 0)
+                        if _n617_rs > 2.0:
+                            _n617_s = "strong_rs"
+                        elif _n617_rs >= -1.0:
+                            _n617_s = "inline_rs"
+                        else:
+                            _n617_s = "weak_rs"
+                    except Exception:
+                        _n617_s = "inline_rs"
+                    _buy_signals_merged["relative_strength_vs_spy_perf"] = _n617_s
+                    # N618: Distance to nearest gap fill level
+                    try:
+                        _n618_gf = float(d.get("gap_fill_dist_pct", d.get("gap_unfilled_pct", 5)) or 5)
+                        if _n618_gf <= 0:
+                            _n618_s = "gap_fill_done"
+                        elif _n618_gf <= 1.0:
+                            _n618_s = "approaching_gap_fill"
+                        else:
+                            _n618_s = "far_from_gap"
+                    except Exception:
+                        _n618_s = "far_from_gap"
+                    _buy_signals_merged["gap_fill_proximity_perf"] = _n618_s
+                    # N619: Multi-timeframe RSI agreement
+                    try:
+                        _n619_drsi = float(d.get("daily_rsi", 50) or 50)
+                        _n619_wrsi = float(d.get("weekly_rsi", d.get("rsi_w", 50)) or 50)
+                        if _n619_drsi > 50 and _n619_wrsi > 50:
+                            _n619_s = "bullish_all_tf"
+                        elif _n619_drsi < 50 and _n619_wrsi < 50:
+                            _n619_s = "bearish_all_tf"
+                        else:
+                            _n619_s = "mixed_tf"
+                    except Exception:
+                        _n619_s = "mixed_tf"
+                    _buy_signals_merged["multi_timeframe_rsi_perf"] = _n619_s
+                    # N620: Most recent earnings quality
+                    try:
+                        _n620_ep = float(d.get("eps_beat_pct", d.get("earnings_beat", 0)) or 0)
+                        if _n620_ep > 5:
+                            _n620_s = "strong_beat"
+                        elif _n620_ep > 0:
+                            _n620_s = "modest_beat"
+                        elif _n620_ep == 0:
+                            _n620_s = "inline_earnings"
+                        else:
+                            _n620_s = "miss_earnings"
+                    except Exception:
+                        _n620_s = "inline_earnings"
+                    _buy_signals_merged["earnings_quality_perf"] = _n620_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -35279,11 +35572,41 @@ def run():
                         "value": (f"{_breadth_pct:.0f}% adv" if _breadth_pct is not None else "N/A"),
                         "detail": "Need ≥ 40% stocks advancing"})
         _met = sum(1 for c in _conds if c["ok"])
+        # Build top-3 candidate details for dashboard display
+        _top3_detail = []
+        for _tc in _top_scan[:3]:
+            _tc_tk = _tc.get("ticker", "")
+            _tc_sig = live.get(_tc_tk, {}) if _tc_tk else {}
+            _tc_triggers = []
+            if _tc.get("at_breakout"): _tc_triggers.append("breakout")
+            if _tc.get("ttm_squeeze"): _tc_triggers.append("squeeze fired")
+            if _tc.get("orb_breakout"): _tc_triggers.append("ORB")
+            if _tc.get("gap_and_hold"): _tc_triggers.append("gap&hold")
+            if _tc.get("mtf_triple"): _tc_triggers.append("MTF triple")
+            if _tc.get("vol_surge"): _tc_triggers.append("RVOL surge")
+            if _tc.get("cup_handle"): _tc_triggers.append("cup&handle")
+            if _tc.get("vwap_reclaim"): _tc_triggers.append("VWAP reclaim")
+            if _tc.get("inside_bar"): _tc_triggers.append("inside bar")
+            if _tc.get("nr7"): _tc_triggers.append("NR7")
+            _top3_detail.append({
+                "ticker":    _tc_tk,
+                "score":     _tc.get("score", 0),
+                "price":     _tc.get("price", 0),
+                "chg_pct":   _tc.get("chg_pct", 0),
+                "vol_ratio": _tc.get("vol_ratio", 1),
+                "sector":    _tc.get("sector", ""),
+                "catalyst":  bool(_tc.get("catalyst")),
+                "triggers":  _tc_triggers[:3],
+                "stop_price": _tc.get("stop_price", 0),
+                "rsi":       _tc.get("rsi", 50),
+                "rs5":       _tc.get("rs5", 0),
+            })
         tlog["next_entry_conditions"] = {
             "conditions": _conds, "met": _met, "total": len(_conds),
             "ready": _met >= len(_conds),
             "top_candidate": _top_scan[0]["ticker"] if _top_scan else None,
             "top_score": _best_sc, "threshold": _eff_thresh,
+            "top_picks": _top3_detail,
         }
     except Exception:
         pass
