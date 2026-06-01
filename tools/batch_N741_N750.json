@@ -1,0 +1,28 @@
+{
+  "batch": "N741-N750",
+  "date": "2026-06-01",
+  "total_neurons_after": 710,
+  "neurons": [
+    {"id": "N741", "key": "gap_fill_risk_perf",      "name": "Gap Fill Risk",          "states": ["large_gap_risk", "moderate_gap", "small_gap"]},
+    {"id": "N742", "key": "earnings_proximity_perf", "name": "Earnings Proximity",      "states": ["earnings_imminent", "earnings_near", "earnings_far"]},
+    {"id": "N743", "key": "dividend_capture_perf",   "name": "Dividend Capture",        "states": ["ex_div_soon", "div_approaching", "no_div_event"]},
+    {"id": "N744", "key": "index_rebalance_perf",    "name": "Index Rebalance Signal",  "states": ["major_index", "minor_index", "no_index"]},
+    {"id": "N745", "key": "lockup_expiry_perf",      "name": "Lockup Expiry",           "states": ["lockup_expiring", "lockup_near", "no_lockup"]},
+    {"id": "N746", "key": "options_gamma_perf",      "name": "Options Gamma",           "states": ["high_gamma", "moderate_gamma", "low_gamma"]},
+    {"id": "N747", "key": "put_call_skew_perf",      "name": "Put/Call Skew",           "states": ["bearish_skew", "bullish_skew", "neutral_skew"]},
+    {"id": "N748", "key": "implied_move_perf",       "name": "Implied Move",            "states": ["large_implied_move", "moderate_implied_move", "small_implied_move"]},
+    {"id": "N749", "key": "macro_catalyst_perf",     "name": "Macro Catalyst",          "states": ["macro_imminent", "macro_near", "macro_clear"]},
+    {"id": "N750", "key": "fed_sensitivity_perf",    "name": "Fed Sensitivity",         "states": ["rate_sensitive_high", "rate_sensitive_medium", "rate_insensitive"]}
+  ],
+  "sections_modified": [
+    "SELL trackers (after N740 block)",
+    "BUY signal classifiers (after N740 classifier, before log_trade call)",
+    "Tuners (N741-N750 block after N731-N740 tuners)",
+    "bot_learned_params initialization (after dark_pool_perf: [])"
+  ],
+  "counters_updated": {
+    "neurons_total": 710,
+    "logger_line": "/710 neurons active"
+  },
+  "compile_check": "PASSED"
+}

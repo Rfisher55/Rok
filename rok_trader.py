@@ -12033,6 +12033,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N741: Gap Fill Risk ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n741 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n741_field = _buy_n741.get("gap_fill_risk_perf", "small_gap") if _buy_n741 else "small_gap"
+            _n741_perf = tlog.setdefault("gap_fill_risk_perf", {})
+            _n741p = _n741_perf.setdefault(_n741_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n741_field})
+            _n741p["total"] += 1; _n741p["total_pnl"] = round(_n741p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n741p["wins"] += 1
+            else:        _n741p["losses"] += 1
+            _n741p["win_rate"] = round(_n741p["wins"] / _n741p["total"] * 100, 1)
+            _n741p["avg_pnl"]  = round(_n741p["total_pnl"] / _n741p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N742: Earnings Proximity ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n742 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n742_field = _buy_n742.get("earnings_proximity_perf", "earnings_far") if _buy_n742 else "earnings_far"
+            _n742_perf = tlog.setdefault("earnings_proximity_perf", {})
+            _n742p = _n742_perf.setdefault(_n742_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n742_field})
+            _n742p["total"] += 1; _n742p["total_pnl"] = round(_n742p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n742p["wins"] += 1
+            else:        _n742p["losses"] += 1
+            _n742p["win_rate"] = round(_n742p["wins"] / _n742p["total"] * 100, 1)
+            _n742p["avg_pnl"]  = round(_n742p["total_pnl"] / _n742p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N743: Dividend Capture ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n743 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n743_field = _buy_n743.get("dividend_capture_perf", "no_div_event") if _buy_n743 else "no_div_event"
+            _n743_perf = tlog.setdefault("dividend_capture_perf", {})
+            _n743p = _n743_perf.setdefault(_n743_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n743_field})
+            _n743p["total"] += 1; _n743p["total_pnl"] = round(_n743p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n743p["wins"] += 1
+            else:        _n743p["losses"] += 1
+            _n743p["win_rate"] = round(_n743p["wins"] / _n743p["total"] * 100, 1)
+            _n743p["avg_pnl"]  = round(_n743p["total_pnl"] / _n743p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N744: Index Rebalance Signal ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n744 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n744_field = _buy_n744.get("index_rebalance_perf", "no_index") if _buy_n744 else "no_index"
+            _n744_perf = tlog.setdefault("index_rebalance_perf", {})
+            _n744p = _n744_perf.setdefault(_n744_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n744_field})
+            _n744p["total"] += 1; _n744p["total_pnl"] = round(_n744p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n744p["wins"] += 1
+            else:        _n744p["losses"] += 1
+            _n744p["win_rate"] = round(_n744p["wins"] / _n744p["total"] * 100, 1)
+            _n744p["avg_pnl"]  = round(_n744p["total_pnl"] / _n744p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N745: Lockup Expiry ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n745 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n745_field = _buy_n745.get("lockup_expiry_perf", "no_lockup") if _buy_n745 else "no_lockup"
+            _n745_perf = tlog.setdefault("lockup_expiry_perf", {})
+            _n745p = _n745_perf.setdefault(_n745_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n745_field})
+            _n745p["total"] += 1; _n745p["total_pnl"] = round(_n745p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n745p["wins"] += 1
+            else:        _n745p["losses"] += 1
+            _n745p["win_rate"] = round(_n745p["wins"] / _n745p["total"] * 100, 1)
+            _n745p["avg_pnl"]  = round(_n745p["total_pnl"] / _n745p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N746: Options Gamma ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n746 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n746_field = _buy_n746.get("options_gamma_perf", "low_gamma") if _buy_n746 else "low_gamma"
+            _n746_perf = tlog.setdefault("options_gamma_perf", {})
+            _n746p = _n746_perf.setdefault(_n746_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n746_field})
+            _n746p["total"] += 1; _n746p["total_pnl"] = round(_n746p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n746p["wins"] += 1
+            else:        _n746p["losses"] += 1
+            _n746p["win_rate"] = round(_n746p["wins"] / _n746p["total"] * 100, 1)
+            _n746p["avg_pnl"]  = round(_n746p["total_pnl"] / _n746p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N747: Put/Call Skew ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n747 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n747_field = _buy_n747.get("put_call_skew_perf", "neutral_skew") if _buy_n747 else "neutral_skew"
+            _n747_perf = tlog.setdefault("put_call_skew_perf", {})
+            _n747p = _n747_perf.setdefault(_n747_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n747_field})
+            _n747p["total"] += 1; _n747p["total_pnl"] = round(_n747p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n747p["wins"] += 1
+            else:        _n747p["losses"] += 1
+            _n747p["win_rate"] = round(_n747p["wins"] / _n747p["total"] * 100, 1)
+            _n747p["avg_pnl"]  = round(_n747p["total_pnl"] / _n747p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N748: Implied Move ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n748 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n748_field = _buy_n748.get("implied_move_perf", "small_implied_move") if _buy_n748 else "small_implied_move"
+            _n748_perf = tlog.setdefault("implied_move_perf", {})
+            _n748p = _n748_perf.setdefault(_n748_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n748_field})
+            _n748p["total"] += 1; _n748p["total_pnl"] = round(_n748p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n748p["wins"] += 1
+            else:        _n748p["losses"] += 1
+            _n748p["win_rate"] = round(_n748p["wins"] / _n748p["total"] * 100, 1)
+            _n748p["avg_pnl"]  = round(_n748p["total_pnl"] / _n748p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N749: Macro Catalyst ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n749 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n749_field = _buy_n749.get("macro_catalyst_perf", "macro_clear") if _buy_n749 else "macro_clear"
+            _n749_perf = tlog.setdefault("macro_catalyst_perf", {})
+            _n749p = _n749_perf.setdefault(_n749_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n749_field})
+            _n749p["total"] += 1; _n749p["total_pnl"] = round(_n749p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n749p["wins"] += 1
+            else:        _n749p["losses"] += 1
+            _n749p["win_rate"] = round(_n749p["wins"] / _n749p["total"] * 100, 1)
+            _n749p["avg_pnl"]  = round(_n749p["total_pnl"] / _n749p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N750: Fed Sensitivity ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n750 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n750_field = _buy_n750.get("fed_sensitivity_perf", "rate_insensitive") if _buy_n750 else "rate_insensitive"
+            _n750_perf = tlog.setdefault("fed_sensitivity_perf", {})
+            _n750p = _n750_perf.setdefault(_n750_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n750_field})
+            _n750p["total"] += 1; _n750p["total_pnl"] = round(_n750p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n750p["wins"] += 1
+            else:        _n750p["losses"] += 1
+            _n750p["win_rate"] = round(_n750p["wins"] / _n750p["total"] * 100, 1)
+            _n750p["avg_pnl"]  = round(_n750p["total_pnl"] / _n750p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -30274,6 +30424,134 @@ def run():
                     except Exception:
                         _n740_s = "at_vwap"
                     _buy_signals_merged["dark_pool_perf"] = _n740_s
+                    # N741: Gap Fill Risk
+                    try:
+                        _n741_gap = float(cand.get("gap_pct", 0) or 0)
+                        if _n741_gap > 3:
+                            _n741_s = "large_gap_risk"
+                        elif _n741_gap >= 1:
+                            _n741_s = "moderate_gap"
+                        else:
+                            _n741_s = "small_gap"
+                    except Exception:
+                        _n741_s = "small_gap"
+                    _buy_signals_merged["gap_fill_risk_perf"] = _n741_s
+                    # N742: Earnings Proximity
+                    try:
+                        _n742_dte = int(cand.get("days_to_earnings", 999) or 999)
+                        if _n742_dte < 5:
+                            _n742_s = "earnings_imminent"
+                        elif _n742_dte <= 30:
+                            _n742_s = "earnings_near"
+                        else:
+                            _n742_s = "earnings_far"
+                    except Exception:
+                        _n742_s = "earnings_far"
+                    _buy_signals_merged["earnings_proximity_perf"] = _n742_s
+                    # N743: Dividend Capture
+                    try:
+                        _n743_exdiv = int(cand.get("days_to_exdiv", 999) or 999)
+                        if _n743_exdiv < 3:
+                            _n743_s = "ex_div_soon"
+                        elif _n743_exdiv <= 14:
+                            _n743_s = "div_approaching"
+                        else:
+                            _n743_s = "no_div_event"
+                    except Exception:
+                        _n743_s = "no_div_event"
+                    _buy_signals_merged["dividend_capture_perf"] = _n743_s
+                    # N744: Index Rebalance Signal
+                    try:
+                        _n744_idx = str(cand.get("index_member", "") or "")
+                        if _n744_idx in ("SP500", "QQQ100", "DOW30"):
+                            _n744_s = "major_index"
+                        elif _n744_idx:
+                            _n744_s = "minor_index"
+                        else:
+                            _n744_s = "no_index"
+                    except Exception:
+                        _n744_s = "no_index"
+                    _buy_signals_merged["index_rebalance_perf"] = _n744_s
+                    # N745: Lockup Expiry
+                    try:
+                        _n745_lock = int(cand.get("lockup_days_remain", 999) or 999)
+                        if _n745_lock < 30:
+                            _n745_s = "lockup_expiring"
+                        elif _n745_lock <= 90:
+                            _n745_s = "lockup_near"
+                        else:
+                            _n745_s = "no_lockup"
+                    except Exception:
+                        _n745_s = "no_lockup"
+                    _buy_signals_merged["lockup_expiry_perf"] = _n745_s
+                    # N746: Options Gamma
+                    try:
+                        _n746_gamma = float(cand.get("gamma_exposure", 0) or 0)
+                        if _n746_gamma > 5:
+                            _n746_s = "high_gamma"
+                        elif _n746_gamma >= 1:
+                            _n746_s = "moderate_gamma"
+                        else:
+                            _n746_s = "low_gamma"
+                    except Exception:
+                        _n746_s = "low_gamma"
+                    _buy_signals_merged["options_gamma_perf"] = _n746_s
+                    # N747: Put/Call Skew
+                    try:
+                        _n747_pc = float(cand.get("pc_ratio", 1) or 1)
+                        if _n747_pc > 1.5:
+                            _n747_s = "bearish_skew"
+                        elif _n747_pc < 0.7:
+                            _n747_s = "bullish_skew"
+                        else:
+                            _n747_s = "neutral_skew"
+                    except Exception:
+                        _n747_s = "neutral_skew"
+                    _buy_signals_merged["put_call_skew_perf"] = _n747_s
+                    # N748: Implied Move
+                    try:
+                        _n748_im = float(cand.get("implied_move_pct", 0) or 0)
+                        if _n748_im > 10:
+                            _n748_s = "large_implied_move"
+                        elif _n748_im >= 5:
+                            _n748_s = "moderate_implied_move"
+                        else:
+                            _n748_s = "small_implied_move"
+                    except Exception:
+                        _n748_s = "small_implied_move"
+                    _buy_signals_merged["implied_move_perf"] = _n748_s
+                    # N749: Macro Catalyst
+                    try:
+                        _n749_mev = int(cand.get("macro_event_hours", 999) or 999)
+                        if _n749_mev < 24:
+                            _n749_s = "macro_imminent"
+                        elif _n749_mev <= 72:
+                            _n749_s = "macro_near"
+                        else:
+                            _n749_s = "macro_clear"
+                    except Exception:
+                        _n749_s = "macro_clear"
+                    _buy_signals_merged["macro_catalyst_perf"] = _n749_s
+                    # N750: Fed Sensitivity
+                    try:
+                        _n750_rs = str(cand.get("rate_sensitivity", "") or "")
+                        if _n750_rs == "high":
+                            _n750_s = "rate_sensitive_high"
+                        elif _n750_rs == "medium":
+                            _n750_s = "rate_sensitive_medium"
+                        elif _n750_rs == "low":
+                            _n750_s = "rate_insensitive"
+                        else:
+                            _n750_sec = sec
+                            if _n750_sec in ("REITs", "Utilities", "Financials"):
+                                _n750_s = "rate_sensitive_high"
+                            elif _n750_sec in ("Technology", "Growth"):
+                                _n750_s = "rate_sensitive_medium"
+                            else:
+                                _n750_s = "rate_insensitive"
+                    except Exception:
+                        _n750_s = "rate_insensitive"
+                    _buy_signals_merged["fed_sensitivity_perf"] = _n750_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -38695,6 +38973,22 @@ def run():
                 if isinstance(_sd, dict) and _sd.get("total", 0) >= 3:
                     _learn_log.append({"neuron": _nnum, "state": _st, "win_rate": _sd.get("win_rate", 50), "samples": _sd["total"]})
 
+        # ── N741-N750 Tuners ──
+        for _key, _attr in [
+            ("gap_fill_risk_perf",        "gap_fill_risk"),
+            ("earnings_proximity_perf",   "earnings_proximity"),
+            ("dividend_capture_perf",     "dividend_capture"),
+            ("index_rebalance_perf",      "index_rebalance"),
+            ("lockup_expiry_perf",        "lockup_expiry"),
+            ("options_gamma_perf",        "options_gamma"),
+            ("put_call_skew_perf",        "put_call_skew"),
+            ("implied_move_perf",         "implied_move"),
+            ("macro_catalyst_perf",       "macro_catalyst"),
+            ("fed_sensitivity_perf",      "fed_sensitivity"),
+        ]:
+            _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
+            if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -39723,6 +40017,16 @@ def run():
             "short_squeeze_perf":          [],        # N738 Short Squeeze Signal
             "insider_activity_perf":       [],        # N739 Insider Activity
             "dark_pool_perf":              [],        # N740 Dark Pool Signal
+            "gap_fill_risk_perf":        [],
+            "earnings_proximity_perf":   [],
+            "dividend_capture_perf":     [],
+            "index_rebalance_perf":      [],
+            "lockup_expiry_perf":        [],
+            "options_gamma_perf":        [],
+            "put_call_skew_perf":        [],
+            "implied_move_perf":         [],
+            "macro_catalyst_perf":       [],
+            "fed_sensitivity_perf":      [],
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -40050,9 +40354,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 700              # total tracked neuron dimensions (N103-N740 complete)
+        tlog["neurons_total"]     = 710              # total tracked neuron dimensions (N103-N750 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/700 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/710 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
