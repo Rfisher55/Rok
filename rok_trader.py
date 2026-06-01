@@ -14606,7 +14606,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 410
+            _n_total = tlog.get("neurons_total") or 420
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -27982,6 +27982,86 @@ def run():
         if _n450_list:
             _learn_log.append(f"N450 Sector Relative Strength: sector_strong={_a_n450['win_rate']:.0f}% sector_weak={_b_n450['win_rate']:.0f}%WR")
 
+        # ── N451: gap fill tendency tuner ────────────────────
+        _n451_raw = tlog.get("gap_fill_tendency_perf", {})
+        _n451_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n451_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n451 = next((s for s in _n451_list if s.get("state")=="gap_filler"), _n451_list[0] if _n451_list else {"win_rate":50})
+        _b_n451 = next((s for s in _n451_list if s.get("state")=="gap_holder"), _n451_list[-1] if _n451_list else {"win_rate":50})
+        if _n451_list:
+            _learn_log.append(f"N451 Gap Fill Tendency: gap_filler={_a_n451['win_rate']:.0f}% gap_holder={_b_n451['win_rate']:.0f}%WR")
+
+        # ── N452: volume trend 3D tuner ────────────────────
+        _n452_raw = tlog.get("volume_trend_3d_perf", {})
+        _n452_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n452_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n452 = next((s for s in _n452_list if s.get("state")=="surging"), _n452_list[0] if _n452_list else {"win_rate":50})
+        _b_n452 = next((s for s in _n452_list if s.get("state")=="drying_up"), _n452_list[-1] if _n452_list else {"win_rate":50})
+        if _n452_list:
+            _learn_log.append(f"N452 Volume Trend 3D: surging={_a_n452['win_rate']:.0f}% drying_up={_b_n452['win_rate']:.0f}%WR")
+
+        # ── N453: institutional activity tuner ────────────────────
+        _n453_raw = tlog.get("institutional_activity_perf", {})
+        _n453_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n453_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n453 = next((s for s in _n453_list if s.get("state")=="heavy_inst"), _n453_list[0] if _n453_list else {"win_rate":50})
+        _b_n453 = next((s for s in _n453_list if s.get("state")=="light_inst"), _n453_list[-1] if _n453_list else {"win_rate":50})
+        if _n453_list:
+            _learn_log.append(f"N453 Institutional Activity: heavy_inst={_a_n453['win_rate']:.0f}% light_inst={_b_n453['win_rate']:.0f}%WR")
+
+        # ── N454: TTM squeeze setup tuner ────────────────────
+        _n454_raw = tlog.get("squeeze_setup_perf", {})
+        _n454_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n454_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n454 = next((s for s in _n454_list if s.get("state")=="in_squeeze"), _n454_list[0] if _n454_list else {"win_rate":50})
+        _b_n454 = next((s for s in _n454_list if s.get("state")=="no_squeeze"), _n454_list[-1] if _n454_list else {"win_rate":50})
+        if _n454_list:
+            _learn_log.append(f"N454 TTM Squeeze Setup: in_squeeze={_a_n454['win_rate']:.0f}% no_squeeze={_b_n454['win_rate']:.0f}%WR")
+
+        # ── N455: price discovery tuner ────────────────────
+        _n455_raw = tlog.get("price_discovery_perf", {})
+        _n455_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n455_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n455 = next((s for s in _n455_list if s.get("state")=="price_discovery"), _n455_list[0] if _n455_list else {"win_rate":50})
+        _b_n455 = next((s for s in _n455_list if s.get("state")=="consolidating"), _n455_list[-1] if _n455_list else {"win_rate":50})
+        if _n455_list:
+            _learn_log.append(f"N455 Price Discovery: price_discovery={_a_n455['win_rate']:.0f}% consolidating={_b_n455['win_rate']:.0f}%WR")
+
+        # ── N456: catalyst freshness tuner ────────────────────
+        _n456_raw = tlog.get("catalyst_freshness_perf", {})
+        _n456_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n456_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n456 = next((s for s in _n456_list if s.get("state")=="fresh_catalyst"), _n456_list[0] if _n456_list else {"win_rate":50})
+        _b_n456 = next((s for s in _n456_list if s.get("state")=="stale"), _n456_list[-1] if _n456_list else {"win_rate":50})
+        if _n456_list:
+            _learn_log.append(f"N456 Catalyst Freshness: fresh_catalyst={_a_n456['win_rate']:.0f}% stale={_b_n456['win_rate']:.0f}%WR")
+
+        # ── N457: options unusual activity tuner ────────────────────
+        _n457_raw = tlog.get("options_unusualness_perf", {})
+        _n457_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n457_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n457 = next((s for s in _n457_list if s.get("state")=="unusual_options"), _n457_list[0] if _n457_list else {"win_rate":50})
+        _b_n457 = next((s for s in _n457_list if s.get("state")=="normal_options"), _n457_list[-1] if _n457_list else {"win_rate":50})
+        if _n457_list:
+            _learn_log.append(f"N457 Options Unusual Activity: unusual_options={_a_n457['win_rate']:.0f}% normal_options={_b_n457['win_rate']:.0f}%WR")
+
+        # ── N458: relative volume entry tuner ────────────────────
+        _n458_raw = tlog.get("relative_volume_entry_perf", {})
+        _n458_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n458_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n458 = next((s for s in _n458_list if s.get("state")=="high_rvol"), _n458_list[0] if _n458_list else {"win_rate":50})
+        _b_n458 = next((s for s in _n458_list if s.get("state")=="normal_vol"), _n458_list[-1] if _n458_list else {"win_rate":50})
+        if _n458_list:
+            _learn_log.append(f"N458 Relative Volume Entry: high_rvol={_a_n458['win_rate']:.0f}% normal_vol={_b_n458['win_rate']:.0f}%WR")
+
+        # ── N459: VWAP position entry tuner ────────────────────
+        _n459_raw = tlog.get("vwap_position_entry_perf", {})
+        _n459_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n459_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n459 = next((s for s in _n459_list if s.get("state")=="above_vwap"), _n459_list[0] if _n459_list else {"win_rate":50})
+        _b_n459 = next((s for s in _n459_list if s.get("state")=="below_vwap"), _n459_list[-1] if _n459_list else {"win_rate":50})
+        if _n459_list:
+            _learn_log.append(f"N459 VWAP Position Entry: above_vwap={_a_n459['win_rate']:.0f}% below_vwap={_b_n459['win_rate']:.0f}%WR")
+
+        # ── N460: daily range quality tuner ────────────────────
+        _n460_raw = tlog.get("daily_range_quality_perf", {})
+        _n460_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n460_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n460 = next((s for s in _n460_list if s.get("state")=="quality_up_day"), _n460_list[0] if _n460_list else {"win_rate":50})
+        _b_n460 = next((s for s in _n460_list if s.get("state")=="down_day"), _n460_list[-1] if _n460_list else {"win_rate":50})
+        if _n460_list:
+            _learn_log.append(f"N460 Daily Range Quality: quality_up_day={_a_n460['win_rate']:.0f}% down_day={_b_n460['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -28719,6 +28799,16 @@ def run():
             "price_range_position_perf": _n448_list,  # N448: price range position at entry vs outcome
             "momentum_quality_score_perf": _n449_list,  # N449: momentum quality score at entry vs outcome
             "sector_relative_strength_perf": _n450_list,  # N450: sector relative strength at entry vs outcome
+            "gap_fill_tendency_perf": _n451_list,  # N451: gap fill tendency at entry vs outcome
+            "volume_trend_3d_perf": _n452_list,  # N452: 3-day volume trend at entry vs outcome
+            "institutional_activity_perf": _n453_list,  # N453: institutional/dark pool activity at entry vs outcome
+            "squeeze_setup_perf": _n454_list,  # N454: TTM squeeze setup at entry vs outcome
+            "price_discovery_perf": _n455_list,  # N455: price discovery (52w breakout) at entry vs outcome
+            "catalyst_freshness_perf": _n456_list,  # N456: catalyst freshness at entry vs outcome
+            "options_unusualness_perf": _n457_list,  # N457: unusual options activity at entry vs outcome
+            "relative_volume_entry_perf": _n458_list,  # N458: relative volume at entry vs outcome
+            "vwap_position_entry_perf": _n459_list,  # N459: VWAP position at entry vs outcome
+            "daily_range_quality_perf": _n460_list,  # N460: daily range quality at entry vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -28999,6 +29089,11 @@ def run():
             "week_vs_sector_perf_entry", "earnings_surprise_hist_perf",
             "fund_ownership_change_perf", "price_range_position_perf",
             "momentum_quality_score_perf", "sector_relative_strength_perf",
+            "gap_fill_tendency_perf", "volume_trend_3d_perf",
+            "institutional_activity_perf", "squeeze_setup_perf",
+            "price_discovery_perf", "catalyst_freshness_perf",
+            "options_unusualness_perf", "relative_volume_entry_perf",
+            "vwap_position_entry_perf", "daily_range_quality_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
@@ -29006,9 +29101,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 410              # total tracked neuron dimensions (N103-N450 complete)
+        tlog["neurons_total"]     = 420              # total tracked neuron dimensions (N103-N460 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/410 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/420 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

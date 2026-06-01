@@ -465,6 +465,16 @@ def _build_weekly_bot_report(docs_dir):
         "price_range_position_perf": "N448 Price Range Position",
         "momentum_quality_score_perf": "N449 Momentum Quality Score",
         "sector_relative_strength_perf": "N450 Sector Relative Strength",
+        "gap_fill_tendency_perf":         "N451 Gap Fill Tendency",
+        "volume_trend_3d_perf":           "N452 Volume Trend 3D",
+        "institutional_activity_perf":    "N453 Institutional Activity",
+        "squeeze_setup_perf":             "N454 TTM Squeeze Setup",
+        "price_discovery_perf":           "N455 Price Discovery",
+        "catalyst_freshness_perf":        "N456 Catalyst Freshness",
+        "options_unusualness_perf":       "N457 Options Unusual Activity",
+        "relative_volume_entry_perf":     "N458 Relative Volume Entry",
+        "vwap_position_entry_perf":       "N459 VWAP Position Entry",
+        "daily_range_quality_perf":       "N460 Daily Range Quality",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
