@@ -1,0 +1,15 @@
+{
+  "bump_cache": true,
+  "neurons": [
+    {"id":"N421","key":"atr_expansion_entry_perf","name":"ATR Expansion Entry","cat":"Technical","desc":"ATR expanding vs contracting vs stable at entry","label":"N421 ATR Expansion Entry"},
+    {"id":"N422","key":"relative_volume_surge_perf","name":"Relative Volume Surge","cat":"Volume","desc":"RVOL surge (>2.5x) vs dry (<0.5x) vs normal at entry","label":"N422 Relative Volume Surge"},
+    {"id":"N423","key":"price_vs_vwap_distance_perf","name":"Price vs VWAP Distance","cat":"Technical","desc":"Distance above/below VWAP at entry","label":"N423 Price vs VWAP Distance"},
+    {"id":"N424","key":"market_regime_duration_perf","name":"Market Regime Duration","cat":"Market","desc":"Young vs mature vs established market regime","label":"N424 Market Regime Duration"},
+    {"id":"N425","key":"entry_day_of_month_perf","name":"Entry Day of Month","cat":"Timing","desc":"Early vs mid vs late month entry timing","label":"N425 Entry Day of Month"},
+    {"id":"N426","key":"sector_breadth_quality_perf","name":"Sector Breadth Quality","cat":"Sector","desc":"Broad sector strength vs weak sector breadth","label":"N426 Sector Breadth Quality"},
+    {"id":"N427","key":"consecutive_green_entry_perf","name":"Consecutive Green Entry","cat":"Technical","desc":"Extended vs fresh vs moderate green-day streak at entry","label":"N427 Consecutive Green Entry"},
+    {"id":"N428","key":"bollinger_position_entry_perf","name":"Bollinger Position Entry","cat":"Technical","desc":"Upper vs lower vs mid Bollinger band position at entry","label":"N428 Bollinger Position Entry"},
+    {"id":"N429","key":"earnings_window_entry_perf","name":"Earnings Window Entry","cat":"Catalyst","desc":"Pre vs post vs no earnings window at entry","label":"N429 Earnings Window Entry"},
+    {"id":"N430","key":"liquidity_dollar_volume_perf","name":"Liquidity Dollar Volume","cat":"Risk","desc":"High vs mid vs low dollar-volume liquidity at entry","label":"N430 Liquidity Dollar Volume"}
+  ]
+}
