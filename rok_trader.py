@@ -23026,15 +23026,15 @@ def run():
 
             _scalp_exit_reason = None
             if 30 <= age_minutes:
-                if pnl_pct >= 2.0 and age_minutes <= 120 and not half_out:
+                if pnl_pct >= 2.0 and age_minutes <= 90 and not half_out:
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= -1.5 and age_minutes >= 30:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif age_minutes >= 90 and pnl_pct >= -0.5 and not half_out:
-                    _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 120 and pnl_pct >= -1.0:
-                    _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
-                elif age_minutes >= 150:
+                elif age_minutes >= 60 and pnl_pct >= -0.5 and not half_out:
+                    _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
+                elif age_minutes >= 90 and pnl_pct >= -1.0:
+                    _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 120:
                     _scalp_exit_reason = f"max hold exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
