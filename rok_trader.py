@@ -21827,8 +21827,8 @@ def run():
     # Avoid new buys in first 3 min (initial price discovery) or last 20 min (end-of-day moves)
     _open_guard  = market_open and _minutes_since_open < 3
     _close_guard = market_open and _minutes_to_close < 20
-    # Market close cleanup: last 8 min before close, liquidate losing positions > -3%
-    _close_cleanup = market_open and _minutes_to_close < 8
+    # Market close cleanup: last 15 min before close, liquidate ALL positions > 30min old
+    _close_cleanup = market_open and _minutes_to_close < 15
     # Market session label — computed early so position sizing can use it
     if not market_open:
         _mkt_sess_hr0 = _et_hour * 60 + _et_min
@@ -23777,9 +23777,8 @@ def run():
                 except Exception:
                     pass
 
-            # Market close cleanup: liquidate ALL positions in last 8 min — cycle for next day
-            if not reason and _close_cleanup and age_minutes >= 30:
-                # Exit all same-day positions at market close — fresh capital for next open
+            # Market close cleanup: liquidate ALL positions in last 15 min — fresh capital for tomorrow
+            if not reason and _close_cleanup and age_minutes >= 20:
                 reason = f"close cleanup ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # Track ever-hit-5pct milestone for breakeven lock
