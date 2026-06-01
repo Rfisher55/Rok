@@ -21755,6 +21755,8 @@ def run():
     # If market closed, only run crypto — skip equity pipeline
     if not market_open:
         tlog = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
+        tlog.pop("error", None)       # clear stale crash data from previous runs
+        tlog.pop("traceback", None)
         tlog["status"]          = "closed"
         tlog["last_updated"]    = run_start.isoformat()
         tlog["portfolio_value"] = portfolio_val
@@ -22838,6 +22840,21 @@ def run():
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
                     f"elite_sigs={len(_learned_elite_sigs)}, cold_sectors={sorted(_learned_cold_sectors)[:3]}, "
                     f"ticker_memory={len(_LEARNED_TICKER_MEMORY)} tickers")
+
+    # ── CRYPTO FIRST: trade Bitcoin/ETH/SOL before equity processing ──────
+    # Crypto runs 24/7 and must not be skipped due to equity loop timing.
+    # Run it at the START so it always executes regardless of how long equity takes.
+    if ENABLE_CRYPTO:
+        try:
+            _early_crypto_ref = []
+            buying_power = run_crypto_trades(
+                tlog, peaks, portfolio_val, buying_power, _early_crypto_ref
+            )
+            if _early_crypto_ref:
+                made_trades = True
+            logger.info("Crypto-first run complete.")
+        except Exception as _ecte:
+            logger.warning(f"Early crypto run error: {_ecte}")
 
     # ── MANAGE EXISTING SHORTS ─────────────────────────────────────────────
     for sym, pos in list(shorts.items()):
