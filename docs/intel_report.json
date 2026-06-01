@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-01T06:35:20.342775+00:00",
+  "generated_at": "2026-06-01T12:23:23.338934+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -981,7 +981,7 @@
     }
   ],
   "fear_greed": {
-    "score": 60.2,
+    "score": 59.2,
     "rating": "greed",
     "previous_score": 60.2,
     "direction": "down"
@@ -1004,8 +1004,8 @@
       "change_pct": -0.55
     },
     "VIX": {
-      "price": 15.32,
-      "change_pct": -2.67
+      "price": 15.79,
+      "change_pct": 3.07
     }
   },
   "market_breadth": {
@@ -1051,7 +1051,7 @@
     }
   },
   "put_call_ratio": {
-    "total": 0.853,
+    "total": 0.858,
     "equity": null,
     "signal": "NEUTRAL",
     "note": "estimated from VIX"
@@ -1083,75 +1083,75 @@
     ],
     [
       "COM",
-      231
+      260
     ],
     [
       "HTTPS",
-      230
+      257
     ],
     [
       "HREF",
-      226
+      253
     ],
     [
       "WWW",
-      193
+      220
     ],
     [
       "CLASS",
-      176
-    ],
-    [
-      "DIV",
-      173
+      199
     ],
     [
       "MD",
-      173
+      196
     ],
     [
       "SC",
-      173
+      196
     ],
     [
-      "LINK",
-      170
+      "DIV",
+      196
     ],
     [
       "BR",
-      170
+      187
     ],
     [
       "USER",
-      168
+      186
+    ],
+    [
+      "LINK",
+      185
     ],
     [
       "SPAN",
-      166
+      184
     ],
     [
       "AMP",
-      117
+      133
     ],
     [
       "AS",
-      106
-    ],
-    [
-      "SRC",
-      73
-    ],
-    [
-      "IMG",
-      73
+      125
     ],
     [
       "WIDTH",
-      73
+      84
+    ],
+    [
+      "IMG",
+      83
     ],
     [
       "TABLE",
-      72
+      83
+    ],
+    [
+      "SRC",
+      83
     ]
   ],
   "stocktwits_trending": [],
@@ -1264,70 +1264,16 @@
       "current_price": 156.54,
       "pct_change": 0.1,
       "date": "2026-06-01"
+    },
+    {
+      "ticker": "AVGO",
+      "entry_price": 446.77,
+      "current_price": 446.77,
+      "pct_change": 0.0,
+      "date": "2026-06-01"
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-05-31",
-      "timestamp": "2026-05-31T17:25:47.657496",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-05-31",
       "timestamp": "2026-05-31T18:47:51.585527",
@@ -1754,16 +1700,70 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-06-01",
+      "timestamp": "2026-06-01T12:23:21.393121",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": 446.77,
+          "target": 481.97
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
-    {
-      "title": "Warren Buffett's Berkshire dumps entire stake in dividend stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/warren-buffetts-berkshire-dumps-entire-203300760.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
     {
       "title": "Nvidia\u2019s latest product is a game-changer",
       "source": "Yahoo Finance",
@@ -1772,211 +1772,218 @@
       "tickers": []
     },
     {
-      "title": "Micron Technology (MU): Renaissance Technologies Is Selling This Stock",
+      "title": "The 2026 stock market has a key factor the dot-com boom lacked",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/micron-technology-mu-renaissance-technologies-191025719.html",
+      "url": "https://finance.yahoo.com/markets/article/the-2026-stock-market-has-a-key-factor-the-dot-com-boom-lacked-121423029.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Stock Market Today: Dow Rises Amid Continued U.S.-Iran Deal Hopes; Nvidia Rallies On New Chip (Live Coverage)",
+      "source": "Yahoo Finance",
+      "url": "https://www.investors.com/market-trend/stock-market-today/dow-jones-sp500-nasdaq-us-iran-deal-nvidia-stock-nvda/?src=A00220&yptr=yahoo",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Gold prices today, Monday, June 1: Gold prices moving lower this morning",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/investing/article/gold-prices-today-monday-june-1-gold-prices-moving-lower-this-morning-120153249.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "10 Overvalued Stocks Are Ticking Time Bombs In Your Portfolio",
+      "source": "Yahoo Finance",
+      "url": "https://www.investors.com/etfs-and-funds/sectors/sp500-overvalued-stocks-are-ticking-time-bombs-in-your-portfolio/?src=A00220&yptr=yahoo",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "Sandisk Corporation (SNDK): Renaissance Technologies Trims Stake",
+      "title": "Analyst Report: Salesforce Inc",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/sandisk-corporation-sndk-renaissance-technologies-191055514.html",
+      "url": "https://finance.yahoo.com/research/reports/ARGUS_2869_AnalystReport_1780312137000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "SoftBank to build up AI data centres in France with major investment",
+      "title": "Is Redwire Stock a Buy Ahead of the SpaceX IPO?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/softbank-build-ai-data-centres-190150588.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Why Cathie Wood Is Pounding the Table for $750,000 Bitcoin: A New Generation Loves Crypto to Hedge Against Inflation",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/why-cathie-wood-pounding-table-190002540.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Why This Fund Made a $30 Million Bet on Floor & Decor Amid a 30% Stock Drop",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/why-fund-made-30-million-190705782.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Bitdeer Technologies Group (BTDR): Leopold Aschenbrenner Is Loading Up on This Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/bitdeer-technologies-group-btdr-leopold-192616662.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Power Solutions International (PSIX): Leopold Aschenbrenner Admires This Power Firm",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/power-solutions-international-psix-leopold-192823825.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "WhiteFiber, Inc. (WYFI): Leopold Aschenbrenner Discloses New Bet",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/whitefiber-inc-wyfi-leopold-aschenbrenner-192949977.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Babcock & Wilcox Enterprises, Inc. (BW): Leopold Aschenbrenner Likes This Energy Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/babcock-wilcox-enterprises-inc-bw-193143112.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Why the 4% Rule May Not Be Safe for Today's Retirement\u2014And How to Adjust Your Plan",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/options/articles/why-4-rule-may-not-190500341.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "SharonAI Holdings Inc. (SHAZ): Leopold Aschenbrenner Declares New Position",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/sharonai-holdings-inc-shaz-leopold-193307274.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "ProPetro Holding Corp. (PUMP): Leopold Aschenbrenner Remains Bullish",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/propetro-holding-corp-pump-leopold-193420035.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/redwire-stock-buy-ahead-spacex-121200104.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Infosys Limited (INFY): Leopold Aschenbrenner Is Bearish on This Firm",
+      "title": "A new NJ bill would hand pet owners up to $900 in tax credits \u2014 and your state could be next",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/infosys-limited-infy-leopold-aschenbrenner-193525731.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "HIVE Digital Technologies Ltd. (HIVE): Leopold Aschenbrenner Opens New Position",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/hive-digital-technologies-ltd-hive-193643662.html",
+      "url": "https://finance.yahoo.com/economy/policy/articles/nj-bill-hand-pet-owners-120000609.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Bank of America has a stark message for Meta stock investors",
+      "title": "From lottery draws to fiscal spending, China broadens digital yuan footprint",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/bank-america-stark-message-meta-191300984.html",
+      "url": "https://finance.yahoo.com/markets/crypto/articles/exclusive-lottery-draws-fiscal-spending-050343922.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Lumentum Holdings Inc. (LITE): Leopold Aschenbrenner Registers Bearish Activity",
+      "title": "Dollar in holding pattern as markets await progress on Middle East peace talks",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/lumentum-holdings-inc-lite-leopold-194045577.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Cipher Digital Inc. (CIFR): Leopold Aschenbrenner Sells Stake in Data Center Stock",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/cipher-digital-inc-cifr-leopold-194150376.html",
+      "url": "https://finance.yahoo.com/news/dollar-steadies-markets-await-signals-004037520.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "EQT Corporation (EQT): Leopold Aschenbrenner Is No Longer Bullish",
+      "title": "Big ticket early-stage bets fuel Europe's cybersecurity funding",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/eqt-corporation-eqt-leopold-aschenbrenner-194800862.html",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/big-ticket-early-stage-bets-114950833.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Analyst Report: Copart Inc",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/research/reports/ARGUS_3955_AnalystReport_1780312137000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "3 Reasons Why IonQ Is the Best Quantum Computing Pure Play",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/3-reasons-why-ionq-best-120700818.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Global stocks hold near highs as AI boom outweighs Middle East tensions",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/news/asia-stocks-extend-ai-boom-oil-up-on-gulf-risk-031412980.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Coherent Corp. (COHR): Leopold Aschenbrenner Changes Bullish Stance",
+      "title": "Here is Why Alphatec (ATEC) is One of the Best Cheap Stocks Under $10 to Buy in June",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/coherent-corp-cohr-leopold-aschenbrenner-194931692.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/why-alphatec-atec-one-best-114426245.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "The Average 401(k) Balance in 2025 May Surprise You",
+      "title": "Goodyear Tire & Rubber (GT): Best Cheap Stocks Under $10 to Buy in June",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/options/articles/average-401-k-balance-2025-190300398.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/goodyear-tire-rubber-gt-best-114416729.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Is Aveanna Healthcare (AVAH) One of the Best Cheap Stocks Under $10 to Buy in June?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/aveanna-healthcare-avah-one-best-114409280.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Market Digest: CRM, CMI, CPRT, NTAP, IQV",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/research/reports/ARGUS_47186_MarketSummary_1780311237000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Kilroy Realty Corporation (KRC): Leopold Aschenbrenner Has Bearish Stance on This Stock",
+      "title": "Drax Group Pauses Buyback as \u00a3561M Bluefield Solar Deal Boosts UK Renewables",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/kilroy-realty-corporation-krc-leopold-195138449.html",
-      "sentiment": -1.0,
+      "url": "https://finance.yahoo.com/sectors/energy/articles/drax-group-pauses-buyback-561m-120311549.html",
+      "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Hut 8 Corp. (HUT): Leopold Aschenbrenner Sells Holding",
+      "title": "Palantir Eyes Buy Point As Software Stocks Extend Rally On Snowflake, Dell Earnings",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/hut-8-corp-hut-leopold-195346935.html",
+      "url": "https://www.investors.com/news/technology/palantir-stock-buy-point-software-rally-artificial-intelligence-disruption/?src=A00220&yptr=yahoo",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Freshworks (FRSH) Launches AI Agent Studio for Freshservice",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/freshworks-frsh-launches-ai-agent-114402247.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Liberty Energy Inc. (LBRT): Leopold Aschenbrenner Sells Position",
+      "title": "Dauch Corporation (DCH) Reports Q1 2026 Sales Growth Amid Net Loss",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/liberty-energy-inc-lbrt-leopold-195548949.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/dauch-corporation-dch-reports-q1-114354517.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Galaxy Digital (GLXY): Leopold Aschenbrenner Is Bearish on This Stock",
+      "title": "Kosmos Energy (KOS) Reports Record Q1 2026 Production Despite Net Loss",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/galaxy-digital-glxy-leopold-aschenbrenner-195727813.html",
-      "sentiment": -1.0,
-      "tickers": []
-    },
-    {
-      "title": "Why a Fund Made a $143 Million Bet on Indivior With Shares Up a Staggering 200%",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/why-fund-made-143-million-191739747.html",
+      "url": "https://finance.yahoo.com/sectors/energy/articles/kosmos-energy-kos-reports-record-114337101.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Is Coca-Cola Stock Underperforming the S&P 500?",
+      "title": "Daily \u2013 Vickers Top Buyers & Sellers for 06/01/2026",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/coca-cola-stock-underperforming-p-205853928.html",
+      "url": "https://finance.yahoo.com/research/reports/ARGUS_47185_TopBottomInsiderActivity_1780310156000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Is Advanced Micro Devices Stock Outperforming the Nasdaq?",
+      "title": "This Tech Stocks Rally Can Rage Into June But Markets Face 3 Big Obstacles",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/advanced-micro-devices-stock-outperforming-213532177.html",
+      "url": "https://www.barrons.com/articles/tech-stock-rally-markets-things-to-know-today-de2c2b2e?siteid=yhoof2&yptr=yahoo",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Tech stocks today: Nvidia CEO calls AI 'a profit generator' at Computex Taipei, unveils new laptop processor",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/technology/live/tech-stocks-today-nvidia-ceo-calls-ai-a-profit-generator-at-computex-taipei-unveils-new-laptop-processor-100000230.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Is Triple Flag Precious Metals (TFPM) The Best Mining Stock to Buy in 2026?",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/triple-flag-precious-metals-tfpm-113845124.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "BellRing Brands (BRBR) Reports Q2 2026 Revenue Growth Amid Margin Pressures",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/bellring-brands-brbr-reports-q2-113729535.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "ADMA Biologics (ADMA) Receives FDA Label Expansion for ASCENIV",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/adma-biologics-adma-receives-fda-113719750.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "These gas deals could make summer road trips a lot cheaper",
+      "title": "Daily \u2013 Vickers Top Insider Picks for 06/01/2026",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/personal-finance/banking/article/these-gas-deals-could-make-summer-road-trips-a-lot-cheaper-194922927.html",
+      "url": "https://finance.yahoo.com/research/reports/ARGUS_47184_InsiderActivity_1780310156000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
       "sentiment": 0.0,
       "tickers": []
     }
   ],
   "source_stats": {
-    "reddit": 199,
-    "news": 246,
-    "stocks": 38,
+    "reddit": 227,
+    "news": 244,
+    "stocks": 37,
     "sec": 40,
     "earnings_upcoming": 25,
     "unusual_options": 20,
     "congress_trades": 15,
-    "technical": 12,
+    "technical": 11,
     "insider_buys": 0
   },
   "buy_count": 7,
@@ -1986,10 +1993,10 @@
       "ticker": "COIN",
       "qty": 63.317855635,
       "cost": 189.52,
-      "price": 189.33,
-      "market_val": 11987.969607,
-      "pnl_usd": -12.03,
-      "pnl_pct": -0.1,
+      "price": 186.09,
+      "market_val": 11782.819755,
+      "pnl_usd": -217.18,
+      "pnl_pct": -1.81,
       "side": "long",
       "entry_date": "2026-05-30",
       "entry_ts": "2026-05-30T16:44:57.438213+00:00",
@@ -2010,15 +2017,15 @@
       "ticker": "MSFT",
       "qty": 27.025200999,
       "cost": 444.03,
-      "price": 459.17,
-      "market_val": 12409.161543,
-      "pnl_usd": 409.16,
-      "pnl_pct": 3.41,
+      "price": 463.05,
+      "market_val": 12514.019323,
+      "pnl_usd": 514.02,
+      "pnl_pct": 4.283,
       "side": "long",
       "entry_date": "2026-05-30",
       "entry_ts": "2026-05-30T16:44:57.438213+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+3.4%)",
+      "rec_reason": "position healthy (+4.3%)",
       "stop_price": 399.63,
       "target_price": 532.84,
       "trail_stop_price": 399.63,
@@ -2034,15 +2041,15 @@
       "ticker": "MSTR",
       "qty": 74.957836217,
       "cost": 160.09,
-      "price": 160.6,
-      "market_val": 12038.228496,
-      "pnl_usd": 38.23,
-      "pnl_pct": 0.319,
+      "price": 155.55,
+      "market_val": 11659.691424,
+      "pnl_usd": -340.31,
+      "pnl_pct": -2.836,
       "side": "long",
       "entry_date": "2026-05-30",
       "entry_ts": "2026-05-30T16:44:57.438213+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+0.3%)",
+      "rec_reason": "wait for market open",
       "stop_price": 144.08,
       "target_price": 192.11,
       "trail_stop_price": 144.08,
@@ -2058,15 +2065,15 @@
       "ticker": "PLTR",
       "qty": 76.737723785,
       "cost": 156.376804,
-      "price": 160.66,
-      "market_val": 12328.682703,
-      "pnl_usd": 328.68,
-      "pnl_pct": 2.739,
+      "price": 158.55,
+      "market_val": 12166.766106,
+      "pnl_usd": 166.77,
+      "pnl_pct": 1.39,
       "side": "long",
       "entry_date": "2026-05-30",
       "entry_ts": "2026-05-30T16:44:57.438213+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+2.7%)",
+      "rec_reason": "position healthy (+1.4%)",
       "stop_price": 140.74,
       "target_price": 187.65,
       "trail_stop_price": 140.74,
@@ -2082,15 +2089,15 @@
       "ticker": "SOFI",
       "qty": 651.697611292,
       "cost": 18.413448,
-      "price": 18.79,
-      "market_val": 12245.398116,
-      "pnl_usd": 245.4,
-      "pnl_pct": 2.045,
+      "price": 18.74,
+      "market_val": 12212.813236,
+      "pnl_usd": 212.81,
+      "pnl_pct": 1.773,
       "side": "long",
       "entry_date": "2026-05-30",
       "entry_ts": "2026-05-30T16:44:57.438213+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+2.0%)",
+      "rec_reason": "position healthy (+1.8%)",
       "stop_price": 16.57,
       "target_price": 22.1,
       "trail_stop_price": 16.57,
@@ -2106,10 +2113,10 @@
       "ticker": "TSLA",
       "qty": 27.401639531,
       "cost": 437.93,
-      "price": 432.49,
-      "market_val": 11850.935081,
-      "pnl_usd": -149.06,
-      "pnl_pct": -1.242,
+      "price": 430.22,
+      "market_val": 11788.733359,
+      "pnl_usd": -211.27,
+      "pnl_pct": -1.761,
       "side": "long",
       "entry_date": "2026-05-30",
       "entry_ts": "2026-05-30T16:44:57.438213+00:00",
