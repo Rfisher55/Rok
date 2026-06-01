@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 580)
+    neurons_total = td.get("neurons_total", 600)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -635,6 +635,24 @@ def _build_weekly_bot_report(docs_dir):
         "gap_fill_proximity_perf":        "N618 Gap Fill Proximity",
         "multi_timeframe_rsi_perf":       "N619 Multi-Timeframe RSI",
         "earnings_quality_perf":          "N620 Earnings Quality",
+        "momentum_divergence_perf":        "N621 Momentum Divergence",
+        "atr_expansion_at_entry_perf":     "N622 ATR Expansion at Entry",
+        "opening_range_position_perf":     "N624 Opening Range Position",
+        "volume_price_trend_perf":         "N626 Volume Price Trend",
+        "gap_to_close_performance_perf":   "N627 Gap to Close Performance",
+        "fear_greed_index_perf":           "N628 Fear Greed Index",
+        "breakout_retest_perf":            "N629 Breakout Retest",
+        "trend_line_proximity_perf":       "N630 Trend Line Proximity",
+        "high_low_range_perf":             "N631 High-Low Range",
+        "price_momentum_5d_perf":          "N632 Price Momentum 5D",
+        "catalyst_sector_alignment_perf":  "N633 Catalyst Sector Alignment",
+        "volume_consistency_perf":         "N634 Volume Consistency",
+        "rsi_trend_alignment_perf":        "N635 RSI Trend Alignment",
+        "order_block_proximity_perf":      "N636 Order Block Proximity",
+        "liquidity_score_perf":            "N637 Liquidity Score",
+        "news_catalyst_sentiment_perf":    "N638 News Catalyst Sentiment",
+        "technical_score_trend_perf":      "N639 Technical Score Trend",
+        "ema_stack_quality_perf":          "N640 EMA Stack Quality",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -878,7 +896,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 580),
+                "neurons_total":    td.get("neurons_total", 600),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -1170,7 +1188,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 580),
+            "neurons_total":   live_market_context.get("neurons_total", 600),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
