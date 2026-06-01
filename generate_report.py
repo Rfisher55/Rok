@@ -425,6 +425,16 @@ def _build_weekly_bot_report(docs_dir):
         "catalyst_quality_tier_perf": "N408 Catalyst Quality Tier",
         "pre_market_volume_quality_perf": "N409 Pre-Market Volume Quality",
         "conviction_score_tier_perf": "N410 Conviction Score Tier",
+        "sector_concentration_risk_perf": "N411 Sector Concentration Risk",
+        "entry_rsi_context_perf": "N412 Entry RSI Context",
+        "spy_5d_momentum_perf": "N413 SPY 5-Day Momentum",
+        "short_float_quality_perf": "N414 Short Float Quality",
+        "sector_news_momentum_perf": "N415 Sector News Momentum",
+        "weekly_close_quality_perf": "N416 Weekly Close Quality",
+        "entry_spread_quality_perf": "N417 Entry Spread Quality",
+        "pre_breakout_compression_perf": "N418 Pre-Breakout Compression",
+        "sector_vs_spx_week_perf": "N419 Sector vs SPX Week",
+        "position_size_quality_perf": "N420 Position Size Quality",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
