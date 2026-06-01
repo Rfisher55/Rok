@@ -18652,11 +18652,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 continue
 
             # Age-based cycle exit: crypto holds max 4 hours then recycles
-            _crypto_entry_ts = peaks.get(sym, {}).get("time", now_utc.isoformat()) if isinstance(peaks.get(sym), dict) else now_utc.isoformat()
+            _peaks_entry = peaks.get(sym)
+            _crypto_entry_ts = _peaks_entry.get("time", now_utc.isoformat()) if isinstance(_peaks_entry, dict) else now_utc.isoformat()
             try:
                 _crypto_age_min = (now_utc - datetime.fromisoformat(_crypto_entry_ts.replace("Z", "+00:00"))).total_seconds() / 60
             except Exception:
                 _crypto_age_min = 0
+            logger.info(f"AGE {sym}: {_crypto_age_min:.0f}min | entry={_crypto_entry_ts[:19]} | pnl={pnl_pct:+.2f}% | in_peaks={sym in peaks}")
 
             reason = None
             if pnl_pct <= -(CRYPTO_STOP_PCT * 100):
@@ -18665,24 +18667,36 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 reason = f"crypto profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -c_trail and pnl_pct > 0:
                 reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
-            elif _crypto_age_min >= 120 and pnl_pct >= -2.0:
+            elif _crypto_age_min >= 240:
+                # 4h absolute timeout — exit regardless of PnL to free capital
+                reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 120 and pnl_pct > -(CRYPTO_STOP_PCT * 100):
+                # 2h cycle: exit anything not already at stop-loss territory (was >= -2%; widened to avoid stuck zone -2% to -5%)
                 reason = f"crypto 2h cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= 60 and pnl_pct >= 0.5:
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
-                logger.info(f"SELL {sym} — {reason}")
-                alpaca_post("/v2/orders", {
-                    "symbol": _raw_sym, "qty": str(round(qty, 8)),
-                    "side": "sell", "type": "market", "time_in_force": "gtc",
-                })
-                log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
-                made_trades_ref.append(True)
-                peaks.pop(sym, None)
+                logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
+                try:
+                    alpaca_post("/v2/orders", {
+                        "symbol": _raw_sym, "qty": str(round(qty, 8)),
+                        "side": "sell", "type": "market", "time_in_force": "gtc",
+                    })
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
+                    made_trades_ref.append(True)
+                    peaks.pop(sym, None)
+                except requests.HTTPError as _he:
+                    _resp_body = _he.response.text[:300] if hasattr(_he, "response") and _he.response is not None else "no body"
+                    logger.warning(f"Crypto sell HTTP {sym}: {_he} | body={_resp_body}")
+                except Exception as _se:
+                    import traceback as _ctb
+                    logger.warning(f"Crypto sell error {sym}: {_se} | {_ctb.format_exc()[:400]}")
             else:
-                logger.info(f"HOLD {sym} — {pnl_pct:+.1f}% | peak ${peak:,.0f} | trail {trail_drop:.1f}% | thr {c_trail:.0f}%")
+                logger.info(f"HOLD {sym} — {pnl_pct:+.1f}% | age={_crypto_age_min:.0f}min peak=${peak:,.0f} trail={trail_drop:.1f}% thr={c_trail:.0f}%")
         except Exception as e:
-            logger.warning(f"Crypto sell error {sym}: {e}")
+            import traceback as _tb
+            logger.warning(f"Crypto sell outer error {sym}: {e} | {_tb.format_exc()[:400]}")
 
     # ── Buy crypto ──────────────────────────────────────────────────────
     open_slots = MAX_CRYPTO_POS - len(held_crypto)
