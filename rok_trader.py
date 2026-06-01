@@ -22632,6 +22632,22 @@ def run():
     logger.info(f"Longs ({len(longs)}): {', '.join(longs) or 'none'}")
     logger.info(f"Shorts ({len(shorts)}): {', '.join(shorts) or 'none'}")
 
+    # ── CRYPTO IMMEDIATE: run Bitcoin/ETH/SOL BEFORE equity data fetch ──────
+    # Crypto must execute before fetch_batch() consumes the time budget.
+    # Positions, peaks, and buying_power are all available here.
+    if ENABLE_CRYPTO:
+        try:
+            _imm_crypto_ref = []
+            buying_power = run_crypto_trades(
+                tlog, peaks, portfolio_val, buying_power, _imm_crypto_ref
+            )
+            _save(PEAK_FILE, peaks)
+            if _imm_crypto_ref:
+                made_trades = True
+            logger.info(f"Crypto immediate run complete — {len(_imm_crypto_ref)} trades.")
+        except Exception as _icte:
+            logger.warning(f"Crypto immediate run error: {_icte}")
+
     # Build full-market scan universe (entire market, not just preset list)
     candidates, shortable = get_full_universe(set(held.keys()))
     logger.info(f"Scanning {len(candidates)} tickers | {len(shortable)} shortable")
@@ -22866,21 +22882,6 @@ def run():
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
                     f"elite_sigs={len(_learned_elite_sigs)}, cold_sectors={sorted(_learned_cold_sectors)[:3]}, "
                     f"ticker_memory={len(_LEARNED_TICKER_MEMORY)} tickers")
-
-    # ── CRYPTO FIRST: trade Bitcoin/ETH/SOL before equity processing ──────
-    # Crypto runs 24/7 and must not be skipped due to equity loop timing.
-    # Run it at the START so it always executes regardless of how long equity takes.
-    if ENABLE_CRYPTO:
-        try:
-            _early_crypto_ref = []
-            buying_power = run_crypto_trades(
-                tlog, peaks, portfolio_val, buying_power, _early_crypto_ref
-            )
-            if _early_crypto_ref:
-                made_trades = True
-            logger.info("Crypto-first run complete.")
-        except Exception as _ecte:
-            logger.warning(f"Early crypto run error: {_ecte}")
 
     # ── MANAGE EXISTING SHORTS ─────────────────────────────────────────────
     for sym, pos in list(shorts.items()):
@@ -46250,7 +46251,18 @@ def run():
 
     _save_equity_snapshot(tlog)
     _save_prices_json(tlog, live if 'live' in dir() else None)
-    _save(TRADES_FILE, tlog)
+    # INLINE FINAL SAVE — bypasses any cached _save() bytecode issues.
+    # json.dumps with default=str CANNOT raise TypeError under any circumstances.
+    try:
+        import json as _jfin
+        TRADES_FILE.parent.mkdir(exist_ok=True)
+        TRADES_FILE.write_text(_jfin.dumps(_sanitize_json(tlog), indent=2))
+    except Exception as _sfin_e:
+        try:
+            import json as _jfin2
+            TRADES_FILE.write_text(_jfin2.dumps(tlog, indent=2, default=str))
+        except Exception:
+            pass
     logger.info(
         f"Cycle done. Trades: {'yes' if made_trades else 'none'}. "
         f"Regime: {regime['regime']}. Portfolio: ${portfolio_val:,.0f}. "
@@ -46265,15 +46277,17 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except Exception as _fatal:
-        import traceback as _tb
+        import traceback as _tb, json as _jfatal
         _tb_str = _tb.format_exc()
         logger.exception(f"FATAL ERROR in run(): {_fatal}")
         try:
             diag = _load(TRADES_FILE, {})
             diag["last_updated"] = datetime.now(timezone.utc).isoformat()
             diag["error"] = f"Bot crashed: {_fatal}"
-            diag["traceback"] = _tb_str[-3000:]  # save last 3000 chars of traceback
-            _save(TRADES_FILE, diag)
+            diag["traceback"] = _tb_str[-3000:]
+            # Inline save — cannot use potentially-stale _save() bytecode
+            TRADES_FILE.parent.mkdir(exist_ok=True)
+            TRADES_FILE.write_text(_jfatal.dumps(diag, indent=2, default=str))
         except Exception:
             pass
         sys.exit(1)
