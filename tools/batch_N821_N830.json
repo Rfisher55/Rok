@@ -1,0 +1,25 @@
+{
+  "batch": "N821_N830",
+  "date": "2026-06-01",
+  "total_neurons_after": 790,
+  "neurons": [
+    {"id": "N821", "key": "market_hour_context_perf", "name": "Market Hour Context"},
+    {"id": "N822", "key": "atr_environment_perf", "name": "ATR Environment"},
+    {"id": "N823", "key": "spread_quality_perf", "name": "Spread Quality"},
+    {"id": "N824", "key": "trend_channel_position_perf", "name": "Trend Channel Position"},
+    {"id": "N825", "key": "vwap_deviation_perf", "name": "VWAP Deviation"},
+    {"id": "N826", "key": "pattern_signal_count_perf", "name": "Pattern Signal Count"},
+    {"id": "N827", "key": "conviction_score_tier_perf", "name": "Conviction Score Tier"},
+    {"id": "N828", "key": "volume_trend_perf", "name": "Volume Trend"},
+    {"id": "N829", "key": "market_internals_perf", "name": "Market Internals"},
+    {"id": "N830", "key": "fundamental_quality_perf", "name": "Fundamental Quality"}
+  ],
+  "sections_modified": [
+    "SELL tracker (after N820 block, ~line 13235)",
+    "BUY signal classifier (after N820 classifier, ~line 32645)",
+    "Tuner pairs list (after N820 entry)",
+    "bot_learned_params dict (after N820 entry)",
+    "neurons_total counter updated 780 -> 790",
+    "logger string updated /780 -> /790 neurons active"
+  ]
+}
