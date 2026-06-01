@@ -14880,6 +14880,72 @@ def run():
                 }
                 logger.info(f"Market open plan: {len(_mop_actions)} positions, {len(_urgent)} urgent")
 
+            # Neural Exit Intelligence: score each position using learned neuron win rates
+            # Compares entry-state win rates against the 50% baseline to compute continuation probability
+            try:
+                _nei_positions = []
+                _lp_nei = tlog.get("bot_learned_params", {})
+                _NEI_KEYS = [
+                    "momentum_quality_perf", "vwap_position_entry_perf",
+                    "relative_volume_entry_perf", "catalyst_freshness_perf",
+                    "squeeze_setup_perf", "gap_fill_tendency_perf",
+                    "volume_trend_3d_perf", "price_discovery_perf",
+                    "options_unusualness_perf", "institutional_activity_perf",
+                    "daily_range_quality_perf", "opening_drive_quality_perf",
+                    "price_vs_ema50_entry_perf", "consec_green_days_perf",
+                    "weekly_trend_quality_perf", "dist_from_52w_high_perf",
+                    "spy_vs_sector_entry_perf", "atr_vol_expansion_perf",
+                    "multi_day_breakout_perf", "inside_bar_resolution_perf",
+                ]
+                for _pos in _positions_data:
+                    _tk = _pos.get("ticker", "")
+                    if not _tk:
+                        continue
+                    _buy_rec = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == _tk), None)
+                    _signal_sum = 0.0
+                    _signal_cnt = 0
+                    _signal_breakdown = []
+                    for _nkey in _NEI_KEYS:
+                        _state = (_buy_rec or {}).get(_nkey)
+                        if not _state:
+                            continue
+                        _data_list = _lp_nei.get(_nkey, [])
+                        _state_data = next((d for d in _data_list if d.get("state") == _state), None)
+                        if _state_data and _state_data.get("total", 0) >= 3:
+                            _wr = _state_data.get("win_rate", 50)
+                            _signal_sum += _wr
+                            _signal_cnt += 1
+                            _signal_breakdown.append({"key": _nkey, "state": _state, "win_rate": _wr})
+                    _avg_wr = round(_signal_sum / _signal_cnt, 1) if _signal_cnt else 50.0
+                    # Continuation score: 0=strong exit, 100=strong hold
+                    _nei_score = round(_avg_wr)
+                    _nei_grade = (
+                        "STRONG_HOLD"   if _nei_score >= 70 else
+                        "HOLD"          if _nei_score >= 55 else
+                        "NEUTRAL"       if _nei_score >= 45 else
+                        "WEAK_HOLD"     if _nei_score >= 35 else
+                        "EXIT_SIGNAL"
+                    )
+                    _nei_positions.append({
+                        "ticker":    _tk,
+                        "score":     _nei_score,
+                        "grade":     _nei_grade,
+                        "signals":   _signal_cnt,
+                        "top_signal": max(_signal_breakdown, key=lambda x: abs(x["win_rate"]-50), default={}).get("key", ""),
+                        "pnl_pct":   round(_pos.get("unrealized_plpc", 0), 2),
+                    })
+                _nei_positions.sort(key=lambda x: x["score"], reverse=True)
+                _exit_signals = [p for p in _nei_positions if p["grade"] == "EXIT_SIGNAL"]
+                tlog["exit_intelligence"] = {
+                    "generated_at":  _now_ts.isoformat(),
+                    "positions":     _nei_positions,
+                    "exit_count":    len(_exit_signals),
+                    "summary":       f"{len(_exit_signals)} exit signal(s) detected" if _exit_signals else f"All {len(_nei_positions)} positions show continuation",
+                }
+                logger.info(f"Exit intelligence: {len(_nei_positions)} positions scored, {len(_exit_signals)} exit signals")
+            except Exception as _nei_err:
+                logger.warning(f"Exit intelligence error: {_nei_err}")
+
             # Weekend Watchlist: fast scan of top stocks for Monday prep
             # Only run if we haven't scanned in the last 90 min to avoid repeated slow downloads
             _last_wd_scan = tlog.get("weekend_watchlist_ts", "")

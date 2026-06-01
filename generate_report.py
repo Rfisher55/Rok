@@ -738,6 +738,7 @@ def _run():
                 "next_market_open":         td.get("next_market_open", ""),
                 "position_news":            td.get("position_news", {}),
                 "portfolio_attribution":    td.get("portfolio_attribution", {}),
+                "exit_intelligence":        td.get("exit_intelligence", {}),
                 "weekend_watchlist_scored": [w for w in td.get("weekend_watchlist", []) if w.get("score")],
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
@@ -995,9 +996,10 @@ def _run():
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
         },
         "weekend_watchlist": live_market_context.get("weekend_watchlist", []),
-        "market_open_plan":  live_market_context.get("market_open_plan", {}),
-        "next_market_open":  live_market_context.get("next_market_open", ""),
-        "position_news":     live_market_context.get("position_news", {}),
+        "market_open_plan":   live_market_context.get("market_open_plan", {}),
+        "exit_intelligence":  live_market_context.get("exit_intelligence", {}),
+        "next_market_open":   live_market_context.get("next_market_open", ""),
+        "position_news":      live_market_context.get("position_news", {}),
     }
 
     # Sanitize all datetime objects before JSON serialization
