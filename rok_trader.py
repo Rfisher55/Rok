@@ -20912,23 +20912,36 @@ def run():
         _save(TRADES_FILE, diag)
         return
 
-    # Determine market_open from ET local time — more reliable than Alpaca clock for paper accounts
-    # NYSE hours: Mon–Fri 9:30 AM – 4:00 PM ET
+    # Determine market_open from ET time — NYSE hours Mon–Fri 9:30 AM–4:00 PM ET
+    # Use pure-stdlib DST-aware UTC→ET conversion (no external packages needed)
     _now_utc_gate = datetime.now(timezone.utc)
     try:
-        from zoneinfo import ZoneInfo as _ZI_gate
-        _et_gate = _now_utc_gate.astimezone(_ZI_gate("America/New_York"))
-        _is_weekday = _et_gate.weekday() < 5
-        _past_open  = _et_gate.hour > 9 or (_et_gate.hour == 9 and _et_gate.minute >= 30)
+        # DST in US: second Sunday of March → first Sunday of November = EDT (UTC-4)
+        # Otherwise EST (UTC-5)
+        def _is_dst(_dt):
+            yr = _dt.year
+            # Second Sunday of March
+            _mar = datetime(yr, 3, 8, 2, tzinfo=timezone.utc)
+            _dst_start = _mar + timedelta(days=(6 - _mar.weekday()) % 7)
+            # First Sunday of November
+            _nov = datetime(yr, 11, 1, 2, tzinfo=timezone.utc)
+            _dst_end = _nov + timedelta(days=(6 - _nov.weekday()) % 7)
+            return _dst_start <= _dt < _dst_end
+        _et_offset = -4 if _is_dst(_now_utc_gate) else -5
+        _et_gate = _now_utc_gate + timedelta(hours=_et_offset)
+        _is_weekday   = _et_gate.weekday() < 5
+        _past_open    = _et_gate.hour > 9 or (_et_gate.hour == 9 and _et_gate.minute >= 30)
         _before_close = _et_gate.hour < 16
-        market_open = bool(_is_weekday and _past_open and _before_close)
+        market_open   = bool(_is_weekday and _past_open and _before_close)
+        _tz_label     = "EDT" if _et_offset == -4 else "EST"
         logger.info(
-            f"Market {'OPEN' if market_open else 'CLOSED'} — ET time {_et_gate.strftime('%H:%M')} "
+            f"Market {'OPEN' if market_open else 'CLOSED'} — "
+            f"{_et_gate.strftime('%H:%M')} {_tz_label} (UTC{_et_offset:+d}) "
             f"weekday={_is_weekday} past_open={_past_open} before_close={_before_close}"
         )
     except Exception as _gate_e:
-        logger.error(f"ET time check failed: {_gate_e} — defaulting closed")
-        market_open = False
+        logger.error(f"ET time check failed: {_gate_e} — falling back to Alpaca clock")
+        market_open = bool(clock.get("is_open", False))
 
     # Time-of-day flags (ET) — derived from next_close timestamp
     _now_et   = datetime.now(timezone.utc).astimezone()
