@@ -18,9 +18,6 @@ on:
     - cron: '*/10 * * * 0,6'
   workflow_dispatch:  # manual trigger anytime
 
-# Allow concurrent runs — each run is independent and saves its own output
-# No concurrency group: prevents stacking delays that block trading
-
 permissions:
   contents: write
 
@@ -46,7 +43,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run trading bot
-        continue-on-error: true   # always run commit step even if bot crashes
+        continue-on-error: true
         env:
           ALPACA_KEY_ID:     ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
@@ -60,20 +57,46 @@ jobs:
         run: |
           git config user.name "ROK Trader Bot"
           git config user.email "rok-trader@users.noreply.github.com"
-          # Stage data files
+
+          # Save bot output files to temp location
+          mkdir -p /tmp/bot-output
           for f in docs/trades.json docs/peaks.json docs/equity.json docs/prices.json; do
-            [ -f "$f" ] && git add "$f" || true
+            [ -f "$f" ] && cp "$f" "/tmp/bot-output/$(basename $f)" && echo "Saved $f" || true
           done
-          # Only commit if there are staged changes
+
+          # Sync to absolute latest main (avoid stale checkout)
+          git fetch origin main
+          git reset --hard origin/main
+
+          # Restore bot output files on top of latest main
+          changed=false
+          for f in trades.json peaks.json equity.json prices.json; do
+            if [ -f "/tmp/bot-output/$f" ]; then
+              cp "/tmp/bot-output/$f" "docs/$f"
+              git add "docs/$f"
+              changed=true
+            fi
+          done
+
+          if [ "$changed" = "false" ]; then
+            echo "No bot output files found"
+            exit 0
+          fi
+
+          # Only commit if there are actual changes
           git diff --staged --quiet && echo "No changes to commit" && exit 0
           git commit -m "Trade log — $(date -u +'%b %d %H:%M UTC')"
-          # Push strategy: fetch latest, use ours for data files (theirs for code), push
+
+          # Push with retries
           for attempt in 1 2 3 4 5 6; do
-            git fetch origin main || { sleep $((attempt * 2)); continue; }
-            # Merge latest main, keeping our data file versions (bot output wins)
-            git merge origin/main -X ours --no-edit -m "merge" 2>/dev/null || \
-              git merge origin/main --allow-unrelated-histories -X ours --no-edit 2>/dev/null || true
             git push origin HEAD:main && echo "Push OK attempt $attempt" && break
             echo "Push attempt $attempt failed, retrying..."
             sleep $((attempt * 2))
+            # Re-sync and re-apply if push failed (someone else pushed)
+            git fetch origin main
+            git reset --hard origin/main
+            for f in trades.json peaks.json equity.json prices.json; do
+              [ -f "/tmp/bot-output/$f" ] && cp "/tmp/bot-output/$f" "docs/$f" && git add "docs/$f" || true
+            done
+            git diff --staged --quiet || git commit --amend --no-edit
           done || echo "WARNING: push failed after 6 attempts"
