@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 850)
+    neurons_total = td.get("neurons_total", 860)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -904,9 +904,22 @@ def _build_weekly_bot_report(docs_dir):
         "crypto_ema_cross_perf":                "N888 Crypto EMA Cross",
         "crypto_dow_perf":                      "N889 Crypto Day-of-Week",
         "crypto_asset_perf":                    "N890 Crypto Asset Class (BTC/ETH/ALT)",
+        "score_accuracy_perf":                  "N891 Score Accuracy Calibration",
+        "vix_direction_perf":                   "N892 VIX Direction at Entry",
+        "et_hour_perf":                         "N893 ET Hour of Day (Equity)",
+        "trade_momentum_perf":                  "N894 Trade Momentum (Hot Hand)",
+        "position_count_perf":                  "N895 Open Position Count",
+        "capital_util_perf":                    "N896 Capital Utilization",
+        "spy_intraday_dir_perf":                "N897 SPY Intraday Direction",
+        "regime_stability_perf":                "N898 Regime Stability",
+        "score_persistence_perf":               "N899 Score Persistence",
+        "sector_breadth_perf":                  "N900 Sector Breadth at Entry",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
+        # Support both list format (bot_learned_params) and dict format (direct perf dicts)
+        if isinstance(data, dict):
+            data = [{"state": k, **v} for k, v in data.items() if isinstance(v, dict)]
         if not isinstance(data, list) or not data:
             continue
         best = max(data, key=lambda x: x.get("win_rate", 50), default=None)

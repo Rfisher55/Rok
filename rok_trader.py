@@ -131,6 +131,7 @@ _LEARNED_SPY_DOWN_PENALTY:  bool = False  # True when red SPY days consistently 
 _LEARNED_FALLING_SCORE_PENALTY: bool = False  # True when falling-score entries consistently underperform
 _LEARNED_ATR_MULTIPLIER:        float = 2.5   # learned ATR stop multiplier (starts at default)
 _LEARNED_NEURON_PARAMS:         dict  = {}    # raw bot_learned_params — neuron state win rates for real-time scoring
+_ALL_NEURON_PERFS:              dict  = {}    # ALL *_perf dicts from tlog — enables full 850-neuron feedback loop
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -1059,6 +1060,77 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 e["is_reentry"] = False
         except Exception:
             e["is_reentry"] = False
+
+        # ── N891-N900: entry state tags ───────────────────────────────────────
+        # VIX direction at entry (N892)
+        try:
+            _vix_dir_now = float(tlog.get("regime", {}).get("vix_1d", 0) or 0)
+            e["vix_direction"] = ("rising" if _vix_dir_now > 1 else "falling" if _vix_dir_now < -1 else "flat")
+        except Exception:
+            e["vix_direction"] = "flat"
+        # ET hour and minute at entry (N893)
+        try:
+            _now_utc_lt = datetime.now(timezone.utc)
+            _yr_lt = _now_utc_lt.year
+            _mar_lt = datetime(_yr_lt, 3, 8, 2, tzinfo=timezone.utc)
+            _dst_s_lt = _mar_lt + timedelta(days=(6 - _mar_lt.weekday()) % 7)
+            _nov_lt = datetime(_yr_lt, 11, 1, 2, tzinfo=timezone.utc)
+            _dst_e_lt = _nov_lt + timedelta(days=(6 - _nov_lt.weekday()) % 7)
+            _et_off_lt = -4 if _dst_s_lt <= _now_utc_lt < _dst_e_lt else -5
+            _et_lt = _now_utc_lt + timedelta(hours=_et_off_lt)
+            e["et_hour_at_entry"] = _et_lt.hour
+            e["et_min_at_entry"]  = _et_lt.minute
+        except Exception:
+            e["et_hour_at_entry"] = -1
+            e["et_min_at_entry"]  = 0
+        # Win streak at entry (N894) — positive = wins, negative = losses
+        try:
+            _streak = 0
+            for _pt in tlog.get("trades", []):
+                if _pt.get("action") not in ("SELL", "SELL_HALF", "COVER"): continue
+                if _pt.get("pnl_pct") is None: continue
+                if _pt.get("pnl_pct", 0) > 0:
+                    _streak = max(0, _streak) + 1
+                else:
+                    _streak = min(0, _streak) - 1
+                break  # only last closed trade
+            e["win_streak_at_entry"] = _streak
+        except Exception:
+            e["win_streak_at_entry"] = 0
+        # Capital utilization at entry (N896)
+        try:
+            _port_val = float(tlog.get("portfolio_value", 100000) or 100000)
+            _bp_now = float(tlog.get("buying_power", _port_val) or _port_val)
+            e["capital_util_pct"] = round((1 - _bp_now / max(_port_val, 1)) * 100, 1)
+        except Exception:
+            e["capital_util_pct"] = 50.0
+        # SPY intraday direction at entry (N897)
+        try:
+            _spy_intra = float(tlog.get("spy_intraday_pct", 0) or 0)
+            e["spy_intraday_dir"] = ("up" if _spy_intra > 0.2 else "down" if _spy_intra < -0.2 else "flat")
+        except Exception:
+            e["spy_intraday_dir"] = "flat"
+        # Regime stability at entry (N898)
+        try:
+            _reg_hist = tlog.get("regime_history", [])
+            _last_3_regimes = [r.get("r") for r in _reg_hist[-3:] if r.get("r")]
+            _reg_stable = len(set(_last_3_regimes)) <= 1 and len(_last_3_regimes) >= 3
+            e["regime_stability"] = ("established" if _reg_stable else "transitioning")
+        except Exception:
+            e["regime_stability"] = "established"
+        # Score persistence (N899) — how many consecutive runs did this ticker appear?
+        try:
+            _persist_data = tlog.get("last_scan_persistence", {})
+            e["persistence_runs"] = int(_persist_data.get(sym, 1))
+        except Exception:
+            e["persistence_runs"] = 1
+        # Sectors advancing at entry (N900)
+        try:
+            _sec_trends = tlog.get("sector_etf_trends", {})
+            e["sectors_advancing"] = sum(1 for sv in _sec_trends.values()
+                                         if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
+        except Exception:
+            e["sectors_advancing"] = 5
 
     # ── Crypto-specific neuron state tags at BUY entry ────────────────────────
     # These fields are read back on SELL to update N881-N890 crypto neurons.
@@ -14417,6 +14489,197 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N891: Score Accuracy Calibration Neuron ───────────────────────────────
+    # Learns whether the composite score bucket (low/medium/high/elite) at entry
+    # actually predicts outcomes. Self-calibrates the scoring model over time.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _c891_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c891_sc = int(_c891_entry.get("score", 0) or 0) if _c891_entry else 0
+            _c891_bkt = ("elite" if _c891_sc >= 80 else "high" if _c891_sc >= 65 else "medium" if _c891_sc >= 45 else "low")
+            _c891_perf = tlog.setdefault("score_accuracy_perf", {})
+            _c891_rec  = _c891_perf.setdefault(_c891_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c891_rec["total"] += 1
+            _c891_rec["total_pnl"] = round(_c891_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c891_rec["wins"] += 1
+            else:           _c891_rec["losses"] += 1
+            _c891_rec["win_rate"] = round(_c891_rec["wins"] / max(_c891_rec["total"], 1) * 100, 1)
+            _c891_rec["avg_pnl"]  = round(_c891_rec["total_pnl"] / max(_c891_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N892: VIX Direction at Entry Neuron ───────────────────────────────────
+    # VIX level matters, but VIX DIRECTION matters more. A rising VIX at 18 is
+    # more dangerous than a flat VIX at 22. Brain learns: is falling VIX actually bullish?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
+        try:
+            _c892_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c892_vix_dir = _c892_entry.get("vix_direction", "flat") if _c892_entry else "flat"
+            _c892_perf = tlog.setdefault("vix_direction_perf", {})
+            _c892_rec  = _c892_perf.setdefault(_c892_vix_dir, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c892_rec["total"] += 1
+            _c892_rec["total_pnl"] = round(_c892_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c892_rec["wins"] += 1
+            else:           _c892_rec["losses"] += 1
+            _c892_rec["win_rate"] = round(_c892_rec["wins"] / max(_c892_rec["total"], 1) * 100, 1)
+            _c892_rec["avg_pnl"]  = round(_c892_rec["total_pnl"] / max(_c892_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N893: ET Hour of Day Neuron (equity) ──────────────────────────────────
+    # More granular than session buckets. Learns: 9:35 AM ET entries vs 11 AM vs 3 PM.
+    # Every 30-minute window gets its own win rate. Brain learns the optimal entry clock.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
+        try:
+            _c893_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c893_hr = int(_c893_entry.get("et_hour_at_entry", -1)) if _c893_entry else -1
+            if _c893_hr >= 0:
+                _c893_min = int(_c893_entry.get("et_min_at_entry", 0)) if _c893_entry else 0
+                _c893_bkt = f"{_c893_hr:02d}:{'30' if _c893_min >= 30 else '00'}"
+                _c893_perf = tlog.setdefault("et_hour_perf", {})
+                _c893_rec  = _c893_perf.setdefault(_c893_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+                _c893_rec["total"] += 1
+                _c893_rec["total_pnl"] = round(_c893_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+                if pnl_pct > 0: _c893_rec["wins"] += 1
+                else:           _c893_rec["losses"] += 1
+                _c893_rec["win_rate"] = round(_c893_rec["wins"] / max(_c893_rec["total"], 1) * 100, 1)
+                _c893_rec["avg_pnl"]  = round(_c893_rec["total_pnl"] / max(_c893_rec["total"], 1), 2)
+                # Feed best and worst hours into bot_learned_params for scoring feedback
+                _all_hrs = tlog.get("et_hour_perf", {})
+                _best_hr = max(_all_hrs.items(), key=lambda kv: kv[1].get("win_rate", 0) * max(kv[1].get("total",0),1), default=(None,{}))[0]
+                _worst_hr = min(_all_hrs.items(), key=lambda kv: kv[1].get("win_rate", 100) if kv[1].get("total",0) >= 4 else 100, default=(None,{}))[0]
+                if _best_hr: tlog.setdefault("bot_learned_params", {})["best_et_hour"] = _best_hr
+                if _worst_hr: tlog.setdefault("bot_learned_params", {})["worst_et_hour"] = _worst_hr
+        except Exception:
+            pass
+
+    # ── N894: Trade Momentum (Hot Hand) Neuron ────────────────────────────────
+    # Does winning streak at entry predict better outcomes? Classic "hot hand" test.
+    # Also tests: does a losing streak mean next trade is more or less likely to win?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _c894_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c894_streak = int(_c894_entry.get("win_streak_at_entry", 0)) if _c894_entry else 0
+            _c894_bkt = ("hot_3+" if _c894_streak >= 3 else "hot_2" if _c894_streak == 2 else "neutral" if _c894_streak == 0 else f"losing_{abs(_c894_streak)}")
+            _c894_perf = tlog.setdefault("trade_momentum_perf", {})
+            _c894_rec  = _c894_perf.setdefault(_c894_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c894_rec["total"] += 1
+            _c894_rec["total_pnl"] = round(_c894_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c894_rec["wins"] += 1
+            else:           _c894_rec["losses"] += 1
+            _c894_rec["win_rate"] = round(_c894_rec["wins"] / max(_c894_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N895: Open Position Count at Entry Neuron ─────────────────────────────
+    # Learns: is concentrated (3-5 positions) or diversified (12-20 positions) better?
+    # Affects how aggressively to fill slots when trade deficit is high.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _c895_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c895_n = int(_c895_entry.get("positions_at_entry", 5)) if _c895_entry else 5
+            _c895_bkt = ("1-3" if _c895_n <= 3 else "4-7" if _c895_n <= 7 else "8-12" if _c895_n <= 12 else "13+")
+            _c895_perf = tlog.setdefault("position_count_perf", {})
+            _c895_rec  = _c895_perf.setdefault(_c895_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c895_rec["total"] += 1
+            _c895_rec["total_pnl"] = round(_c895_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c895_rec["wins"] += 1
+            else:           _c895_rec["losses"] += 1
+            _c895_rec["win_rate"] = round(_c895_rec["wins"] / max(_c895_rec["total"], 1) * 100, 1)
+            _c895_rec["avg_pnl"]  = round(_c895_rec["total_pnl"] / max(_c895_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N896: Capital Utilization at Entry Neuron ─────────────────────────────
+    # Learns: is it better to enter when cash is high (selective) or low (aggressive)?
+    # High cash = patient waiting for best setups; low cash = bottom-fishing
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _c896_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c896_util = float(_c896_entry.get("capital_util_pct", 50)) if _c896_entry else 50.0
+            _c896_bkt = ("high_cash" if _c896_util < 30 else "moderate" if _c896_util < 60 else "deployed" if _c896_util < 85 else "max_deployed")
+            _c896_perf = tlog.setdefault("capital_util_perf", {})
+            _c896_rec  = _c896_perf.setdefault(_c896_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c896_rec["total"] += 1
+            _c896_rec["total_pnl"] = round(_c896_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c896_rec["wins"] += 1
+            else:           _c896_rec["losses"] += 1
+            _c896_rec["win_rate"] = round(_c896_rec["wins"] / max(_c896_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N897: SPY Intraday Direction Neuron ───────────────────────────────────
+    # Not just SPY's day return — is SPY CURRENTLY going up or down in this 30-min bar?
+    # Brain learns: enter when SPY is trending up intraday = confirmation.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
+        try:
+            _c897_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c897_spy = _c897_entry.get("spy_intraday_dir", "flat") if _c897_entry else "flat"
+            _c897_perf = tlog.setdefault("spy_intraday_dir_perf", {})
+            _c897_rec  = _c897_perf.setdefault(_c897_spy, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c897_rec["total"] += 1
+            _c897_rec["total_pnl"] = round(_c897_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c897_rec["wins"] += 1
+            else:           _c897_rec["losses"] += 1
+            _c897_rec["win_rate"] = round(_c897_rec["wins"] / max(_c897_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N898: Regime Stability Neuron ─────────────────────────────────────────
+    # New regime (just changed) vs established regime. Fresh regimes are uncertain —
+    # the bot might be entering on a false signal. Learns: wait for regime confirmation.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _c898_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c898_stab = _c898_entry.get("regime_stability", "established") if _c898_entry else "established"
+            _c898_perf = tlog.setdefault("regime_stability_perf", {})
+            _c898_rec  = _c898_perf.setdefault(_c898_stab, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c898_rec["total"] += 1
+            _c898_rec["total_pnl"] = round(_c898_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c898_rec["wins"] += 1
+            else:           _c898_rec["losses"] += 1
+            _c898_rec["win_rate"] = round(_c898_rec["wins"] / max(_c898_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N899: Score Persistence at Entry Neuron ───────────────────────────────
+    # A stock appearing in the top candidates on MULTIPLE CONSECUTIVE runs = sustained
+    # institutional accumulation. Single-run flashes are noise. Learns: how many
+    # consecutive appearances produce the best entries?
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _c899_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c899_runs = int(_c899_entry.get("persistence_runs", 1)) if _c899_entry else 1
+            _c899_bkt = ("first_appear" if _c899_runs <= 1 else "two_runs" if _c899_runs == 2 else "three_runs" if _c899_runs == 3 else "persistent_4+")
+            _c899_perf = tlog.setdefault("score_persistence_perf", {})
+            _c899_rec  = _c899_perf.setdefault(_c899_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c899_rec["total"] += 1
+            _c899_rec["total_pnl"] = round(_c899_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c899_rec["wins"] += 1
+            else:           _c899_rec["losses"] += 1
+            _c899_rec["win_rate"] = round(_c899_rec["wins"] / max(_c899_rec["total"], 1) * 100, 1)
+            _c899_rec["avg_pnl"]  = round(_c899_rec["total_pnl"] / max(_c899_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N900: Sector Breadth at Entry Neuron ──────────────────────────────────
+    # How many sectors are advancing when we enter? Learns: broad sector participation
+    # (5+ sectors advancing) = healthy bull; narrow (1-2 sectors) = fragile leadership.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
+        try:
+            _c900_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c900_secs = int(_c900_entry.get("sectors_advancing", 5)) if _c900_entry else 5
+            _c900_bkt = ("broad_6+" if _c900_secs >= 6 else "healthy_4-5" if _c900_secs >= 4 else "narrow_2-3" if _c900_secs >= 2 else "single_sector")
+            _c900_perf = tlog.setdefault("sector_breadth_perf", {})
+            _c900_rec  = _c900_perf.setdefault(_c900_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c900_rec["total"] += 1
+            _c900_rec["total_pnl"] = round(_c900_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c900_rec["wins"] += 1
+            else:           _c900_rec["losses"] += 1
+            _c900_rec["win_rate"] = round(_c900_rec["wins"] / max(_c900_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -20904,14 +21167,16 @@ def score(tk, d, sentiment=0, regime_adj=0):
     except Exception:
         pass
 
-    # ── NEURAL STATE LAYER: market-condition neurons inform entry score ─────────
-    # Uses historical win rates per neuron state to auto-tune score weights.
-    # E.g.: if low_vix_regime historically wins 72% of trades, add +3 when VIX < 15.
+    # ── NEURAL STATE LAYER: ALL 850 neurons inform entry score ────────────────
+    # Every neuron that has accumulated data feeds its win-rate edge back here.
+    # Formula: adj = (win_rate - 50) * 0.07 + avg_pnl * 0.012, scaled by sample count.
+    # With enough trades, this layer becomes the dominant scoring signal.
     try:
-        if _LEARNED_NEURON_PARAMS:
+        if _LEARNED_NEURON_PARAMS or _ALL_NEURON_PERFS:
             _nsl_adj = 0.0
 
             def _nsl_edge(nkey, nstate, minsamp=5):
+                """Read from bot_learned_params (list format)"""
                 data = _LEARNED_NEURON_PARAMS.get(nkey, [])
                 if not isinstance(data, list):
                     return 0.0
@@ -20923,6 +21188,22 @@ def score(tk, d, sentiment=0, regime_adj=0):
                         w = min(1.0, n / 30.0)
                         return ((wr - 50) * 0.07 + avg * 0.012) * w
                 return 0.0
+
+            def _nde(nkey, nstate, minsamp=3):
+                """Read from _ALL_NEURON_PERFS (dict format) — covers all 850 neurons"""
+                data = _ALL_NEURON_PERFS.get(nkey, {})
+                if not isinstance(data, dict):
+                    return 0.0
+                rec = data.get(nstate, {})
+                if not isinstance(rec, dict):
+                    return 0.0
+                n = int(rec.get("total", 0))
+                if n < minsamp:
+                    return 0.0
+                wr  = float(rec.get("win_rate", 50) or 50)
+                avg = float(rec.get("avg_pnl", 0) or 0)
+                w   = min(1.0, n / 20.0)
+                return ((wr - 50) * 0.07 + avg * 0.012) * w
 
             # N580: VIX-based market regime (macro risk level at entry)
             _nsl_vix = d.get("vix", 20) or 20
@@ -20979,6 +21260,141 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           "cold_sector" if _nsl_sec_pct <= -1 else "neutral_sector")
             _nsl_adj += _nsl_edge("sector_rotation_perf", _nsl_sec_s)
 
+            # ── FULL 850-NEURON FEEDBACK LAYER (dict-format neurons) ────────────
+            # Every perf dict in tlog is loaded via _ALL_NEURON_PERFS.
+            # Each wire below closes a feedback loop that previously had no return path.
+
+            # RSI zone at entry (N128)
+            _fb_rsi_z = ("oversold" if rsi < 30 else "neutral" if rsi < 60 else "overbought")
+            _nsl_adj += _nde("rsi_at_entry_perf", _fb_rsi_z)
+
+            # VIX bracket (N127)
+            _fb_vix = d.get("vix", _nsl_vix) or _nsl_vix
+            _fb_vix_b = ("low" if _fb_vix < 15 else "normal" if _fb_vix < 25 else "high" if _fb_vix < 35 else "extreme")
+            _nsl_adj += _nde("vix_bracket_performance", _fb_vix_b)
+
+            # RVOL tier (N130)
+            _fb_rv = ("extreme" if vr >= 4 else "surge" if vr >= 2.5 else "elevated" if vr >= 1.5 else "normal" if vr >= 0.7 else "dry")
+            _nsl_adj += _nde("rvol_performance", _fb_rv)
+
+            # Day-of-week (N136)
+            _fb_dow = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][datetime.now(timezone.utc).weekday()]
+            _nsl_adj += _nde("dow_performance", _fb_dow)
+
+            # Market breadth tier (N148)
+            _fb_brd = float(d.get("market_breadth", 50) or 50)
+            _fb_brd_b = ("thrust" if _fb_brd >= 90 else "strong" if _fb_brd >= 65 else "weak" if _fb_brd <= 35 else "neutral")
+            _nsl_adj += _nde("market_breadth_perf", _fb_brd_b)
+
+            # Signal count sweet spot (N156)
+            _fb_sigs = int(d.get("signal_count", 0) or 0)
+            _fb_sig_b = ("1-2" if _fb_sigs <= 2 else "3-4" if _fb_sigs <= 4 else "5-7" if _fb_sigs <= 7 else "8+")
+            _nsl_adj += _nde("signal_count_perf", _fb_sig_b)
+
+            # MACD entry state (N116)
+            _fb_macd_s = ("bull_div" if d.get("macd_bull_div") else
+                          "rising" if macd > 0 and (d.get("macd_slope",0) or 0) > 0 else
+                          "recovering" if macd < 0 and (d.get("macd_slope",0) or 0) > 0 else "negative")
+            _nsl_adj += _nde("macd_entry_state_perf", _fb_macd_s)
+
+            # TTM squeeze (N121)
+            _fb_sqz = ("fired" if d.get("ttm_squeeze_fired") else "in_squeeze" if d.get("in_squeeze") else "none")
+            _nsl_adj += _nde("ttm_squeeze_entry_perf", _fb_sqz)
+
+            # VWAP position (N124)
+            _fb_vwap = ("above" if vwap > 0.5 else "below" if vwap < -0.5 else "at_vwap")
+            _nsl_adj += _nde("vwap_performance", _fb_vwap)
+
+            # Price tier (N133)
+            _fb_ptier = ("micro" if price < 10 else "small" if price < 30 else "mid" if price < 100 else "large")
+            _nsl_adj += _nde("price_tier_perf", _fb_ptier)
+
+            # EMA 50 position (N110)
+            _fb_e50 = float(d.get("price_vs_ema50", 0) or 0)
+            _fb_e50_b = ("above_far" if _fb_e50 > 10 else "above" if _fb_e50 > 2 else "below" if _fb_e50 > -10 else "below_far")
+            _nsl_adj += _nde("ema50_position_perf", _fb_e50_b)
+
+            # EMA 200 position / macro trend (N111)
+            _fb_e200 = float(d.get("price_vs_ema200", 0) or 0)
+            _fb_e200_b = ("above" if _fb_e200 > 5 else "near" if _fb_e200 > -5 else "below")
+            _nsl_adj += _nde("ema200_position_perf", _fb_e200_b)
+
+            # Sector performance (per sector)
+            _fb_sec_key = SECTOR_MAP.get(tk, "other")
+            _nsl_adj += _nde("sector_performance", _fb_sec_key)
+
+            # Regime state (N153)
+            _fb_reg = _LEARNED_NEURON_PARAMS.get("current_regime", "neutral") if _LEARNED_NEURON_PARAMS else "neutral"
+            _nsl_adj += _nde("regime_performance", _fb_reg)
+
+            # Breakout type (N140 cup-handle, N141 VCP)
+            if d.get("cup_handle"):     _nsl_adj += _nde("pattern_entry_perf", "cup_handle")
+            if d.get("vcp_breakout"):   _nsl_adj += _nde("pattern_entry_perf", "vcp")
+            if d.get("double_bottom"):  _nsl_adj += _nde("pattern_entry_perf", "double_bottom")
+
+            # Momentum grade (N115)
+            _fb_grade = d.get("grade", "C") or "C"
+            _nsl_adj += _nde("grade_perf", _fb_grade)
+
+            # Pre-market gap (N125)
+            _fb_pm = float(d.get("pm_gap_pct", 0) or 0)
+            _fb_pm_b = ("big_up" if _fb_pm > 3 else "small_up" if _fb_pm > 0.5 else "big_down" if _fb_pm < -3 else "small_down" if _fb_pm < -0.5 else "flat")
+            _nsl_adj += _nde("pm_gap_entry_perf", _fb_pm_b)
+
+            # Ticker memory (N138) — per-ticker historical performance
+            _nsl_adj += _nde("ticker_memory", tk) * 0.5 if tk in _ALL_NEURON_PERFS.get("ticker_memory", {}) else 0
+
+            # Trend template quality (N135)
+            _fb_tt = int(d.get("trend_template", 0) or 0)
+            _fb_tt_b = ("elite" if _fb_tt >= 7 else "good" if _fb_tt >= 5 else "fair" if _fb_tt >= 3 else "weak")
+            _nsl_adj += _nde("tt_quality_perf", _fb_tt_b)
+
+            # ATR bucket (N129)
+            _fb_atr = float(d.get("atr_pct", 0) or 0)
+            _fb_atr_b = ("tight" if _fb_atr < 1 else "normal" if _fb_atr < 2.5 else "wide" if _fb_atr < 5 else "very_wide")
+            _nsl_adj += _nde("atr_bucket_perf", _fb_atr_b)
+
+            # DCA context (N149)
+            _fb_dca = ("dca" if d.get("is_dca") else "fresh")
+            _nsl_adj += _nde("dca_performance", _fb_dca)
+
+            # Earnings proximity (N145)
+            _fb_earn = int(d.get("earnings_days", 99) or 99)
+            _fb_earn_b = ("near_1-2d" if _fb_earn <= 2 else "near_3-7d" if _fb_earn <= 7 else "normal")
+            _nsl_adj += _nde("earnings_proximity_perf", _fb_earn_b)
+
+            # Macro event context (N151)
+            _fb_macro = d.get("macro_event", "none") or "none"
+            _nsl_adj += _nde("macro_event_perf", _fb_macro)
+
+            # ── N891-N900 feedback ───────────────────────────────────────────
+            # N891: Score accuracy — does this score tier actually win?
+            _fb_sc_tier = ("elite" if s >= 80 else "high" if s >= 65 else "medium" if s >= 45 else "low")
+            _nsl_adj += _nde("score_accuracy_perf", _fb_sc_tier)
+
+            # N892: VIX direction
+            _fb_vix_dir = d.get("vix_direction", "flat") or "flat"
+            _nsl_adj += _nde("vix_direction_perf", _fb_vix_dir)
+
+            # N893: ET hour
+            _fb_et_hr = d.get("et_hour", -1)
+            if _fb_et_hr >= 0:
+                _fb_et_min = d.get("et_min", 0) or 0
+                _fb_et_bkt = f"{_fb_et_hr:02d}:{'30' if _fb_et_min >= 30 else '00'}"
+                _nsl_adj += _nde("et_hour_perf", _fb_et_bkt)
+
+            # N897: SPY intraday direction
+            _fb_spy_dir = d.get("spy_intraday_dir", "flat") or "flat"
+            _nsl_adj += _nde("spy_intraday_dir_perf", _fb_spy_dir)
+
+            # N899: Score persistence (run count)
+            _fb_persist = int(d.get("persistence_runs", 1) or 1)
+            _fb_pers_bkt = ("first_appear" if _fb_persist <= 1 else "two_runs" if _fb_persist == 2 else "three_runs" if _fb_persist == 3 else "persistent_4+")
+            _nsl_adj += _nde("score_persistence_perf", _fb_pers_bkt)
+
+            # Cap the full neural layer at ±20 (wider cap as brain accumulates more data)
+            s += max(-20, min(20, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
+            _nsl_adj = 0.0  # reset so old cap below is a no-op
             s += max(-12, min(12, round(_nsl_adj)))
     except Exception:
         pass
@@ -22380,8 +22796,12 @@ def run():
     # Clamp to safe range (1.5x to 4x ATR)
     _LEARNED_ATR_MULTIPLIER = max(1.5, min(4.0, _LEARNED_ATR_MULTIPLIER))
     # Neuron state win-rate lookup (used in score() neural state layer)
-    global _LEARNED_NEURON_PARAMS
+    global _LEARNED_NEURON_PARAMS, _ALL_NEURON_PERFS
     _LEARNED_NEURON_PARAMS = tlog.get("bot_learned_params", {})
+    # Load ALL *_perf dicts from tlog into global for full 850-neuron feedback loop
+    _ALL_NEURON_PERFS = {k: v for k, v in tlog.items()
+                         if isinstance(k, str) and k.endswith("_perf") and isinstance(v, dict)}
+    logger.info(f"Brain loaded: {len(_ALL_NEURON_PERFS)} neuron perf dicts active for scoring feedback")
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
@@ -45007,9 +45427,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 850              # total tracked neuron dimensions (N103-N890 complete)
+        tlog["neurons_total"]     = 860              # total tracked neuron dimensions (N103-N900 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/850 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/860 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
