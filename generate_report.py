@@ -815,6 +815,49 @@ def _build_weekly_bot_report(docs_dir):
             for h, v in sorted(hour_wr.items()) if v["total"] >= 2
         ]
 
+    # ── Strategy Insights: performance attribution from all learned neurons ──
+    # Identify top "alpha" neuron states (win rate vs base rate)
+    strategy_insights = {"top_alpha": [], "top_drag": [], "key_combos": []}
+    try:
+        base_wr = win_rate  # use weekly win rate as baseline
+        alpha_states = []
+        for key, label in neuron_map.items():
+            data = lp.get(key, [])
+            if not isinstance(data, list):
+                continue
+            for state_data in data:
+                if not isinstance(state_data, dict):
+                    continue
+                tot = state_data.get("total", 0)
+                wr  = state_data.get("win_rate", 50)
+                if tot < 4:
+                    continue
+                alpha = wr - base_wr
+                alpha_states.append({
+                    "neuron": label,
+                    "state": state_data.get("state", ""),
+                    "win_rate": wr,
+                    "alpha": round(alpha, 1),
+                    "samples": tot,
+                    "avg_pnl": state_data.get("avg_pnl", 0),
+                })
+        alpha_states.sort(key=lambda x: (-x["alpha"], -x["win_rate"]))
+        strategy_insights["top_alpha"] = alpha_states[:6]
+        strategy_insights["top_drag"] = sorted(
+            [s for s in alpha_states if s["alpha"] < -10],
+            key=lambda x: x["alpha"]
+        )[:4]
+        # Top signal combinations (already computed in signal_synergy)
+        syn_data = td.get("signal_synergy", {}) if 'td' in dir() else {}
+        if syn_data:
+            strategy_insights["key_combos"] = sorted(
+                [{"pair": k, "win_rate": v.get("win_rate", 0), "samples": v.get("total", 0), "avg_pnl": v.get("avg_pnl", 0)}
+                 for k, v in syn_data.items() if v.get("total", 0) >= 3 and v.get("win_rate", 0) >= 65],
+                key=lambda x: (-x["win_rate"], -x["samples"])
+            )[:6]
+    except Exception:
+        pass
+
     return {
         "generated_at": now.isoformat(),
         "period": "Last 7 days",
@@ -832,6 +875,7 @@ def _build_weekly_bot_report(docs_dir):
         "neurons_total": neurons_total,
         "top_neurons": top_neurons[:10],
         "equity_curve": equity_week,
+        "strategy_insights": strategy_insights,
         "learn_log": learn_log,
         "strategy_mode": td.get("strategy_mode", "SELECTIVE"),
         "recovery_mode": td.get("recovery_mode", False),
