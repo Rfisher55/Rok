@@ -1,0 +1,28 @@
+{
+  "batch": "N781-N790",
+  "date": "2026-06-01",
+  "total_neurons_after": 750,
+  "neurons": [
+    {"id": "N781", "key": "price_discovery_zone_perf",     "name": "Price Discovery Zone",     "states": ["at_52w_high", "near_52w_high", "mid_range", "deep_in_range"]},
+    {"id": "N782", "key": "liquidity_trap_perf",           "name": "Liquidity Trap",            "states": ["high_liquidity", "normal_liquidity", "thin_liquidity", "illiquid_risk"]},
+    {"id": "N783", "key": "mean_reversion_setup_perf",     "name": "Mean Reversion Setup",      "states": ["oversold_reversion", "mild_reversion", "neutral_mr", "extended_mild", "overbought_caution"]},
+    {"id": "N784", "key": "trend_exhaustion_perf",         "name": "Trend Exhaustion",          "states": ["extended_trend", "mature_trend", "young_trend", "fresh_trend"]},
+    {"id": "N785", "key": "squeeze_coil_perf",             "name": "Squeeze Coil",              "states": ["tight_coil", "moderate_coil", "wide_range"]},
+    {"id": "N786", "key": "breakout_quality_perf",         "name": "Breakout Quality",          "states": ["strong_volume_breakout", "breakout_moderate_vol", "gap_and_hold", "pattern_breakout", "no_breakout"]},
+    {"id": "N787", "key": "false_breakout_risk_perf",      "name": "False Breakout Risk",       "states": ["low_vol_breakout_risk", "heavy_overhead_risk", "high_float_rotation_risk", "low_false_breakout_risk"]},
+    {"id": "N788", "key": "continuation_vs_reversal_perf", "name": "Continuation vs Reversal",  "states": ["continuation_setup", "reversal_setup", "neutral_setup"]},
+    {"id": "N789", "key": "pattern_completion_perf",       "name": "Pattern Completion",        "states": ["cup_handle_complete", "bull_flag_complete", "vcp_complete", "orb_pattern", "gap_hold_pattern", "no_pattern"]},
+    {"id": "N790", "key": "entry_timing_precision_perf",   "name": "Entry Timing Precision",    "states": ["optimal_timing", "good_timing", "suboptimal_timing", "poor_timing"]}
+  ],
+  "sections_modified": [
+    "SELL trackers (after N780 block, before Price Acceleration Neuron)",
+    "BUY signal classifiers (after N780 classifier, before log_trade call)",
+    "Tuners (N781-N790 block after N771-N780 tuners)",
+    "bot_learned_params initialization (after debt_to_equity_perf: [])"
+  ],
+  "counters_updated": {
+    "neurons_total": 750,
+    "logger_line": "/750 neurons active"
+  },
+  "compile_check": "PASSED"
+}

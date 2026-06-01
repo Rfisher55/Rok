@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 740)
+    neurons_total = td.get("neurons_total", 760)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -794,6 +794,26 @@ def _build_weekly_bot_report(docs_dir):
         "price_earnings_relative_perf":        "N778 PE Relative",
         "free_cash_flow_yield_perf":           "N779 Free Cash Flow Yield",
         "debt_to_equity_perf":                 "N780 Debt/Equity",
+        "price_discovery_zone_perf":            "N781 Price Discovery Zone",
+        "liquidity_trap_perf":                  "N782 Liquidity Trap",
+        "mean_reversion_setup_perf":            "N783 Mean Reversion Setup",
+        "trend_exhaustion_perf":                "N784 Trend Exhaustion",
+        "squeeze_coil_perf":                    "N785 Squeeze Coil",
+        "breakout_quality_perf":                "N786 Breakout Quality",
+        "false_breakout_risk_perf":             "N787 False Breakout Risk",
+        "continuation_vs_reversal_perf":        "N788 Continuation vs Reversal",
+        "pattern_completion_perf":              "N789 Pattern Completion",
+        "entry_timing_precision_perf":          "N790 Entry Timing Precision",
+        "portfolio_beta_risk_perf":             "N791 Portfolio Beta Risk",
+        "correlation_cluster_perf":             "N792 Correlation Cluster",
+        "sector_rotation_speed_perf":           "N793 Sector Rotation Speed",
+        "market_cap_tier_perf":                 "N794 Market Cap Tier",
+        "float_rotation_speed_perf":            "N795 Float Rotation Speed",
+        "news_velocity_perf":                   "N796 News Velocity",
+        "social_momentum_perf":                 "N797 Social Momentum",
+        "catalyst_magnitude_perf":              "N798 Catalyst Magnitude",
+        "expected_value_score_perf":            "N799 Expected Value Score",
+        "composite_signal_strength_perf":       "N800 Composite Signal Strength",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -1249,7 +1269,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 740),
+                "neurons_total":    td.get("neurons_total", 760),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -1579,7 +1599,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 740),
+            "neurons_total":   live_market_context.get("neurons_total", 760),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),

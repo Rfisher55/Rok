@@ -1,0 +1,28 @@
+{
+  "batch": "N791-N800",
+  "date": "2026-06-01",
+  "total_neurons_after": 760,
+  "neurons": [
+    {"id": "N791", "key": "portfolio_beta_risk_perf",       "name": "Portfolio Beta Risk",       "states": ["high_beta_add", "moderate_beta_add", "low_beta_add", "neutral_beta_add"]},
+    {"id": "N792", "key": "correlation_cluster_perf",       "name": "Correlation Cluster",       "states": ["high_correlation_risk", "moderate_correlation", "low_correlation"]},
+    {"id": "N793", "key": "sector_rotation_speed_perf",     "name": "Sector Rotation Speed",     "states": ["fast_rotation", "moderate_rotation", "slow_rotation"]},
+    {"id": "N794", "key": "market_cap_tier_perf",           "name": "Market Cap Tier",           "states": ["mega_cap", "large_cap", "mid_cap", "small_cap"]},
+    {"id": "N795", "key": "float_rotation_speed_perf",      "name": "Float Rotation Speed",      "states": ["fast_float_rotation", "normal_float_rotation", "slow_float_rotation"]},
+    {"id": "N796", "key": "news_velocity_perf",             "name": "News Velocity",             "states": ["breaking_news", "fresh_news_momentum", "news_cooling", "stale_news"]},
+    {"id": "N797", "key": "social_momentum_perf",           "name": "Social Momentum",           "states": ["viral_momentum", "elevated_social", "normal_social", "subdued_social"]},
+    {"id": "N798", "key": "catalyst_magnitude_perf",        "name": "Catalyst Magnitude",        "states": ["major_catalyst", "moderate_catalyst", "minor_catalyst"]},
+    {"id": "N799", "key": "expected_value_score_perf",      "name": "Expected Value Score",      "states": ["high_ev_trade", "good_ev_trade", "neutral_ev_trade", "low_ev_trade"]},
+    {"id": "N800", "key": "composite_signal_strength_perf", "name": "Composite Signal Strength", "states": ["elite_composite_signal", "strong_composite_signal", "moderate_composite_signal", "single_signal", "no_composite_signal"]}
+  ],
+  "sections_modified": [
+    "SELL trackers (after N790 block, before Price Acceleration Neuron)",
+    "BUY signal classifiers (after N790 classifier, before log_trade call)",
+    "Tuners (N791-N800 block after N781-N790 tuners)",
+    "bot_learned_params initialization (after entry_timing_precision_perf: [])"
+  ],
+  "counters_updated": {
+    "neurons_total": 760,
+    "logger_line": "/760 neurons active"
+  },
+  "compile_check": "PASSED"
+}
