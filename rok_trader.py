@@ -18393,8 +18393,49 @@ def fetch_crypto_data() -> dict:
             logger.info(f"Alpaca fallback data for {sym}: price={sig['price']:.2f} chg={sig['change_pct']:+.1f}%")
 
     logger.info(f"Crypto data loaded: {list(result.keys())} ({len(result)}/{len(CRYPTO_UNIVERSE)} coins)")
+    # Last-resort: if ALL data sources failed, get live prices from Alpaca trades API
+    # and create minimal neutral signals so the bot can still trade crypto
     if not result:
-        logger.warning("CRYPTO: all data fetch attempts failed — no crypto data available")
+        logger.warning("CRYPTO: primary+fallback failed — trying Alpaca trades API last resort")
+        for alpaca_sym in list(CRYPTO_UNIVERSE.keys())[:4]:  # BTC/USD, ETH/USD, SOL/USD, AVAX/USD
+            try:
+                sym_no_slash = alpaca_sym.replace("/", "")
+                r = requests.get(
+                    f"{ALPACA_DATA_BASE}/v1beta3/crypto/us/latest/trades",
+                    headers=_h(), params={"symbols": alpaca_sym}, timeout=10
+                )
+                if r.status_code == 200:
+                    trades_data = r.json().get("trades", {})
+                    trade = trades_data.get(alpaca_sym) or trades_data.get(sym_no_slash, {})
+                    price = float(trade.get("p", 0))
+                else:
+                    # Try without slash
+                    r2 = requests.get(
+                        f"{ALPACA_DATA_BASE}/v1beta3/crypto/us/latest/trades",
+                        headers=_h(), params={"symbols": sym_no_slash}, timeout=10
+                    )
+                    if r2.status_code == 200:
+                        td2 = r2.json().get("trades", {})
+                        trade = td2.get(alpaca_sym) or td2.get(sym_no_slash, {})
+                        price = float(trade.get("p", 0))
+                    else:
+                        price = 0
+                if price > 0:
+                    result[alpaca_sym] = {
+                        "price": price, "change_pct": 0, "intraday": 0,
+                        "vol_ratio": 1.0, "rsi": 50, "ema_cross": 0,
+                        "macd": 0, "bb_pos": 50, "vwap_pos": 0,
+                        "roc5": 0, "stoch_k": 50, "price_vs_ema50": 0,
+                        "williams_r": -50, "macd_slope": 0,
+                        "ttm_squeeze_fired": False, "price_vs_ema200": 0,
+                        "rs63": 0, "adx": 20, "mtf_aligned": False,
+                        "fib_support": False, "macd_bull_div": False,
+                        "cup_handle": False, "mom_accel": False,
+                        "at_demand_zone": False, "trend_reversal": False,
+                    }
+                    logger.info(f"Last-resort price for {alpaca_sym}: ${price:,.2f}")
+            except Exception as _lre:
+                logger.warning(f"Last-resort fetch failed for {alpaca_sym}: {_lre}")
     return result
 
 
