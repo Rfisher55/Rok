@@ -471,6 +471,22 @@ def build_prompt(
             rej_lines.append(f"  ${r.get('ticker','')} score={r.get('score',0)} — SKIPPED: {r.get('reason','')}")
         rejected_str = "\n".join(rej_lines)
 
+    # Recent Alpaca auto-executed trades
+    recent_trades_str = ""
+    _recent_trades = lmc.get("recent_alpaca_trades") or []
+    if _recent_trades:
+        tr_lines = []
+        for t in _recent_trades[-8:]:
+            act = t.get("action","")
+            tk  = t.get("ticker","")
+            px  = t.get("price") or 0
+            pnl = t.get("pnl_pct")
+            sc  = t.get("score") or "?"
+            ts  = (t.get("time") or "")[:16]
+            pnl_str = f" P&L {pnl:+.1f}%" if pnl is not None else ""
+            tr_lines.append(f"  {act} ${tk} @${px:.2f} score={sc}{pnl_str} [{ts}]")
+        recent_trades_str = "\n".join(tr_lines)
+
     # Last scan top candidates context
     scan_str = ""
     if scan_top:
@@ -628,7 +644,7 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 710)
+    nT = lmc.get("neurons_total", 720)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:
@@ -783,6 +799,10 @@ HIGH_SHORT=short squeeze fuel, NEWS_ACCELERATING=catalyst building, ↓DEG=score
 LAST SCAN TOP CANDIDATES (bot's freshest buy ideas):
 {scan_str}
 {f'''
+RECENT ALPACA AUTO-EXECUTED TRADES (last 8 bot orders):
+{recent_trades_str}
+''' if recent_trades_str else ''}
+{f'''
 STOCKS BOT CONSIDERED BUT REJECTED THIS SCAN:
 {rejected_str}
 ''' if rejected_str else ''}
@@ -828,6 +848,7 @@ CRITICAL INSTRUCTIONS:
 16. morning_game_plan: generate a concrete 3-step action plan. step1/step2 must name specific tickers. best_entry_window = "9:30-10:30 AM ET" for trend days, "10:30-11:30 AM ET" for range/choppy. max_new_positions: 1-2 if loss_streak or bear regime; 3-4 if strong_bull and clean day
 17. Brain's Top 3 Picks: if any of these match buy signals in other data sources, elevate their signal_strength by +1 in buy_signals and mention the brain's score in reasons
 18. Rejected Candidates: review STOCKS BOT CONSIDERED BUT REJECTED — if any were rejected only for minor reasons (sector full, thin vol) but have strong signals, mention them as alternative watches in rok_message
+19. Recent Bot Trades: if RECENT ALPACA AUTO-EXECUTED TRADES shows recent buys, confirm they align with current signals; if a recently bought stock is now showing exit signals, flag it urgently in rok_message
 """
 
 

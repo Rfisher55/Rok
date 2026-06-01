@@ -12183,6 +12183,306 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N751: Pre-Market Gap ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n751 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n751_field = _buy_n751.get("pre_market_gap_perf", "flat_pm") if _buy_n751 else "flat_pm"
+            _n751_perf = tlog.setdefault("pre_market_gap_perf", {})
+            _n751p = _n751_perf.setdefault(_n751_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n751_field})
+            _n751p["total"] += 1; _n751p["total_pnl"] = round(_n751p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n751p["wins"] += 1
+            else:        _n751p["losses"] += 1
+            _n751p["win_rate"] = round(_n751p["wins"] / _n751p["total"] * 100, 1)
+            _n751p["avg_pnl"]  = round(_n751p["total_pnl"] / _n751p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N752: Opening Range ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n752 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n752_field = _buy_n752.get("opening_range_perf", "or_mid") if _buy_n752 else "or_mid"
+            _n752_perf = tlog.setdefault("opening_range_perf", {})
+            _n752p = _n752_perf.setdefault(_n752_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n752_field})
+            _n752p["total"] += 1; _n752p["total_pnl"] = round(_n752p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n752p["wins"] += 1
+            else:        _n752p["losses"] += 1
+            _n752p["win_rate"] = round(_n752p["wins"] / _n752p["total"] * 100, 1)
+            _n752p["avg_pnl"]  = round(_n752p["total_pnl"] / _n752p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N753: VWAP Reclaim ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n753 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n753_field = _buy_n753.get("vwap_reclaim_perf", "above_vwap_hold") if _buy_n753 else "above_vwap_hold"
+            _n753_perf = tlog.setdefault("vwap_reclaim_perf", {})
+            _n753p = _n753_perf.setdefault(_n753_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n753_field})
+            _n753p["total"] += 1; _n753p["total_pnl"] = round(_n753p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n753p["wins"] += 1
+            else:        _n753p["losses"] += 1
+            _n753p["win_rate"] = round(_n753p["wins"] / _n753p["total"] * 100, 1)
+            _n753p["avg_pnl"]  = round(_n753p["total_pnl"] / _n753p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N754: Intraday Momentum ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n754 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n754_field = _buy_n754.get("intraday_momentum_perf", "flat_id") if _buy_n754 else "flat_id"
+            _n754_perf = tlog.setdefault("intraday_momentum_perf", {})
+            _n754p = _n754_perf.setdefault(_n754_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n754_field})
+            _n754p["total"] += 1; _n754p["total_pnl"] = round(_n754p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n754p["wins"] += 1
+            else:        _n754p["losses"] += 1
+            _n754p["win_rate"] = round(_n754p["wins"] / _n754p["total"] * 100, 1)
+            _n754p["avg_pnl"]  = round(_n754p["total_pnl"] / _n754p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N755: Closing Strength ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n755 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n755_field = _buy_n755.get("closing_strength_perf", "neutral_close") if _buy_n755 else "neutral_close"
+            _n755_perf = tlog.setdefault("closing_strength_perf", {})
+            _n755p = _n755_perf.setdefault(_n755_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n755_field})
+            _n755p["total"] += 1; _n755p["total_pnl"] = round(_n755p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n755p["wins"] += 1
+            else:        _n755p["losses"] += 1
+            _n755p["win_rate"] = round(_n755p["wins"] / _n755p["total"] * 100, 1)
+            _n755p["avg_pnl"]  = round(_n755p["total_pnl"] / _n755p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N756: Multi-Day Pattern ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n756 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n756_field = _buy_n756.get("multi_day_pattern_perf", "multi_day_consolidation") if _buy_n756 else "multi_day_consolidation"
+            _n756_perf = tlog.setdefault("multi_day_pattern_perf", {})
+            _n756p = _n756_perf.setdefault(_n756_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n756_field})
+            _n756p["total"] += 1; _n756p["total_pnl"] = round(_n756p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n756p["wins"] += 1
+            else:        _n756p["losses"] += 1
+            _n756p["win_rate"] = round(_n756p["wins"] / _n756p["total"] * 100, 1)
+            _n756p["avg_pnl"]  = round(_n756p["total_pnl"] / _n756p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N757: Base Breakout ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n757 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n757_field = _buy_n757.get("base_breakout_perf", "no_base") if _buy_n757 else "no_base"
+            _n757_perf = tlog.setdefault("base_breakout_perf", {})
+            _n757p = _n757_perf.setdefault(_n757_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n757_field})
+            _n757p["total"] += 1; _n757p["total_pnl"] = round(_n757p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n757p["wins"] += 1
+            else:        _n757p["losses"] += 1
+            _n757p["win_rate"] = round(_n757p["wins"] / _n757p["total"] * 100, 1)
+            _n757p["avg_pnl"]  = round(_n757p["total_pnl"] / _n757p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N758: Trend Channel ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n758 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n758_field = _buy_n758.get("trend_channel_perf", "channel_mid") if _buy_n758 else "channel_mid"
+            _n758_perf = tlog.setdefault("trend_channel_perf", {})
+            _n758p = _n758_perf.setdefault(_n758_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n758_field})
+            _n758p["total"] += 1; _n758p["total_pnl"] = round(_n758p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n758p["wins"] += 1
+            else:        _n758p["losses"] += 1
+            _n758p["win_rate"] = round(_n758p["wins"] / _n758p["total"] * 100, 1)
+            _n758p["avg_pnl"]  = round(_n758p["total_pnl"] / _n758p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N759: Pivot Point ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n759 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n759_field = _buy_n759.get("pivot_point_perf", "above_pivot") if _buy_n759 else "above_pivot"
+            _n759_perf = tlog.setdefault("pivot_point_perf", {})
+            _n759p = _n759_perf.setdefault(_n759_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n759_field})
+            _n759p["total"] += 1; _n759p["total_pnl"] = round(_n759p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n759p["wins"] += 1
+            else:        _n759p["losses"] += 1
+            _n759p["win_rate"] = round(_n759p["wins"] / _n759p["total"] * 100, 1)
+            _n759p["avg_pnl"]  = round(_n759p["total_pnl"] / _n759p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N760: Fibonacci Level ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n760 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n760_field = _buy_n760.get("fibonacci_level_perf", "no_fib_level") if _buy_n760 else "no_fib_level"
+            _n760_perf = tlog.setdefault("fibonacci_level_perf", {})
+            _n760p = _n760_perf.setdefault(_n760_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n760_field})
+            _n760p["total"] += 1; _n760p["total_pnl"] = round(_n760p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n760p["wins"] += 1
+            else:        _n760p["losses"] += 1
+            _n760p["win_rate"] = round(_n760p["wins"] / _n760p["total"] * 100, 1)
+            _n760p["avg_pnl"]  = round(_n760p["total_pnl"] / _n760p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N761: Breadth Thrust ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n761 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n761_field = _buy_n761.get("breadth_thrust_perf", "neutral_breadth") if _buy_n761 else "neutral_breadth"
+            _n761_perf = tlog.setdefault("breadth_thrust_perf", {})
+            _n761p = _n761_perf.setdefault(_n761_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n761_field})
+            _n761p["total"] += 1; _n761p["total_pnl"] = round(_n761p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n761p["wins"] += 1
+            else:        _n761p["losses"] += 1
+            _n761p["win_rate"] = round(_n761p["wins"] / _n761p["total"] * 100, 1)
+            _n761p["avg_pnl"]  = round(_n761p["total_pnl"] / _n761p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N762: Put/Call Ratio Trend ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n762 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n762_field = _buy_n762.get("put_call_ratio_trend_perf", "pc_neutral") if _buy_n762 else "pc_neutral"
+            _n762_perf = tlog.setdefault("put_call_ratio_trend_perf", {})
+            _n762p = _n762_perf.setdefault(_n762_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n762_field})
+            _n762p["total"] += 1; _n762p["total_pnl"] = round(_n762p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n762p["wins"] += 1
+            else:        _n762p["losses"] += 1
+            _n762p["win_rate"] = round(_n762p["wins"] / _n762p["total"] * 100, 1)
+            _n762p["avg_pnl"]  = round(_n762p["total_pnl"] / _n762p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N763: New Highs vs Lows ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n763 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n763_field = _buy_n763.get("new_highs_lows_perf", "balanced_nh_nl") if _buy_n763 else "balanced_nh_nl"
+            _n763_perf = tlog.setdefault("new_highs_lows_perf", {})
+            _n763p = _n763_perf.setdefault(_n763_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n763_field})
+            _n763p["total"] += 1; _n763p["total_pnl"] = round(_n763p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n763p["wins"] += 1
+            else:        _n763p["losses"] += 1
+            _n763p["win_rate"] = round(_n763p["wins"] / _n763p["total"] * 100, 1)
+            _n763p["avg_pnl"]  = round(_n763p["total_pnl"] / _n763p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N764: Advance/Decline Line ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n764 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n764_field = _buy_n764.get("advance_decline_perf", "ad_neutral") if _buy_n764 else "ad_neutral"
+            _n764_perf = tlog.setdefault("advance_decline_perf", {})
+            _n764p = _n764_perf.setdefault(_n764_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n764_field})
+            _n764p["total"] += 1; _n764p["total_pnl"] = round(_n764p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n764p["wins"] += 1
+            else:        _n764p["losses"] += 1
+            _n764p["win_rate"] = round(_n764p["wins"] / _n764p["total"] * 100, 1)
+            _n764p["avg_pnl"]  = round(_n764p["total_pnl"] / _n764p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N765: Institutional Flow ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n765 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n765_field = _buy_n765.get("institutional_flow_perf", "inst_neutral") if _buy_n765 else "inst_neutral"
+            _n765_perf = tlog.setdefault("institutional_flow_perf", {})
+            _n765p = _n765_perf.setdefault(_n765_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n765_field})
+            _n765p["total"] += 1; _n765p["total_pnl"] = round(_n765p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n765p["wins"] += 1
+            else:        _n765p["losses"] += 1
+            _n765p["win_rate"] = round(_n765p["wins"] / _n765p["total"] * 100, 1)
+            _n765p["avg_pnl"]  = round(_n765p["total_pnl"] / _n765p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N766: Retail Flow ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n766 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n766_field = _buy_n766.get("retail_flow_perf", "retail_neutral") if _buy_n766 else "retail_neutral"
+            _n766_perf = tlog.setdefault("retail_flow_perf", {})
+            _n766p = _n766_perf.setdefault(_n766_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n766_field})
+            _n766p["total"] += 1; _n766p["total_pnl"] = round(_n766p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n766p["wins"] += 1
+            else:        _n766p["losses"] += 1
+            _n766p["win_rate"] = round(_n766p["wins"] / _n766p["total"] * 100, 1)
+            _n766p["avg_pnl"]  = round(_n766p["total_pnl"] / _n766p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N767: Smart Money Flow ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n767 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n767_field = _buy_n767.get("smart_money_flow_perf", "smart_neutral") if _buy_n767 else "smart_neutral"
+            _n767_perf = tlog.setdefault("smart_money_flow_perf", {})
+            _n767p = _n767_perf.setdefault(_n767_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n767_field})
+            _n767p["total"] += 1; _n767p["total_pnl"] = round(_n767p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n767p["wins"] += 1
+            else:        _n767p["losses"] += 1
+            _n767p["win_rate"] = round(_n767p["wins"] / _n767p["total"] * 100, 1)
+            _n767p["avg_pnl"]  = round(_n767p["total_pnl"] / _n767p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N768: Fear & Greed ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n768 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n768_field = _buy_n768.get("fear_greed_perf", "neutral_fg") if _buy_n768 else "neutral_fg"
+            _n768_perf = tlog.setdefault("fear_greed_perf", {})
+            _n768p = _n768_perf.setdefault(_n768_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n768_field})
+            _n768p["total"] += 1; _n768p["total_pnl"] = round(_n768p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n768p["wins"] += 1
+            else:        _n768p["losses"] += 1
+            _n768p["win_rate"] = round(_n768p["wins"] / _n768p["total"] * 100, 1)
+            _n768p["avg_pnl"]  = round(_n768p["total_pnl"] / _n768p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N769: VIX Term Structure ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n769 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n769_field = _buy_n769.get("vix_term_structure_perf", "vix_flat") if _buy_n769 else "vix_flat"
+            _n769_perf = tlog.setdefault("vix_term_structure_perf", {})
+            _n769p = _n769_perf.setdefault(_n769_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n769_field})
+            _n769p["total"] += 1; _n769p["total_pnl"] = round(_n769p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n769p["wins"] += 1
+            else:        _n769p["losses"] += 1
+            _n769p["win_rate"] = round(_n769p["wins"] / _n769p["total"] * 100, 1)
+            _n769p["avg_pnl"]  = round(_n769p["total_pnl"] / _n769p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N770: Credit Spread ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n770 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n770_field = _buy_n770.get("credit_spread_perf", "normal_credit_spreads") if _buy_n770 else "normal_credit_spreads"
+            _n770_perf = tlog.setdefault("credit_spread_perf", {})
+            _n770p = _n770_perf.setdefault(_n770_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n770_field})
+            _n770p["total"] += 1; _n770p["total_pnl"] = round(_n770p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n770p["wins"] += 1
+            else:        _n770p["losses"] += 1
+            _n770p["win_rate"] = round(_n770p["wins"] / _n770p["total"] * 100, 1)
+            _n770p["avg_pnl"]  = round(_n770p["total_pnl"] / _n770p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -30552,6 +30852,175 @@ def run():
                     except Exception:
                         _n750_s = "rate_insensitive"
                     _buy_signals_merged["fed_sensitivity_perf"] = _n750_s
+                    # N751: Pre-Market Gap
+                    try:
+                        _n751_gap = float(cand.get("pm_gap_pct", 0) or 0)
+                        if _n751_gap > 2:
+                            _n751_s = "strong_pm_gap_up"
+                        elif _n751_gap >= 0.5:
+                            _n751_s = "small_pm_gap_up"
+                        elif _n751_gap > -0.5:
+                            _n751_s = "flat_pm"
+                        else:
+                            _n751_s = "pm_gap_down"
+                    except Exception:
+                        _n751_s = "flat_pm"
+                    _buy_signals_merged["pre_market_gap_perf"] = _n751_s
+                    # N752: Opening Range
+                    try:
+                        _n752_orp = str(cand.get("or_position", "") or "")
+                        if _n752_orp == "above_or":
+                            _n752_s = "or_breakout"
+                        elif _n752_orp == "at_or_high":
+                            _n752_s = "or_high_test"
+                        elif _n752_orp == "mid_or":
+                            _n752_s = "or_mid"
+                        elif _n752_orp == "below_or":
+                            _n752_s = "or_below"
+                        else:
+                            _n752_price = float(cand.get("price", 0) or 0)
+                            _n752_vwap = float(cand.get("vwap", 0) or _n752_price)
+                            if _n752_vwap > 0 and _n752_price > _n752_vwap * 1.001:
+                                _n752_s = "or_breakout"
+                            elif _n752_vwap > 0 and _n752_price < _n752_vwap * 0.999:
+                                _n752_s = "or_below"
+                            else:
+                                _n752_s = "or_mid"
+                    except Exception:
+                        _n752_s = "or_mid"
+                    _buy_signals_merged["opening_range_perf"] = _n752_s
+                    # N753: VWAP Reclaim
+                    try:
+                        _n753_price = float(cand.get("price", 0) or 0)
+                        _n753_vwap = float(cand.get("vwap", 0) or _n753_price)
+                        _n753_prev = float(cand.get("prev_close", 0) or 0)
+                        if _n753_vwap > 0 and _n753_price > _n753_vwap * 1.001 and _n753_prev > 0 and _n753_prev < _n753_vwap:
+                            _n753_s = "vwap_reclaim"
+                        elif _n753_vwap > 0 and _n753_price > _n753_vwap * 1.001:
+                            _n753_s = "above_vwap_hold"
+                        elif _n753_vwap > 0 and abs(_n753_price / _n753_vwap - 1) < 0.001:
+                            _n753_s = "vwap_test"
+                        else:
+                            _n753_s = "below_vwap"
+                    except Exception:
+                        _n753_s = "above_vwap_hold"
+                    _buy_signals_merged["vwap_reclaim_perf"] = _n753_s
+                    # N754: Intraday Momentum
+                    try:
+                        _n754_chg = float(cand.get("intraday_chg_pct", 0) or cand.get("change_pct", 0) or 0)
+                        if _n754_chg > 3:
+                            _n754_s = "strong_id_momentum"
+                        elif _n754_chg >= 1:
+                            _n754_s = "moderate_id_momentum"
+                        elif _n754_chg > -1:
+                            _n754_s = "flat_id"
+                        else:
+                            _n754_s = "id_selling"
+                    except Exception:
+                        _n754_s = "flat_id"
+                    _buy_signals_merged["intraday_momentum_perf"] = _n754_s
+                    # N755: Closing Strength
+                    try:
+                        _n755_cs = str(cand.get("prev_close_strength", "") or "")
+                        _n755_pc = float(cand.get("prev_close", 0) or 0)
+                        _n755_op = float(cand.get("open", 0) or _n755_pc)
+                        _n755_cvo = float(cand.get("close_vs_open", 0) or 0)
+                        if _n755_cs == "strong" or (_n755_op > 0 and _n755_pc > _n755_op * 1.005):
+                            _n755_s = "strong_close"
+                        elif _n755_cs == "weak" or (_n755_op > 0 and _n755_pc < _n755_op * 0.995):
+                            _n755_s = "weak_close"
+                        elif _n755_cvo > 0.5:
+                            _n755_s = "strong_close"
+                        elif _n755_cvo < -0.5:
+                            _n755_s = "weak_close"
+                        else:
+                            _n755_s = "neutral_close"
+                    except Exception:
+                        _n755_s = "neutral_close"
+                    _buy_signals_merged["closing_strength_perf"] = _n755_s
+                    # N756: Multi-Day Pattern
+                    try:
+                        _n756_pat = str(cand.get("pattern_3d", "") or "")
+                        _n756_d3 = float(cand.get("d3_chg", cand.get("d5_chg", 0)) or 0)
+                        if _n756_pat == "uptrend" or _n756_d3 > 3:
+                            _n756_s = "multi_day_uptrend"
+                        elif _n756_pat == "downtrend" or _n756_d3 < -3:
+                            _n756_s = "multi_day_downtrend"
+                        else:
+                            _n756_s = "multi_day_consolidation"
+                    except Exception:
+                        _n756_s = "multi_day_consolidation"
+                    _buy_signals_merged["multi_day_pattern_perf"] = _n756_s
+                    # N757: Base Breakout
+                    try:
+                        _n757_wb = int(cand.get("weeks_basing", 0) or 0)
+                        if _n757_wb > 6:
+                            _n757_s = "long_base_breakout"
+                        elif _n757_wb >= 3:
+                            _n757_s = "medium_base_breakout"
+                        elif cand.get("near_52w_high", False):
+                            _n757_s = "52w_high_breakout"
+                        else:
+                            _n757_s = "no_base"
+                    except Exception:
+                        _n757_s = "no_base"
+                    _buy_signals_merged["base_breakout_perf"] = _n757_s
+                    # N758: Trend Channel
+                    try:
+                        _n758_cp = str(cand.get("channel_position", "") or "")
+                        _n758_d20 = float(cand.get("d20_chg", 0) or 0)
+                        if _n758_cp == "upper" or _n758_d20 > 5:
+                            _n758_s = "channel_top"
+                        elif _n758_cp == "lower" or _n758_d20 < -5:
+                            _n758_s = "channel_bottom"
+                        else:
+                            _n758_s = "channel_mid"
+                    except Exception:
+                        _n758_s = "channel_mid"
+                    _buy_signals_merged["trend_channel_perf"] = _n758_s
+                    # N759: Pivot Point
+                    try:
+                        _n759_vp = str(cand.get("vs_pivot", "") or "")
+                        if _n759_vp == "above":
+                            _n759_s = "above_pivot"
+                        elif _n759_vp == "below":
+                            _n759_s = "below_pivot"
+                        elif _n759_vp == "at":
+                            _n759_s = "at_pivot"
+                        else:
+                            _n759_price = float(cand.get("price", 0) or 0)
+                            _n759_vwap = float(cand.get("vwap", 0) or _n759_price)
+                            if _n759_vwap > 0 and _n759_price > _n759_vwap:
+                                _n759_s = "above_pivot"
+                            elif _n759_vwap > 0 and _n759_price < _n759_vwap:
+                                _n759_s = "below_pivot"
+                            else:
+                                _n759_s = "at_pivot"
+                    except Exception:
+                        _n759_s = "above_pivot"
+                    _buy_signals_merged["pivot_point_perf"] = _n759_s
+                    # N760: Fibonacci Level
+                    try:
+                        _n760_fl = str(cand.get("fib_level", "") or "")
+                        if _n760_fl == "0.618":
+                            _n760_s = "near_golden_ratio"
+                        elif _n760_fl == "0.5":
+                            _n760_s = "near_half_fib"
+                        elif _n760_fl == "0.382":
+                            _n760_s = "near_382_fib"
+                        else:
+                            _n760_pb = float(cand.get("pullback_pct", 0) or 0)
+                            if 5 <= _n760_pb < 10:
+                                _n760_s = "near_382_fib"
+                            elif 10 <= _n760_pb < 15:
+                                _n760_s = "near_half_fib"
+                            elif 15 <= _n760_pb < 20:
+                                _n760_s = "near_golden_ratio"
+                            else:
+                                _n760_s = "no_fib_level"
+                    except Exception:
+                        _n760_s = "no_fib_level"
+                    _buy_signals_merged["fibonacci_level_perf"] = _n760_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -38989,6 +39458,22 @@ def run():
             _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
             if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
 
+        # ── N751-N760 Tuners ──
+        for _key, _attr in [
+            ("pre_market_gap_perf",    "pre_market_gap"),
+            ("opening_range_perf",     "opening_range"),
+            ("vwap_reclaim_perf",      "vwap_reclaim"),
+            ("intraday_momentum_perf", "intraday_momentum"),
+            ("closing_strength_perf",  "closing_strength"),
+            ("multi_day_pattern_perf", "multi_day_pattern"),
+            ("base_breakout_perf",     "base_breakout"),
+            ("trend_channel_perf",     "trend_channel"),
+            ("pivot_point_perf",       "pivot_point"),
+            ("fibonacci_level_perf",   "fibonacci_level"),
+        ]:
+            _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
+            if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -40027,6 +40512,15 @@ def run():
             "implied_move_perf":         [],
             "macro_catalyst_perf":       [],
             "fed_sensitivity_perf":      [],
+            "pre_market_gap_perf":    [],
+            "opening_range_perf":     [],
+            "vwap_reclaim_perf":      [],
+            "closing_strength_perf":  [],
+            "multi_day_pattern_perf": [],
+            "base_breakout_perf":     [],
+            "trend_channel_perf":     [],
+            "pivot_point_perf":       [],
+            "fibonacci_level_perf":   [],
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -40354,9 +40848,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 710              # total tracked neuron dimensions (N103-N750 complete)
+        tlog["neurons_total"]     = 720              # total tracked neuron dimensions (N103-N760 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/710 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/720 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

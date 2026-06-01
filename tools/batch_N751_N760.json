@@ -1,0 +1,28 @@
+{
+  "batch": "N751-N760",
+  "date": "2026-06-01",
+  "total_neurons_after": 720,
+  "neurons": [
+    {"id": "N751", "key": "pre_market_gap_perf",    "name": "Pre-Market Gap",    "states": ["strong_pm_gap_up", "small_pm_gap_up", "flat_pm", "pm_gap_down"]},
+    {"id": "N752", "key": "opening_range_perf",     "name": "Opening Range",     "states": ["or_breakout", "or_high_test", "or_mid", "or_below"]},
+    {"id": "N753", "key": "vwap_reclaim_perf",      "name": "VWAP Reclaim",      "states": ["vwap_reclaim", "above_vwap_hold", "vwap_test", "below_vwap"]},
+    {"id": "N754", "key": "intraday_momentum_perf", "name": "Intraday Momentum", "states": ["strong_id_momentum", "moderate_id_momentum", "flat_id", "id_selling"]},
+    {"id": "N755", "key": "closing_strength_perf",  "name": "Closing Strength",  "states": ["strong_close", "neutral_close", "weak_close"]},
+    {"id": "N756", "key": "multi_day_pattern_perf", "name": "Multi-Day Pattern", "states": ["multi_day_uptrend", "multi_day_consolidation", "multi_day_downtrend"]},
+    {"id": "N757", "key": "base_breakout_perf",     "name": "Base Breakout",     "states": ["long_base_breakout", "medium_base_breakout", "52w_high_breakout", "no_base"]},
+    {"id": "N758", "key": "trend_channel_perf",     "name": "Trend Channel",     "states": ["channel_top", "channel_mid", "channel_bottom"]},
+    {"id": "N759", "key": "pivot_point_perf",       "name": "Pivot Point",       "states": ["above_pivot", "at_pivot", "below_pivot"]},
+    {"id": "N760", "key": "fibonacci_level_perf",   "name": "Fibonacci Level",   "states": ["near_golden_ratio", "near_half_fib", "near_382_fib", "no_fib_level"]}
+  ],
+  "sections_modified": [
+    "SELL trackers (after N750 block)",
+    "BUY signal classifiers (after N750 classifier, before log_trade call)",
+    "Tuners (N751-N760 block after N741-N750 tuners)",
+    "bot_learned_params initialization (after fed_sensitivity_perf: [])"
+  ],
+  "counters_updated": {
+    "neurons_total": 720,
+    "logger_line": "/720 neurons active"
+  },
+  "compile_check": "PASSED"
+}
