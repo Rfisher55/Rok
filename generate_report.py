@@ -485,6 +485,16 @@ def _build_weekly_bot_report(docs_dir):
         "multi_day_breakout_perf":        "N468 Multi-Day Breakout",
         "inside_bar_resolution_perf":     "N469 Inside Bar Resolution",
         "earnings_drift_days_perf":       "N470 Earnings Drift Days",
+        "premarket_gap_size_perf":        "N471 Pre-Market Gap Size",
+        "stock_pcr_entry_perf":           "N472 Stock Put/Call Ratio Entry",
+        "monthly_momentum_perf":          "N473 Monthly Price Momentum",
+        "breakout_52w_entry_perf":        "N474 52-Week Breakout Entry",
+        "hist_vol_level_perf":            "N475 Historical Volatility Level",
+        "avwap_dist_entry_perf":          "N476 AVWAP Distance at Entry",
+        "w52_range_position_perf":        "N477 52-Week Range Position",
+        "rs_line_new_high_perf":          "N478 RS Line New High",
+        "rs_line_trending_perf":          "N479 RS Line Trend Direction",
+        "sector_alpha_entry_perf":        "N480 Sector Alpha at Entry",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -728,7 +738,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 430),
+                "neurons_total":    td.get("neurons_total", 440),
                 "last_decision":    td.get("last_decision", ""),
                 "next_run_utc":     td.get("next_run_utc", ""),
                 "bot_brain_summary": td.get("bot_brain_summary", ""),

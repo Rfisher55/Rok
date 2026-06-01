@@ -1,0 +1,102 @@
+[
+  {
+    "id": "N471",
+    "key": "premarket_gap_size_perf",
+    "name": "Pre-Market Gap Size",
+    "description": "How large was the pre-market gap at entry? Classifies pm_gap_pct into large gap up, small gap up, flat, or gap down categories.",
+    "live_field": "pm_gap_pct",
+    "states": ["large_gap_up", "small_gap_up", "flat_open", "gap_down"],
+    "state_logic": "large_gap_up if pm_gap_pct > 3, small_gap_up if 0.5-3%, flat_open if -0.5 to 0.5%, gap_down if < -0.5%",
+    "default_state": "flat_open"
+  },
+  {
+    "id": "N472",
+    "key": "stock_pcr_entry_perf",
+    "name": "Stock Put/Call Ratio Entry",
+    "description": "Stock-level options put/call ratio at entry. Low PCR = bullish positioning, high PCR = bearish positioning. Uses options_pcr from live[ticker] data.",
+    "live_field": "options_pcr",
+    "states": ["bullish_pcr", "neutral_pcr", "bearish_pcr"],
+    "state_logic": "bullish_pcr if options_pcr < 0.7, bearish_pcr if > 1.3, otherwise neutral_pcr",
+    "default_state": "neutral_pcr"
+  },
+  {
+    "id": "N473",
+    "key": "monthly_momentum_perf",
+    "name": "Monthly Price Momentum",
+    "description": "20-day (approximately 1-month) price change at entry. Measures the momentum runway before the trade. Uses chg20d from live data.",
+    "live_field": "chg20d",
+    "states": ["strong_up_month", "moderate_up_month", "flat_month", "down_month"],
+    "state_logic": "strong_up_month if chg20d > 15%, moderate_up_month if 3-15%, flat_month if -3 to 3%, down_month if < -3%",
+    "default_state": "flat_month"
+  },
+  {
+    "id": "N474",
+    "key": "breakout_52w_entry_perf",
+    "name": "52-Week Breakout Entry",
+    "description": "Is the stock breaking out to or near 52-week highs? Uses breakout_52w boolean from live data to classify entry context.",
+    "live_field": "breakout_52w",
+    "states": ["at_52w_break", "near_52w_high", "mid_range_52w"],
+    "state_logic": "at_52w_break if breakout_52w is True, near_52w_high if dist_from_52w_high < 5 but not breaking, otherwise mid_range_52w",
+    "default_state": "mid_range_52w"
+  },
+  {
+    "id": "N475",
+    "key": "hist_vol_level_perf",
+    "name": "Historical Volatility Level",
+    "description": "20-day historical (realized) volatility level at entry. High vol = wider swings, low vol = compression setup. Uses hv20 from live data.",
+    "live_field": "hv20",
+    "states": ["high_realized_vol", "normal_vol", "low_compressed_vol"],
+    "state_logic": "high_realized_vol if hv20 > 50, low_compressed_vol if < 20, otherwise normal_vol",
+    "default_state": "normal_vol"
+  },
+  {
+    "id": "N476",
+    "key": "avwap_dist_entry_perf",
+    "name": "AVWAP Distance at Entry",
+    "description": "How far is price from the anchored VWAP (52-week low anchor) at entry? Measures overextension or value zone. Uses avwap_dist_pct from live data.",
+    "live_field": "avwap_dist_pct",
+    "states": ["extended_above_avwap", "near_avwap", "below_avwap"],
+    "state_logic": "extended_above_avwap if avwap_dist_pct > 10%, below_avwap if < 0%, otherwise near_avwap",
+    "default_state": "near_avwap"
+  },
+  {
+    "id": "N477",
+    "key": "w52_range_position_perf",
+    "name": "52-Week Range Position",
+    "description": "Where in the 52-week price range is the stock at entry? Top quartile = near highs, lower half = deep in range. Uses w52_range_pos from live data.",
+    "live_field": "w52_range_pos",
+    "states": ["top_quartile_52w", "upper_half_52w", "lower_half_52w"],
+    "state_logic": "top_quartile_52w if w52_range_pos > 75%, upper_half_52w if 50-75%, otherwise lower_half_52w",
+    "default_state": "upper_half_52w"
+  },
+  {
+    "id": "N478",
+    "key": "rs_line_new_high_perf",
+    "name": "RS Line New High",
+    "description": "Is the relative strength line making a new high at entry? RS new high confirms leadership. Uses rs_line_new_high boolean from live data.",
+    "live_field": "rs_line_new_high",
+    "states": ["rs_at_new_high", "rs_not_new_high"],
+    "state_logic": "rs_at_new_high if rs_line_new_high is True, otherwise rs_not_new_high",
+    "default_state": "rs_not_new_high"
+  },
+  {
+    "id": "N479",
+    "key": "rs_line_trending_perf",
+    "name": "RS Line Trend Direction",
+    "description": "Is the relative strength line trending up vs SPY? Rising RS confirms stock outperformance. Uses rs_line_trending boolean from live data.",
+    "live_field": "rs_line_trending",
+    "states": ["rs_line_rising", "rs_line_flat"],
+    "state_logic": "rs_line_rising if rs_line_trending is True, otherwise rs_line_flat",
+    "default_state": "rs_line_flat"
+  },
+  {
+    "id": "N480",
+    "key": "sector_alpha_entry_perf",
+    "name": "Sector Alpha at Entry",
+    "description": "Is the stock generating alpha above its sector at entry? Positive sector alpha means stock is outperforming its peers. Uses sector_alpha from live data.",
+    "live_field": "sector_alpha",
+    "states": ["high_sector_alpha", "neutral_sector_alpha", "negative_sector_alpha"],
+    "state_logic": "high_sector_alpha if sector_alpha > 2%, negative_sector_alpha if < 0%, otherwise neutral_sector_alpha",
+    "default_state": "neutral_sector_alpha"
+  }
+]
