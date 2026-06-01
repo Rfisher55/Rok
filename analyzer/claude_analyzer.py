@@ -628,7 +628,7 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 680)
+    nT = lmc.get("neurons_total", 700)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:
@@ -743,6 +743,10 @@ def build_prompt(
         gp_parts = [f"{g}: {v.get('win_rate',0):.0f}%WR({v.get('samples',0)}t)" for g, v in sorted(gp.items(), key=lambda x: -x[1].get("win_rate",0))[:4]]
         if gp_parts:
             ba_lines.append(f"  Grade WRs: {' | '.join(gp_parts)}")
+    if ba.get("weekly_wr_trend"):
+        wt = ba["weekly_wr_trend"]
+        arrow = "↑ IMPROVING" if wt.get("trend") == "improving" else ("↓ DECLINING" if wt.get("trend") == "declining" else "→ STABLE")
+        ba_lines.append(f"  Win rate trend (4wk): {wt.get('first_wr',0):.0f}% → {wt.get('latest_wr',0):.0f}% [{arrow}]")
     ba_str = "\n".join(ba_lines) if ba_lines else "  Brain still accumulating trade data to identify optimal conditions"
 
     # Append live trading context so AI can give position-specific guidance

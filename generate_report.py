@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 680)
+    neurons_total = td.get("neurons_total", 700)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -734,6 +734,26 @@ def _build_weekly_bot_report(docs_dir):
         "news_timing_entry_perf":           "N718 News Timing Entry",
         "earnings_beat_entry_perf":         "N719 Earnings Beat Entry",
         "institutional_buying_pressure_perf": "N720 Institutional Buying Pressure",
+        "accumulation_distribution_perf":     "N721 Accumulation Distribution",
+        "price_momentum_quality_perf":        "N722 Price Momentum Quality",
+        "entry_candle_quality_perf":          "N723 Entry Candle Quality",
+        "risk_per_trade_perf":                "N724 Risk Per Trade",
+        "market_internal_alignment_perf":     "N725 Market Internal Alignment",
+        "reversal_confirmation_perf":         "N726 Reversal Confirmation",
+        "support_resistance_quality_perf":    "N727 Support/Resistance Quality",
+        "price_target_achievability_perf":    "N728 Price Target Achievability",
+        "sector_momentum_rank_perf":          "N729 Sector Momentum Rank",
+        "conviction_persistence_perf":        "N730 Conviction Persistence",
+        "order_fill_quality_perf":            "N731 Order Fill Quality",
+        "spread_cost_perf":                   "N732 Spread Cost",
+        "slippage_perf":                      "N733 Slippage Control",
+        "position_add_perf":                  "N734 Position Add Timing",
+        "exit_discipline_perf":               "N735 Exit Discipline",
+        "news_sentiment_shift_perf":          "N736 News Sentiment Shift",
+        "analyst_revision_perf":              "N737 Analyst Revision",
+        "short_squeeze_perf":                 "N738 Short Squeeze Signal",
+        "insider_activity_perf":              "N739 Insider Activity",
+        "dark_pool_perf":                     "N740 Dark Pool Signal",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -865,6 +885,47 @@ def _build_weekly_bot_report(docs_dir):
             {"hour": h, "win_rate": round(v["wins"] / v["total"] * 100), "samples": v["total"]}
             for h, v in sorted(hour_wr.items()) if v["total"] >= 2
         ]
+
+    # ── Weekly Win Rate Trend (4-week rolling) ────────────────────────────────
+    # Compute win rate for each of the last 4 calendar weeks to detect improvement/decay.
+    try:
+        _wk_buckets = {}
+        for t in all_trades:
+            if t.get("action") not in ("SELL", "SELL_HALF", "COVER"):
+                continue
+            ts2 = t.get("timestamp") or t.get("time") or ""
+            pnl2 = t.get("pnl") or t.get("pnl_pct") or 0
+            try:
+                td2 = datetime.fromisoformat(ts2.replace("Z", "+00:00")) if ts2 else None
+            except Exception:
+                td2 = None
+            if not td2:
+                continue
+            # Bucket by ISO week
+            _wk = td2.strftime("%Y-W%U")
+            _wk_buckets.setdefault(_wk, {"wins": 0, "total": 0})
+            _wk_buckets[_wk]["total"] += 1
+            if pnl2 > 0:
+                _wk_buckets[_wk]["wins"] += 1
+        # Take the last 4 weeks with data
+        _wk_trend = sorted(
+            [{"week": k, "win_rate": round(v["wins"] / v["total"] * 100), "samples": v["total"]}
+             for k, v in _wk_buckets.items() if v["total"] >= 2],
+            key=lambda x: x["week"]
+        )[-4:]
+        if len(_wk_trend) >= 2:
+            # Compute trend direction
+            _first_wr = _wk_trend[0]["win_rate"]
+            _last_wr  = _wk_trend[-1]["win_rate"]
+            _trend_dir = "improving" if _last_wr > _first_wr + 5 else ("declining" if _last_wr < _first_wr - 5 else "stable")
+            brain_analytics["weekly_wr_trend"] = {
+                "weeks": _wk_trend,
+                "trend": _trend_dir,
+                "first_wr": _first_wr,
+                "latest_wr": _last_wr,
+            }
+    except Exception:
+        pass
 
     # ── Trade Duration Analytics ──────────────────────────────────────────────
     # Optimal hold time: best duration bucket by win rate from hold_duration_perf
@@ -1148,7 +1209,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 680),
+                "neurons_total":    td.get("neurons_total", 700),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -1471,7 +1532,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 680),
+            "neurons_total":   live_market_context.get("neurons_total", 700),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
