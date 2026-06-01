@@ -65,9 +65,9 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 20      # max open long positions — expanded for learning volume
-MAX_SHORTS         = 6       # max open short positions — more shorts = more data
-MAX_POSITION_PCT   = 0.07    # max 7% of portfolio per position (smaller = more positions)
+MAX_POSITIONS      = 35      # max open long positions — high volume for 100+ trades/day
+MAX_SHORTS         = 8       # max open short positions — more shorts = more data
+MAX_POSITION_PCT   = 0.05    # max 5% of portfolio per position (smaller = more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
 STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cycling)
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
@@ -75,7 +75,7 @@ PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
 MIN_BUY_SCORE      = 10      # aggressive learning phase: enter on more signals
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
-MAX_HOLD_DAYS      = 2       # exit stale positions faster — cycle capital for learning
+MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 6       # more positions per sector to generate more data
 ENABLE_SHORTS      = True    # enable short selling in bear/neutral regime
 VIX_HIGH_THRESH    = 30      # reduce position sizes when VIX above this
@@ -109,8 +109,8 @@ CRYPTO_UNIVERSE  = {
 CRYPTO_STOP_PCT  = 0.08     # 8% stop — tighter for faster learning cycles
 CRYPTO_TARGET_PCT= 0.12     # 12% target — faster turnover = more trades = more learning
 # Learning phase: lower score gates so the brain gets real data fast
-CRYPTO_MIN_SCORE = 10       # minimum technical score to consider (was 22)
-CRYPTO_MIN_COMBINED = 8     # minimum tech+AI combined to enter (was 20)
+CRYPTO_MIN_SCORE = 8        # minimum technical score to consider
+CRYPTO_MIN_COMBINED = -5    # AI score is a bonus not a gate — allow negative AI but positive tech
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
@@ -18300,25 +18300,83 @@ def get_btc_dominance() -> float:
         return 55.0
 
 
+def _alpaca_crypto_snapshot(symbols: list) -> dict:
+    """Fetch crypto prices from Alpaca data API as fallback when yfinance fails."""
+    try:
+        syms_param = ",".join(symbols)
+        r = requests.get(
+            f"{ALPACA_DATA_BASE}/v1beta3/crypto/us/snapshots",
+            headers=_h(), params={"symbols": syms_param}, timeout=10
+        )
+        if r.status_code != 200:
+            return {}
+        data = r.json().get("snapshots", {})
+        result = {}
+        for sym, snap in data.items():
+            try:
+                price = float(snap.get("latestTrade", {}).get("p", 0) or
+                              snap.get("latestQuote", {}).get("ap", 0))
+                daily_bar = snap.get("dailyBar", {})
+                prev_close = float(snap.get("prevDailyBar", {}).get("c", price) or price)
+                chg = ((price - prev_close) / prev_close * 100) if prev_close > 0 else 0
+                vr = (float(daily_bar.get("v", 0)) /
+                      max(float(snap.get("prevDailyBar", {}).get("v", 1) or 1), 1))
+                if price > 0:
+                    result[sym] = {
+                        "price": price, "change_pct": chg, "intraday": chg,
+                        "vol_ratio": min(vr, 5.0), "rsi": 50, "ema_cross": 0,
+                        "macd": 0.1 if chg > 0 else -0.1,
+                        "bb_pos": 60 if chg > 0 else 40,
+                        "vwap_pos": 0.3 if chg > 0 else -0.3,
+                        "roc5": chg, "stoch_k": 50, "price_vs_ema50": chg * 0.5,
+                        "williams_r": -50, "macd_slope": 0.01 if chg > 0 else -0.01,
+                        "ttm_squeeze_fired": False, "price_vs_ema200": 0,
+                        "rs63": 0, "adx": 20, "mtf_aligned": chg > 0,
+                        "fib_support": False, "macd_bull_div": False,
+                        "cup_handle": False, "mom_accel": vr > 1.5,
+                        "at_demand_zone": False, "trend_reversal": False,
+                    }
+            except Exception:
+                pass
+        return result
+    except Exception as e:
+        logger.warning(f"Alpaca crypto snapshot failed: {e}")
+        return {}
+
+
 def fetch_crypto_data() -> dict:
     """
-    Fetch price + indicators for all CRYPTO_UNIVERSE coins via yfinance.
-    Uses 90d daily data (same as equity) for full technical analysis.
+    Fetch price + indicators for all CRYPTO_UNIVERSE coins.
+    Primary: yfinance (full technical analysis).
+    Fallback: Alpaca data API (basic price/change data).
     Returns {alpaca_symbol: signal_dict}.
     """
     result = {}
+    failed = []
     for alpaca_sym, yf_sym in CRYPTO_UNIVERSE.items():
         try:
-            daily  = yf.download(yf_sym, period="90d", interval="1d",
+            daily  = yf.download(yf_sym, period="60d", interval="1d",
                                  auto_adjust=True, progress=False)
             hourly = yf.download(yf_sym, period="3d",  interval="1h",
                                  auto_adjust=True, progress=False)
             sig = _extract(daily, hourly)
             if sig and sig["price"] > 0:
                 result[alpaca_sym] = sig
+            else:
+                failed.append(alpaca_sym)
         except Exception as e:
-            logger.debug(f"Crypto data error {yf_sym}: {e}")
-    logger.info(f"Crypto data: {list(result.keys())}")
+            logger.warning(f"Crypto yfinance error {yf_sym}: {e}")
+            failed.append(alpaca_sym)
+
+    # Fallback: use Alpaca data API for any coins that failed yfinance
+    if failed:
+        logger.info(f"Using Alpaca fallback for {len(failed)} crypto coins: {failed}")
+        alpaca_snaps = _alpaca_crypto_snapshot(failed)
+        for sym, sig in alpaca_snaps.items():
+            result[sym] = sig
+            logger.info(f"Alpaca fallback data for {sym}: price={sig['price']:.2f} chg={sig['change_pct']:+.1f}%")
+
+    logger.info(f"Crypto data loaded: {list(result.keys())}")
     return result
 
 
@@ -18581,7 +18639,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         sc = crypto_score(sig)
         # BTC dominance adjustments: boost BTC when dom > 60, boost alts when dom < 50
         is_btc = "BTC" in alpaca_sym
-        if btc_dom > 60 and not is_btc:   sc = max(0, sc - 8)   # penalize alts in risk-off
+        if btc_dom > 60 and not is_btc:   sc = max(0, sc - 3)   # mild penalty for alts in risk-off (was -8)
         elif btc_dom < 50 and not is_btc: sc = min(100, sc + 5) # bonus for alts in alt season
         elif btc_dom > 60 and is_btc:     sc = min(100, sc + 5) # boost BTC in risk-off
 
@@ -22815,6 +22873,8 @@ def run():
         logger.info(f"52W breakout candidates: {', '.join(sorted(breakout_52w_cands))}")
 
     tlog        = _load(TRADES_FILE, {"trades": [], "positions": [], "last_updated": ""})
+    tlog.pop("error", None)      # clear any stale crash message from previous run
+    tlog.pop("traceback", None)
     made_trades = False
     now_utc     = datetime.now(timezone.utc)
 
@@ -23026,11 +23086,13 @@ def run():
             half_out = peaks[sym].get("half_out", False)
 
             _scalp_exit_reason = None
-            if 30 <= age_minutes:
-                if pnl_pct >= 2.0 and age_minutes <= 90 and not half_out:
+            if 20 <= age_minutes:
+                if pnl_pct >= 1.5 and age_minutes <= 90 and not half_out:
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif pnl_pct <= -1.5 and age_minutes >= 30:
+                elif pnl_pct <= -1.5 and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
+                elif age_minutes >= 45 and pnl_pct >= 0.3 and not half_out:
+                    _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 60 and pnl_pct >= -0.5 and not half_out:
                     _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 90 and pnl_pct >= -1.0:
@@ -23848,8 +23910,8 @@ def run():
     # Regime-aware max positions: more room in bull, tighter in bear
     _reg_str   = regime.get("regime", "neutral")
     _reg_score = regime.get("score", 0)
-    if   _reg_str == "bull" and _reg_score >= 3:  _regime_max = min(MAX_POSITIONS + 3, 15)
-    elif _reg_str == "bull":                       _regime_max = min(MAX_POSITIONS + 1, 14)
+    if   _reg_str == "bull" and _reg_score >= 3:  _regime_max = MAX_POSITIONS + 5
+    elif _reg_str == "bull":                       _regime_max = MAX_POSITIONS + 2
     elif _reg_str == "bear" and _reg_score <= -3:  _regime_max = max(MAX_POSITIONS - 6, 4)
     elif _reg_str == "bear":                       _regime_max = max(MAX_POSITIONS - 3, 6)
     else:                                          _regime_max = MAX_POSITIONS
@@ -24078,13 +24140,17 @@ def run():
     _hours_market_elapsed = min(6.5, max(0, _minutes_since_open / 60.0)) if market_open else 0
     _paced_target = int(DAILY_TRADE_TARGET * (_hours_market_elapsed / 6.5)) if _hours_market_elapsed > 0 else 0
     _trade_deficit = max(0, _paced_target - _trades_today_count)
-    if _trade_deficit >= 20:
-        _pace_adj = -8  # far behind: aggressively lower threshold
+    if _trade_deficit >= 30:
+        _pace_adj = -8  # far behind: override to minimum possible
+        _eff_min_score = 5  # floor — take any signal at all
+        logger.info(f"Trade pace EMERGENCY: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, threshold floored to 5")
+    elif _trade_deficit >= 15:
+        _pace_adj = -8
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 8")
-    elif _trade_deficit >= 10:
+    elif _trade_deficit >= 8:
         _pace_adj = -5
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 5")
-    elif _trade_deficit >= 5:
+    elif _trade_deficit >= 3:
         _pace_adj = -3
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — lowering threshold by 3")
     else:
