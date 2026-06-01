@@ -16357,8 +16357,23 @@ def run():
             try:
                 _lp_sc = tlog.get("bot_learned_params", {})
                 _tk_sig_sc = live.get(tk, {})
-                _vix_now_lb = float(regime.get("vix", 20.0) or 20.0)
-                _regime_lb  = regime.get("regime", "neutral")
+                # Derive VIX & regime defensively from in-scope sources (no dependency on outer `regime`)
+                try:
+                    _vix_now_lb = float((live.get("VIX") or live.get("^VIX") or {}).get("price") or 0) or 0.0
+                except Exception:
+                    _vix_now_lb = 0.0
+                if _vix_now_lb <= 0:
+                    _rg_tl = tlog.get("regime")
+                    if isinstance(_rg_tl, dict):
+                        _vix_now_lb = float(_rg_tl.get("vix", 20.0) or 20.0)
+                    else:
+                        _vix_now_lb = 20.0
+                _rg_tl2 = tlog.get("regime")
+                if isinstance(_rg_tl2, dict):
+                    _regime_lb = _rg_tl2.get("regime", tlog.get("market_regime", "neutral"))
+                else:
+                    _regime_lb = _rg_tl2 or tlog.get("market_regime", "neutral")
+                _regime_lb = str(_regime_lb).lower()
                 _MIN_N = 5  # minimum sample count before trusting a neuron
                 def _nwr(key, state):
                     return next((s.get("win_rate", 50) for s in _lp_sc.get(key, []) if s.get("state") == state), 50)
