@@ -1,0 +1,87 @@
+{
+  "batch": "N591-N600",
+  "neurons": [
+    {
+      "id": "N591",
+      "key": "entry_session_quality_perf",
+      "description": "Trading session quality at entry: morning momentum vs midday chop vs afternoon power hour",
+      "values": ["morning_session", "midday_session", "afternoon_session"],
+      "source_field": "datetime.now().hour",
+      "thresholds": "9<=h<11 = morning_session, 14<=h<=16 = afternoon_session, else = midday_session"
+    },
+    {
+      "id": "N592",
+      "key": "vwap_deviation_entry_perf",
+      "description": "How far price is from VWAP at entry",
+      "values": ["extended_above_vwap", "slightly_above_vwap", "below_vwap"],
+      "source_field": "d.get('vwap_pos', d.get('vwap_distance_pct', 0))",
+      "thresholds": ">+2% = extended_above_vwap, 0-2% = slightly_above_vwap, <0% = below_vwap"
+    },
+    {
+      "id": "N593",
+      "key": "prior_day_close_relation_perf",
+      "description": "Price relative to prior day close at entry",
+      "values": ["above_prior_close", "near_prior_close", "below_prior_close"],
+      "source_field": "d.get('change_pct', d.get('chg1d', 0))",
+      "thresholds": ">+0.5% = above_prior_close, -0.5% to +0.5% = near_prior_close, <-0.5% = below_prior_close"
+    },
+    {
+      "id": "N594",
+      "key": "intraday_high_proximity_perf",
+      "description": "How close to intraday high at entry (intraday_tq percentile 0-1)",
+      "values": ["near_intraday_high", "mid_range_intraday", "near_intraday_low"],
+      "source_field": "d.get('intraday_tq', d.get('intra_tq', 0.5))",
+      "thresholds": ">=0.9 = near_intraday_high, <=0.1 = near_intraday_low, else = mid_range_intraday"
+    },
+    {
+      "id": "N595",
+      "key": "float_size_perf",
+      "description": "Shares in float at entry: micro float for high volatility, large float for stability",
+      "values": ["micro_float", "small_float", "large_float"],
+      "source_field": "d.get('float_shares', d.get('float', 50e6))",
+      "thresholds": "<10M shares = micro_float, 10-50M = small_float, >50M = large_float"
+    },
+    {
+      "id": "N596",
+      "key": "short_squeeze_velocity_perf",
+      "description": "Short squeeze velocity signal: high short float + RVOL surge + price momentum",
+      "values": ["explosive_squeeze_setup", "moderate_squeeze", "no_squeeze"],
+      "source_field": "d.get('short_float', 0) + d.get('rvol', 1) + d.get('chg1d', 0)",
+      "thresholds": "short_float>20% AND rvol>3 AND chg1d>=2% = explosive_squeeze_setup, short_float>10% OR (rvol>2 AND chg1d>=1%) = moderate_squeeze, else = no_squeeze"
+    },
+    {
+      "id": "N597",
+      "key": "tape_reading_entry_perf",
+      "description": "Tape/order flow quality at entry based on uptick ratio",
+      "values": ["heavy_buying_tape", "neutral_tape", "heavy_selling_tape"],
+      "source_field": "d.get('uptick_ratio', d.get('tape_quality', 0.5))",
+      "thresholds": ">0.6 = heavy_buying_tape, <0.4 = heavy_selling_tape, else = neutral_tape"
+    },
+    {
+      "id": "N598",
+      "key": "options_open_interest_perf",
+      "description": "Options open interest context at entry: liquidity tier of options chain",
+      "values": ["high_oi_ticker", "medium_oi_ticker", "low_oi_ticker"],
+      "source_field": "d.get('options_oi', d.get('put_call_oi', 0))",
+      "thresholds": ">10000 contracts = high_oi_ticker, >0 = medium_oi_ticker, ==0 = low_oi_ticker"
+    },
+    {
+      "id": "N599",
+      "key": "weekly_trend_alignment_perf",
+      "description": "Weekly trend alignment with daily direction at entry",
+      "values": ["weekly_daily_aligned", "weekly_daily_conflict", "neutral_alignment"],
+      "source_field": "d.get('weekly_trend', d.get('wk_trend', 0)) vs d.get('daily_trend', 0)",
+      "thresholds": "both>0 = weekly_daily_aligned, opposite signs = weekly_daily_conflict, else = neutral_alignment"
+    },
+    {
+      "id": "N600",
+      "key": "momentum_score_bucket_perf",
+      "description": "Composite momentum score bucket from RVOL, RS rating, chg1d, and entry score",
+      "values": ["elite_momentum", "strong_momentum", "moderate_momentum", "weak_momentum"],
+      "source_field": "rvol*10 + rs_rating*0.3 + max(0,chg1d)*5 + score*0.2 (capped at 100)",
+      "thresholds": ">=80 = elite_momentum, 65-79 = strong_momentum, 50-64 = moderate_momentum, <50 = weak_momentum"
+    }
+  ],
+  "neurons_total": 560,
+  "status": "complete"
+}

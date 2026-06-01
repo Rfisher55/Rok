@@ -16777,7 +16777,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 550
+            _n_total = tlog.get("neurons_total") or 560
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -16917,6 +16917,13 @@ def run():
                     "weekly_trend_quality_perf", "dist_from_52w_high_perf",
                     "spy_vs_sector_entry_perf", "atr_vol_expansion_perf",
                     "multi_day_breakout_perf", "inside_bar_resolution_perf",
+                    # Enhanced neurons (N561-N590): market-condition context at entry
+                    "market_regime_vix_perf", "volume_vs_50d_avg_perf",
+                    "spy_intraday_trend_perf", "gap_and_go_quality_perf",
+                    "sector_etf_5d_momentum_perf", "squeeze_momentum_perf",
+                    "trend_following_score_perf", "breakout_false_signal_perf",
+                    "technical_pattern_quality_perf", "market_open_strength_perf",
+                    "options_iv_rank_perf", "smart_money_flow_perf",
                 ]
                 for _pos in _positions_data:
                     _tk = _pos.get("ticker", "")
@@ -33301,6 +33308,86 @@ def run():
         if _n590_list:
             _learn_log.append(f"N590 52w Range: upper_range={_a_n590['win_rate']:.0f}% lower_range={_b_n590['win_rate']:.0f}%WR")
 
+        # ── N591: Entry Session Quality entry tuner ────────────────────
+        _n591_raw = tlog.get("entry_session_quality_perf", {})
+        _n591_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n591_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n591 = next((s for s in _n591_list if s.get("state")=="morning_session"), _n591_list[0] if _n591_list else {"win_rate":50})
+        _b_n591 = next((s for s in _n591_list if s.get("state")=="midday_session"), _n591_list[-1] if _n591_list else {"win_rate":50})
+        if _n591_list:
+            _learn_log.append(f"N591 Session: morning_session={_a_n591['win_rate']:.0f}% midday_session={_b_n591['win_rate']:.0f}%WR")
+
+        # ── N592: VWAP Deviation Entry entry tuner ────────────────────
+        _n592_raw = tlog.get("vwap_deviation_entry_perf", {})
+        _n592_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n592_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n592 = next((s for s in _n592_list if s.get("state")=="slightly_above_vwap"), _n592_list[0] if _n592_list else {"win_rate":50})
+        _b_n592 = next((s for s in _n592_list if s.get("state")=="below_vwap"), _n592_list[-1] if _n592_list else {"win_rate":50})
+        if _n592_list:
+            _learn_log.append(f"N592 VWAP Dev: slightly_above_vwap={_a_n592['win_rate']:.0f}% below_vwap={_b_n592['win_rate']:.0f}%WR")
+
+        # ── N593: Prior Day Close Relation entry tuner ────────────────────
+        _n593_raw = tlog.get("prior_day_close_relation_perf", {})
+        _n593_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n593_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n593 = next((s for s in _n593_list if s.get("state")=="above_prior_close"), _n593_list[0] if _n593_list else {"win_rate":50})
+        _b_n593 = next((s for s in _n593_list if s.get("state")=="below_prior_close"), _n593_list[-1] if _n593_list else {"win_rate":50})
+        if _n593_list:
+            _learn_log.append(f"N593 Prior Close: above_prior_close={_a_n593['win_rate']:.0f}% below_prior_close={_b_n593['win_rate']:.0f}%WR")
+
+        # ── N594: Intraday High Proximity entry tuner ────────────────────
+        _n594_raw = tlog.get("intraday_high_proximity_perf", {})
+        _n594_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n594_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n594 = next((s for s in _n594_list if s.get("state")=="near_intraday_high"), _n594_list[0] if _n594_list else {"win_rate":50})
+        _b_n594 = next((s for s in _n594_list if s.get("state")=="near_intraday_low"), _n594_list[-1] if _n594_list else {"win_rate":50})
+        if _n594_list:
+            _learn_log.append(f"N594 Intraday Prox: near_intraday_high={_a_n594['win_rate']:.0f}% near_intraday_low={_b_n594['win_rate']:.0f}%WR")
+
+        # ── N595: Float Size entry tuner ────────────────────
+        _n595_raw = tlog.get("float_size_perf", {})
+        _n595_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n595_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n595 = next((s for s in _n595_list if s.get("state")=="micro_float"), _n595_list[0] if _n595_list else {"win_rate":50})
+        _b_n595 = next((s for s in _n595_list if s.get("state")=="large_float"), _n595_list[-1] if _n595_list else {"win_rate":50})
+        if _n595_list:
+            _learn_log.append(f"N595 Float: micro_float={_a_n595['win_rate']:.0f}% large_float={_b_n595['win_rate']:.0f}%WR")
+
+        # ── N596: Short Squeeze Velocity entry tuner ────────────────────
+        _n596_raw = tlog.get("short_squeeze_velocity_perf", {})
+        _n596_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n596_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n596 = next((s for s in _n596_list if s.get("state")=="explosive_squeeze_setup"), _n596_list[0] if _n596_list else {"win_rate":50})
+        _b_n596 = next((s for s in _n596_list if s.get("state")=="no_squeeze"), _n596_list[-1] if _n596_list else {"win_rate":50})
+        if _n596_list:
+            _learn_log.append(f"N596 Squeeze: explosive_squeeze_setup={_a_n596['win_rate']:.0f}% no_squeeze={_b_n596['win_rate']:.0f}%WR")
+
+        # ── N597: Tape Reading Entry entry tuner ────────────────────
+        _n597_raw = tlog.get("tape_reading_entry_perf", {})
+        _n597_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n597_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n597 = next((s for s in _n597_list if s.get("state")=="heavy_buying_tape"), _n597_list[0] if _n597_list else {"win_rate":50})
+        _b_n597 = next((s for s in _n597_list if s.get("state")=="heavy_selling_tape"), _n597_list[-1] if _n597_list else {"win_rate":50})
+        if _n597_list:
+            _learn_log.append(f"N597 Tape: heavy_buying_tape={_a_n597['win_rate']:.0f}% heavy_selling_tape={_b_n597['win_rate']:.0f}%WR")
+
+        # ── N598: Options Open Interest entry tuner ────────────────────
+        _n598_raw = tlog.get("options_open_interest_perf", {})
+        _n598_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n598_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n598 = next((s for s in _n598_list if s.get("state")=="high_oi_ticker"), _n598_list[0] if _n598_list else {"win_rate":50})
+        _b_n598 = next((s for s in _n598_list if s.get("state")=="low_oi_ticker"), _n598_list[-1] if _n598_list else {"win_rate":50})
+        if _n598_list:
+            _learn_log.append(f"N598 Options OI: high_oi_ticker={_a_n598['win_rate']:.0f}% low_oi_ticker={_b_n598['win_rate']:.0f}%WR")
+
+        # ── N599: Weekly Trend Alignment entry tuner ────────────────────
+        _n599_raw = tlog.get("weekly_trend_alignment_perf", {})
+        _n599_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n599_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n599 = next((s for s in _n599_list if s.get("state")=="weekly_daily_aligned"), _n599_list[0] if _n599_list else {"win_rate":50})
+        _b_n599 = next((s for s in _n599_list if s.get("state")=="weekly_daily_conflict"), _n599_list[-1] if _n599_list else {"win_rate":50})
+        if _n599_list:
+            _learn_log.append(f"N599 Weekly Align: weekly_daily_aligned={_a_n599['win_rate']:.0f}% weekly_daily_conflict={_b_n599['win_rate']:.0f}%WR")
+
+        # ── N600: Momentum Score Bucket entry tuner ────────────────────
+        _n600_raw = tlog.get("momentum_score_bucket_perf", {})
+        _n600_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n600_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n600 = next((s for s in _n600_list if s.get("state")=="elite_momentum"), _n600_list[0] if _n600_list else {"win_rate":50})
+        _b_n600 = next((s for s in _n600_list if s.get("state")=="weak_momentum"), _n600_list[-1] if _n600_list else {"win_rate":50})
+        if _n600_list:
+            _learn_log.append(f"N600 Momentum: elite_momentum={_a_n600['win_rate']:.0f}% weak_momentum={_b_n600['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -34179,6 +34266,16 @@ def run():
             "technical_pattern_quality_perf": _n588_list,  # N588: technical pattern quality (high/medium/low_quality_pattern) at entry vs outcome
             "market_open_strength_perf": _n589_list,  # N589: market open strength (strong/weak/flat_open) at entry vs outcome
             "price_range_percentile_perf": _n590_list,  # N590: 52-week range position (upper/mid/lower_range) at entry vs outcome
+            "entry_session_quality_perf": _n591_list,  # N591: trading session quality at entry (morning/midday/afternoon_session) vs outcome
+            "vwap_deviation_entry_perf": _n592_list,  # N592: VWAP deviation at entry (extended_above/slightly_above/below_vwap) vs outcome
+            "prior_day_close_relation_perf": _n593_list,  # N593: price vs prior day close (above/near/below_prior_close) vs outcome
+            "intraday_high_proximity_perf": _n594_list,  # N594: intraday high proximity (near_intraday_high/mid_range/near_intraday_low) vs outcome
+            "float_size_perf": _n595_list,  # N595: float size (micro/small/large_float) at entry vs outcome
+            "short_squeeze_velocity_perf": _n596_list,  # N596: short squeeze velocity (explosive_squeeze_setup/moderate_squeeze/no_squeeze) vs outcome
+            "tape_reading_entry_perf": _n597_list,  # N597: tape/order flow quality (heavy_buying/neutral/heavy_selling_tape) vs outcome
+            "options_open_interest_perf": _n598_list,  # N598: options OI context (high/medium/low_oi_ticker) at entry vs outcome
+            "weekly_trend_alignment_perf": _n599_list,  # N599: weekly trend alignment (weekly_daily_aligned/conflict/neutral) vs outcome
+            "momentum_score_bucket_perf": _n600_list,  # N600: composite momentum bucket (elite/strong/moderate/weak_momentum) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -34506,9 +34603,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 550              # total tracked neuron dimensions (N103-N590 complete)
+        tlog["neurons_total"]     = 560              # total tracked neuron dimensions (N103-N600 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/550 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/560 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
