@@ -14306,7 +14306,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 390
+            _n_total = tlog.get("neurons_total") or 400
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours

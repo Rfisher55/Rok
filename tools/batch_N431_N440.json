@@ -1,0 +1,106 @@
+{
+  "batch": "N431-N440",
+  "neurons_total_after": 400,
+  "entries": [
+    {
+      "id": "N431",
+      "key": "overnight_gap_entry_perf",
+      "label": "N431 Overnight Gap Entry",
+      "sell_section": "        # N431: Overnight gap at entry\n        if _lp: _lp.setdefault('overnight_gap_entry_perf',[]).append({'state':str('gap_up' if float((live.get(ticker,{}).get('gap_pct') or live.get(ticker,{}).get('overnight_gap') or 0))>0.01 else 'gap_down' if float((live.get(ticker,{}).get('gap_pct') or live.get(ticker,{}).get('overnight_gap') or 0))<-0.01 else 'flat'),'won':_won})",
+      "buy_section": "        # N431 Overnight Gap Entry\n        _sig_overnight_gap_entry = str('gap_up' if float((live.get(ticker,{}).get('gap_pct') or live.get(ticker,{}).get('overnight_gap') or 0))>0.01 else 'gap_down' if float((live.get(ticker,{}).get('gap_pct') or live.get(ticker,{}).get('overnight_gap') or 0))<-0.01 else 'flat')\n        if _lp: _lp.setdefault('overnight_gap_entry_perf',[]).append({'state':_sig_overnight_gap_entry,'won':None})\n        score += _nbns('overnight_gap_entry_perf', _sig_overnight_gap_entry)\n        score += _npen('overnight_gap_entry_perf', _sig_overnight_gap_entry)",
+      "tune_section": "        _tune_overnight_gap_entry = _best_state('overnight_gap_entry_perf')\n        if _tune_overnight_gap_entry: insights.append(f\"N431 best Overnight Gap Entry: {_tune_overnight_gap_entry}\")",
+      "conviction_key": "            'overnight_gap_entry': _sig_overnight_gap_entry,",
+      "neuron_active_expr": "                bool(_sig_overnight_gap_entry),"
+    },
+    {
+      "id": "N432",
+      "key": "iv_percentile_entry_perf",
+      "label": "N432 IV Percentile Entry",
+      "sell_section": "        # N432: IV percentile at entry\n        if _lp: _lp.setdefault('iv_percentile_entry_perf',[]).append({'state':str('high_iv' if float((live.get(ticker,{}).get('iv_percentile') or live.get(ticker,{}).get('implied_volatility') or 0))>70 else 'low_iv' if float((live.get(ticker,{}).get('iv_percentile') or live.get(ticker,{}).get('implied_volatility') or 0))<30 else 'mid_iv'),'won':_won})",
+      "buy_section": "        # N432 IV Percentile Entry\n        _sig_iv_percentile_entry = str('high_iv' if float((live.get(ticker,{}).get('iv_percentile') or live.get(ticker,{}).get('implied_volatility') or 0))>70 else 'low_iv' if float((live.get(ticker,{}).get('iv_percentile') or live.get(ticker,{}).get('implied_volatility') or 0))<30 else 'mid_iv')\n        if _lp: _lp.setdefault('iv_percentile_entry_perf',[]).append({'state':_sig_iv_percentile_entry,'won':None})\n        score += _nbns('iv_percentile_entry_perf', _sig_iv_percentile_entry)\n        score += _npen('iv_percentile_entry_perf', _sig_iv_percentile_entry)",
+      "tune_section": "        _tune_iv_percentile_entry = _best_state('iv_percentile_entry_perf')\n        if _tune_iv_percentile_entry: insights.append(f\"N432 best IV Percentile Entry: {_tune_iv_percentile_entry}\")",
+      "conviction_key": "            'iv_percentile_entry': _sig_iv_percentile_entry,",
+      "neuron_active_expr": "                bool(_sig_iv_percentile_entry),"
+    },
+    {
+      "id": "N433",
+      "key": "price_momentum_5d_perf",
+      "label": "N433 Price Momentum 5D",
+      "sell_section": "        # N433: Price momentum 5D at entry\n        if _lp: _lp.setdefault('price_momentum_5d_perf',[]).append({'state':str('strong_up' if float((live.get(ticker,{}).get('change_5d') or live.get(ticker,{}).get('week_change') or 0))>5 else 'flat_neg' if float((live.get(ticker,{}).get('change_5d') or live.get(ticker,{}).get('week_change') or 0))<0 else 'mild_up'),'won':_won})",
+      "buy_section": "        # N433 Price Momentum 5D\n        _sig_price_momentum_5d = str('strong_up' if float((live.get(ticker,{}).get('change_5d') or live.get(ticker,{}).get('week_change') or 0))>5 else 'flat_neg' if float((live.get(ticker,{}).get('change_5d') or live.get(ticker,{}).get('week_change') or 0))<0 else 'mild_up')\n        if _lp: _lp.setdefault('price_momentum_5d_perf',[]).append({'state':_sig_price_momentum_5d,'won':None})\n        score += _nbns('price_momentum_5d_perf', _sig_price_momentum_5d)\n        score += _npen('price_momentum_5d_perf', _sig_price_momentum_5d)",
+      "tune_section": "        _tune_price_momentum_5d = _best_state('price_momentum_5d_perf')\n        if _tune_price_momentum_5d: insights.append(f\"N433 best Price Momentum 5D: {_tune_price_momentum_5d}\")",
+      "conviction_key": "            'price_momentum_5d': _sig_price_momentum_5d,",
+      "neuron_active_expr": "                bool(_sig_price_momentum_5d),"
+    },
+    {
+      "id": "N434",
+      "key": "news_sentiment_score_perf",
+      "label": "N434 News Sentiment Score",
+      "sell_section": "        # N434: News sentiment score at entry\n        if _lp: _lp.setdefault('news_sentiment_score_perf',[]).append({'state':str('bullish' if float((live.get(ticker,{}).get('news_sentiment') or live.get(ticker,{}).get('sentiment_score') or 0))>0.3 else 'bearish' if float((live.get(ticker,{}).get('news_sentiment') or live.get(ticker,{}).get('sentiment_score') or 0))<-0.3 else 'neutral'),'won':_won})",
+      "buy_section": "        # N434 News Sentiment Score\n        _sig_news_sentiment_score = str('bullish' if float((live.get(ticker,{}).get('news_sentiment') or live.get(ticker,{}).get('sentiment_score') or 0))>0.3 else 'bearish' if float((live.get(ticker,{}).get('news_sentiment') or live.get(ticker,{}).get('sentiment_score') or 0))<-0.3 else 'neutral')\n        if _lp: _lp.setdefault('news_sentiment_score_perf',[]).append({'state':_sig_news_sentiment_score,'won':None})\n        score += _nbns('news_sentiment_score_perf', _sig_news_sentiment_score)\n        score += _npen('news_sentiment_score_perf', _sig_news_sentiment_score)",
+      "tune_section": "        _tune_news_sentiment_score = _best_state('news_sentiment_score_perf')\n        if _tune_news_sentiment_score: insights.append(f\"N434 best News Sentiment Score: {_tune_news_sentiment_score}\")",
+      "conviction_key": "            'news_sentiment_score': _sig_news_sentiment_score,",
+      "neuron_active_expr": "                bool(_sig_news_sentiment_score),"
+    },
+    {
+      "id": "N435",
+      "key": "short_interest_ratio_perf",
+      "label": "N435 Short Interest Ratio",
+      "sell_section": "        # N435: Short interest ratio at entry\n        if _lp: _lp.setdefault('short_interest_ratio_perf',[]).append({'state':str('high_si' if float((live.get(ticker,{}).get('short_interest') or live.get(ticker,{}).get('short_ratio') or 0))>15 else 'low_si' if float((live.get(ticker,{}).get('short_interest') or live.get(ticker,{}).get('short_ratio') or 0))<5 else 'mid_si'),'won':_won})",
+      "buy_section": "        # N435 Short Interest Ratio\n        _sig_short_interest_ratio = str('high_si' if float((live.get(ticker,{}).get('short_interest') or live.get(ticker,{}).get('short_ratio') or 0))>15 else 'low_si' if float((live.get(ticker,{}).get('short_interest') or live.get(ticker,{}).get('short_ratio') or 0))<5 else 'mid_si')\n        if _lp: _lp.setdefault('short_interest_ratio_perf',[]).append({'state':_sig_short_interest_ratio,'won':None})\n        score += _nbns('short_interest_ratio_perf', _sig_short_interest_ratio)\n        score += _npen('short_interest_ratio_perf', _sig_short_interest_ratio)",
+      "tune_section": "        _tune_short_interest_ratio = _best_state('short_interest_ratio_perf')\n        if _tune_short_interest_ratio: insights.append(f\"N435 best Short Interest Ratio: {_tune_short_interest_ratio}\")",
+      "conviction_key": "            'short_interest_ratio': _sig_short_interest_ratio,",
+      "neuron_active_expr": "                bool(_sig_short_interest_ratio),"
+    },
+    {
+      "id": "N436",
+      "key": "analyst_revision_trend_perf",
+      "label": "N436 Analyst Revision Trend",
+      "sell_section": "        # N436: Analyst revision trend at entry\n        if _lp: _lp.setdefault('analyst_revision_trend_perf',[]).append({'state':str('upgrades' if float((live.get(ticker,{}).get('analyst_revisions') or live.get(ticker,{}).get('estimate_revisions') or 0))>0 else 'downgrades' if float((live.get(ticker,{}).get('analyst_revisions') or live.get(ticker,{}).get('estimate_revisions') or 0))<0 else 'neutral'),'won':_won})",
+      "buy_section": "        # N436 Analyst Revision Trend\n        _sig_analyst_revision_trend = str('upgrades' if float((live.get(ticker,{}).get('analyst_revisions') or live.get(ticker,{}).get('estimate_revisions') or 0))>0 else 'downgrades' if float((live.get(ticker,{}).get('analyst_revisions') or live.get(ticker,{}).get('estimate_revisions') or 0))<0 else 'neutral')\n        if _lp: _lp.setdefault('analyst_revision_trend_perf',[]).append({'state':_sig_analyst_revision_trend,'won':None})\n        score += _nbns('analyst_revision_trend_perf', _sig_analyst_revision_trend)\n        score += _npen('analyst_revision_trend_perf', _sig_analyst_revision_trend)",
+      "tune_section": "        _tune_analyst_revision_trend = _best_state('analyst_revision_trend_perf')\n        if _tune_analyst_revision_trend: insights.append(f\"N436 best Analyst Revision Trend: {_tune_analyst_revision_trend}\")",
+      "conviction_key": "            'analyst_revision_trend': _sig_analyst_revision_trend,",
+      "neuron_active_expr": "                bool(_sig_analyst_revision_trend),"
+    },
+    {
+      "id": "N437",
+      "key": "beta_regime_fit_perf",
+      "label": "N437 Beta Regime Fit",
+      "sell_section": "        # N437: Beta regime fit at entry\n        if _lp: _lp.setdefault('beta_regime_fit_perf',[]).append({'state':str('good_fit' if (float(live.get(ticker,{}).get('beta',1.0) or 1.0)>1.3 and tlog.get('market_regime','neutral')=='bull') or (float(live.get(ticker,{}).get('beta',1.0) or 1.0)<0.8 and tlog.get('market_regime','neutral')=='bear') else 'bad_fit' if (float(live.get(ticker,{}).get('beta',1.0) or 1.0)<0.8 and tlog.get('market_regime','neutral')=='bull') or (float(live.get(ticker,{}).get('beta',1.0) or 1.0)>1.3 and tlog.get('market_regime','neutral')=='bear') else 'neutral_fit'),'won':_won})",
+      "buy_section": "        # N437 Beta Regime Fit\n        _sig_beta_regime_fit = str('good_fit' if (float(live.get(ticker,{}).get('beta',1.0) or 1.0)>1.3 and tlog.get('market_regime','neutral')=='bull') or (float(live.get(ticker,{}).get('beta',1.0) or 1.0)<0.8 and tlog.get('market_regime','neutral')=='bear') else 'bad_fit' if (float(live.get(ticker,{}).get('beta',1.0) or 1.0)<0.8 and tlog.get('market_regime','neutral')=='bull') or (float(live.get(ticker,{}).get('beta',1.0) or 1.0)>1.3 and tlog.get('market_regime','neutral')=='bear') else 'neutral_fit')\n        if _lp: _lp.setdefault('beta_regime_fit_perf',[]).append({'state':_sig_beta_regime_fit,'won':None})\n        score += _nbns('beta_regime_fit_perf', _sig_beta_regime_fit)\n        score += _npen('beta_regime_fit_perf', _sig_beta_regime_fit)",
+      "tune_section": "        _tune_beta_regime_fit = _best_state('beta_regime_fit_perf')\n        if _tune_beta_regime_fit: insights.append(f\"N437 best Beta Regime Fit: {_tune_beta_regime_fit}\")",
+      "conviction_key": "            'beta_regime_fit': _sig_beta_regime_fit,",
+      "neuron_active_expr": "                bool(_sig_beta_regime_fit),"
+    },
+    {
+      "id": "N438",
+      "key": "days_since_earnings_perf",
+      "label": "N438 Days Since Earnings",
+      "sell_section": "        # N438: Days since earnings at entry\n        if _lp: _lp.setdefault('days_since_earnings_perf',[]).append({'state':str('fresh' if int((live.get(ticker,{}).get('days_since_earnings') or 45))<14 else 'stale' if int((live.get(ticker,{}).get('days_since_earnings') or 45))>60 else 'mid_window'),'won':_won})",
+      "buy_section": "        # N438 Days Since Earnings\n        _sig_days_since_earnings = str('fresh' if int((live.get(ticker,{}).get('days_since_earnings') or 45))<14 else 'stale' if int((live.get(ticker,{}).get('days_since_earnings') or 45))>60 else 'mid_window')\n        if _lp: _lp.setdefault('days_since_earnings_perf',[]).append({'state':_sig_days_since_earnings,'won':None})\n        score += _nbns('days_since_earnings_perf', _sig_days_since_earnings)\n        score += _npen('days_since_earnings_perf', _sig_days_since_earnings)",
+      "tune_section": "        _tune_days_since_earnings = _best_state('days_since_earnings_perf')\n        if _tune_days_since_earnings: insights.append(f\"N438 best Days Since Earnings: {_tune_days_since_earnings}\")",
+      "conviction_key": "            'days_since_earnings': _sig_days_since_earnings,",
+      "neuron_active_expr": "                bool(_sig_days_since_earnings),"
+    },
+    {
+      "id": "N439",
+      "key": "put_call_ratio_perf",
+      "label": "N439 Put/Call Ratio",
+      "sell_section": "        # N439: Put/call ratio at entry\n        if _lp: _lp.setdefault('put_call_ratio_perf',[]).append({'state':str('low_pcr' if float(live.get('PCR', live.get('put_call_ratio', {})).get('price', live.get('put_call_ratio', 1.0)) if isinstance(live.get('PCR', live.get('put_call_ratio', {})), dict) else float(live.get('PCR', 1.0) or 1.0))<0.8 else 'high_pcr' if float(live.get('PCR', live.get('put_call_ratio', {})).get('price', live.get('put_call_ratio', 1.0)) if isinstance(live.get('PCR', live.get('put_call_ratio', {})), dict) else float(live.get('PCR', 1.0) or 1.0))>1.2 else 'mid_pcr'),'won':_won})",
+      "buy_section": "        # N439 Put/Call Ratio\n        _sig_put_call_ratio = str('low_pcr' if float(live.get('PCR', live.get('put_call_ratio', {})).get('price', live.get('put_call_ratio', 1.0)) if isinstance(live.get('PCR', live.get('put_call_ratio', {})), dict) else float(live.get('PCR', 1.0) or 1.0))<0.8 else 'high_pcr' if float(live.get('PCR', live.get('put_call_ratio', {})).get('price', live.get('put_call_ratio', 1.0)) if isinstance(live.get('PCR', live.get('put_call_ratio', {})), dict) else float(live.get('PCR', 1.0) or 1.0))>1.2 else 'mid_pcr')\n        if _lp: _lp.setdefault('put_call_ratio_perf',[]).append({'state':_sig_put_call_ratio,'won':None})\n        score += _nbns('put_call_ratio_perf', _sig_put_call_ratio)\n        score += _npen('put_call_ratio_perf', _sig_put_call_ratio)",
+      "tune_section": "        _tune_put_call_ratio = _best_state('put_call_ratio_perf')\n        if _tune_put_call_ratio: insights.append(f\"N439 best Put/Call Ratio: {_tune_put_call_ratio}\")",
+      "conviction_key": "            'put_call_ratio': _sig_put_call_ratio,",
+      "neuron_active_expr": "                bool(_sig_put_call_ratio),"
+    },
+    {
+      "id": "N440",
+      "key": "trend_strength_adx_perf",
+      "label": "N440 Trend Strength ADX",
+      "sell_section": "        # N440: Trend strength ADX at entry\n        if _lp: _lp.setdefault('trend_strength_adx_perf',[]).append({'state':str('strong_trend' if float(live.get(ticker,{}).get('adx', live.get(ticker,{}).get('ADX', 0)) or 0)>25 else 'ranging' if float(live.get(ticker,{}).get('adx', live.get(ticker,{}).get('ADX', 0)) or 0)<10 else 'weak_trend'),'won':_won})",
+      "buy_section": "        # N440 Trend Strength ADX\n        _sig_trend_strength_adx = str('strong_trend' if float(live.get(ticker,{}).get('adx', live.get(ticker,{}).get('ADX', 0)) or 0)>25 else 'ranging' if float(live.get(ticker,{}).get('adx', live.get(ticker,{}).get('ADX', 0)) or 0)<10 else 'weak_trend')\n        if _lp: _lp.setdefault('trend_strength_adx_perf',[]).append({'state':_sig_trend_strength_adx,'won':None})\n        score += _nbns('trend_strength_adx_perf', _sig_trend_strength_adx)\n        score += _npen('trend_strength_adx_perf', _sig_trend_strength_adx)",
+      "tune_section": "        _tune_trend_strength_adx = _best_state('trend_strength_adx_perf')\n        if _tune_trend_strength_adx: insights.append(f\"N440 best Trend Strength ADX: {_tune_trend_strength_adx}\")",
+      "conviction_key": "            'trend_strength_adx': _sig_trend_strength_adx,",
+      "neuron_active_expr": "                bool(_sig_trend_strength_adx),"
+    }
+  ]
+}

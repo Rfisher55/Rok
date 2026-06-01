@@ -445,6 +445,16 @@ def _build_weekly_bot_report(docs_dir):
         "bollinger_position_entry_perf": "N428 Bollinger Position Entry",
         "earnings_window_entry_perf": "N429 Earnings Window Entry",
         "liquidity_dollar_volume_perf": "N430 Liquidity Dollar Volume",
+        "overnight_gap_entry_perf": "N431 Overnight Gap Entry",
+        "iv_percentile_entry_perf": "N432 IV Percentile Entry",
+        "price_momentum_5d_perf": "N433 Price Momentum 5D",
+        "news_sentiment_score_perf": "N434 News Sentiment Score",
+        "short_interest_ratio_perf": "N435 Short Interest Ratio",
+        "analyst_revision_trend_perf": "N436 Analyst Revision Trend",
+        "beta_regime_fit_perf": "N437 Beta Regime Fit",
+        "days_since_earnings_perf": "N438 Days Since Earnings",
+        "put_call_ratio_perf": "N439 Put/Call Ratio",
+        "trend_strength_adx_perf": "N440 Trend Strength ADX",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
