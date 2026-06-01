@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 790)
+    neurons_total = td.get("neurons_total", 800)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -844,6 +844,16 @@ def _build_weekly_bot_report(docs_dir):
         "volume_trend_perf":                    "N828 Volume Trend",
         "market_internals_perf":                "N829 Market Internals",
         "fundamental_quality_perf":             "N830 Fundamental Quality",
+        "gap_type_perf":                        "N831 Gap Type",
+        "earnings_proximity_perf":              "N832 Earnings Proximity",
+        "institutional_flow_perf":              "N833 Institutional Flow",
+        "price_vs_52w_perf":                    "N834 Price vs 52W Range",
+        "sector_momentum_perf":                 "N835 Sector Momentum",
+        "short_float_perf":                     "N836 Short Float",
+        "market_cap_tier_perf":                 "N837 Market Cap Tier",
+        "float_quality_perf":                   "N838 Float Quality",
+        "news_freshness_perf":                  "N839 News Freshness",
+        "analyst_sentiment_perf":               "N840 Analyst Sentiment",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -1299,7 +1309,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 790),
+                "neurons_total":    td.get("neurons_total", 800),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -1400,6 +1410,34 @@ def _run():
                 })(),
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
+            # Enrich brain_analytics with hourly win rate data (from trades history)
+            try:
+                _hr_wr = {}
+                for _ht in (td.get("trades") or []):
+                    if _ht.get("action") not in ("SELL", "SELL_HALF", "COVER"): continue
+                    _hpnl = _ht.get("pnl_pct") or _ht.get("pnl_usd") or 0
+                    _hts = _ht.get("entry_time") or _ht.get("time") or ""
+                    if not _hts or _hpnl == 0: continue
+                    try:
+                        from zoneinfo import ZoneInfo as _ZI
+                        _het = datetime.fromisoformat(_hts.replace("Z", "+00:00"))
+                        _hhr = _het.astimezone(_ZI("America/New_York")).hour
+                        _hr_wr.setdefault(_hhr, {"wins": 0, "total": 0})
+                        _hr_wr[_hhr]["total"] += 1
+                        if _hpnl > 0: _hr_wr[_hhr]["wins"] += 1
+                    except Exception:
+                        pass
+                if _hr_wr and live_market_context.get("brain_analytics") is not None:
+                    _bhr = max(_hr_wr.items(), key=lambda x: x[1]["wins"]/max(x[1]["total"],1) if x[1]["total"] >= 2 else 0)
+                    live_market_context["brain_analytics"]["best_entry_hour"] = {
+                        "hour_et": _bhr[0], "win_rate": round(_bhr[1]["wins"]/_bhr[1]["total"]*100), "samples": _bhr[1]["total"]
+                    }
+                    live_market_context["brain_analytics"]["hourly_win_rates"] = [
+                        {"hour": h, "win_rate": round(v["wins"]/v["total"]*100), "samples": v["total"]}
+                        for h, v in sorted(_hr_wr.items()) if v["total"] >= 2
+                    ]
+            except Exception:
+                pass
     except Exception as _te:
         logger.warning(f"Could not load trades.json: {_te}")
 
@@ -1648,7 +1686,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 790),
+            "neurons_total":   live_market_context.get("neurons_total", 800),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),

@@ -1,0 +1,23 @@
+{
+  "batch": "N831-N840",
+  "date": "2026-06-01",
+  "total_neurons_after": 800,
+  "neurons": [
+    {"id": "N831", "key": "gap_type_perf", "name": "Gap Type"},
+    {"id": "N832", "key": "earnings_proximity_perf", "name": "Earnings Proximity"},
+    {"id": "N833", "key": "institutional_flow_perf", "name": "Institutional Flow"},
+    {"id": "N834", "key": "price_vs_52w_perf", "name": "Price vs 52-Week Range"},
+    {"id": "N835", "key": "sector_momentum_perf", "name": "Sector Momentum"},
+    {"id": "N836", "key": "short_float_perf", "name": "Short Float"},
+    {"id": "N837", "key": "market_cap_tier_perf", "name": "Market Cap Tier"},
+    {"id": "N838", "key": "float_quality_perf", "name": "Float Quality"},
+    {"id": "N839", "key": "news_freshness_perf", "name": "News Freshness"},
+    {"id": "N840", "key": "analyst_sentiment_perf", "name": "Analyst Sentiment"}
+  ],
+  "sections_modified": [
+    "SELL tracker (after N830 block, ~line 13385)",
+    "BUY signal classifier (after N830 classifier block, ~line 33102)",
+    "Tuner pairs list (after N830 entry, ~line 41800)",
+    "bot_learned_params (after N830 entry, ~line 42931)"
+  ]
+}
