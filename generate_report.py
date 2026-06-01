@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 770)
+    neurons_total = td.get("neurons_total", 780)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -824,6 +824,16 @@ def _build_weekly_bot_report(docs_dir):
         "gap_size_perf":                        "N808 Gap Size",
         "short_squeeze_risk_perf":              "N809 Short Squeeze Risk",
         "institutional_flow_perf":              "N810 Institutional Flow",
+        "price_discovery_phase_perf":           "N811 Price Discovery Phase",
+        "momentum_persistence_perf":            "N812 Momentum Persistence",
+        "relative_volume_tier_perf":            "N813 Relative Volume Tier",
+        "price_structure_quality_perf":         "N814 Price Structure Quality",
+        "catalyst_recency_perf":                "N815 Catalyst Recency",
+        "sector_leadership_perf":               "N816 Sector Leadership",
+        "options_iv_environment_perf":          "N817 Options IV Environment",
+        "breadth_alignment_perf":               "N818 Breadth Alignment",
+        "entry_vs_ema_perf":                    "N819 Entry vs EMA",
+        "daily_pnl_context_perf":               "N820 Daily P&L Context",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -1279,7 +1289,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 770),
+                "neurons_total":    td.get("neurons_total", 780),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),
@@ -1628,7 +1638,7 @@ def _run():
             "strategy_mode":   live_market_context.get("strategy_mode", ""),
             "bot_conviction":  live_market_context.get("bot_conviction", 0),
             "neurons_active":  live_market_context.get("neurons_active", 0),
-            "neurons_total":   live_market_context.get("neurons_total", 770),
+            "neurons_total":   live_market_context.get("neurons_total", 780),
             "market_open":     live_market_context.get("market_open", False),
             "win_rate":        live_market_context.get("win_rate", 0),
             "drawdown_pct":    live_market_context.get("drawdown_pct", 0),

@@ -1,0 +1,25 @@
+{
+  "batch": "N811-N820",
+  "date": "2026-06-01",
+  "total_neurons_after": 780,
+  "neurons": [
+    {"id": "N811", "key": "price_discovery_phase_perf", "name": "Price Discovery Phase"},
+    {"id": "N812", "key": "momentum_persistence_perf", "name": "Momentum Persistence"},
+    {"id": "N813", "key": "relative_volume_tier_perf", "name": "Relative Volume Tier"},
+    {"id": "N814", "key": "price_structure_quality_perf", "name": "Price Structure Quality"},
+    {"id": "N815", "key": "catalyst_recency_perf", "name": "Catalyst Recency"},
+    {"id": "N816", "key": "sector_leadership_perf", "name": "Sector Leadership"},
+    {"id": "N817", "key": "options_iv_environment_perf", "name": "Options IV Environment"},
+    {"id": "N818", "key": "breadth_alignment_perf", "name": "Breadth Alignment"},
+    {"id": "N819", "key": "entry_vs_ema_perf", "name": "Entry vs EMA"},
+    {"id": "N820", "key": "daily_pnl_context_perf", "name": "Daily PnL Context"}
+  ],
+  "sections_modified": [
+    "SELL tracker (after N810 block, ~line 13085)",
+    "BUY signal classifiers (after N810 classifier, ~line 32497)",
+    "Tuner pairs list (after N810 entry, ~line 41168)",
+    "bot_learned_params (after N810 entry, ~line 42279)",
+    "neurons_total updated 770 -> 780",
+    "logger string updated /770 -> /780"
+  ]
+}
