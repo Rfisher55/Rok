@@ -65,21 +65,24 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 12      # max open long positions
-MAX_SHORTS         = 4       # max open short positions
-MAX_POSITION_PCT   = 0.10    # max 10% of portfolio per position
-RISK_PER_TRADE_PCT = 0.01    # risk 1% of portfolio per trade (ATR-sized)
-STOP_LOSS_PCT      = 0.07    # hard stop: sell if down 7%
-PROFIT_TARGET_PCT  = 0.20    # take full profit at +20%
-PARTIAL_PROFIT_PCT = 0.10    # take half profit at +10%
-TRAILING_STOP_PCT  = 0.05    # trailing stop: sell if falls 5% from peak
-MIN_BUY_SCORE      = 15      # minimum composite score to enter long
-MIN_SHORT_SCORE    = 18      # min bearish score to enter short
-MAX_HOLD_DAYS      = 5       # exit stale positions after N days
-MAX_SECTOR_LONGS   = 4       # max long positions per sector
+MAX_POSITIONS      = 20      # max open long positions — expanded for learning volume
+MAX_SHORTS         = 6       # max open short positions — more shorts = more data
+MAX_POSITION_PCT   = 0.07    # max 7% of portfolio per position (smaller = more positions)
+RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
+STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cycling)
+PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
+PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
+TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
+MIN_BUY_SCORE      = 10      # aggressive learning phase: enter on more signals
+MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
+MAX_HOLD_DAYS      = 2       # exit stale positions faster — cycle capital for learning
+MAX_SECTOR_LONGS   = 6       # more positions per sector to generate more data
 ENABLE_SHORTS      = True    # enable short selling in bear/neutral regime
 VIX_HIGH_THRESH    = 30      # reduce position sizes when VIX above this
 VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
+# Intraday cycling: sell same-day positions that hit quick target or stop early
+INTRADAY_QUICK_TARGET = 0.03  # exit same day at +3% — quick flip for learning data
+INTRADAY_QUICK_STOP   = 0.02  # exit same day at -2% if entered last 90 min
 
 TRADES_FILE  = Path("docs/trades.json")
 PEAK_FILE    = Path("docs/peaks.json")
@@ -88,8 +91,8 @@ PRICES_FILE  = Path("docs/prices.json")
 
 # ── Crypto config ─────────────────────────────────────────────────────────────
 ENABLE_CRYPTO    = True
-MAX_CRYPTO_POS   = 3        # max concurrent crypto positions
-CRYPTO_MAX_PCT   = 0.07     # max 7% portfolio per crypto position
+MAX_CRYPTO_POS   = 8        # max concurrent crypto positions — expanded for learning
+CRYPTO_MAX_PCT   = 0.06     # max 6% portfolio per crypto position
 # Alpaca crypto symbols → yfinance equivalents
 CRYPTO_UNIVERSE  = {
     "BTC/USD":  "BTC-USD",
@@ -98,9 +101,16 @@ CRYPTO_UNIVERSE  = {
     "AVAX/USD": "AVAX-USD",
     "DOGE/USD": "DOGE-USD",
     "XRP/USD":  "XRP-USD",
+    "LTC/USD":  "LTC-USD",
+    "LINK/USD": "LINK-USD",
+    "DOT/USD":  "DOT-USD",
+    "UNI/USD":  "UNI-USD",
 }
-CRYPTO_STOP_PCT  = 0.10     # crypto is volatile: 10% stop
-CRYPTO_TARGET_PCT= 0.25     # 25% profit target for crypto
+CRYPTO_STOP_PCT  = 0.08     # 8% stop — tighter for faster learning cycles
+CRYPTO_TARGET_PCT= 0.12     # 12% target — faster turnover = more trades = more learning
+# Learning phase: lower score gates so the brain gets real data fast
+CRYPTO_MIN_SCORE = 10       # minimum technical score to consider (was 22)
+CRYPTO_MIN_COMBINED = 8     # minimum tech+AI combined to enter (was 20)
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
@@ -1049,6 +1059,16 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 e["is_reentry"] = False
         except Exception:
             e["is_reentry"] = False
+
+    # ── Crypto-specific neuron state tags at BUY entry ────────────────────────
+    # These fields are read back on SELL to update N881-N890 crypto neurons.
+    if action == "BUY" and "/" in sym and signals:
+        for _ckey in ("crypto_momentum_tier", "crypto_rsi_zone", "crypto_vol_surge",
+                      "crypto_ema_cross", "crypto_dow", "crypto_asset_class",
+                      "crypto_score_tier", "crypto_ai_score", "crypto_btc_dom",
+                      "crypto_hour_utc"):
+            if _ckey in signals:
+                e[_ckey] = signals[_ckey]
 
     tlog.setdefault("trades", []).insert(0, e)
     tlog["trades"] = tlog["trades"][:500]
@@ -14196,6 +14216,207 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N881: Bitcoin / Crypto Momentum Tier Neuron ───────────────────────────────
+    # Learns which ROC5 momentum bucket produces winning crypto trades.
+    # BTC explosive momentum may overshoot — learns whether to chase or wait.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c881_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c881_state = _c881_entry.get("crypto_momentum_tier", "unknown") if _c881_entry else "unknown"
+            if _c881_state and _c881_state != "unknown":
+                _c881_perf = tlog.setdefault("crypto_momentum_perf", {})
+                _c881_rec  = _c881_perf.setdefault(_c881_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+                _c881_rec["total"] += 1
+                _c881_rec["total_pnl"] = round(_c881_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+                if pnl_pct > 0: _c881_rec["wins"] += 1
+                else:           _c881_rec["losses"] += 1
+                _c881_rec["win_rate"] = round(_c881_rec["wins"] / max(_c881_rec["total"], 1) * 100, 1)
+                _c881_rec["avg_pnl"]  = round(_c881_rec["total_pnl"] / max(_c881_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N882: Crypto AI Sentiment Accuracy Neuron ──────────────────────────────
+    # Tracks whether the AI sentiment score at entry predicted the actual outcome.
+    # High AI score + win = AI is useful; high AI score + loss = AI is overrated here.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c882_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c882_ai = float(_c882_entry.get("crypto_ai_score", 0)) if _c882_entry else 0.0
+            _c882_bkt = ("positive" if _c882_ai > 2 else "neutral" if _c882_ai >= -2 else "negative")
+            _c882_perf = tlog.setdefault("crypto_ai_sentiment_perf", {})
+            _c882_rec  = _c882_perf.setdefault(_c882_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c882_rec["total"] += 1
+            _c882_rec["total_pnl"] = round(_c882_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c882_rec["wins"] += 1
+            else:           _c882_rec["losses"] += 1
+            _c882_rec["win_rate"] = round(_c882_rec["wins"] / max(_c882_rec["total"], 1) * 100, 1)
+            _c882_rec["avg_pnl"]  = round(_c882_rec["total_pnl"] / max(_c882_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N883: Crypto Hold Duration Neuron ─────────────────────────────────────
+    # Learns optimal hold time for crypto positions. Fast exits (<4h) may cut winners;
+    # long holds (>2 days) may ride through full reversals.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c883_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _c883_entry:
+                from datetime import datetime as _dt883
+                _buy_ts = _c883_entry.get("time", "")
+                _sell_ts = datetime.now(timezone.utc).isoformat()
+                if _buy_ts:
+                    try:
+                        _held_hours = (_dt883.fromisoformat(_sell_ts.replace("Z","")) - _dt883.fromisoformat(_buy_ts.replace("Z",""))).total_seconds() / 3600
+                    except Exception:
+                        _held_hours = 24
+                    _hold_bkt = ("scalp_<4h" if _held_hours < 4 else "intraday_4-24h" if _held_hours < 24
+                                 else "swing_1-3d" if _held_hours < 72 else "hold_3d+")
+                    _c883_perf = tlog.setdefault("crypto_hold_duration_perf", {})
+                    _c883_rec  = _c883_perf.setdefault(_hold_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+                    _c883_rec["total"] += 1
+                    _c883_rec["total_pnl"] = round(_c883_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+                    if pnl_pct > 0: _c883_rec["wins"] += 1
+                    else:           _c883_rec["losses"] += 1
+                    _c883_rec["win_rate"] = round(_c883_rec["wins"] / max(_c883_rec["total"], 1) * 100, 1)
+                    _c883_rec["avg_pnl"]  = round(_c883_rec["total_pnl"] / max(_c883_rec["total"], 1), 2)
+                    tlog["crypto_hold_duration_perf"] = _c883_perf
+                    # Feed best hold duration into bot_learned_params
+                    _best_bkt = max(_c883_perf.items(), key=lambda kv: kv[1].get("win_rate", 0) * max(kv[1].get("total", 0), 1), default=(None, {}))[0]
+                    if _best_bkt:
+                        tlog.setdefault("bot_learned_params", {})["best_crypto_hold"] = _best_bkt
+        except Exception:
+            pass
+
+    # ── N884: Crypto Score Tier Neuron ────────────────────────────────────────
+    # Learns which score tier (speculative/low/medium/high) actually wins.
+    # Adjusts effective CRYPTO_MIN_SCORE dynamically based on results.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c884_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c884_state = _c884_entry.get("crypto_score_tier", "low") if _c884_entry else "low"
+            _c884_perf  = tlog.setdefault("crypto_score_tier_perf", {})
+            _c884_rec   = _c884_perf.setdefault(_c884_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c884_rec["total"] += 1
+            _c884_rec["total_pnl"] = round(_c884_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c884_rec["wins"] += 1
+            else:           _c884_rec["losses"] += 1
+            _c884_rec["win_rate"] = round(_c884_rec["wins"] / max(_c884_rec["total"], 1) * 100, 1)
+            # Find the lowest score tier with a positive win rate — that becomes learned min
+            _tier_map = {"speculative": 10, "low": 15, "medium": 25, "high": 40}
+            _best_tier = min((_t for _t, _d in _c884_perf.items()
+                              if _d.get("win_rate", 0) >= 52 and _d.get("total", 0) >= 3),
+                             key=lambda _t: _tier_map.get(_t, 99), default=None)
+            if _best_tier:
+                tlog.setdefault("bot_learned_params", {})["best_crypto_score_tier"] = _tier_map[_best_tier]
+        except Exception:
+            pass
+
+    # ── N885: BTC Dominance at Entry Neuron ───────────────────────────────────
+    # Learns whether entering during high/neutral/low BTC dom produces better results.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c885_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c885_dom   = float(_c885_entry.get("crypto_btc_dom", 55)) if _c885_entry else 55.0
+            _c885_bkt   = ("high_dom" if _c885_dom > 60 else "low_dom" if _c885_dom < 50 else "neutral_dom")
+            _c885_perf  = tlog.setdefault("crypto_btcdom_perf", {})
+            _c885_rec   = _c885_perf.setdefault(_c885_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c885_rec["total"] += 1
+            _c885_rec["total_pnl"] = round(_c885_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c885_rec["wins"] += 1
+            else:           _c885_rec["losses"] += 1
+            _c885_rec["win_rate"] = round(_c885_rec["wins"] / max(_c885_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N886: Crypto RSI Zone Neuron ──────────────────────────────────────────
+    # Learns whether oversold/neutral/overbought RSI at entry produces best outcomes.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c886_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c886_state = _c886_entry.get("crypto_rsi_zone", "neutral") if _c886_entry else "neutral"
+            _c886_perf  = tlog.setdefault("crypto_rsi_zone_perf", {})
+            _c886_rec   = _c886_perf.setdefault(_c886_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c886_rec["total"] += 1
+            _c886_rec["total_pnl"] = round(_c886_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c886_rec["wins"] += 1
+            else:           _c886_rec["losses"] += 1
+            _c886_rec["win_rate"] = round(_c886_rec["wins"] / max(_c886_rec["total"], 1) * 100, 1)
+            _c886_rec["avg_pnl"]  = round(_c886_rec["total_pnl"] / max(_c886_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N887: Crypto Volume Surge Neuron ──────────────────────────────────────
+    # Learns whether volume surge entries outperform dry/normal volume entries.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c887_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c887_state = _c887_entry.get("crypto_vol_surge", "normal") if _c887_entry else "normal"
+            _c887_perf  = tlog.setdefault("crypto_vol_surge_perf", {})
+            _c887_rec   = _c887_perf.setdefault(_c887_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c887_rec["total"] += 1
+            _c887_rec["total_pnl"] = round(_c887_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c887_rec["wins"] += 1
+            else:           _c887_rec["losses"] += 1
+            _c887_rec["win_rate"] = round(_c887_rec["wins"] / max(_c887_rec["total"], 1) * 100, 1)
+            _c887_rec["avg_pnl"]  = round(_c887_rec["total_pnl"] / max(_c887_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── N888: Crypto EMA Cross Neuron ─────────────────────────────────────────
+    # Tracks whether bull/flat/bear EMA cross at crypto entry predicts outcome.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c888_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c888_state = _c888_entry.get("crypto_ema_cross", "flat") if _c888_entry else "flat"
+            _c888_perf  = tlog.setdefault("crypto_ema_cross_perf", {})
+            _c888_rec   = _c888_perf.setdefault(_c888_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c888_rec["total"] += 1
+            _c888_rec["total_pnl"] = round(_c888_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c888_rec["wins"] += 1
+            else:           _c888_rec["losses"] += 1
+            _c888_rec["win_rate"] = round(_c888_rec["wins"] / max(_c888_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N889: Crypto Day-of-Week Neuron ───────────────────────────────────────
+    # Crypto is 24/7 — learns which day of week produces best entry outcomes.
+    # Weekends can have thin liquidity spikes or institutional gaps.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c889_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c889_state = _c889_entry.get("crypto_dow", "Mon") if _c889_entry else "Mon"
+            _c889_perf  = tlog.setdefault("crypto_dow_perf", {})
+            _c889_rec   = _c889_perf.setdefault(_c889_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c889_rec["total"] += 1
+            _c889_rec["total_pnl"] = round(_c889_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c889_rec["wins"] += 1
+            else:           _c889_rec["losses"] += 1
+            _c889_rec["win_rate"] = round(_c889_rec["wins"] / max(_c889_rec["total"], 1) * 100, 1)
+        except Exception:
+            pass
+
+    # ── N890: Crypto Asset Class Neuron ───────────────────────────────────────
+    # Learns relative performance: BTC vs ETH vs ALT coins.
+    # If ALTs keep losing, brain learns to concentrate on BTC/ETH in risk-off.
+    if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
+        try:
+            _c890_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c890_state = _c890_entry.get("crypto_asset_class", "ALT") if _c890_entry else "ALT"
+            _c890_perf  = tlog.setdefault("crypto_asset_perf", {})
+            _c890_rec   = _c890_perf.setdefault(_c890_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
+            _c890_rec["total"] += 1
+            _c890_rec["total_pnl"] = round(_c890_rec.get("total_pnl", 0.0) + pnl_pct, 2)
+            if pnl_pct > 0: _c890_rec["wins"] += 1
+            else:           _c890_rec["losses"] += 1
+            _c890_rec["win_rate"] = round(_c890_rec["wins"] / max(_c890_rec["total"], 1) * 100, 1)
+            _c890_rec["avg_pnl"]  = round(_c890_rec["total_pnl"] / max(_c890_rec["total"], 1), 2)
+            # Feed best asset class into bot_learned_params
+            _best_asset = max(_c890_perf.items(), key=lambda kv: kv[1].get("win_rate", 0) * max(kv[1].get("total",0),1), default=(None,{}))[0]
+            if _best_asset:
+                tlog.setdefault("bot_learned_params", {})["best_crypto_asset"] = _best_asset
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -18019,6 +18240,20 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     btc_dom = get_btc_dominance()
     logger.info(f"BTC dominance: {btc_dom:.1f}% — {'risk-off: prefer BTC' if btc_dom > 60 else 'altcoin season' if btc_dom < 50 else 'neutral'}")
 
+    # Use learned score threshold if available (N884), otherwise use config floor
+    _lp_cth = tlog.get("bot_learned_params", {})
+    _learned_crypto_min = float(_lp_cth.get("best_crypto_score_tier", CRYPTO_MIN_SCORE))
+    _effective_crypto_min = max(CRYPTO_MIN_SCORE, _learned_crypto_min)
+    logger.info(f"Crypto entry threshold: {_effective_crypto_min:.0f} (learned: {_learned_crypto_min:.0f})")
+
+    # Load learned neuron adjustments for crypto (N881-N890)
+    _cn881 = tlog.get("crypto_momentum_perf", {})   # N881 BTC momentum tier
+    _cn886 = tlog.get("crypto_rsi_zone_perf", {})   # N886 RSI zone
+    _cn887 = tlog.get("crypto_vol_surge_perf", {})  # N887 volume surge
+    _cn888 = tlog.get("crypto_ema_cross_perf", {})  # N888 EMA cross state
+    _cn889 = tlog.get("crypto_dow_perf", {})        # N889 day of week
+    _cn890 = tlog.get("crypto_asset_perf", {})      # N890 asset class
+
     scored = []
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
@@ -18029,21 +18264,77 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         if btc_dom > 60 and not is_btc:   sc = max(0, sc - 8)   # penalize alts in risk-off
         elif btc_dom < 50 and not is_btc: sc = min(100, sc + 5) # bonus for alts in alt season
         elif btc_dom > 60 and is_btc:     sc = min(100, sc + 5) # boost BTC in risk-off
-        if sc >= 22:
+
+        # Apply learned neuron adjustments (N881-N890)
+        try:
+            _roc5 = sig.get("roc5", 0) or 0
+            _mom_tier = ("explosive" if _roc5 > 10 else "strong" if _roc5 > 4
+                         else "moderate" if _roc5 > 1 else "flat" if _roc5 > -1 else "falling")
+            _mom_wr = _cn881.get(_mom_tier, {}).get("win_rate", 50.0)
+            if _mom_wr > 60: sc = min(100, sc + 4)
+            elif _mom_wr < 40: sc = max(0, sc - 4)
+
+            _rsi = sig.get("rsi", 50) or 50
+            _rsi_zone = ("oversold" if _rsi < 30 else "neutral" if _rsi < 60 else "overbought")
+            _rsi_wr = _cn886.get(_rsi_zone, {}).get("win_rate", 50.0)
+            if _rsi_wr > 60: sc = min(100, sc + 3)
+            elif _rsi_wr < 40: sc = max(0, sc - 3)
+
+            _vr = sig.get("vol_ratio", 1) or 1
+            _vol_tier = ("surge" if _vr > 3 else "elevated" if _vr > 1.5 else "normal" if _vr > 0.7 else "dry")
+            _vol_wr = _cn887.get(_vol_tier, {}).get("win_rate", 50.0)
+            if _vol_wr > 60: sc = min(100, sc + 3)
+            elif _vol_wr < 40: sc = max(0, sc - 3)
+
+            _dow_now = now_utc.weekday()
+            _dow_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][_dow_now]
+            _dow_wr = _cn889.get(_dow_name, {}).get("win_rate", 50.0)
+            if _dow_wr > 60: sc = min(100, sc + 3)
+            elif _dow_wr < 40: sc = max(0, sc - 3)
+
+            _asset_key = "BTC" if "BTC" in alpaca_sym else "ETH" if "ETH" in alpaca_sym else "ALT"
+            _asset_wr = _cn890.get(_asset_key, {}).get("win_rate", 50.0)
+            if _asset_wr > 65: sc = min(100, sc + 5)
+            elif _asset_wr < 35: sc = max(0, sc - 5)
+        except Exception:
+            pass
+
+        if sc >= _effective_crypto_min:
             scored.append((alpaca_sym, sc, sig))
     scored.sort(key=lambda x: -x[1])
+    logger.info(f"Crypto candidates above threshold: {[(s, sc) for s,sc,_ in scored]}")
 
     for alpaca_sym, sc, sig in scored[:open_slots]:
         try:
             coin_name = alpaca_sym.split("/")[0]
             ai_score  = ai_crypto_sentiment(coin_name, signals=sig)
-            if sc + ai_score < 20:
+            if sc + ai_score < CRYPTO_MIN_COMBINED:
                 logger.info(f"SKIP {alpaca_sym} — combined score too low (tech={sc} ai={ai_score:+.0f})")
                 continue
             price    = sig["price"]
             notional = round(min(portfolio_val * CRYPTO_MAX_PCT, buying_power * 0.3), 2)
             if notional < 10:
                 continue
+
+            # Tag neuron states at entry for learning feedback later (N881-N890)
+            _roc5e = sig.get("roc5", 0) or 0
+            _rsie  = sig.get("rsi", 50) or 50
+            _vre   = sig.get("vol_ratio", 1) or 1
+            _emace = sig.get("ema_cross", 0) or 0
+            _sc_tier = ("high" if sc >= 40 else "medium" if sc >= 25 else "low" if sc >= 15 else "speculative")
+            _crypto_entry_signals = {
+                "crypto_momentum_tier":  ("explosive" if _roc5e > 10 else "strong" if _roc5e > 4
+                                          else "moderate" if _roc5e > 1 else "flat" if _roc5e > -1 else "falling"),
+                "crypto_rsi_zone":       ("oversold" if _rsie < 30 else "neutral" if _rsie < 60 else "overbought"),
+                "crypto_vol_surge":      ("surge" if _vre > 3 else "elevated" if _vre > 1.5 else "normal" if _vre > 0.7 else "dry"),
+                "crypto_ema_cross":      ("bull" if _emace > 0.5 else "bear" if _emace < -0.5 else "flat"),
+                "crypto_dow":            ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][now_utc.weekday()],
+                "crypto_asset_class":    ("BTC" if "BTC" in alpaca_sym else "ETH" if "ETH" in alpaca_sym else "ALT"),
+                "crypto_score_tier":     _sc_tier,
+                "crypto_ai_score":       round(float(ai_score), 1),
+                "crypto_btc_dom":        round(float(btc_dom), 1),
+                "crypto_hour_utc":       now_utc.hour,
+            }
             logger.info(f"BUY {alpaca_sym} — ${notional:.0f} @ ~${price:,.2f} | score {sc} | ai {ai_score:+.0f}")
             alpaca_post("/v2/orders", {
                 "symbol":        alpaca_sym,
@@ -18053,7 +18344,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 "time_in_force": "gtc",   # crypto uses GTC not DAY
             })
             log_trade(tlog, "BUY", alpaca_sym, price, notional, score=sc,
-                      reason=f"crypto score={sc} ai={ai_score:+.0f}")
+                      reason=f"crypto score={sc} ai={ai_score:+.0f}",
+                      signals=_crypto_entry_signals)
             peaks[alpaca_sym] = {"peak": price, "time": now_utc.isoformat(), "half_out": False}
             made_trades_ref.append(True)
             buying_power -= notional
@@ -44663,9 +44955,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 840              # total tracked neuron dimensions (N103-N880 complete)
+        tlog["neurons_total"]     = 850              # total tracked neuron dimensions (N103-N890 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/840 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/850 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

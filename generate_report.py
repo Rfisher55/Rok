@@ -108,7 +108,7 @@ def _build_weekly_bot_report(docs_dir):
 
     all_trades = td.get("trades", [])
     lp = td.get("bot_learned_params", {})
-    neurons_total = td.get("neurons_total", 840)
+    neurons_total = td.get("neurons_total", 850)
     neurons_active = td.get("neurons_active", 0)
 
     # Filter to this week's closed trades (SELL / COVER actions with pnl)
@@ -894,6 +894,16 @@ def _build_weekly_bot_report(docs_dir):
         "price_discovery_phase_perf":           "N878 Price Discovery Phase",
         "smart_money_divergence_perf":          "N879 Smart Money Divergence",
         "volatility_regime_shift_perf":         "N880 Volatility Regime Shift",
+        "crypto_momentum_perf":                 "N881 BTC Momentum Tier",
+        "crypto_ai_sentiment_perf":             "N882 Crypto AI Sentiment Accuracy",
+        "crypto_hold_duration_perf":            "N883 Crypto Hold Duration",
+        "crypto_score_tier_perf":               "N884 Crypto Score Threshold",
+        "crypto_btcdom_perf":                   "N885 BTC Dominance at Entry",
+        "crypto_rsi_zone_perf":                 "N886 Crypto RSI Zone",
+        "crypto_vol_surge_perf":                "N887 Crypto Volume Surge",
+        "crypto_ema_cross_perf":                "N888 Crypto EMA Cross",
+        "crypto_dow_perf":                      "N889 Crypto Day-of-Week",
+        "crypto_asset_perf":                    "N890 Crypto Asset Class (BTC/ETH/ALT)",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])
@@ -1349,7 +1359,7 @@ def _run():
                 "bot_conviction":   td.get("bot_conviction", 0),
                 "strategy_mode":    td.get("strategy_mode", ""),
                 "neurons_active":   td.get("neurons_active", 0),
-                "neurons_total":    td.get("neurons_total", 840),
+                "neurons_total":    td.get("neurons_total", 850),
                 "intraday_wins":    td.get("intraday_wins", 0),
                 "intraday_losses":  td.get("intraday_losses", 0),
                 "loss_streak":      td.get("loss_streak", 0),

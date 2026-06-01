@@ -1,5 +1,5 @@
 // ROK Service Worker — network-first, cache as fallback
-const CACHE = 'rok-v68';
+const CACHE = 'rok-v69';
 const OFFLINE_FILES = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
