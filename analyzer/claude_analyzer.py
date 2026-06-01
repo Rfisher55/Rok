@@ -703,6 +703,28 @@ def build_prompt(
             corr_lines.append(f"  ⚠ HIGH CONCENTRATION: {max_cluster}/{total_pos} positions in same sector — sector selloff would hit all")
     corr_str = "\n".join(corr_lines) if corr_lines else "  No concentration risk detected"
 
+    # Build brain analytics section (optimal trading conditions from neuron learning)
+    ba = lmc.get("brain_analytics") or {}
+    ba_lines = []
+    if ba.get("best_day_of_week"):
+        bst = ba["best_day_of_week"]
+        ba_lines.append(f"  Best day to enter: {bst.get('best_state','?')} → {bst.get('win_rate',0):.0f}% WR ({bst.get('samples',0)} trades)")
+    if ba.get("best_session"):
+        bst = ba["best_session"]
+        ba_lines.append(f"  Best session: {bst.get('best_state','?')} → {bst.get('win_rate',0):.0f}% WR")
+    if ba.get("best_entry_hour"):
+        bh = ba["best_entry_hour"]
+        ampm = "AM" if bh.get("hour_et", 0) < 12 else "PM"
+        hr12 = bh["hour_et"] % 12 or 12
+        ba_lines.append(f"  Best entry hour (ET): {hr12} {ampm} → {bh.get('win_rate',0):.0f}% WR ({bh.get('samples',0)} trades)")
+    if ba.get("best_vix_regime"):
+        bst = ba["best_vix_regime"]
+        ba_lines.append(f"  Best VIX regime: {bst.get('best_state','?')} → {bst.get('win_rate',0):.0f}% WR")
+    if ba.get("top_edge_neurons"):
+        for n in ba["top_edge_neurons"][:2]:
+            ba_lines.append(f"  Top edge: {n.get('neuron','').replace('_perf','').replace('_',' ')} | {n.get('best_state','')} → {n.get('win_rate',0):.0f}% WR ({n.get('samples',0)} trades)")
+    ba_str = "\n".join(ba_lines) if ba_lines else "  Brain still accumulating trade data to identify optimal conditions"
+
     # Append live trading context so AI can give position-specific guidance
     return base + f"""
 
@@ -713,6 +735,9 @@ LIVE MARKET CONDITIONS:
 
 ROK BOT BRAIN STATUS:
 {brain_str}
+
+BRAIN'S LEARNED OPTIMAL TRADING CONDITIONS:
+{ba_str}
 
 ENTRY GATE STATUS:
 {nec_str}
