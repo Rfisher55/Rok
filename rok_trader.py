@@ -23098,12 +23098,12 @@ def run():
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif age_minutes >= 45 and pnl_pct >= 0.3 and not half_out:
                     _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 60 and pnl_pct >= -0.5 and not half_out:
+                elif age_minutes >= 60 and not half_out:
+                    # 60min hard cycle: exit regardless of PnL — capital must cycle
                     _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 90 and pnl_pct >= -1.0:
+                elif age_minutes >= 90:
+                    # 90min backup: unconditional exit to force capital recycling
                     _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
-                elif age_minutes >= 120:
-                    _scalp_exit_reason = f"max hold exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
             # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
@@ -23707,9 +23707,10 @@ def run():
                 except Exception:
                     pass
 
-            # Market close cleanup: liquidate losing positions in last 8 min to avoid overnight risk
-            if not reason and _close_cleanup and pnl_pct < -3:
-                reason = f"close cleanup — avoid overnight loss ({pnl_pct:+.1f}%)"
+            # Market close cleanup: liquidate ALL positions in last 8 min — cycle for next day
+            if not reason and _close_cleanup and age_minutes >= 30:
+                # Exit all same-day positions at market close — fresh capital for next open
+                reason = f"close cleanup ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # Track ever-hit-5pct milestone for breakeven lock
             if pnl_pct >= 5 and sym in peaks:
