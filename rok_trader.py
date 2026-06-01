@@ -36224,6 +36224,7 @@ def run():
 
     # Compute profit factor, Sharpe-like ratio, and max drawdown from trade history
     _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+    logger.info(f"Brain: {len(_closed)} closed trades from {len(tlog.get('trades',[]))} total")
     _closed_pnl = [(t, float(t["pnl_pct"] or 0)) for t in _closed]
     _gross_wins  = sum(p for _, p in _closed_pnl if p > 0) or 0
     _gross_losses= abs(sum(p for _, p in _closed_pnl if p < 0)) or 1
@@ -46071,10 +46072,12 @@ def run():
         tlog["bot_learned_params"]["trades_analyzed"] = len(_closed)
         tlog["bot_learned_params"]["last_tuned"]      = now_utc.isoformat()
         tlog["bot_learned_params"]["learn_log"]       = _learn_log[-20:]
+        logger.info(f"Brain learning complete: trades_analyzed={len(_closed)} learn_log_entries={len(_learn_log)}")
         if _learn_log:
             logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")
     except Exception as _ste:
-        logger.warning(f"Self-tune error: {_ste}")
+        import traceback as _tb
+        logger.warning(f"Self-tune error: {_ste}\n{_tb.format_exc()[:500]}")
         tlog.setdefault("bot_learned_params", {})["trades_analyzed"] = len(_closed) if _closed else 0
 
     # ── Apply learned score adjustment to effective_min_score ──────────
