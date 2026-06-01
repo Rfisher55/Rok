@@ -1438,6 +1438,22 @@ def _run():
                     ]
             except Exception:
                 pass
+            # Enrich brain_analytics with weekly win rate trend (from previous weekly_report.json)
+            try:
+                _wkrp = docs_dir / "weekly_report.json"
+                if _wkrp.exists() and live_market_context.get("brain_analytics") is not None:
+                    _wkd = json.loads(_wkrp.read_text())
+                    _wkba = _wkd.get("brain_analytics", {})
+                    if _wkba.get("weekly_wr_trend"):
+                        live_market_context["brain_analytics"]["weekly_wr_trend"] = _wkba["weekly_wr_trend"]
+                    if not live_market_context["brain_analytics"].get("best_momentum_state") and _wkba.get("best_momentum_state"):
+                        _bms = _wkba["best_momentum_state"]
+                        live_market_context["brain_analytics"]["best_momentum_state"] = {
+                            "best_state": _bms.get("state", ""), "win_rate": _bms.get("win_rate", 0),
+                            "samples": _bms.get("samples", 0)
+                        }
+            except Exception:
+                pass
     except Exception as _te:
         logger.warning(f"Could not load trades.json: {_te}")
 
