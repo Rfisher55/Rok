@@ -61,8 +61,8 @@
   },
   {
     "id": "N467",
-    "key": "atr_expansion_entry_perf",
-    "name": "ATR Expansion Entry",
+    "key": "atr_vol_expansion_perf",
+    "name": "ATR/Vol Expansion Entry",
     "description": "Is Average True Range expanding at entry (vol_ratio proxy)? Uses vol_ratio from live data.",
     "live_field": "vol_ratio",
     "states": ["atr_expanding", "stable_vol", "contracting"],

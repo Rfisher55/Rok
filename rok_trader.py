@@ -28443,7 +28443,7 @@ def run():
             _learn_log.append(f"N466 SPY vs Sector Entry: sector_hot={_a_n466['win_rate']:.0f}% sector_cold={_b_n466['win_rate']:.0f}%WR")
 
         # ── N467: ATR expansion entry tuner ────────────────────
-        _n467_raw = tlog.get("atr_expansion_entry_perf", {})
+        _n467_raw = tlog.get("atr_vol_expansion_perf", {})
         _n467_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n467_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n467 = next((s for s in _n467_list if s.get("state")=="atr_expanding"), _n467_list[0] if _n467_list else {"win_rate":50})
         _b_n467 = next((s for s in _n467_list if s.get("state")=="contracting"), _n467_list[-1] if _n467_list else {"win_rate":50})
@@ -29227,7 +29227,7 @@ def run():
             "weekly_trend_quality_perf": _n464_list,  # N464: weekly trend quality at entry vs outcome
             "dist_from_52w_high_perf": _n465_list,  # N465: distance from 52-week high at entry vs outcome
             "spy_vs_sector_entry_perf": _n466_list,  # N466: SPY vs sector at entry vs outcome
-            "atr_expansion_entry_perf": _n467_list,  # N467: ATR expansion at entry vs outcome
+            "atr_vol_expansion_perf": _n467_list,  # N467: ATR/vol expansion at entry vs outcome
             "multi_day_breakout_perf": _n468_list,  # N468: multi-day breakout at entry vs outcome
             "inside_bar_resolution_perf": _n469_list,  # N469: inside bar resolution at entry vs outcome
             "earnings_drift_days_perf": _n470_list,  # N470: earnings drift days at entry vs outcome
@@ -29519,7 +29519,7 @@ def run():
             "opening_drive_quality_perf", "price_vs_ema50_entry_perf",
             "consec_green_days_perf", "weekly_trend_quality_perf",
             "dist_from_52w_high_perf", "spy_vs_sector_entry_perf",
-            "atr_expansion_entry_perf", "multi_day_breakout_perf",
+            "atr_vol_expansion_perf", "multi_day_breakout_perf",
             "inside_bar_resolution_perf", "earnings_drift_days_perf",
         ) if _lp_conv.get(k))
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])

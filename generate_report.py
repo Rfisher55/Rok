@@ -481,7 +481,7 @@ def _build_weekly_bot_report(docs_dir):
         "weekly_trend_quality_perf":      "N464 Weekly Trend Quality",
         "dist_from_52w_high_perf":        "N465 Distance from 52W High",
         "spy_vs_sector_entry_perf":       "N466 SPY vs Sector Entry",
-        "atr_expansion_entry_perf":       "N467 ATR Expansion Entry",
+        "atr_vol_expansion_perf":         "N467 ATR/Vol Expansion Entry",
         "multi_day_breakout_perf":        "N468 Multi-Day Breakout",
         "inside_bar_resolution_perf":     "N469 Inside Bar Resolution",
         "earnings_drift_days_perf":       "N470 Earnings Drift Days",
