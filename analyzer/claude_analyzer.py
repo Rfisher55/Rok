@@ -222,7 +222,14 @@ Respond ONLY with this exact JSON structure (no other text):
       "risk": "Biggest threat to this position in plain English",
       "target": <float — price target or exit level if applicable, or null>
     }}
-  ]
+  ],
+  "morning_game_plan": {{
+    "step1": "First action to take when market opens — specific ticker and what to do",
+    "step2": "Second priority action — monitor or act on this setup",
+    "step3": "Risk management reminder — what level or event would change the plan",
+    "best_entry_window": "Best time window today based on market conditions and day type",
+    "max_new_positions": <integer — how many new trades to take today given current conditions>
+  }}
 }}
 
 Rules:
@@ -612,7 +619,7 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 600)
+    nT = lmc.get("neurons_total", 610)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:
@@ -650,6 +657,26 @@ def build_prompt(
     nec_str = f"  {nec_met}/{nec_total} conditions met | {'✅ READY TO TRADE' if nec_ready else '⏸ WAITING'}"
     if nec_top:
         nec_str += f" | Top pick: {nec_top} (score {nec_score})"
+
+    # Build brain's top picks section
+    top_picks_lines = []
+    for pick in (nec.get("top_picks") or [])[:3]:
+        tk  = pick.get("ticker", "")
+        sc  = pick.get("score", 0)
+        px  = pick.get("price", 0)
+        chg = pick.get("chg_pct", 0)
+        rvol = pick.get("vol_ratio", 1)
+        cat  = "✓catalyst" if pick.get("catalyst") else ""
+        trigs = ", ".join(pick.get("triggers", []))
+        stop  = pick.get("stop_price", 0)
+        rsi   = pick.get("rsi", 50)
+        rs5   = pick.get("rs5", 0)
+        top_picks_lines.append(
+            f"  ${tk} score={sc} | ${px:.2f} ({chg:+.1f}%) | RVOL {rvol:.1f}x | "
+            f"RSI {rsi:.0f} | RS5 {rs5:+.1f}% | stop ${stop:.2f} | "
+            f"triggers: [{trigs}] {cat}"
+        )
+    top_picks_str = "\n".join(top_picks_lines) if top_picks_lines else "  No qualified picks yet"
 
     # Build portfolio correlation risk summary
     corr_lines = []
@@ -689,6 +716,9 @@ ROK BOT BRAIN STATUS:
 
 ENTRY GATE STATUS:
 {nec_str}
+
+BRAIN'S TOP 3 PICKS RIGHT NOW (neural-scored, with entry triggers and stops):
+{top_picks_str}
 
 INTRADAY PERFORMANCE:
 {intraday_str}
@@ -742,6 +772,8 @@ CRITICAL INSTRUCTIONS:
 13. ADD signal: if a position is up 5%+ with strong technical signals and still has room to target, suggest adding shares
 14. INTRADAY RISK: if loss_streak >= 2 in Intraday Performance, emphasize capital preservation in rok_message — suggest being selective and sizing down
 15. If the brain's top neurons show a specific state with high win rate (e.g., "morning_session: 78% WR"), reference this timing context for entries
+16. morning_game_plan: generate a concrete 3-step action plan. step1/step2 must name specific tickers. best_entry_window = "9:30-10:30 AM ET" for trend days, "10:30-11:30 AM ET" for range/choppy. max_new_positions: 1-2 if loss_streak or bear regime; 3-4 if strong_bull and clean day
+17. Brain's Top 3 Picks: if any of these match buy signals in other data sources, elevate their signal_strength by +1 in buy_signals and mention the brain's score in reasons
 """
 
 
@@ -797,6 +829,7 @@ def run_analysis(
         result.setdefault("technical_breakouts", [])
         result.setdefault("sector_rotation", "")
         result.setdefault("position_analysis", [])
+        result.setdefault("morning_game_plan", {})
         for pa in result.get("position_analysis", []):
             pa.setdefault("confidence", 5)
             pa.setdefault("target", None)
