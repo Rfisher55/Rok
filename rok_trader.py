@@ -22969,10 +22969,12 @@ def run():
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= -1.5 and age_minutes >= 30:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif age_minutes >= 90 and pnl_pct > 0 and not half_out:
+                elif age_minutes >= 90 and pnl_pct >= -0.5 and not half_out:
                     _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 120 and abs(pnl_pct) < 0.5:
-                    _scalp_exit_reason = f"stale scalp exit (flat {pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 120 and pnl_pct >= -1.0:
+                    _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 150:
+                    _scalp_exit_reason = f"max hold exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
             # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
@@ -25136,7 +25138,7 @@ def run():
             elif _close_guard:
                 _status_parts.append(f"Close guard active ({_minutes_to_close:.0f} min to close — no new positions)")
             elif open_long_slots == 0:
-                _status_parts.append(f"Portfolio full ({len(longs)}/{MAX_LONGS} positions) — monitoring holds")
+                _status_parts.append(f"Portfolio full ({len(longs)}/{MAX_POSITIONS} positions) — monitoring holds")
             elif not final_scores:
                 _status_parts.append(f"No setups met threshold {_eff_min_score} — watching {len(candidates_buy)} candidates")
             else:
