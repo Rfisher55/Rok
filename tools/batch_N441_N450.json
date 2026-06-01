@@ -1,0 +1,16 @@
+{
+  "batch": "N441-N450",
+  "neurons_total_after": 410,
+  "entries": [
+    {"id": "N441", "key": "market_cap_tier_entry_perf", "label": "N441 Market Cap Tier", "cat": "Market", "desc": "Large vs mid vs small cap at entry"},
+    {"id": "N442", "key": "sector_momentum_entry_perf", "label": "N442 Sector Momentum", "cat": "Sector", "desc": "Sector ETF 5-day return at entry: hot/flat/cold"},
+    {"id": "N443", "key": "spread_quality_entry_perf", "label": "N443 Spread Quality", "cat": "Microstructure", "desc": "Bid-ask spread pct at entry: tight/normal/wide"},
+    {"id": "N444", "key": "price_above_open_perf", "label": "N444 Price vs Open", "cat": "Intraday", "desc": "Intraday position relative to opening price"},
+    {"id": "N445", "key": "week_vs_sector_perf_entry", "label": "N445 Week vs Sector Alpha", "cat": "Relative Strength", "desc": "Stock weekly return vs sector: leader/in_line/laggard"},
+    {"id": "N446", "key": "earnings_surprise_hist_perf", "label": "N446 Earnings Surprise History", "cat": "Fundamentals", "desc": "Last 4 quarters earnings beats: strong_beats/mixed/misses"},
+    {"id": "N447", "key": "fund_ownership_change_perf", "label": "N447 Fund Ownership Change", "cat": "Institutional", "desc": "Institutional ownership trend: accumulating/stable/distributing"},
+    {"id": "N448", "key": "price_range_position_perf", "label": "N448 Price Range Position", "cat": "Technical", "desc": "Price position in 52-week range: near_high/mid_range/near_low"},
+    {"id": "N449", "key": "momentum_quality_score_perf", "label": "N449 Momentum Quality Score", "cat": "Momentum", "desc": "Composite momentum quality score: high/medium/low quality"},
+    {"id": "N450", "key": "sector_relative_strength_perf", "label": "N450 Sector Relative Strength", "cat": "Sector", "desc": "Sector ETF RS vs SPY 63-day: sector_strong/neutral/weak"}
+  ]
+}

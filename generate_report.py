@@ -455,6 +455,16 @@ def _build_weekly_bot_report(docs_dir):
         "days_since_earnings_perf": "N438 Days Since Earnings",
         "put_call_ratio_perf": "N439 Put/Call Ratio",
         "trend_strength_adx_perf": "N440 Trend Strength ADX",
+        "market_cap_tier_entry_perf": "N441 Market Cap Tier",
+        "sector_momentum_entry_perf": "N442 Sector Momentum",
+        "spread_quality_entry_perf": "N443 Spread Quality",
+        "price_above_open_perf": "N444 Price Above Open",
+        "week_vs_sector_perf_entry": "N445 Week vs Sector",
+        "earnings_surprise_hist_perf": "N446 Earnings Surprise History",
+        "fund_ownership_change_perf": "N447 Fund Ownership Change",
+        "price_range_position_perf": "N448 Price Range Position",
+        "momentum_quality_score_perf": "N449 Momentum Quality Score",
+        "sector_relative_strength_perf": "N450 Sector Relative Strength",
     }
     for key, label in neuron_map.items():
         data = lp.get(key, [])

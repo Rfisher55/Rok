@@ -39,9 +39,12 @@ jobs:
         run: |
           git config user.name "ROK Intelligence Bot"
           git config user.email "rok-bot@users.noreply.github.com"
-          # Add only files that actually exist (--ignore-missing requires --dry-run in newer git)
           for f in docs/intel_report.json docs/history.json docs/prices.json docs/weekly_report.json; do [ -f "$f" ] && git add "$f" || true; done
           git diff --staged --quiet || git commit -m "Intel update — $(date -u +'%b %d %H:%M UTC')"
-          git fetch origin main
-          git rebase origin/main || git rebase --abort || true
-          git push origin HEAD:main || true
+          # Retry push up to 4 times with exponential backoff to handle concurrent trade-bot commits
+          for attempt in 1 2 3 4; do
+            git fetch origin main && git rebase origin/main && git push origin HEAD:main && break
+            echo "Push attempt $attempt failed, retrying..."
+            sleep $((attempt * 3))
+            git rebase --abort 2>/dev/null || true
+          done || echo "WARNING: push failed after 4 attempts"
