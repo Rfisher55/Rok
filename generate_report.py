@@ -939,6 +939,17 @@ def _run():
         "drawdown_halt":   live_market_context.get("drawdown_halt", False),
         "regime_max_pos":  live_market_context.get("regime_max_pos", 12),
         "scan_breadth_pct": live_market_context.get("scan_breadth_pct"),
+        # Full live context for dashboard (weekend watchlist, bot state, etc.)
+        "bot_state": {
+            "strategy_mode":   live_market_context.get("strategy_mode", ""),
+            "bot_conviction":  live_market_context.get("bot_conviction", 0),
+            "neurons_active":  live_market_context.get("neurons_active", 0),
+            "neurons_total":   live_market_context.get("neurons_total", 390),
+            "market_open":     live_market_context.get("market_open", False),
+            "win_rate":        live_market_context.get("win_rate", 0),
+            "drawdown_pct":    live_market_context.get("drawdown_pct", 0),
+        },
+        "weekend_watchlist": live_market_context.get("weekend_watchlist", []),
     }
 
     # Sanitize all datetime objects before JSON serialization
