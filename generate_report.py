@@ -793,6 +793,21 @@ def _run():
                 "exit_intelligence":        td.get("exit_intelligence", {}),
                 "sector_performance":       {k: {"win_rate": v.get("win_rate",0), "total": v.get("total",0), "avg_pnl": v.get("avg_pnl",0)} for k, v in td.get("sector_performance", {}).items() if v.get("total",0) >= 2},
                 "weekend_watchlist_scored": [w for w in td.get("weekend_watchlist", []) if w.get("score")],
+                # Synaptic intelligence: top learned signal pairs and triplets
+                "top_synapses": sorted(
+                    [{"pair": k, "wr": v.get("win_rate",0), "avg_pnl": v.get("avg_pnl",0), "n": v.get("total",0)}
+                     for k, v in td.get("signal_synergy", {}).items() if v.get("total",0) >= 2 and v.get("win_rate",0) >= 55],
+                    key=lambda x: (-x["wr"], -x["n"])
+                )[:12],
+                "top_triplets": sorted(
+                    [{"combo": k, "wr": v.get("win_rate",0), "avg_pnl": v.get("avg_pnl",0), "n": v.get("total",0)}
+                     for k, v in td.get("signal_triplets", {}).items() if v.get("total",0) >= 2 and v.get("win_rate",0) >= 60],
+                    key=lambda x: (-x["wr"], -x["n"])
+                )[:8],
+                # Next entry conditions and regime state
+                "next_entry_conditions": td.get("next_entry_conditions", {}),
+                "smart_alerts": td.get("smart_alerts", []),
+                "last_scan_top": td.get("last_scan_top", [])[:9],
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:
@@ -1053,6 +1068,13 @@ def _run():
         "exit_intelligence":  live_market_context.get("exit_intelligence", {}),
         "next_market_open":   live_market_context.get("next_market_open", ""),
         "position_news":      live_market_context.get("position_news", {}),
+        # Synaptic learning intelligence
+        "top_synapses":       live_market_context.get("top_synapses", []),
+        "top_triplets":       live_market_context.get("top_triplets", []),
+        "sector_performance": live_market_context.get("sector_performance", {}),
+        "next_entry_conditions": live_market_context.get("next_entry_conditions", {}),
+        "smart_alerts":       live_market_context.get("smart_alerts", []),
+        "last_scan_top":      live_market_context.get("last_scan_top", []),
     }
 
     # Sanitize all datetime objects before JSON serialization
