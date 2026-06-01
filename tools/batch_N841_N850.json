@@ -1,0 +1,23 @@
+{
+  "batch": "N841_N850",
+  "date": "2026-06-01",
+  "total_neurons_after": 810,
+  "neurons": [
+    {"id": "N841", "key": "breakout_quality_perf", "name": "Breakout Quality"},
+    {"id": "N842", "key": "orb_status_perf", "name": "ORB Status"},
+    {"id": "N843", "key": "squeeze_status_perf", "name": "Squeeze Status"},
+    {"id": "N844", "key": "price_level_perf", "name": "Price Level"},
+    {"id": "N845", "key": "entry_rsi_zone_perf", "name": "Entry RSI Zone"},
+    {"id": "N846", "key": "macd_signal_perf", "name": "MACD Signal"},
+    {"id": "N847", "key": "inside_bar_context_perf", "name": "Inside Bar Context"},
+    {"id": "N848", "key": "spy_correlation_perf", "name": "SPY Correlation"},
+    {"id": "N849", "key": "position_size_tier_perf", "name": "Position Size Tier"},
+    {"id": "N850", "key": "exit_trigger_type_perf", "name": "Exit Trigger Type"}
+  ],
+  "sections_modified": [
+    "SELL tracker (after N840 block)",
+    "BUY signal classifier (after N840 classifier)",
+    "Tuner pairs list",
+    "bot_learned_params"
+  ]
+}
