@@ -18696,23 +18696,23 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
-                import math as _math
-                _sell_qty = _math.floor(qty * 1e8) / 1e8  # floor-truncate to never exceed available
-                logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={_sell_qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
+                logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
                 try:
-                    if _sell_qty > 0:
-                        # Normal case: place sell order with floor-truncated qty
-                        alpaca_post("/v2/orders", {
-                            "symbol": _raw_sym, "qty": str(_sell_qty),
-                            "side": "sell", "type": "market", "time_in_force": "gtc",
-                        })
-                    else:
-                        # Residual position < 1e-8 units (settlement artifact): close via DELETE
-                        logger.info(f"CLOSE residual position {_raw_sym} via DELETE /v2/positions")
-                        r_del = requests.delete(f"{ALPACA_BASE}/v2/positions/{_raw_sym}",
-                                                headers=_h(), timeout=10)
-                        if r_del.status_code not in (200, 204):
-                            raise requests.HTTPError(response=r_del)
+                    # Use DELETE /v2/positions to close full position — avoids all qty precision issues
+                    # (rounding-up causes 403 insufficient balance; tiny qty causes 422 min-qty rejection)
+                    _del_r = requests.delete(f"{ALPACA_BASE}/v2/positions/{_raw_sym}",
+                                             headers=_h(), timeout=10)
+                    if _del_r.status_code not in (200, 204):
+                        # Fall back to order-based sell if DELETE fails
+                        import math as _math
+                        _sell_qty = _math.floor(qty * 1e8) / 1e8
+                        if _sell_qty > 0:
+                            alpaca_post("/v2/orders", {
+                                "symbol": _raw_sym, "qty": str(_sell_qty),
+                                "side": "sell", "type": "market", "time_in_force": "gtc",
+                            })
+                        else:
+                            raise requests.HTTPError(response=_del_r)
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
                     made_trades_ref.append(True)
                     peaks.pop(sym, None)
