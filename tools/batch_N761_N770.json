@@ -1,0 +1,28 @@
+{
+  "batch": "N761-N770",
+  "date": "2026-06-01",
+  "total_neurons_after": 730,
+  "neurons": [
+    {"id": "N761", "key": "breadth_thrust_perf",        "name": "Breadth Thrust",         "states": ["strong_breadth_thrust", "moderate_breadth", "neutral_breadth", "weak_breadth"]},
+    {"id": "N762", "key": "put_call_ratio_trend_perf",  "name": "Put/Call Ratio Trend",   "states": ["pc_falling_bullish", "pc_neutral", "pc_rising_bearish"]},
+    {"id": "N763", "key": "new_highs_lows_perf",        "name": "New Highs vs Lows",      "states": ["nh_dominant", "nh_strong", "balanced_nh_nl", "nl_dominant"]},
+    {"id": "N764", "key": "advance_decline_perf",       "name": "Advance/Decline Line",   "states": ["ad_improving", "ad_neutral", "ad_deteriorating"]},
+    {"id": "N765", "key": "institutional_flow_perf",    "name": "Institutional Flow",     "states": ["inst_accumulation", "inst_neutral", "inst_distribution"]},
+    {"id": "N766", "key": "retail_flow_perf",           "name": "Retail Flow",            "states": ["retail_fomo_risk", "retail_neutral", "retail_capitulation"]},
+    {"id": "N767", "key": "smart_money_flow_perf",      "name": "Smart Money Flow",       "states": ["smart_accumulation", "smart_neutral", "smart_distribution"]},
+    {"id": "N768", "key": "fear_greed_perf",            "name": "Fear & Greed",           "states": ["extreme_greed", "greed", "neutral_fg", "fear", "extreme_fear"]},
+    {"id": "N769", "key": "vix_term_structure_perf",    "name": "VIX Term Structure",     "states": ["vix_backwardation_stress", "vix_flat", "vix_contango_calm"]},
+    {"id": "N770", "key": "credit_spread_perf",         "name": "Credit Spread",          "states": ["tight_credit_spreads", "normal_credit_spreads", "wide_credit_spreads", "stress_credit_spreads"]}
+  ],
+  "sections_modified": [
+    "SELL trackers (after N760 block)",
+    "BUY signal classifiers (after N760 classifier, before log_trade call)",
+    "Tuners (N761-N770 block after N751-N760 tuners)",
+    "bot_learned_params initialization (after fibonacci_level_perf: [])"
+  ],
+  "counters_updated": {
+    "neurons_total": 730,
+    "logger_line": "/730 neurons active"
+  },
+  "compile_check": "PASSED"
+}

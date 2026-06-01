@@ -31021,6 +31021,155 @@ def run():
                     except Exception:
                         _n760_s = "no_fib_level"
                     _buy_signals_merged["fibonacci_level_perf"] = _n760_s
+                    # N761: Breadth Thrust
+                    try:
+                        _n761_bp = float(sc.get("breadth_pct", sc.get("adv_pct", 50)) or 50)
+                        if _n761_bp > 70:
+                            _n761_s = "strong_breadth_thrust"
+                        elif _n761_bp >= 55:
+                            _n761_s = "moderate_breadth"
+                        elif _n761_bp >= 45:
+                            _n761_s = "neutral_breadth"
+                        else:
+                            _n761_s = "weak_breadth"
+                    except Exception:
+                        _n761_s = "neutral_breadth"
+                    _buy_signals_merged["breadth_thrust_perf"] = _n761_s
+                    # N762: Put/Call Ratio Trend
+                    try:
+                        _n762_trend = str(sc.get("pc_ratio_trend", "") or "")
+                        _n762_d1 = float(sc.get("pc_ratio_d1", 0) or 0)
+                        if _n762_trend == "falling" or _n762_d1 < -0.1:
+                            _n762_s = "pc_falling_bullish"
+                        elif _n762_trend == "rising" or _n762_d1 > 0.1:
+                            _n762_s = "pc_rising_bearish"
+                        else:
+                            _n762_s = "pc_neutral"
+                    except Exception:
+                        _n762_s = "pc_neutral"
+                    _buy_signals_merged["put_call_ratio_trend_perf"] = _n762_s
+                    # N763: New Highs vs Lows
+                    try:
+                        _n763_ratio = float(sc.get("nh_nl_ratio", 1) or 1)
+                        if _n763_ratio > 3:
+                            _n763_s = "nh_dominant"
+                        elif _n763_ratio >= 1.5:
+                            _n763_s = "nh_strong"
+                        elif _n763_ratio >= 0.5:
+                            _n763_s = "balanced_nh_nl"
+                        else:
+                            _n763_s = "nl_dominant"
+                    except Exception:
+                        _n763_s = "balanced_nh_nl"
+                    _buy_signals_merged["new_highs_lows_perf"] = _n763_s
+                    # N764: Advance/Decline Line
+                    try:
+                        _n764_adv = float(sc.get("adv_pct", 50) or 50)
+                        if _n764_adv > 55:
+                            _n764_s = "ad_improving"
+                        elif _n764_adv < 45:
+                            _n764_s = "ad_deteriorating"
+                        else:
+                            _n764_s = "ad_neutral"
+                    except Exception:
+                        _n764_s = "ad_neutral"
+                    _buy_signals_merged["advance_decline_perf"] = _n764_s
+                    # N765: Institutional Flow
+                    try:
+                        _n765_if = str(sc.get("inst_flow", "") or "")
+                        if _n765_if == "buying":
+                            _n765_s = "inst_accumulation"
+                        elif _n765_if == "selling":
+                            _n765_s = "inst_distribution"
+                        else:
+                            _n765_llr = float(sc.get("large_lot_ratio", 1) or 1)
+                            if _n765_llr > 1.5:
+                                _n765_s = "inst_accumulation"
+                            elif _n765_llr < 0.7:
+                                _n765_s = "inst_distribution"
+                            else:
+                                _n765_s = "inst_neutral"
+                    except Exception:
+                        _n765_s = "inst_neutral"
+                    _buy_signals_merged["institutional_flow_perf"] = _n765_s
+                    # N766: Retail Flow
+                    try:
+                        _n766_rs = str(sc.get("retail_sentiment", "") or "")
+                        if _n766_rs == "bullish":
+                            _n766_s = "retail_fomo_risk"
+                        elif _n766_rs == "bearish":
+                            _n766_s = "retail_capitulation"
+                        else:
+                            _n766_rp = float(sc.get("robinhood_popularity", 0) or 0)
+                            if _n766_rp > 50:
+                                _n766_s = "retail_fomo_risk"
+                            else:
+                                _n766_s = "retail_neutral"
+                    except Exception:
+                        _n766_s = "retail_neutral"
+                    _buy_signals_merged["retail_flow_perf"] = _n766_s
+                    # N767: Smart Money Flow
+                    try:
+                        _n767_sm = str(sc.get("smart_money", "") or "")
+                        if _n767_sm == "accumulating":
+                            _n767_s = "smart_accumulation"
+                        elif _n767_sm == "distributing":
+                            _n767_s = "smart_distribution"
+                        else:
+                            _n767_dp = float(sc.get("dark_pool_buy_pct", 50) or 50)
+                            if _n767_dp > 60:
+                                _n767_s = "smart_accumulation"
+                            elif _n767_dp < 40:
+                                _n767_s = "smart_distribution"
+                            else:
+                                _n767_s = "smart_neutral"
+                    except Exception:
+                        _n767_s = "smart_neutral"
+                    _buy_signals_merged["smart_money_flow_perf"] = _n767_s
+                    # N768: Fear & Greed
+                    try:
+                        _n768_fg = float(sc.get("fear_greed", 50) or 50)
+                        if _n768_fg > 75:
+                            _n768_s = "extreme_greed"
+                        elif _n768_fg >= 60:
+                            _n768_s = "greed"
+                        elif _n768_fg >= 40:
+                            _n768_s = "neutral_fg"
+                        elif _n768_fg >= 25:
+                            _n768_s = "fear"
+                        else:
+                            _n768_s = "extreme_fear"
+                    except Exception:
+                        _n768_s = "neutral_fg"
+                    _buy_signals_merged["fear_greed_perf"] = _n768_s
+                    # N769: VIX Term Structure
+                    try:
+                        _n769_term = str(sc.get("vix_term", "") or "")
+                        _n769_spot = float(sc.get("vix_spot", 20) or 20)
+                        _n769_3m   = float(sc.get("vix_3m", 20) or 20)
+                        if _n769_term == "backwardation" or (_n769_3m > 0 and _n769_spot > _n769_3m * 1.1):
+                            _n769_s = "vix_backwardation_stress"
+                        elif _n769_term == "contango" or (_n769_3m > 0 and _n769_spot < _n769_3m * 0.9):
+                            _n769_s = "vix_contango_calm"
+                        else:
+                            _n769_s = "vix_flat"
+                    except Exception:
+                        _n769_s = "vix_flat"
+                    _buy_signals_merged["vix_term_structure_perf"] = _n769_s
+                    # N770: Credit Spread
+                    try:
+                        _n770_hy = float(sc.get("hy_spread", 300) or 300)
+                        if _n770_hy < 200:
+                            _n770_s = "tight_credit_spreads"
+                        elif _n770_hy < 350:
+                            _n770_s = "normal_credit_spreads"
+                        elif _n770_hy < 500:
+                            _n770_s = "wide_credit_spreads"
+                        else:
+                            _n770_s = "stress_credit_spreads"
+                    except Exception:
+                        _n770_s = "normal_credit_spreads"
+                    _buy_signals_merged["credit_spread_perf"] = _n770_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -39474,6 +39623,22 @@ def run():
             _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
             if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
 
+        # ── N761-N770 Tuners ──
+        for _key, _attr in [
+            ("breadth_thrust_perf",        "breadth_thrust"),
+            ("put_call_ratio_trend_perf",  "put_call_ratio_trend"),
+            ("new_highs_lows_perf",        "new_highs_lows"),
+            ("advance_decline_perf",       "advance_decline"),
+            ("institutional_flow_perf",    "institutional_flow"),
+            ("retail_flow_perf",           "retail_flow"),
+            ("smart_money_flow_perf",      "smart_money_flow"),
+            ("fear_greed_perf",            "fear_greed"),
+            ("vix_term_structure_perf",    "vix_term_structure"),
+            ("credit_spread_perf",         "credit_spread"),
+        ]:
+            _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
+            if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -40521,6 +40686,16 @@ def run():
             "trend_channel_perf":     [],
             "pivot_point_perf":       [],
             "fibonacci_level_perf":   [],
+            "breadth_thrust_perf":        [],
+            "put_call_ratio_trend_perf":  [],
+            "new_highs_lows_perf":        [],
+            "advance_decline_perf":       [],
+            "institutional_flow_perf":    [],
+            "retail_flow_perf":           [],
+            "smart_money_flow_perf":      [],
+            "fear_greed_perf":            [],
+            "vix_term_structure_perf":    [],
+            "credit_spread_perf":         [],
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -40848,9 +41023,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 720              # total tracked neuron dimensions (N103-N760 complete)
+        tlog["neurons_total"]     = 730              # total tracked neuron dimensions (N103-N770 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/720 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/730 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
