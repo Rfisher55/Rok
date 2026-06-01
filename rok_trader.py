@@ -348,7 +348,14 @@ def _sanitize_json(obj):
 
 def _save(path, data):
     path.parent.mkdir(exist_ok=True)
-    path.write_text(json.dumps(_sanitize_json(data), indent=2))
+    # Three-layer safety: sanitize numpy types, custom encoder, fallback default=str
+    try:
+        path.write_text(json.dumps(_sanitize_json(data), indent=2))
+    except TypeError:
+        try:
+            path.write_text(json.dumps(data, indent=2, cls=_NumpySafeEncoder))
+        except TypeError:
+            path.write_text(json.dumps(data, indent=2, default=str))
 
 
 def _save_equity_snapshot(tlog: dict) -> None:
