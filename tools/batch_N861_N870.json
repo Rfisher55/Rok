@@ -1,0 +1,25 @@
+{
+  "batch": "N861_N870",
+  "date": "2026-06-01",
+  "total_neurons_after": 830,
+  "neurons": [
+    {"id": "N861", "key": "intraday_trend_quality_perf", "name": "Intraday Trend Quality"},
+    {"id": "N862", "key": "price_action_quality_perf", "name": "Price Action Quality"},
+    {"id": "N863", "key": "earnings_beat_quality_perf", "name": "Earnings Beat Quality"},
+    {"id": "N864", "key": "vcp_quality_perf", "name": "VCP Quality"},
+    {"id": "N865", "key": "sector_etf_alignment_perf", "name": "Sector ETF Alignment"},
+    {"id": "N866", "key": "trade_count_context_perf", "name": "Trade Count Context"},
+    {"id": "N867", "key": "news_volume_perf", "name": "News Volume"},
+    {"id": "N868", "key": "technical_setup_combo_perf", "name": "Technical Setup Combo"},
+    {"id": "N869", "key": "risk_reward_at_entry_perf", "name": "Risk/Reward at Entry"},
+    {"id": "N870", "key": "signal_freshness_perf", "name": "Signal Freshness"}
+  ],
+  "sections_modified": [
+    "SELL tracker (after N860 block)",
+    "BUY signal classifier (before log_trade call)",
+    "Tuner pairs (after score_momentum_perf entry)",
+    "bot_learned_params (after score_momentum_perf entry)",
+    "neurons_total updated 820 -> 830",
+    "logger string updated /820 -> /830 neurons active"
+  ]
+}
