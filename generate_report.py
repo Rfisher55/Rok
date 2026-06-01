@@ -739,6 +739,7 @@ def _run():
                 "position_news":            td.get("position_news", {}),
                 "portfolio_attribution":    td.get("portfolio_attribution", {}),
                 "exit_intelligence":        td.get("exit_intelligence", {}),
+                "sector_performance":       {k: {"win_rate": v.get("win_rate",0), "total": v.get("total",0), "avg_pnl": v.get("avg_pnl",0)} for k, v in td.get("sector_performance", {}).items() if v.get("total",0) >= 2},
                 "weekend_watchlist_scored": [w for w in td.get("weekend_watchlist", []) if w.get("score")],
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
