@@ -8432,6 +8432,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N501: Elder Ray Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n501 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n501_field = _buy_n501.get("elder_ray_entry_perf", "bull_power_neg") if _buy_n501 else "bull_power_neg"
+            _n501_perf = tlog.setdefault("elder_ray_entry_perf", {})
+            _n501p = _n501_perf.setdefault(_n501_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n501_field})
+            _n501p["total"] += 1; _n501p["total_pnl"] = round(_n501p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n501p["wins"] += 1
+            else:        _n501p["losses"] += 1
+            _n501p["win_rate"] = round(_n501p["wins"] / _n501p["total"] * 100, 1)
+            _n501p["avg_pnl"]  = round(_n501p["total_pnl"] / _n501p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N502: Aroon Signal Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n502 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n502_field = _buy_n502.get("aroon_signal_entry_perf", "aroon_neutral") if _buy_n502 else "aroon_neutral"
+            _n502_perf = tlog.setdefault("aroon_signal_entry_perf", {})
+            _n502p = _n502_perf.setdefault(_n502_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n502_field})
+            _n502p["total"] += 1; _n502p["total_pnl"] = round(_n502p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n502p["wins"] += 1
+            else:        _n502p["losses"] += 1
+            _n502p["win_rate"] = round(_n502p["wins"] / _n502p["total"] * 100, 1)
+            _n502p["avg_pnl"]  = round(_n502p["total_pnl"] / _n502p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N503: Chande Momentum Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n503 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n503_field = _buy_n503.get("chande_momentum_entry_perf", "neutral_cmo") if _buy_n503 else "neutral_cmo"
+            _n503_perf = tlog.setdefault("chande_momentum_entry_perf", {})
+            _n503p = _n503_perf.setdefault(_n503_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n503_field})
+            _n503p["total"] += 1; _n503p["total_pnl"] = round(_n503p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n503p["wins"] += 1
+            else:        _n503p["losses"] += 1
+            _n503p["win_rate"] = round(_n503p["wins"] / _n503p["total"] * 100, 1)
+            _n503p["avg_pnl"]  = round(_n503p["total_pnl"] / _n503p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N504: DPO Signal Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n504 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n504_field = _buy_n504.get("dpo_signal_entry_perf", "dpo_below_zero") if _buy_n504 else "dpo_below_zero"
+            _n504_perf = tlog.setdefault("dpo_signal_entry_perf", {})
+            _n504p = _n504_perf.setdefault(_n504_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n504_field})
+            _n504p["total"] += 1; _n504p["total_pnl"] = round(_n504p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n504p["wins"] += 1
+            else:        _n504p["losses"] += 1
+            _n504p["win_rate"] = round(_n504p["wins"] / _n504p["total"] * 100, 1)
+            _n504p["avg_pnl"]  = round(_n504p["total_pnl"] / _n504p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N505: Price vs VWAP Deviation Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n505 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n505_field = _buy_n505.get("price_vs_vwap_deviation_perf", "near_vwap") if _buy_n505 else "near_vwap"
+            _n505_perf = tlog.setdefault("price_vs_vwap_deviation_perf", {})
+            _n505p = _n505_perf.setdefault(_n505_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n505_field})
+            _n505p["total"] += 1; _n505p["total_pnl"] = round(_n505p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n505p["wins"] += 1
+            else:        _n505p["losses"] += 1
+            _n505p["win_rate"] = round(_n505p["wins"] / _n505p["total"] * 100, 1)
+            _n505p["avg_pnl"]  = round(_n505p["total_pnl"] / _n505p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N506: Accumulation Distribution Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n506 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n506_field = _buy_n506.get("accumulation_dist_perf", "ad_flat") if _buy_n506 else "ad_flat"
+            _n506_perf = tlog.setdefault("accumulation_dist_perf", {})
+            _n506p = _n506_perf.setdefault(_n506_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n506_field})
+            _n506p["total"] += 1; _n506p["total_pnl"] = round(_n506p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n506p["wins"] += 1
+            else:        _n506p["losses"] += 1
+            _n506p["win_rate"] = round(_n506p["wins"] / _n506p["total"] * 100, 1)
+            _n506p["avg_pnl"]  = round(_n506p["total_pnl"] / _n506p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N507: Chandelier Exit Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n507 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n507_field = _buy_n507.get("chandelier_exit_entry_perf", "below_chandelier") if _buy_n507 else "below_chandelier"
+            _n507_perf = tlog.setdefault("chandelier_exit_entry_perf", {})
+            _n507p = _n507_perf.setdefault(_n507_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n507_field})
+            _n507p["total"] += 1; _n507p["total_pnl"] = round(_n507p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n507p["wins"] += 1
+            else:        _n507p["losses"] += 1
+            _n507p["win_rate"] = round(_n507p["wins"] / _n507p["total"] * 100, 1)
+            _n507p["avg_pnl"]  = round(_n507p["total_pnl"] / _n507p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N508: PPO Signal Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n508 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n508_field = _buy_n508.get("ppo_signal_entry_perf", "ppo_negative") if _buy_n508 else "ppo_negative"
+            _n508_perf = tlog.setdefault("ppo_signal_entry_perf", {})
+            _n508p = _n508_perf.setdefault(_n508_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n508_field})
+            _n508p["total"] += 1; _n508p["total_pnl"] = round(_n508p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n508p["wins"] += 1
+            else:        _n508p["losses"] += 1
+            _n508p["win_rate"] = round(_n508p["wins"] / _n508p["total"] * 100, 1)
+            _n508p["avg_pnl"]  = round(_n508p["total_pnl"] / _n508p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N509: Coppock Curve Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n509 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n509_field = _buy_n509.get("coppock_curve_entry_perf", "coppock_falling") if _buy_n509 else "coppock_falling"
+            _n509_perf = tlog.setdefault("coppock_curve_entry_perf", {})
+            _n509p = _n509_perf.setdefault(_n509_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n509_field})
+            _n509p["total"] += 1; _n509p["total_pnl"] = round(_n509p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n509p["wins"] += 1
+            else:        _n509p["losses"] += 1
+            _n509p["win_rate"] = round(_n509p["wins"] / _n509p["total"] * 100, 1)
+            _n509p["avg_pnl"]  = round(_n509p["total_pnl"] / _n509p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N510: Hull MA Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n510 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n510_field = _buy_n510.get("hull_ma_entry_perf", "hull_neutral") if _buy_n510 else "hull_neutral"
+            _n510_perf = tlog.setdefault("hull_ma_entry_perf", {})
+            _n510p = _n510_perf.setdefault(_n510_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n510_field})
+            _n510p["total"] += 1; _n510p["total_pnl"] = round(_n510p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n510p["wins"] += 1
+            else:        _n510p["losses"] += 1
+            _n510p["win_rate"] = round(_n510p["wins"] / _n510p["total"] * 100, 1)
+            _n510p["avg_pnl"]  = round(_n510p["total_pnl"] / _n510p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -15226,7 +15376,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 460
+            _n_total = tlog.get("neurons_total") or 470
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -15631,6 +15781,88 @@ def run():
                         logger.info(f"News fetched for {len(_pos_news)} positions")
             except Exception as _news_e:
                 logger.debug(f"Position news fetch: {_news_e}")
+
+            # ── Morning / Evening AI Brief ──────────────────────────────────
+            # Generates an actionable brief once per session (morning pre-market or evening recap).
+            # Uses Claude Haiku for concise, position-specific guidance.
+            try:
+                _brief_date_key = _now_ts.strftime("%Y-%m-%d")
+                _is_premarket = _et_hour < 9 or (_et_hour == 9 and _et_min < 30)
+                _is_evening = _et_hour >= 16
+                _brief_type = "morning" if _is_premarket else ("evening" if _is_evening else "midday")
+                _last_brief = tlog.get("morning_brief", {})
+                _brief_stale = (
+                    _last_brief.get("date", "") != _brief_date_key
+                    or _last_brief.get("type", "") != _brief_type
+                )
+                if _brief_stale and ANTHROPIC_API_KEY and _brief_type != "midday":
+                    _cm_pos_brief = tlog.get("positions", [])
+                    _pos_lines = [
+                        f"  ${_bp['ticker']}: {float(_bp.get('pnl_pct', 0) or 0):+.1f}% ({_bp.get('recommendation', 'HOLD')})"
+                        for _bp in _cm_pos_brief[:6]
+                    ]
+                    _ei_brief = tlog.get("exit_intelligence", {})
+                    _ei_exits = [p["ticker"] for p in _ei_brief.get("positions", []) if p.get("grade") == "EXIT_SIGNAL"]
+                    _mop_brief = tlog.get("market_open_plan", {})
+                    _urgent_t = [a["ticker"] for a in _mop_brief.get("actions", []) if a.get("priority", 4) <= 2]
+                    _nm_brief = tlog.get("near_miss_watch", [])
+                    _nm_str = ", ".join(f"${x['ticker']}({x['score']}pts)" for x in _nm_brief[:4]) if _nm_brief else "none in range"
+                    _wd_brief = tlog.get("weekend_watchlist", [])
+                    _wd_str = ", ".join(f"${x['ticker']}" for x in _wd_brief[:5]) if _wd_brief else "none"
+                    _reg_brief = (tlog.get("regime", {}) or {}).get("regime", "neutral")
+                    _vix_brief = float((tlog.get("regime", {}) or {}).get("vix", 20) or 20)
+                    _wr_brief = float(tlog.get("win_rate", 0) or 0)
+                    _conv_brief = int(tlog.get("bot_conviction", 50) or 50)
+                    _pval_brief = float(tlog.get("portfolio_value", 100000) or 100000)
+                    _n_held_b = len(_cm_pos_brief)
+                    if _brief_type == "morning":
+                        _brief_prompt = (
+                            f"You are an elite AI trading assistant. Write a punchy morning brief (5-7 sentences) for a day trader.\n\n"
+                            f"Date: {_now_ts.strftime('%A %B %d')} (pre-market)\n"
+                            f"Portfolio: ${_pval_brief:,.0f} | Regime: {_reg_brief} | VIX: {_vix_brief:.1f}\n"
+                            f"Positions ({_n_held_b}):\n{chr(10).join(_pos_lines) if _pos_lines else '  None'}\n"
+                            f"Neural exit signals: {', '.join('$'+t for t in _ei_exits) if _ei_exits else 'none — all green'}\n"
+                            f"Urgent at open: {', '.join('$'+t for t in _urgent_t) if _urgent_t else 'none'}\n"
+                            f"Near-buy watchlist: {_nm_str}\n"
+                            f"Bot conviction: {_conv_brief}/100 | Win rate: {_wr_brief:.0%}\n\n"
+                            f"Write: (1) market temperature, (2) specific action for each position, (3) top opportunity. Direct, no fluff. $TICKER format."
+                        )
+                    else:
+                        _brief_prompt = (
+                            f"You are an elite AI trading assistant. Write a punchy evening recap (5-7 sentences).\n\n"
+                            f"Date: {_now_ts.strftime('%A %B %d')} (after hours)\n"
+                            f"Portfolio: ${_pval_brief:,.0f} | Regime: {_reg_brief} | VIX: {_vix_brief:.1f}\n"
+                            f"Positions ({_n_held_b}):\n{chr(10).join(_pos_lines) if _pos_lines else '  None'}\n"
+                            f"Neural exit alerts: {', '.join('$'+t for t in _ei_exits) if _ei_exits else 'none'}\n"
+                            f"Overnight watchlist: {_wd_str}\n"
+                            f"Bot conviction: {_conv_brief}/100\n\n"
+                            f"Write: (1) today summary, (2) overnight risk on held positions, (3) tomorrow prep. $TICKER format."
+                        )
+                    try:
+                        import anthropic as _anth_br
+                        _br_client = _anth_br.Anthropic(api_key=ANTHROPIC_API_KEY)
+                        _br_resp = _br_client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=300,
+                            messages=[{"role": "user", "content": _brief_prompt}]
+                        )
+                        _br_text = (_br_resp.content[0].text.strip()
+                                    if _br_resp.content else "")
+                        if _br_text:
+                            tlog["morning_brief"] = {
+                                "type":         _brief_type,
+                                "date":         _brief_date_key,
+                                "generated_at": _now_ts.isoformat(),
+                                "text":         _br_text,
+                                "n_positions":  _n_held_b,
+                                "exit_signals": _ei_exits,
+                                "urgent":       _urgent_t,
+                            }
+                            logger.info(f"AI {_brief_type} brief generated ({len(_br_text)} chars)")
+                    except Exception as _br_api_e:
+                        logger.debug(f"Brief API: {_br_api_e}")
+            except Exception as _brief_e:
+                logger.debug(f"Morning brief: {_brief_e}")
 
         except Exception as _cm_enrich_e:
             logger.debug(f"Closed-market brain enrichment: {_cm_enrich_e}")
@@ -23055,6 +23287,126 @@ def run():
                     except Exception:
                         _n500_s = "in_cloud"
                     _buy_signals_merged["ichimoku_cloud_entry_perf"] = _n500_s
+                    # N501: Elder Ray at entry
+                    try:
+                        _n501_er = str(live.get(tk, {}).get('elder_ray', '') or '')
+                        if _n501_er == 'bull_power_pos':
+                            _n501_s = "bull_power_pos"
+                        elif _n501_er == 'bear_power':
+                            _n501_s = "bear_power"
+                        else:
+                            _n501_s = "bull_power_neg"
+                    except Exception:
+                        _n501_s = "bull_power_neg"
+                    _buy_signals_merged["elder_ray_entry_perf"] = _n501_s
+                    # N502: Aroon signal at entry
+                    try:
+                        _n502_ar = str(live.get(tk, {}).get('aroon_signal', '') or '')
+                        if _n502_ar == 'aroon_strong_up':
+                            _n502_s = "aroon_strong_up"
+                        elif _n502_ar == 'aroon_strong_down':
+                            _n502_s = "aroon_strong_down"
+                        else:
+                            _n502_s = "aroon_neutral"
+                    except Exception:
+                        _n502_s = "aroon_neutral"
+                    _buy_signals_merged["aroon_signal_entry_perf"] = _n502_s
+                    # N503: Chande Momentum at entry
+                    try:
+                        _n503_cmo = str(live.get(tk, {}).get('chande_momentum', '') or '')
+                        if _n503_cmo == 'strong_bullish_cmo':
+                            _n503_s = "strong_bullish_cmo"
+                        elif _n503_cmo == 'strong_bearish_cmo':
+                            _n503_s = "strong_bearish_cmo"
+                        else:
+                            _n503_s = "neutral_cmo"
+                    except Exception:
+                        _n503_s = "neutral_cmo"
+                    _buy_signals_merged["chande_momentum_entry_perf"] = _n503_s
+                    # N504: DPO signal at entry
+                    try:
+                        _n504_dpo = str(live.get(tk, {}).get('dpo_signal', '') or '')
+                        if _n504_dpo == 'dpo_above_zero':
+                            _n504_s = "dpo_above_zero"
+                        elif _n504_dpo == 'dpo_zero_cross':
+                            _n504_s = "dpo_zero_cross"
+                        else:
+                            _n504_s = "dpo_below_zero"
+                    except Exception:
+                        _n504_s = "dpo_below_zero"
+                    _buy_signals_merged["dpo_signal_entry_perf"] = _n504_s
+                    # N505: Price vs VWAP deviation at entry
+                    try:
+                        _n505_vd = float(live.get(tk, {}).get('vwap_dev_pct', 0) or 0)
+                        if _n505_vd > 2.0:
+                            _n505_s = "far_above_vwap"
+                        elif _n505_vd < -2.0:
+                            _n505_s = "far_below_vwap"
+                        else:
+                            _n505_s = "near_vwap"
+                    except Exception:
+                        _n505_s = "near_vwap"
+                    _buy_signals_merged["price_vs_vwap_deviation_perf"] = _n505_s
+                    # N506: Accumulation/Distribution trend at entry
+                    try:
+                        _n506_ad = str(live.get(tk, {}).get('ad_trend', '') or '')
+                        if _n506_ad == 'ad_rising':
+                            _n506_s = "ad_rising"
+                        elif _n506_ad == 'ad_falling':
+                            _n506_s = "ad_falling"
+                        else:
+                            _n506_s = "ad_flat"
+                    except Exception:
+                        _n506_s = "ad_flat"
+                    _buy_signals_merged["accumulation_dist_perf"] = _n506_s
+                    # N507: Chandelier exit position at entry
+                    try:
+                        _n507_ce = str(live.get(tk, {}).get('chandelier_bull', '') or '')
+                        if _n507_ce == 'above_chandelier':
+                            _n507_s = "above_chandelier"
+                        elif _n507_ce == 'at_chandelier':
+                            _n507_s = "at_chandelier"
+                        else:
+                            _n507_s = "below_chandelier"
+                    except Exception:
+                        _n507_s = "below_chandelier"
+                    _buy_signals_merged["chandelier_exit_entry_perf"] = _n507_s
+                    # N508: PPO signal at entry
+                    try:
+                        _n508_ppo = str(live.get(tk, {}).get('ppo_signal', '') or '')
+                        if _n508_ppo == 'ppo_positive_cross':
+                            _n508_s = "ppo_positive_cross"
+                        elif _n508_ppo == 'ppo_positive':
+                            _n508_s = "ppo_positive"
+                        else:
+                            _n508_s = "ppo_negative"
+                    except Exception:
+                        _n508_s = "ppo_negative"
+                    _buy_signals_merged["ppo_signal_entry_perf"] = _n508_s
+                    # N509: Coppock Curve at entry
+                    try:
+                        _n509_cc = str(live.get(tk, {}).get('coppock_curve', '') or '')
+                        if _n509_cc == 'coppock_rising_pos':
+                            _n509_s = "coppock_rising_pos"
+                        elif _n509_cc == 'coppock_rising_neg':
+                            _n509_s = "coppock_rising_neg"
+                        else:
+                            _n509_s = "coppock_falling"
+                    except Exception:
+                        _n509_s = "coppock_falling"
+                    _buy_signals_merged["coppock_curve_entry_perf"] = _n509_s
+                    # N510: Hull MA signal at entry
+                    try:
+                        _n510_hm = str(live.get(tk, {}).get('hull_ma_signal', '') or '')
+                        if _n510_hm == 'hull_bullish':
+                            _n510_s = "hull_bullish"
+                        elif _n510_hm == 'hull_bearish':
+                            _n510_s = "hull_bearish"
+                        else:
+                            _n510_s = "hull_neutral"
+                    except Exception:
+                        _n510_s = "hull_neutral"
+                    _buy_signals_merged["hull_ma_entry_perf"] = _n510_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -29644,6 +29996,86 @@ def run():
         if _n500_list:
             _learn_log.append(f"N500 Ichimoku Cloud: above_cloud={_a_n500['win_rate']:.0f}% below_cloud={_b_n500['win_rate']:.0f}%WR")
 
+        # ── N501: Elder Ray entry tuner ────────────────────
+        _n501_raw = tlog.get("elder_ray_entry_perf", {})
+        _n501_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n501_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n501 = next((s for s in _n501_list if s.get("state")=="bull_power_pos"), _n501_list[0] if _n501_list else {"win_rate":50})
+        _b_n501 = next((s for s in _n501_list if s.get("state")=="bear_power"), _n501_list[-1] if _n501_list else {"win_rate":50})
+        if _n501_list:
+            _learn_log.append(f"N501 Elder Ray: bull_power_pos={_a_n501['win_rate']:.0f}% bear_power={_b_n501['win_rate']:.0f}%WR")
+
+        # ── N502: Aroon signal entry tuner ────────────────────
+        _n502_raw = tlog.get("aroon_signal_entry_perf", {})
+        _n502_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n502_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n502 = next((s for s in _n502_list if s.get("state")=="aroon_strong_up"), _n502_list[0] if _n502_list else {"win_rate":50})
+        _b_n502 = next((s for s in _n502_list if s.get("state")=="aroon_strong_down"), _n502_list[-1] if _n502_list else {"win_rate":50})
+        if _n502_list:
+            _learn_log.append(f"N502 Aroon Signal: aroon_strong_up={_a_n502['win_rate']:.0f}% aroon_strong_down={_b_n502['win_rate']:.0f}%WR")
+
+        # ── N503: Chande Momentum entry tuner ────────────────────
+        _n503_raw = tlog.get("chande_momentum_entry_perf", {})
+        _n503_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n503_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n503 = next((s for s in _n503_list if s.get("state")=="strong_bullish_cmo"), _n503_list[0] if _n503_list else {"win_rate":50})
+        _b_n503 = next((s for s in _n503_list if s.get("state")=="strong_bearish_cmo"), _n503_list[-1] if _n503_list else {"win_rate":50})
+        if _n503_list:
+            _learn_log.append(f"N503 Chande Momentum: strong_bullish_cmo={_a_n503['win_rate']:.0f}% strong_bearish_cmo={_b_n503['win_rate']:.0f}%WR")
+
+        # ── N504: DPO signal entry tuner ────────────────────
+        _n504_raw = tlog.get("dpo_signal_entry_perf", {})
+        _n504_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n504_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n504 = next((s for s in _n504_list if s.get("state")=="dpo_above_zero"), _n504_list[0] if _n504_list else {"win_rate":50})
+        _b_n504 = next((s for s in _n504_list if s.get("state")=="dpo_below_zero"), _n504_list[-1] if _n504_list else {"win_rate":50})
+        if _n504_list:
+            _learn_log.append(f"N504 DPO Signal: dpo_above_zero={_a_n504['win_rate']:.0f}% dpo_below_zero={_b_n504['win_rate']:.0f}%WR")
+
+        # ── N505: Price vs VWAP deviation entry tuner ────────────────────
+        _n505_raw = tlog.get("price_vs_vwap_deviation_perf", {})
+        _n505_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n505_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n505 = next((s for s in _n505_list if s.get("state")=="far_above_vwap"), _n505_list[0] if _n505_list else {"win_rate":50})
+        _b_n505 = next((s for s in _n505_list if s.get("state")=="far_below_vwap"), _n505_list[-1] if _n505_list else {"win_rate":50})
+        if _n505_list:
+            _learn_log.append(f"N505 VWAP Dev: far_above_vwap={_a_n505['win_rate']:.0f}% far_below_vwap={_b_n505['win_rate']:.0f}%WR")
+
+        # ── N506: Accumulation/Distribution entry tuner ────────────────────
+        _n506_raw = tlog.get("accumulation_dist_perf", {})
+        _n506_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n506_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n506 = next((s for s in _n506_list if s.get("state")=="ad_rising"), _n506_list[0] if _n506_list else {"win_rate":50})
+        _b_n506 = next((s for s in _n506_list if s.get("state")=="ad_falling"), _n506_list[-1] if _n506_list else {"win_rate":50})
+        if _n506_list:
+            _learn_log.append(f"N506 A/D Line: ad_rising={_a_n506['win_rate']:.0f}% ad_falling={_b_n506['win_rate']:.0f}%WR")
+
+        # ── N507: Chandelier exit entry tuner ────────────────────
+        _n507_raw = tlog.get("chandelier_exit_entry_perf", {})
+        _n507_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n507_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n507 = next((s for s in _n507_list if s.get("state")=="above_chandelier"), _n507_list[0] if _n507_list else {"win_rate":50})
+        _b_n507 = next((s for s in _n507_list if s.get("state")=="below_chandelier"), _n507_list[-1] if _n507_list else {"win_rate":50})
+        if _n507_list:
+            _learn_log.append(f"N507 Chandelier Exit: above_chandelier={_a_n507['win_rate']:.0f}% below_chandelier={_b_n507['win_rate']:.0f}%WR")
+
+        # ── N508: PPO signal entry tuner ────────────────────
+        _n508_raw = tlog.get("ppo_signal_entry_perf", {})
+        _n508_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n508_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n508 = next((s for s in _n508_list if s.get("state")=="ppo_positive_cross"), _n508_list[0] if _n508_list else {"win_rate":50})
+        _b_n508 = next((s for s in _n508_list if s.get("state")=="ppo_negative"), _n508_list[-1] if _n508_list else {"win_rate":50})
+        if _n508_list:
+            _learn_log.append(f"N508 PPO Signal: ppo_positive_cross={_a_n508['win_rate']:.0f}% ppo_negative={_b_n508['win_rate']:.0f}%WR")
+
+        # ── N509: Coppock Curve entry tuner ────────────────────
+        _n509_raw = tlog.get("coppock_curve_entry_perf", {})
+        _n509_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n509_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n509 = next((s for s in _n509_list if s.get("state")=="coppock_rising_pos"), _n509_list[0] if _n509_list else {"win_rate":50})
+        _b_n509 = next((s for s in _n509_list if s.get("state")=="coppock_falling"), _n509_list[-1] if _n509_list else {"win_rate":50})
+        if _n509_list:
+            _learn_log.append(f"N509 Coppock Curve: coppock_rising_pos={_a_n509['win_rate']:.0f}% coppock_falling={_b_n509['win_rate']:.0f}%WR")
+
+        # ── N510: Hull MA entry tuner ────────────────────
+        _n510_raw = tlog.get("hull_ma_entry_perf", {})
+        _n510_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n510_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n510 = next((s for s in _n510_list if s.get("state")=="hull_bullish"), _n510_list[0] if _n510_list else {"win_rate":50})
+        _b_n510 = next((s for s in _n510_list if s.get("state")=="hull_bearish"), _n510_list[-1] if _n510_list else {"win_rate":50})
+        if _n510_list:
+            _learn_log.append(f"N510 Hull MA: hull_bullish={_a_n510['win_rate']:.0f}% hull_bearish={_b_n510['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -30432,6 +30864,16 @@ def run():
             "cmf_entry_perf": _n498_list,  # N498: Chaikin Money Flow at entry vs outcome
             "dmi_cross_entry_perf": _n499_list,  # N499: DMI crossover signal at entry vs outcome
             "ichimoku_cloud_entry_perf": _n500_list,  # N500: Ichimoku cloud position at entry vs outcome
+            "elder_ray_entry_perf": _n501_list,  # N501: Elder Ray bull/bear power at entry vs outcome
+            "aroon_signal_entry_perf": _n502_list,  # N502: Aroon signal at entry vs outcome
+            "chande_momentum_entry_perf": _n503_list,  # N503: Chande Momentum Oscillator at entry vs outcome
+            "dpo_signal_entry_perf": _n504_list,  # N504: DPO signal at entry vs outcome
+            "price_vs_vwap_deviation_perf": _n505_list,  # N505: price vs VWAP deviation % at entry vs outcome
+            "accumulation_dist_perf": _n506_list,  # N506: A/D line trend at entry vs outcome
+            "chandelier_exit_entry_perf": _n507_list,  # N507: Chandelier exit position at entry vs outcome
+            "ppo_signal_entry_perf": _n508_list,  # N508: PPO signal at entry vs outcome
+            "coppock_curve_entry_perf": _n509_list,  # N509: Coppock Curve state at entry vs outcome
+            "hull_ma_entry_perf": _n510_list,  # N510: Hull MA signal at entry vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -30744,9 +31186,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 460              # total tracked neuron dimensions (N103-N500 complete)
+        tlog["neurons_total"]     = 470              # total tracked neuron dimensions (N103-N510 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/460 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/470 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
