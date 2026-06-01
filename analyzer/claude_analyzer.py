@@ -732,6 +732,17 @@ def build_prompt(
     if ba.get("top_edge_neurons"):
         for n in ba["top_edge_neurons"][:2]:
             ba_lines.append(f"  Top edge: {n.get('neuron','').replace('_perf','').replace('_',' ')} | {n.get('best_state','')} → {n.get('win_rate',0):.0f}% WR ({n.get('samples',0)} trades)")
+    if ba.get("best_hold_duration"):
+        bh = ba["best_hold_duration"]
+        ba_lines.append(f"  Best hold duration: {bh.get('state','?')} → {bh.get('win_rate',0):.0f}% WR, avg P&L {bh.get('avg_pnl',0):+.1f}% ({bh.get('samples',0)} trades)")
+    if ba.get("best_catalyst_type"):
+        bc = ba["best_catalyst_type"]
+        ba_lines.append(f"  Best catalyst: {bc.get('state','?')} → {bc.get('win_rate',0):.0f}% WR ({bc.get('samples',0)} trades)")
+    if ba.get("grade_performance"):
+        gp = ba["grade_performance"]
+        gp_parts = [f"{g}: {v.get('win_rate',0):.0f}%WR({v.get('samples',0)}t)" for g, v in sorted(gp.items(), key=lambda x: -x[1].get("win_rate",0))[:4]]
+        if gp_parts:
+            ba_lines.append(f"  Grade WRs: {' | '.join(gp_parts)}")
     ba_str = "\n".join(ba_lines) if ba_lines else "  Brain still accumulating trade data to identify optimal conditions"
 
     # Append live trading context so AI can give position-specific guidance

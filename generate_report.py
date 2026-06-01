@@ -856,6 +856,39 @@ def _build_weekly_bot_report(docs_dir):
             for h, v in sorted(hour_wr.items()) if v["total"] >= 2
         ]
 
+    # ── Trade Duration Analytics ──────────────────────────────────────────────
+    # Optimal hold time: best duration bucket by win rate from hold_duration_perf
+    dur_best = _best_state("hold_duration_perf")
+    if not dur_best:
+        dur_best = _best_state("hold_time_perf")
+    if dur_best:
+        brain_analytics["best_hold_duration"] = {
+            "state": dur_best.get("state", ""),
+            "win_rate": dur_best.get("win_rate", 0),
+            "samples": dur_best.get("total", 0),
+            "avg_pnl": dur_best.get("avg_pnl", 0),
+        }
+    # Best catalyst type for entries
+    cat_best = _best_state("catalyst_freshness_perf")
+    if not cat_best:
+        cat_best = _best_state("catalyst_type_perf")
+    if cat_best:
+        brain_analytics["best_catalyst_type"] = {
+            "state": cat_best.get("state", ""),
+            "win_rate": cat_best.get("win_rate", 0),
+            "samples": cat_best.get("total", 0),
+        }
+    # Grade performance summary (A+ vs A vs B+/B)
+    grade_data = {
+        s.get("state", ""): s
+        for s in lp.get("grade_perf", []) if isinstance(s, dict) and s.get("total", 0) >= 3
+    }
+    if grade_data:
+        brain_analytics["grade_performance"] = {
+            g: {"win_rate": v.get("win_rate", 0), "samples": v.get("total", 0), "avg_pnl": v.get("avg_pnl", 0)}
+            for g, v in grade_data.items()
+        }
+
     # ── Strategy Insights: performance attribution from all learned neurons ──
     # Identify top "alpha" neuron states (win rate vs base rate)
     strategy_insights = {"top_alpha": [], "top_drag": [], "key_combos": []}
@@ -1168,6 +1201,14 @@ def _run():
                             ({"state": x.get("state"), "win_rate": x.get("win_rate",0), "samples": x.get("total",0)}
                              for x in sorted([x for x in lp.get("market_regime_vix_perf",[]) if isinstance(x,dict) and x.get("total",0)>=3],
                                              key=lambda x: -x.get("win_rate",0))[:1]), None),
+                        "best_hold_duration": next(
+                            ({"state": x.get("state"), "win_rate": x.get("win_rate",0), "samples": x.get("total",0), "avg_pnl": x.get("avg_pnl",0)}
+                             for x in sorted([x for x in (lp.get("hold_duration_perf") or lp.get("hold_time_perf", [])) if isinstance(x,dict) and x.get("total",0)>=3],
+                                             key=lambda x: -x.get("win_rate",0))[:1]), None),
+                        "grade_performance": {
+                            s.get("state",""): {"win_rate": s.get("win_rate",0), "samples": s.get("total",0), "avg_pnl": s.get("avg_pnl",0)}
+                            for s in lp.get("grade_perf", []) if isinstance(s, dict) and s.get("total",0) >= 3
+                        } or None,
                     }.items() if v is not None
                 },
             }
