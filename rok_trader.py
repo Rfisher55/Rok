@@ -18620,6 +18620,28 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     except Exception as _oe:
         logger.warning(f"Fetch open orders failed: {_oe}")
 
+    # ── Safety valve: force-remove positions stuck in error loop for > 4h ──
+    _sell_errors = tlog.get("crypto_sell_errors", [])
+    _err_counts = {}
+    for _err in _sell_errors[-30:]:  # look at last 30 errors
+        _err_sym = _err.get("sym", "")
+        _err_counts[_err_sym] = _err_counts.get(_err_sym, 0) + 1
+    for _stuck_sym, _stuck_n in _err_counts.items():
+        if _stuck_n >= 3 and _stuck_sym in held_crypto:
+            _stuck_entry_ts = peaks.get(_stuck_sym, {}).get("time", now_utc.isoformat()) if isinstance(peaks.get(_stuck_sym), dict) else now_utc.isoformat()
+            try:
+                _stuck_age = (now_utc - datetime.fromisoformat(_stuck_entry_ts.replace("Z", "+00:00"))).total_seconds() / 60
+            except Exception:
+                _stuck_age = 999
+            if _stuck_age >= 240:
+                logger.warning(f"FORCE-REMOVE {_stuck_sym}: {_stuck_n} sell errors, age={_stuck_age:.0f}min — freeing slot")
+                peaks.pop(_stuck_sym, None)
+                held_crypto.pop(_stuck_sym, None)
+                tlog.setdefault("crypto_sell_errors", []).append({
+                    "ts": now_utc.isoformat(), "sym": _stuck_sym, "reason": "force_removed",
+                    "http_err": f"stuck {_stuck_n} errors", "body": f"age={_stuck_age:.0f}min",
+                })
+
     # ── Sell / manage open crypto positions ──────────────────────────────
     for sym, pos in list(held_crypto.items()):
         try:
@@ -18713,8 +18735,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                         _is_residual = (
                             "minimal qty" in _del_body.lower()
                             or "qty must be" in _del_body.lower()
-                            or '"code":40310000' in _del_body
-                            or '"code":40010001' in _del_body
+                            or "40310000" in _del_body   # Alpaca code for min-qty violation
+                            or "40010001" in _del_body   # Alpaca code for qty=0
                         )
                         if _is_residual:
                             # Sub-minimum residual position — untradeable, treat as gone
