@@ -35492,7 +35492,7 @@ def run():
             sig = live.get(sym, {})
             if not sig:
                 return {}
-            return {
+            _raw = {
                 "rsi":            round(sig.get("daily_rsi", 50), 1),
                 "vwap_pos":       round(sig.get("vwap_pos", 0), 2),
                 "vwap_price":     round(sig.get("vwap_price", 0), 2),
@@ -35642,6 +35642,7 @@ def run():
                 "day_low":            round(sig.get("day_low", 0.0)  or 0.0, 2),
                 "day_open":           round(sig.get("day_open", 0.0) or 0.0, 2),
             }
+            return _sanitize_json(_raw)
 
         _pos_list_raw = []
         for p in curr:
