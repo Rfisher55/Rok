@@ -18702,8 +18702,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                     # (rounding-up causes 403 insufficient balance; tiny qty causes 422 min-qty rejection)
                     _del_r = requests.delete(f"{ALPACA_BASE}/v2/positions/{_raw_sym}",
                                              headers=_h(), timeout=10)
-                    if _del_r.status_code not in (200, 204):
-                        # Fall back to order-based sell if DELETE fails
+                    if _del_r.status_code in (200, 204):
+                        pass  # closed cleanly
+                    elif _del_r.status_code == 404:
+                        # Position already gone (settled / previously closed) — treat as success
+                        logger.info(f"Position {_raw_sym} already gone (404) — removing from tracking")
+                    else:
+                        # DELETE rejected — fall back to order-based sell
                         import math as _math
                         _sell_qty = _math.floor(qty * 1e8) / 1e8
                         if _sell_qty > 0:
