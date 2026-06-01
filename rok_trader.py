@@ -9933,6 +9933,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N601: Bid-Ask Spread Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n601 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n601_field = _buy_n601.get("bid_ask_spread_perf", "normal_spread") if _buy_n601 else "normal_spread"
+            _n601_perf = tlog.setdefault("bid_ask_spread_perf", {})
+            _n601p = _n601_perf.setdefault(_n601_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n601_field})
+            _n601p["total"] += 1; _n601p["total_pnl"] = round(_n601p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n601p["wins"] += 1
+            else:        _n601p["losses"] += 1
+            _n601p["win_rate"] = round(_n601p["wins"] / _n601p["total"] * 100, 1)
+            _n601p["avg_pnl"]  = round(_n601p["total_pnl"] / _n601p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N602: News Recency Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n602 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n602_field = _buy_n602.get("news_recency_perf", "same_day_news") if _buy_n602 else "same_day_news"
+            _n602_perf = tlog.setdefault("news_recency_perf", {})
+            _n602p = _n602_perf.setdefault(_n602_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n602_field})
+            _n602p["total"] += 1; _n602p["total_pnl"] = round(_n602p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n602p["wins"] += 1
+            else:        _n602p["losses"] += 1
+            _n602p["win_rate"] = round(_n602p["wins"] / _n602p["total"] * 100, 1)
+            _n602p["avg_pnl"]  = round(_n602p["total_pnl"] / _n602p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N603: Sector Rotation Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n603 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n603_field = _buy_n603.get("sector_rotation_perf", "neutral_sector") if _buy_n603 else "neutral_sector"
+            _n603_perf = tlog.setdefault("sector_rotation_perf", {})
+            _n603p = _n603_perf.setdefault(_n603_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n603_field})
+            _n603p["total"] += 1; _n603p["total_pnl"] = round(_n603p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n603p["wins"] += 1
+            else:        _n603p["losses"] += 1
+            _n603p["win_rate"] = round(_n603p["wins"] / _n603p["total"] * 100, 1)
+            _n603p["avg_pnl"]  = round(_n603p["total_pnl"] / _n603p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N604: Pre-Market Volume Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n604 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n604_field = _buy_n604.get("pre_market_volume_perf", "moderate_pm_vol") if _buy_n604 else "moderate_pm_vol"
+            _n604_perf = tlog.setdefault("pre_market_volume_perf", {})
+            _n604p = _n604_perf.setdefault(_n604_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n604_field})
+            _n604p["total"] += 1; _n604p["total_pnl"] = round(_n604p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n604p["wins"] += 1
+            else:        _n604p["losses"] += 1
+            _n604p["win_rate"] = round(_n604p["wins"] / _n604p["total"] * 100, 1)
+            _n604p["avg_pnl"]  = round(_n604p["total_pnl"] / _n604p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N605: Breakout Volume Confirm Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n605 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n605_field = _buy_n605.get("breakout_volume_confirm_perf", "moderate_vol_breakout") if _buy_n605 else "moderate_vol_breakout"
+            _n605_perf = tlog.setdefault("breakout_volume_confirm_perf", {})
+            _n605p = _n605_perf.setdefault(_n605_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n605_field})
+            _n605p["total"] += 1; _n605p["total_pnl"] = round(_n605p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n605p["wins"] += 1
+            else:        _n605p["losses"] += 1
+            _n605p["win_rate"] = round(_n605p["wins"] / _n605p["total"] * 100, 1)
+            _n605p["avg_pnl"]  = round(_n605p["total_pnl"] / _n605p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N606: Trend Day Type Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n606 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n606_field = _buy_n606.get("trend_day_type_perf", "balanced_day") if _buy_n606 else "balanced_day"
+            _n606_perf = tlog.setdefault("trend_day_type_perf", {})
+            _n606p = _n606_perf.setdefault(_n606_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n606_field})
+            _n606p["total"] += 1; _n606p["total_pnl"] = round(_n606p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n606p["wins"] += 1
+            else:        _n606p["losses"] += 1
+            _n606p["win_rate"] = round(_n606p["wins"] / _n606p["total"] * 100, 1)
+            _n606p["avg_pnl"]  = round(_n606p["total_pnl"] / _n606p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N607: Entry Candle Pattern Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n607 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n607_field = _buy_n607.get("entry_candle_pattern_perf", "doji_indecision") if _buy_n607 else "doji_indecision"
+            _n607_perf = tlog.setdefault("entry_candle_pattern_perf", {})
+            _n607p = _n607_perf.setdefault(_n607_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n607_field})
+            _n607p["total"] += 1; _n607p["total_pnl"] = round(_n607p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n607p["wins"] += 1
+            else:        _n607p["losses"] += 1
+            _n607p["win_rate"] = round(_n607p["wins"] / _n607p["total"] * 100, 1)
+            _n607p["avg_pnl"]  = round(_n607p["total_pnl"] / _n607p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N608: Resistance Proximity Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n608 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n608_field = _buy_n608.get("resistance_proximity_perf", "approaching_resistance") if _buy_n608 else "approaching_resistance"
+            _n608_perf = tlog.setdefault("resistance_proximity_perf", {})
+            _n608p = _n608_perf.setdefault(_n608_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n608_field})
+            _n608p["total"] += 1; _n608p["total_pnl"] = round(_n608p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n608p["wins"] += 1
+            else:        _n608p["losses"] += 1
+            _n608p["win_rate"] = round(_n608p["wins"] / _n608p["total"] * 100, 1)
+            _n608p["avg_pnl"]  = round(_n608p["total_pnl"] / _n608p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N609: Market Breadth Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n609 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n609_field = _buy_n609.get("market_breadth_perf", "neutral_breadth") if _buy_n609 else "neutral_breadth"
+            _n609_perf = tlog.setdefault("market_breadth_perf", {})
+            _n609p = _n609_perf.setdefault(_n609_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n609_field})
+            _n609p["total"] += 1; _n609p["total_pnl"] = round(_n609p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n609p["wins"] += 1
+            else:        _n609p["losses"] += 1
+            _n609p["win_rate"] = round(_n609p["wins"] / _n609p["total"] * 100, 1)
+            _n609p["avg_pnl"]  = round(_n609p["total_pnl"] / _n609p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N610: Time of Day Score Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n610 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n610_field = _buy_n610.get("time_of_day_score_perf", "good_window") if _buy_n610 else "good_window"
+            _n610_perf = tlog.setdefault("time_of_day_score_perf", {})
+            _n610p = _n610_perf.setdefault(_n610_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n610_field})
+            _n610p["total"] += 1; _n610p["total_pnl"] = round(_n610p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n610p["wins"] += 1
+            else:        _n610p["losses"] += 1
+            _n610p["win_rate"] = round(_n610p["wins"] / _n610p["total"] * 100, 1)
+            _n610p["avg_pnl"]  = round(_n610p["total_pnl"] / _n610p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -16393,7 +16543,36 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           "in_squeeze" if d.get("in_squeeze") else "no_squeeze")
             _nsl_adj += _nsl_edge("squeeze_momentum_perf", _nsl_sqz_s)
 
-            s += max(-8, min(8, round(_nsl_adj)))
+            # N591: Entry session quality (time-of-day momentum context)
+            _nsl_hr = datetime.now().hour
+            _nsl_sess_s = ("morning_session" if 9 <= _nsl_hr < 11 else
+                           "afternoon_session" if 14 <= _nsl_hr <= 16 else "midday_session")
+            _nsl_adj += _nsl_edge("entry_session_quality_perf", _nsl_sess_s)
+
+            # N599: Weekly trend alignment (higher timeframe context)
+            _nsl_w_chg = d.get("week_chg", d.get("chg5d", 0)) or 0
+            _nsl_wtrend_s = ("strong_weekly_uptrend" if _nsl_w_chg >= 3 else
+                             "weekly_downtrend" if _nsl_w_chg <= -1 else "weak_weekly_trend")
+            _nsl_adj += _nsl_edge("weekly_trend_alignment_perf", _nsl_wtrend_s)
+
+            # N600: Composite momentum score bucket (overall signal density)
+            _nsl_mom_s = ("elite_momentum" if s >= 85 else "strong_momentum" if s >= 70 else
+                          "moderate_momentum" if s >= 50 else "weak_momentum")
+            _nsl_adj += _nsl_edge("momentum_score_bucket_perf", _nsl_mom_s)
+
+            # N593: Prior day close relation (overnight drift context)
+            _nsl_chg1d = d.get("change_pct", d.get("chg1d", 0)) or 0
+            _nsl_priorday_s = ("above_prior_close" if _nsl_chg1d >= 0.5 else
+                               "below_prior_close" if _nsl_chg1d <= -0.5 else "near_prior_close")
+            _nsl_adj += _nsl_edge("prior_day_close_relation_perf", _nsl_priorday_s)
+
+            # N603: Sector rotation (hot vs cold sector at entry)
+            _nsl_sec_pct = d.get("sector_etf_1d", d.get("sector_day_pct", 0)) or 0
+            _nsl_sec_s = ("hot_sector" if _nsl_sec_pct >= 1 else
+                          "cold_sector" if _nsl_sec_pct <= -1 else "neutral_sector")
+            _nsl_adj += _nsl_edge("sector_rotation_perf", _nsl_sec_s)
+
+            s += max(-12, min(12, round(_nsl_adj)))
     except Exception:
         pass
 
@@ -17473,6 +17652,44 @@ def run():
         logger.warning(f"DRAWDOWN HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys until recovery")
     elif drawdown_pct > 2:
         logger.info(f"Portfolio drawdown: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — risk reduced")
+
+    # ── INTRADAY PERFORMANCE FEEDBACK: adaptive daily risk budget ────────────
+    # Track today's closed trades and scale risk in/out dynamically.
+    # Going 0-2 today → normal risk. 3+ consecutive losses → shrink to 60%.
+    # Winning consistently → allow 10% more confidence.
+    _tz_et = ZoneInfo("America/New_York")
+    _today_str_run = datetime.now(_tz_et).strftime("%Y-%m-%d")
+    _all_trades_run = _prior_tlog.get("trades", [])
+    _closed_today_run = [t for t in _all_trades_run
+                         if (t.get("time") or "")[:10] == _today_str_run
+                         and t.get("action") in ("SELL", "COVER")
+                         and t.get("pnl_pct") is not None]
+    _today_wins_run  = sum(1 for t in _closed_today_run if (t.get("pnl_pct") or 0) > 0)
+    _today_losses_run = sum(1 for t in _closed_today_run if (t.get("pnl_pct") or 0) <= 0)
+    _today_total_run = _today_wins_run + _today_losses_run
+    # Detect consecutive losses at end of today's closed trades (loss streak)
+    _loss_streak = 0
+    for _t in reversed(_closed_today_run):
+        if (_t.get("pnl_pct") or 0) <= 0:
+            _loss_streak += 1
+        else:
+            break
+    # Daily risk multiplier: tighten on loss streak, loosen on win streak
+    _daily_risk_mult = 1.0
+    if _loss_streak >= 4:
+        _daily_risk_mult = 0.50   # 4+ consecutive losses: very defensive
+        logger.warning(f"LOSS STREAK={_loss_streak}: daily_risk_mult={_daily_risk_mult:.2f} — cautious mode")
+    elif _loss_streak >= 3:
+        _daily_risk_mult = 0.65   # 3 consecutive losses: reduce meaningfully
+        logger.info(f"Loss streak={_loss_streak}: daily_risk_mult={_daily_risk_mult:.2f}")
+    elif _loss_streak >= 2:
+        _daily_risk_mult = 0.80   # 2 consecutive losses: mild caution
+        logger.info(f"Loss streak={_loss_streak}: daily_risk_mult={_daily_risk_mult:.2f}")
+    elif _today_total_run >= 3 and _today_wins_run / _today_total_run >= 0.75:
+        _daily_risk_mult = 1.10   # 75%+ win rate today (3+ trades): slightly more confident
+        logger.info(f"Strong day ({_today_wins_run}/{_today_total_run}): daily_risk_mult={_daily_risk_mult:.2f}")
+    if _today_total_run > 0:
+        logger.info(f"Today: {_today_wins_run}W/{_today_losses_run}L (streak={_loss_streak})")
 
     # Win rate + payoff ratio from trade history for full Kelly criterion
     _trade_stats = _prior_tlog.get("stats", {})
@@ -20152,6 +20369,13 @@ def run():
                     if _recovery_mode:
                         notional = round(notional * 0.60, 2)
                         logger.info(f"Recovery mode sizing: {tk} notional cut 40%")
+
+                    # ── Intraday Performance Feedback Sizing ──────────────────────────
+                    # Shrink positions after intraday loss streaks; grow after strong winning days.
+                    if _daily_risk_mult != 1.0:
+                        notional = round(notional * _daily_risk_mult, 2)
+                        if _daily_risk_mult < 1.0:
+                            logger.info(f"Intraday loss streak sizing: {tk} × {_daily_risk_mult:.2f} → ${notional:.0f}")
 
                     # ── Neural Quality Size Multiplier ────────────────────────────────
                     # Synthesizes RS tier (N127), trend template (N108), score persistence (N138),
@@ -27093,6 +27317,10 @@ def run():
     tlog["buying_power"]    = round(buying_power, 2)
     tlog["regime"]          = regime
     tlog["status"]          = "ok"
+    tlog["intraday_wins"]   = _today_wins_run
+    tlog["intraday_losses"] = _today_losses_run
+    tlog["loss_streak"]     = _loss_streak
+    tlog["daily_risk_mult"] = _daily_risk_mult
     # Next expected run: 5 minutes from now during market hours
     try:
         from datetime import timedelta
