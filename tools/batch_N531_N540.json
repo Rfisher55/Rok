@@ -1,0 +1,67 @@
+{
+  "batch": "N531-N540",
+  "neurons": [
+    {
+      "id": "N531",
+      "key": "catalyst_freshness_entry_perf",
+      "description": "Catalyst freshness at entry (news age hours)",
+      "values": ["fresh_catalyst", "aging_catalyst", "stale_catalyst"]
+    },
+    {
+      "id": "N532",
+      "key": "entry_timing_session_perf",
+      "description": "Entry timing session (power hour / mid-session / open drive)",
+      "values": ["power_hour_entry", "mid_session_entry", "open_drive_entry"]
+    },
+    {
+      "id": "N533",
+      "key": "institutional_flow_entry_perf",
+      "description": "Institutional flow at entry (accumulation score)",
+      "values": ["inst_accumulation", "inst_neutral", "inst_distribution"]
+    },
+    {
+      "id": "N534",
+      "key": "vwap_relationship_entry_perf",
+      "description": "VWAP relationship at entry (% above/below VWAP)",
+      "values": ["above_vwap_strong", "at_vwap", "below_vwap"]
+    },
+    {
+      "id": "N535",
+      "key": "momentum_persistence_entry_perf",
+      "description": "Momentum persistence at entry (rs5 + rvol surge)",
+      "values": ["momentum_3d_strong", "momentum_moderate", "momentum_fading"]
+    },
+    {
+      "id": "N536",
+      "key": "put_call_skew_entry_perf",
+      "description": "Put/call skew at entry (options PCR)",
+      "values": ["call_dominated", "neutral_pcr", "put_dominated"]
+    },
+    {
+      "id": "N537",
+      "key": "spy_momentum_entry_perf",
+      "description": "SPY momentum at entry (RSI + above 200MA)",
+      "values": ["spy_strong", "spy_neutral", "spy_weak"]
+    },
+    {
+      "id": "N538",
+      "key": "earnings_proximity_entry_perf",
+      "description": "Earnings proximity at entry (post-beat drift / pre-earnings / none)",
+      "values": ["post_earnings_drift", "pre_earnings_drift", "no_earnings_catalyst"]
+    },
+    {
+      "id": "N539",
+      "key": "price_acceleration_entry_perf",
+      "description": "Price acceleration at entry (chg vs ATR ratio)",
+      "values": ["accelerating_breakout", "steady_trend", "decelerating_move"]
+    },
+    {
+      "id": "N540",
+      "key": "risk_reward_at_entry_perf",
+      "description": "Risk/reward ratio at entry (target vs stop vs price)",
+      "values": ["excellent_rr", "good_rr", "poor_rr"]
+    }
+  ],
+  "neurons_total": 500,
+  "status": "complete"
+}
