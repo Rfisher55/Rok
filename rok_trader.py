@@ -12483,6 +12483,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N771: Earnings Quality ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n771 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n771_field = _buy_n771.get("earnings_quality_perf", "inline_eps") if _buy_n771 else "inline_eps"
+            _n771_perf = tlog.setdefault("earnings_quality_perf", {})
+            _n771p = _n771_perf.setdefault(_n771_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n771_field})
+            _n771p["total"] += 1; _n771p["total_pnl"] = round(_n771p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n771p["wins"] += 1
+            else:        _n771p["losses"] += 1
+            _n771p["win_rate"] = round(_n771p["wins"] / _n771p["total"] * 100, 1)
+            _n771p["avg_pnl"]  = round(_n771p["total_pnl"] / _n771p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N772: Revenue Growth ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n772 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n772_field = _buy_n772.get("revenue_growth_perf", "low_rev_growth") if _buy_n772 else "low_rev_growth"
+            _n772_perf = tlog.setdefault("revenue_growth_perf", {})
+            _n772p = _n772_perf.setdefault(_n772_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n772_field})
+            _n772p["total"] += 1; _n772p["total_pnl"] = round(_n772p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n772p["wins"] += 1
+            else:        _n772p["losses"] += 1
+            _n772p["win_rate"] = round(_n772p["wins"] / _n772p["total"] * 100, 1)
+            _n772p["avg_pnl"]  = round(_n772p["total_pnl"] / _n772p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N773: Margin Expansion ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n773 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n773_field = _buy_n773.get("margin_expansion_perf", "margin_stable") if _buy_n773 else "margin_stable"
+            _n773_perf = tlog.setdefault("margin_expansion_perf", {})
+            _n773p = _n773_perf.setdefault(_n773_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n773_field})
+            _n773p["total"] += 1; _n773p["total_pnl"] = round(_n773p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n773p["wins"] += 1
+            else:        _n773p["losses"] += 1
+            _n773p["win_rate"] = round(_n773p["wins"] / _n773p["total"] * 100, 1)
+            _n773p["avg_pnl"]  = round(_n773p["total_pnl"] / _n773p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N774: Guidance Revision ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n774 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n774_field = _buy_n774.get("guidance_revision_perf", "guidance_inline") if _buy_n774 else "guidance_inline"
+            _n774_perf = tlog.setdefault("guidance_revision_perf", {})
+            _n774p = _n774_perf.setdefault(_n774_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n774_field})
+            _n774p["total"] += 1; _n774p["total_pnl"] = round(_n774p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n774p["wins"] += 1
+            else:        _n774p["losses"] += 1
+            _n774p["win_rate"] = round(_n774p["wins"] / _n774p["total"] * 100, 1)
+            _n774p["avg_pnl"]  = round(_n774p["total_pnl"] / _n774p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N775: Insider Buying Intensity ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n775 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n775_field = _buy_n775.get("insider_buying_intensity_perf", "no_insider_activity") if _buy_n775 else "no_insider_activity"
+            _n775_perf = tlog.setdefault("insider_buying_intensity_perf", {})
+            _n775p = _n775_perf.setdefault(_n775_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n775_field})
+            _n775p["total"] += 1; _n775p["total_pnl"] = round(_n775p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n775p["wins"] += 1
+            else:        _n775p["losses"] += 1
+            _n775p["win_rate"] = round(_n775p["wins"] / _n775p["total"] * 100, 1)
+            _n775p["avg_pnl"]  = round(_n775p["total_pnl"] / _n775p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N776: Institutional Ownership Change ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n776 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n776_field = _buy_n776.get("institutional_ownership_change_perf", "inst_neutral") if _buy_n776 else "inst_neutral"
+            _n776_perf = tlog.setdefault("institutional_ownership_change_perf", {})
+            _n776p = _n776_perf.setdefault(_n776_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n776_field})
+            _n776p["total"] += 1; _n776p["total_pnl"] = round(_n776p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n776p["wins"] += 1
+            else:        _n776p["losses"] += 1
+            _n776p["win_rate"] = round(_n776p["wins"] / _n776p["total"] * 100, 1)
+            _n776p["avg_pnl"]  = round(_n776p["total_pnl"] / _n776p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N777: Short Interest Trend ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n777 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n777_field = _buy_n777.get("short_interest_trend_perf", "si_stable") if _buy_n777 else "si_stable"
+            _n777_perf = tlog.setdefault("short_interest_trend_perf", {})
+            _n777p = _n777_perf.setdefault(_n777_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n777_field})
+            _n777p["total"] += 1; _n777p["total_pnl"] = round(_n777p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n777p["wins"] += 1
+            else:        _n777p["losses"] += 1
+            _n777p["win_rate"] = round(_n777p["wins"] / _n777p["total"] * 100, 1)
+            _n777p["avg_pnl"]  = round(_n777p["total_pnl"] / _n777p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N778: PE Relative ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n778 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n778_field = _buy_n778.get("price_earnings_relative_perf", "pe_inline") if _buy_n778 else "pe_inline"
+            _n778_perf = tlog.setdefault("price_earnings_relative_perf", {})
+            _n778p = _n778_perf.setdefault(_n778_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n778_field})
+            _n778p["total"] += 1; _n778p["total_pnl"] = round(_n778p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n778p["wins"] += 1
+            else:        _n778p["losses"] += 1
+            _n778p["win_rate"] = round(_n778p["wins"] / _n778p["total"] * 100, 1)
+            _n778p["avg_pnl"]  = round(_n778p["total_pnl"] / _n778p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N779: Free Cash Flow Yield ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n779 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n779_field = _buy_n779.get("free_cash_flow_yield_perf", "moderate_fcf_yield") if _buy_n779 else "moderate_fcf_yield"
+            _n779_perf = tlog.setdefault("free_cash_flow_yield_perf", {})
+            _n779p = _n779_perf.setdefault(_n779_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n779_field})
+            _n779p["total"] += 1; _n779p["total_pnl"] = round(_n779p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n779p["wins"] += 1
+            else:        _n779p["losses"] += 1
+            _n779p["win_rate"] = round(_n779p["wins"] / _n779p["total"] * 100, 1)
+            _n779p["avg_pnl"]  = round(_n779p["total_pnl"] / _n779p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N780: Debt/Equity ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n780 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n780_field = _buy_n780.get("debt_to_equity_perf", "moderate_debt") if _buy_n780 else "moderate_debt"
+            _n780_perf = tlog.setdefault("debt_to_equity_perf", {})
+            _n780p = _n780_perf.setdefault(_n780_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n780_field})
+            _n780p["total"] += 1; _n780p["total_pnl"] = round(_n780p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n780p["wins"] += 1
+            else:        _n780p["losses"] += 1
+            _n780p["win_rate"] = round(_n780p["wins"] / _n780p["total"] * 100, 1)
+            _n780p["avg_pnl"]  = round(_n780p["total_pnl"] / _n780p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -31170,6 +31320,138 @@ def run():
                     except Exception:
                         _n770_s = "normal_credit_spreads"
                     _buy_signals_merged["credit_spread_perf"] = _n770_s
+                    # N771: Earnings Quality
+                    try:
+                        _n771_eps = float(sc.get("eps_beat_pct", 0) or 0)
+                        if _n771_eps > 10:
+                            _n771_s = "strong_eps_beat"
+                        elif _n771_eps >= 3:
+                            _n771_s = "moderate_eps_beat"
+                        elif _n771_eps >= -3:
+                            _n771_s = "inline_eps"
+                        else:
+                            _n771_s = "eps_miss"
+                    except Exception:
+                        _n771_s = "inline_eps"
+                    _buy_signals_merged["earnings_quality_perf"] = _n771_s
+                    # N772: Revenue Growth
+                    try:
+                        _n772_rev = float(sc.get("rev_growth_pct", 0) or 0)
+                        if _n772_rev > 20:
+                            _n772_s = "strong_rev_growth"
+                        elif _n772_rev >= 10:
+                            _n772_s = "solid_rev_growth"
+                        elif _n772_rev >= 0:
+                            _n772_s = "low_rev_growth"
+                        else:
+                            _n772_s = "rev_decline"
+                    except Exception:
+                        _n772_s = "low_rev_growth"
+                    _buy_signals_merged["revenue_growth_perf"] = _n772_s
+                    # N773: Margin Expansion
+                    try:
+                        _n773_mc = float(sc.get("margin_chg", 0) or 0)
+                        if _n773_mc > 2:
+                            _n773_s = "margin_expanding"
+                        elif _n773_mc >= -2:
+                            _n773_s = "margin_stable"
+                        else:
+                            _n773_s = "margin_contracting"
+                    except Exception:
+                        _n773_s = "margin_stable"
+                    _buy_signals_merged["margin_expansion_perf"] = _n773_s
+                    # N774: Guidance Revision
+                    try:
+                        _n774_g = sc.get("guidance", "inline")
+                        if _n774_g == "raised":
+                            _n774_s = "guidance_raised"
+                        elif _n774_g == "lowered":
+                            _n774_s = "guidance_lowered"
+                        elif _n774_g == "inline":
+                            _n774_s = "guidance_inline"
+                        else:
+                            _n774_s = "no_guidance"
+                    except Exception:
+                        _n774_s = "no_guidance"
+                    _buy_signals_merged["guidance_revision_perf"] = _n774_s
+                    # N775: Insider Buying Intensity
+                    try:
+                        _n775_ins = float(sc.get("insider_net_shares", 0) or 0)
+                        if _n775_ins > 100000:
+                            _n775_s = "heavy_insider_buying"
+                        elif _n775_ins >= 10000:
+                            _n775_s = "moderate_insider_buying"
+                        elif _n775_ins < 0:
+                            _n775_s = "insider_selling"
+                        else:
+                            _n775_s = "no_insider_activity"
+                    except Exception:
+                        _n775_s = "no_insider_activity"
+                    _buy_signals_merged["insider_buying_intensity_perf"] = _n775_s
+                    # N776: Institutional Ownership Change
+                    try:
+                        _n776_ioc = float(sc.get("inst_own_chg", 0) or 0)
+                        if _n776_ioc > 5:
+                            _n776_s = "inst_accumulating"
+                        elif _n776_ioc >= -5:
+                            _n776_s = "inst_neutral"
+                        else:
+                            _n776_s = "inst_distributing"
+                    except Exception:
+                        _n776_s = "inst_neutral"
+                    _buy_signals_merged["institutional_ownership_change_perf"] = _n776_s
+                    # N777: Short Interest Trend
+                    try:
+                        _n777_sf = float(sc.get("short_float_pct", 10) or 10)
+                        if _n777_sf > 30:
+                            _n777_s = "si_rising_bearish"
+                        elif _n777_sf >= 10:
+                            _n777_s = "si_stable"
+                        else:
+                            _n777_s = "si_falling_bullish"
+                    except Exception:
+                        _n777_s = "si_stable"
+                    _buy_signals_merged["short_interest_trend_perf"] = _n777_s
+                    # N778: PE Relative
+                    try:
+                        _n778_pe = float(sc.get("pe_vs_sector", 0) or 0)
+                        if _n778_pe < -20:
+                            _n778_s = "pe_discount"
+                        elif _n778_pe <= 20:
+                            _n778_s = "pe_inline"
+                        else:
+                            _n778_s = "pe_premium"
+                    except Exception:
+                        _n778_s = "pe_inline"
+                    _buy_signals_merged["price_earnings_relative_perf"] = _n778_s
+                    # N779: Free Cash Flow Yield
+                    try:
+                        _n779_fcf = float(sc.get("fcf_yield_pct", 3) or 3)
+                        if _n779_fcf > 5:
+                            _n779_s = "high_fcf_yield"
+                        elif _n779_fcf >= 2:
+                            _n779_s = "moderate_fcf_yield"
+                        elif _n779_fcf >= 0:
+                            _n779_s = "low_fcf_yield"
+                        else:
+                            _n779_s = "negative_fcf"
+                    except Exception:
+                        _n779_s = "moderate_fcf_yield"
+                    _buy_signals_merged["free_cash_flow_yield_perf"] = _n779_s
+                    # N780: Debt/Equity
+                    try:
+                        _n780_de = float(sc.get("debt_to_equity", 1) or 1)
+                        if _n780_de < 0.3:
+                            _n780_s = "low_debt"
+                        elif _n780_de < 1.0:
+                            _n780_s = "moderate_debt"
+                        elif _n780_de < 2.0:
+                            _n780_s = "high_debt"
+                        else:
+                            _n780_s = "very_high_debt"
+                    except Exception:
+                        _n780_s = "moderate_debt"
+                    _buy_signals_merged["debt_to_equity_perf"] = _n780_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -39639,6 +39921,22 @@ def run():
             _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
             if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
 
+        # ── N771-N780 Tuners ──
+        for _key, _attr in [
+            ("earnings_quality_perf",               "earnings_quality"),
+            ("revenue_growth_perf",                 "revenue_growth"),
+            ("margin_expansion_perf",               "margin_expansion"),
+            ("guidance_revision_perf",              "guidance_revision"),
+            ("insider_buying_intensity_perf",       "insider_buying_intensity"),
+            ("institutional_ownership_change_perf", "institutional_ownership_change"),
+            ("short_interest_trend_perf",           "short_interest_trend"),
+            ("price_earnings_relative_perf",        "price_earnings_relative"),
+            ("free_cash_flow_yield_perf",           "free_cash_flow_yield"),
+            ("debt_to_equity_perf",                 "debt_to_equity"),
+        ]:
+            _states = sorted(tlog.get(_key, {}).items(), key=lambda x: (x[1].get("wins",0)/max(x[1].get("total",1),1))*x[1].get("total",0), reverse=True)
+            if _states: tlog.setdefault("bot_learned_params", {}).setdefault("best_" + _attr, _states[0][0])
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -40696,6 +40994,16 @@ def run():
             "fear_greed_perf":            [],
             "vix_term_structure_perf":    [],
             "credit_spread_perf":         [],
+            "earnings_quality_perf":               [],
+            "revenue_growth_perf":                 [],
+            "margin_expansion_perf":               [],
+            "guidance_revision_perf":              [],
+            "insider_buying_intensity_perf":       [],
+            "institutional_ownership_change_perf": [],
+            "short_interest_trend_perf":           [],
+            "price_earnings_relative_perf":        [],
+            "free_cash_flow_yield_perf":           [],
+            "debt_to_equity_perf":                 [],
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -41023,9 +41331,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 730              # total tracked neuron dimensions (N103-N770 complete)
+        tlog["neurons_total"]     = 740              # total tracked neuron dimensions (N103-N780 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/730 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/740 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

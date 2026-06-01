@@ -1,0 +1,28 @@
+{
+  "batch": "N771-N780",
+  "date": "2026-06-01",
+  "total_neurons_after": 740,
+  "neurons": [
+    {"id": "N771", "key": "earnings_quality_perf",               "name": "Earnings Quality",                "states": ["strong_eps_beat", "moderate_eps_beat", "inline_eps", "eps_miss"]},
+    {"id": "N772", "key": "revenue_growth_perf",                 "name": "Revenue Growth",                  "states": ["strong_rev_growth", "solid_rev_growth", "low_rev_growth", "rev_decline"]},
+    {"id": "N773", "key": "margin_expansion_perf",               "name": "Margin Expansion",                "states": ["margin_expanding", "margin_stable", "margin_contracting"]},
+    {"id": "N774", "key": "guidance_revision_perf",              "name": "Guidance Revision",               "states": ["guidance_raised", "guidance_inline", "guidance_lowered", "no_guidance"]},
+    {"id": "N775", "key": "insider_buying_intensity_perf",       "name": "Insider Buying Intensity",        "states": ["heavy_insider_buying", "moderate_insider_buying", "no_insider_activity", "insider_selling"]},
+    {"id": "N776", "key": "institutional_ownership_change_perf", "name": "Institutional Ownership Change",  "states": ["inst_accumulating", "inst_neutral", "inst_distributing"]},
+    {"id": "N777", "key": "short_interest_trend_perf",           "name": "Short Interest Trend",            "states": ["si_falling_bullish", "si_stable", "si_rising_bearish"]},
+    {"id": "N778", "key": "price_earnings_relative_perf",        "name": "PE Relative",                     "states": ["pe_discount", "pe_inline", "pe_premium"]},
+    {"id": "N779", "key": "free_cash_flow_yield_perf",           "name": "Free Cash Flow Yield",            "states": ["high_fcf_yield", "moderate_fcf_yield", "low_fcf_yield", "negative_fcf"]},
+    {"id": "N780", "key": "debt_to_equity_perf",                 "name": "Debt/Equity",                     "states": ["low_debt", "moderate_debt", "high_debt", "very_high_debt"]}
+  ],
+  "sections_modified": [
+    "SELL trackers (after N770 block)",
+    "BUY signal classifiers (after N770 classifier, before log_trade call)",
+    "Tuners (N771-N780 block after N761-N770 tuners)",
+    "bot_learned_params initialization (after credit_spread_perf: [])"
+  ],
+  "counters_updated": {
+    "neurons_total": 740,
+    "logger_line": "/740 neurons active"
+  },
+  "compile_check": "PASSED"
+}

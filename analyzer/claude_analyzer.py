@@ -644,7 +644,7 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 730)
+    nT = lmc.get("neurons_total", 740)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:
@@ -763,6 +763,18 @@ def build_prompt(
         wt = ba["weekly_wr_trend"]
         arrow = "↑ IMPROVING" if wt.get("trend") == "improving" else ("↓ DECLINING" if wt.get("trend") == "declining" else "→ STABLE")
         ba_lines.append(f"  Win rate trend (4wk): {wt.get('first_wr',0):.0f}% → {wt.get('latest_wr',0):.0f}% [{arrow}]")
+    # Add strategy insights (top alpha/drag neurons)
+    si = lmc.get("strategy_insights") or {}
+    alpha = si.get("top_alpha", [])
+    drag  = si.get("top_drag", [])
+    if alpha:
+        ba_lines.append("  --- Top Edge Patterns ---")
+        for a in alpha[:4]:
+            ba_lines.append(f"  EDGE: {a.get('neuron','').replace('_perf','').replace('_',' ')} [{a.get('state','')}] => {a.get('win_rate',0):.0f}% WR (+{a.get('alpha',0):.0f}% vs base) n={a.get('total',0)}")
+    if drag:
+        ba_lines.append("  --- Drag Patterns (avoid) ---")
+        for d in drag[:3]:
+            ba_lines.append(f"  DRAG: {d.get('neuron','').replace('_perf','').replace('_',' ')} [{d.get('state','')}] => {d.get('win_rate',0):.0f}% WR ({d.get('alpha',0):.0f}% vs base)")
     ba_str = "\n".join(ba_lines) if ba_lines else "  Brain still accumulating trade data to identify optimal conditions"
 
     # Append live trading context so AI can give position-specific guidance
