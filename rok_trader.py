@@ -83,6 +83,7 @@ VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
 # Intraday cycling: sell same-day positions that hit quick target or stop early
 INTRADAY_QUICK_TARGET = 0.03  # exit same day at +3% — quick flip for learning data
 INTRADAY_QUICK_STOP   = 0.02  # exit same day at -2% if entered last 90 min
+# v4.1 — 2026-06-01: crypto threshold lowered to 5, force-buy fallback added
 
 TRADES_FILE  = Path("docs/trades.json")
 PEAK_FILE    = Path("docs/peaks.json")
