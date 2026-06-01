@@ -2008,6 +2008,67 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-06-01",
+      "timestamp": "2026-06-01T06:35:19.800350",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": 446.77,
+          "target": 481.97
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "last_analysis": {
@@ -2382,9 +2443,9 @@
         "ticker": "AVGO",
         "company": "Broadcom Inc.",
         "signal_strength": 7,
-        "current_price": null,
-        "price_target": null,
-        "stop_loss": null,
+        "current_price": 446.77,
+        "price_target": 481.97,
+        "stop_loss": 411.03,
         "time_horizon": "1-2 weeks",
         "risk_level": "Medium",
         "catalyst": "Broadcom reports earnings this week and they make the custom AI chips that companies like Google and Meta use to build their AI systems \u2014 this is one of the most important earnings reports of the season for the entire AI trade.",
@@ -2433,7 +2494,10 @@
           421.86,
           426.58,
           446.77
-        ]
+        ],
+        "sector": "Technology",
+        "vol_ratio": 2.12,
+        "rsi": 57.8
       }
     ],
     "sell_signals": [
