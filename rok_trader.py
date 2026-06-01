@@ -18839,6 +18839,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _asset_wr = _cn890.get(_asset_key, {}).get("win_rate", 50.0)
             if _asset_wr > 65: sc = min(100, sc + 5)
             elif _asset_wr < 35: sc = max(0, sc - 5)
+
+            # Per-coin track record from brain learning
+            _coin_name = alpaca_sym.split("/")[0]
+            _coin_boost_list  = _lp_cth.get("crypto_coin_boost", [])
+            _coin_reduce_list = _lp_cth.get("crypto_coin_reduce", [])
+            if _coin_name in _coin_boost_list:   sc = min(100, sc + 5)
+            elif _coin_name in _coin_reduce_list: sc = max(0,   sc - 5)
         except Exception:
             pass
 
@@ -22658,20 +22665,35 @@ def run():
         except Exception as _cm_enrich_e:
             logger.debug(f"Closed-market brain enrichment: {_cm_enrich_e}")
 
-        # ── Off-hours brain update: apply today's exit performance to learned params ──
+        # ── Off-hours brain update: deep learning from today's full session ──────
         try:
-            _oh_today = run_start.strftime("%Y-%m-%d")
+            from collections import defaultdict as _dd
+            _oh_today  = run_start.strftime("%Y-%m-%d")
             _oh_trades = tlog.get("trades", [])
-            _oh_sells = [t for t in _oh_trades
-                         if t.get("action") in ("SELL", "SELL_HALF")
-                         and t.get("time", "").startswith(_oh_today)
-                         and t.get("pnl_pct") is not None]
+            _oh_sells  = [t for t in _oh_trades
+                          if t.get("action") in ("SELL", "SELL_HALF")
+                          and t.get("time", "").startswith(_oh_today)
+                          and t.get("pnl_pct") is not None]
+            _lp = tlog.setdefault("bot_learned_params", {})
+
+            # Always recalculate recent_wr from ALL closed trades (last 20)
+            _all_closed = [t for t in _oh_trades
+                           if t.get("action") in ("SELL", "SELL_HALF", "COVER")
+                           and t.get("pnl_pct") is not None]
+            if _all_closed:
+                _r20 = sorted(_all_closed, key=lambda t: t.get("time",""))[-20:]
+                _lp["recent_wr"]      = round(sum(1 for t in _r20 if float(t.get("pnl_pct",0)) > 0) / len(_r20), 3)
+                _lp["recent_avg_pnl"] = round(sum(float(t.get("pnl_pct",0)) for t in _r20) / len(_r20), 3)
+                _lp["trades_analyzed"] = len(_all_closed)
+
             if _oh_sells:
-                # Group by exit category
-                from collections import defaultdict as _dd
+                # ── Exit strategy performance ──
                 _exit_perf = _dd(list)
+                _crypto_by_coin = _dd(list)   # per-coin crypto pnl for coin-level learning
                 for _s in _oh_sells:
-                    _r = _s.get("reason", "")
+                    _r  = _s.get("reason", "")
+                    _tk = _s.get("ticker", "")
+                    _pnl = float(_s["pnl_pct"])
                     if "90min" in _r or "90-min" in _r:        _cat = "90min_cycle"
                     elif "60min" in _r or "60-min" in _r:      _cat = "60min_cycle"
                     elif "45min" in _r:                        _cat = "45min_profit"
@@ -22679,46 +22701,78 @@ def run():
                     elif "stop loss" in _r or "scalp stop" in _r: _cat = "stop_loss"
                     elif "profit" in _r or "target" in _r:     _cat = "profit_target"
                     else:                                       _cat = "other"
-                    _exit_perf[_cat].append(float(_s["pnl_pct"]))
-
-                _ep_summary = {}
-                _lp = tlog.setdefault("bot_learned_params", {})
+                    _exit_perf[_cat].append(_pnl)
+                    if "/" in _tk:  # crypto ticker
+                        _coin = _tk.split("/")[0]
+                        _crypto_by_coin[_coin].append(_pnl)
 
                 # Merge today's exits into cumulative cross-day totals
                 _cum = _lp.setdefault("cumulative_exit_perf", {})
+                _ep_summary = {}
                 for _cat, _pnls in _exit_perf.items():
                     _avg = sum(_pnls) / len(_pnls)
-                    _wr = sum(1 for p in _pnls if p > 0) / len(_pnls) * 100
+                    _wr  = sum(1 for p in _pnls if p > 0) / len(_pnls) * 100
                     _ep_summary[_cat] = {"n": len(_pnls), "avg_pnl": round(_avg, 3), "win_rate": round(_wr, 1)}
-                    # Accumulate into rolling cross-day totals
                     _ce = _cum.setdefault(_cat, {"n": 0, "total_pnl": 0.0, "wins": 0})
                     _ce["n"]         += len(_pnls)
-                    _ce["total_pnl"] = round(_ce["total_pnl"] + sum(_pnls), 4)
+                    _ce["total_pnl"]  = round(_ce["total_pnl"] + sum(_pnls), 4)
                     _ce["wins"]      += sum(1 for p in _pnls if p > 0)
-                    _ce["avg_pnl"]   = round(_ce["total_pnl"] / _ce["n"], 3)
-                    _ce["win_rate"]  = round(_ce["wins"] / _ce["n"] * 100, 1)
+                    _ce["avg_pnl"]    = round(_ce["total_pnl"] / _ce["n"], 3)
+                    _ce["win_rate"]   = round(_ce["wins"] / _ce["n"] * 100, 1)
 
-                # Bayesian-weighted best: shrink low-n categories toward 0 using prior of 5 trades at 0%
+                # Bayesian-weighted best (prior n=5 at 0%)
                 _PRIOR_N = 5
                 _best_cat, _best_score = None, -999
                 for _cat, _ce in _cum.items():
                     if _cat in ("stop_loss", "other"):
                         continue
-                    _bayes_score = (_ce["total_pnl"]) / (_ce["n"] + _PRIOR_N)
-                    if _bayes_score > _best_score:
-                        _best_score, _best_cat = _bayes_score, _cat
+                    _bayes = _ce["total_pnl"] / (_ce["n"] + _PRIOR_N)
+                    if _bayes > _best_score:
+                        _best_score, _best_cat = _bayes, _cat
 
-                _lp["exit_strategy_perf"]      = _ep_summary
-                _lp["best_exit_strategy"]       = _best_cat or _lp.get("best_exit_strategy")
-                _lp["trades_analyzed"]          = len(_oh_sells)
-                _lp["best_exit_bayes_score"]    = round(_best_score, 3) if _best_score > -999 else None
+                _lp["exit_strategy_perf"]   = _ep_summary
+                _lp["best_exit_strategy"]   = _best_cat or _lp.get("best_exit_strategy")
+                _lp["best_exit_bayes_score"]= round(_best_score, 3) if _best_score > -999 else None
 
-                # Update daily trade count to include off-hours crypto
-                _all_today = [t for t in _oh_trades if t.get("time", "").startswith(_oh_today)]
-                tlog["daily_trade_count"] = len(_all_today)
-                logger.info(f"Off-hours brain: {len(_oh_sells)} sells analyzed | best_exit={_best_cat} bayes={_best_score:+.3f} | total_today={len(_all_today)}")
+                # ── Per-coin crypto learning: which coins earn best ──
+                if _crypto_by_coin:
+                    _coin_perf = _lp.setdefault("crypto_coin_perf", {})
+                    for _coin, _pnls in _crypto_by_coin.items():
+                        _ce2 = _coin_perf.setdefault(_coin, {"n": 0, "total_pnl": 0.0, "wins": 0})
+                        _ce2["n"]         += len(_pnls)
+                        _ce2["total_pnl"]  = round(_ce2["total_pnl"] + sum(_pnls), 4)
+                        _ce2["wins"]      += sum(1 for p in _pnls if p > 0)
+                        _ce2["avg_pnl"]    = round(_ce2["total_pnl"] / _ce2["n"], 3)
+                        _ce2["win_rate"]   = round(_ce2["wins"] / _ce2["n"] * 100, 1)
+                    # Identify losing coins to reduce score, winning coins to boost
+                    _coin_boost  = [c for c, d in _coin_perf.items() if d["n"] >= 3 and d["win_rate"] >= 65]
+                    _coin_reduce = [c for c, d in _coin_perf.items() if d["n"] >= 3 and d["win_rate"] < 35]
+                    _lp["crypto_coin_boost"]  = _coin_boost
+                    _lp["crypto_coin_reduce"] = _coin_reduce
+
+                # ── Daily PnL summary ──
+                _eq_sells  = [t for t in _oh_sells if "/" not in t.get("ticker","")]
+                _cr_sells  = [t for t in _oh_sells if "/" in t.get("ticker","")]
+                _lp["daily_pnl_summary"] = {
+                    "date": _oh_today,
+                    "equity_sells": len(_eq_sells),
+                    "equity_avg_pnl": round(sum(float(t["pnl_pct"]) for t in _eq_sells)/max(len(_eq_sells),1), 3),
+                    "equity_wr": round(sum(1 for t in _eq_sells if float(t["pnl_pct"])>0)/max(len(_eq_sells),1)*100, 1),
+                    "crypto_sells": len(_cr_sells),
+                    "crypto_avg_pnl": round(sum(float(t["pnl_pct"]) for t in _cr_sells)/max(len(_cr_sells),1), 3),
+                    "crypto_wr": round(sum(1 for t in _cr_sells if float(t["pnl_pct"])>0)/max(len(_cr_sells),1)*100, 1),
+                }
+
+            # Update daily trade count
+            _all_today = [t for t in _oh_trades if t.get("time","").startswith(_oh_today)]
+            tlog["daily_trade_count"] = len(_all_today)
+            _oh_msg = (f"Off-hours brain: {len(_oh_sells)} sells | "
+                       f"wr={_lp.get('recent_wr',0):.0%} avg={_lp.get('recent_avg_pnl',0):+.2f}% | "
+                       f"best_exit={_lp.get('best_exit_strategy')} | total_today={len(_all_today)}")
+            logger.info(_oh_msg)
         except Exception as _oe:
-            logger.debug(f"Off-hours brain update: {_oe}")
+            import traceback as _oetb
+            logger.debug(f"Off-hours brain update: {_oe} | {_oetb.format_exc()[:200]}")
 
         if ENABLE_CRYPTO:
             peaks = _load(PEAK_FILE, {})
