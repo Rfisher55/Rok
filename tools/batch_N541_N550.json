@@ -1,0 +1,87 @@
+{
+  "batch": "N541-N550",
+  "neurons": [
+    {
+      "id": "N541",
+      "key": "short_interest_ratio_perf",
+      "description": "Short interest ratio at entry (SI ratio %)",
+      "values": ["high_short_interest", "moderate_short_interest", "low_short_interest"],
+      "source_field": "d.get('short_float', d.get('short_interest_ratio', 0))",
+      "thresholds": ">10% = high, 5-10% = moderate, <5% = low"
+    },
+    {
+      "id": "N542",
+      "key": "float_rotation_perf",
+      "description": "Float rotation at entry (volume as % of float)",
+      "values": ["high_rotation", "normal_rotation", "low_rotation"],
+      "source_field": "rvol * avg_vol / float_shares * 100 (or rvol proxy)",
+      "thresholds": ">100% = high, 20-100% = normal, <20% = low"
+    },
+    {
+      "id": "N543",
+      "key": "tick_trend_entry_perf",
+      "description": "NYSE tick trend at entry (tick avg)",
+      "values": ["tick_positive", "tick_neutral", "tick_negative"],
+      "source_field": "tlog.get('tick_avg', d.get('tick_avg', 0))",
+      "thresholds": ">+200 = positive, -200 to +200 = neutral, <-200 = negative"
+    },
+    {
+      "id": "N544",
+      "key": "market_phase_entry_perf",
+      "description": "Market phase at entry (early_bull / late_bull / bear)",
+      "values": ["early_bull", "late_bull", "bear"],
+      "source_field": "tlog.get('spy_above_200ma') and tlog.get('spy_rsi')",
+      "thresholds": "above200+RSI<65=early_bull, above200+RSI>=65=late_bull, below200=bear"
+    },
+    {
+      "id": "N545",
+      "key": "sector_relative_strength_perf",
+      "description": "Sector relative strength vs SPY (sector ETF RS)",
+      "values": ["sector_leading", "sector_inline", "sector_lagging"],
+      "source_field": "d.get('sector_rs', d.get('sector_rel_strength', 1.0))",
+      "thresholds": ">1.05 = leading, 0.95-1.05 = inline, <0.95 = lagging"
+    },
+    {
+      "id": "N546",
+      "key": "news_sentiment_score_perf",
+      "description": "Aggregated news sentiment score at entry",
+      "values": ["strong_positive_news", "neutral_news", "negative_news"],
+      "source_field": "d.get('news_sentiment', d.get('sentiment_score', 0))",
+      "thresholds": ">=0.6 = strong_positive, -0.2 to 0.6 = neutral, <-0.2 = negative"
+    },
+    {
+      "id": "N547",
+      "key": "relative_volume_spike_perf",
+      "description": "Relative volume spike classification at entry",
+      "values": ["extreme_rvol", "high_rvol", "normal_rvol", "low_rvol"],
+      "source_field": "d.get('rvol', 1.0)",
+      "thresholds": ">=3x = extreme, 2-3x = high, 1-2x = normal, <1x = low"
+    },
+    {
+      "id": "N548",
+      "key": "atr_expansion_perf",
+      "description": "ATR expansion at entry (today ATR vs 5d avg ATR)",
+      "values": ["expanding_atr", "stable_atr", "contracting_atr"],
+      "source_field": "d.get('atr_pct') vs d.get('atr5d_avg')",
+      "thresholds": "ratio>1.2 = expanding, 0.85-1.2 = stable, <0.85 = contracting"
+    },
+    {
+      "id": "N549",
+      "key": "close_vs_range_perf",
+      "description": "Close position in day's range at entry",
+      "values": ["strong_close", "mid_close", "weak_close"],
+      "source_field": "d.get('close_vs_range') or (close-low)/(high-low)",
+      "thresholds": ">=0.8 = strong (top 20%), 0.2-0.8 = mid, <=0.2 = weak (bottom 20%)"
+    },
+    {
+      "id": "N550",
+      "key": "consecutive_up_days_perf",
+      "description": "Consecutive up days before entry",
+      "values": ["streak_entry", "neutral_entry", "pullback_entry"],
+      "source_field": "d.get('consec_up', d.get('streak', d.get('consec_green', 0)))",
+      "thresholds": ">=3 = streak, -1 to 2 = neutral, <=-2 = pullback"
+    }
+  ],
+  "neurons_total": 510,
+  "status": "complete"
+}
