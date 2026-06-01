@@ -18892,15 +18892,34 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _buy_list = _fallback[:_n_fallback]
             logger.info(f"Crypto force-buy: {open_slots} open slots, buying top {len(_buy_list)} by score")
 
-    # Always reserve one slot for BTC/USD if it's not already held (core holding)
-    _btc_held = "BTC/USD" in held_crypto
-    _btc_in_list = any("BTC" in sym for sym, _, _ in _buy_list)
-    if not _btc_held and not _btc_in_list and open_slots > len(_buy_list) and "BTC/USD" in crypto_data:
+    # BTC core holding: ensure BTC/USD is always in the portfolio when possible.
+    # If BTC not held and not in buy list, replace the weakest-performing coin in the
+    # buy list with BTC (using brain's crypto_coin_perf) — or add it if there's room.
+    _btc_held   = "BTC/USD" in held_crypto
+    _btc_in_list= any("BTC" in sym for sym, _, _ in _buy_list)
+    if not _btc_held and not _btc_in_list and "BTC/USD" in crypto_data:
         _btc_sig = crypto_data["BTC/USD"]
-        _btc_sc = crypto_score(_btc_sig)
+        _btc_sc  = crypto_score(_btc_sig)
         if _btc_sc > 0:
-            _buy_list = list(_buy_list) + [("BTC/USD", _btc_sc, _btc_sig)]
-            logger.info(f"BTC/USD added as core holding (score={_btc_sc})")
+            if open_slots > len(_buy_list):
+                # Spare slot — add BTC directly
+                _buy_list = list(_buy_list) + [("BTC/USD", _btc_sc, _btc_sig)]
+                logger.info(f"BTC/USD added as core holding (score={_btc_sc})")
+            elif _buy_list:
+                # All slots filled — swap out the worst-WR coin for BTC if brain says it's weak
+                _coin_perf_map = _lp_cth.get("crypto_coin_perf", {})
+                _worst_idx, _worst_wr = None, 100
+                for _i, (_sym, _sc2, _sig2) in enumerate(_buy_list):
+                    _cn = _sym.split("/")[0]
+                    _cwr = _coin_perf_map.get(_cn, {}).get("win_rate", 50.0)
+                    _cn_n = _coin_perf_map.get(_cn, {}).get("n", 0)
+                    if _cn_n >= 2 and _cwr < _worst_wr:
+                        _worst_wr, _worst_idx = _cwr, _i
+                if _worst_idx is not None and _worst_wr < 30:
+                    _evicted = _buy_list[_worst_idx][0]
+                    _buy_list = list(_buy_list)
+                    _buy_list[_worst_idx] = ("BTC/USD", _btc_sc, _btc_sig)
+                    logger.info(f"BTC/USD replacing {_evicted} (WR={_worst_wr:.0f}%) as core holding")
 
     for alpaca_sym, sc, sig in _buy_list:
         try:
