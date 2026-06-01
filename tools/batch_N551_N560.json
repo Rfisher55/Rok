@@ -1,0 +1,87 @@
+{
+  "batch": "N551-N560",
+  "neurons": [
+    {
+      "id": "N551",
+      "key": "pre_market_gap_perf",
+      "description": "Pre-market gap direction at entry",
+      "values": ["gap_up_strong", "gap_flat", "gap_down_strong"],
+      "source_field": "d.get('premarket_gap_pct', d.get('gap_pct', 0))",
+      "thresholds": ">+1.5% = gap_up_strong, -1.5% to +1.5% = gap_flat, <-1.5% = gap_down_strong"
+    },
+    {
+      "id": "N552",
+      "key": "opening_range_breakout_perf",
+      "description": "Opening range breakout pattern at entry",
+      "values": ["orb_breakout", "inside_orb", "orb_breakdown"],
+      "source_field": "d.get('orb_breakout', False) and d.get('inside_bar', False)",
+      "thresholds": "orb_breakout=True -> orb_breakout, inside_bar=True -> inside_orb, else -> orb_breakdown"
+    },
+    {
+      "id": "N553",
+      "key": "institutional_ownership_perf",
+      "description": "Institutional ownership % at entry",
+      "values": ["high_inst_own", "medium_inst_own", "low_inst_own"],
+      "source_field": "d.get('institutional_ownership', d.get('inst_own_pct', 0.5))",
+      "thresholds": ">70% = high_inst_own, 30-70% = medium_inst_own, <30% = low_inst_own"
+    },
+    {
+      "id": "N554",
+      "key": "analyst_consensus_perf",
+      "description": "Analyst consensus rating at entry",
+      "values": ["strong_buy_consensus", "mixed_consensus", "sell_consensus"],
+      "source_field": "d.get('analyst_rec_score', d.get('analyst_count_buy', 0))",
+      "thresholds": ">=4 buys = strong_buy_consensus, 1-3 buys = mixed_consensus, 0 or sell = sell_consensus"
+    },
+    {
+      "id": "N555",
+      "key": "earnings_growth_rate_perf",
+      "description": "Earnings (EPS) growth rate at entry",
+      "values": ["high_earnings_growth", "moderate_growth", "low_growth"],
+      "source_field": "d.get('eps_growth_pct', d.get('earnings_growth', 0))",
+      "thresholds": ">25% = high_earnings_growth, 5-25% = moderate_growth, <5% = low_growth"
+    },
+    {
+      "id": "N556",
+      "key": "revenue_growth_rate_perf",
+      "description": "Revenue growth rate (YoY) at entry",
+      "values": ["strong_revenue_growth", "moderate_revenue", "weak_revenue"],
+      "source_field": "d.get('revenue_growth_pct', d.get('rev_growth', 0))",
+      "thresholds": ">20% = strong_revenue_growth, 5-20% = moderate_revenue, <5% = weak_revenue"
+    },
+    {
+      "id": "N557",
+      "key": "profit_margin_perf",
+      "description": "Net profit margin at entry",
+      "values": ["high_margin", "average_margin", "thin_margin"],
+      "source_field": "d.get('net_margin_pct', d.get('profit_margin', 0))",
+      "thresholds": ">20% = high_margin, 5-20% = average_margin, <5% = thin_margin"
+    },
+    {
+      "id": "N558",
+      "key": "debt_to_equity_perf",
+      "description": "Debt-to-equity ratio (balance sheet health) at entry",
+      "values": ["low_debt", "moderate_debt", "high_debt"],
+      "source_field": "d.get('debt_to_equity', d.get('dte_ratio', 0.5))",
+      "thresholds": "<0.3 = low_debt, 0.3-1.0 = moderate_debt, >1.0 = high_debt"
+    },
+    {
+      "id": "N559",
+      "key": "buyback_activity_perf",
+      "description": "Share buyback activity (buyback yield) at entry",
+      "values": ["active_buyback", "minimal_buyback", "diluting"],
+      "source_field": "d.get('buyback_yield', d.get('buyback_pct', 0))",
+      "thresholds": ">2% = active_buyback, 0-2% = minimal_buyback, <0 = diluting"
+    },
+    {
+      "id": "N560",
+      "key": "dividend_yield_entry_perf",
+      "description": "Dividend yield at entry",
+      "values": ["high_yield", "moderate_yield", "no_yield"],
+      "source_field": "d.get('dividend_yield', d.get('div_yield', 0))",
+      "thresholds": ">3% = high_yield, 1-3% = moderate_yield, <1% = no_yield"
+    }
+  ],
+  "neurons_total": 520,
+  "status": "complete"
+}
