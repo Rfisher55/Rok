@@ -8732,6 +8732,156 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N521: Liquidity Score Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n521 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n521_field = _buy_n521.get("liquidity_score_entry_perf", "normal_liquidity") if _buy_n521 else "normal_liquidity"
+            _n521_perf = tlog.setdefault("liquidity_score_entry_perf", {})
+            _n521p = _n521_perf.setdefault(_n521_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n521_field})
+            _n521p["total"] += 1; _n521p["total_pnl"] = round(_n521p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n521p["wins"] += 1
+            else:        _n521p["losses"] += 1
+            _n521p["win_rate"] = round(_n521p["wins"] / _n521p["total"] * 100, 1)
+            _n521p["avg_pnl"]  = round(_n521p["total_pnl"] / _n521p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N522: Sector Rotation Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n522 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n522_field = _buy_n522.get("sector_rotation_entry_perf", "sector_neutral") if _buy_n522 else "sector_neutral"
+            _n522_perf = tlog.setdefault("sector_rotation_entry_perf", {})
+            _n522p = _n522_perf.setdefault(_n522_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n522_field})
+            _n522p["total"] += 1; _n522p["total_pnl"] = round(_n522p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n522p["wins"] += 1
+            else:        _n522p["losses"] += 1
+            _n522p["win_rate"] = round(_n522p["wins"] / _n522p["total"] * 100, 1)
+            _n522p["avg_pnl"]  = round(_n522p["total_pnl"] / _n522p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N523: Macro Regime Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n523 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n523_field = _buy_n523.get("macro_regime_entry_perf", "mixed_macro") if _buy_n523 else "mixed_macro"
+            _n523_perf = tlog.setdefault("macro_regime_entry_perf", {})
+            _n523p = _n523_perf.setdefault(_n523_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n523_field})
+            _n523p["total"] += 1; _n523p["total_pnl"] = round(_n523p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n523p["wins"] += 1
+            else:        _n523p["losses"] += 1
+            _n523p["win_rate"] = round(_n523p["wins"] / _n523p["total"] * 100, 1)
+            _n523p["avg_pnl"]  = round(_n523p["total_pnl"] / _n523p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N524: Correlation to SPY Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n524 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n524_field = _buy_n524.get("correlation_spy_entry_perf", "medium_corr_spy") if _buy_n524 else "medium_corr_spy"
+            _n524_perf = tlog.setdefault("correlation_spy_entry_perf", {})
+            _n524p = _n524_perf.setdefault(_n524_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n524_field})
+            _n524p["total"] += 1; _n524p["total_pnl"] = round(_n524p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n524p["wins"] += 1
+            else:        _n524p["losses"] += 1
+            _n524p["win_rate"] = round(_n524p["wins"] / _n524p["total"] * 100, 1)
+            _n524p["avg_pnl"]  = round(_n524p["total_pnl"] / _n524p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N525: Beta Bucket Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n525 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n525_field = _buy_n525.get("beta_bucket_entry_perf", "medium_beta") if _buy_n525 else "medium_beta"
+            _n525_perf = tlog.setdefault("beta_bucket_entry_perf", {})
+            _n525p = _n525_perf.setdefault(_n525_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n525_field})
+            _n525p["total"] += 1; _n525p["total_pnl"] = round(_n525p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n525p["wins"] += 1
+            else:        _n525p["losses"] += 1
+            _n525p["win_rate"] = round(_n525p["wins"] / _n525p["total"] * 100, 1)
+            _n525p["avg_pnl"]  = round(_n525p["total_pnl"] / _n525p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N526: Price vs 52-Week Range Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n526 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n526_field = _buy_n526.get("price_vs_52w_entry_perf", "midrange_52w") if _buy_n526 else "midrange_52w"
+            _n526_perf = tlog.setdefault("price_vs_52w_entry_perf", {})
+            _n526p = _n526_perf.setdefault(_n526_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n526_field})
+            _n526p["total"] += 1; _n526p["total_pnl"] = round(_n526p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n526p["wins"] += 1
+            else:        _n526p["losses"] += 1
+            _n526p["win_rate"] = round(_n526p["wins"] / _n526p["total"] * 100, 1)
+            _n526p["avg_pnl"]  = round(_n526p["total_pnl"] / _n526p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N527: Gap Fill Status Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n527 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n527_field = _buy_n527.get("gap_fill_status_entry_perf", "gap_filled") if _buy_n527 else "gap_filled"
+            _n527_perf = tlog.setdefault("gap_fill_status_entry_perf", {})
+            _n527p = _n527_perf.setdefault(_n527_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n527_field})
+            _n527p["total"] += 1; _n527p["total_pnl"] = round(_n527p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n527p["wins"] += 1
+            else:        _n527p["losses"] += 1
+            _n527p["win_rate"] = round(_n527p["wins"] / _n527p["total"] * 100, 1)
+            _n527p["avg_pnl"]  = round(_n527p["total_pnl"] / _n527p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N528: Order Flow Imbalance Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n528 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n528_field = _buy_n528.get("order_flow_imbalance_perf", "balanced_flow") if _buy_n528 else "balanced_flow"
+            _n528_perf = tlog.setdefault("order_flow_imbalance_perf", {})
+            _n528p = _n528_perf.setdefault(_n528_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n528_field})
+            _n528p["total"] += 1; _n528p["total_pnl"] = round(_n528p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n528p["wins"] += 1
+            else:        _n528p["losses"] += 1
+            _n528p["win_rate"] = round(_n528p["wins"] / _n528p["total"] * 100, 1)
+            _n528p["avg_pnl"]  = round(_n528p["total_pnl"] / _n528p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N529: Regime Volatility Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n529 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n529_field = _buy_n529.get("regime_volatility_entry_perf", "normal_vol_regime") if _buy_n529 else "normal_vol_regime"
+            _n529_perf = tlog.setdefault("regime_volatility_entry_perf", {})
+            _n529p = _n529_perf.setdefault(_n529_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n529_field})
+            _n529p["total"] += 1; _n529p["total_pnl"] = round(_n529p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n529p["wins"] += 1
+            else:        _n529p["losses"] += 1
+            _n529p["win_rate"] = round(_n529p["wins"] / _n529p["total"] * 100, 1)
+            _n529p["avg_pnl"]  = round(_n529p["total_pnl"] / _n529p["total"], 2)
+        except Exception:
+            pass
+
+    # ── N530: Breadth Thrust Entry Performance ────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_n530 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _n530_field = _buy_n530.get("breadth_thrust_entry_perf", "mixed_breadth") if _buy_n530 else "mixed_breadth"
+            _n530_perf = tlog.setdefault("breadth_thrust_entry_perf", {})
+            _n530p = _n530_perf.setdefault(_n530_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n530_field})
+            _n530p["total"] += 1; _n530p["total_pnl"] = round(_n530p["total_pnl"] + pnl, 2)
+            if pnl > 0: _n530p["wins"] += 1
+            else:        _n530p["losses"] += 1
+            _n530p["win_rate"] = round(_n530p["wins"] / _n530p["total"] * 100, 1)
+            _n530p["avg_pnl"]  = round(_n530p["total_pnl"] / _n530p["total"], 2)
+        except Exception:
+            pass
+
     # ── Price Acceleration Neuron (58): is price accelerating at entry? ─────────
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
@@ -15526,7 +15676,7 @@ def run():
                 1 for k, v in _learned.items()
                 if isinstance(v, dict) and v.get("state") not in ("unknown", None, "")
             )
-            _n_total = tlog.get("neurons_total") or 480
+            _n_total = tlog.get("neurons_total") or 490
             tlog["neurons_active"] = _n_active
             tlog["neurons_total"]  = _n_total
             # Preserve key display fields so dashboard shows data during off-hours
@@ -23723,6 +23873,132 @@ def run():
                     except Exception:
                         _n520_s = "maintained"
                     _buy_signals_merged["guidance_revision_entry_perf"] = _n520_s
+                    # N521: Liquidity score at entry (ATR-adjusted bid-ask spread vs volume)
+                    try:
+                        _n521_spread = float(live.get(tk, {}).get('spread_pct', live.get(tk, {}).get('bid_ask_spread_pct', 0)) or 0)
+                        _n521_atr = float(live.get(tk, {}).get('atr_pct', 1.5) or 1.5)
+                        _n521_ratio = _n521_spread / max(_n521_atr, 0.01)
+                        if _n521_ratio < 0.05:
+                            _n521_s = "high_liquidity"
+                        elif _n521_ratio > 0.20:
+                            _n521_s = "low_liquidity"
+                        else:
+                            _n521_s = "normal_liquidity"
+                    except Exception:
+                        _n521_s = "normal_liquidity"
+                    _buy_signals_merged["liquidity_score_entry_perf"] = _n521_s
+                    # N522: Sector rotation at entry (money flow into/out of sector)
+                    try:
+                        _n522_etf = live.get(tk, {}).get('sector_etf', 'SPY')
+                        _n522_chg5d = float(live.get(_n522_etf, {}).get('chg5d', 0) or 0) if _n522_etf else 0.0
+                        _n522_chg1d = float(live.get(_n522_etf, {}).get('chg1d', 0) or 0) if _n522_etf else 0.0
+                        if _n522_chg5d >= 2.0 or (_n522_chg5d >= 1.0 and _n522_chg1d > 0):
+                            _n522_s = "sector_inflow"
+                        elif _n522_chg5d <= -2.0 or (_n522_chg5d <= -1.0 and _n522_chg1d < 0):
+                            _n522_s = "sector_outflow"
+                        else:
+                            _n522_s = "sector_neutral"
+                    except Exception:
+                        _n522_s = "sector_neutral"
+                    _buy_signals_merged["sector_rotation_entry_perf"] = _n522_s
+                    # N523: Macro regime at entry (broad macro environment via VIX)
+                    try:
+                        _n523_vix = float(vix or regime.get("vix", 18) or 18)
+                        if _n523_vix < 15:
+                            _n523_s = "risk_on"
+                        elif _n523_vix > 25:
+                            _n523_s = "risk_off"
+                        else:
+                            _n523_s = "mixed_macro"
+                    except Exception:
+                        _n523_s = "mixed_macro"
+                    _buy_signals_merged["macro_regime_entry_perf"] = _n523_s
+                    # N524: 20-day rolling correlation to SPY at entry
+                    try:
+                        _n524_corr = float(live.get(tk, {}).get('spy_corr_20d', live.get(tk, {}).get('spy_correlation', 0.5)) or 0.5)
+                        if _n524_corr < 0.3:
+                            _n524_s = "low_corr_spy"
+                        elif _n524_corr > 0.7:
+                            _n524_s = "high_corr_spy"
+                        else:
+                            _n524_s = "medium_corr_spy"
+                    except Exception:
+                        _n524_s = "medium_corr_spy"
+                    _buy_signals_merged["correlation_spy_entry_perf"] = _n524_s
+                    # N525: Beta bucket at entry (<0.8 low, >1.4 high)
+                    try:
+                        _n525_beta = float(live.get(tk, {}).get('true_beta', live.get(tk, {}).get('beta', 1.0)) or 1.0)
+                        if _n525_beta < 0.8:
+                            _n525_s = "low_beta"
+                        elif _n525_beta > 1.4:
+                            _n525_s = "high_beta"
+                        else:
+                            _n525_s = "medium_beta"
+                    except Exception:
+                        _n525_s = "medium_beta"
+                    _buy_signals_merged["beta_bucket_entry_perf"] = _n525_s
+                    # N526: Price vs 52-week range at entry
+                    try:
+                        _n526_rp = float(live.get(tk, {}).get('w52_range_pos', 50) or 50)
+                        if _n526_rp > 90.0:
+                            _n526_s = "near_52w_high"
+                        elif _n526_rp < 25.0:
+                            _n526_s = "near_52w_low"
+                        else:
+                            _n526_s = "midrange_52w"
+                    except Exception:
+                        _n526_s = "midrange_52w"
+                    _buy_signals_merged["price_vs_52w_entry_perf"] = _n526_s
+                    # N527: Gap fill status at entry
+                    try:
+                        _n527_pm_gap = float(live.get(tk, {}).get('pm_gap_pct', 0) or 0)
+                        _n527_chg1d  = float(live.get(tk, {}).get('chg1d', 0) or 0)
+                        if _n527_pm_gap >= 1.5 and _n527_chg1d < _n527_pm_gap * 0.5:
+                            _n527_s = "unfilled_gap_above"
+                        elif _n527_pm_gap <= -1.5 and _n527_chg1d > _n527_pm_gap * 0.5:
+                            _n527_s = "unfilled_gap_below"
+                        else:
+                            _n527_s = "gap_filled"
+                    except Exception:
+                        _n527_s = "gap_filled"
+                    _buy_signals_merged["gap_fill_status_entry_perf"] = _n527_s
+                    # N528: Order flow imbalance at entry (vol ratio + price momentum proxy)
+                    try:
+                        _n528_rvol = float(live.get(tk, {}).get('rvol', live.get(tk, {}).get('vol_ratio', 1.0)) or 1.0)
+                        _n528_chg1d = float(live.get(tk, {}).get('chg1d', 0) or 0)
+                        if _n528_rvol >= 1.5 and _n528_chg1d > 0.5:
+                            _n528_s = "buyer_dominated"
+                        elif _n528_rvol >= 1.5 and _n528_chg1d < -0.5:
+                            _n528_s = "seller_dominated"
+                        else:
+                            _n528_s = "balanced_flow"
+                    except Exception:
+                        _n528_s = "balanced_flow"
+                    _buy_signals_merged["order_flow_imbalance_perf"] = _n528_s
+                    # N529: Regime volatility at entry (VIX level)
+                    try:
+                        _n529_vix = float(vix or regime.get("vix", 18) or 18)
+                        if _n529_vix < 15:
+                            _n529_s = "low_vol_regime"
+                        elif _n529_vix > 25:
+                            _n529_s = "high_vol_regime"
+                        else:
+                            _n529_s = "normal_vol_regime"
+                    except Exception:
+                        _n529_s = "normal_vol_regime"
+                    _buy_signals_merged["regime_volatility_entry_perf"] = _n529_s
+                    # N530: Breadth thrust at entry (advance/decline quality)
+                    try:
+                        _n530_adv_pct = float(breadth.get('adv_pct', 50) or 50)
+                        if _n530_adv_pct >= 65.0:
+                            _n530_s = "strong_breadth"
+                        elif _n530_adv_pct <= 40.0:
+                            _n530_s = "weak_breadth"
+                        else:
+                            _n530_s = "mixed_breadth"
+                    except Exception:
+                        _n530_s = "mixed_breadth"
+                    _buy_signals_merged["breadth_thrust_entry_perf"] = _n530_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -30472,6 +30748,86 @@ def run():
         if _n520_list:
             _learn_log.append(f"N520 Guidance Revision: raised_guidance={_a_n520['win_rate']:.0f}% lowered_guidance={_b_n520['win_rate']:.0f}%WR")
 
+        # ── N521: Liquidity Score entry tuner ────────────────────
+        _n521_raw = tlog.get("liquidity_score_entry_perf", {})
+        _n521_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n521_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n521 = next((s for s in _n521_list if s.get("state")=="high_liquidity"), _n521_list[0] if _n521_list else {"win_rate":50})
+        _b_n521 = next((s for s in _n521_list if s.get("state")=="low_liquidity"), _n521_list[-1] if _n521_list else {"win_rate":50})
+        if _n521_list:
+            _learn_log.append(f"N521 Liquidity Score: high_liquidity={_a_n521['win_rate']:.0f}% low_liquidity={_b_n521['win_rate']:.0f}%WR")
+
+        # ── N522: Sector Rotation entry tuner ────────────────────
+        _n522_raw = tlog.get("sector_rotation_entry_perf", {})
+        _n522_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n522_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n522 = next((s for s in _n522_list if s.get("state")=="sector_inflow"), _n522_list[0] if _n522_list else {"win_rate":50})
+        _b_n522 = next((s for s in _n522_list if s.get("state")=="sector_outflow"), _n522_list[-1] if _n522_list else {"win_rate":50})
+        if _n522_list:
+            _learn_log.append(f"N522 Sector Rotation: sector_inflow={_a_n522['win_rate']:.0f}% sector_outflow={_b_n522['win_rate']:.0f}%WR")
+
+        # ── N523: Macro Regime entry tuner ────────────────────
+        _n523_raw = tlog.get("macro_regime_entry_perf", {})
+        _n523_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n523_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n523 = next((s for s in _n523_list if s.get("state")=="risk_on"), _n523_list[0] if _n523_list else {"win_rate":50})
+        _b_n523 = next((s for s in _n523_list if s.get("state")=="risk_off"), _n523_list[-1] if _n523_list else {"win_rate":50})
+        if _n523_list:
+            _learn_log.append(f"N523 Macro Regime: risk_on={_a_n523['win_rate']:.0f}% risk_off={_b_n523['win_rate']:.0f}%WR")
+
+        # ── N524: Correlation to SPY entry tuner ────────────────────
+        _n524_raw = tlog.get("correlation_spy_entry_perf", {})
+        _n524_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n524_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n524 = next((s for s in _n524_list if s.get("state")=="low_corr_spy"), _n524_list[0] if _n524_list else {"win_rate":50})
+        _b_n524 = next((s for s in _n524_list if s.get("state")=="high_corr_spy"), _n524_list[-1] if _n524_list else {"win_rate":50})
+        if _n524_list:
+            _learn_log.append(f"N524 SPY Correlation: low_corr_spy={_a_n524['win_rate']:.0f}% high_corr_spy={_b_n524['win_rate']:.0f}%WR")
+
+        # ── N525: Beta Bucket entry tuner ────────────────────
+        _n525_raw = tlog.get("beta_bucket_entry_perf", {})
+        _n525_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n525_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n525 = next((s for s in _n525_list if s.get("state")=="low_beta"), _n525_list[0] if _n525_list else {"win_rate":50})
+        _b_n525 = next((s for s in _n525_list if s.get("state")=="high_beta"), _n525_list[-1] if _n525_list else {"win_rate":50})
+        if _n525_list:
+            _learn_log.append(f"N525 Beta Bucket: low_beta={_a_n525['win_rate']:.0f}% high_beta={_b_n525['win_rate']:.0f}%WR")
+
+        # ── N526: Price vs 52-Week Range entry tuner ────────────────────
+        _n526_raw = tlog.get("price_vs_52w_entry_perf", {})
+        _n526_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n526_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n526 = next((s for s in _n526_list if s.get("state")=="near_52w_high"), _n526_list[0] if _n526_list else {"win_rate":50})
+        _b_n526 = next((s for s in _n526_list if s.get("state")=="near_52w_low"), _n526_list[-1] if _n526_list else {"win_rate":50})
+        if _n526_list:
+            _learn_log.append(f"N526 Price vs 52W: near_52w_high={_a_n526['win_rate']:.0f}% near_52w_low={_b_n526['win_rate']:.0f}%WR")
+
+        # ── N527: Gap Fill Status entry tuner ────────────────────
+        _n527_raw = tlog.get("gap_fill_status_entry_perf", {})
+        _n527_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n527_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n527 = next((s for s in _n527_list if s.get("state")=="unfilled_gap_above"), _n527_list[0] if _n527_list else {"win_rate":50})
+        _b_n527 = next((s for s in _n527_list if s.get("state")=="unfilled_gap_below"), _n527_list[-1] if _n527_list else {"win_rate":50})
+        if _n527_list:
+            _learn_log.append(f"N527 Gap Fill Status: unfilled_gap_above={_a_n527['win_rate']:.0f}% unfilled_gap_below={_b_n527['win_rate']:.0f}%WR")
+
+        # ── N528: Order Flow Imbalance entry tuner ────────────────────
+        _n528_raw = tlog.get("order_flow_imbalance_perf", {})
+        _n528_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n528_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n528 = next((s for s in _n528_list if s.get("state")=="buyer_dominated"), _n528_list[0] if _n528_list else {"win_rate":50})
+        _b_n528 = next((s for s in _n528_list if s.get("state")=="seller_dominated"), _n528_list[-1] if _n528_list else {"win_rate":50})
+        if _n528_list:
+            _learn_log.append(f"N528 Order Flow: buyer_dominated={_a_n528['win_rate']:.0f}% seller_dominated={_b_n528['win_rate']:.0f}%WR")
+
+        # ── N529: Regime Volatility entry tuner ────────────────────
+        _n529_raw = tlog.get("regime_volatility_entry_perf", {})
+        _n529_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n529_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n529 = next((s for s in _n529_list if s.get("state")=="low_vol_regime"), _n529_list[0] if _n529_list else {"win_rate":50})
+        _b_n529 = next((s for s in _n529_list if s.get("state")=="high_vol_regime"), _n529_list[-1] if _n529_list else {"win_rate":50})
+        if _n529_list:
+            _learn_log.append(f"N529 Vol Regime: low_vol_regime={_a_n529['win_rate']:.0f}% high_vol_regime={_b_n529['win_rate']:.0f}%WR")
+
+        # ── N530: Breadth Thrust entry tuner ────────────────────
+        _n530_raw = tlog.get("breadth_thrust_entry_perf", {})
+        _n530_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n530_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n530 = next((s for s in _n530_list if s.get("state")=="strong_breadth"), _n530_list[0] if _n530_list else {"win_rate":50})
+        _b_n530 = next((s for s in _n530_list if s.get("state")=="weak_breadth"), _n530_list[-1] if _n530_list else {"win_rate":50})
+        if _n530_list:
+            _learn_log.append(f"N530 Breadth Thrust: strong_breadth={_a_n530['win_rate']:.0f}% weak_breadth={_b_n530['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -31280,6 +31636,16 @@ def run():
             "social_momentum_entry_perf": _n518_list,  # N518: social momentum at entry vs outcome
             "earnings_surprise_entry_perf": _n519_list,  # N519: earnings surprise at entry vs outcome
             "guidance_revision_entry_perf": _n520_list,  # N520: guidance direction at entry vs outcome
+            "liquidity_score_entry_perf": _n521_list,  # N521: liquidity score (ATR-adj spread/vol) at entry vs outcome
+            "sector_rotation_entry_perf": _n522_list,  # N522: sector money flow direction at entry vs outcome
+            "macro_regime_entry_perf": _n523_list,  # N523: broad macro regime (risk-on/off) at entry vs outcome
+            "correlation_spy_entry_perf": _n524_list,  # N524: 20-day rolling correlation to SPY at entry vs outcome
+            "beta_bucket_entry_perf": _n525_list,  # N525: stock beta bucket (<0.8/med/>1.4) at entry vs outcome
+            "price_vs_52w_entry_perf": _n526_list,  # N526: price position in 52-week range at entry vs outcome
+            "gap_fill_status_entry_perf": _n527_list,  # N527: gap fill status (unfilled above/filled/below) at entry vs outcome
+            "order_flow_imbalance_perf": _n528_list,  # N528: order flow imbalance (buyer/balanced/seller) at entry vs outcome
+            "regime_volatility_entry_perf": _n529_list,  # N529: VIX-based volatility regime at entry vs outcome
+            "breadth_thrust_entry_perf": _n530_list,  # N530: market breadth thrust quality at entry vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -31597,9 +31963,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 480              # total tracked neuron dimensions (N103-N520 complete)
+        tlog["neurons_total"]     = 490              # total tracked neuron dimensions (N103-N530 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/480 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/490 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"

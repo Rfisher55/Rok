@@ -1,0 +1,24 @@
+{
+  "batch": "N521-N530",
+  "neurons": [
+    {"id": "N521", "key": "liquidity_score_entry_perf", "values": ["high_liquidity", "normal_liquidity", "low_liquidity"], "description": "ATR-adjusted bid-ask spread vs volume quality at entry"},
+    {"id": "N522", "key": "sector_rotation_entry_perf", "values": ["sector_inflow", "sector_neutral", "sector_outflow"], "description": "Sector ETF 5d+1d momentum indicating money flow direction"},
+    {"id": "N523", "key": "macro_regime_entry_perf", "values": ["risk_on", "mixed_macro", "risk_off"], "description": "Broad macro environment via VIX level (risk_on VIX<15, risk_off VIX>25)"},
+    {"id": "N524", "key": "correlation_spy_entry_perf", "values": ["low_corr_spy", "medium_corr_spy", "high_corr_spy"], "description": "20-day rolling correlation to SPY (low <0.3, high >0.7)"},
+    {"id": "N525", "key": "beta_bucket_entry_perf", "values": ["low_beta", "medium_beta", "high_beta"], "description": "Stock beta bucket: low_beta <0.8, medium_beta 0.8-1.4, high_beta >1.4"},
+    {"id": "N526", "key": "price_vs_52w_entry_perf", "values": ["near_52w_high", "midrange_52w", "near_52w_low"], "description": "Price position in 52-week range: near_52w_high >90%, near_52w_low <25%"},
+    {"id": "N527", "key": "gap_fill_status_entry_perf", "values": ["unfilled_gap_above", "gap_filled", "unfilled_gap_below"], "description": "Gap fill status: unfilled gap above (pm_gap>=1.5% and intraday < 50% fill)"},
+    {"id": "N528", "key": "order_flow_imbalance_perf", "values": ["buyer_dominated", "balanced_flow", "seller_dominated"], "description": "Order flow proxy: rvol>=1.5 + chg1d direction indicates buyer vs seller domination"},
+    {"id": "N529", "key": "regime_volatility_entry_perf", "values": ["low_vol_regime", "normal_vol_regime", "high_vol_regime"], "description": "VIX-based volatility regime: low_vol_regime VIX<15, high_vol_regime VIX>25"},
+    {"id": "N530", "key": "breadth_thrust_entry_perf", "values": ["strong_breadth", "mixed_breadth", "weak_breadth"], "description": "Market breadth thrust via advance/decline %: strong >=65%, weak <=40%"}
+  ],
+  "neurons_total": 490,
+  "status": "complete",
+  "sections_updated": [
+    "Section 1 (SELL tracker): lines ~8734-8892 in log_trade",
+    "Section 2 (BUY recorder): lines ~23725-23830 in buy loop",
+    "Section 3 (Tuner/learn_log): lines ~30750-30835 in self-tuning block",
+    "Section 4 (bot_learned_params dict): lines ~31638-31649",
+    "Section 6 (neurons_total): updated 480->490 in two locations"
+  ]
+}

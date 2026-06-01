@@ -596,11 +596,33 @@ def build_prompt(
     conv = lmc.get("bot_conviction", 0)
     strat = lmc.get("strategy_mode", "")
     nA = lmc.get("neurons_active", 0)
-    nT = lmc.get("neurons_total", 270)
+    nT = lmc.get("neurons_total", 480)
     last_dec = lmc.get("last_decision", "")[:150]
     brain_str = f"  Conviction: {conv}/100 | Strategy: {strat} | Brain: {nA}/{nT} neurons active"
     if last_dec:
         brain_str += f"\n  Last decision: {last_dec}"
+
+    # Build top signal synergies section
+    syn_lines = []
+    for s in (lmc.get("top_synapses") or [])[:6]:
+        syn_lines.append(f"  {s.get('pair','').replace('+', ' + ')}: {s.get('wr',0):.0f}% WR ({s.get('n',0)} trades)")
+    syn_str = "\n".join(syn_lines) if syn_lines else "  Not enough trade history yet"
+
+    tri_lines = []
+    for t in (lmc.get("top_triplets") or [])[:5]:
+        tri_lines.append(f"  {t.get('combo','')[:50]}: {t.get('wr',0):.0f}% WR ({t.get('n',0)} trades)")
+    tri_str = "\n".join(tri_lines) if tri_lines else "  Not enough trade history yet"
+
+    # Build next entry conditions summary
+    nec = lmc.get("next_entry_conditions") or {}
+    nec_met = nec.get("met", 0)
+    nec_total = nec.get("total", 7)
+    nec_ready = nec.get("ready", False)
+    nec_top = nec.get("top_candidate")
+    nec_score = nec.get("top_score", 0)
+    nec_str = f"  {nec_met}/{nec_total} conditions met | {'✅ READY TO TRADE' if nec_ready else '⏸ WAITING'}"
+    if nec_top:
+        nec_str += f" | Top pick: {nec_top} (score {nec_score})"
 
     # Append live trading context so AI can give position-specific guidance
     return base + f"""
@@ -612,6 +634,9 @@ LIVE MARKET CONDITIONS:
 
 ROK BOT BRAIN STATUS:
 {brain_str}
+
+ENTRY GATE STATUS:
+{nec_str}
 
 OPEN POSITIONS WITH LIVE TECHNICAL SIGNALS:
 {positions_str}
@@ -633,6 +658,12 @@ NEURAL EXIT INTELLIGENCE (brain's pattern-learned continuation scores per positi
 SECTOR WIN RATES (brain's learned performance by sector):
 {_build_sector_wr_str(lmc)}
 
+TOP LEARNED SIGNAL PAIRS (synapse memory — when these 2 signals fire together, high win rate):
+{syn_str}
+
+TOP LEARNED 3-SIGNAL COMBOS (strongest neural triplets by historical win rate):
+{tri_str}
+
 CRITICAL INSTRUCTIONS:
 1. For EACH open position, generate a position_analysis entry with: action (HOLD/TRIM/SELL/STRONG_HOLD),
    confidence (1-10), thesis (why hold or exit), risk (biggest threat), and target (price target or exit level)
@@ -644,6 +675,7 @@ CRITICAL INSTRUCTIONS:
 7. Mention specific held tickers by name in rok_message — users see this as their pocket guide
 8. Include top scan candidates and weekend watchlist as new buy ideas if they have strong signals
 9. The user checks this dashboard as their pocket trading guide — make rok_message actionable and specific
+10. If top learned signal pairs show high-WR patterns matching current positions, reference this in thesis
 """
 
 
