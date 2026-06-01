@@ -18602,6 +18602,24 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         logger.warning(f"Crypto positions fetch failed: {e}")
         return buying_power
 
+    # ── Cancel stale crypto sell orders before managing positions ────────
+    # Stale GTC sell orders tie up position qty and cause "insufficient balance" on new sells.
+    try:
+        open_orders = alpaca_get("/v2/orders?status=open&asset_class=crypto")
+        for _ord in open_orders:
+            _ord_side = _ord.get("side", "")
+            _ord_sym  = _ord.get("symbol", "")
+            _ord_id   = _ord.get("id", "")
+            if _ord_side == "sell" and _ord_id:
+                try:
+                    requests.delete(f"{ALPACA_BASE}/v2/orders/{_ord_id}",
+                                    headers=_h(), timeout=10)
+                    logger.info(f"Cancelled stale crypto sell order {_ord_sym} id={_ord_id[:8]}")
+                except Exception as _ce:
+                    logger.warning(f"Cancel order failed {_ord_id}: {_ce}")
+    except Exception as _oe:
+        logger.warning(f"Fetch open orders failed: {_oe}")
+
     # ── Sell / manage open crypto positions ──────────────────────────────
     for sym, pos in list(held_crypto.items()):
         try:
