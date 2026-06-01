@@ -18317,6 +18317,28 @@ def run():
             except Exception:
                 pass
 
+            # ── NEI-Adaptive Trailing Stop Adjustment ────────────────────────────
+            # Pre-computed Neural Exit Intelligence scores directly widen/tighten trails.
+            # High NEI (≥70): historically good setup → give more room to run.
+            # Low NEI (≤35): poor continuation likelihood → protect capital.
+            try:
+                _nei_pos_list = tlog.get("exit_intelligence", {}).get("positions", [])
+                _nei_for_sym = next((p for p in _nei_pos_list if p.get("ticker") == sym), None)
+                if _nei_for_sym and _nei_for_sym.get("signals", 0) >= 3:
+                    _nei_sc = _nei_for_sym.get("score", 50)
+                    if _nei_sc >= 70 and pnl_pct > 2:
+                        dyn_trail = min(dyn_trail * 1.18, dyn_trail + 2.0)
+                        logger.info(f"NEI-WIDE {sym}: NEI={_nei_sc} (STRONG_HOLD) → trail={dyn_trail:.1f}%")
+                    elif _nei_sc >= 60 and pnl_pct > 1:
+                        dyn_trail = min(dyn_trail * 1.08, dyn_trail + 0.8)
+                    elif _nei_sc <= 35 and pnl_pct > 0:
+                        dyn_trail = max(dyn_trail * 0.75, dyn_trail - 1.5)
+                        logger.info(f"NEI-TIGHT {sym}: NEI={_nei_sc} (EXIT_SIGNAL) → trail={dyn_trail:.1f}%")
+                    elif _nei_sc <= 45 and pnl_pct > 0:
+                        dyn_trail = max(dyn_trail * 0.88, dyn_trail - 0.8)
+            except Exception:
+                pass
+
             # ── Full exit conditions ──
             reason = None
             # ── N102: Dynamic Support Level Exit ─────────────────────────────────
@@ -26223,6 +26245,126 @@ def run():
                     except Exception:
                         _n600_s = "moderate_momentum"
                     _buy_signals_merged["momentum_score_bucket_perf"] = _n600_s
+                    # N601: Bid-ask spread quality at entry
+                    try:
+                        _n601_sp = float(d.get("spread_pct", d.get("ask_spread_pct", 0.1)) or 0.1)
+                        if _n601_sp < 0.05:
+                            _n601_s = "tight_spread"
+                        elif _n601_sp <= 0.2:
+                            _n601_s = "normal_spread"
+                        else:
+                            _n601_s = "wide_spread"
+                    except Exception:
+                        _n601_s = "normal_spread"
+                    _buy_signals_merged["bid_ask_spread_perf"] = _n601_s
+                    # N602: News catalyst recency at entry
+                    try:
+                        _n602_age = float(d.get("news_age_hours", d.get("catalyst_age_h", 8)) or 8)
+                        if _n602_age < 2:
+                            _n602_s = "fresh_news"
+                        elif _n602_age <= 8:
+                            _n602_s = "same_day_news"
+                        else:
+                            _n602_s = "stale_news"
+                    except Exception:
+                        _n602_s = "same_day_news"
+                    _buy_signals_merged["news_recency_perf"] = _n602_s
+                    # N603: Sector rotation signal at entry
+                    try:
+                        _n603_etf = float(d.get("sector_etf_1d", d.get("sector_day_pct", 0)) or 0)
+                        if _n603_etf >= 1.0:
+                            _n603_s = "hot_sector"
+                        elif _n603_etf <= -1.0:
+                            _n603_s = "cold_sector"
+                        else:
+                            _n603_s = "neutral_sector"
+                    except Exception:
+                        _n603_s = "neutral_sector"
+                    _buy_signals_merged["sector_rotation_perf"] = _n603_s
+                    # N604: Pre-market volume signal at entry
+                    try:
+                        _n604_pmv = float(d.get("pm_volume", d.get("premarket_vol", 0)) or 0)
+                        if _n604_pmv > 500000:
+                            _n604_s = "exceptional_pm_vol"
+                        elif _n604_pmv >= 100000:
+                            _n604_s = "moderate_pm_vol"
+                        else:
+                            _n604_s = "low_pm_vol"
+                    except Exception:
+                        _n604_s = "moderate_pm_vol"
+                    _buy_signals_merged["pre_market_volume_perf"] = _n604_s
+                    # N605: Volume on breakout bar confirmation
+                    try:
+                        _n605_vr = float(d.get("vol_ratio", 1) or 1)
+                        if _n605_vr >= 2.0:
+                            _n605_s = "volume_confirmed_breakout"
+                        elif _n605_vr >= 1.5:
+                            _n605_s = "moderate_vol_breakout"
+                        else:
+                            _n605_s = "weak_vol_breakout"
+                    except Exception:
+                        _n605_s = "moderate_vol_breakout"
+                    _buy_signals_merged["breakout_volume_confirm_perf"] = _n605_s
+                    # N606: Market trend day type (SPY ADX)
+                    try:
+                        _n606_adx = float(d.get("spy_adx", d.get("market_adx", 20)) or 20)
+                        if _n606_adx > 30:
+                            _n606_s = "strong_trend_day"
+                        elif _n606_adx >= 15:
+                            _n606_s = "balanced_day"
+                        else:
+                            _n606_s = "choppy_reversal_day"
+                    except Exception:
+                        _n606_s = "balanced_day"
+                    _buy_signals_merged["trend_day_type_perf"] = _n606_s
+                    # N607: Entry candle pattern
+                    try:
+                        _n607_cp = str(d.get("entry_candle", d.get("candle_pattern", "neutral")) or "neutral").lower()
+                        if any(x in _n607_cp for x in ("engulfing", "hammer", "bullish")):
+                            _n607_s = "bullish_engulfing"
+                        elif any(x in _n607_cp for x in ("doji", "spinning", "indecision")):
+                            _n607_s = "doji_indecision"
+                        else:
+                            _n607_s = "bearish_candle"
+                    except Exception:
+                        _n607_s = "doji_indecision"
+                    _buy_signals_merged["entry_candle_pattern_perf"] = _n607_s
+                    # N608: Distance to next resistance level
+                    try:
+                        _n608_rd = float(d.get("res_dist_pct", d.get("resistance_pct", 3)) or 3)
+                        if _n608_rd <= 0:
+                            _n608_s = "clear_above_resistance"
+                        elif _n608_rd <= 1.0:
+                            _n608_s = "approaching_resistance"
+                        else:
+                            _n608_s = "far_from_resistance"
+                    except Exception:
+                        _n608_s = "approaching_resistance"
+                    _buy_signals_merged["resistance_proximity_perf"] = _n608_s
+                    # N609: Market breadth (advance/decline ratio)
+                    try:
+                        _n609_mb = float(d.get("market_breadth", d.get("adv_dec_pct", 50)) or 50)
+                        if _n609_mb > 65:
+                            _n609_s = "strong_breadth"
+                        elif _n609_mb >= 45:
+                            _n609_s = "neutral_breadth"
+                        else:
+                            _n609_s = "weak_breadth"
+                    except Exception:
+                        _n609_s = "neutral_breadth"
+                    _buy_signals_merged["market_breadth_perf"] = _n609_s
+                    # N610: Composite time-of-day score bucket
+                    try:
+                        _n610_h = datetime.now().hour
+                        if _n610_h == 9 or (_n610_h == 15):
+                            _n610_s = "prime_window"
+                        elif _n610_h == 10:
+                            _n610_s = "good_window"
+                        else:
+                            _n610_s = "avoid_window"
+                    except Exception:
+                        _n610_s = "good_window"
+                    _buy_signals_merged["time_of_day_score_perf"] = _n610_s
                     log_trade(tlog, "BUY", tk, price, notional, score=sc, reason=reason,
                               signals=_buy_signals_merged)
                     _entry_prem_sigs = [k for k in (
@@ -33616,6 +33758,86 @@ def run():
         if _n600_list:
             _learn_log.append(f"N600 Momentum: elite_momentum={_a_n600['win_rate']:.0f}% weak_momentum={_b_n600['win_rate']:.0f}%WR")
 
+        # ── N601: Bid-Ask Spread entry tuner ────────────────────
+        _n601_raw = tlog.get("bid_ask_spread_perf", {})
+        _n601_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n601_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n601 = next((s for s in _n601_list if s.get("state")=="tight_spread"), _n601_list[0] if _n601_list else {"win_rate":50})
+        _b_n601 = next((s for s in _n601_list if s.get("state")=="wide_spread"), _n601_list[-1] if _n601_list else {"win_rate":50})
+        if _n601_list:
+            _learn_log.append(f"N601 BidAsk: tight_spread={_a_n601['win_rate']:.0f}% wide_spread={_b_n601['win_rate']:.0f}%WR")
+
+        # ── N602: News Recency entry tuner ────────────────────
+        _n602_raw = tlog.get("news_recency_perf", {})
+        _n602_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n602_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n602 = next((s for s in _n602_list if s.get("state")=="fresh_news"), _n602_list[0] if _n602_list else {"win_rate":50})
+        _b_n602 = next((s for s in _n602_list if s.get("state")=="stale_news"), _n602_list[-1] if _n602_list else {"win_rate":50})
+        if _n602_list:
+            _learn_log.append(f"N602 NewsAge: fresh_news={_a_n602['win_rate']:.0f}% stale_news={_b_n602['win_rate']:.0f}%WR")
+
+        # ── N603: Sector Rotation entry tuner ────────────────────
+        _n603_raw = tlog.get("sector_rotation_perf", {})
+        _n603_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n603_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n603 = next((s for s in _n603_list if s.get("state")=="hot_sector"), _n603_list[0] if _n603_list else {"win_rate":50})
+        _b_n603 = next((s for s in _n603_list if s.get("state")=="cold_sector"), _n603_list[-1] if _n603_list else {"win_rate":50})
+        if _n603_list:
+            _learn_log.append(f"N603 SectorRot: hot_sector={_a_n603['win_rate']:.0f}% cold_sector={_b_n603['win_rate']:.0f}%WR")
+
+        # ── N604: Pre-Market Volume entry tuner ────────────────────
+        _n604_raw = tlog.get("pre_market_volume_perf", {})
+        _n604_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n604_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n604 = next((s for s in _n604_list if s.get("state")=="exceptional_pm_vol"), _n604_list[0] if _n604_list else {"win_rate":50})
+        _b_n604 = next((s for s in _n604_list if s.get("state")=="low_pm_vol"), _n604_list[-1] if _n604_list else {"win_rate":50})
+        if _n604_list:
+            _learn_log.append(f"N604 PMVol: exceptional_pm_vol={_a_n604['win_rate']:.0f}% low_pm_vol={_b_n604['win_rate']:.0f}%WR")
+
+        # ── N605: Breakout Volume Confirm entry tuner ────────────────────
+        _n605_raw = tlog.get("breakout_volume_confirm_perf", {})
+        _n605_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n605_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n605 = next((s for s in _n605_list if s.get("state")=="volume_confirmed_breakout"), _n605_list[0] if _n605_list else {"win_rate":50})
+        _b_n605 = next((s for s in _n605_list if s.get("state")=="weak_vol_breakout"), _n605_list[-1] if _n605_list else {"win_rate":50})
+        if _n605_list:
+            _learn_log.append(f"N605 BrkVol: volume_confirmed_breakout={_a_n605['win_rate']:.0f}% weak_vol_breakout={_b_n605['win_rate']:.0f}%WR")
+
+        # ── N606: Trend Day Type entry tuner ────────────────────
+        _n606_raw = tlog.get("trend_day_type_perf", {})
+        _n606_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n606_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n606 = next((s for s in _n606_list if s.get("state")=="strong_trend_day"), _n606_list[0] if _n606_list else {"win_rate":50})
+        _b_n606 = next((s for s in _n606_list if s.get("state")=="choppy_reversal_day"), _n606_list[-1] if _n606_list else {"win_rate":50})
+        if _n606_list:
+            _learn_log.append(f"N606 TrendDay: strong_trend_day={_a_n606['win_rate']:.0f}% choppy_reversal_day={_b_n606['win_rate']:.0f}%WR")
+
+        # ── N607: Entry Candle Pattern entry tuner ────────────────────
+        _n607_raw = tlog.get("entry_candle_pattern_perf", {})
+        _n607_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n607_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n607 = next((s for s in _n607_list if s.get("state")=="bullish_engulfing"), _n607_list[0] if _n607_list else {"win_rate":50})
+        _b_n607 = next((s for s in _n607_list if s.get("state")=="bearish_candle"), _n607_list[-1] if _n607_list else {"win_rate":50})
+        if _n607_list:
+            _learn_log.append(f"N607 Candle: bullish_engulfing={_a_n607['win_rate']:.0f}% bearish_candle={_b_n607['win_rate']:.0f}%WR")
+
+        # ── N608: Resistance Proximity entry tuner ────────────────────
+        _n608_raw = tlog.get("resistance_proximity_perf", {})
+        _n608_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n608_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n608 = next((s for s in _n608_list if s.get("state")=="clear_above_resistance"), _n608_list[0] if _n608_list else {"win_rate":50})
+        _b_n608 = next((s for s in _n608_list if s.get("state")=="approaching_resistance"), _n608_list[-1] if _n608_list else {"win_rate":50})
+        if _n608_list:
+            _learn_log.append(f"N608 Resist: clear_above_resistance={_a_n608['win_rate']:.0f}% approaching_resistance={_b_n608['win_rate']:.0f}%WR")
+
+        # ── N609: Market Breadth entry tuner ────────────────────
+        _n609_raw = tlog.get("market_breadth_perf", {})
+        _n609_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n609_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n609 = next((s for s in _n609_list if s.get("state")=="strong_breadth"), _n609_list[0] if _n609_list else {"win_rate":50})
+        _b_n609 = next((s for s in _n609_list if s.get("state")=="weak_breadth"), _n609_list[-1] if _n609_list else {"win_rate":50})
+        if _n609_list:
+            _learn_log.append(f"N609 Breadth: strong_breadth={_a_n609['win_rate']:.0f}% weak_breadth={_b_n609['win_rate']:.0f}%WR")
+
+        # ── N610: Time of Day Score entry tuner ────────────────────
+        _n610_raw = tlog.get("time_of_day_score_perf", {})
+        _n610_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n610_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n610 = next((s for s in _n610_list if s.get("state")=="prime_window"), _n610_list[0] if _n610_list else {"win_rate":50})
+        _b_n610 = next((s for s in _n610_list if s.get("state")=="avoid_window"), _n610_list[-1] if _n610_list else {"win_rate":50})
+        if _n610_list:
+            _learn_log.append(f"N610 TimeDay: prime_window={_a_n610['win_rate']:.0f}% avoid_window={_b_n610['win_rate']:.0f}%WR")
+
         # ── N141: Intraday Momentum State (multi-tier) ───────────────────────────────
         _n141_raw = tlog.get("intraday_momentum_perf", {})
         _n141_insights = []
@@ -34504,6 +34726,16 @@ def run():
             "options_open_interest_perf": _n598_list,  # N598: options OI context (high/medium/low_oi_ticker) at entry vs outcome
             "weekly_trend_alignment_perf": _n599_list,  # N599: weekly trend alignment (weekly_daily_aligned/conflict/neutral) vs outcome
             "momentum_score_bucket_perf": _n600_list,  # N600: composite momentum bucket (elite/strong/moderate/weak_momentum) vs outcome
+            "bid_ask_spread_perf": _n601_list,  # N601: bid-ask spread quality at entry (tight/normal/wide_spread) vs outcome
+            "news_recency_perf": _n602_list,  # N602: news catalyst recency (fresh_news/same_day_news/stale_news) vs outcome
+            "sector_rotation_perf": _n603_list,  # N603: sector rotation signal (hot/neutral/cold_sector) vs outcome
+            "pre_market_volume_perf": _n604_list,  # N604: pre-market volume (exceptional/moderate/low_pm_vol) vs outcome
+            "breakout_volume_confirm_perf": _n605_list,  # N605: breakout bar volume (volume_confirmed/moderate/weak_vol_breakout) vs outcome
+            "trend_day_type_perf": _n606_list,  # N606: market trend day type (strong_trend/balanced/choppy_reversal_day) vs outcome
+            "entry_candle_pattern_perf": _n607_list,  # N607: entry candle pattern (bullish_engulfing/doji_indecision/bearish_candle) vs outcome
+            "resistance_proximity_perf": _n608_list,  # N608: resistance proximity (clear_above/approaching/far_from_resistance) vs outcome
+            "market_breadth_perf": _n609_list,  # N609: market breadth (strong/neutral/weak_breadth) vs outcome
+            "time_of_day_score_perf": _n610_list,  # N610: time-of-day score bucket (prime/good/avoid_window) vs outcome
             "intraday_momentum_perf": _n141_insights,         # N141: intraday momentum state (VWAP+chg1d) vs outcome
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
@@ -34831,9 +35063,9 @@ def run():
         tlog["strategy_mode"]     = _strat_mode
         tlog["strategy_desc"]     = _strat_desc
         tlog["neurons_active"]    = _neuron_active   # how many neurons have learned data
-        tlog["neurons_total"]     = 560              # total tracked neuron dimensions (N103-N600 complete)
+        tlog["neurons_total"]     = 570              # total tracked neuron dimensions (N103-N610 complete)
         tlog["elite_setup_wr"]    = _pt_elite_wr     # N100 master neuron win rate for elite setups
-        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/560 neurons active")
+        logger.info(f"Bot conviction: {_conv_final}/100 → {_strat_mode} | {_neuron_active}/570 neurons active")
     except Exception as _ce:
         tlog["bot_conviction"] = 50
         tlog["strategy_mode"]  = "SELECTIVE"
@@ -35210,31 +35442,54 @@ def run():
             import requests as _req4
             _pm_positions = tlog.get("positions", [])
             _pm_gaps = tlog.get("premarket_gaps", [])
-            _pm_top  = tlog.get("last_scan_top", [])[:3]
+            _pm_top  = tlog.get("last_scan_top", [])[:5]
             _spy_pm  = next((g for g in _pm_gaps if g.get("ticker") == "SPY"), {})
+            _qqq_pm  = next((g for g in _pm_gaps if g.get("ticker") == "QQQ"), {})
             _held_gaps = [g for g in _pm_gaps if g.get("ticker") in [p["ticker"] for p in _pm_positions]]
             _regime_desc = regime.get("regime", "neutral").upper()
             _vix_now = regime.get("vix", 0)
+            _breadth_now = breadth.get("adv_pct", 50)
+            _macro_today = get_macro_context()
+            _top_sectors = sorted(sector_adjs.items(), key=lambda x: -x[1])[:3] if sector_adjs else []
+            _bot_win_rate = round(win_rate * 100, 1)
+            _daily_pnl_ytd = tlog.get("stats", {}).get("total_pnl_pct", 0) or 0
+            # Build position summary with current P&L
+            _pos_summary = " | ".join(
+                f"{p['ticker']} {p.get('pnl_pct',0):+.1f}%"
+                for p in sorted(_pm_positions, key=lambda x: -(x.get('pnl_pct',0) or 0))[:5]
+            ) if _pm_positions else "none"
             _pm_prompt = (
-                f"Pre-market briefing (2 sentences, ≤50 words total) for a momentum trader.\n"
-                f"SPY PM: {_spy_pm.get('pm_gap_pct',0):+.1f}% | VIX {_vix_now:.1f} | Regime: {_regime_desc}\n"
-                + (f"Held positions PM gaps: " + " | ".join(f"{g['ticker']} {g.get('pm_gap_pct',0):+.1f}%" for g in _held_gaps[:4]) + "\n" if _held_gaps else "")
-                + (f"Top candidates today: " + " | ".join(f"{s['ticker']} sc{s['score']}" for s in _pm_top) + "\n" if _pm_top else "")
-                + "Sentence 1: market tone + key PM gaps. Sentence 2: #1 priority action at open. Be direct."
+                f"You are a professional stock trading assistant writing a pre-market game plan.\n"
+                f"Date: {_pm_date_key} | Market opens in ~30 minutes\n\n"
+                f"MARKET CONDITIONS:\n"
+                f"  SPY PM: {_spy_pm.get('pm_gap_pct',0):+.1f}% | QQQ PM: {_qqq_pm.get('pm_gap_pct',0):+.1f}%\n"
+                f"  VIX: {_vix_now:.1f} | Regime: {_regime_desc} | Breadth: {_breadth_now:.0f}% advancing\n"
+                + (f"  Macro event: {_macro_today.get('label','normal').upper()} ({_macro_today.get('event','none')})\n" if _macro_today.get('event') != 'none' else "")
+                + (f"  Hot sectors: {', '.join(f'{s} ({v:+.0f})' for s,v in _top_sectors)}\n" if _top_sectors else "")
+                + f"\nPORTFOLIO ({len(_pm_positions)} positions):\n  {_pos_summary}\n"
+                + (f"  PM gaps on held: " + " | ".join(f"{g['ticker']} {g.get('pm_gap_pct',0):+.1f}%" for g in _held_gaps[:4]) + "\n" if _held_gaps else "")
+                + (f"\nTOP CANDIDATES (brain scored):\n  " + " | ".join(f"{s['ticker']} sc{s['score']}" for s in _pm_top) + "\n" if _pm_top else "")
+                + f"\nBOT STATS: {_bot_win_rate:.1f}% win rate | {_daily_pnl_ytd:+.1f}% total P&L\n"
+                + f"\nWrite a 4-sentence trading game plan:\n"
+                f"1. Market tone (SPY gap, VIX level, regime — what type of day to expect)\n"
+                f"2. Positions to watch (any gaps on held stocks, what to do if they gap up/down)\n"
+                f"3. Top entry candidate and specific entry trigger to watch for\n"
+                f"4. Risk note — what to avoid today given current conditions\n"
+                f"Be specific, actionable, professional. No fluff. ≤100 words total."
             )
             _pmr = _req4.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
                          "content-type": "application/json"},
-                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 80,
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 160,
                       "messages": [{"role": "user", "content": _pm_prompt}]},
-                timeout=10,
+                timeout=15,
             )
             if _pmr.status_code == 200:
                 _pm_text = _pmr.json()["content"][0]["text"].strip()
                 tlog["premarket_brief"]      = _pm_text
                 tlog["premarket_brief_date"] = _pm_date_key
-                logger.info(f"Pre-market brief: {_pm_text[:80]}...")
+                logger.info(f"Pre-market brief: {_pm_text[:120]}...")
     except Exception as _pm_e:
         logger.debug(f"Pre-market brief skipped: {_pm_e}")
 
