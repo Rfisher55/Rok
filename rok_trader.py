@@ -18607,11 +18607,14 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         try:
             # Use Alpaca's raw symbol for orders (may differ from our normalized sym)
             _raw_sym = pos.get("symbol", sym)
-            cost     = float(pos.get("avg_entry_price", 0))
-            qty      = abs(float(pos.get("qty", 0)))
+            cost     = float(pos.get("avg_entry_price", 0) or 0)
+            qty      = abs(float(pos.get("qty", 0) or 0))
             sig      = crypto_data.get(sym, {})
-            current  = sig.get("price") or float(pos.get("current_price", cost))
-            if cost <= 0 or qty <= 0:
+            _alpaca_cur = pos.get("current_price")
+            current  = (sig.get("price")
+                        or (float(_alpaca_cur) if _alpaca_cur and float(_alpaca_cur or 0) > 0 else None)
+                        or cost)
+            if cost <= 0 or qty <= 0 or current <= 0:
                 continue
             pnl_pct = (current - cost) / cost * 100
 
