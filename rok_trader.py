@@ -20,6 +20,32 @@ import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+# ZoneInfo with fallback: use tzdata-backed zoneinfo if available, else simple UTC-offset class
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    try:
+        from backports.zoneinfo import ZoneInfo
+    except ImportError:
+        class ZoneInfo:  # type: ignore[no-redef]
+            """Minimal UTC-offset ZoneInfo stand-in for America/New_York (auto DST)."""
+            def __init__(self, key: str):
+                self._key = key
+            def utcoffset(self, dt):
+                if dt is None:
+                    dt = datetime.now(timezone.utc)
+                yr = dt.year
+                _mar = datetime(yr, 3, 8, 2, tzinfo=timezone.utc)
+                _dst_start = _mar + timedelta(days=(6 - _mar.weekday()) % 7)
+                _nov = datetime(yr, 11, 1, 2, tzinfo=timezone.utc)
+                _dst_end = _nov + timedelta(days=(6 - _nov.weekday()) % 7)
+                _is_dst = _dst_start <= (dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)) < _dst_end
+                return timedelta(hours=-4 if _is_dst else -5)
+            def fromutc(self, dt):
+                return dt + self.utcoffset(dt)
+            def __repr__(self):
+                return f"ZoneInfo(key='{self._key}')"
+
 import pandas as pd
 import requests
 import yfinance as yf
