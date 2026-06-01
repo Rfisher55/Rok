@@ -1,0 +1,25 @@
+{
+  "batch": "N851_N860",
+  "date": "2026-06-01",
+  "total_neurons_after": 820,
+  "neurons": [
+    {"id": "N851", "key": "spy_trend_strength_perf", "name": "SPY Trend Strength"},
+    {"id": "N852", "key": "sector_rotation_perf", "name": "Sector Rotation Phase"},
+    {"id": "N853", "key": "pre_market_gap_perf", "name": "Pre-Market Gap Size"},
+    {"id": "N854", "key": "relative_strength_tier_perf", "name": "Relative Strength Tier"},
+    {"id": "N855", "key": "position_count_perf", "name": "Position Count at Entry"},
+    {"id": "N856", "key": "catalyst_strength_perf", "name": "Catalyst Strength"},
+    {"id": "N857", "key": "market_cap_momentum_perf", "name": "Market Cap Momentum"},
+    {"id": "N858", "key": "open_position_pnl_perf", "name": "Open Position PnL Context"},
+    {"id": "N859", "key": "trend_template_score_perf", "name": "Trend Template Score"},
+    {"id": "N860", "key": "score_momentum_perf", "name": "Score Momentum"}
+  ],
+  "sections_modified": [
+    "SELL tracker (after N850 block, line ~13690)",
+    "BUY signal classifier (after N850 classifier block, line ~33553)",
+    "Tuner pairs list (after exit_trigger_type_perf entry)",
+    "bot_learned_params initialization (after exit_trigger_type_perf entry)",
+    "neurons_total updated 810 -> 820",
+    "logger string updated /810 -> /820 neurons active"
+  ]
+}
