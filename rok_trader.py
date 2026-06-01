@@ -18303,12 +18303,22 @@ def get_btc_dominance() -> float:
 def _alpaca_crypto_snapshot(symbols: list) -> dict:
     """Fetch crypto prices from Alpaca data API as fallback when yfinance fails."""
     try:
+        # Alpaca v1beta3 needs slash format: BTC/USD (not BTCUSD)
+        # but also accepts no-slash; try both
         syms_param = ",".join(symbols)
         r = requests.get(
             f"{ALPACA_DATA_BASE}/v1beta3/crypto/us/snapshots",
-            headers=_h(), params={"symbols": syms_param}, timeout=10
+            headers=_h(), params={"symbols": syms_param}, timeout=15
         )
         if r.status_code != 200:
+            # Try without slashes as fallback
+            syms_noslash = ",".join(s.replace("/", "") for s in symbols)
+            r = requests.get(
+                f"{ALPACA_DATA_BASE}/v1beta3/crypto/us/snapshots",
+                headers=_h(), params={"symbols": syms_noslash}, timeout=15
+            )
+        if r.status_code != 200:
+            logger.warning(f"Alpaca crypto snapshot HTTP {r.status_code}: {r.text[:200]}")
             return {}
         data = r.json().get("snapshots", {})
         result = {}
@@ -18382,7 +18392,9 @@ def fetch_crypto_data() -> dict:
             result[sym] = sig
             logger.info(f"Alpaca fallback data for {sym}: price={sig['price']:.2f} chg={sig['change_pct']:+.1f}%")
 
-    logger.info(f"Crypto data loaded: {list(result.keys())}")
+    logger.info(f"Crypto data loaded: {list(result.keys())} ({len(result)}/{len(CRYPTO_UNIVERSE)} coins)")
+    if not result:
+        logger.warning("CRYPTO: all data fetch attempts failed — no crypto data available")
     return result
 
 
@@ -18657,6 +18669,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         if alpaca_sym in held_crypto:
             continue
         sc = crypto_score(sig)
+        logger.info(f"Crypto score {alpaca_sym}: {sc} (chg={sig.get('change_pct',0):+.1f}% roc5={sig.get('roc5',0):+.1f}% vr={sig.get('vol_ratio',1):.1f}x)")
         # BTC dominance adjustments: boost BTC when dom > 60, boost alts when dom < 50
         is_btc = "BTC" in alpaca_sym
         if btc_dom > 60 and not is_btc:   sc = max(0, sc - 3)   # mild penalty for alts in risk-off (was -8)
