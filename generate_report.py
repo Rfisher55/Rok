@@ -1359,6 +1359,25 @@ def _run():
                         } or None,
                     }.items() if v is not None
                 },
+                # Strategy insights: top edge and drag patterns from learned neurons
+                "strategy_insights": (lambda: {
+                    "top_alpha": sorted(
+                        [{"neuron": neuron_map.get(k, k), "key": k, "state": sd.get("state",""),
+                          "win_rate": sd.get("win_rate",0), "alpha": round(sd.get("win_rate",0) - (td.get("win_rate") or 50), 1),
+                          "total": sd.get("total",0), "avg_pnl": sd.get("avg_pnl",0)}
+                         for k in neuron_map for sd in (lp.get(k) or [])
+                         if isinstance(sd, dict) and sd.get("total",0) >= 4 and sd.get("win_rate",0) - (td.get("win_rate") or 50) >= 12],
+                        key=lambda x: (-x["alpha"], -x["win_rate"])
+                    )[:6],
+                    "top_drag": sorted(
+                        [{"neuron": neuron_map.get(k, k), "key": k, "state": sd.get("state",""),
+                          "win_rate": sd.get("win_rate",0), "alpha": round(sd.get("win_rate",0) - (td.get("win_rate") or 50), 1),
+                          "total": sd.get("total",0)}
+                         for k in neuron_map for sd in (lp.get(k) or [])
+                         if isinstance(sd, dict) and sd.get("total",0) >= 4 and sd.get("win_rate",0) - (td.get("win_rate") or 50) <= -10],
+                        key=lambda x: x["alpha"]
+                    )[:4],
+                })(),
             }
             logger.info(f"Loaded {len(current_positions)} positions, {len(last_scan_top)} scan candidates, {len(td.get('weekend_watchlist', []))} watchlist items from trades.json")
     except Exception as _te:
@@ -1633,6 +1652,10 @@ def _run():
         "last_scan_top":      live_market_context.get("last_scan_top", []),
         "top_neurons":        live_market_context.get("top_neurons", []),
         "recent_alpaca_trades": live_market_context.get("recent_alpaca_trades", []),
+        # Neural brain strategy insights (from weekly performance data)
+        "strategy_insights":  live_market_context.get("strategy_insights", {}),
+        "brain_analytics":    live_market_context.get("brain_analytics", {}),
+        "portfolio_attribution": live_market_context.get("portfolio_attribution", {}),
     }
 
     # Sanitize all datetime objects before JSON serialization
