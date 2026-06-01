@@ -18835,15 +18835,26 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     logger.info(f"Crypto candidates above threshold: {[(s, sc) for s,sc,_ in scored]}")
 
     # Force-buy fallback: if nothing scored above threshold but we have empty slots,
-    # buy the top 2 highest-scoring coins anyway (ensures crypto always cycling)
+    # buy top-scoring coins anyway to keep capital working 24/7
     _buy_list = scored[:open_slots]
-    if not scored and open_slots > 0 and len(held_crypto) == 0:
+    if not _buy_list and open_slots > 0:
         _fallback = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
                      if sym not in held_crypto and crypto_score(sig) > 0]
         _fallback.sort(key=lambda x: -x[1])
+        _n_fallback = min(open_slots, max(2, open_slots // 2))
         if _fallback:
-            _buy_list = _fallback[:2]
-            logger.info(f"Crypto force-buy: no coins above threshold; buying top {len(_buy_list)} by score")
+            _buy_list = _fallback[:_n_fallback]
+            logger.info(f"Crypto force-buy: {open_slots} open slots, buying top {len(_buy_list)} by score")
+
+    # Always reserve one slot for BTC/USD if it's not already held (core holding)
+    _btc_held = "BTC/USD" in held_crypto
+    _btc_in_list = any("BTC" in sym for sym, _, _ in _buy_list)
+    if not _btc_held and not _btc_in_list and open_slots > len(_buy_list) and "BTC/USD" in crypto_data:
+        _btc_sig = crypto_data["BTC/USD"]
+        _btc_sc = crypto_score(_btc_sig)
+        if _btc_sc > 0:
+            _buy_list = list(_buy_list) + [("BTC/USD", _btc_sc, _btc_sig)]
+            logger.info(f"BTC/USD added as core holding (score={_btc_sc})")
 
     for alpaca_sym, sc, sig in _buy_list:
         try:
@@ -22629,6 +22640,50 @@ def run():
 
         except Exception as _cm_enrich_e:
             logger.debug(f"Closed-market brain enrichment: {_cm_enrich_e}")
+
+        # ── Off-hours brain update: apply today's exit performance to learned params ──
+        try:
+            _oh_today = run_start.strftime("%Y-%m-%d")
+            _oh_trades = tlog.get("trades", [])
+            _oh_sells = [t for t in _oh_trades
+                         if t.get("action") in ("SELL", "SELL_HALF")
+                         and t.get("time", "").startswith(_oh_today)
+                         and t.get("pnl_pct") is not None]
+            if _oh_sells:
+                # Group by exit category
+                from collections import defaultdict as _dd
+                _exit_perf = _dd(list)
+                for _s in _oh_sells:
+                    _r = _s.get("reason", "")
+                    if "90min" in _r or "90-min" in _r:        _cat = "90min_cycle"
+                    elif "60min" in _r or "60-min" in _r:      _cat = "60min_cycle"
+                    elif "45min" in _r:                        _cat = "45min_profit"
+                    elif "crypto 2h" in _r or "4h" in _r:      _cat = "crypto_cycle"
+                    elif "stop loss" in _r or "scalp stop" in _r: _cat = "stop_loss"
+                    elif "profit" in _r or "target" in _r:     _cat = "profit_target"
+                    else:                                       _cat = "other"
+                    _exit_perf[_cat].append(float(_s["pnl_pct"]))
+
+                _ep_summary = {}
+                _best_cat, _best_avg = None, -999
+                for _cat, _pnls in _exit_perf.items():
+                    _avg = sum(_pnls) / len(_pnls)
+                    _wr = sum(1 for p in _pnls if p > 0) / len(_pnls) * 100
+                    _ep_summary[_cat] = {"n": len(_pnls), "avg_pnl": round(_avg, 3), "win_rate": round(_wr, 1)}
+                    if _avg > _best_avg and _cat not in ("stop_loss",):
+                        _best_avg, _best_cat = _avg, _cat
+
+                _lp = tlog.setdefault("bot_learned_params", {})
+                _lp["exit_strategy_perf"]  = _ep_summary
+                _lp["best_exit_strategy"]  = _best_cat or _lp.get("best_exit_strategy")
+                _lp["trades_analyzed"]     = len(_oh_sells)
+
+                # Update daily trade count to include off-hours crypto
+                _all_today = [t for t in _oh_trades if t.get("time", "").startswith(_oh_today)]
+                tlog["daily_trade_count"] = len(_all_today)
+                logger.info(f"Off-hours brain: {len(_oh_sells)} sells analyzed | best_exit={_best_cat} avg={_best_avg:+.2f}% | total_today={len(_all_today)}")
+        except Exception as _oe:
+            logger.debug(f"Off-hours brain update: {_oe}")
 
         if ENABLE_CRYPTO:
             peaks = _load(PEAK_FILE, {})
