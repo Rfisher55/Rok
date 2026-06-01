@@ -1,0 +1,87 @@
+{
+  "batch": "N581-N590",
+  "neurons": [
+    {
+      "id": "N581",
+      "key": "trend_following_score_perf",
+      "description": "Combined trend-following score at entry",
+      "values": ["strong_trend_follow", "moderate_trend_follow", "weak_trend_follow"],
+      "source_field": "d.get('trend_score', d.get('trend_following_score', 50))",
+      "thresholds": ">70 = strong_trend_follow, 40-70 = moderate_trend_follow, <40 = weak_trend_follow"
+    },
+    {
+      "id": "N582",
+      "key": "mean_reversion_setup_perf",
+      "description": "Mean reversion setup quality at entry (RSI extreme + Bollinger extreme)",
+      "values": ["strong_mean_rev", "moderate_mean_rev", "no_mean_rev"],
+      "source_field": "d.get('rsi', 50) + d.get('bb_pct', 0.5)",
+      "thresholds": "(RSI <30 or >70) AND (bb_pct <=0.1 or >=0.9) = strong_mean_rev, RSI <35 or >65 = moderate_mean_rev, else = no_mean_rev"
+    },
+    {
+      "id": "N583",
+      "key": "breakout_false_signal_perf",
+      "description": "Breakout authenticity at entry (volume confirmation + follow-through)",
+      "values": ["confirmed_breakout", "suspect_breakout", "failed_breakout"],
+      "source_field": "d.get('breakout_confirmed', d.get('vol_ratio', 1.0)) + d.get('chg1d', 0)",
+      "thresholds": "vol_ratio >=2.0 AND chg1d >0 = confirmed_breakout, vol_ratio <1.5 = suspect_breakout, else = failed_breakout"
+    },
+    {
+      "id": "N584",
+      "key": "intraday_momentum_shift_perf",
+      "description": "Intraday momentum shift direction at entry",
+      "values": ["accelerating_up", "decelerating", "reversing"],
+      "source_field": "d.get('intraday_chg', d.get('chg_from_open', 0))",
+      "thresholds": ">0.5% = accelerating_up, -0.5% to 0.5% = decelerating, <-0.5% = reversing"
+    },
+    {
+      "id": "N585",
+      "key": "sector_news_catalyst_perf",
+      "description": "Sector-level news catalyst direction at entry",
+      "values": ["sector_catalyst_bullish", "no_sector_catalyst", "sector_catalyst_bearish"],
+      "source_field": "d.get('sector_news_score', d.get('sector_sentiment', 0))",
+      "thresholds": ">0 = sector_catalyst_bullish, ==0 = no_sector_catalyst, <0 = sector_catalyst_bearish"
+    },
+    {
+      "id": "N586",
+      "key": "analyst_upgrade_momentum_perf",
+      "description": "Recency of analyst upgrade at entry",
+      "values": ["fresh_upgrade", "stale_upgrade", "no_upgrade"],
+      "source_field": "d.get('analyst_upgrade_days', d.get('days_since_upgrade', 99))",
+      "thresholds": "<=7 days = fresh_upgrade, 8-30 days = stale_upgrade, >30 days = no_upgrade"
+    },
+    {
+      "id": "N587",
+      "key": "earnings_estimate_revision_perf",
+      "description": "EPS estimate revision trend (number of analysts raising estimates) at entry",
+      "values": ["rising_estimates", "stable_estimates", "falling_estimates"],
+      "source_field": "d.get('eps_revision_trend', d.get('eps_revisions', 0))",
+      "thresholds": ">=2 analysts raised = rising_estimates, -1 to 1 = stable_estimates, <=-1 = falling_estimates"
+    },
+    {
+      "id": "N588",
+      "key": "technical_pattern_quality_perf",
+      "description": "Technical pattern quality at entry (cup/handle, bull flag, base breakout, etc.)",
+      "values": ["high_quality_pattern", "medium_quality_pattern", "low_quality_pattern"],
+      "source_field": "d.get('pattern_score', d.get('tech_pattern_quality', 0))",
+      "thresholds": ">=70 = high_quality_pattern, 35-69 = medium_quality_pattern, <35 = low_quality_pattern"
+    },
+    {
+      "id": "N589",
+      "key": "market_open_strength_perf",
+      "description": "Market open strength (SPY first 30-minute change) for the trading day",
+      "values": ["strong_open", "flat_open", "weak_open"],
+      "source_field": "tlog.get('market_open_chg', d.get('market_open_chg', d.get('spy_open_30min', 0)))",
+      "thresholds": ">=+0.5% = strong_open, -0.5% to +0.5% = flat_open, <=-0.5% = weak_open"
+    },
+    {
+      "id": "N590",
+      "key": "price_range_percentile_perf",
+      "description": "Where stock price sits within its 52-week range at entry",
+      "values": ["upper_range", "mid_range", "lower_range"],
+      "source_field": "d.get('w52_range_pos', d.get('price_vs_52w', 50))",
+      "thresholds": ">75% of 52w range = upper_range, 25-75% = mid_range, <25% = lower_range"
+    }
+  ],
+  "neurons_total": 550,
+  "status": "complete"
+}
