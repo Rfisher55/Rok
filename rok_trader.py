@@ -19331,29 +19331,34 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     logger.info(f"Crypto candidates above threshold: {[(s, sc) for s,sc,_ in scored]}")
 
     # Force-buy fallback: if nothing scored above threshold but we have empty slots,
-    # buy top-scoring coins anyway to keep capital working 24/7.
-    # Floor is CRYPTO_MIN_SCORE // 2 so fallback still requires meaningful signal.
+    # buy top-scoring coins to keep capital working, but only BTC/ETH at reduced floor.
+    # Data shows low-score alt entries (<25) are consistently losing — raised floor.
     _buy_list = scored[:open_slots]
     _fb_coin_reduce = _lp_cth.get("crypto_coin_reduce", [])
-    _fallback_floor = max(8, CRYPTO_MIN_SCORE // 2)  # fallback floor: half the normal minimum (min 8)
+    _fallback_floor = max(20, int(CRYPTO_MIN_SCORE * 0.70))  # 70% of min (was 50%) — tighter quality bar
     if not _buy_list and open_slots > 0:
+        # Only allow BTC/ETH in the primary fallback — most liquid, lowest noise
         _fallback = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
                      if sym not in held_crypto
                      and crypto_score(sig) >= _fallback_floor
+                     and ("BTC" in sym or "ETH" in sym)  # majors only at reduced threshold
                      and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
         _fallback.sort(key=lambda x: -x[1])
-        _n_fallback = min(open_slots, max(1, open_slots // 3))  # more conservative fallback count
+        _n_fallback = min(open_slots, max(1, open_slots // 3))
         if _fallback:
             _buy_list = _fallback[:_n_fallback]
-            logger.info(f"Crypto force-buy (floor={_fallback_floor}): {open_slots} open slots, buying top {len(_buy_list)} (excluded brain-flagged losers: {_fb_coin_reduce})")
-        elif open_slots > 0:
-            # All non-loser coins already held — allow any coin at floor/2 minimum
+            logger.info(f"Crypto force-buy (floor={_fallback_floor}, majors-only): {open_slots} open slots, buying top {len(_buy_list)}")
+        else:
+            # Secondary fallback: any coin but at 80% of regular min (was 50% floor/2 ≈ 25%)
+            _alt_floor = max(22, int(CRYPTO_MIN_SCORE * 0.80))
             _fallback_any = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
-                             if sym not in held_crypto and crypto_score(sig) >= _fallback_floor // 2]
+                             if sym not in held_crypto
+                             and crypto_score(sig) >= _alt_floor
+                             and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
             _fallback_any.sort(key=lambda x: -x[1])
             if _fallback_any:
-                _buy_list = _fallback_any[:min(open_slots, 1)]  # max 1 slot for any-coin fallback
-                logger.info(f"Crypto force-buy last-resort: {_buy_list[0][0]} (score>={_fallback_floor//2})")
+                _buy_list = _fallback_any[:min(open_slots, 1)]  # max 1 slot for alt fallback
+                logger.info(f"Crypto force-buy alt-fallback: {_buy_list[0][0]} (score>={_alt_floor})")
 
     # BTC core holding: ensure BTC/USD is always in the portfolio when possible.
     # If BTC not held and not in buy list, replace the weakest-performing coin in the
@@ -19363,7 +19368,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     if not _btc_held and not _btc_in_list and "BTC/USD" in crypto_data:
         _btc_sig = crypto_data["BTC/USD"]
         _btc_sc  = crypto_score(_btc_sig)
-        if _btc_sc > 0:
+        if _btc_sc >= max(15, CRYPTO_MIN_SCORE // 2):  # require meaningful BTC score before forcing
             if open_slots > len(_buy_list):
                 # Spare slot — add BTC directly
                 _buy_list = list(_buy_list) + [("BTC/USD", _btc_sc, _btc_sig)]
