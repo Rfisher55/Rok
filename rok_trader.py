@@ -25607,6 +25607,18 @@ def run():
                 logger.warning(f"score() crash for {tk}: {_se}")
                 return 0
         tech_scores = {tk: _safe_score(tk) for tk in live if tk not in held}
+
+        # Track score history for top candidates so N730 consecutive_strong_scans works
+        # (score_history is only updated for held stocks in the main hold loop;
+        # this ensures non-held candidates that keep appearing get persistence credit)
+        _top_score_cands = sorted([(tk, sc) for tk, sc in tech_scores.items() if sc >= _eff_min_score - 5], key=lambda x: -x[1])[:30]
+        for _csk, _csv in _top_score_cands:
+            if _csk not in peaks or not isinstance(peaks.get(_csk), dict):
+                peaks[_csk] = {"score_history": [], "peak": 0, "time": now_utc.isoformat(), "half_out": False}
+            _csh = peaks[_csk].setdefault("score_history", [])
+            _csh.append({"s": _csv, "t": now_utc.isoformat()})
+            peaks[_csk]["score_history"] = _csh[-12:]  # keep last 12 scans (~1h for 5min cron)
+
         candidates_buy = sorted(
             [(tk, sc) for tk, sc in tech_scores.items() if sc >= _eff_min_score - 5],
             key=lambda x: -x[1],
