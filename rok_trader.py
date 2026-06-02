@@ -21982,9 +21982,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_brd_b = ("thrust" if _fb_brd >= 90 else "strong" if _fb_brd >= 65 else "weak" if _fb_brd <= 35 else "neutral")
             _nsl_adj += _nde("market_breadth_perf", _fb_brd_b)
 
-            # Signal count sweet spot (N156)
-            _fb_sigs = int(d.get("signal_count", 0) or 0)
-            _fb_sig_b = ("1-2" if _fb_sigs <= 2 else "3-4" if _fb_sigs <= 4 else "5-7" if _fb_sigs <= 7 else "8+")
+            # Signal count sweet spot (N156) — buckets match log_trade storage: 1-3/4-6/7-10/11+
+            _fb_sigs = int(d.get("signal_count", d.get("signal_count_at_entry", 0)) or 0)
+            _fb_sig_b = ("1-3" if _fb_sigs <= 3 else "4-6" if _fb_sigs <= 6 else "7-10" if _fb_sigs <= 10 else "11+")
             _nsl_adj += _nde("signal_count_perf", _fb_sig_b)
 
             # MACD entry state (N116)
@@ -22212,8 +22212,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
                              else "flat")
             _nsl_adj += _nde("time_weighted_momentum_perf", _fb_n872_bkt)
 
-            # N873: Relative volume burst tier
-            _fb_n873_bkt = ("burst_3x" if _fb_n871_rvol >= 3.0 else "elevated_2x" if _fb_n871_rvol >= 2.0 else "normal_vol")
+            # N873: Relative volume burst — buckets match log_trade N873 state labels
+            _fb_n873_bkt = ("extreme_burst" if _fb_n871_rvol > 3.0 else "strong_burst" if _fb_n871_rvol > 2.0
+                            else "moderate_surge" if _fb_n871_rvol > 1.5 else "normal_vol" if _fb_n871_rvol > 0.8
+                            else "low_vol_day")
             _nsl_adj += _nde("relative_volume_burst_perf", _fb_n873_bkt)
 
             # N875: MTF alignment state
@@ -22228,9 +22230,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
                             else "aligned")
             _nsl_adj += _nde("smart_money_divergence_perf", _fb_n879_bkt)
 
-            # N880: Volatility regime shift (HV expanding vs contracting)
-            _fb_n880_bkt = ("vol_expanding" if d.get("hv_expanding") else
-                            "vol_contracting" if d.get("hv_contracting") else "stable_vol")
+            # N880: Volatility regime shift — VIX-tier labels match buy-loop N880 storage
+            _fb_n880_vix = float(d.get("vix_at_entry", d.get("vix_level", 18)) or 18)
+            if   _fb_n880_vix < 13:   _fb_n880_bkt = "vol_compression"
+            elif _fb_n880_vix < 18:   _fb_n880_bkt = "stable_low"
+            elif _fb_n880_vix < 25:   _fb_n880_bkt = "rising_vol"
+            elif _fb_n880_vix < 35:   _fb_n880_bkt = "vol_spike"
+            else:                     _fb_n880_bkt = "vol_extreme"
             _nsl_adj += _nde("volatility_regime_shift_perf", _fb_n880_bkt)
 
             # Candle pattern quality at entry (hammer, engulfing, morning star, etc.)
@@ -22640,10 +22646,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                                          _n872_s = "flat"
             _nsl_adj += _nde("time_weighted_momentum_perf", _n872_s)
 
-            # N874: Catalyst timing — fresh catalyst = edge
-            _n874_cat = bool(d.get("catalyst") or d.get("news_catalyst") or d.get("earnings_beat")
-                             or int(d.get("news_count_24h", 0) or 0) >= 5)
-            _nsl_adj += _nde("catalyst_timing_perf", "fresh_catalyst" if _n874_cat else "stale_catalyst")
+            # N874: Catalyst timing — 4-tier labels match log_trade N874 state storage
+            _n874_nc  = int(d.get("news_count_24h", d.get("news_count", 0)) or 0)
+            _n874_chg = abs(float(d.get("change_pct", 0) or 0))
+            if _n874_nc > 5 and _n874_chg > 2.0:   _n874_cat_s = "same_day_catalyst"
+            elif _n874_nc > 2 and _n874_chg > 1.0: _n874_cat_s = "yesterday_catalyst"
+            elif _n874_nc > 0:                      _n874_cat_s = "week_old_catalyst"
+            else:                                   _n874_cat_s = "stale_catalyst"
+            _nsl_adj += _nde("catalyst_timing_perf", _n874_cat_s)
 
             # N878: Price discovery phase — near 52W high = discovery_up
             _n878_52wh = float(d.get("near_52w_high", 1.0) or 1.0)
