@@ -76,7 +76,7 @@ TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
 MIN_BUY_SCORE      = 60      # raised from 40: 77% of entries score 100+ (compression) — 60 filters weak setups
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
-MAX_SECTOR_LONGS   = 6       # more positions per sector to generate more data
+MAX_SECTOR_LONGS   = 12      # raised from 6 — 12 per sector for high-volume trading; "other" uncapped below
 ENABLE_SHORTS      = True    # enable short selling in bear/neutral regime
 VIX_HIGH_THRESH    = 30      # reduce position sizes when VIX above this
 VIX_EXTREME_THRESH = 45      # halt new buys when VIX above this
@@ -209,6 +209,16 @@ SECTOR_MAP = {
     "SPY":"etf","QQQ":"etf","IWM":"etf","XLK":"etf","XLF":"etf",
     "XLE":"etf","XLV":"etf","XLRE":"etf","XLU":"etf","XLB":"etf",
     "XLC":"etf","XLY":"etf","XLI":"etf",
+    # Semiconductors / Photonics (frequently traded)
+    "HIMX":"tech","MRVL":"tech","STM":"tech","LITE":"tech","COHR":"tech",
+    "CAMT":"tech","CRNT":"tech","KEEL":"tech",
+    # Energy / Materials (frequently traded)
+    "FLNC":"energy","UEC":"energy","LAC":"materials","MX":"materials",
+    # Biotech / Healthcare (frequently traded)
+    "LEGN":"biotech","RLAY":"biotech","CMPS":"biotech",
+    # Financials / Other (frequently traded)
+    "CIB":"finance","HPE":"tech","CLS":"industrial","MGM":"consumer",
+    "TMHC":"consumer_tech",
 }
 
 # ── Base universe ─────────────────────────────────────────────────────────────
@@ -27826,7 +27836,7 @@ def run():
     _trade_deficit = max(0, _paced_target - _trades_today_count)
     _pace_regime_ok = regime.get("regime", "neutral") not in ("bear",)  # don't push volume in bear market
     if _trade_deficit >= 50 and _pace_regime_ok:
-        _pace_adj = -15  # far behind 300/day target: lower aggressively toward 300
+        _pace_adj = -15  # far behind 500/day target: lower aggressively toward 500
         _pace_floor = 20 if not _vix_spike else max(MIN_BUY_SCORE, 30)
         _eff_min_score = max(_pace_floor, _eff_min_score + _pace_adj)
         logger.info(f"Trade pace EMERGENCY: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, threshold → {_eff_min_score}")
@@ -28064,8 +28074,10 @@ def run():
             if tk in _loss_cooldown:
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": "48h loss cooldown"})
                 continue
-            if sector_counts.get(sec, 0) >= MAX_SECTOR_LONGS:
-                logger.info(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{MAX_SECTOR_LONGS})")
+            # "other" sector gets 2× cap since it catches all uncategorized momentum stocks
+            _sec_cap = MAX_SECTOR_LONGS * 2 if sec == "other" else MAX_SECTOR_LONGS
+            if sector_counts.get(sec, 0) >= _sec_cap:
+                logger.info(f"SKIP {tk} — sector {sec} full ({sector_counts.get(sec,0)}/{_sec_cap})")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"sector {sec} full"})
                 continue
             # Sector ETF confirmation: skip individual stock buy if the whole sector is bearish
