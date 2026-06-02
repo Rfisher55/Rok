@@ -25926,7 +25926,8 @@ def run():
     _closed_today_run = [t for t in _all_trades_run
                          if (t.get("time") or "")[:10] == _today_str_run
                          and t.get("action") in ("SELL", "COVER")
-                         and t.get("pnl_pct") is not None]
+                         and t.get("pnl_pct") is not None
+                         and "/" not in t.get("ticker", "")]  # equity-only: crypto losses must not cut equity sizing
     _today_wins_run  = sum(1 for t in _closed_today_run if float(t.get("pnl_pct") or 0) > 0)
     _today_losses_run = sum(1 for t in _closed_today_run if float(t.get("pnl_pct") or 0) <= 0)
     _today_total_run = _today_wins_run + _today_losses_run
