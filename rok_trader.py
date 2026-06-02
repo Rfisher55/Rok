@@ -26252,8 +26252,15 @@ def run():
                 elif age_minutes >= 45 and pnl_pct >= 0.3 and not half_out:
                     _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
-                    # 60min cycle: exit losers/flat — winners (>0.3%) ride to 90min
-                    _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
+                    # Smart 60min exit: if position is just slightly negative (-0.5% to 0%)
+                    # and current live score is still strong (≥55), extend to 90min.
+                    # Only hard-exit if truly losing (< -0.5%) or score has deteriorated.
+                    _live_d_now = live.get(sym, {}) or {}
+                    _now_sc = score(sym, _live_d_now) if _live_d_now else 0
+                    if pnl_pct >= -0.5 and _now_sc >= 55:
+                        pass  # extend to 90min — signal still valid, give it time
+                    else:
+                        _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 90:
                     # 90min backup: unconditional exit to force capital recycling
                     _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
