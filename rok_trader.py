@@ -28676,6 +28676,8 @@ def run():
                     _learned_bonus += _npen("capital_util_perf", "high_cash", 4, -8)    # 3.1% WR n=32 — near-block
                 elif _cap_util_pct_lb < 60:
                     _learned_bonus += _npen("capital_util_perf", "moderate", 13, -5)    # 12.9% WR n=31
+                elif _cap_util_pct_lb >= 60:
+                    _learned_bonus += _npen("capital_util_perf", "deployed", 5, -8)     # 0.0% WR n=8 — fully deployed = worst state
                 # breadth_perf["mixed"]: 41.3% WR n=46 — mixed breadth = adverse entry conditions
                 _brd_adv_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
                 _brd_bkt_lb = ("strong" if _brd_adv_lb >= 70 else "broad" if _brd_adv_lb >= 55
@@ -28688,10 +28690,12 @@ def run():
                     _learned_bonus += _npen("halfhour_performance", "1730", 40, -2)  # 39.3% WR n=28
                 elif _hw_utc_lb == "1900":
                     _learned_bonus += _nbns("halfhour_performance", "1900", 61, 2)   # 62.5% WR n=8
-                # Day of week: Wednesday entries = 60.9% WR n=46; Monday = 45.9% WR
+                # Day of week: Wednesday=60.9% WR n=46 bonus; Monday=45.8% WR n=72 penalty
                 _dow_now_lb = datetime.utcnow().weekday()  # 0=Mon, 2=Wed
                 if _dow_now_lb == 2:
                     _learned_bonus += _nbns("day_of_week_perf", "wednesday", 60, 1)  # 60.9% WR n=46
+                elif _dow_now_lb == 0:
+                    _learned_bonus += _npen("day_of_week_perf", "monday_entry", 47, -1)  # 45.8% WR n=72
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
                     _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
                     _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
@@ -28819,8 +28823,9 @@ def run():
                     # vwap_perf["above"] = 50% WR n=36 — dead bonus at 62% threshold; vwap_distance also 46.5% WR
                     pass  # both above-VWAP signals are coin flip or worse, no bonus
                 elif abs(_vwp_lb) <= 0.5:
-                    # vwap_perf["at_vwap"] = 47.2% WR n=36 — penalize
+                    # vwap_perf["at_vwap"] = 44.7% WR n=38 — penalize both dicts
                     _learned_bonus += _npen("vwap_distance_perf", "above_vwap", 47, -1)
+                    _learned_bonus += _npen("vwap_perf", "at_vwap", 45, -1)  # 44.7% WR n=38
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
                 # SPY alignment bonus: trading with the market direction
@@ -28929,7 +28934,7 @@ def run():
                 if _ptier_lb == "micro":
                     _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
                 elif _ptier_lb == "small":
-                    _learned_bonus += _nbns("price_tier_perf", "small", 60, 1)   # 80% WR in data!
+                    _learned_bonus += _npen("price_tier_perf", "small", 40, -2)  # 36.4% WR n=11 — wrong bonus→penalty
                 # Ichimoku cloud position: inside=55.2% WR n=29, above=48.5% WR n=33, below=20% WR n=10
                 _ich_lb = str(_tk_sig_sc.get("ichimoku_state", _tk_sig_sc.get("ichimoku_pos", "")) or "")
                 _ich_above_flag = bool(_tk_sig_sc.get("ichimoku_above", False))
@@ -29126,6 +29131,20 @@ def run():
                 # ema_struct_perf["both"] = 47.2% WR n=36 — bonus dead; below_both=45.7% → mild penalty
                 if not (_e50_pct_lb > 0 and _e200_pct_lb > 0):
                     _learned_bonus += _npen("ema_struct_perf", "below_both", 46, -1)
+                # EMA50 "below" = 19.2% WR n=26 — catastrophic, much worse than _nde alone covers
+                if _e50_pct_lb < -2:
+                    _learned_bonus += _npen("ema50_position_perf", "below", 25, -5)  # 19.2% WR n=26
+                # EMA200 "near" (-5 to +5%) = 19.2% WR n=26 — unstable zone, explicit hard penalty
+                if -5 < _e200_pct_lb <= 5:
+                    _learned_bonus += _npen("ema200_position_perf", "near", 25, -5)  # 19.2% WR n=26
+                # ATR tight (<1%) = 21.4% WR n=28 — insufficient volatility for momentum entries
+                _atr_pct_bkt = float(_tk_sig_sc.get("atr_pct", 0) or 0)
+                if 0 < _atr_pct_bkt < 1.0:
+                    _learned_bonus += _npen("atr_bucket_perf", "tight", 25, -5)  # 21.4% WR n=28
+                # Market quality "good" (50-74) = 40.9% WR n=44 — worse than weak/poor quality
+                _mq_val_lb = int(tlog.get("market_quality", 50) or 50)
+                if 50 <= _mq_val_lb < 75:
+                    _learned_bonus += _npen("mkt_quality_perf", "good", 42, -2)  # 40.9% WR n=44
                 # AVWAP: above=47.2% WR n=36 (updated — was 65%) — no bonus warranted
                 # avwap_perf["above"] = 47.2% WR n=36 — bonus dead (threshold 60%)
                 # POC control: above=48.5% WR n=33 (updated — was 64%) — no bonus
@@ -29184,12 +29203,20 @@ def run():
                     _learned_bonus += _nbns("score_trend_perf", "rising", 60, 1)   # improving conviction
                 elif _sc_trend_lb == "falling":
                     _learned_bonus += _npen("score_trend_perf", "falling", 40, -1) # weakening setup
+                # Breakout age: day4_7=45.8% WR n=72 — stale breakouts underperform fresh ones
+                _bkage_dsb_lb = int(_tk_sig_sc.get("days_since_breakout", 99) or 99)
+                if 4 <= _bkage_dsb_lb <= 7:
+                    _learned_bonus += _npen("breakout_age_perf", "day4_7", 47, -1)  # 45.8% WR n=72
+                elif _bkage_dsb_lb > 7:
+                    _learned_bonus += _npen("breakout_age_perf", "extended", 47, -1)  # stale breakout
                 # Sector ETF momentum: sector in uptrend vs lagging
                 _sec_etf_lb = str(_tk_sig_sc.get("sector_etf_momentum_perf", "sector_inline") or "sector_inline")
                 if _sec_etf_lb == "sector_leading":
                     _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_leading", 60, 1)
                 elif _sec_etf_lb == "sector_flat":
                     _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_flat", 60, 1)  # 60.9% WR n=46
+                elif _sec_etf_lb == "sector_inline":
+                    _learned_bonus += _npen("sector_etf_momentum_perf", "sector_inline", 47, -1)  # 45.9% WR n=74
                 elif _sec_etf_lb == "sector_lagging":
                     _learned_bonus += _npen("sector_etf_momentum_perf", "sector_lagging", 40, -2)
                 # ROC acceleration: only penalize negative when signals explicitly present
