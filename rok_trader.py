@@ -24706,11 +24706,12 @@ def run():
         _et_hour, _et_min = _now_et.hour - 4, _now_et.minute  # rough UTC-4
     _minutes_since_open = (_et_hour - 9) * 60 + (_et_min - 30) if market_open else 999
     _minutes_to_close   = (16 * 60) - (_et_hour * 60 + _et_min) if market_open else 999
-    # Avoid new buys in first 3 min (initial price discovery) or last 20 min (end-of-day moves)
+    # Avoid new buys in first 3 min (initial price discovery) or last 25 min (end-of-day moves)
     _open_guard  = market_open and _minutes_since_open < 3
-    _close_guard = market_open and _minutes_to_close < 20
-    # Market close cleanup: last 15 min before close, liquidate ALL positions > 30min old
-    _close_cleanup = market_open and _minutes_to_close < 15
+    _close_guard = market_open and _minutes_to_close < 25
+    # Market close cleanup: last 30 min before close, liquidate ALL positions > 10min old
+    # Extended from 15→30min to prevent overnight holds when 90min timer can't fire
+    _close_cleanup = market_open and _minutes_to_close < 30
     # Market session label — computed early so position sizing can use it
     if not market_open:
         _mkt_sess_hr0 = _et_hour * 60 + _et_min
@@ -26900,8 +26901,8 @@ def run():
                 except Exception:
                     pass
 
-            # Market close cleanup: liquidate ALL positions in last 15 min — fresh capital for tomorrow
-            if not reason and _close_cleanup and age_minutes >= 20:
+            # Market close cleanup: liquidate ALL positions in last 30 min — no overnight holds
+            if not reason and _close_cleanup and age_minutes >= 5:
                 reason = f"close cleanup ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # Track ever-hit-5pct milestone for breakeven lock
@@ -27221,6 +27222,27 @@ def run():
     elif _win_streak_3:
         _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 1)
         logger.info(f"Win streak (3W): lowering threshold by 1 → {_eff_min_score}")
+
+    # Rolling 20-trade WR guard: tighten threshold when recent performance is poor
+    # This is the fastest feedback loop — responds to current market conditions in <20 trades
+    try:
+        _all_closed = [t for t in tlog.get("trades", [])
+                       if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+        _last20 = _all_closed[-20:] if len(_all_closed) >= 20 else []
+        if len(_last20) >= 10:
+            _r20_wins = sum(1 for t in _last20 if (t.get("pnl_pct") or 0) > 0)
+            _r20_wr   = _r20_wins / len(_last20) * 100
+            if _r20_wr < 40 and len(_last20) >= 15:
+                _eff_min_score += 8
+                logger.info(f"Rolling WR guard: last {len(_last20)} trades WR={_r20_wr:.0f}% — raising threshold +8 → {_eff_min_score}")
+            elif _r20_wr < 50 and len(_last20) >= 12:
+                _eff_min_score += 4
+                logger.info(f"Rolling WR guard: last {len(_last20)} trades WR={_r20_wr:.0f}% — raising threshold +4 → {_eff_min_score}")
+            elif _r20_wr >= 75 and len(_last20) >= 15:
+                _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)
+                logger.info(f"Rolling WR hot streak: last {len(_last20)} trades WR={_r20_wr:.0f}% — lowering threshold -3 → {_eff_min_score}")
+    except Exception:
+        pass
 
     # Internal scan breadth guard: if <30% of our universe is advancing, add +6 to threshold
     if _scan_breadth_poor:
