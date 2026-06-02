@@ -23879,6 +23879,349 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                   _pat_entry_q = None
             if _pat_entry_q:
                 _nsl_adj += _nde("pattern_entry_perf", _pat_entry_q)
+            # ── Batch N900-N960: Direct-key perf dicts (state stored under same name as perf dict) ──
+            for _bk in ("fear_greed_bucket_perf","short_float_bucket_perf","iv_rank_bucket_perf",
+                         "float_size_bucket_perf","gap_size_bucket_perf","consec_green_days_perf",
+                         "obv_slope_entry_perf","stoch_position_entry_perf","mfi_level_entry_perf",
+                         "price_vs_vwap_deviation_perf","consolidation_length_perf","fear_greed_index_perf",
+                         "ema_stack_quality_perf","day_of_week_perf","institutional_ownership_perf",
+                         "weekly_momentum_perf","gap_type_quality_perf","conviction_score_perf",
+                         "float_size_perf","news_sentiment_score_perf","fear_greed_entry_perf",
+                         "news_sentiment_shift_perf","fear_greed_perf","institutional_ownership_change_perf",
+                         "gap_size_perf","conviction_score_tier_perf","gap_type_perf","short_float_perf",
+                         "adx_strength_entry_perf","adx_trend_strength_perf","avwap_dist_entry_perf",
+                         "beta_bucket_entry_perf","atr_expansion_perf","call_volume_surge_perf",
+                         "bid_ask_spread_perf","advance_decline_perf","accumulation_dist_perf",
+                         "analyst_revision_trend_perf","analyst_upgrade_entry_perf","analyst_upgrade_momentum_perf",
+                         "aroon_signal_entry_perf","atr_expansion_entry_perf","atr_vol_expansion_perf",
+                         "base_breakout_perf","beta_regime_fit_perf","bollinger_position_entry_perf",
+                         "breadth_thrust_entry_perf","breadth_thrust_perf","breakout_false_signal_perf",
+                         "breakout_quality_score_perf","breakout_retest_perf","breakout_volume_confirmation_perf",
+                         "breakout_volume_quality_perf","buyback_activity_perf","catalyst_duration_perf",
+                         "catalyst_freshness_entry_perf","catalyst_freshness_perf","catalyst_magnitude_perf",
+                         "catalyst_quality_tier_perf","catalyst_recency_perf","catalyst_sector_alignment_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Batch N961-N1020 ──
+            for _bk in ("catalyst_type_detail_perf","cci_level_entry_perf","chande_momentum_entry_perf",
+                         "chandelier_exit_entry_perf","close_vs_range_perf","closing_strength_perf",
+                         "cmf_entry_perf","composite_signal_strength_perf","composite_technical_score_perf",
+                         "congressional_buy_signal_perf","consecutive_green_entry_perf","consecutive_up_days_perf",
+                         "consolidation_length_perf","continuation_vs_reversal_perf","coppock_curve_entry_perf",
+                         "correlation_cluster_perf","correlation_spy_entry_perf","credit_spread_perf",
+                         "daily_atr_move_perf","daily_range_quality_perf","dark_pool_activity_perf",
+                         "dark_pool_entry_perf","dark_pool_flow_perf","dark_pool_perf","days_since_earnings_perf",
+                         "debt_to_equity_perf","dividend_capture_perf","dividend_yield_entry_perf",
+                         "dmi_cross_entry_perf","donchian_breakout_entry_perf","dpo_signal_entry_perf",
+                         "earnings_beat_quality_perf","earnings_beat_streak_perf","earnings_drift_days_perf",
+                         "earnings_drift_perf","earnings_estimate_revision_perf","earnings_momentum_perf",
+                         "earnings_proximity_entry_perf","earnings_quality_perf","earnings_revision_direction_perf",
+                         "earnings_revision_perf","earnings_season_phase_perf","earnings_surprise_entry_perf",
+                         "earnings_surprise_hist_perf","earnings_window_entry_perf","elder_ray_entry_perf",
+                         "entry_candle_pattern_perf","entry_day_of_month_perf","entry_price_vs_vwap_perf",
+                         "entry_rsi_context_perf","entry_session_quality_perf","entry_spread_quality_perf",
+                         "entry_time_quality_perf","entry_timing_precision_perf","entry_timing_session_perf",
+                         "entry_vs_sector_beta_perf","exit_discipline_perf","exit_trigger_type_perf",
+                         "expected_value_score_perf","false_breakout_risk_perf","fed_policy_stance_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Batch N1021-N1080 ──
+            for _bk in ("fed_sensitivity_perf","fibonacci_level_perf","float_rotation_entry_perf",
+                         "float_rotation_perf","float_rotation_speed_perf","free_cash_flow_yield_perf",
+                         "fund_ownership_change_perf","fundamental_quality_perf","gamma_exposure_perf",
+                         "gap_and_go_quality_perf","gap_fill_proximity_perf","gap_fill_risk_perf",
+                         "gap_fill_status_entry_perf","gap_quality_context_perf","gap_to_close_performance_perf",
+                         "guidance_revision_entry_perf","guidance_revision_perf","high_low_range_perf",
+                         "higher_lows_entry_perf","hist_vol_level_perf","hull_ma_entry_perf",
+                         "ichimoku_cloud_entry_perf","imbalance_fill_perf","implied_move_perf",
+                         "index_divergence_perf","index_rebalance_perf","industry_group_rank_perf",
+                         "inside_bar_resolution_perf","insider_activity_perf","insider_buying_intensity_perf",
+                         "insider_purchase_signal_perf","institutional_accumulation_perf","institutional_activity_perf",
+                         "institutional_filing_perf","institutional_flow_entry_perf","institutional_flow_perf",
+                         "institutional_flow_quality_perf","institutional_footprint_perf","institutional_size_entry_perf",
+                         "intraday_high_proximity_perf","intraday_high_quality_perf","intraday_momentum_perf",
+                         "intraday_momentum_shift_perf","intraday_range_position_perf","intraday_reversal_perf",
+                         "intraday_structure_perf","iv_percentile_entry_perf","keltner_position_entry_perf",
+                         "liquidity_dollar_volume_perf","liquidity_score_entry_perf","liquidity_trap_perf",
+                         "lockup_expiry_perf","macd_slope_entry_perf","macro_backdrop_perf","macro_catalyst_perf",
+                         "macro_regime_entry_perf","macro_regime_perf","macro_tailwind_perf","margin_expansion_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Batch N1081-N1140 ──
+            for _bk in ("market_breadth_entry_perf","market_breadth_score_perf","market_cap_momentum_perf",
+                         "market_cap_tier_entry_perf","market_internals_entry_perf","market_internals_perf",
+                         "market_internals_quality_perf","market_open_strength_perf","market_phase_entry_perf",
+                         "market_regime_duration_perf","market_regime_vix_perf","market_structure_break_perf",
+                         "market_timing_score_perf","mean_reversion_setup_perf","mean_reversion_signal_perf",
+                         "momentum_persistence_entry_perf","momentum_persistence_perf","momentum_quality_score_perf",
+                         "momentum_score_bucket_perf","monthly_momentum_perf","morning_momentum_quality_perf",
+                         "multi_day_breakout_perf","multi_day_pattern_perf","multi_timeframe_rsi_perf",
+                         "multi_timeframe_trend_perf","new_highs_lows_perf","news_age_quality_perf",
+                         "news_catalyst_sentiment_perf","news_impact_direction_perf","news_recency_perf",
+                         "open_position_pnl_perf","opening_drive_quality_perf","opening_gap_follow_perf",
+                         "opening_range_breakout_perf","opening_range_perf","opening_range_position_perf",
+                         "opening_strength_perf","option_flow_imbalance_perf","options_flow_signal_perf",
+                         "options_gamma_perf","options_iv_rank_perf","options_open_interest_perf",
+                         "options_skew_entry_perf","options_unusualness_perf","order_block_level_perf",
+                         "order_block_proximity_perf","order_fill_quality_perf","overnight_gap_entry_perf",
+                         "parabolic_extension_perf","pattern_completion_perf","pattern_signal_count_perf",
+                         "pe_ratio_tier_entry_perf","pivot_point_entry_perf","pivot_point_perf",
+                         "pivot_point_proximity_perf","portfolio_beta_risk_perf","portfolio_heat_perf",
+                         "position_add_perf","position_concentration_perf","position_maturity_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Batch N1141-N1200 ──
+            for _bk in ("position_overlap_perf","position_risk_reward_entry_perf","position_size_quality_perf",
+                         "position_size_tier_perf","post_earnings_drift_perf","ppo_signal_entry_perf",
+                         "pre_breakout_compression_perf","pre_entry_rvol_quality_perf","pre_market_volume_perf",
+                         "pre_market_volume_quality_perf","pre_market_vs_prior_close_perf","premarket_gap_size_perf",
+                         "premarket_volume_perf","price_above_open_perf","price_acceleration_entry_perf",
+                         "price_acceleration_perf","price_discovery_perf","price_discovery_zone_perf",
+                         "price_earnings_relative_perf","price_range_percentile_perf","price_range_position_perf",
+                         "price_structure_quality_perf","price_vs_vwap_distance_perf","prior_day_close_relation_perf",
+                         "prior_day_range_perf","profit_margin_perf","put_call_ratio_trend_perf",
+                         "put_call_skew_entry_perf","put_call_skew_perf","put_wall_proximity_perf",
+                         "regime_momentum_sync_perf","regime_spy_alignment_perf","regime_transition_perf",
+                         "regime_volatility_entry_perf","relative_pe_perf","relative_strength_rank_perf",
+                         "relative_strength_vs_market_perf","relative_strength_vs_spy_perf","relative_volume_entry_perf",
+                         "relative_volume_spike_perf","relative_volume_surge_perf","relative_volume_tier_perf",
+                         "relative_volume_trend_perf","resistance_proximity_perf","retail_flow_perf",
+                         "revenue_growth_perf","reversal_candle_perf","risk_adjusted_return_perf",
+                         "risk_reward_ratio_perf","roc_momentum_entry_perf","rs_line_new_high_perf",
+                         "rs_line_trending_perf","rsi_trend_alignment_perf","rsi_vs_sector_rsi_perf",
+                         "sector_alpha_entry_perf","sector_breadth_quality_perf","sector_concentration_risk_perf",
+                         "sector_cycle_phase_perf","sector_etf_flow_perf","sector_etf_gap_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Batch N1201-N1260 ──
+            for _bk in ("sector_etf_momentum_perf","sector_etf_vs_spy_today_perf","sector_leadership_perf",
+                         "sector_leadership_position_perf","sector_leadership_quality_perf","sector_momentum_entry_perf",
+                         "sector_momentum_quality_perf","sector_news_catalyst_perf","sector_news_momentum_perf",
+                         "sector_relative_strength_perf","sector_rotation_entry_perf","sector_rotation_phase_perf",
+                         "sector_rotation_signal_perf","sector_rotation_speed_perf","sector_vs_spx_week_perf",
+                         "sector_weekly_rank_perf","short_float_quality_perf","short_interest_perf",
+                         "short_interest_ratio_perf","short_interest_trend_perf","short_squeeze_entry_perf",
+                         "short_squeeze_perf","short_squeeze_potential_perf","short_squeeze_risk_perf",
+                         "short_squeeze_velocity_perf","slippage_perf","smart_money_indicator_perf",
+                         "smart_stop_placement_perf","social_buzz_velocity_perf","social_momentum_entry_perf",
+                         "social_momentum_perf","social_sentiment_velocity_perf","spread_cost_perf",
+                         "spread_quality_entry_perf","spread_quality_perf","spy_alignment_perf",
+                         "spy_correlation_perf","spy_intraday_trend_perf","spy_momentum_entry_perf",
+                         "spy_morning_action_perf","spy_open_vs_close_perf","spy_options_oi_perf",
+                         "spy_vs_sector_entry_perf","squeeze_coil_perf","squeeze_momentum_perf",
+                         "squeeze_momentum_state_perf","squeeze_setup_perf","stoch_position_entry_perf",
+                         "stock_pcr_entry_perf","support_confluence_quality_perf","support_level_proximity_perf",
+                         "tape_reading_entry_perf","tape_speed_entry_perf","technical_pattern_quality_perf",
+                         "technical_score_quality_perf","technical_score_trend_perf","tick_trend_entry_perf",
+                         "ticker_age_bucket_perf","time_of_day_score_perf","time_since_last_trade_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Batch N1261-N1310 ──
+            for _bk in ("trade_count_context_perf","trade_grade_performance_perf","trend_age_bucket_perf",
+                         "trend_age_perf","trend_channel_perf","trend_channel_position_perf","trend_day_type_perf",
+                         "trend_exhaustion_perf","trend_following_score_perf","trend_line_proximity_perf",
+                         "trend_quality_score_perf","trend_reversal_signal_perf","trend_strength_adx_perf",
+                         "trending_sector_rotation_perf","vix_term_structure_perf","vol_expansion_at_entry_perf",
+                         "volatility_contraction_perf","volume_climax_perf","volume_consistency_perf",
+                         "volume_price_trend_perf","volume_profile_entry_perf","volume_trend_perf",
+                         "volume_weighted_trend_perf","vwap_deviation_entry_perf","vwap_deviation_perf",
+                         "vwap_distance_perf","vwap_position_entry_perf","vwap_reclaim_perf",
+                         "vwap_relationship_entry_perf","weekly_close_quality_perf","weekly_options_expiry_perf",
+                         "weekly_trend_alignment_perf","weekly_trend_quality_perf","williams_r_entry_perf"):
+                _bv = str(d.get(_bk, "") or "")
+                if _bv: _nsl_adj += _nde(_bk, _bv)
+            # ── Direct-state neurons (state field differs from perf dict name) ──
+            _nsl_adj += _nde("breadth_direction_perf", str(d.get("breadth_direction", "") or ""))
+            _nsl_adj += _nde("atr_pct_perf", str(d.get("atr_pct_state", "") or ""))
+            _nsl_adj += _nde("bb_position_perf", str(d.get("bb_position_state", "") or ""))
+            _nsl_adj += _nde("vix_regime_perf", str(d.get("vix_regime_state", "") or ""))
+            _nsl_adj += _nde("vix_level_perf", str(d.get("vix_level_state", "") or ""))
+            _nsl_adj += _nde("macd_cross_state_perf", str(d.get("macd_cross_state", "") or ""))
+            _nsl_adj += _nde("sector_type_perf", str(d.get("sector_type", "") or ""))
+            _nsl_adj += _nde("cap_style_perf", str(d.get("cap_style_alignment", "") or ""))
+            _nsl_adj += _nde("dollar_vol_perf", str(d.get("dollar_vol_tier", "") or ""))
+            # ── Batch N1311-N1370: state-field neurons group A ──
+            for _pk, _sk in (("accum_distrib_perf","accum_distrib_state"),
+                              ("adv_decline_line_perf","adl_trend"),
+                              ("adv_decline_ratio_perf","adv_decline_state"),
+                              ("adv_decline_ratio_today_perf","adv_decline_ratio_today_state"),
+                              ("ai_sentiment_tier_perf","ai_sentiment"),
+                              ("analyst_momentum_perf","analyst_rating_momentum"),
+                              ("atr_as_pct_price_perf","atr_as_pct_price_state"),
+                              ("atr_multiple_gain_potential_perf","atr_multiple_gain_potential_state"),
+                              ("breakout_age_perf","breakout_age_tier"),
+                              ("buy_score_vs_threshold_perf","buy_score_vs_threshold_state"),
+                              ("catalyst_sector_match_perf","catalyst_sector_match_state"),
+                              ("chg_ytd_bucket_perf","chg_ytd_bucket_state"),
+                              ("consec_red_entry_perf","consec_red_days_at_entry"),
+                              ("consecutive_green_days_perf","consecutive_green_days_state"),
+                              ("consecutive_spy_up_perf","consecutive_spy_up_state"),
+                              ("consecutive_win_streak_perf","consecutive_win_streak_state"),
+                              ("consecutive_wins_perf","consec_wins_bucket"),
+                              ("cross_asset_momentum_perf","cross_asset_momentum"),
+                              ("crowd_tier_perf","crowd_tier"),
+                              ("daily_drawdown_state_perf","daily_dd_state"),
+                              ("dollar_index_perf","dollar_index_state"),
+                              ("earnings_distance_perf","earnings_distance_state"),
+                              ("earnings_season_perf","earnings_season_phase"),
+                              ("earnings_surprise_direction_perf","earnings_surprise_direction"),
+                              ("entry_after_halt_perf","entry_after_halt_state"),
+                              ("entry_at_support_perf","entry_at_support_state"),
+                              ("entry_dow_perf","entry_dow"),
+                              ("entry_hour_bucket_perf","entry_hour_bucket"),
+                              ("entry_near_high_low_perf","entry_near_high_low_state"),
+                              ("entry_premium_count_perf","entry_premium_count_bucket"),
+                              ("entry_quality_score_perf","entry_quality_score_state"),
+                              ("entry_rank_in_session_perf","entry_rank_in_session_state"),
+                              ("entry_score_decile_perf","entry_score_decile"),
+                              ("eps_surprise_perf","eps_surprise_history"),
+                              ("estimate_revision_perf","estimate_revision_trend"),
+                              ("fed_week_perf","fed_week"),
+                              ("futures_signal_perf","open_futures_state"),
+                              ("gap_overnight_direction_perf","gap_overnight_direction_state"),
+                              ("gold_signal_perf","gold_signal"),
+                              ("holding_cost_vs_cash_perf","holding_cost_vs_cash_state"),
+                              ("insider_timing_perf","insider_buy_recency"),
+                              ("institutional_quality_perf","institutional_tier"),
+                              ("intraday_trend_persistence_perf","intraday_trend_persistence_state"),
+                              ("macro_day_risk_perf","macro_day_risk_state"),
+                              ("macro_hold_perf","macro_event_at_entry"),
+                              ("macro_shock_perf","macro_shock_week"),
+                              ("macro_stress_index_perf","macro_stress_index_state"),
+                              ("market_breadth_level_perf","breadth_level_state"),
+                              ("market_cap_regime_perf","cap_regime"),
+                              ("market_correl_perf","market_correl_tier"),
+                              ("market_hours_quadrant_perf","market_hours_quadrant_state"),
+                              ("market_internals_score_perf","market_internals_state"),
+                              ("market_internals_trend_perf","market_internals_trend_state"),
+                              ("market_leader_flag_perf","market_leader_flag_state"),
+                              ("market_open_momentum_perf","market_open_momentum_state"),
+                              ("market_phase_perf","market_phase_state"),
+                              ("momentum_quality_perf","momentum_quality_state"),
+                              ("morning_star_time_perf","morning_star_time_state"),
+                              ("mtf_agree_perf","mtf_trend_agree"),
+                              ("news_catalyst_urgency_perf","catalyst_urgency_state"),
+                              ("news_sent_mom_perf","news_sent_momentum"),
+                              ("oi_skew_perf","oi_skew_state"),
+                              ("open_gap_perf","open_gap_state"),
+                              ("open_position_count_perf","position_count_at_entry_state"),
+                              ("opex_week_perf","opex_week"),
+                              ("options_expiry_week_perf","options_expiry_week_state"),
+                              ("orb_quality_perf","orb_state"),
+                              ("overnight_gap_follow_perf","overnight_gap_follow_state"),
+                              ("overnight_gap_vol_perf","overnight_gap_vol"),
+                              ("pm_volume_perf","pm_volume_tier"),
+                              ("portfolio_drawdown_perf","portfolio_drawdown_state"),
+                              ("portfolio_win_rate_trend_perf","portfolio_win_rate_trend_state"),
+                              ("pos_size_tier_perf","pos_size_tier"),
+                              ("position_count_at_entry_perf","position_count_bucket"),
+                              ("position_duration_target_perf","duration_target"),
+                              ("position_pnl_before_entry_perf","position_pnl_before_entry_state"),
+                              ("position_size_bucket_perf","position_size_bucket_state"),
+                              ("pre_market_action_perf","pre_market_action_state"),
+                              ("premarket_gap_direction_perf","premarket_gap_dir_state"),
+                              ("price_gap_size_perf","price_gap_size_state"),
+                              ("price_vs_open_perf","price_vs_open_state"),
+                              ("price_vs_vwap_perf","price_vs_vwap_state"),
+                              ("prior_week_trend_perf","prior_week_trend_state"),
+                              ("psar_bull_entry_perf","psar_bull_entry_state"),
+                              ("recent_buy_count_perf","recent_buy_count_state"),
+                              ("recent_market_breadth_perf","recent_market_breadth_state"),
+                              ("reentry_perf","reentry_type"),
+                              ("regime_duration_perf","regime_duration"),
+                              ("regime_quality_combined_perf","regime_quality_combined_state"),
+                              ("risk_rotation_perf","risk_rotation"),
+                              ("score_regime_align_perf","score_regime_align"),
+                              ("seasonal_month_perf","seasonal_month"),
+                              ("sector_concentration_perf","sector_conc"),
+                              ("sector_etf_vs_spy_perf","sector_etf_vs_spy_state"),
+                              ("sector_leader_lag_perf","sector_leader_lag_state"),
+                              ("sector_mom_accel_perf","sector_mom_accel"),
+                              ("sector_news_flow_perf","sector_news_flow_state"),
+                              ("sector_rotation_strength_perf","sector_rotation_state"),
+                              ("sector_rs_phase_perf","sector_rs_phase"),
+                              ("sector_strength_score_perf","sector_strength_score_state"),
+                              ("sector_vs_spy_today_perf","sector_vs_spy_today_state"),
+                              ("short_int_perf","short_int_tier"),
+                              ("signal_density_perf","signal_count_at_entry"),
+                              ("social_sentiment_score_perf","social_sentiment_tier"),
+                              ("spread_vs_atr_perf","spread_vs_atr_state"),
+                              ("spy_breadth_thrust_perf","spy_breadth_thrust_state"),
+                              ("spy_close_vs_open_perf","spy_close_vs_open_state"),
+                              ("spy_gap_vs_stock_perf","gap_diverge_state"),
+                              ("spy_intraday_perf","spy_intraday_trend"),
+                              ("spy_rsi_overbought_perf","spy_rsi_overbought_state"),
+                              ("spy_rsi_zone_perf","spy_rsi_zone"),
+                              ("spy_volume_vs_avg_perf","spy_volume_vs_avg_state"),
+                              ("spy_vs_qqq_divergence_perf","spy_vs_qqq_divergence_state"),
+                              ("spy_vs_vix_diverge_perf","spy_vix_diverge_state"),
+                              ("spy_vwap_entry_perf","spy_vwap_state"),
+                              ("stop_distance_pct_perf","stop_distance_state"),
+                              ("streak_state_perf","streak_state"),
+                              ("support_quality_perf","support_quality_state"),
+                              ("tech_confluence_perf","tech_level_confluence"),
+                              ("technical_pattern_strength_perf","pattern_strength"),
+                              ("technical_score_bucket_perf","technical_score_bucket_state"),
+                              ("tick_extreme_perf","tick_extreme_state"),
+                              ("ticker_beta_bucket_perf","ticker_beta_bucket_state"),
+                              ("ticker_earnings_beat_streak_perf","ticker_earnings_beat_streak_state"),
+                              ("ticker_momentum_perf","ticker_momentum_state"),
+                              ("ticker_prior_day_gap_perf","prior_day_gap_state"),
+                              ("ticker_rs_rating_tier_perf","rs_rating_tier_state"),
+                              ("time_of_day_bucket_perf","time_of_day_bucket_state"),
+                              ("trade_cadence_perf","trade_cadence"),
+                              ("trend_acceleration_perf","trend_acceleration_state"),
+                              ("trend_age_days_perf","trend_age_bucket"),
+                              ("vix_trend_perf","vix_trend_at_entry"),
+                              ("vol_contraction_entry_perf","vol_contraction_state"),
+                              ("vol_price_confirm_perf","vol_price_confirm"),
+                              ("volume_surge_state_perf","volume_surge_state"),
+                              ("vwap_distance_pct_perf","vwap_distance_pct_state"),
+                              ("vwap_position_perf","vwap_position_state"),
+                              ("weekly_rs_trend_perf","weekly_rs_trend_state"),
+                              ("yield_curve_perf","yield_curve_state")):
+                _sv = str(d.get(_sk, "") or "")
+                if _sv: _nsl_adj += _nde(_pk, _sv)
+            # ── Inline-computed special neurons ──
+            # entry_score_tier_perf: bucket current score s
+            _n128x_bkt = ("elite" if s >= 80 else "strong" if s >= 65 else "moderate" if s >= 50 else "borderline")
+            _nsl_adj += _nde("entry_score_tier_perf", _n128x_bkt)
+            # float_tier_perf: bucket float_shares_m
+            _n116x_fm = float(d.get("float_shares_m", 0) or 0)
+            if _n116x_fm > 0:
+                _n116x_bkt = ("thin" if _n116x_fm < 50 else "large" if _n116x_fm >= 500 else "normal")
+                _nsl_adj += _nde("float_tier_perf", _n116x_bkt)
+            # rvol_entry_tier_perf: bucket rvol
+            _n109x_rv = float(d.get("rvol", d.get("vol_ratio", 1)) or 1)
+            _n109x_bkt = ("explosive" if _n109x_rv >= 5 else "surge" if _n109x_rv >= 2.5 else "elevated" if _n109x_rv >= 1.5 else "normal")
+            _nsl_adj += _nde("rvol_entry_tier_perf", _n109x_bkt)
+            # gap_entry_perf: bucket gap_pct_at_entry
+            _gep_v = float(d.get("gap_pct_at_entry", d.get("pm_gap_pct", 0)) or 0)
+            if abs(_gep_v) > 0.1:
+                _gep_bkt = ("gap_up_big" if _gep_v > 5 else "gap_up_mid" if _gep_v > 2 else "gap_up_small" if _gep_v > 0.5 else "gap_down")
+                _nsl_adj += _nde("gap_entry_perf", _gep_bkt)
+            # mktcap_tier_perf: bucket market_cap_b (in billions)
+            _mkt_b = float(d.get("market_cap_b", d.get("market_cap", 0) or 0) or 0)
+            if _mkt_b > 0:
+                _mkt_bkt = ("mega" if _mkt_b >= 200 else "large" if _mkt_b >= 10 else "mid" if _mkt_b >= 2 else "small")
+                _nsl_adj += _nde("mktcap_tier_perf", _mkt_bkt)
+            # stock_stability_perf: per-ticker historical performance
+            if tk in _ALL_NEURON_PERFS.get("stock_stability_perf", {}):
+                _nsl_adj += _nde("stock_stability_perf", tk) * 0.5
+            # microstructure_perf: bucket bid_ask_spread_pct (tight/normal/wide)
+            _ms_sp = float(d.get("bid_ask_spread_pct", 0.1) or 0.1)
+            _nsl_adj += _nde("microstructure_perf", "tight" if _ms_sp < 0.05 else "wide" if _ms_sp >= 0.2 else "normal")
+            # pattern_confluence_perf: bucket pattern_confluence_count
+            _pc_cnt = int(d.get("pattern_confluence_count", 0) or 0)
+            if _pc_cnt > 0:
+                _pc_bkt = ("high_confluence" if _pc_cnt >= 3 else "medium_confluence" if _pc_cnt == 2 else "single_pattern")
+                _nsl_adj += _nde("pattern_confluence_perf", _pc_bkt)
+            # pos_size_perf: position size bucket from buy signals
+            _psp_bkt = str(d.get("pos_size_bucket", "") or "")
+            if _psp_bkt: _nsl_adj += _nde("pos_size_perf", _psp_bkt)
+            # crypto_correlation_perf: crypto leading vs lagging SPY
+            _ccr_st = str(d.get("crypto_correlation_state", "") or "")
+            if _ccr_st and "/" in tk: _nsl_adj += _nde("crypto_correlation_perf", _ccr_st)
             # Crypto-specific neurons (only active for crypto tickers with "/" in name)
             if "/" in tk:
                 # C881: Crypto momentum tier (labels: explosive/strong/moderate/flat/falling)
