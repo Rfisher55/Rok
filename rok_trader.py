@@ -26434,6 +26434,59 @@ def run():
                 _mq_vix_pen = max(0, (_mq_vix_now - 20) * -1.5)   # VIX > 20 penalizes
                 _mq_reg_adj = 10 if "bull" in _mq_reg else (-10 if "bear" in _mq_reg else 0)
                 live[tk]["market_quality"] = max(0, min(100, int(50 + _mq_base + _mq_vix_pen + _mq_reg_adj)))
+                # N129/N181: atr_pct — ATR as % of price (used by ATR bucket neurons)
+                try:
+                    _atr_inj = float(live[tk].get("atr", 0) or 0)
+                    _px_inj  = float(live[tk].get("price", 1) or 1)
+                    live[tk]["atr_pct"] = round(_atr_inj / max(_px_inj, 0.01) * 100, 2) if _atr_inj > 0 else 0.0
+                except Exception:
+                    live[tk]["atr_pct"] = 0.0
+                # N222/N32: sector_etf_momentum — used by N222 perf dict and sector_momentum_perf
+                try:
+                    _seco_sec = live[tk].get("sector", SECTOR_MAP.get(tk, "other"))
+                    _seco_etf = tlog.get("sector_etf_trends", {}).get(_seco_sec, {})
+                    _seco_1d  = float(_seco_etf.get("chg1d", 0) or 0)
+                    _seco_5d  = float(_seco_etf.get("chg5d", 0) or 0)
+                    live[tk]["sector_etf_momentum"] = (
+                        "accelerating" if _seco_1d > 0.5 and _seco_5d > 1.0 else
+                        "decelerating" if _seco_1d < -0.3 and _seco_5d < 0 else "neutral"
+                    )
+                    live[tk]["sector_chg1d"] = round(_seco_1d, 2)
+                    live[tk]["sector_chg5d"] = round(_seco_5d, 2)
+                except Exception:
+                    live[tk]["sector_etf_momentum"] = "neutral"
+                # Alias signals: score() reads these keys but live dict uses different names
+                live[tk]["chg1d"]  = live[tk].get("change_pct", 0)      # alias of change_pct
+                live[tk]["chg5d"]  = live[tk].get("roc5", 0)             # 5-day return proxy
+                live[tk]["close"]  = live[tk].get("price", 0)            # close = current price
+                live[tk]["vwap"]   = live[tk].get("vwap_price", 0)       # vwap price level
+                live[tk]["week_chg"] = live[tk].get("roc5", 0)           # week change proxy
+                live[tk]["vix"]    = float((tlog.get("regime") or {}).get("vix", 20) or 20)
+                live[tk]["vcp_breakout"] = bool(live[tk].get("vcp", False))  # alias of vcp
+                # sector_etf_1d and sector_day_pct from sector trends
+                live[tk]["sector_etf_1d"]  = live[tk].get("sector_chg1d", 0)
+                live[tk]["sector_day_pct"] = live[tk].get("sector_chg1d", 0)
+                # News velocity signals from news cache
+                try:
+                    _nvc2      = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
+                    _nvc2_hdls = _nvc2.get("headlines", []) if isinstance(_nvc2, dict) else []
+                    _nc24 = len([h for h in _nvc2_hdls if (h.get("h", 999) or 999) <= 24])
+                    live[tk]["news_count_24h"]  = _nc24
+                    live[tk]["news_velocity"]   = float(_nc24 / max(1, len(_nvc2_hdls)) * 2)
+                    live[tk]["news_accelerating"] = bool(_nc24 >= 3)
+                    live[tk]["news_catalyst"]   = bool(_nc24 >= 1)
+                except Exception:
+                    live[tk]["news_count_24h"]  = 0
+                    live[tk]["news_velocity"]   = 0.0
+                    live[tk]["news_accelerating"] = False
+                    live[tk]["news_catalyst"]   = False
+                # TTM squeeze state: in_squeeze (momentum building but not fired yet)
+                live[tk]["in_squeeze"] = (
+                    bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
+                    or (not live[tk].get("ttm_squeeze_fired", False)
+                        and (live[tk].get("hv_contracting", False) or
+                             float(live[tk].get("bb_pos", 50) or 50) < 30))
+                )
                 # N728: risk/reward ratio from ATR stop and pivot target
                 try:
                     _n728_price  = float(live[tk].get("price", 0) or 0)
