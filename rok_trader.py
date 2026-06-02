@@ -14165,7 +14165,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_871 = tlog.get("order_flow_imbalance_perf", {})
-            _sf_871_state = held.get(sym, {}).get("order_flow_imbalance_state", "balanced_flow")
+            _sf_871_state = "balanced_flow"  # default; overridden by BUY-entry lookup below
             _sf_871_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_871_entry:
                 _sf_871_state = _sf_871_entry.get("order_flow_imbalance_state", _sf_871_state)
@@ -14183,7 +14183,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_872 = tlog.get("time_weighted_momentum_perf", {})
-            _sf_872_state = held.get(sym, {}).get("time_weighted_momentum_state", "flat")
+            _sf_872_state = "flat"  # default; overridden by BUY-entry lookup below
             _sf_872_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_872_entry:
                 _sf_872_state = _sf_872_entry.get("time_weighted_momentum_state", _sf_872_state)
@@ -14201,7 +14201,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_873 = tlog.get("relative_volume_burst_perf", {})
-            _sf_873_state = held.get(sym, {}).get("relative_volume_burst_state", "normal_vol")
+            _sf_873_state = "normal_vol"  # default; overridden by BUY-entry lookup below
             _sf_873_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_873_entry:
                 _sf_873_state = _sf_873_entry.get("relative_volume_burst_state", _sf_873_state)
@@ -14219,7 +14219,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_874 = tlog.get("catalyst_timing_perf", {})
-            _sf_874_state = held.get(sym, {}).get("catalyst_timing_state", "stale_catalyst")
+            _sf_874_state = "stale_catalyst"  # default; overridden by BUY-entry lookup below
             _sf_874_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_874_entry:
                 _sf_874_state = _sf_874_entry.get("catalyst_timing_state", _sf_874_state)
@@ -14237,7 +14237,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_875 = tlog.get("multi_timeframe_alignment_perf", {})
-            _sf_875_state = held.get(sym, {}).get("multi_timeframe_alignment_state", "mixed_signals")
+            _sf_875_state = "mixed_signals"  # default; overridden by BUY-entry lookup below
             _sf_875_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_875_entry:
                 _sf_875_state = _sf_875_entry.get("multi_timeframe_alignment_state", _sf_875_state)
@@ -14255,7 +14255,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_876 = tlog.get("market_maker_activity_perf", {})
-            _sf_876_state = held.get(sym, {}).get("market_maker_activity_state", "mm_normal")
+            _sf_876_state = "mm_normal"  # default; overridden by BUY-entry lookup below
             _sf_876_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_876_entry:
                 _sf_876_state = _sf_876_entry.get("market_maker_activity_state", _sf_876_state)
@@ -14273,7 +14273,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_877 = tlog.get("alpha_decay_risk_perf", {})
-            _sf_877_state = held.get(sym, {}).get("alpha_decay_risk_state", "mid_alpha")
+            _sf_877_state = "mid_alpha"  # default; overridden by BUY-entry lookup below
             _sf_877_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_877_entry:
                 _sf_877_state = _sf_877_entry.get("alpha_decay_risk_state", _sf_877_state)
@@ -14291,7 +14291,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_878 = tlog.get("price_discovery_phase_perf", {})
-            _sf_878_state = held.get(sym, {}).get("price_discovery_phase_state", "continuation")
+            _sf_878_state = "continuation"  # default; overridden by BUY-entry lookup below
             _sf_878_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_878_entry:
                 _sf_878_state = _sf_878_entry.get("price_discovery_phase_state", _sf_878_state)
@@ -14309,7 +14309,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_879 = tlog.get("smart_money_divergence_perf", {})
-            _sf_879_state = held.get(sym, {}).get("smart_money_divergence_state", "neutral_flow")
+            _sf_879_state = "neutral_flow"  # default; overridden by BUY-entry lookup below
             _sf_879_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_879_entry:
                 _sf_879_state = _sf_879_entry.get("smart_money_divergence_state", _sf_879_state)
@@ -18841,6 +18841,12 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         _learned_cycle_min = 150  # brain learned: longer holds win → extend to 2.5h
     logger.info(f"Crypto cycle threshold: {_learned_cycle_min}min (hold_pref={_best_hold_bkt}) | ET={_cur_et_bkt} best={_best_et_hour} worst={_worst_et_hour}")
 
+    # Correlation guard: count how many ALT positions already held (non BTC/ETH)
+    _held_alts  = sum(1 for s in held_crypto if "BTC" not in s and "ETH" not in s)
+    _held_majors= sum(1 for s in held_crypto if "BTC" in s or "ETH" in s)
+    # If already holding 4+ alts and 0 majors, heavily penalize additional alts
+    _corr_alt_penalty = max(0, (_held_alts - 3) * 4)  # +4 penalty per alt beyond 3
+
     scored = []
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
@@ -18849,9 +18855,16 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         logger.info(f"Crypto score {alpaca_sym}: {sc} (chg={sig.get('change_pct',0):+.1f}% roc5={sig.get('roc5',0):+.1f}% vr={sig.get('vol_ratio',1):.1f}x)")
         # BTC dominance adjustments: boost BTC when dom > 60, boost alts when dom < 50
         is_btc = "BTC" in alpaca_sym
-        if btc_dom > 60 and not is_btc:   sc = max(0, sc - 3)   # mild penalty for alts in risk-off (was -8)
+        is_eth = "ETH" in alpaca_sym
+        if btc_dom > 60 and not is_btc:   sc = max(0, sc - 3)   # mild penalty for alts in risk-off
         elif btc_dom < 50 and not is_btc: sc = min(100, sc + 5) # bonus for alts in alt season
         elif btc_dom > 60 and is_btc:     sc = min(100, sc + 5) # boost BTC in risk-off
+
+        # Correlation penalty: reduce alt scores when portfolio already saturated with alts
+        if not is_btc and not is_eth:
+            sc = max(0, sc - _corr_alt_penalty)
+        elif is_btc or is_eth:
+            sc = min(100, sc + (_corr_alt_penalty // 2))  # boost majors when alts overcrowded
 
         # Apply learned neuron adjustments (N881-N890)
         try:
