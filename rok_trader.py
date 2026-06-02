@@ -26325,8 +26325,8 @@ def run():
                         except Exception as _ge:
                             logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
                         continue
-            elif _fast_age_min >= 30 and not _fast_half_out and -0.15 <= pnl_pct <= 0.05:
-                # 30min dead-flat exit: release slot for better setup (maximize daily trades)
+            elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.15:
+                # 30min flat/drifting exit: wider window frees capital for fresh setups faster
                 _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
@@ -28631,8 +28631,10 @@ def run():
                 if bool(_tk_sig_sc.get("donchian_up", False)):
                     _learned_bonus += _nbns("donchian_breakout_entry_perf", "donchian_up", 62, 1)
                 if not bool(_tk_sig_sc.get("orb_breakout", False)) and not bool(_tk_sig_sc.get("orb_active", False)):
-                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 62, 2)  # no_orb=80% WR n=15, consolidating=50%
-                # ORB breakout: data shows consolidating=50% — the orb_up bonus was a wrong key, removed
+                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 62, 2)  # no_orb=80% WR n=15
+                elif bool(_tk_sig_sc.get("orb_active", False)) and not bool(_tk_sig_sc.get("orb_breakout", False)):
+                    _learned_bonus += _npen("orb_quality_perf", "consolidating", 47, -2)  # 44.4% WR n=36 — stuck in range
+                # chart_pattern single (1 pattern): WR=38.5% n=13 — weak single-trigger, real moves need multi-pattern
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
                     _learned_bonus += _nbns("vwap_reclaim_perf", "reclaim", 62, 1)
                 if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
@@ -28955,13 +28957,22 @@ def run():
                 # Vol dry-up (Wyckoff compression): dry_up state = tight range before breakout
                 if bool(_tk_sig_sc.get("vol_dry_up", False)):
                     _learned_bonus += _nbns("vol_dry_perf", "dry_up", 62, 2)  # clean compression
-                # Stochastic zone: overbought continuation vs oversold caution
+                # Chart pattern quality: single pattern=38.5% WR n=13 (weak false positives); multi=better
+                _chart_sc_lb = int(_tk_sig_sc.get("chart_pattern_score", 0) or 0)
+                _chart_st_lb = str(_tk_sig_sc.get("chart_pattern_state", "") or "")
+                if _chart_sc_lb == 1 or _chart_st_lb == "single":
+                    _learned_bonus += _npen("chart_pattern_perf", "single", 42, -3)  # 38.5% WR n=13 — single pattern = weak
+                elif _chart_sc_lb >= 2 or _chart_st_lb == "multi":
+                    _learned_bonus += _nbns("chart_pattern_perf", "multi", 58, 2)    # multi-pattern confluence bonus
+                # Stochastic zone: data shows overbought=42.9% WR (bad!), neutral=62.5% WR (good!)
                 _sk_lb = float(_tk_sig_sc.get("stoch_k", 50) or 50)
                 _sk_zone_lb = ("overbought" if _sk_lb > 80 else "oversold" if _sk_lb < 20 else "neutral")
                 if _sk_zone_lb == "overbought":
-                    _learned_bonus += _nbns("stoch_zone_perf", "overbought", 62, 1)  # momentum continuation
+                    _learned_bonus += _npen("stoch_zone_perf", "overbought", 45, -2)  # 42.9% WR n=21 — chasing!
+                elif _sk_zone_lb == "neutral":
+                    _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
                 elif _sk_zone_lb == "oversold":
-                    _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)   # reversal risk in trend sys
+                    _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
                 _lr2_raw_lb = _tk_sig_sc.get("lr_r2")
                 if _lr2_raw_lb is not None:
