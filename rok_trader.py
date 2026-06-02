@@ -30880,6 +30880,254 @@ def run():
                 # last_exit_trigger (set at exit time; seed with manual so neuron fires during buys)
                 if not live[tk].get("last_exit_trigger"):
                     live[tk]["last_exit_trigger"] = "manual"
+                # ── R52: Score-function dead computed fields ──
+                # ad_trend (N721 accumulation_distribution_perf)
+                try:
+                    _r52_obv = live[tk].get("obv_rising")
+                    _r52_obv_sl = float(live[tk].get("obv_slope_pct", 0) or 0)
+                    if _r52_obv is True and _r52_obv_sl > 1.0:
+                        live[tk]["ad_trend"] = "rising_fast"
+                    elif _r52_obv is True:
+                        live[tk]["ad_trend"] = "rising"
+                    elif _r52_obv is False and _r52_obv_sl < -1.0:
+                        live[tk]["ad_trend"] = "falling_fast"
+                    elif _r52_obv is False:
+                        live[tk]["ad_trend"] = "falling"
+                    else:
+                        live[tk]["ad_trend"] = "flat"
+                except Exception:
+                    live[tk]["ad_trend"] = "flat"
+                # avg_dollar_vol (N721 liquidity filter)
+                try:
+                    _r52_avgvol = float(live[tk].get("avg_vol_14", live[tk].get("avg_volume", 0)) or 0)
+                    _r52_px     = float(live[tk].get("price", 1) or 1)
+                    live[tk]["avg_dollar_vol"] = round(_r52_avgvol * _r52_px, 0)
+                except Exception:
+                    live[tk]["avg_dollar_vol"] = 0.0
+                # atr_pct_state (N batch state field)
+                try:
+                    _r52_atr  = float(live[tk].get("atr", 0) or 0)
+                    _r52_apx  = float(live[tk].get("price", 1) or 1)
+                    _r52_apct = (_r52_atr / _r52_apx * 100) if _r52_apx > 0 else 0
+                    live[tk]["atr_pct"] = round(_r52_apct, 2)
+                    live[tk]["atr_pct_state"] = ("high_vol" if _r52_apct > 4.0
+                                                  else "mid_vol" if _r52_apct > 2.0
+                                                  else "low_vol" if _r52_apct > 1.0
+                                                  else "minimal_vol")
+                except Exception:
+                    live[tk]["atr_pct_state"] = "low_vol"
+                # bb_position_state (N batch state field)
+                try:
+                    _r52_bbp = float(live[tk].get("bb_pos", 50) or 50)
+                    live[tk]["bb_position_state"] = ("overbought" if _r52_bbp > 90
+                                                     else "upper" if _r52_bbp > 65
+                                                     else "middle" if _r52_bbp >= 35
+                                                     else "lower" if _r52_bbp >= 10
+                                                     else "oversold")
+                except Exception:
+                    live[tk]["bb_position_state"] = "middle"
+                # catalyst_age_state (N836)
+                try:
+                    _r52_curg  = float(live[tk].get("catalyst_urg", 0) or 0)
+                    _r52_cage  = float(live[tk].get("catalyst_age_hours", 999) or 999)
+                    if _r52_curg >= 3 or _r52_cage <= 2:
+                        live[tk]["catalyst_age_state"] = "fresh_catalyst"
+                    elif _r52_curg >= 1 or _r52_cage <= 24:
+                        live[tk]["catalyst_age_state"] = "active_catalyst"
+                    elif live[tk].get("catalyst_type", "none") not in ("none", ""):
+                        live[tk]["catalyst_age_state"] = "stale_catalyst"
+                    else:
+                        live[tk]["catalyst_age_state"] = "no_catalyst"
+                except Exception:
+                    live[tk]["catalyst_age_state"] = "no_catalyst"
+                # crypto_correlation_state (missed in R51)
+                try:
+                    _r52_btc5  = float(live.get("BTC/USD", {}).get("chg5d",
+                                       live.get("BTCUSD",  {}).get("chg5d", 0)) or 0)
+                    _r52_tk5   = float(live[tk].get("chg5d", 0) or 0)
+                    if _r52_btc5 == 0:
+                        live[tk]["crypto_correlation_state"] = "no_crypto_data"
+                    else:
+                        _r52_ratio = _r52_tk5 / _r52_btc5 if _r52_btc5 != 0 else 0
+                        live[tk]["crypto_correlation_state"] = ("high_crypto_correl" if _r52_ratio >= 0.8
+                                                                else "moderate_correl" if _r52_ratio >= 0.4
+                                                                else "low_correl" if _r52_ratio >= 0
+                                                                else "inverse_correl")
+                except Exception:
+                    live[tk]["crypto_correlation_state"] = "no_crypto_data"
+                # dollar_vol_tier (N batch state field)
+                try:
+                    _r52_dv = float(live[tk].get("avg_dollar_vol", 0) or 0)
+                    live[tk]["dollar_vol_tier"] = ("mega" if _r52_dv >= 100_000_000
+                                                   else "large" if _r52_dv >= 20_000_000
+                                                   else "mid" if _r52_dv >= 5_000_000
+                                                   else "small")
+                except Exception:
+                    live[tk]["dollar_vol_tier"] = "mid"
+                # entry_grade (N717 position_sizing_outcome_perf) — simplified inline grade
+                try:
+                    _r52_crit = sum([
+                        float(live[tk].get("price_vs_ema200", 0) or 0) > 3,
+                        float(live[tk].get("price_vs_ema50",  0) or 0) > 0,
+                        bool(live[tk].get("mtf_aligned",       False)),
+                        bool(live[tk].get("mtf_aligned",       False)),  # double weight
+                        float(live[tk].get("daily_rsi",   50) or 50) > 50,
+                        float(live[tk].get("adx",          0) or 0)  >= 25,
+                        bool(live[tk].get("ttm_squeeze_fired", False)),
+                        bool(live[tk].get("fib_support",       False)),
+                        bool(live[tk].get("cup_handle",        False)),
+                        bool(live[tk].get("cup_handle",        False)),  # double weight
+                        bool(live[tk].get("vcp",               False)),
+                        bool(live[tk].get("vcp",               False)),  # double weight
+                        bool(live[tk].get("ema_stacked_bull",  False)),
+                        bool(live[tk].get("ema_stacked_bull",  False)),  # double weight
+                        bool(live[tk].get("ema21_pullback",    False)),
+                        bool(live[tk].get("ema21_pullback",    False)),  # double weight
+                        bool(live[tk].get("at_breakout",       False)),
+                        bool(live[tk].get("higher_lows",       False)),
+                    ])
+                    live[tk]["entry_grade"] = ("A+" if _r52_crit >= 12
+                                               else "A"  if _r52_crit >= 10
+                                               else "B+" if _r52_crit >= 8
+                                               else "B"  if _r52_crit >= 6
+                                               else "C"  if _r52_crit >= 4
+                                               else "D"  if _r52_crit >= 2
+                                               else "F")
+                except Exception:
+                    live[tk]["entry_grade"] = "B"
+                # hh_hl_score / price_action_quality (N613)
+                try:
+                    _r52_paq = sum([
+                        bool(live[tk].get("higher_lows",      False)),
+                        bool(live[tk].get("vcp",              False)),
+                        bool(live[tk].get("trend_template",   False)),
+                        bool(live[tk].get("ema_stacked_bull", False)),
+                        bool(live[tk].get("at_breakout",      False)),
+                        bool(live[tk].get("mom_accel",        False)),
+                    ])
+                    live[tk]["hh_hl_score"]          = _r52_paq
+                    live[tk]["price_action_quality"] = _r52_paq
+                except Exception:
+                    live[tk]["hh_hl_score"]          = 0
+                    live[tk]["price_action_quality"] = 0
+                # macd_cross_state (N batch state field)
+                try:
+                    _r52_ec = float(live[tk].get("ema_cross", 0) or 0)
+                    live[tk]["macd_cross_state"] = ("bull_cross" if _r52_ec > 0.05
+                                                    else "bear_cross" if _r52_ec < -0.05
+                                                    else "no_cross")
+                except Exception:
+                    live[tk]["macd_cross_state"] = "no_cross"
+                # market_quality (N707 — from tlog, stored by market scanner)
+                try:
+                    live[tk]["market_quality"] = int(tlog.get("market_quality", 60) or 60)
+                except Exception:
+                    live[tk]["market_quality"] = 60
+                # obv_trend / on_balance_volume_trend (N720 / N693)
+                try:
+                    _r52_obv2 = live[tk].get("obv_rising")
+                    _r52_obv_t = ("up" if _r52_obv2 is True else "down" if _r52_obv2 is False else "flat")
+                    live[tk]["obv_trend"]               = _r52_obv_t
+                    live[tk]["on_balance_volume_trend"] = _r52_obv_t
+                except Exception:
+                    live[tk]["obv_trend"]               = "flat"
+                    live[tk]["on_balance_volume_trend"] = "flat"
+                # pos_size_bucket (different from pos_size_tier; score reads string "small"/"normal"/"large")
+                try:
+                    _r52_bp2  = float(tlog.get("buying_power", 0) or 0)
+                    _r52_pv2  = float(tlog.get("portfolio_value", _r52_bp2) or _r52_bp2 or 1)
+                    _r52_pct2 = (_r52_bp2 / _r52_pv2 * 100) if _r52_pv2 > 0 else 50
+                    live[tk]["pos_size_bucket"] = ("large" if _r52_pct2 >= 20
+                                                   else "small" if _r52_pct2 <= 5
+                                                   else "normal")
+                except Exception:
+                    live[tk]["pos_size_bucket"] = "normal"
+                # sentiment_score — store the live ai_sentiment score for N879/N856 neurons
+                try:
+                    _r52_sent_raw = float(sent if isinstance(sent, (int, float)) else 0)
+                    # Convert -10..+10 ai_score to 0..10 sentiment_score scale
+                    live[tk]["sentiment_score"] = round(5.0 + _r52_sent_raw / 2, 2)
+                except Exception:
+                    live[tk]["sentiment_score"] = 5.0
+                # spy_intraday_dir (N_SL SPY intraday direction)
+                try:
+                    _r52_spy_d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    live[tk]["spy_intraday_dir"] = ("up" if _r52_spy_d > 0.15
+                                                    else "down" if _r52_spy_d < -0.15
+                                                    else "flat")
+                except Exception:
+                    live[tk]["spy_intraday_dir"] = "flat"
+                # sr_quality (N727 support/resistance quality — 0..5 float)
+                try:
+                    live[tk]["sr_quality"] = float(sum([
+                        bool(live[tk].get("at_support",        False)),
+                        bool(live[tk].get("near_key_support",  False)),
+                        bool(live[tk].get("fib_support",       False)),
+                        bool(live[tk].get("near_support",      False)),
+                        bool(live[tk].get("at_demand_zone",    False)),
+                    ]))
+                except Exception:
+                    live[tk]["sr_quality"] = 0.0
+                # timing_quality (N716 — int 1=caution/2=good/3=prime)
+                try:
+                    _r52_tq = 1
+                    if live[tk].get("nr7_signal"):                              _r52_tq = max(_r52_tq, 2)
+                    if live[tk].get("inside_bar"):                              _r52_tq = max(_r52_tq, 2)
+                    if live[tk].get("vwap_reclaim"):                            _r52_tq = max(_r52_tq, 2)
+                    if live[tk].get("ema21_pullback"):                          _r52_tq = max(_r52_tq, 2)
+                    if live[tk].get("nr7_signal") and live[tk].get("ema21_pullback"): _r52_tq = 3
+                    if live[tk].get("at_breakout") and live[tk].get("rvol_surge"):    _r52_tq = 3
+                    live[tk]["timing_quality"] = _r52_tq
+                except Exception:
+                    live[tk]["timing_quality"] = 1
+                # vix_level_state (N batch state field)
+                try:
+                    _r52_vix = float(live[tk].get("vix", regime.get("vix", 20)) or 20)
+                    live[tk]["vix_level_state"] = ("extreme_fear" if _r52_vix >= 35
+                                                   else "fear" if _r52_vix >= 25
+                                                   else "elevated" if _r52_vix >= 18
+                                                   else "normal" if _r52_vix >= 12
+                                                   else "complacent")
+                except Exception:
+                    live[tk]["vix_level_state"] = "normal"
+                # vix_regime_state (N batch state field — combines level + direction)
+                try:
+                    _r52_vix2    = float(live[tk].get("vix", regime.get("vix", 20)) or 20)
+                    _r52_vix_dec = bool(live[tk].get("vix_declining", regime.get("vix_declining", False)))
+                    if _r52_vix2 >= 25 and not _r52_vix_dec:
+                        live[tk]["vix_regime_state"] = "spiking"
+                    elif _r52_vix2 >= 25 and _r52_vix_dec:
+                        live[tk]["vix_regime_state"] = "fear_receding"
+                    elif _r52_vix2 >= 18:
+                        live[tk]["vix_regime_state"] = "stable_high"
+                    elif _r52_vix2 >= 12:
+                        live[tk]["vix_regime_state"] = "stable_normal"
+                    else:
+                        live[tk]["vix_regime_state"] = "complacent_low"
+                except Exception:
+                    live[tk]["vix_regime_state"] = "stable_normal"
+                # vol_trend (N714 — string: surging/rising/flat/declining)
+                try:
+                    _r52_vr2  = float(live[tk].get("vol_ratio", 1.0) or 1.0)
+                    _r52_obv3 = live[tk].get("obv_rising")
+                    if _r52_vr2 >= 2.0 and _r52_obv3 is True:
+                        live[tk]["vol_trend"] = "surging"
+                    elif _r52_vr2 >= 1.3 or _r52_obv3 is True:
+                        live[tk]["vol_trend"] = "rising"
+                    elif _r52_vr2 <= 0.6 or _r52_obv3 is False:
+                        live[tk]["vol_trend"] = "declining"
+                    else:
+                        live[tk]["vol_trend"] = "flat"
+                except Exception:
+                    live[tk]["vol_trend"] = "flat"
+                # weekly_trend / wk_trend (N214 — float from chg5d)
+                try:
+                    _r52_wt = float(live[tk].get("chg5d", live[tk].get("rs5", 0)) or 0)
+                    live[tk]["weekly_trend"] = round(_r52_wt, 3)
+                    live[tk]["wk_trend"]     = live[tk]["weekly_trend"]
+                except Exception:
+                    live[tk]["weekly_trend"] = 0.0
+                    live[tk]["wk_trend"]     = 0.0
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
