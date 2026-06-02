@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-01T23:27:00.886567+00:00",
+  "generated_at": "2026-06-02T11:17:47.529050+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -876,7 +876,13 @@
       ],
       "signal_strength": 6,
       "risk_level": "Medium",
-      "time_horizon": "1-3 months"
+      "time_horizon": "1-3 months",
+      "current_price": 109.93,
+      "price_target": 137.93,
+      "stop_loss": 101.14,
+      "sector": "Consumer Defensive",
+      "vol_ratio": 1.96,
+      "rsi": 59.7
     }
   ],
   "notable_trends": [
@@ -981,9 +987,9 @@
     }
   ],
   "fear_greed": {
-    "score": 59.1,
+    "score": 57.1,
     "rating": "greed",
-    "previous_score": 60.2,
+    "previous_score": 59.1,
     "direction": "down"
   },
   "market_indices": {
@@ -1004,8 +1010,8 @@
       "change_pct": -0.5
     },
     "VIX": {
-      "price": 16.05,
-      "change_pct": 4.77
+      "price": 16.14,
+      "change_pct": 0.56
     }
   },
   "market_breadth": {
@@ -1051,7 +1057,7 @@
     }
   },
   "put_call_ratio": {
-    "total": 0.86,
+    "total": 0.861,
     "equity": null,
     "signal": "NEUTRAL",
     "note": "estimated from VIX"
@@ -1083,6 +1089,10 @@
     ],
     [
       "AXON",
+      10
+    ],
+    [
+      "BTCUSD",
       10
     ],
     [
@@ -1147,10 +1157,6 @@
     ],
     [
       "ORCL",
-      10
-    ],
-    [
-      "PANW",
       10
     ]
   ],
@@ -1274,67 +1280,6 @@
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-05-31",
-      "timestamp": "2026-05-31T22:06:12.865062",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-05-31",
       "timestamp": "2026-05-31T23:21:46.830855",
@@ -1761,229 +1706,290 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-06-02",
+      "timestamp": "2026-06-02T11:17:46.973580",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": 446.77,
+          "target": 481.97
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
     {
-      "title": "Is Visa (V) One of the Best Long-Term Dividend Stocks to Invest In According to Billionaires?",
+      "title": "Wipro to raise stake in US insurtech company Aggne Global to 80%",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/visa-v-one-best-long-145131772.html",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/wipro-raise-stake-us-insurtech-110509254.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Ford vs GM: One Auto Giant Looks Much Stronger for 2026",
+      "title": "Trump wants Fort Knox \u2018physically audited\u2019 after stunning $40M arrest \u2014 here's why so many are after the yellow metal",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/ford-vs-gm-one-auto-144839095.html",
+      "url": "https://finance.yahoo.com/markets/commodities/articles/trump-wants-fort-knox-physically-105500941.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Dollar Tree Stock Popped on Earnings. That Could Be a Red Flag for the Rest of the Market.",
+      "title": "I\u2019m 45 and I just found out about a 20-year-old 401(k) account with $25,000 in it. Where should I put the money?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/dollar-tree-stock-popped-earnings-150002791.html",
+      "url": "https://finance.yahoo.com/markets/options/articles/m-45-just-found-20-103000577.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "The DRAM Shortage to Extend Into 2028. This Means Micron Stock Could Easily Double From Here.",
+      "title": "Warren Buffett told CNBC he could end America's deficit crisis 'in five minutes.\u2019 Would his solution still work in 2026?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/dram-shortage-extend-2028-means-150002603.html",
+      "url": "https://finance.yahoo.com/economy/policy/articles/warren-buffett-told-cnbc-could-101500637.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Sandisk Stock Has Soared Over 4,000% Over the Past Year. Wall Street\u2019s Still Chasing the Stock",
+      "title": "Best high-yield savings interest rates today, Tuesday, June 2, 2026: Earn up to 4.10% APY",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/sandisk-stock-soared-over-4-150002547.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Applied Materials (AMAT) \u2013 Among the 10 Best Long-Term Dividend Stocks to Invest In According to Billionaires",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/applied-materials-amat-among-10-144737834.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "I Used to Think a 401(k) Was the Best Retirement Savings Tool. But Here Are 4 Issues to Know About.",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/options/articles/used-think-401-k-best-145600692.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Bank of America (BAC) Expects Q2 Trading Revenue to Jump 15%, Reuters Reports",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/bank-america-bac-expects-q2-144422007.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Is ConocoPhillips Stock Underperforming the Nasdaq?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/conocophillips-stock-underperforming-nasdaq-150840769.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Barclays Downgrades Cigna (CI), Flags Risks around PBM Transition",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/barclays-downgrades-cigna-ci-flags-144207563.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Analyst Report: Occidental Petroleum Corp",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/research/reports/ARGUS_3285_AnalystReport_1780335465000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Here is why OptimumBank Holdings, Inc. (OPHC) is among the Best Growth Stocks to Buy with Low P/E Ratios",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/why-optimumbank-holdings-inc-ophc-144038484.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "I Moved My Mom Into Assisted Living For $5,400 A Month, But the Bill Hit $8,900 By 3 Months Later \u2014 And Now They're Threatening To Evict Her",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/healthcare/articles/moved-mom-assisted-living-5-150125754.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Liberty Capital Corporation (GLIBA) among the Best Growth Stocks to Buy with Low P/E Ratios?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/liberty-capital-corporation-gliba-among-144047770.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Why Analysts Remain Constructive On MSC Income Fund (MSIF) Despite Near-Term Pressure",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/why-analysts-remain-constructive-msc-144012488.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Euroseas Ltd. (ESEA): 10 Best Growth Stocks to Buy with Low P/E Ratios",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/euroseas-ltd-esea-10-best-144028101.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Palmer Square Capital BDC (PSBD) Expands Its Buyback Program As Confidence Grows",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/palmer-square-capital-bdc-psbd-144022186.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "3 Ways to Play the Data Center Land Grab",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/3-ways-play-data-center-150500711.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Paymentus (PAY) Delivers Another Strong Quarter As Digital Payments Momentum Builds",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/paymentus-pay-delivers-another-strong-144000362.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Truist Highlights Costco\u2019s (COST) Sales Momentum While Flagging Membership Growth Slowdown",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/truist-highlights-costco-cost-sales-143946108.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Why Analysts Continue To Raise Expectations For Legacy Education (LGCY)",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/why-analysts-continue-raise-expectations-143926171.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Crexendo (CXDO) Lands Major Wins As UCaaS Momentum Strengthens",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/crexendo-cxdo-lands-major-wins-143950763.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Trump and Kevin Warsh Plan a Huge Giveaway to Retirees. There\u2019s Only One Problem",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/economy/policy/articles/trump-kevin-warsh-plan-huge-144328998.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Nvidia (NVDA) Delivers Another Beat As A New AI Trend Gains Momentum",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/nvidia-nvda-delivers-another-beat-143937700.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Olaplex Holdings, Inc. (OLPX) among the Best Up and Coming Penny Stocks to Buy Now?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/olaplex-holdings-inc-olpx-among-143903981.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "KKR Strikes A Multibillion-Dollar Deal As Its Industrial Strategy Advances",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/kkr-strikes-multibillion-dollar-deal-143916906.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Zevia PBC (ZVIA): 8 Best Up and Coming Penny Stocks to Buy Now",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/zevia-pbc-zvia-8-best-143842015.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Xometry's (XMTR) CEO Recently Sold 50K Shares. Should You Follow?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/xometrys-xmtr-ceo-recently-sold-144403447.html",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-high-yield-savings-interest-rates-today-tuesday-june-2-2026-100000194.html",
       "sentiment": -1.0,
       "tickers": []
     },
     {
-      "title": "NeOnc Technologies (NTHI) Could Be Targeting A Challenging Market With A Different Strategy",
+      "title": "Sofico acquires Vinli, accelerating its agentic AI strategy",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/healthcare/articles/neonc-technologies-nthi-could-targeting-143812091.html",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/sofico-acquires-vinli-accelerating-agentic-105420933.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Here is why Blaize Holdings, Inc. (BZAI) is among the Best Up and Coming Penny Stocks to Buy Now",
+      "title": "HELOC and home equity loan rates today, June 2, 2026: With rates so close, how to decide which is best",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/why-blaize-holdings-inc-bzai-143853772.html",
+      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/heloc-home-equity-loan-rates-today-tuesday-june-2-2026-100000034.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Best CD rates today, Tuesday, June 2, 2026: Lock in up to 4% APY today",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-cd-rates-today-june-2-2026-100000869.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "AI is carrying the S&P 500 rally: Chart of the Day",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/article/ai-is-carrying-the-sp-500-rally-chart-of-the-day-100000546.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Best money market account rates today, Tuesday, June 2, 2026: Earn up to 4.01% APY",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-money-market-account-rates-today-tuesday-june-2-2026-100000757.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Here's Why Tesla Stock Soared in May (And What the SpaceX IPO Means to Tesla Investors)",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/heres-why-tesla-stock-soared-105000775.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Mortgage and refinance rates today, June 2, 2026: Rates falling on Tuesday",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/mortgages/article/mortgage-refinance-rates-today-tuesday-june-2-2026-100000585.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Retirees are going back to work, either by choice or necessity: Readers weigh in",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/economy/article/retirees-are-going-back-to-work-either-by-choice-or-necessity-readers-weigh-in-095700967.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "H.C. Wainwright Maintains Buy Rating on Tempus AI (TEM) Following Strong Revenue Growth",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/h-c-wainwright-maintains-buy-093804409.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Bernstein Maintains Rating on Lyft (LYFT) Following Autonomous Vehicle Discussions",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/bernstein-maintains-rating-lyft-lyft-093802604.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Nestl\u00e9 workers continue protest against layoffs at Spain plant",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/nestl-workers-continue-protest-against-104355638.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "H.C. Wainwright Raises Price Target on Immunovant (IMVT) Following Positive Rheumatoid Arthritis Trial Data",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/h-c-wainwright-raises-price-093801017.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Cantor Fitzgerald Reiterates Overweight on Intuitive Machines (LUNR) Following Major Space Force Contract Win",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/cantor-fitzgerald-reiterates-overweight-intuitive-093759232.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Jefferies Initiates Buy Rating on TeraWulf (WULF) Amid AI Data Center Expansion",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/jefferies-initiates-buy-rating-terawulf-093758206.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "BTIG Raises Price Target on Core Scientific (CORZ) Following Power Capacity Expansion",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/btig-raises-price-target-core-093756237.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "The 3 Best Growth ETFs to Buy Under $20",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/3-best-growth-etfs-buy-103900995.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Piper Sandler and Stifel Update Price Targets on Figma (FIG) Following Revenue Growth and AI Product Adoption",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/piper-sandler-stifel-price-targets-093754502.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Compass Point Raises Price Target on Applied Digital (APLD) Following Major AI Data Center Lease Agreement",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/compass-point-raises-price-target-093751684.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Cantor Fitzgerald Maintains Overweight Rating on Summit Therapeutics (SMMT) Amid Mixed Clinical Developments",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/cantor-fitzgerald-maintains-overweight-rating-093753062.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "IonQ (IONQ) Reports Record Revenue Growth and Quantum Computing Advances in Q1 2026",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/ionq-ionq-reports-record-revenue-093750536.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Magnificent Seven Slide as Alphabet's Stock Issuance Plan Raises AI Spending Fears",
+      "source": "Yahoo Finance",
+      "url": "https://www.barrons.com/livecoverage/stock-market-news-today-060226/card/magnificent-seven-slide-as-alphabet-s-stock-issuance-plan-raises-ai-spending-fears-OlkeKDuXWCuqnT1QwI6G?siteid=yhoof2&yptr=yahoo",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Stocks bounce as AI optimism offsets Middle East anxiety",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/world-indices/articles/asia-stocks-skittish-middle-east-003840902.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Bank of America and New Street Research Maintain Neutral Stance on AST SpaceMobile (ASTS) Amid Launch Delays",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/bank-america-street-research-maintain-093747679.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Symbotic (SYM) Reports Revenue Beat as Software Growth and Automation Expansion Accelerate",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/symbotic-sym-reports-revenue-beat-093748943.html",
+      "sentiment": 1.0,
+      "tickers": []
+    },
+    {
+      "title": "Compass Point Raises Price Target on Nebius Group (NBIS) Following Strong AI Cloud Growth",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/compass-point-raises-price-target-093745745.html",
       "sentiment": 1.0,
       "tickers": []
     }
   ],
   "source_stats": {
-    "reddit": 273,
-    "news": 243,
+    "reddit": 259,
+    "news": 242,
     "stocks": 36,
     "sec": 40,
     "earnings_upcoming": 25,
     "unusual_options": 20,
     "congress_trades": 15,
-    "technical": 11,
+    "technical": 12,
     "insider_buys": 0
   },
   "buy_count": 7,
@@ -1993,15 +1999,15 @@
       "ticker": "ABNB",
       "qty": 36.6642,
       "cost": 137.439972,
-      "price": 137.65,
-      "market_val": 5046.82713,
-      "pnl_usd": 7.7,
-      "pnl_pct": 0.153,
+      "price": 137.0,
+      "market_val": 5022.9954,
+      "pnl_usd": -16.13,
+      "pnl_pct": -0.32,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+0.2%)",
+      "rec_reason": "wait for market open",
       "stop_price": 129.19,
       "target_price": 157.12,
       "peak_price": 137.64,
@@ -2231,11 +2237,11 @@
     {
       "ticker": "ACN",
       "qty": 25.239,
-      "cost": 196.78,
-      "price": 196.0,
-      "market_val": 4946.844,
-      "pnl_usd": -19.69,
-      "pnl_pct": -0.396,
+      "cost": 196.793836,
+      "price": 195.33,
+      "market_val": 4929.93387,
+      "pnl_usd": -36.95,
+      "pnl_pct": -0.744,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
@@ -2478,16 +2484,16 @@
     {
       "ticker": "AMC",
       "qty": 1091.575567604,
-      "cost": 2.140046,
-      "price": 2.1099,
-      "market_val": 2303.11529,
-      "pnl_usd": -32.91,
-      "pnl_pct": -1.409,
+      "cost": 2.140047,
+      "price": 2.0699,
+      "market_val": 2259.452267,
+      "pnl_usd": -76.57,
+      "pnl_pct": -3.278,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
-      "recommendation": "HOLD",
-      "rec_reason": "wait for market open",
+      "recommendation": "TIGHTEN",
+      "rec_reason": "only 2.9% from stop",
       "stop_price": 2.01,
       "target_price": 2.61,
       "peak_price": 2.17,
@@ -2733,16 +2739,16 @@
     {
       "ticker": "ARM",
       "qty": 6.1347,
-      "cost": 411.48,
-      "price": 412.97,
-      "market_val": 2533.447059,
-      "pnl_usd": 9.14,
-      "pnl_pct": 0.362,
+      "cost": 410.695906,
+      "price": 410.76,
+      "market_val": 2519.889372,
+      "pnl_usd": 0.39,
+      "pnl_pct": 0.016,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+0.4%)",
+      "rec_reason": "position healthy (+0.0%)",
       "stop_price": 386.79,
       "target_price": 502.01,
       "peak_price": 410.88,
@@ -2980,8 +2986,8 @@
     {
       "ticker": "AVAXUSD",
       "qty": 1e-09,
-      "cost": 8.992174499,
-      "price": 8.92953,
+      "cost": 9.0417,
+      "price": 8.731,
       "market_val": 0.0,
       "pnl_usd": 0.0,
       "pnl_pct": 0.0,
@@ -3044,16 +3050,16 @@
     {
       "ticker": "AVGO",
       "qty": 5.4618,
-      "cost": 462.09986,
-      "price": 473.2,
-      "market_val": 2584.52376,
-      "pnl_usd": 60.63,
-      "pnl_pct": 2.402,
+      "cost": 463.358185,
+      "price": 488.0293,
+      "market_val": 2665.518431,
+      "pnl_usd": 134.75,
+      "pnl_pct": 5.324,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+2.4%)",
+      "rec_reason": "position healthy (+5.3%)",
       "stop_price": 434.37,
       "target_price": 539.79,
       "peak_price": 461.5,
@@ -3291,11 +3297,11 @@
     {
       "ticker": "AXON",
       "qty": 4.539,
-      "cost": 483.34,
-      "price": 477.3,
-      "market_val": 2166.4647,
-      "pnl_usd": -27.42,
-      "pnl_pct": -1.25,
+      "cost": 479.665658,
+      "price": 472.02,
+      "market_val": 2142.49878,
+      "pnl_usd": -34.7,
+      "pnl_pct": -1.594,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
@@ -3535,18 +3541,34 @@
       "ai_commentary": "HOLD position. RSI 77 signals overbought; trailing stop 3.4% away provides adequate downside protection despite strong ADX momentum."
     },
     {
+      "ticker": "BTCUSD",
+      "qty": 0.068394508,
+      "cost": 70884.6225374,
+      "price": 69478.4,
+      "market_val": 4751.940985,
+      "pnl_usd": -96.18,
+      "pnl_pct": -1.984,
+      "side": "long",
+      "entry_date": "2026-06-02",
+      "entry_ts": "2026-06-02T03:11:22.372341+00:00",
+      "recommendation": "HOLD",
+      "rec_reason": "wait for market open",
+      "stop_price": 66631.55,
+      "target_price": 79390.78
+    },
+    {
       "ticker": "CRM",
       "qty": 10.4161,
-      "cost": 210.2,
-      "price": 205.5,
-      "market_val": 2140.50855,
-      "pnl_usd": -48.96,
-      "pnl_pct": -2.236,
+      "cost": 209.965946,
+      "price": 202.0,
+      "market_val": 2104.0522,
+      "pnl_usd": -82.97,
+      "pnl_pct": -3.794,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
-      "recommendation": "HOLD",
-      "rec_reason": "wait for market open",
+      "recommendation": "TIGHTEN",
+      "rec_reason": "only 2.2% from stop",
       "stop_price": 197.59,
       "target_price": 251.08,
       "peak_price": 210.95,
@@ -3783,16 +3805,16 @@
     {
       "ticker": "CRWV",
       "qty": 13.5653,
-      "cost": 124.711327,
-      "price": 125.24,
-      "market_val": 1698.918172,
-      "pnl_usd": 7.17,
-      "pnl_pct": 0.424,
+      "cost": 124.778484,
+      "price": 126.45,
+      "market_val": 1715.332185,
+      "pnl_usd": 22.67,
+      "pnl_pct": 1.34,
       "side": "long",
       "entry_date": "2026-06-01",
       "entry_ts": "2026-06-01T21:12:25.918963+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+0.4%)",
+      "rec_reason": "position healthy (+1.3%)",
       "stop_price": 117.23,
       "target_price": 152.15,
       "peak_price": 125.39,
@@ -4033,228 +4055,6 @@
       "exit_urgency": 2,
       "pos_health": 4,
       "ai_commentary": "HOLD position; minimal loss (-0.3%), strong ADX (200) confirms trend, RSI neutral (58), adequate volume support sustains upside potential."
-    },
-    {
-      "ticker": "DASH",
-      "qty": 13.2648,
-      "cost": 165.13,
-      "price": 165.38,
-      "market_val": 2193.732624,
-      "pnl_usd": 3.32,
-      "pnl_pct": 0.151,
-      "side": "long",
-      "entry_date": "2026-06-01",
-      "entry_ts": "2026-06-01T21:12:25.918963+00:00",
-      "recommendation": "HOLD",
-      "rec_reason": "position healthy (+0.2%)",
-      "stop_price": 155.22,
-      "target_price": 199.51,
-      "peak_price": 165.05,
-      "earnings_days": null,
-      "r_multiple": -0.06,
-      "days_held": 0,
-      "hours_held": 0.2,
-      "intraday_chg_pct": 3.45,
-      "vol_pace": 0.62,
-      "thesis_status": "INTACT",
-      "thesis_intact": 1,
-      "thesis_gone": 0,
-      "thesis_total": 1,
-      "live_signals": {
-        "rsi": 56.5,
-        "vwap_pos": 1.1,
-        "vwap_price": 162.93,
-        "roc5": 2.83,
-        "macd_slope": 0.0,
-        "vol_ratio": 0.68,
-        "vwap_reclaim": false,
-        "adx": 157.7,
-        "adx_trend": "strong",
-        "rs5": 7.01,
-        "rs63": -6.08,
-        "rs_line_new_high": false,
-        "rs_line_trending": false,
-        "chandelier_stop": 156.53,
-        "ichimoku": 0,
-        "macd_bull_div": false,
-        "mtf_aligned": false,
-        "mtf_triple": false,
-        "mtf_score": 1,
-        "mtf_conflict": false,
-        "weekly_bull": false,
-        "daily_up": true,
-        "hourly_up": false,
-        "price_vs_ema200": -3.56,
-        "mfi": 53.0,
-        "mfi_overbought": false,
-        "mfi_bull_div": false,
-        "supertrend_bull": false,
-        "supertrend_stop": 175.29,
-        "rvol": 0.62,
-        "rvol_surge": false,
-        "force_index_rising": true,
-        "force_index_div": false,
-        "true_beta": 1.0,
-        "true_alpha": 0.0,
-        "pivot": 159.21,
-        "pivot_r1": 163.31,
-        "pivot_r2": 167.32,
-        "pivot_s1": 155.2,
-        "pivot_s2": 151.1,
-        "psar": 148.581,
-        "psar_bull": true,
-        "options_pcr": 0.34,
-        "options_bull": true,
-        "options_bear": true,
-        "unusual_calls": true,
-        "unusual_puts": true,
-        "vwap_b1u": 165.25,
-        "vwap_b2u": 167.57,
-        "vwap_b1d": 160.61,
-        "vwap_b2d": 158.29,
-        "price_accel": 5.756,
-        "price_accel_pos": true,
-        "lr_slope": -73.1,
-        "lr_r2": 0.193,
-        "lr_below_channel": false,
-        "lr_above_channel": true,
-        "ha_bull": false,
-        "ha_consec_bull": 2,
-        "hammer": false,
-        "bullish_engulfing": false,
-        "morning_star": false,
-        "three_white_soldiers": false,
-        "accum_score": 2,
-        "news_accelerating": false,
-        "news_velocity": 0.0,
-        "news_count_24h": 0,
-        "pm_gap_pct": 0.0,
-        "pm_gap_up": false,
-        "pm_gap_down": false,
-        "pm_big_gap_up": false,
-        "pm_price": 0.0,
-        "gex_sign": -1,
-        "gamma_wall_up": 170.0,
-        "gamma_wall_down": 155.0,
-        "squeeze_potential": false,
-        "trend_quality_score": 3.6,
-        "consec_green": 2,
-        "consec_red": 0,
-        "hv20": 48.5,
-        "hv5": 46.2,
-        "hv_expanding": false,
-        "hv_contracting": false,
-        "key_support_1": 164.08,
-        "key_support_2": 159.45,
-        "key_resist_1": 165.24,
-        "key_resist_2": 168.0,
-        "near_key_support": true,
-        "near_key_resist": true,
-        "fib_level_382": 169.48,
-        "fib_level_500": 165.15,
-        "fib_level_618": 160.83,
-        "fib_level_786": 154.66,
-        "fib_high_ref": 183.5,
-        "fib_low_ref": 146.81,
-        "short_float": 0.036,
-        "short_ratio": 3.0,
-        "high_short": false,
-        "atm_iv": 62.2,
-        "rs_sector": 0.0,
-        "rs252": -3.65,
-        "rs_rating": 45,
-        "ema21_pullback": false,
-        "ema21_touch": false,
-        "macd_bear_div": true,
-        "rsi_divergence": false,
-        "rsi_bull_divergence": false,
-        "fund_quality": -1,
-        "earnings_growth": -0.061,
-        "revenue_growth": 0.331,
-        "forward_pe": 21.160603,
-        "profit_margin": 0.0629,
-        "roe": 0.09922,
-        "pocket_pivot": false,
-        "htf": false,
-        "htf_consec": 0,
-        "trend_template": 0,
-        "tt_full": false,
-        "above_avwap_52wl": true,
-        "avwap_52wl": 163.57,
-        "avwap_dist_pct": 0.74,
-        "vol_bearish_div": false,
-        "vol_bullish_div": false,
-        "w52_range_pos": 30.3,
-        "expected_move_wk": 14.41,
-        "expected_move_mo": 29.54,
-        "expected_move_pct_wk": 8.76,
-        "analyst_upgrade": false,
-        "analyst_rev_score": 1,
-        "analyst_buy_pct": 0.778,
-        "analyst_net_rev": 0,
-        "analyst_price_tgt": 0.0,
-        "analyst_upside_pct": 0.0,
-        "news_headlines": [],
-        "catalyst_type": "none",
-        "catalyst_urg": 0,
-        "catalyst_dir": "none",
-        "day_high": 166.52,
-        "day_low": 157.4,
-        "day_open": 161.54
-      },
-      "score_history": [
-        {
-          "s": 100,
-          "t": "2026-06-01T19:48:24.781355+00:00"
-        },
-        {
-          "s": 100,
-          "t": "2026-06-01T19:55:07.158769+00:00"
-        }
-      ],
-      "pnl_history": [
-        {
-          "p": -0.05,
-          "t": "2026-06-01T19:48:24.781355+00:00"
-        },
-        {
-          "p": -0.21,
-          "t": "2026-06-01T19:55:07.158769+00:00"
-        }
-      ],
-      "mae": -0.21,
-      "mfe": 0.0,
-      "atr_at_entry": 7.64,
-      "scale_in_pending": false,
-      "scale_in_notional": 0.0,
-      "entry_thesis": "",
-      "entry_score": 100,
-      "entry_premium_count": 0,
-      "entry_premium_signals": [],
-      "grade": "B+",
-      "rs_rating": 45,
-      "rs252": -3.65,
-      "sector": "consumer_tech",
-      "rs_sector": 0.0,
-      "kelly_size_pct": 10.0,
-      "atr_size_1pct": 0,
-      "atr_size_2pct": 0,
-      "avwap_entry": 0.0,
-      "avwap_entry_pct": 0.0,
-      "spy_since_entry": 0.0,
-      "rs_alpha": 0.0,
-      "dyn_trail_pct": 4.0,
-      "trail_stop_price": 158.45,
-      "dist_from_trail": 3.67,
-      "live_score": 100,
-      "score_delta": 0,
-      "live_rr": 5.8,
-      "pivot_pct": 0.7,
-      "extended": false,
-      "overextended": false,
-      "exit_urgency": 3,
-      "pos_health": 3,
-      "ai_commentary": "**HOLD.** Position near entry with neutral RSI(56) and weakened trend (ADX 158), awaiting clearer directional conviction before adding/exiting."
     }
   ],
   "position_analysis": [],

@@ -2313,6 +2313,67 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-06-02",
+      "timestamp": "2026-06-02T11:17:46.973580",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": 446.77,
+          "target": 481.97
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "last_analysis": {
@@ -3191,7 +3252,13 @@
         ],
         "signal_strength": 6,
         "risk_level": "Medium",
-        "time_horizon": "1-3 months"
+        "time_horizon": "1-3 months",
+        "current_price": 109.93,
+        "price_target": 137.93,
+        "stop_loss": 101.14,
+        "sector": "Consumer Defensive",
+        "vol_ratio": 1.96,
+        "rsi": 59.7
       }
     ],
     "notable_trends": [
