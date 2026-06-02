@@ -22491,6 +22491,42 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                _n730_s = "no_persistence"
             _nsl_adj += _nde("conviction_persistence_perf", _n730_s)
 
+            # ── Commit 10: remaining unwired neurons N716-N719, N875-N877 ───────
+
+            # N716: Setup timing quality (prime/good/caution/poor)
+            _n716_tq = int(d.get("timing_quality", 1) or 1)
+            if _n716_tq == 3:   _n716_s = "prime_timing_window"
+            elif _n716_tq == 2: _n716_s = "good_timing_window"
+            elif _n716_tq == 1: _n716_s = "caution_timing"
+            else:               _n716_s = "poor_timing_window"
+            _nsl_adj += _nde("setup_timing_quality_perf", _n716_s)
+
+            # N719: Earnings beat quality at entry
+            _n719_surp = float(d.get("earnings_surprise_pct", 0) or 0)
+            if _n719_surp > 20:               _n719_s = "massive_earnings_beat"
+            elif _n719_surp > 10:             _n719_s = "strong_earnings_beat"
+            elif _n719_surp > 5:              _n719_s = "moderate_beat"
+            elif _n719_surp > 0:              _n719_s = "slight_beat"
+            elif d.get("has_earnings_beat"):  _n719_s = "earnings_beat_entry"
+            else:                             _n719_s = "no_earnings_catalyst"
+            _nsl_adj += _nde("earnings_beat_entry_perf", _n719_s)
+
+            # N876: Market maker activity (rvol_surge = MM pulling orders or institutions stepping in)
+            _n876_s = "mm_active" if d.get("rvol_surge") else "mm_normal"
+            _nsl_adj += _nde("market_maker_activity_perf", _n876_s)
+
+            # N877: Alpha decay risk — based on session timing (morning = fresh, late = stale)
+            _n877_et_h = int(d.get("et_hour", d.get("et_hour_at_entry", -1)) or -1)
+            if 9 <= _n877_et_h <= 11:    _n877_s = "low_decay"
+            elif _n877_et_h >= 15:       _n877_s = "high_decay"
+            elif _n877_et_h >= 0:        _n877_s = "moderate_decay"
+            else:                        _n877_s = "moderate_decay"
+            _nsl_adj += _nde("alpha_decay_risk_perf", _n877_s)
+
+            # N875: Multi-TF alignment (aligned_all vs mixed)
+            _n875_s = ("aligned_all" if d.get("mtf_aligned") else "mixed_signals")
+            _nsl_adj += _nde("multi_timeframe_alignment_perf", _n875_s)
+
             # N871: Order flow imbalance — volume + direction
             _n871_rvol = float(d.get("rvol", 1.0) or 1.0)
             _n871_chg  = float(d.get("change_pct", 0) or 0)
