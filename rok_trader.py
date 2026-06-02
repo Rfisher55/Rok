@@ -28065,7 +28065,7 @@ def run():
                 _ng_green_lights = 0
                 _pt_strong = _pt_wr.get("strong", 0)
                 if _pt_strong >= 65:  # learned: strong-premium entries win >65%
-                    _prem_ct2 = sum([bool(_tk_sig.get(k)) for k in ("vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired","gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising")])
+                    _prem_ct2 = sum([bool(_tk_sig.get(k)) for k in ("vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired","higher_lows","rvol_surge","supertrend_bull","obv_rising","kc_breakout")])
                     if _prem_ct2 >= 4:
                         _ng_green_lights += 1
                 if _rv_wr.get("explosive", 0) >= 65 and float(_tk_sig.get("rvol", 0) or 0) >= 5.0:
@@ -28617,6 +28617,8 @@ def run():
                     _learned_bonus += _nbns("psar_bull_entry_perf", "bullish", 60, 1)
                 if bool(_tk_sig_sc.get("kc_breakout", False)):
                     _learned_bonus += _nbns("keltner_position_entry_perf", "kc_breakout", 60, 1)
+                    if bool(_tk_sig_sc.get("ichimoku_above", False)):
+                        _learned_bonus += _nbns("signal_synergy", "ichimoku_above+kc_breakout", 65, 2)  # 83% WR n=6
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
                     _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
@@ -28628,8 +28630,9 @@ def run():
                     _learned_bonus += _nbns("squeeze_momentum_perf", "squeeze_fired", 65, 2)
                 if bool(_tk_sig_sc.get("donchian_up", False)):
                     _learned_bonus += _nbns("donchian_breakout_entry_perf", "donchian_up", 62, 1)
-                if bool(_tk_sig_sc.get("orb_breakout", False)):
-                    _learned_bonus += _nbns("orb_quality_perf", "orb_up", 65, 2)
+                if not bool(_tk_sig_sc.get("orb_breakout", False)) and not bool(_tk_sig_sc.get("orb_active", False)):
+                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 62, 2)  # no_orb=80% WR n=15, consolidating=50%
+                # ORB breakout: data shows consolidating=50% — the orb_up bonus was a wrong key, removed
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
                     _learned_bonus += _nbns("vwap_reclaim_perf", "reclaim", 62, 1)
                 if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
@@ -28770,10 +28773,15 @@ def run():
                     _learned_bonus += _nbns("concentration_perf", "3-4", 60, 1)  # 80% WR
                 elif _open_pos_lb >= 8:
                     _learned_bonus += _npen("concentration_perf", "8+", 55, -1)  # 53% WR — spread too thin
-                # Reentry type: winner reentry = 80% WR
+                # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3
                 _reentry_lb = str(_tk_sig_sc.get("reentry_type", "") or "")
                 if "winner" in _reentry_lb or "re_winner" in _reentry_lb:
                     _learned_bonus += _nbns("reentry_perf", "winner", 60, 2)     # 80% WR
+                elif "loser" in _reentry_lb or "re_loser" in _reentry_lb:
+                    _learned_bonus += _npen("reentry_perf", "loser", 40, -3)     # 33% WR n=3
+                # Candle pattern present: 65% WR n=17 vs no pattern 59% WR
+                if bool(_tk_sig_sc.get("candle_pattern", False)) or bool(_tk_sig_sc.get("three_white_soldiers", False)) or bool(_tk_sig_sc.get("hammer", False)):
+                    _learned_bonus += _nbns("candle_pattern_perf", "present", 62, 1)  # 65% WR n=17
                 # MFI distribution zone: 75% WR
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
                 if _mfi_lb >= 60:
