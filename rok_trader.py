@@ -29370,12 +29370,14 @@ def run():
                     _learned_bonus += _npen("volume_climax_perf", "blow_off_climax", 38, -2)  # potential exhaustion
                 elif _rvol_vc_lb > 2:
                     _learned_bonus += _nbns("volume_climax_perf", "elevated_volume", 62, 1)   # strong interest
-                # Daily RSI overbought: WR=20% n=10 (daily_rsi>=70 = extended/overdue reversal)
+                # Daily RSI overbought/oversold: overbought=20% WR n=10; oversold = confirmed downtrend
                 _drsi_lb = _tk_sig_sc.get("daily_rsi")
                 if _drsi_lb is not None:
                     _drsi_lb = float(_drsi_lb or 50)
                     if _drsi_lb >= 70:
                         _learned_bonus += _npen("rsi_at_entry_perf", "overbought", 30, -3)  # 20% WR n=10 daily overbought
+                    elif _drsi_lb < 30:
+                        _learned_bonus += _npen("rsi_at_entry_perf", "oversold_daily", 35, -2)  # daily downtrend confirmed
                 # Trade momentum: losing=4.4% WR n=45; neutral=15.6% WR n=32 — both catastrophic
                 _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
                 if _tm_wstrk == -1:
