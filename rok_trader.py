@@ -29064,15 +29064,21 @@ def run():
                     _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
                 elif _ptier_lb == "small":
                     _learned_bonus += _npen("price_tier_perf", "small", 40, -2)  # 36.4% WR n=11 — wrong bonus→penalty
-                # Ichimoku cloud position: inside=55.2% WR n=29, above=48.5% WR n=33, below=20% WR n=10
-                _ich_lb = str(_tk_sig_sc.get("ichimoku_state", _tk_sig_sc.get("ichimoku_pos", "")) or "")
+                # Ichimoku: derive position from flags (ichimoku_state/pos not in fetch_batch)
                 _ich_above_flag = bool(_tk_sig_sc.get("ichimoku_above", False))
+                _ich_cloud_flag = bool(_tk_sig_sc.get("ichimoku_bull_cloud", False))
+                _ich_tk_flag    = bool(_tk_sig_sc.get("ichimoku_tk_bull", False))
+                if _ich_above_flag:
+                    _ich_lb = "above"
+                elif _ich_cloud_flag or _ich_tk_flag:
+                    _ich_lb = "inside"
+                else:
+                    _ich_lb = "below"
                 if "inside" in _ich_lb:
                     _learned_bonus += _nbns("ichimoku_perf", "inside", 54, 1)    # 55.2% WR — threshold lowered (was stale 80%)
-                elif "above" in _ich_lb or _ich_above_flag:
-                    # ichimoku_perf["above"] = 48.5% WR n=33 — below 50%, change to mild penalty
-                    _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)
-                elif "below" in _ich_lb:  # only explicitly "below" — other states are neutral
+                elif "above" in _ich_lb:
+                    _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)    # 48.5% WR n=33 — coin flip or worse
+                elif "below" in _ich_lb:
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
                 # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=35.3% WR n=17 — field is ha_consec_bull in _extract
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec_bull", _tk_sig_sc.get("ha_consec", 0)) or 0)
