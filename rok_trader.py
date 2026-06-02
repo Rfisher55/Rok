@@ -28598,7 +28598,8 @@ def run():
                 elif _vix_br == "elevated":
                     _learned_bonus += _npen("vix_entry_perf", "elevated", 42, -2)
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
-                    _learned_bonus += _nbns("pocket_pivot_perf", "pp", 65, 2)
+                    _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
+                    _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
                 if bool(_tk_sig_sc.get("ha_bull", False)):
                     _learned_bonus += _nbns("ha_trend_perf", "bull", 60, 2)  # 69.7% WR n=33 (key fix: was "bullish")
                 # Expanded learned bonus checks — more signal/state combinations
@@ -29090,6 +29091,15 @@ def run():
                     _tm_lb = "losing_1" if _tm_wstrk == -1 else "losing_2+" if _tm_wstrk <= -2 else ""
                 if _tm_lb == "losing_1":
                     _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 29% WR n=14 — avoid loss chasing
+                # Position count: 13+ positions = WR=31% n=16 — over-diversification kills quality
+                _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
+                _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
+                if _pos_bkt_lb == "13+":
+                    _learned_bonus += _npen("position_count_perf", "13+", 38, -3)  # 31% WR n=16
+                # Sector breadth: single_sector = WR=29% n=17 — narrow market = risky entry
+                _sec_adv_lb = int(_tk_sig_sc.get("sectors_advancing_now", 5) or 5)
+                if _sec_adv_lb < 2:
+                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 35, -3)  # 29% WR n=17
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
