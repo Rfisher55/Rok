@@ -23506,6 +23506,37 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 _n622_atr_q = "stable_atr"
             _nsl_adj += _nde("atr_expansion_at_entry_perf", _n622_atr_q)
 
+            # N554: Analyst consensus (labels: strong_buy_consensus/mixed_consensus/sell_consensus)
+            _n554_rec_v = float(d.get("analyst_rec_score", d.get("analyst_count_buy", 0)) or 0)
+            if   _n554_rec_v >= 4: _n554_ac_q = "strong_buy_consensus"
+            elif _n554_rec_v >= 1: _n554_ac_q = "mixed_consensus"
+            else:                  _n554_ac_q = "sell_consensus"
+            _nsl_adj += _nde("analyst_consensus_perf", _n554_ac_q)
+
+            # N555: Earnings growth rate (labels: high_earnings_growth/moderate_growth/low_growth)
+            _n555_eps_v = float(d.get("eps_growth_pct", d.get("earnings_growth", 0)) or 0)
+            if   _n555_eps_v > 25.0: _n555_eg_q = "high_earnings_growth"
+            elif _n555_eps_v >= 5.0: _n555_eg_q = "moderate_growth"
+            else:                     _n555_eg_q = "low_growth"
+            _nsl_adj += _nde("earnings_growth_rate_perf", _n555_eg_q)
+
+            # N817: Options IV environment (labels: extreme_iv/high_iv/elevated_iv/normal_iv/low_iv)
+            _n817_iv_v = float(d.get("atm_iv", d.get("iv", 0)) or 0)
+            if   _n817_iv_v > 100: _n817_iv_q = "extreme_iv"
+            elif _n817_iv_v > 60:  _n817_iv_q = "high_iv"
+            elif _n817_iv_v > 35:  _n817_iv_q = "elevated_iv"
+            elif _n817_iv_v >= 20: _n817_iv_q = "normal_iv"
+            else:                  _n817_iv_q = "low_iv"
+            _nsl_adj += _nde("options_iv_environment_perf", _n817_iv_q)
+
+            # N818: Breadth alignment (labels: strong_breadth/good_breadth/weak_breadth/poor_breadth)
+            _n818_brd_v = float(d.get("breadth_pct", d.get("market_breadth", 50)) or 50)
+            if   _n818_brd_v > 65:  _n818_brd_q = "strong_breadth"
+            elif _n818_brd_v >= 50: _n818_brd_q = "good_breadth"
+            elif _n818_brd_v >= 35: _n818_brd_q = "weak_breadth"
+            else:                    _n818_brd_q = "poor_breadth"
+            _nsl_adj += _nde("breadth_alignment_perf", _n818_brd_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
