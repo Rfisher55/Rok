@@ -109,9 +109,9 @@ CRYPTO_UNIVERSE  = {
 }
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
-# Learning phase: lower score gates so the brain gets real data fast
-CRYPTO_MIN_SCORE = 5        # minimum technical score (score starts at 8; 5 allows flat/mildly bearish)
-CRYPTO_MIN_COMBINED = -5    # AI score is a bonus not a gate — allow negative AI but positive tech
+# Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
+CRYPTO_MIN_SCORE = 15       # minimum technical score for crypto entry
+CRYPTO_MIN_COMBINED = -3    # AI score gate — only mildly negative AI allowed
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
@@ -19108,27 +19108,29 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     logger.info(f"Crypto candidates above threshold: {[(s, sc) for s,sc,_ in scored]}")
 
     # Force-buy fallback: if nothing scored above threshold but we have empty slots,
-    # buy top-scoring coins anyway to keep capital working 24/7
+    # buy top-scoring coins anyway to keep capital working 24/7.
+    # Floor is CRYPTO_MIN_SCORE // 2 so fallback still requires meaningful signal.
     _buy_list = scored[:open_slots]
     _fb_coin_reduce = _lp_cth.get("crypto_coin_reduce", [])
+    _fallback_floor = max(8, CRYPTO_MIN_SCORE // 2)  # fallback floor: half the normal minimum (min 8)
     if not _buy_list and open_slots > 0:
         _fallback = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
                      if sym not in held_crypto
-                     and crypto_score(sig) > 0
+                     and crypto_score(sig) >= _fallback_floor
                      and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
         _fallback.sort(key=lambda x: -x[1])
-        _n_fallback = min(open_slots, max(2, open_slots // 2))
+        _n_fallback = min(open_slots, max(1, open_slots // 3))  # more conservative fallback count
         if _fallback:
             _buy_list = _fallback[:_n_fallback]
-            logger.info(f"Crypto force-buy: {open_slots} open slots, buying top {len(_buy_list)} by score (excluded brain-flagged losers: {_fb_coin_reduce})")
+            logger.info(f"Crypto force-buy (floor={_fallback_floor}): {open_slots} open slots, buying top {len(_buy_list)} (excluded brain-flagged losers: {_fb_coin_reduce})")
         elif open_slots > 0:
-            # All non-loser coins already held — allow any coin as last resort
+            # All non-loser coins already held — allow any coin at floor/2 minimum
             _fallback_any = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
-                             if sym not in held_crypto and crypto_score(sig) > 0]
+                             if sym not in held_crypto and crypto_score(sig) >= _fallback_floor // 2]
             _fallback_any.sort(key=lambda x: -x[1])
             if _fallback_any:
                 _buy_list = _fallback_any[:min(open_slots, 1)]  # max 1 slot for any-coin fallback
-                logger.info(f"Crypto force-buy last-resort: {_buy_list[0][0]} (all preferred coins held)")
+                logger.info(f"Crypto force-buy last-resort: {_buy_list[0][0]} (score>={_fallback_floor//2})")
 
     # BTC core holding: ensure BTC/USD is always in the portfolio when possible.
     # If BTC not held and not in buy list, replace the weakest-performing coin in the
@@ -24046,8 +24048,9 @@ def run():
                         except Exception as _ge:
                             logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
                         continue
-            elif _fast_age_min >= 60 and not _fast_half_out:
-                # 60min hard exit — unconditional capital cycle
+            elif _fast_age_min >= 60 and not _fast_half_out and pnl_pct <= 0.3:
+                # 60min exit for losers/flat — winners (>0.3%) ride to 90min
+                # Brain data: 90min exits average +1.2% vs 60min +0.5% — let winners run
                 _fast_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
@@ -24161,8 +24164,8 @@ def run():
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif age_minutes >= 45 and pnl_pct >= 0.3 and not half_out:
                     _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 60 and not half_out:
-                    # 60min hard cycle: exit regardless of PnL — capital must cycle
+                elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
+                    # 60min cycle: exit losers/flat — winners (>0.3%) ride to 90min
                     _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 90:
                     # 90min backup: unconditional exit to force capital recycling
