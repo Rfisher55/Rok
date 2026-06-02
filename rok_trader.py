@@ -26348,11 +26348,13 @@ def run():
                 _et_ctx = _now_et_ctx + timedelta(hours=_et_off_ctx)
                 live[tk]["et_hour"] = _et_ctx.hour
                 live[tk]["et_min"]  = _et_ctx.minute
-                # N721: ad_trend — market advance/decline trend from breadth
+                # N721: ad_trend — market A/D trend using score()-compatible string values
                 _n721_adv_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
-                if   _n721_adv_ctx > 62: live[tk]["ad_trend"] = "uptrend"
-                elif _n721_adv_ctx < 38: live[tk]["ad_trend"] = "downtrend"
-                else:                    live[tk]["ad_trend"] = "flat"
+                if   _n721_adv_ctx > 70: live[tk]["ad_trend"] = "rising_fast"
+                elif _n721_adv_ctx > 60: live[tk]["ad_trend"] = "rising"
+                elif _n721_adv_ctx > 40: live[tk]["ad_trend"] = "flat"
+                elif _n721_adv_ctx > 30: live[tk]["ad_trend"] = "falling"
+                else:                    live[tk]["ad_trend"] = "falling_fast"
                 # N726: reversal_confirmed — bullish reversal candle + RSI recovery + positive move
                 _n726_bull = (live[tk].get("hammer", False) or live[tk].get("bullish_engulfing", False)
                               or live[tk].get("morning_star", False))
@@ -26393,6 +26395,37 @@ def run():
                                                 "down" if _spy_adv_inj < 38 else "flat")
                 live[tk]["market_breadth"]   = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
                 live[tk]["persistence_runs"] = int(_curr_persist.get(tk, 0))
+                # N718: news_age_hours — age of freshest news headline (from news velocity cache)
+                try:
+                    _nvc_data = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
+                    _nvc_hdls = _nvc_data.get("headlines", []) if isinstance(_nvc_data, dict) else []
+                    if _nvc_hdls:
+                        live[tk]["news_age_hours"] = min(
+                            (h.get("h", 999) or 999) for h in _nvc_hdls if h.get("h") is not None
+                        ) if _nvc_hdls else 999
+                    else:
+                        live[tk]["news_age_hours"] = 999
+                except Exception:
+                    live[tk]["news_age_hours"] = 999
+                # N728: risk/reward ratio from ATR stop and pivot target
+                try:
+                    _n728_price  = float(live[tk].get("price", 0) or 0)
+                    _n728_atr    = float(live[tk].get("atr", 0) or 0)
+                    _n728_r1     = float(live[tk].get("pivot_r1", 0) or 0)
+                    _n728_r2     = float(live[tk].get("pivot_r2", 0) or 0)
+                    _n728_stop   = _n728_price - (_n728_atr * 2.5) if _n728_atr > 0 else 0
+                    _n728_target = _n728_r1 if _n728_r1 > _n728_price else (_n728_r2 if _n728_r2 > _n728_price else 0)
+                    if _n728_price > 0 and _n728_stop > 0 and _n728_target > _n728_price:
+                        _n728_risk   = _n728_price - _n728_stop
+                        _n728_reward = _n728_target - _n728_price
+                        live[tk]["rr"] = round(_n728_reward / max(_n728_risk, 0.01), 2)
+                        live[tk]["target_pct"] = round((_n728_target / _n728_price - 1) * 100, 1)
+                    else:
+                        live[tk]["rr"] = 1.5
+                        live[tk]["target_pct"] = 5.0
+                except Exception:
+                    live[tk]["rr"] = 1.5
+                    live[tk]["target_pct"] = 5.0
             except Exception:
                 pass
 
@@ -27166,7 +27199,7 @@ def run():
                         _cat_headlines = live.get(tk, {}).get("news_headlines", []) or []
                         if _cat_headlines:
                             _newest_age_hrs = min(
-                                (h.get("age_hours", 999) or 999) for h in _cat_headlines if h.get("age_hours") is not None
+                                (h.get("h", h.get("age_hours", 999)) or 999) for h in _cat_headlines
                             ) if _cat_headlines else 999
                             _buy_signals_merged["catalyst_age_state"] = (
                                 "same_day"   if _newest_age_hrs <= 8 else
