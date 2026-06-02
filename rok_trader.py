@@ -21769,6 +21769,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if _accum >= 8:   s += 7   # very strong accumulation — rare, high conviction
     elif _accum >= 6: s += 4   # solid institutional buying pattern
     elif _accum >= 4: s += 2   # moderate accumulation
+    elif _accum <= 2: s -= 3   # light/no accumulation = weak institutional support
 
     # News Velocity: accelerating news flow = catalyst building = institutional awareness
     if d.get("news_accelerating", False):   s += 5   # 3+ articles in 24h, accelerating
@@ -21987,7 +21988,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # ── SECTOR CONTEXT LAYER: sectors with poor historical win rates penalized ─
     try:
         _sector_key = SECTOR_MAP.get(tk, "other")
-        if _LEARNED_COLD_SECTORS and _sector_key in _LEARNED_COLD_SECTORS:
+        if _sector_key == "other":
+            s -= 6   # unmapped sector: unknown quality, require stronger evidence
+        elif _LEARNED_COLD_SECTORS and _sector_key in _LEARNED_COLD_SECTORS:
             s -= 5   # this sector has been losing: raise the bar
         elif _LEARNED_HOT_SECTORS and _sector_key in _LEARNED_HOT_SECTORS:
             s += 3   # this sector has been winning: slight boost
@@ -28315,18 +28318,24 @@ def run():
                     _ng_green_lights += 2  # elite score tier = strong green
                 elif tech_sc >= 85 and (_n180_ng.get("score_85_95", 0) >= 70 or _n180_ng.get("score_85_plus", 0) >= 70):
                     _ng_green_lights += 1
-                # N999: other-sector + no-accum combo = high uncertainty strike
-                # Unmapped sectors (CMPS/SAIC-type) with zero institutional accumulation
-                # have historically been the worst risk-adjusted entries
+                # N999: other-sector + light/no accum = 2 strikes (CMPS/SAIC-type: worst risk-adjusted entries)
                 _n999_sec = SECTOR_MAP.get(tk, "other")
                 _n999_accum = int(_tk_sig.get("accum_score", 0) or 0)
                 _n999_acperf = _ALL_NEURON_PERFS.get("accum_perf", {}).get("none", {})
-                if _n999_sec == "other" and _n999_accum == 0:
-                    _ng_strikes += 1; _ng_reasons.append(f"other sector + zero accum (unknown setup quality)")
-                # N998: accum=none proved bad historically: add a strike when n>=5 and WR<35
+                if _n999_sec == "other" and _n999_accum <= 2:
+                    _ng_strikes += 2; _ng_reasons.append(f"other sector + light accum={_n999_accum} (2 strikes: unknown setup quality)")
+                # N998: zero accum + historically proven bad
                 elif (_n999_acperf.get("total", 0) >= 5 and float(_n999_acperf.get("win_rate", 50)) < 35
                       and _n999_accum == 0):
                     _ng_strikes += 1; _ng_reasons.append(f"zero accum historically fails({_n999_acperf.get('win_rate',50):.0f}%WR n={_n999_acperf.get('total',0)})")
+                # N997: other sector requires premium-tier signal confirmation (high-beta unknowns need strong setup)
+                if _n999_sec == "other":
+                    _n997_prem = sum(bool(_tk_sig.get(k)) for k in (
+                        "vcp", "cup_handle", "at_breakout", "mtf_triple", "ttm_squeeze_fired",
+                        "gap_and_hold", "orb_breakout", "rvol_surge", "supertrend_bull", "obv_rising"
+                    ))
+                    if _n997_prem < 2:
+                        _ng_strikes += 1; _ng_reasons.append(f"other sector + only {_n997_prem} premium sigs (needs 2+)")
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -29733,8 +29742,12 @@ def run():
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
                                              + breakout_adj + _learned_bonus + rotation_flip_adj)
             # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
+            # Exception: unknown-sector stocks (other) don't earn the A+ discount
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
-            _grade_thresh = _eff_min_score - 5 if _grade_now == "A+" else _eff_min_score
+            _is_other_sector = (SECTOR_MAP.get(tk, "other") == "other")
+            _grade_thresh = (_eff_min_score if _is_other_sector
+                             else _eff_min_score - 5 if _grade_now == "A+"
+                             else _eff_min_score)
             # Score trend guard: if history shows falling-score entries fail, require +4 for them
             if _LEARNED_FALLING_SCORE_PENALTY:
                 _sh_now = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
