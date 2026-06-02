@@ -15225,7 +15225,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl_pct is not None:
         try:
             _c901_age_min = 9999.0
-            _c901_entry = next((t for t in tlog.get("trades", [])
+            _c901_entry = next((t for t in reversed(tlog.get("trades", []))
                                 if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _c901_entry:
                 try:
