@@ -24326,6 +24326,28 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 _c890_ac_q = ("BTC" if "BTC" in tk else "ETH" if "ETH" in tk else "ALT")
                 _nsl_adj += _nde("crypto_asset_perf", _c890_ac_q)
 
+            # ── High-confidence veto: neurons with extreme learned signals ──────
+            # When brain has ≥5 samples AND WR ≤25% or ≥80%: apply extra hard penalty/boost
+            _veto_adj = 0.0
+            try:
+                _grade_rec  = _ALL_NEURON_PERFS.get("grade_perf", {}).get(_fb_grade, {})
+                if isinstance(_grade_rec, dict) and _grade_rec.get("total", 0) >= 5:
+                    _gwr = float(_grade_rec.get("win_rate", 50) or 50)
+                    if _gwr <= 25:   _veto_adj -= 15   # Grade with proven terrible WR: hard block
+                    elif _gwr >= 80: _veto_adj += 8    # Grade with proven elite WR: extra boost
+                _ac_rec = _ALL_NEURON_PERFS.get("accum_perf", {}).get(_fb_ac_bkt, {})
+                if isinstance(_ac_rec, dict) and _ac_rec.get("total", 0) >= 5:
+                    _awr = float(_ac_rec.get("win_rate", 50) or 50)
+                    if _awr <= 25:   _veto_adj -= 10   # No accumulation proven losers: penalize hard
+                    elif _awr >= 80: _veto_adj += 5
+                _price_rec = _ALL_NEURON_PERFS.get("price_tier_perf", {}).get(_fb_ptier, {})
+                if isinstance(_price_rec, dict) and _price_rec.get("total", 0) >= 5:
+                    _ptwr = float(_price_rec.get("win_rate", 50) or 50)
+                    if _ptwr <= 25:  _veto_adj -= 8    # Micro-caps with proven poor WR
+                    elif _ptwr >= 80: _veto_adj += 4
+            except Exception:
+                pass
+            _nsl_adj += _veto_adj
             # Cap the full neural layer at ±30 (raised from 25 to match 765-neuron set)
             s += max(-30, min(30, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
