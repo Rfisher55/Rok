@@ -26155,9 +26155,9 @@ def run():
             # Let winners run at market open instead of dumping immediately on the 90min timer.
             _is_overnight = _fast_age_min >= 360  # held 6+ hours = overnight hold
             _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
-            if _fast_age_min >= 90 and not _grace_override:
-                # 90min unconditional exit — force capital recycling
-                _fast_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+            if _fast_age_min >= 120 and not _grace_override:
+                # 120min hard limit — always exit, no exceptions
+                _fast_reason = f"120min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
                     alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
@@ -26170,6 +26170,28 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
+            elif _fast_age_min >= 90 and not _grace_override:
+                # 90min check: exit flat/losing positions; allow super-momentum to ride to 120min
+                _fast_d_90 = live.get(sym, {}) or {}
+                _fast_sc_90 = score(sym, _fast_d_90) if _fast_d_90 else 0
+                _fast_rvol_90 = float(_fast_d_90.get("rvol", 1.0) or 1.0)
+                # Super-momentum extension: pnl>1% AND score>=60 AND rvol>1.5 = still running
+                if pnl_pct >= 1.0 and _fast_sc_90 >= 60 and _fast_rvol_90 >= 1.5 and not _close_guard:
+                    logger.info(f"HOLD {sym} 90min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 120min)")
+                else:
+                    _fast_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]
+                        del held[sym]
+                        peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"Fast sell failed {sym}: {_fe}")
+                    continue
             elif _grace_override:
                 # Overnight winner: position held 6h+ with ≥3% gain — extend cycle
                 # Exit when P&L drops by 1.5% from current high (protect gains) or at 4h mark
@@ -28148,9 +28170,11 @@ def run():
                     _spy_5m_ng = float(live.get("SPY", {}).get("chg5m", 0) or 0)
                     if _spy_5m_ng <= -0.1:
                         _ng_strikes += 1; _ng_reasons.append(f"SPY trending down intraday historically fails({_n179_ng.get('spy_trending_down',50):.0f}%WR)")
-                # N180: entry score decile green light
+                # N180: entry score decile green light (now distinguishes 95+ from 85-95)
                 _n180_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("entry_score_decile_perf",[])}
-                if tech_sc >= 85 and _n180_ng.get("score_85_plus", 0) >= 70:
+                if tech_sc >= 95 and _n180_ng.get("score_95_plus", 0) >= 70:
+                    _ng_green_lights += 2  # elite score tier = strong green
+                elif tech_sc >= 85 and (_n180_ng.get("score_85_95", 0) >= 70 or _n180_ng.get("score_85_plus", 0) >= 70):
                     _ng_green_lights += 1
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
@@ -30298,9 +30322,10 @@ def run():
                         _buy_signals_merged["spy_intraday_trend"] = _spy_it
                     except Exception:
                         _buy_signals_merged["spy_intraday_trend"] = "spy_flat"
-                    # N180: entry score decile
+                    # N180: entry score decile (expanded to capture 95+ tier)
                     try:
-                        if sc >= 85:        _sd = "score_85_plus"
+                        if sc >= 95:        _sd = "score_95_plus"
+                        elif sc >= 85:      _sd = "score_85_95"
                         elif sc >= 75:      _sd = "score_75_85"
                         elif sc >= 65:      _sd = "score_65_75"
                         else:               _sd = "score_55_65"
@@ -41941,6 +41966,33 @@ def run():
             if _above_vw and _below_vw and (_above_vw["win_rate"] - _below_vw["win_rate"]) >= 15:
                 _learn_log.append(f"Above-VWAP entries outperform by {_above_vw['win_rate']-_below_vw['win_rate']:.0f}pts — VWAP as key institutional filter confirmed")
 
+        # ── N881: Consecutive green days at entry vs outcome ──────────────────────
+        _n881_raw = tlog.get("consec_green_entry_perf", {})
+        _cgen_insights = []
+        for _cgenbk, _cgend in _n881_raw.items():
+            if _cgend.get("total", 0) >= 3:
+                _cgen_insights.append({"bucket": _cgenbk, "win_rate": _cgend.get("win_rate", 50),
+                                       "avg_pnl": _cgend.get("avg_pnl", 0), "total": _cgend.get("total", 0)})
+        if _cgen_insights:
+            _cgen_s = sorted(_cgen_insights, key=lambda x: -x["win_rate"])
+            _cgen_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR({s['total']})" for s in _cgen_s)
+            _learn_log.append(f"Consec green at entry WRs: {_cgen_sum}")
+
+        # ── N882: VWAP distance at entry vs outcome ────────────────────────────
+        _n882_raw = tlog.get("vwap_dist_entry_perf", {})
+        _vden_insights = []
+        for _vdenbk, _vdend in _n882_raw.items():
+            if _vdend.get("total", 0) >= 3:
+                _vden_insights.append({"bucket": _vdenbk, "win_rate": _vdend.get("win_rate", 50),
+                                       "avg_pnl": _vdend.get("avg_pnl", 0), "total": _vdend.get("total", 0)})
+        if _vden_insights:
+            _vden_s = sorted(_vden_insights, key=lambda x: -x["win_rate"])
+            _vden_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR({s['total']})" for s in _vden_s)
+            _learn_log.append(f"VWAP dist at entry WRs: {_vden_sum}")
+            _best_vden = _vden_s[0] if _vden_s else None
+            if _best_vden and _best_vden["win_rate"] >= 65:
+                _learn_log.append(f"Best VWAP entry tier '{_best_vden['bucket']}': {_best_vden['win_rate']:.0f}% WR")
+
         # ── 37. MACD State Neuron: MACD phase at entry vs outcome ─────────────────
         _mc_raw = tlog.get("macd_state_perf", {})
         _mc_insights = []
@@ -49278,6 +49330,8 @@ def run():
             "squeeze_perf":         _sq_insights,           # TTM squeeze breakout vs normal
             "urgency_perf":         _nu_insights,           # news catalyst urgency vs outcome
             "vwap_perf":            _vw_insights,           # VWAP position at entry vs outcome
+            "consec_green_entry_perf": _cgen_insights,       # N881: consecutive green days at entry
+            "vwap_dist_entry_perf": _vden_insights,          # N882: VWAP distance at entry
             "score_decay_perf":     _sd_insights,           # decay exit vs held outcomes
             "score_decay_threshold": _learned_decay_thresh,  # learned optimal decay trigger (pts)
             "poc_dist_perf":        _pc_insights,            # POC distance at entry vs outcome
