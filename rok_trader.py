@@ -28542,6 +28542,21 @@ def run():
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 83% WR
+                # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
+                _grade_lb = momentum_grade(_tk_sig_sc, tech_sc)
+                if _grade_lb == "F":
+                    _learned_bonus += _npen("grade_perf", "F", 30, -4)    # 12% WR: huge penalty
+                elif _grade_lb == "D":
+                    _learned_bonus += _npen("grade_perf", "D", 35, -2)    # ~30% WR: moderate penalty
+                elif _grade_lb in ("A+", "A"):
+                    _learned_bonus += _nbns("grade_perf", "A+", 65, 2)    # A+ bonus when data shows good WR
+                # Price tier: micro-cap (<$10) has 14% WR — penalize when confirmed
+                _pr_lb2 = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
+                _ptier_lb = "micro" if _pr_lb2 < 10 else "small" if _pr_lb2 < 30 else "mid" if _pr_lb2 < 100 else "large"
+                if _ptier_lb == "micro":
+                    _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
+                elif _ptier_lb == "small":
+                    _learned_bonus += _nbns("price_tier_perf", "small", 60, 1)   # 80% WR in data!
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
