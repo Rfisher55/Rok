@@ -1864,6 +1864,40 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N881: Consecutive green days at entry vs outcome ──────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_cg = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _cg_bkt = _buy_cg.get("consec_green_entry_perf", "no_streak") if _buy_cg else "no_streak"
+            _cg_perf = tlog.setdefault("consec_green_entry_perf", {})
+            _cgp = _cg_perf.setdefault(_cg_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _cg_bkt})
+            _cgp["total"] = _cgp.get("total", 0) + 1
+            _cgp["total_pnl"] = round(_cgp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _cgp["wins"] = _cgp.get("wins", 0) + 1
+            else: _cgp["losses"] = _cgp.get("losses", 0) + 1
+            if _cgp["total"] > 0:
+                _cgp["win_rate"] = round(_cgp["wins"] / _cgp["total"] * 100, 1)
+                _cgp["avg_pnl"]  = round(_cgp["total_pnl"] / _cgp["total"], 2)
+        except Exception:
+            pass
+
+    # ── N882: VWAP distance at entry vs outcome ────────────────────────────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_vd = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _vd_bkt = _buy_vd.get("vwap_dist_entry_perf", "at_vwap") if _buy_vd else "at_vwap"
+            _vd_perf = tlog.setdefault("vwap_dist_entry_perf", {})
+            _vdp = _vd_perf.setdefault(_vd_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _vd_bkt})
+            _vdp["total"] = _vdp.get("total", 0) + 1
+            _vdp["total_pnl"] = round(_vdp.get("total_pnl", 0.0) + pnl, 2)
+            if pnl > 0: _vdp["wins"] = _vdp.get("wins", 0) + 1
+            else: _vdp["losses"] = _vdp.get("losses", 0) + 1
+            if _vdp["total"] > 0:
+                _vdp["win_rate"] = round(_vdp["wins"] / _vdp["total"] * 100, 1)
+                _vdp["avg_pnl"]  = round(_vdp["total_pnl"] / _vdp["total"], 2)
+        except Exception:
+            pass
+
     # ── MACD State Neuron: MACD phase at entry vs trade outcome ──────────────────
     # Bull div (MACD diverging from price) = highest conviction; rising = confirming trend;
     # recovering = crossing from negative; negative = counter-trend entry risk.
@@ -23919,6 +23953,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
             elif _n855b_cnt_v <= 12: _n855b_pc_q = "8-12"
             else:                     _n855b_pc_q = "13+"
             _nsl_adj += _nde("position_count_v1_perf", _n855b_pc_q)
+            # N881: Consecutive green days at entry (injected into live[tk] before scoring)
+            _n881_cg = str(d.get("consec_green_entry_perf", "") or "")
+            if _n881_cg: _nsl_adj += _nde("consec_green_entry_perf", _n881_cg)
+            # N882: VWAP distance at entry (injected into live[tk] before scoring)
+            _n882_vd = str(d.get("vwap_dist_entry_perf", "") or "")
+            if _n882_vd: _nsl_adj += _nde("vwap_dist_entry_perf", _n882_vd)
             # Pattern entry perf (labels: cup_handle/vcp/double_bottom based on active pattern)
             if d.get("cup_handle"): _pat_entry_q = "cup_handle"
             elif d.get("vcp"):      _pat_entry_q = "vcp"
@@ -27379,14 +27419,20 @@ def run():
     _hours_market_elapsed = min(6.5, max(0, _minutes_since_open / 60.0)) if market_open else 0
     _paced_target = int(DAILY_TRADE_TARGET * (_hours_market_elapsed / 6.5)) if _hours_market_elapsed > 0 else 0
     _trade_deficit = max(0, _paced_target - _trades_today_count)
-    if _trade_deficit >= 30:
-        _pace_adj = -8  # far behind: override to minimum possible
-        _eff_min_score = 5  # floor — take any signal at all
-        logger.info(f"Trade pace EMERGENCY: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, threshold floored to 5")
-    elif _trade_deficit >= 15:
+    _pace_regime_ok = regime.get("regime", "neutral") not in ("bear",)  # don't push volume in bear market
+    if _trade_deficit >= 30 and _pace_regime_ok:
+        _pace_adj = -8  # far behind: lower aggressively
+        # Floor: in bear/vix-spike regimes use MIN_BUY_SCORE-5, else use 20
+        _pace_floor = 20 if not _vix_spike else max(MIN_BUY_SCORE, 30)
+        _eff_min_score = max(_pace_floor, _eff_min_score + _pace_adj)
+        logger.info(f"Trade pace EMERGENCY: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, threshold → {_eff_min_score}")
+    elif _trade_deficit >= 30:
+        _pace_adj = -4  # bear market: less aggressive pace push
+        logger.info(f"Trade pace (bear mode): deficit {_trade_deficit}, modest adj -4")
+    elif _trade_deficit >= 15 and _pace_regime_ok:
         _pace_adj = -8
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 8")
-    elif _trade_deficit >= 8:
+    elif _trade_deficit >= 8 and _pace_regime_ok:
         _pace_adj = -5
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 5")
     elif _trade_deficit >= 3:
@@ -27394,7 +27440,8 @@ def run():
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — lowering threshold by 3")
     else:
         _pace_adj = 0
-    _eff_min_score = max(5, _eff_min_score + _pace_adj)
+    if _trade_deficit < 30:  # regular (non-emergency) pace adj
+        _eff_min_score = max(20, _eff_min_score + _pace_adj)
     tlog["daily_trade_count"]  = _trades_today_count
     tlog["daily_trade_target"] = DAILY_TRADE_TARGET
     tlog["daily_trade_pace"]   = _paced_target
@@ -28233,7 +28280,45 @@ def run():
                     _learned_bonus += _nbns("pocket_pivot_perf", "pp", 65, 2)
                 if bool(_tk_sig_sc.get("ha_bull", False)):
                     _learned_bonus += _nbns("ha_trend_perf", "bullish", 62, 1)
-                _learned_bonus = max(-8, min(14, _learned_bonus))
+                # Expanded learned bonus checks — more signal/state combinations
+                if bool(_tk_sig_sc.get("cup_handle", False)):
+                    _learned_bonus += _nbns("cup_handle_perf", "cup", 65, 2)
+                if bool(_tk_sig_sc.get("double_bottom", False)):
+                    _learned_bonus += _nbns("double_bottom_perf", "double_bottom", 65, 2)
+                if bool(_tk_sig_sc.get("obv_rising", False)):
+                    _learned_bonus += _nbns("obv_trend_perf", "rising", 62, 1)
+                if bool(_tk_sig_sc.get("supertrend_bull", False)):
+                    _learned_bonus += _nbns("supertrend_perf", "bull", 62, 1)
+                if bool(_tk_sig_sc.get("ttm_squeeze_fired", False)):
+                    _learned_bonus += _nbns("squeeze_momentum_perf", "squeeze_fired", 65, 2)
+                if bool(_tk_sig_sc.get("donchian_up", False)):
+                    _learned_bonus += _nbns("donchian_breakout_entry_perf", "donchian_up", 62, 1)
+                if bool(_tk_sig_sc.get("orb_breakout", False)):
+                    _learned_bonus += _nbns("orb_quality_perf", "orb_up", 65, 2)
+                if bool(_tk_sig_sc.get("vwap_reclaim", False)):
+                    _learned_bonus += _nbns("vwap_reclaim_perf", "reclaim", 62, 1)
+                if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
+                    _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 1)
+                # Short float extremes: high short interest = squeeze potential, low = clean trend
+                _sf_lb = float(_tk_sig_sc.get("short_float", 0) or 0)
+                if _sf_lb >= 20:
+                    _learned_bonus += _nbns("short_float_perf", "extreme_short", 62, 1)
+                elif _sf_lb >= 10:
+                    _learned_bonus += _nbns("short_float_perf", "high_short", 62, 1)
+                # Breakout quality bonus
+                _bq_lb = bool(_tk_sig_sc.get("at_breakout", False)) and bool(_tk_sig_sc.get("rvol_surge", False))
+                if _bq_lb:
+                    _learned_bonus += _nbns("breakout_quality_perf", "high_vol_breakout", 65, 2)
+                # Squeeze + NR7 combo (max compression = explosive move)
+                if bool(_tk_sig_sc.get("ttm_squeeze_fired", False)) and bool(_tk_sig_sc.get("nr7_signal", False)):
+                    _learned_bonus += _nbns("squeeze_status_perf", "squeeze_nr7", 68, 3)
+                # RS rating quality
+                _rsr_lb = float(_tk_sig_sc.get("rs_rating", 0) or 0)
+                if _rsr_lb >= 85:
+                    _learned_bonus += _nbns("relative_strength_tier_perf", "elite_rs", 65, 2)
+                elif _rsr_lb <= 40:
+                    _learned_bonus += _npen("relative_strength_tier_perf", "weak_rs", 42, -1)
+                _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
 
@@ -28519,6 +28604,212 @@ def run():
                     live[tk]["n_open_at_entry"] = int(len(longs))
                 except Exception:
                     live[tk]["n_open_at_entry"] = 5
+                # ── Inject N831-N880 states so those neurons fire in score() ──
+                try:
+                    _inj_gap = float(live[tk].get("gap_pct", live[tk].get("pm_gap", 0)) or 0)
+                    live[tk]["gap_type_perf"] = (
+                        "large_gap_up" if _inj_gap > 3.0 else
+                        "moderate_gap_up" if _inj_gap >= 1.0 else
+                        "small_gap_up" if _inj_gap >= 0.2 else
+                        "flat_open" if _inj_gap >= -0.2 else "gap_down")
+                except Exception: pass
+                try:
+                    _inj_d2e = float(live[tk].get("days_to_earnings", live[tk].get("days_to_earn", 999)) or 999)
+                    _inj_eb = bool(live[tk].get("earnings_beat", False))
+                    live[tk]["earnings_phase_perf"] = (
+                        "earnings_imminent" if _inj_d2e <= 3 else
+                        "pre_earnings" if _inj_d2e <= 14 else
+                        "post_earnings" if _inj_eb else "neutral_earnings")
+                except Exception: pass
+                try:
+                    _inj_of = bool(live[tk].get("options_flow", live[tk].get("unusual_calls", False)))
+                    _inj_dp = bool(live[tk].get("dark_pool", False))
+                    live[tk]["institutional_flow_perf"] = (
+                        "strong_inst_flow" if _inj_of and _inj_dp else
+                        "options_flow_only" if _inj_of else
+                        "dark_pool_only" if _inj_dp else "no_inst_signal")
+                except Exception: pass
+                try:
+                    _inj_p52 = float(live[tk].get("pct_52w_high", live[tk].get("near_52w_high", 0)) or 0)
+                    if _inj_p52 <= 0: _inj_p52 = 50.0
+                    live[tk]["price_vs_52w_perf"] = (
+                        "at_52w_high" if _inj_p52 > 95 else
+                        "near_52w_high" if _inj_p52 >= 85 else
+                        "upper_half_range" if _inj_p52 >= 60 else
+                        "middle_range" if _inj_p52 >= 40 else "lower_half_range")
+                except Exception: pass
+                try:
+                    _inj_srs = float(live[tk].get("sector_rs", live[tk].get("rs_sector", 0)) or 0)
+                    live[tk]["sector_momentum_perf"] = (
+                        "sector_leader" if _inj_srs > 70 else
+                        "above_avg_sector" if _inj_srs >= 55 else
+                        "avg_sector" if _inj_srs >= 45 else "lagging_sector")
+                except Exception: pass
+                try:
+                    _inj_sf = float(live[tk].get("short_float", live[tk].get("short_float_pct", 0)) or 0)
+                    live[tk]["short_float_perf"] = (
+                        "extreme_short" if _inj_sf > 25 else
+                        "high_short" if _inj_sf >= 15 else
+                        "moderate_short" if _inj_sf >= 8 else "low_short")
+                except Exception: pass
+                try:
+                    _inj_mc = float(live[tk].get("market_cap_b", live[tk].get("market_cap", 0)) or 0)
+                    live[tk]["market_cap_tier_perf"] = (
+                        "mega_cap" if _inj_mc > 200 else
+                        "large_cap" if _inj_mc >= 10 else
+                        "mid_cap" if _inj_mc >= 2 else "small_cap")
+                except Exception: pass
+                try:
+                    _inj_fs = float(live[tk].get("float_shares_m", live[tk].get("float_shares", 200)) or 200)
+                    live[tk]["float_quality_perf"] = (
+                        "tight_float" if _inj_fs < 20 else
+                        "small_float" if _inj_fs < 100 else
+                        "medium_float" if _inj_fs <= 500 else "large_float")
+                except Exception: pass
+                try:
+                    _inj_nhr = float(live[tk].get("news_age_hours", live[tk].get("news_hours_ago", 48)) or 48)
+                    live[tk]["news_freshness_perf"] = (
+                        "breaking_news" if _inj_nhr <= 2 else
+                        "fresh_news" if _inj_nhr <= 12 else
+                        "day_old_news" if _inj_nhr <= 48 else "stale_news")
+                except Exception: pass
+                try:
+                    _inj_b52 = bool(live[tk].get("breakout_52w", False))
+                    _inj_bvs = bool(live[tk].get("rvol_surge", live[tk].get("vol_surge", False)))
+                    _inj_bat = bool(live[tk].get("at_breakout", False))
+                    live[tk]["breakout_quality_perf"] = (
+                        "confirmed_52w_breakout" if _inj_b52 and _inj_bvs else
+                        "high_vol_breakout" if _inj_bat and _inj_bvs else
+                        "quiet_breakout" if _inj_bat else "no_breakout")
+                except Exception: pass
+                try:
+                    _inj_orb = bool(live[tk].get("orb_breakout", False))
+                    _inj_gah = bool(live[tk].get("gap_and_hold", False))
+                    live[tk]["orb_status_perf"] = (
+                        "orb_gap_hold" if _inj_orb and _inj_gah else
+                        "orb_only" if _inj_orb else
+                        "gap_hold_only" if _inj_gah else "no_orb")
+                except Exception: pass
+                try:
+                    _inj_ttm = bool(live[tk].get("ttm_squeeze_fired", live[tk].get("ttm_squeeze", False)))
+                    _inj_nr7 = bool(live[tk].get("nr7_signal", live[tk].get("nr7", False)))
+                    live[tk]["squeeze_status_perf"] = (
+                        "squeeze_nr7" if _inj_ttm and _inj_nr7 else
+                        "squeeze_only" if _inj_ttm else
+                        "nr7_only" if _inj_nr7 else "no_squeeze")
+                except Exception: pass
+                try:
+                    _inj_px = float(live[tk].get("price", 0) or 0)
+                    live[tk]["price_level_perf"] = (
+                        "penny_stock" if _inj_px < 5 else
+                        "low_price" if _inj_px < 20 else
+                        "mid_price" if _inj_px < 100 else
+                        "high_price" if _inj_px <= 500 else "elite_price")
+                except Exception: pass
+                try:
+                    _inj_rsi = float(live[tk].get("rsi", live[tk].get("daily_rsi", 50)) or 50)
+                    live[tk]["entry_rsi_zone_perf"] = (
+                        "overbought" if _inj_rsi > 75 else
+                        "strong_momentum" if _inj_rsi >= 60 else
+                        "neutral_rsi" if _inj_rsi >= 45 else
+                        "oversold_bounce" if _inj_rsi >= 30 else "extreme_oversold")
+                except Exception: pass
+                try:
+                    _inj_mbull = bool(live[tk].get("macd_bull", (live[tk].get("ema_cross", 0) or 0) > 0))
+                    _inj_mhist = bool((live[tk].get("macd", 0) or 0) > 0)
+                    live[tk]["macd_signal_perf"] = (
+                        "macd_bull_positive" if _inj_mbull and _inj_mhist else
+                        "macd_bull_crossover" if _inj_mbull else
+                        "macd_histogram_pos" if _inj_mhist else "macd_bearish")
+                except Exception: pass
+                try:
+                    _inj_ib = bool(live[tk].get("inside_bar", False))
+                    _inj_nr7b = bool(live[tk].get("nr7_signal", live[tk].get("nr7", False)))
+                    live[tk]["inside_bar_context_perf"] = (
+                        "inside_nr7" if _inj_ib and _inj_nr7b else
+                        "inside_bar_only" if _inj_ib else
+                        "nr7_base" if _inj_nr7b else "normal_bar")
+                except Exception: pass
+                try:
+                    _inj_beta = float(live[tk].get("beta", 1.0) or 1.0)
+                    live[tk]["spy_correlation_perf"] = (
+                        "high_beta" if _inj_beta > 1.5 else
+                        "market_follower" if _inj_beta >= 0.8 else
+                        "low_correlation" if _inj_beta >= 0.4 else "uncorrelated")
+                except Exception: pass
+                try:
+                    _inj_spy5 = float(live[tk].get("spy_5d", live[tk].get("spy_trend", 0)) or 0)
+                    live[tk]["spy_trend_strength_perf"] = (
+                        "strong_bull_trend" if _inj_spy5 > 2 else
+                        "mild_bull_trend" if _inj_spy5 >= 0.5 else
+                        "flat_trend" if _inj_spy5 >= -0.5 else
+                        "mild_bear_trend" if _inj_spy5 >= -2 else "strong_bear_trend")
+                except Exception: pass
+                try:
+                    _inj_srs2 = float(live[tk].get("sector_rs", 50) or 50)
+                    _inj_sc5d = float(live[tk].get("sector_etf_chg5d_at_entry", live[tk].get("sector_chg5d", 0)) or 0)
+                    live[tk]["sector_rotation_perf"] = (
+                        "sector_accelerating" if _inj_srs2 > 65 and _inj_sc5d > 2 else
+                        "sector_strong" if _inj_srs2 > 55 else
+                        "sector_neutral" if _inj_srs2 >= 45 else "sector_weak")
+                except Exception: pass
+                try:
+                    _inj_pm = float(live[tk].get("pm_gap", live[tk].get("gap_pct", 0)) or 0)
+                    live[tk]["pre_market_gap_perf"] = (
+                        "large_pm_gap" if _inj_pm > 5 else
+                        "moderate_pm_gap" if _inj_pm >= 2 else
+                        "small_pm_gap" if _inj_pm >= 0.5 else
+                        "flat_pm" if _inj_pm >= -0.5 else "pm_gapdown")
+                except Exception: pass
+                try:
+                    _inj_rsr = float(live[tk].get("rs_rating", live[tk].get("rs5", 0)) or 0)
+                    live[tk]["relative_strength_tier_perf"] = (
+                        "elite_rs" if _inj_rsr > 90 else
+                        "strong_rs" if _inj_rsr >= 75 else
+                        "above_avg_rs" if _inj_rsr >= 60 else
+                        "avg_rs" if _inj_rsr >= 40 else "weak_rs")
+                except Exception: pass
+                try:
+                    _inj_poscnt = int(len(longs))
+                    live[tk]["position_count_v1_perf"] = (
+                        "1-3" if _inj_poscnt <= 3 else
+                        "4-7" if _inj_poscnt <= 7 else
+                        "8-12" if _inj_poscnt <= 12 else "13+")
+                except Exception: pass
+                try:
+                    _inj_mc2 = float(live[tk].get("market_cap_b", 0) or 0)
+                    _inj_s5d = float(live[tk].get("spy_5d", 0) or 0)
+                    live[tk]["market_cap_momentum_perf"] = (
+                        "mega_bull" if _inj_mc2 > 200 and _inj_s5d > 1 else
+                        "small_bull" if _inj_mc2 < 5 and _inj_s5d > 1 else
+                        "mega_defensive" if _inj_mc2 > 100 and _inj_s5d < -1 else
+                        "small_risk_off" if _inj_mc2 < 5 and _inj_s5d < -1 else
+                        "neutral_cap_momentum")
+                except Exception: pass
+                try:
+                    _inj_rvol = float(live[tk].get("rvol", live[tk].get("vol_ratio", 1)) or 1)
+                    live[tk]["rvol_tier_perf"] = (
+                        "extreme_rvol" if _inj_rvol >= 5 else
+                        "high_rvol" if _inj_rvol >= 3 else
+                        "elevated_rvol" if _inj_rvol >= 1.5 else
+                        "normal_rvol" if _inj_rvol >= 0.8 else "low_rvol")
+                except Exception: pass
+                try:
+                    _inj_cg = int(live[tk].get("consec_green", live[tk].get("consecutive_green_days", 0)) or 0)
+                    live[tk]["consec_green_entry_perf"] = (
+                        "4plus_green" if _inj_cg >= 4 else
+                        "3_green" if _inj_cg == 3 else
+                        "2_green" if _inj_cg == 2 else
+                        "1_green" if _inj_cg == 1 else "no_streak")
+                except Exception: pass
+                try:
+                    _inj_vwp = float(live[tk].get("vwap_pos", live[tk].get("vwap_pct", 0)) or 0)
+                    live[tk]["vwap_dist_entry_perf"] = (
+                        "far_above_vwap" if _inj_vwp > 2 else
+                        "above_vwap" if _inj_vwp > 0.3 else
+                        "at_vwap" if _inj_vwp >= -0.3 else
+                        "below_vwap" if _inj_vwp >= -2 else "far_below_vwap")
+                except Exception: pass
             except Exception:
                 pass
 
@@ -39029,6 +39320,26 @@ def run():
                         _n880_perf = tlog.setdefault("volatility_regime_shift_perf", {})
                         _n880_perf.setdefault(_n880_state, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
                         _buy_signals_merged["volatility_regime_shift_perf"] = _n880_state
+                    except Exception:
+                        pass
+                    # N881 — Consecutive green days at entry
+                    try:
+                        _n881_cg = int(sc.get("consec_green", sc.get("consecutive_green_days", 0)) or 0)
+                        _n881_s = ("4plus_green" if _n881_cg >= 4 else
+                                   "3_green" if _n881_cg == 3 else
+                                   "2_green" if _n881_cg == 2 else
+                                   "1_green" if _n881_cg == 1 else "no_streak")
+                        _buy_signals_merged["consec_green_entry_perf"] = _n881_s
+                    except Exception:
+                        pass
+                    # N882 — VWAP distance at entry
+                    try:
+                        _n882_vwp = float(sc.get("vwap_pos", sc.get("vwap_pct", 0)) or 0)
+                        _n882_s = ("far_above_vwap" if _n882_vwp > 2 else
+                                   "above_vwap" if _n882_vwp > 0.3 else
+                                   "at_vwap" if _n882_vwp >= -0.3 else
+                                   "below_vwap" if _n882_vwp >= -2 else "far_below_vwap")
+                        _buy_signals_merged["vwap_dist_entry_perf"] = _n882_s
                     except Exception:
                         pass
 
