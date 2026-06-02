@@ -28429,6 +28429,52 @@ def run():
                     _learned_bonus += _nbns("relative_strength_tier_perf", "elite_rs", 65, 2)
                 elif _rsr_lb <= 40:
                     _learned_bonus += _npen("relative_strength_tier_perf", "weak_rs", 42, -1)
+                # High RVOL bonus: extreme volume surge at entry → higher conviction
+                _rv_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1)) or 1)
+                if _rv_lb >= 5:
+                    _learned_bonus += _nbns("relative_volume_spike_perf", "extreme_rvol", 60, 2)
+                elif _rv_lb >= 2.5:
+                    _learned_bonus += _nbns("relative_volume_spike_perf", "high_rvol", 58, 1)
+                elif _rv_lb < 0.8:
+                    _learned_bonus += _npen("relative_volume_spike_perf", "normal_rvol", 48, -1)
+                # VWAP position bonus: entering above VWAP = trend direction confirmed
+                _vwp_lb = float(_tk_sig_sc.get("vwap_pos", _tk_sig_sc.get("vwap_distance", 0)) or 0)
+                if _vwp_lb > 0.5:
+                    _learned_bonus += _nbns("vwap_distance_perf", "above_vwap", 60, 1)
+                elif _vwp_lb > 2:
+                    _learned_bonus += _nbns("vwap_distance_perf", "far_above_vwap", 60, 1)
+                elif _vwp_lb < -0.5:
+                    _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
+                # SPY alignment bonus: trading with the market direction
+                _spy_it_lb = str(_tk_sig_sc.get("spy_intraday_trend", _tk_sig_sc.get("spy_intraday_dir", "flat")) or "flat")
+                if "up" in _spy_it_lb:
+                    _learned_bonus += _nbns("spy_intraday_trend_perf", "spy_up", 58, 1)
+                elif "down" in _spy_it_lb:
+                    _learned_bonus += _npen("spy_intraday_trend_perf", "spy_down", 48, -1)
+                # MACD signal bonus: bullish cross with momentum = higher conviction
+                _macd_lb = float(_tk_sig_sc.get("macd", 0) or 0)
+                _macds_lb = float(_tk_sig_sc.get("macd_signal", _tk_sig_sc.get("macd_sig", 0)) or 0)
+                if _macd_lb > _macds_lb and _macd_lb > 0:
+                    _learned_bonus += _nbns("macd_cross_state_perf", "macd_bullish_cross", 60, 1)
+                elif _macd_lb < _macds_lb:
+                    _learned_bonus += _npen("macd_cross_state_perf", "macd_bearish_cross", 48, -1)
+                # Strong close position: price in top 30% of day range = bullish breadth
+                _dh_lb = float(_tk_sig_sc.get("day_high", 0) or 0)
+                _dl_lb = float(_tk_sig_sc.get("day_low", 0) or 0)
+                _pr_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
+                if _dh_lb > _dl_lb > 0 and _pr_lb > 0:
+                    _rng_lb = (_pr_lb - _dl_lb) / (_dh_lb - _dl_lb)
+                    if _rng_lb >= 0.7:
+                        _learned_bonus += _nbns("close_vs_range_perf", "strong_close", 60, 1)
+                    elif _rng_lb <= 0.3:
+                        _learned_bonus += _npen("close_vs_range_perf", "weak_close", 48, -1)
+                # Signal density: dense confirmed signals = higher probability setup
+                _sig_cnt_lb = sum(1 for _sk2 in ["at_breakout","orb_breakout","ttm_squeeze_fired",
+                    "obv_rising","higher_lows","vcp","cup_handle","ema_stacked_bull","double_bottom"] if _tk_sig_sc.get(_sk2))
+                if _sig_cnt_lb >= 4:
+                    _learned_bonus += _nbns("signal_density_perf", "dense_signals", 62, 2)
+                elif _sig_cnt_lb >= 2:
+                    _learned_bonus += _nbns("signal_density_perf", "moderate_signals", 58, 1)
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
@@ -29072,6 +29118,204 @@ def run():
                         live[tk]["breakout_confirmation_perf"] = "low_vol_breakout"
                     else:
                         live[tk]["breakout_confirmation_perf"] = "no_breakout"
+                except Exception: pass
+                # ── Wave-2 batch neuron injections ──────────────────────────────────
+                try:  # relative_volume_spike/surge/tier/trend perfs (all read same rvol)
+                    _inj_rv = float(_inj_d.get("rvol", _inj_d.get("vol_ratio", 1.0)) or 1.0)
+                    _inj_rv_st = ("extreme_rvol" if _inj_rv >= 5 else "high_rvol" if _inj_rv >= 2.5
+                                  else "mid_rvol" if _inj_rv >= 1.5 else "normal_rvol")
+                    live[tk]["relative_volume_spike_perf"]  = _inj_rv_st
+                    live[tk]["relative_volume_surge_perf"]  = _inj_rv_st
+                    live[tk]["relative_volume_tier_perf"]   = _inj_rv_st
+                    live[tk]["relative_volume_trend_perf"]  = _inj_rv_st
+                    live[tk]["relative_volume_entry_perf"]  = _inj_rv_st
+                except Exception: pass
+                try:  # spy_intraday_trend_perf + spy_intraday_perf state-field
+                    _inj_sp_dir = str(_inj_d.get("spy_intraday_dir", _inj_d.get("spy_day_bucket", "flat")) or "flat")
+                    _inj_sp_st  = ("spy_up" if "up" in _inj_sp_dir else "spy_down" if "down" in _inj_sp_dir else "spy_flat")
+                    live[tk]["spy_intraday_trend_perf"] = _inj_sp_st
+                    live[tk]["spy_intraday_trend"]      = _inj_sp_st  # for spy_intraday_perf state-field neuron
+                    live[tk]["spy_intraday_perf"]       = _inj_sp_st
+                except Exception: pass
+                try:  # sector_etf_momentum_perf
+                    _inj_sec_mom = str(_inj_d.get("sector_etf_momentum", "neutral") or "neutral")
+                    _inj_sec_st  = ("sector_leading" if "bull" in _inj_sec_mom or "strong" in _inj_sec_mom
+                                    else "sector_lagging" if "bear" in _inj_sec_mom or "weak" in _inj_sec_mom
+                                    else "sector_inline")
+                    live[tk]["sector_etf_momentum_perf"] = _inj_sec_st
+                except Exception: pass
+                try:  # vwap_distance_perf + vwap_position_entry_perf + vwap_position_state + price_vs_vwap_state
+                    _inj_vwp2 = float(_inj_d.get("vwap_pos", _inj_d.get("vwap_distance", 0)) or 0)
+                    _inj_vwp_st = ("far_above_vwap" if _inj_vwp2 > 2 else "above_vwap" if _inj_vwp2 > 0.3
+                                   else "near_vwap" if _inj_vwp2 >= -0.3 else
+                                   "below_vwap" if _inj_vwp2 >= -2 else "far_below_vwap")
+                    live[tk]["vwap_distance_perf"]         = _inj_vwp_st
+                    live[tk]["vwap_position_entry_perf"]   = _inj_vwp_st
+                    live[tk]["vwap_position_state"]        = _inj_vwp_st  # for vwap_position_perf state-field
+                    live[tk]["price_vs_vwap_state"]        = _inj_vwp_st  # for price_vs_vwap_perf state-field
+                    live[tk]["vwap_relationship_entry_perf"] = _inj_vwp_st
+                    # vwap_distance_pct_state for vwap_distance_pct_perf
+                    _inj_vwp_pct_st = ("far_above" if _inj_vwp2 > 3 else "above" if _inj_vwp2 > 0.5
+                                       else "near_vwap" if abs(_inj_vwp2) <= 0.5 else
+                                       "below" if _inj_vwp2 >= -3 else "far_below")
+                    live[tk]["vwap_distance_pct_state"] = _inj_vwp_pct_st
+                except Exception: pass
+                try:  # resistance_proximity_perf: use near_52w_high (% to 52w high, negative = below)
+                    _inj_52h = float(_inj_d.get("near_52w_high", _inj_d.get("dist_52w_high", -10)) or -10)
+                    live[tk]["resistance_proximity_perf"] = (
+                        "at_resistance" if abs(_inj_52h) < 1 else
+                        "approaching_resistance" if _inj_52h > -5 else "clear_of_resistance")
+                except Exception: pass
+                try:  # vix_regime_state + vix_level_state (for vix_regime_perf / vix_level_perf)
+                    _inj_vix2 = float(_inj_d.get("vix", 20) or 20)
+                    _inj_vix_rg = ("low_vol" if _inj_vix2 < 15 else "normal_vol" if _inj_vix2 < 20
+                                   else "high_vol" if _inj_vix2 < 30 else "extreme_vol")
+                    live[tk]["vix_regime_state"] = _inj_vix_rg
+                    live[tk]["vix_level_state"]  = _inj_vix_rg
+                    live[tk]["vix_trend_at_entry"] = (
+                        "vix_falling" if _inj_vix2 < 18 else "vix_rising" if _inj_vix2 > 25 else "vix_stable")
+                except Exception: pass
+                try:  # macd_cross_state (for macd_cross_state_perf)
+                    _inj_macd   = float(_inj_d.get("macd", 0) or 0)
+                    _inj_macds  = float(_inj_d.get("macd_signal", _inj_d.get("macd_sig", 0)) or 0)
+                    live[tk]["macd_cross_state"] = (
+                        "macd_bullish_cross" if _inj_macd > _inj_macds and _inj_macd > 0 else
+                        "macd_bearish_cross" if _inj_macd < _inj_macds else
+                        "macd_bullish" if _inj_macd > 0 else "macd_bearish")
+                except Exception: pass
+                try:  # entry_hour_bucket (for entry_hour_bucket_perf state-field neuron)
+                    from datetime import datetime as _inj_dth, timezone as _inj_tzh
+                    _inj_hr = _inj_dth.now(_inj_tzh.utc).hour - 5  # EST offset
+                    if _inj_hr < 0: _inj_hr += 24
+                    live[tk]["entry_hour_bucket"] = (
+                        "power_hour_open" if _inj_hr in (9,) else
+                        "morning_session" if _inj_hr in (10, 11) else
+                        "midday_lull" if _inj_hr in (12, 13) else
+                        "afternoon_session" if _inj_hr in (14, 15) else "power_hour_close")
+                except Exception: pass
+                try:  # seasonal_month (for seasonal_month_perf state-field neuron)
+                    from datetime import datetime as _inj_dtm, timezone as _inj_tzm
+                    live[tk]["seasonal_month"] = _inj_dtm.now(_inj_tzm.utc).strftime("%B").lower()
+                except Exception: pass
+                try:  # price_vs_open_state (for price_vs_open_perf state-field neuron)
+                    _inj_pr   = float(_inj_d.get("price", _inj_d.get("last", 0)) or 0)
+                    _inj_opn  = float(_inj_d.get("open", _inj_d.get("day_open", 0)) or 0)
+                    if _inj_pr > 0 and _inj_opn > 0:
+                        _inj_pvo = (_inj_pr - _inj_opn) / _inj_opn * 100
+                        live[tk]["price_vs_open_state"] = (
+                            "well_above_open" if _inj_pvo > 1.5 else "above_open" if _inj_pvo > 0.3
+                            else "near_open" if abs(_inj_pvo) <= 0.3 else
+                            "below_open" if _inj_pvo >= -1.5 else "well_below_open")
+                except Exception: pass
+                try:  # premarket_gap_dir_state (for premarket_gap_direction_perf state-field neuron)
+                    _inj_pmg2 = float(_inj_d.get("pm_gap_pct", _inj_d.get("gap_pct", 0)) or 0)
+                    live[tk]["premarket_gap_dir_state"] = (
+                        "gap_up_large" if _inj_pmg2 > 3 else "gap_up_small" if _inj_pmg2 > 0.5
+                        else "gap_down_large" if _inj_pmg2 < -3 else "gap_down_small" if _inj_pmg2 < -0.5
+                        else "flat_open")
+                except Exception: pass
+                try:  # market_hours_quadrant_state (for market_hours_quadrant_perf)
+                    from datetime import datetime as _inj_dtq, timezone as _inj_tzq
+                    _inj_mh = _inj_dtq.now(_inj_tzq.utc).hour - 5
+                    if _inj_mh < 0: _inj_mh += 24
+                    live[tk]["market_hours_quadrant_state"] = (
+                        "q1_open" if _inj_mh < 10 else "q2_morning" if _inj_mh < 12
+                        else "q3_midday" if _inj_mh < 14 else "q4_close")
+                except Exception: pass
+                try:  # breadth_direction (for breadth_direction_perf direct-state neuron)
+                    _inj_adl = float(_inj_d.get("advance_decline_ratio", _inj_d.get("adl", 1.0)) or 1.0)
+                    live[tk]["breadth_direction"] = (
+                        "breadth_strong_up" if _inj_adl > 2.0 else "breadth_up" if _inj_adl > 1.2
+                        else "breadth_down" if _inj_adl < 0.8 else "breadth_neutral")
+                except Exception: pass
+                try:  # dollar_vol_tier (for dollar_vol_perf direct-state neuron)
+                    _inj_dv = float(_inj_d.get("dollar_volume", 0) or 0)
+                    if _inj_dv == 0:
+                        _inj_pr2 = float(_inj_d.get("price", _inj_d.get("last", 0)) or 0)
+                        _inj_vol = float(_inj_d.get("volume", 0) or 0)
+                        _inj_dv  = _inj_pr2 * _inj_vol
+                    live[tk]["dollar_vol_tier"] = (
+                        "high_dollar_vol" if _inj_dv > 50_000_000 else
+                        "mid_dollar_vol" if _inj_dv > 5_000_000 else "low_dollar_vol")
+                except Exception: pass
+                try:  # atr_pct_state (for atr_pct_perf direct-state neuron)
+                    _inj_atr_p = float(_inj_d.get("atr_pct", _inj_d.get("atr", 0)) or 0)
+                    live[tk]["atr_pct_state"] = (
+                        "high_atr" if _inj_atr_p > 4 else "mid_atr" if _inj_atr_p > 1.5 else "low_atr")
+                except Exception: pass
+                try:  # bb_position_state (for bb_position_perf direct-state neuron)
+                    _inj_bb2 = float(_inj_d.get("bb_pctb", _inj_d.get("bb_percent_b", 0.5)) or 0.5)
+                    live[tk]["bb_position_state"] = (
+                        "above_upper_bb" if _inj_bb2 > 1.0 else "upper_bb" if _inj_bb2 > 0.8
+                        else "lower_bb" if _inj_bb2 < 0.2 else "below_lower_bb" if _inj_bb2 < 0
+                        else "mid_bb")
+                except Exception: pass
+                try:  # signal_count_at_entry (for signal_density_perf state-field neuron)
+                    _inj_sig_keys = ["at_breakout","orb_breakout","ttm_squeeze_fired","gap_and_hold",
+                                     "obv_rising","higher_lows","vcp","cup_handle","ema_stacked_bull",
+                                     "double_bottom","supertrend_bull","ha_bull","mfi_bull_div",
+                                     "force_index_rising","kc_breakout","donchian_up","poc_breakout"]
+                    _inj_sig_cnt = sum(1 for _sk2 in _inj_sig_keys if _inj_d.get(_sk2))
+                    live[tk]["signal_count_at_entry"] = (
+                        "dense_signals" if _inj_sig_cnt >= 5 else "moderate_signals" if _inj_sig_cnt >= 3
+                        else "sparse_signals" if _inj_sig_cnt >= 1 else "no_signals")
+                except Exception: pass
+                try:  # sector_type (for sector_type_perf direct-state neuron)
+                    _inj_sec_key = SECTOR_MAP.get(tk, "other")
+                    live[tk]["sector_type"] = _inj_sec_key
+                except Exception: pass
+                try:  # ticker_momentum_state (for ticker_momentum_perf state-field neuron)
+                    _inj_rs1t = float(_inj_d.get("rs1", 0) or 0)
+                    _inj_rs5t = float(_inj_d.get("rs5", 0) or 0)
+                    _inj_rs63t = float(_inj_d.get("rs63", 0) or 0)
+                    live[tk]["ticker_momentum_state"] = (
+                        "strong_momentum" if _inj_rs1t > 3 and _inj_rs5t > 3 else
+                        "building_momentum" if _inj_rs1t > 1 or _inj_rs5t > 1 else
+                        "declining_momentum" if _inj_rs1t < -1 and _inj_rs5t < -1 else "flat_momentum")
+                except Exception: pass
+                try:  # breadth_level_state (for market_breadth_level_perf state-field neuron)
+                    _inj_adlr = float(_inj_d.get("advance_decline_ratio", _inj_d.get("adl", 1.0)) or 1.0)
+                    live[tk]["breadth_level_state"] = (
+                        "strong_breadth" if _inj_adlr > 2.0 else "good_breadth" if _inj_adlr > 1.3
+                        else "weak_breadth" if _inj_adlr < 0.7 else "neutral_breadth")
+                except Exception: pass
+                try:  # ticker_beta_bucket_state (for ticker_beta_bucket_perf state-field neuron)
+                    _inj_beta = float(_inj_d.get("beta", _inj_d.get("beta_1y", 1.0)) or 1.0)
+                    live[tk]["ticker_beta_bucket_state"] = (
+                        "high_beta" if _inj_beta > 1.5 else "low_beta" if _inj_beta < 0.7 else "normal_beta")
+                except Exception: pass
+                try:  # open_gap_state (for open_gap_perf state-field neuron)
+                    _inj_og = float(_inj_d.get("gap_pct", _inj_d.get("pm_gap_pct", 0)) or 0)
+                    live[tk]["open_gap_state"] = (
+                        "big_gap_up" if _inj_og > 3 else "small_gap_up" if _inj_og > 0.5
+                        else "big_gap_down" if _inj_og < -3 else "small_gap_down" if _inj_og < -0.5
+                        else "flat")
+                except Exception: pass
+                try:  # cap_style_alignment (for cap_style_perf direct-state neuron)
+                    # align market cap tier with momentum to detect regime fit
+                    _inj_mcc  = float(_inj_d.get("market_cap", 0) or 0)
+                    _inj_rs1c = float(_inj_d.get("rs1", 0) or 0)
+                    if _inj_mcc > 50:
+                        live[tk]["cap_style_alignment"] = ("large_cap_bull" if _inj_rs1c > 1 else "large_cap_bear")
+                    elif _inj_mcc > 2:
+                        live[tk]["cap_style_alignment"] = ("mid_cap_bull" if _inj_rs1c > 1 else "mid_cap_flat")
+                    else:
+                        live[tk]["cap_style_alignment"] = ("small_cap_bull" if _inj_rs1c > 2 else "small_cap_bear")
+                except Exception: pass
+                try:  # intraday_trend_persistence_state (for intraday_trend_persistence_perf)
+                    # based on how long price has been above VWAP + rvol confirmation
+                    _inj_vwpt = float(_inj_d.get("vwap_pos", 0) or 0)
+                    _inj_rvt  = float(_inj_d.get("rvol", 1) or 1)
+                    live[tk]["intraday_trend_persistence_state"] = (
+                        "persistent_bull" if _inj_vwpt > 0.5 and _inj_rvt > 1.5 else
+                        "persistent_bear" if _inj_vwpt < -0.5 and _inj_rvt > 1.5 else
+                        "choppy" if _inj_rvt < 0.8 else "neutral_drift")
+                except Exception: pass
+                try:  # pm_volume_tier (for pm_volume_perf state-field neuron)
+                    _inj_pmvol = float(_inj_d.get("pm_volume", _inj_d.get("premarket_volume", 0)) or 0)
+                    live[tk]["pm_volume_tier"] = (
+                        "high_pm_vol" if _inj_pmvol > 500_000 else
+                        "mid_pm_vol" if _inj_pmvol > 100_000 else "low_pm_vol")
                 except Exception: pass
             except Exception:
                 pass
