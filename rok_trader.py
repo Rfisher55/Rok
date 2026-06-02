@@ -3876,6 +3876,9 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             else:        _n172p["losses"] += 1
             _n172p["win_rate"] = round(_n172p["wins"] / _n172p["total"] * 100, 1)
             _n172p["avg_pnl"]  = round(_n172p["total_pnl"] / _n172p["total"], 2)
+            # Store per-ticker last exit trigger so injection blocks can feed it back into score()
+            _tlog_let = tlog.setdefault("last_exit_trigger_map", {})
+            _tlog_let[sym] = _n172_trigger
         except Exception:
             pass
 
@@ -30877,9 +30880,13 @@ def run():
                                                 else "neutral")
                 except Exception:
                     live[tk]["options_flow"] = "neutral"
-                # last_exit_trigger (set at exit time; seed with manual so neuron fires during buys)
-                if not live[tk].get("last_exit_trigger"):
-                    live[tk]["last_exit_trigger"] = "manual"
+                # last_exit_trigger (updated from tlog map set by N172 exit recording)
+                try:
+                    _let_map = tlog.get("last_exit_trigger_map", {})
+                    live[tk]["last_exit_trigger"] = _let_map.get(tk, live[tk].get("last_exit_trigger", "manual"))
+                except Exception:
+                    if not live[tk].get("last_exit_trigger"):
+                        live[tk]["last_exit_trigger"] = "manual"
                 # ── R52: Score-function dead computed fields ──
                 # ad_trend (N721 accumulation_distribution_perf)
                 try:
