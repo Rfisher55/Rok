@@ -28453,7 +28453,7 @@ def run():
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 62, 2)
                 if bool(_tk_sig_sc.get("force_index_rising", False)):
-                    _learned_bonus += _nbns("force_index_div_perf", "rising", 60, 1)
+                    _learned_bonus += _nbns("force_index_perf", "rising", 60, 1)
                 if bool(_tk_sig_sc.get("mom_accel", False)):
                     _learned_bonus += _nbns("momentum_persistence_perf", "accelerating", 60, 1)
                 if bool(_tk_sig_sc.get("ichimoku_above", False)):
@@ -28655,6 +28655,65 @@ def run():
                 _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
                 if not _st_bul_lb and not _st_bear_lb:
                     _learned_bonus += _nbns("st_gap_perf", "no_st", 60, 1)      # 80% WR n=15
+                # Price acceleration: accelerating=64% WR n=22; decelerating=22% WR n=9
+                if bool(_tk_sig_sc.get("price_accel_pos", False)):
+                    _learned_bonus += _nbns("price_accel_perf", "accelerating", 60, 1)
+                else:
+                    _learned_bonus += _npen("price_accel_perf", "decelerating", 30, -2)
+                # Trend confirmation (ST+PSAR combo): both=62% WR n=21; neither=22% WR n=9
+                _tc_st_lb = bool(_tk_sig_sc.get("supertrend_bull"))
+                _tc_ps_lb = bool(_tk_sig_sc.get("psar_bull"))
+                if _tc_st_lb and _tc_ps_lb:
+                    _learned_bonus += _nbns("trend_conf_perf", "both", 60, 1)
+                elif not _tc_st_lb and not _tc_ps_lb:
+                    _learned_bonus += _npen("trend_conf_perf", "neither", 30, -2)
+                # Keltner channel inside (no breakout): 22% WR n=9
+                _kc_pos_lb = float(_tk_sig_sc.get("kc_pos", 50) or 50)
+                if not bool(_tk_sig_sc.get("kc_breakout", False)) and _kc_pos_lb < 80:
+                    _learned_bonus += _npen("kc_zone_perf", "inside", 30, -2)
+                # Vol ratio + momentum combo: partial=69% WR n=16; weak=12% WR n=8
+                _vratio_lb2 = float(_tk_sig_sc.get("vol_ratio", 1.0) or 1.0)
+                _macc_lb2 = bool(_tk_sig_sc.get("mom_accel", False))
+                if _vratio_lb2 >= 1.5 and _macc_lb2:
+                    pass  # confirmed — handled by other neurons
+                elif _vratio_lb2 >= 1.2 or _macc_lb2:
+                    _learned_bonus += _nbns("vol_ratio_mom_perf", "partial", 60, 1)
+                else:
+                    _learned_bonus += _npen("vol_ratio_mom_perf", "weak", 25, -2)
+                # MTF alignment none: 30% WR n=10
+                _mtf_sc_lb = (int(bool(_tk_sig_sc.get("mtf_aligned")))
+                              + int(bool(_tk_sig_sc.get("ema_stacked_bull")))
+                              + int(float(_tk_sig_sc.get("roc20", 0) or 0) > 0))
+                if _mtf_sc_lb == 0:
+                    _learned_bonus += _npen("mtf_align_perf", "none", 35, -1)
+                # Force index weak (neither rising nor div): 11% WR n=9
+                if not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
+                    _learned_bonus += _npen("force_index_perf", "weak", 25, -2)
+                # RS rating tier: elite>=90 = 69% WR n=13; average 50-75 = 31% WR n=13
+                _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
+                if _rsr3_lb >= 90:
+                    _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 1)
+                elif 50 <= _rsr3_lb < 75:
+                    _learned_bonus += _npen("rs_rating_perf", "average", 35, -1)
+                # Not at breakout level: 30% WR n=10
+                if not bool(_tk_sig_sc.get("at_breakout", False)):
+                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 35, -1)
+                # RS63 quality: lagging (<0.5) = 30% WR n=10
+                _rs63_ql_lb = float(_tk_sig_sc.get("rs63", 0) or 0)
+                if _rs63_ql_lb < 0.5:
+                    _learned_bonus += _npen("rs63_q_tier_perf", "lagging", 35, -1)
+                # Premium signal tier: weak (<2 premium signals) = 30% WR n=10
+                _prem_ct_lb = sum(bool(_tk_sig_sc.get(k)) for k in [
+                    "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
+                    "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising"])
+                if _prem_ct_lb < 2:
+                    _learned_bonus += _npen("premium_tier_perf", "weak", 35, -1)
+                elif _prem_ct_lb >= 4:
+                    _learned_bonus += _nbns("premium_tier_perf", "strong", 60, 1)
+                # Price tier large (>=100): 68% WR n=19
+                _pr_tier_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
+                if _pr_tier_lb >= 100:
+                    _learned_bonus += _nbns("price_tier_perf", "large", 60, 1)
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
