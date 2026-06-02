@@ -29352,9 +29352,20 @@ def run():
                     _learned_bonus += _npen("signal_freshness_perf", "building_signal", 47, -1)  # 45.5% WR n=77
                 elif _fresh_lb in ("stale_signal", "very_stale_signal"):
                     _learned_bonus += _npen("signal_freshness_perf", _fresh_lb, 38, -1)
-                # Score persistence: first_appear=9.1% WR n=77 (CATASTROPHIC); new_entry=60.9% WR n=46
-                _pers_runs_lb = int(_tk_sig_sc.get("persistence_runs", 0) or 0)
-                _sp_type_lb = str(_tk_sig_sc.get("score_persistence", "") or "")
+                # Score persistence: read DIRECTLY from source data (not live[tk] — injections run after this block)
+                _pers_runs_lb = int(_curr_persist.get(tk, 0) or 0)  # direct from persist counter (live[tk] not set yet)
+                try:
+                    _sp_sh_lb = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    if len(_sp_sh_lb) >= 3:
+                        _sp_avg_lb = sum(_sp_sh_lb) / len(_sp_sh_lb); _sp_last_lb = _sp_sh_lb[-1]; _sp_first_lb = _sp_sh_lb[0]
+                        if _sp_avg_lb >= 65 and _sp_last_lb >= 65: _sp_type_lb = "persistent_strong"
+                        elif _sp_last_lb > _sp_first_lb + 5:       _sp_type_lb = "rising"
+                        elif _sp_last_lb < _sp_first_lb - 5:       _sp_type_lb = "declining"
+                        else:                                        _sp_type_lb = "stable"
+                    else:
+                        _sp_type_lb = "new_entry"
+                except Exception:
+                    _sp_type_lb = "new_entry"
                 if _pers_runs_lb <= 0:
                     _learned_bonus += _npen("score_persistence_perf", "first_appear", 15, -8)  # 9.1% WR n=77
                 if _sp_type_lb == "new_entry":
