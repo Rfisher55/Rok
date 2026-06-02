@@ -21719,10 +21719,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           "in_squeeze" if d.get("in_squeeze") else "no_squeeze")
             _nsl_adj += _nsl_edge("squeeze_momentum_perf", _nsl_sqz_s)
 
-            # N591: Entry session quality (time-of-day momentum context)
-            _nsl_hr = datetime.now().hour
-            _nsl_sess_s = ("morning_session" if 9 <= _nsl_hr < 11 else
-                           "afternoon_session" if 14 <= _nsl_hr <= 16 else "midday_session")
+            # N591: Entry session quality (time-of-day in ET, not UTC)
+            # Use d.get("et_hour") when injected by buy loop, else approximate from UTC
+            _nsl_et_hr = int(d.get("et_hour", -1) or -1)
+            if _nsl_et_hr < 0:  # fallback: rough UTC → ET (EDT -4)
+                _nsl_utc_hr = datetime.now(timezone.utc).hour
+                _nsl_et_hr  = (_nsl_utc_hr - 4) % 24
+            _nsl_sess_s = ("morning_session" if 9 <= _nsl_et_hr < 11 else
+                           "afternoon_session" if 14 <= _nsl_et_hr <= 16 else "midday_session")
             _nsl_adj += _nsl_edge("entry_session_quality_perf", _nsl_sess_s)
 
             # N599: Weekly trend alignment (higher timeframe context)
@@ -22981,6 +22985,27 @@ def run():
                     _coin_reduce = [c for c, d in _coin_perf.items() if d["n"] >= 3 and d["win_rate"] < 35]
                     _lp["crypto_coin_boost"]  = _coin_boost
                     _lp["crypto_coin_reduce"] = _coin_reduce
+
+                # ── Adaptive crypto entry threshold: raise bar when crypto WR is poor ──
+                # Self-tuning: recent crypto performance adjusts the minimum score requirement.
+                # If crypto is losing (WR < 35%), demand better signals before entering.
+                # If crypto is winning (WR > 60%), slightly relax to capture more opportunities.
+                _cr_all = [t for t in _oh_trades
+                           if t.get("action") in ("SELL","SELL_HALF")
+                           and "/" in t.get("ticker","")
+                           and t.get("pnl_pct") is not None]
+                _cr_last20 = sorted(_cr_all, key=lambda t: t.get("time",""))[-20:]
+                if len(_cr_last20) >= 5:
+                    _cr_wr20 = sum(1 for t in _cr_last20 if float(t.get("pnl_pct",0)or 0) > 0) / len(_cr_last20)
+                    _cur_thr = float(_lp.get("best_crypto_score_tier", CRYPTO_MIN_SCORE))
+                    if _cr_wr20 < 0.35:   # poor WR — raise bar by 5 (max +20 above floor)
+                        _new_thr = min(CRYPTO_MIN_SCORE + 20, _cur_thr + 5)
+                        _lp["best_crypto_score_tier"] = _new_thr
+                        logger.info(f"Crypto threshold raised: WR={_cr_wr20:.0%} → min_score={_new_thr:.0f}")
+                    elif _cr_wr20 > 0.60:  # good WR — lower bar slightly (but never below floor)
+                        _new_thr = max(CRYPTO_MIN_SCORE, _cur_thr - 3)
+                        _lp["best_crypto_score_tier"] = _new_thr
+                        logger.info(f"Crypto threshold relaxed: WR={_cr_wr20:.0%} → min_score={_new_thr:.0f}")
 
                 # ── Daily PnL summary ──
                 _eq_sells  = [t for t in _oh_sells if "/" not in t.get("ticker","")]
@@ -25636,7 +25661,7 @@ def run():
             except Exception:
                 _learned_bonus = 0
 
-            # Inject live state context for N894-N900 dead neurons (not in signals dict)
+            # Inject live state context for N893-N900 dead neurons (not in signals dict)
             try:
                 _n894_trades = [t for t in tlog.get("trades", [])
                                 if t.get("action") in ("SELL","SELL_HALF","COVER")
@@ -25654,6 +25679,18 @@ def run():
                 live[tk]["regime_stable_now"]     = "established" if len(set(_rh_ctx)) <= 1 and len(_rh_ctx) >= 3 else "transitioning"
                 live[tk]["sectors_advancing_now"] = sum(1 for sv in tlog.get("sector_etf_trends", {}).values()
                                                         if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
+                # N893: inject current ET hour so score() can look up et_hour_perf
+                # (previously dead because live[tk] never had "et_hour")
+                _now_et_ctx = datetime.now(timezone.utc)
+                _yr_ctx = _now_et_ctx.year
+                _mar_ctx = datetime(_yr_ctx, 3, 8, 2, tzinfo=timezone.utc)
+                _dst_s_ctx = _mar_ctx + timedelta(days=(6 - _mar_ctx.weekday()) % 7)
+                _nov_ctx = datetime(_yr_ctx, 11, 1, 2, tzinfo=timezone.utc)
+                _dst_e_ctx = _nov_ctx + timedelta(days=(6 - _nov_ctx.weekday()) % 7)
+                _et_off_ctx = -4 if _dst_s_ctx <= _now_et_ctx < _dst_e_ctx else -5
+                _et_ctx = _now_et_ctx + timedelta(hours=_et_off_ctx)
+                live[tk]["et_hour"] = _et_ctx.hour
+                live[tk]["et_min"]  = _et_ctx.minute
             except Exception:
                 pass
 
@@ -31931,9 +31968,9 @@ def run():
                     except Exception:
                         _n590_s = "mid_range"
                     _buy_signals_merged["price_range_percentile_perf"] = _n590_s
-                    # N591: Trading session quality at entry
+                    # N591: Trading session quality at entry (ET hour, not UTC)
                     try:
-                        _n591_h = datetime.now().hour
+                        _n591_h = _et_hour if '_et_hour' in dir() else (now_utc.hour - 4) % 24
                         if 9 <= _n591_h < 11:
                             _n591_s = "morning_session"
                         elif 14 <= _n591_h <= 16:
@@ -32169,9 +32206,9 @@ def run():
                     except Exception:
                         _n609_s = "neutral_breadth"
                     _buy_signals_merged["market_breadth_perf"] = _n609_s
-                    # N610: Composite time-of-day score bucket
+                    # N610: Composite time-of-day score bucket (ET hour, not UTC)
                     try:
-                        _n610_h = datetime.now().hour
+                        _n610_h = _et_hour if '_et_hour' in dir() else (now_utc.hour - 4) % 24
                         if _n610_h == 9 or (_n610_h == 15):
                             _n610_s = "prime_window"
                         elif _n610_h == 10:
@@ -35233,10 +35270,10 @@ def run():
                         _buy_signals_merged["daily_pnl_context_perf"] = _n820_s
                     except Exception:
                         pass
-                    # N821: Market Hour Context
+                    # N821: Market Hour Context (ET hour, not UTC)
                     try:
                         _n821_s = "midday"
-                        _h = sc.get("et_hour", datetime.now().hour)
+                        _h = sc.get("et_hour", _et_hour if '_et_hour' in dir() else (now_utc.hour - 4) % 24)
                         if 9 <= _h < 10:
                             _n821_s = "prime_open"
                         elif 10 <= _h < 11:
