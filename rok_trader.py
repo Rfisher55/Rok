@@ -9344,8 +9344,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n540 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n540_field = _buy_n540.get("risk_reward_at_entry_perf", "good_rr") if _buy_n540 else "good_rr"
-            _n540_perf = tlog.setdefault("risk_reward_at_entry_perf", {})
+            _n540_field = _buy_n540.get("risk_reward_v1_perf", "good_rr") if _buy_n540 else "good_rr"
+            _n540_perf = tlog.setdefault("risk_reward_v1_perf", {})
             _n540p = _n540_perf.setdefault(_n540_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n540_field})
             _n540p["total"] += 1; _n540p["total_pnl"] = round(_n540p["total_pnl"] + pnl, 2)
             if pnl > 0: _n540p["wins"] += 1
@@ -9374,8 +9374,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n542 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n542_field = _buy_n542.get("float_rotation_perf", "normal_rotation") if _buy_n542 else "normal_rotation"
-            _n542_perf = tlog.setdefault("float_rotation_perf", {})
+            _n542_field = _buy_n542.get("float_rotation_v1_perf", "normal_rotation") if _buy_n542 else "normal_rotation"
+            _n542_perf = tlog.setdefault("float_rotation_v1_perf", {})
             _n542p = _n542_perf.setdefault(_n542_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n542_field})
             _n542p["total"] += 1; _n542p["total_pnl"] = round(_n542p["total_pnl"] + pnl, 2)
             if pnl > 0: _n542p["wins"] += 1
@@ -9524,8 +9524,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n552 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n552_field = _buy_n552.get("opening_range_breakout_perf", "inside_orb") if _buy_n552 else "inside_orb"
-            _n552_perf = tlog.setdefault("opening_range_breakout_perf", {})
+            _n552_field = _buy_n552.get("orb_quality_v1_perf", "inside_orb") if _buy_n552 else "inside_orb"
+            _n552_perf = tlog.setdefault("orb_quality_v1_perf", {})
             _n552p = _n552_perf.setdefault(_n552_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n552_field})
             _n552p["total"] += 1; _n552p["total_pnl"] = round(_n552p["total_pnl"] + pnl, 2)
             if pnl > 0: _n552p["wins"] += 1
@@ -9539,8 +9539,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n553 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n553_field = _buy_n553.get("institutional_ownership_perf", "medium_inst_own") if _buy_n553 else "medium_inst_own"
-            _n553_perf = tlog.setdefault("institutional_ownership_perf", {})
+            _n553_field = _buy_n553.get("inst_own_quality_perf", "medium_inst_own") if _buy_n553 else "medium_inst_own"
+            _n553_perf = tlog.setdefault("inst_own_quality_perf", {})
             _n553p = _n553_perf.setdefault(_n553_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n553_field})
             _n553p["total"] += 1; _n553p["total_pnl"] = round(_n553p["total_pnl"] + pnl, 2)
             if pnl > 0: _n553p["wins"] += 1
@@ -9974,8 +9974,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n582 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n582_field = _buy_n582.get("mean_reversion_setup_perf", "no_mean_rev") if _buy_n582 else "no_mean_rev"
-            _n582_perf = tlog.setdefault("mean_reversion_setup_perf", {})
+            _n582_field = _buy_n582.get("mean_rev_v1_perf", "no_mean_rev") if _buy_n582 else "no_mean_rev"
+            _n582_perf = tlog.setdefault("mean_rev_v1_perf", {})
             _n582p = _n582_perf.setdefault(_n582_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n582_field})
             _n582p["total"] += 1; _n582p["total_pnl"] = round(_n582p["total_pnl"] + pnl, 2)
             if pnl > 0: _n582p["wins"] += 1
@@ -10289,8 +10289,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n603 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n603_field = _buy_n603.get("sector_rotation_perf", "neutral_sector") if _buy_n603 else "neutral_sector"
-            _n603_perf = tlog.setdefault("sector_rotation_perf", {})
+            _n603_field = _buy_n603.get("sector_rotation_v1_perf", "neutral_sector") if _buy_n603 else "neutral_sector"
+            _n603_perf = tlog.setdefault("sector_rotation_v1_perf", {})
             _n603p = _n603_perf.setdefault(_n603_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n603_field})
             _n603p["total"] += 1; _n603p["total_pnl"] = round(_n603p["total_pnl"] + pnl, 2)
             if pnl > 0: _n603p["wins"] += 1
@@ -10469,8 +10469,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n615 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n615_field = _buy_n615.get("options_flow_signal_perf", "neutral_flow") if _buy_n615 else "neutral_flow"
-            _n615_perf = tlog.setdefault("options_flow_signal_perf", {})
+            _n615_field = _buy_n615.get("options_flow_v1_perf", "neutral_flow") if _buy_n615 else "neutral_flow"
+            _n615_perf = tlog.setdefault("options_flow_v1_perf", {})
             _n615p = _n615_perf.setdefault(_n615_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n615_field})
             _n615p["total"] += 1; _n615p["total_pnl"] = round(_n615p["total_pnl"] + pnl, 2)
             if pnl > 0: _n615p["wins"] += 1
@@ -10904,8 +10904,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n644 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n644_field = _buy_n644.get("insider_activity_perf", "no_insider_activity") if _buy_n644 else "no_insider_activity"
-            _n644_perf = tlog.setdefault("insider_activity_perf", {})
+            _n644_field = _buy_n644.get("insider_activity_v1_perf", "no_insider_activity") if _buy_n644 else "no_insider_activity"
+            _n644_perf = tlog.setdefault("insider_activity_v1_perf", {})
             _n644p = _n644_perf.setdefault(_n644_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n644_field})
             _n644p["total"] += 1; _n644p["total_pnl"] = round(_n644p["total_pnl"] + pnl, 2)
             if pnl > 0: _n644p["wins"] += 1
@@ -23073,6 +23073,64 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                     _n471_gap_q = "gap_down"
             _nsl_adj += _nde("premarket_gap_v1_perf", _n471_gap_q)
 
+            # N540: Risk/reward quality (excellent_rr/good_rr/poor_rr)
+            _n540_atr_pct_v = float(d.get("atr_pct", 1.5) or 1.5)
+            _n540_rr_q = ("excellent_rr" if _n540_atr_pct_v >= 2.0 else "poor_rr" if _n540_atr_pct_v < 1.0 else "good_rr")
+            _nsl_adj += _nde("risk_reward_v1_perf", _n540_rr_q)
+
+            # N542: Float rotation rate (high_rotation/normal_rotation/low_rotation)
+            _n542_rvol_v = float(d.get("rvol", 1.0) or 1.0)
+            _n542_rot_q = ("high_rotation" if _n542_rvol_v > 3.0 else "low_rotation" if _n542_rvol_v < 0.7 else "normal_rotation")
+            _nsl_adj += _nde("float_rotation_v1_perf", _n542_rot_q)
+
+            # N552: ORB quality (orb_breakout/inside_orb/orb_breakdown)
+            _n552_orb_v  = bool(d.get("orb_breakout", d.get("orb_up", False)))
+            _n552_ib_v   = bool(d.get("inside_bar", False))
+            if   _n552_orb_v: _n552_orb_q = "orb_breakout"
+            elif _n552_ib_v:  _n552_orb_q = "inside_orb"
+            else:             _n552_orb_q = "orb_breakdown"
+            _nsl_adj += _nde("orb_quality_v1_perf", _n552_orb_q)
+
+            # N553: Institutional ownership quality (high_inst_own/medium_inst_own/low_inst_own)
+            _n553_inst_v = float(d.get("institutional_ownership", d.get("inst_own", 0.5)) or 0.5)
+            if   _n553_inst_v > 0.70: _n553_inst_q = "high_inst_own"
+            elif _n553_inst_v >= 0.30: _n553_inst_q = "medium_inst_own"
+            else:                     _n553_inst_q = "low_inst_own"
+            _nsl_adj += _nde("inst_own_quality_perf", _n553_inst_q)
+
+            # N582: Mean reversion setup (strong_mean_rev/moderate_mean_rev/no_mean_rev)
+            _n582_rsi_v = float(d.get("rsi", 50) or 50)
+            _n582_bb_v  = float(d.get("bb_pct", d.get("bb_pos", 50) / 100 if d.get("bb_pos") else 0.5) or 0.5)
+            if (_n582_rsi_v < 30 or _n582_rsi_v > 70) and (_n582_bb_v <= 0.1 or _n582_bb_v >= 0.9):
+                _n582_mr_q = "strong_mean_rev"
+            elif _n582_rsi_v < 35 or _n582_rsi_v > 65:
+                _n582_mr_q = "moderate_mean_rev"
+            else:
+                _n582_mr_q = "no_mean_rev"
+            _nsl_adj += _nde("mean_rev_v1_perf", _n582_mr_q)
+
+            # N603: Sector rotation signal (hot_sector/neutral_sector/cold_sector)
+            _n603_etf_v = float(d.get("sector_etf_1d", d.get("sector_day_pct", d.get("rs_sector", 0))) or 0)
+            if   _n603_etf_v >= 1.0:  _n603_sec_q = "hot_sector"
+            elif _n603_etf_v <= -1.0: _n603_sec_q = "cold_sector"
+            else:                     _n603_sec_q = "neutral_sector"
+            _nsl_adj += _nde("sector_rotation_v1_perf", _n603_sec_q)
+
+            # N615: Options flow signal (bullish_sweep/call_buying/put_buying/neutral_flow)
+            _n615_of_v = str(d.get("options_flow", d.get("unusual_options", "")) or "").lower()
+            if   any(x in _n615_of_v for x in ("sweep", "bullish_sweep")): _n615_opt_q = "bullish_sweep"
+            elif any(x in _n615_of_v for x in ("call_buy", "call buying")):  _n615_opt_q = "call_buying"
+            elif any(x in _n615_of_v for x in ("put_buy", "put buying")):    _n615_opt_q = "put_buying"
+            else:                                                              _n615_opt_q = "neutral_flow"
+            _nsl_adj += _nde("options_flow_v1_perf", _n615_opt_q)
+
+            # N644: Insider activity (insider_buying/insider_selling/no_insider_activity)
+            _n644_ins_v = float(d.get("insider_net_shares", d.get("insider_shares", d.get("insider_buying", 0))) or 0)
+            if   _n644_ins_v > 0: _n644_ins_q = "insider_buying"
+            elif _n644_ins_v < 0: _n644_ins_q = "insider_selling"
+            else:                 _n644_ins_q = "no_insider_activity"
+            _nsl_adj += _nde("insider_activity_v1_perf", _n644_ins_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -32692,7 +32750,7 @@ def run():
                             _n540_s = "poor_rr"
                     except Exception:
                         _n540_s = "good_rr"
-                    _buy_signals_merged["risk_reward_at_entry_perf"] = _n540_s
+                    _buy_signals_merged["risk_reward_v1_perf"] = _n540_s
                     # N541: Short interest ratio at entry (SI ratio %)
                     try:
                         _n541_si = float(d.get("short_float", d.get("short_interest_ratio", 0)) or 0)
@@ -32722,7 +32780,7 @@ def run():
                             _n542_s = "low_rotation"
                     except Exception:
                         _n542_s = "normal_rotation"
-                    _buy_signals_merged["float_rotation_perf"] = _n542_s
+                    _buy_signals_merged["float_rotation_v1_perf"] = _n542_s
                     # N543: NYSE tick trend at entry (tick avg)
                     try:
                         _n543_tick = float(tlog.get("tick_avg", d.get("tick_avg", 0)) or 0)
@@ -32855,7 +32913,7 @@ def run():
                             _n552_s = "orb_breakdown"
                     except Exception:
                         _n552_s = "inside_orb"
-                    _buy_signals_merged["opening_range_breakout_perf"] = _n552_s
+                    _buy_signals_merged["orb_quality_v1_perf"] = _n552_s
                     # N553: Institutional ownership % at entry
                     try:
                         _n553_inst = float(d.get("institutional_ownership", d.get("inst_own_pct", 0.5)) or 0.5)
@@ -32867,7 +32925,7 @@ def run():
                             _n553_s = "low_inst_own"
                     except Exception:
                         _n553_s = "medium_inst_own"
-                    _buy_signals_merged["institutional_ownership_perf"] = _n553_s
+                    _buy_signals_merged["inst_own_quality_perf"] = _n553_s
                     # N554: Analyst consensus at entry
                     try:
                         _n554_rec = float(d.get("analyst_rec_score", d.get("analyst_count_buy", 0)) or 0)
@@ -33219,7 +33277,7 @@ def run():
                             _n582_s = "no_mean_rev"
                     except Exception:
                         _n582_s = "no_mean_rev"
-                    _buy_signals_merged["mean_reversion_setup_perf"] = _n582_s
+                    _buy_signals_merged["mean_rev_v1_perf"] = _n582_s
                     # N583: Breakout authenticity at entry
                     try:
                         _n583_vr  = float(d.get("breakout_confirmed", d.get("vol_ratio", 1.0)) or 1.0)
@@ -33482,7 +33540,7 @@ def run():
                             _n603_s = "neutral_sector"
                     except Exception:
                         _n603_s = "neutral_sector"
-                    _buy_signals_merged["sector_rotation_perf"] = _n603_s
+                    _buy_signals_merged["sector_rotation_v1_perf"] = _n603_s
                     # N604: Pre-market volume signal at entry
                     try:
                         _n604_pmv = float(d.get("pm_volume", d.get("premarket_vol", 0)) or 0)
@@ -33644,7 +33702,7 @@ def run():
                             _n615_s = "neutral_flow"
                     except Exception:
                         _n615_s = "neutral_flow"
-                    _buy_signals_merged["options_flow_signal_perf"] = _n615_s
+                    _buy_signals_merged["options_flow_v1_perf"] = _n615_s
                     # N616: 13F institutional filing signal at entry
                     try:
                         _n616_if = str(d.get("inst_filing", d.get("13f_change", "no_change")) or "no_change").lower()
@@ -34038,7 +34096,7 @@ def run():
                             _n644_s = "no_insider_activity"
                     except Exception:
                         _n644_s = "no_insider_activity"
-                    _buy_signals_merged["insider_activity_perf"] = _n644_s
+                    _buy_signals_merged["insider_activity_v1_perf"] = _n644_s
                     # N645: Earnings season phase
                     try:
                         _n645_now = datetime.now()
@@ -39511,9 +39569,9 @@ def run():
         _n537_list = _prev_learned.get("spy_momentum_entry_perf", [])
         _n538_list = _prev_learned.get("earnings_proximity_entry_perf", [])
         _n539_list = _prev_learned.get("price_acceleration_entry_perf", [])
-        _n540_list = _prev_learned.get("risk_reward_at_entry_perf", [])
+        _n540_list = _prev_learned.get("risk_reward_v1_perf", [])
         _n541_list = _prev_learned.get("short_int_ratio_v2_perf", [])
-        _n542_list = _prev_learned.get("float_rotation_perf", [])
+        _n542_list = _prev_learned.get("float_rotation_v1_perf", [])
         _n543_list = _prev_learned.get("tick_trend_entry_perf", [])
         _n544_list = _prev_learned.get("market_phase_entry_perf", [])
         _n545_list = _prev_learned.get("sector_rs_v2_perf", [])
@@ -39523,8 +39581,8 @@ def run():
         _n549_list = _prev_learned.get("close_vs_range_perf", [])
         _n550_list = _prev_learned.get("consecutive_up_days_perf", [])
         _n551_list = _prev_learned.get("pm_gap_direction_perf", [])
-        _n552_list = _prev_learned.get("opening_range_breakout_perf", [])
-        _n553_list = _prev_learned.get("institutional_ownership_perf", [])
+        _n552_list = _prev_learned.get("orb_quality_v1_perf", [])
+        _n553_list = _prev_learned.get("inst_own_quality_perf", [])
         _n554_list = _prev_learned.get("analyst_consensus_perf", [])
         _n555_list = _prev_learned.get("earnings_growth_rate_perf", [])
         _n556_list = _prev_learned.get("revenue_growth_rate_perf", [])
@@ -39553,7 +39611,7 @@ def run():
         _n579_list = _prev_learned.get("gamma_exposure_perf", [])
         _n580_list = _prev_learned.get("market_regime_vix_perf", [])
         _n581_list = _prev_learned.get("trend_following_score_perf", [])
-        _n582_list = _prev_learned.get("mean_reversion_setup_perf", [])
+        _n582_list = _prev_learned.get("mean_rev_v1_perf", [])
         _n583_list = _prev_learned.get("breakout_false_signal_perf", [])
         _n584_list = _prev_learned.get("intraday_momentum_shift_perf", [])
         _n585_list = _prev_learned.get("sector_news_catalyst_perf", [])
@@ -39574,7 +39632,7 @@ def run():
         _n600_list = _prev_learned.get("momentum_score_bucket_perf", [])
         _n601_list = _prev_learned.get("bid_ask_spread_perf", [])
         _n602_list = _prev_learned.get("news_recency_perf", [])
-        _n603_list = _prev_learned.get("sector_rotation_perf", [])
+        _n603_list = _prev_learned.get("sector_rotation_v1_perf", [])
         _n604_list = _prev_learned.get("pre_market_volume_perf", [])
         _n605_list = _prev_learned.get("breakout_volume_confirm_perf", [])
         _n606_list = _prev_learned.get("trend_day_type_perf", [])
@@ -39586,7 +39644,7 @@ def run():
         _n612_list = _prev_learned.get("catalyst_type_detail_perf", [])
         _n613_list = _prev_learned.get("price_action_quality_perf", [])
         _n614_list = _prev_learned.get("market_cap_size_perf", [])
-        _n615_list = _prev_learned.get("options_flow_signal_perf", [])
+        _n615_list = _prev_learned.get("options_flow_v1_perf", [])
         _n616_list = _prev_learned.get("institutional_filing_perf", [])
         _n617_list = _prev_learned.get("relative_strength_vs_spy_perf", [])
         _n618_list = _prev_learned.get("gap_fill_proximity_perf", [])
@@ -39615,7 +39673,7 @@ def run():
         _n641_list = _prev_learned.get("pivot_point_proximity_perf", [])
         _n642_list = _prev_learned.get("float_rotation_perf", [])
         _n643_list = _prev_learned.get("short_interest_perf", [])
-        _n644_list = _prev_learned.get("insider_activity_perf", [])
+        _n644_list = _prev_learned.get("insider_activity_v1_perf", [])
         _n645_list = _prev_learned.get("earnings_season_phase_perf", [])
         _n646_list = _prev_learned.get("put_call_ratio_perf", [])
         _n647_list = _prev_learned.get("vwap_distance_perf", [])
@@ -45214,7 +45272,7 @@ def run():
             _learn_log.append(f"N539 Price Accel: accelerating_breakout={_a_n539['win_rate']:.0f}% decelerating_move={_b_n539['win_rate']:.0f}%WR")
 
         # ── N540: Risk/Reward at Entry tuner ────────────────────
-        _n540_raw = tlog.get("risk_reward_at_entry_perf", {})
+        _n540_raw = tlog.get("risk_reward_v1_perf", {})
         _n540_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n540_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n540 = next((s for s in _n540_list if s.get("state")=="excellent_rr"), _n540_list[0] if _n540_list else {"win_rate":50})
         _b_n540 = next((s for s in _n540_list if s.get("state")=="poor_rr"), _n540_list[-1] if _n540_list else {"win_rate":50})
@@ -45230,7 +45288,7 @@ def run():
             _learn_log.append(f"N541 Short Interest: high_si={_a_n541['win_rate']:.0f}% low_si={_b_n541['win_rate']:.0f}%WR")
 
         # ── N542: Float Rotation entry tuner ────────────────────
-        _n542_raw = tlog.get("float_rotation_perf", {})
+        _n542_raw = tlog.get("float_rotation_v1_perf", {})
         _n542_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n542_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n542 = next((s for s in _n542_list if s.get("state")=="high_rotation"), _n542_list[0] if _n542_list else {"win_rate":50})
         _b_n542 = next((s for s in _n542_list if s.get("state")=="low_rotation"), _n542_list[-1] if _n542_list else {"win_rate":50})
@@ -45310,7 +45368,7 @@ def run():
             _learn_log.append(f"N551 Pre-Market Gap: gap_up_strong={_a_n551['win_rate']:.0f}% gap_down_strong={_b_n551['win_rate']:.0f}%WR")
 
         # ── N552: Opening Range Breakout entry tuner ────────────────────
-        _n552_raw = tlog.get("opening_range_breakout_perf", {})
+        _n552_raw = tlog.get("orb_quality_v1_perf", {})
         _n552_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n552_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n552 = next((s for s in _n552_list if s.get("state")=="orb_breakout"), _n552_list[0] if _n552_list else {"win_rate":50})
         _b_n552 = next((s for s in _n552_list if s.get("state")=="orb_breakdown"), _n552_list[-1] if _n552_list else {"win_rate":50})
@@ -45318,7 +45376,7 @@ def run():
             _learn_log.append(f"N552 ORB Pattern: orb_breakout={_a_n552['win_rate']:.0f}% orb_breakdown={_b_n552['win_rate']:.0f}%WR")
 
         # ── N553: Institutional Ownership entry tuner ────────────────────
-        _n553_raw = tlog.get("institutional_ownership_perf", {})
+        _n553_raw = tlog.get("inst_own_quality_perf", {})
         _n553_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n553_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n553 = next((s for s in _n553_list if s.get("state")=="high_inst_own"), _n553_list[0] if _n553_list else {"win_rate":50})
         _b_n553 = next((s for s in _n553_list if s.get("state")=="low_inst_own"), _n553_list[-1] if _n553_list else {"win_rate":50})
@@ -45550,7 +45608,7 @@ def run():
             _learn_log.append(f"N581 Trend Follow: strong_trend_follow={_a_n581['win_rate']:.0f}% weak_trend_follow={_b_n581['win_rate']:.0f}%WR")
 
         # ── N582: Mean Reversion Setup entry tuner ────────────────────
-        _n582_raw = tlog.get("mean_reversion_setup_perf", {})
+        _n582_raw = tlog.get("mean_rev_v1_perf", {})
         _n582_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n582_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n582 = next((s for s in _n582_list if s.get("state")=="strong_mean_rev"), _n582_list[0] if _n582_list else {"win_rate":50})
         _b_n582 = next((s for s in _n582_list if s.get("state")=="no_mean_rev"), _n582_list[-1] if _n582_list else {"win_rate":50})
@@ -45718,7 +45776,7 @@ def run():
             _learn_log.append(f"N602 NewsAge: fresh_news={_a_n602['win_rate']:.0f}% stale_news={_b_n602['win_rate']:.0f}%WR")
 
         # ── N603: Sector Rotation entry tuner ────────────────────
-        _n603_raw = tlog.get("sector_rotation_perf", {})
+        _n603_raw = tlog.get("sector_rotation_v1_perf", {})
         _n603_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n603_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n603 = next((s for s in _n603_list if s.get("state")=="hot_sector"), _n603_list[0] if _n603_list else {"win_rate":50})
         _b_n603 = next((s for s in _n603_list if s.get("state")=="cold_sector"), _n603_list[-1] if _n603_list else {"win_rate":50})
@@ -45814,7 +45872,7 @@ def run():
             _learn_log.append(f"N614 MktCap: small_cap={_a_n614['win_rate']:.0f}% nano_cap={_b_n614['win_rate']:.0f}%WR")
 
         # ── N615: Options Flow Signal entry tuner ────────────────────
-        _n615_raw = tlog.get("options_flow_signal_perf", {})
+        _n615_raw = tlog.get("options_flow_v1_perf", {})
         _n615_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n615_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n615 = next((s for s in _n615_list if s.get("state")=="bullish_sweep"), _n615_list[0] if _n615_list else {"win_rate":50})
         _b_n615 = next((s for s in _n615_list if s.get("state")=="put_buying"), _n615_list[-1] if _n615_list else {"win_rate":50})
@@ -46046,7 +46104,7 @@ def run():
             _learn_log.append(f"N643 ShortInt: high_short_interest={_a_n643['win_rate']:.0f}% low_short={_b_n643['win_rate']:.0f}%WR")
 
         # ── N644: Insider Activity entry tuner ────────────────────
-        _n644_raw = tlog.get("insider_activity_perf", {})
+        _n644_raw = tlog.get("insider_activity_v1_perf", {})
         _n644_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n644_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n644 = next((s for s in _n644_list if s.get("state")=="insider_buying"), _n644_list[0] if _n644_list else {"win_rate":50})
         _b_n644 = next((s for s in _n644_list if s.get("state")=="insider_selling"), _n644_list[-1] if _n644_list else {"win_rate":50})
@@ -46945,6 +47003,14 @@ def run():
             ("news_volume_perf",                "news_volume"),
             ("technical_setup_combo_perf",      "technical_setup_combo"),
             ("risk_reward_at_entry_perf",       "risk_reward_at_entry"),
+            ("risk_reward_v1_perf",             "risk_reward_v1"),
+            ("float_rotation_v1_perf",          "float_rotation_v1"),
+            ("orb_quality_v1_perf",             "orb_quality_v1"),
+            ("inst_own_quality_perf",           "inst_own_quality"),
+            ("mean_rev_v1_perf",                "mean_rev_v1"),
+            ("sector_rotation_v1_perf",         "sector_rotation_v1"),
+            ("options_flow_v1_perf",            "options_flow_v1"),
+            ("insider_activity_v1_perf",        "insider_activity_v1"),
             ("signal_freshness_perf",           "signal_freshness"),
             ("order_flow_pressure_perf",     "order_flow_pressure"),
             ("time_weighted_momentum_perf",  "time_weighted_momentum"),
@@ -47790,9 +47856,9 @@ def run():
             "spy_momentum_entry_perf": _n537_list,  # N537: SPY momentum (RSI+200MA) at entry vs outcome
             "earnings_proximity_entry_perf": _n538_list,  # N538: earnings proximity (post/pre/none) at entry vs outcome
             "price_acceleration_entry_perf": _n539_list,  # N539: price acceleration (chg vs ATR) at entry vs outcome
-            "risk_reward_at_entry_perf": _n540_list,  # N540: risk/reward ratio (3:1/2:1/<1.5:1) at entry vs outcome
+            "risk_reward_v1_perf": _n540_list,  # N540: risk/reward ratio v1 (excellent_rr/good_rr/poor_rr) vs outcome
             "short_int_ratio_v2_perf": _n541_list,  # N541: short interest ratio (high/moderate/low SI%) at entry vs outcome
-            "float_rotation_perf": _n542_list,  # N542: float rotation (vol as % of float) at entry vs outcome
+            "float_rotation_v1_perf": _n542_list,  # N542: float rotation v1 (high/normal/low_rotation) vs outcome
             "tick_trend_entry_perf": _n543_list,  # N543: NYSE tick trend (positive/neutral/negative) at entry vs outcome
             "market_phase_entry_perf": _n544_list,  # N544: market phase (early_bull/late_bull/bear) at entry vs outcome
             "sector_rs_v2_perf": _n545_list,  # N545: sector RS vs SPY (leading/inline/lagging) at entry vs outcome
@@ -47803,8 +47869,8 @@ def run():
             "consecutive_up_days_perf": _n550_list,  # N550: consecutive up days (streak/neutral/pullback) at entry vs outcome
             "pm_gap_direction_perf": _n551_list,  # N551: pre-market gap direction (gap_up_strong/gap_flat/gap_down_strong) at entry vs outcome
             "pm_gap_size_v2_perf": _n751_list,  # N751: pre-market gap size tier (strong_pm_gap_up/small_pm_gap_up/flat_pm/pm_gap_down) vs outcome
-            "opening_range_breakout_perf": _n552_list,  # N552: ORB pattern (orb_breakout/inside_orb/orb_breakdown) at entry vs outcome
-            "institutional_ownership_perf": _n553_list,  # N553: institutional ownership % (high/medium/low) at entry vs outcome
+            "orb_quality_v1_perf": _n552_list,  # N552: ORB quality v1 (orb_breakout/inside_orb/orb_breakdown) vs outcome
+            "inst_own_quality_perf": _n553_list,  # N553: institutional ownership quality (high/medium/low_inst_own) vs outcome
             "analyst_consensus_perf": _n554_list,  # N554: analyst consensus (strong_buy/mixed/sell) at entry vs outcome
             "earnings_growth_rate_perf": _n555_list,  # N555: EPS growth rate (high/moderate/low) at entry vs outcome
             "revenue_growth_rate_perf": _n556_list,  # N556: revenue growth rate (strong/moderate/weak) at entry vs outcome
@@ -47833,7 +47899,7 @@ def run():
             "gamma_exposure_perf": _n579_list,  # N579: net gamma exposure (positive_gex/negative_gex) at entry vs outcome
             "market_regime_vix_perf": _n580_list,  # N580: VIX regime (low/normal/high/extreme_vix_regime) at entry vs outcome
             "trend_following_score_perf": _n581_list,  # N581: trend-following score (strong/moderate/weak_trend_follow) at entry vs outcome
-            "mean_reversion_setup_perf": _n582_list,  # N582: mean reversion setup (strong/moderate/no_mean_rev) at entry vs outcome
+            "mean_rev_v1_perf": _n582_list,  # N582: mean reversion setup v1 (strong/moderate/no_mean_rev) vs outcome
             "breakout_false_signal_perf": _n583_list,  # N583: breakout authenticity (confirmed/suspect/failed_breakout) at entry vs outcome
             "intraday_momentum_shift_perf": _n584_list,  # N584: intraday momentum shift (accelerating_up/decelerating/reversing) at entry vs outcome
             "sector_news_catalyst_perf": _n585_list,  # N585: sector news catalyst (bullish/bearish/no_sector_catalyst) at entry vs outcome
@@ -47854,7 +47920,7 @@ def run():
             "momentum_score_bucket_perf": _n600_list,  # N600: composite momentum bucket (elite/strong/moderate/weak_momentum) vs outcome
             "bid_ask_spread_perf": _n601_list,  # N601: bid-ask spread quality at entry (tight/normal/wide_spread) vs outcome
             "news_recency_perf": _n602_list,  # N602: news catalyst recency (fresh_news/same_day_news/stale_news) vs outcome
-            "sector_rotation_perf": _n603_list,  # N603: sector rotation signal (hot/neutral/cold_sector) vs outcome
+            "sector_rotation_v1_perf": _n603_list,  # N603: sector rotation v1 (hot/neutral/cold_sector) vs outcome
             "pre_market_volume_perf": _n604_list,  # N604: pre-market volume (exceptional/moderate/low_pm_vol) vs outcome
             "breakout_volume_confirm_perf": _n605_list,  # N605: breakout bar volume (volume_confirmed/moderate/weak_vol_breakout) vs outcome
             "trend_day_type_perf": _n606_list,  # N606: market trend day type (strong_trend/balanced/choppy_reversal_day) vs outcome
@@ -47866,7 +47932,7 @@ def run():
             "catalyst_type_detail_perf": _n612_list,  # N612: detailed catalyst type (earnings/product/upgrade/news/technical_catalyst) vs outcome
             "price_action_quality_perf": _n613_list,  # N613: price action quality at entry (smooth_uptrend/recovering_action/choppy_action) vs outcome
             "market_cap_size_perf": _n614_list,   # N614: market cap size (nano/micro/small/mid_cap) vs outcome
-            "options_flow_signal_perf": _n615_list,  # N615: unusual options flow (bullish_sweep/call_buying/neutral_flow/put_buying) vs outcome
+            "options_flow_v1_perf": _n615_list,  # N615: options flow v1 (bullish_sweep/call_buying/put_buying/neutral_flow) vs outcome
             "institutional_filing_perf": _n616_list,  # N616: 13F institutional filing signal (new_inst_position/increased/no_change/decreased_inst) vs outcome
             "relative_strength_vs_spy_perf": _n617_list,  # N617: RS vs SPY on entry day (strong_rs/inline_rs/weak_rs) vs outcome
             "gap_fill_proximity_perf": _n618_list,  # N618: distance to gap fill level (approaching_gap_fill/gap_fill_done/far_from_gap) vs outcome
@@ -47895,7 +47961,7 @@ def run():
             "pivot_point_proximity_perf": _n641_list,  # N641: pivot point proximity (at_pivot/above_pivot/below_pivot/far_from_pivot) vs outcome
             "float_rotation_perf": _n642_list,  # N642: float rotation (high_float_rotation/moderate_rotation/low_rotation/minimal_rotation) vs outcome
             "short_interest_perf": _n643_list,  # N643: short interest (high_short_interest/moderate_short/low_short/unknown_short) vs outcome
-            "insider_activity_perf": _n644_list,  # N644: insider activity (insider_buying/insider_selling/no_insider_activity) vs outcome
+            "insider_activity_v1_perf": _n644_list,  # N644: insider activity v1 (insider_buying/insider_selling/no_insider_activity) vs outcome
             "earnings_season_phase_perf": _n645_list,  # N645: earnings season phase (early/peak/late/non_earnings_season) vs outcome
             "put_call_ratio_perf": _n646_list,  # N646: put/call ratio (low_pcr_bullish/neutral_pcr/high_pcr_bearish/extreme_fear_pcr) vs outcome
             "vwap_distance_perf": _n647_list,  # N647: VWAP distance (above_vwap_strong/above_vwap/below_vwap/far_below_vwap) vs outcome
@@ -48086,6 +48152,14 @@ def run():
             "intraday_structure_perf":         [],
             "gap_size_perf":                   [],
             "short_squeeze_risk_perf":         [],
+            "risk_reward_v1_perf":             [],
+            "float_rotation_v1_perf":          [],
+            "orb_quality_v1_perf":             [],
+            "inst_own_quality_perf":           [],
+            "mean_rev_v1_perf":                [],
+            "sector_rotation_v1_perf":         [],
+            "options_flow_v1_perf":            [],
+            "insider_activity_v1_perf":        [],
             "institutional_flow_perf":         [],
             "inst_flow_quality_perf":          [],
             "inst_ownership_perf":             [],
@@ -48160,6 +48234,14 @@ def run():
             "exit_trigger_type_perf":          [],
             "spy_trend_strength_perf":         [],
             "sector_rotation_perf":            [],
+            "sector_rotation_v1_perf":         [],
+            "risk_reward_v1_perf":             [],
+            "float_rotation_v1_perf":          [],
+            "orb_quality_v1_perf":             [],
+            "inst_own_quality_perf":           [],
+            "mean_rev_v1_perf":                [],
+            "options_flow_v1_perf":            [],
+            "insider_activity_v1_perf":        [],
             "pm_gap_direction_perf":           [],
             "pm_gap_size_v2_perf":             [],
             "relative_strength_tier_perf":     [],
@@ -48178,6 +48260,14 @@ def run():
             "news_volume_perf":                [],
             "technical_setup_combo_perf":      [],
             "risk_reward_at_entry_perf":       [],
+            "risk_reward_v1_perf":             [],
+            "float_rotation_v1_perf":          [],
+            "orb_quality_v1_perf":             [],
+            "inst_own_quality_perf":           [],
+            "mean_rev_v1_perf":                [],
+            "sector_rotation_v1_perf":         [],
+            "options_flow_v1_perf":            [],
+            "insider_activity_v1_perf":        [],
             "signal_freshness_perf":           [],
             "order_flow_imbalance_perf":    [],
             "order_flow_pressure_perf":     [],
