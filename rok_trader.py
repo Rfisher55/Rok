@@ -26276,6 +26276,14 @@ def run():
                 live[tk]["regime_stable_now"]     = "established" if len(set(_rh_ctx)) <= 1 and len(_rh_ctx) >= 3 else "transitioning"
                 live[tk]["sectors_advancing_now"] = sum(1 for sv in tlog.get("sector_etf_trends", {}).values()
                                                         if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
+                # N725: vix_declining + breadth_aligned — derived from regime/breadth context
+                _vix_1d_ctx = float((tlog.get("regime") or {}).get("vix_1d", 0) or 0)
+                live[tk]["vix_declining"] = _vix_1d_ctx < -0.5   # VIX fell >0.5pt = declining
+                _adv_pct_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
+                live[tk]["breadth_aligned"] = _adv_pct_ctx >= 55  # >55% advancing = bullish breadth
+                # N730: consecutive_strong_scans — count from score_history in peaks
+                _css_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                live[tk]["consecutive_strong_scans"] = sum(1 for _sc_h in _css_hist[-5:] if _sc_h >= _eff_min_score)
                 # N893: inject current ET hour so score() can look up et_hour_perf
                 # (previously dead because live[tk] never had "et_hour")
                 _now_et_ctx = datetime.now(timezone.utc)
