@@ -22444,6 +22444,33 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                     _n726_s = "no_reversal_signal"
             _nsl_adj += _nde("reversal_confirmation_perf", _n726_s)
 
+            # N723: Entry candle quality
+            _n723_cp = str(d.get("candle_pattern", "") or "")
+            if "hammer" in _n723_cp or "doji_bull" in _n723_cp: _n723_s = "bullish_reversal_candle"
+            elif "engulf" in _n723_cp:                           _n723_s = "engulfing_candle"
+            elif "marubozu" in _n723_cp:                         _n723_s = "strong_momentum_candle"
+            elif "doji" in _n723_cp:                             _n723_s = "indecision_candle"
+            else:                                                _n723_s = "neutral_candle"
+            _nsl_adj += _nde("entry_candle_quality_perf", _n723_s)
+
+            # N727: Support/resistance quality at entry
+            _n727_srq = float(d.get("sr_quality", 0) or 0)
+            if _n727_srq > 80:   _n727_s = "key_structural_level"
+            elif _n727_srq > 60: _n727_s = "strong_sr_level"
+            elif _n727_srq > 40: _n727_s = "moderate_sr_level"
+            elif _n727_srq > 20: _n727_s = "weak_sr_level"
+            else:                _n727_s = "no_clear_sr"
+            _nsl_adj += _nde("support_resistance_quality_perf", _n727_s)
+
+            # N728: Price target achievability (reward/risk ratio)
+            _n728_rr = float(d.get("rr", 0) or 0)
+            _n728_tp = float(d.get("target_pct", 100) or 100)
+            if _n728_rr > 3 and _n728_tp < 30: _n728_s = "high_probability_target"
+            elif _n728_rr > 2:                  _n728_s = "achievable_target"
+            elif _n728_rr > 1.5:                _n728_s = "marginal_target"
+            else:                               _n728_s = "low_probability_target"
+            _nsl_adj += _nde("price_target_achievability_perf", _n728_s)
+
             # N729: Sector momentum rank at entry
             _n729_sr = float(d.get("sector_rs_rank", 50) or 50)
             if _n729_sr < 10:   _n729_s = "top_decile_sector"
@@ -22452,6 +22479,15 @@ def score(tk, d, sentiment=0, regime_adj=0):
             elif _n729_sr < 75: _n729_s = "below_avg_sector"
             else:               _n729_s = "bottom_sector"
             _nsl_adj += _nde("sector_momentum_rank_perf", _n729_s)
+
+            # N730: Conviction persistence — stocks appearing across multiple scans are stronger
+            _n730_css = int(d.get("consecutive_strong_scans", 0) or 0)
+            if _n730_css >= 5:   _n730_s = "very_persistent_conviction"
+            elif _n730_css >= 3: _n730_s = "persistent_conviction"
+            elif _n730_css >= 2: _n730_s = "building_conviction"
+            elif _n730_css >= 1: _n730_s = "first_scan_signal"
+            else:                _n730_s = "no_persistence"
+            _nsl_adj += _nde("conviction_persistence_perf", _n730_s)
 
             # N871: Order flow imbalance — volume + direction
             _n871_rvol = float(d.get("rvol", 1.0) or 1.0)
