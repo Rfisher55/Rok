@@ -31206,6 +31206,324 @@ def run():
                     )
                 except Exception:
                     live[tk]["is_dca"] = False
+                # ── R54: Remaining 32 dead N1311 batch state keys ──
+                # ai_sentiment tier bucket (batch line 24242 reads d.get("ai_sentiment"))
+                try:
+                    _r54_sent = float(sent if isinstance(sent, (int, float)) else 0)
+                    live[tk]["ai_sentiment"] = ("very_pos" if _r54_sent >= 5
+                                                else "pos" if _r54_sent >= 2
+                                                else "neutral" if _r54_sent >= -2
+                                                else "neg" if _r54_sent >= -5
+                                                else "very_neg")
+                except Exception:
+                    live[tk]["ai_sentiment"] = "neutral"
+                # catalyst_sector_match_state
+                try:
+                    _r54_cat_t = str(live[tk].get("catalyst_type", "none") or "none").lower()
+                    _r54_sec   = str(SECTOR_MAP.get(tk, "other") or "other")
+                    _match = (_r54_cat_t not in ("none", "") and
+                              (_r54_cat_t in _r54_sec or _r54_sec in _r54_cat_t or
+                               bool(live[tk].get("catalyst")) or bool(live[tk].get("news_headline"))))
+                    live[tk]["catalyst_sector_match_state"] = "match" if _match else "no_match"
+                except Exception:
+                    live[tk]["catalyst_sector_match_state"] = "no_match"
+                # catalyst_urgency_state (from catalyst_urg int value)
+                try:
+                    _r54_cu = int(live[tk].get("catalyst_urg", 0) or 0)
+                    live[tk]["catalyst_urgency_state"] = ("high_urgency" if _r54_cu >= 3
+                                                          else "moderate" if _r54_cu >= 1
+                                                          else "low_urgency")
+                except Exception:
+                    live[tk]["catalyst_urgency_state"] = "low_urgency"
+                # consecutive_spy_up_state (from SPY breadth_history or consecutive up days)
+                try:
+                    _r54_spy_hist = [h.get("spy_chg", 0) for h in tlog.get("breadth_history", [])
+                                     if h.get("spy_chg") is not None][-5:]
+                    _r54_spy_up = sum(1 for c in _r54_spy_hist if float(c or 0) > 0)
+                    live[tk]["consecutive_spy_up_state"] = ("spy_5up" if _r54_spy_up >= 5
+                                                            else "spy_4up" if _r54_spy_up >= 4
+                                                            else "spy_mixed" if _r54_spy_up >= 2
+                                                            else "spy_down")
+                except Exception:
+                    live[tk]["consecutive_spy_up_state"] = "spy_mixed"
+                # duration_target (target holding period bucket)
+                try:
+                    _r54_atr4 = float(live[tk].get("atr_pct", 0) or 0)
+                    live[tk]["duration_target"] = ("scalp" if _r54_atr4 > 4.0
+                                                   else "intraday" if _r54_atr4 > 2.0
+                                                   else "swing")
+                except Exception:
+                    live[tk]["duration_target"] = "intraday"
+                # earnings_distance_state (days to earnings bucket)
+                try:
+                    _r54_dte = int(live[tk].get("earnings_days", live[tk].get("days_to_earnings", 99)) or 99)
+                    live[tk]["earnings_distance_state"] = ("imminent" if _r54_dte <= 3
+                                                           else "near" if _r54_dte <= 10
+                                                           else "weeks_away" if _r54_dte <= 30
+                                                           else "far")
+                except Exception:
+                    live[tk]["earnings_distance_state"] = "far"
+                # entry_after_halt_state (trading halt detection from vol/price spike)
+                try:
+                    _r54_vr_halt = float(live[tk].get("vol_ratio", 1.0) or 1.0)
+                    _r54_chg_halt = abs(float(live[tk].get("change_pct", 0) or 0))
+                    live[tk]["entry_after_halt_state"] = ("post_halt" if _r54_vr_halt > 5 and _r54_chg_halt > 10
+                                                          else "no_halt")
+                except Exception:
+                    live[tk]["entry_after_halt_state"] = "no_halt"
+                # entry_rank_in_session_state (rank of this buy in today's session)
+                try:
+                    _r54_today_buys = len([t for t in tlog.get("trades", [])
+                                           if t.get("action") == "BUY" and
+                                           t.get("time", "")[:10] == now_utc.strftime("%Y-%m-%d")])
+                    live[tk]["entry_rank_in_session_state"] = ("first_buy" if _r54_today_buys == 0
+                                                               else "early" if _r54_today_buys <= 3
+                                                               else "mid_session" if _r54_today_buys <= 8
+                                                               else "late_session")
+                except Exception:
+                    live[tk]["entry_rank_in_session_state"] = "mid_session"
+                # gap_diverge_state (SPY gap vs stock gap divergence)
+                try:
+                    _r54_spy_pm = float(live.get("SPY", {}).get("pm_gap_pct", 0) or 0)
+                    _r54_tk_pm  = float(live[tk].get("pm_gap_pct", 0) or 0)
+                    _r54_div = _r54_tk_pm - _r54_spy_pm
+                    live[tk]["gap_diverge_state"] = ("stock_gap_higher" if _r54_div > 1.0
+                                                     else "stock_gap_lower" if _r54_div < -1.0
+                                                     else "gap_aligned")
+                except Exception:
+                    live[tk]["gap_diverge_state"] = "gap_aligned"
+                # gap_overnight_direction_state (overnight gap direction)
+                try:
+                    _r54_pm_g = float(live[tk].get("pm_gap_pct", 0) or 0)
+                    live[tk]["gap_overnight_direction_state"] = ("gap_up_big" if _r54_pm_g > 3
+                                                                 else "gap_up" if _r54_pm_g > 0.5
+                                                                 else "gap_down_big" if _r54_pm_g < -3
+                                                                 else "gap_down" if _r54_pm_g < -0.5
+                                                                 else "flat_open")
+                except Exception:
+                    live[tk]["gap_overnight_direction_state"] = "flat_open"
+                # gold_signal (GLD direction)
+                try:
+                    _r54_gld = float(live.get("GLD", {}).get("chg1d", 0) or 0)
+                    live[tk]["gold_signal"] = ("gold_rising" if _r54_gld > 0.3
+                                               else "gold_falling" if _r54_gld < -0.3
+                                               else "gold_flat")
+                except Exception:
+                    live[tk]["gold_signal"] = "gold_flat"
+                # holding_cost_vs_cash_state (opportunity cost proxy)
+                try:
+                    _r54_target = float(live[tk].get("target_pct", live[tk].get("rr", 1.5) * 2.0) or 2.0)
+                    live[tk]["holding_cost_vs_cash_state"] = ("high_return_potential" if _r54_target >= 5.0
+                                                              else "moderate_return" if _r54_target >= 2.0
+                                                              else "low_return")
+                except Exception:
+                    live[tk]["holding_cost_vs_cash_state"] = "moderate_return"
+                # macro_day_risk_state (macro event risk level)
+                try:
+                    live[tk]["macro_day_risk_state"] = ("high_macro_risk" if live[tk].get("macro_event")
+                                                        else "macro_shock_day" if live[tk].get("macro_shock_day")
+                                                        else "low_macro_risk")
+                except Exception:
+                    live[tk]["macro_day_risk_state"] = "low_macro_risk"
+                # macro_stress_index_state (composite: vix + spy + breadth)
+                try:
+                    _r54_vix_s  = float(live[tk].get("vix", regime.get("vix", 20)) or 20)
+                    _r54_spy_s  = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r54_adv_s  = float(breadth.get("adv_pct", 50) or 50)
+                    _r54_stress = sum([_r54_vix_s > 25, _r54_spy_s < -0.5, _r54_adv_s < 40])
+                    live[tk]["macro_stress_index_state"] = ("high_stress" if _r54_stress >= 2
+                                                            else "moderate_stress" if _r54_stress >= 1
+                                                            else "low_stress")
+                except Exception:
+                    live[tk]["macro_stress_index_state"] = "low_stress"
+                # market_internals_state (market internals health)
+                try:
+                    _r54_adv_i  = float(breadth.get("adv_pct", 50) or 50)
+                    _r54_spy_i  = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r54_vix_i  = float(regime.get("vix", 20) or 20)
+                    _r54_health = sum([_r54_adv_i > 60, _r54_spy_i > 0.2, _r54_vix_i < 20])
+                    live[tk]["market_internals_state"] = ("bullish_internals" if _r54_health >= 3
+                                                          else "mixed_internals" if _r54_health >= 2
+                                                          else "weak_internals" if _r54_health >= 1
+                                                          else "bearish_internals")
+                except Exception:
+                    live[tk]["market_internals_state"] = "mixed_internals"
+                # overnight_gap_follow_state (have overnight gaps been following through?)
+                try:
+                    _r54_gap_follow = live.get("SPY", {}).get("gap_follow_rate", None)
+                    if _r54_gap_follow is None:
+                        _r54_pm_now = float(live.get("SPY", {}).get("pm_gap_pct", 0) or 0)
+                        _r54_spy_d  = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                        _r54_follow = ((_r54_pm_now > 0 and _r54_spy_d > 0) or
+                                       (_r54_pm_now < 0 and _r54_spy_d < 0))
+                        live[tk]["overnight_gap_follow_state"] = ("following" if _r54_follow else "fading")
+                    else:
+                        live[tk]["overnight_gap_follow_state"] = ("following" if float(_r54_gap_follow or 0) > 0.5 else "fading")
+                except Exception:
+                    live[tk]["overnight_gap_follow_state"] = "following"
+                # portfolio_win_rate_trend_state (is bot's WR improving?)
+                try:
+                    _r54_recent = [t.get("pnl", 0) for t in tlog.get("trades", [])
+                                   if t.get("action") in ("SELL", "COVER") and t.get("pnl") is not None][-20:]
+                    if len(_r54_recent) >= 10:
+                        _r54_early_wr = sum(1 for p in _r54_recent[:10] if p > 0) / 10
+                        _r54_late_wr  = sum(1 for p in _r54_recent[10:] if p > 0) / max(len(_r54_recent[10:]), 1)
+                        live[tk]["portfolio_win_rate_trend_state"] = ("improving" if _r54_late_wr > _r54_early_wr + 0.1
+                                                                      else "declining" if _r54_late_wr < _r54_early_wr - 0.1
+                                                                      else "stable")
+                    else:
+                        live[tk]["portfolio_win_rate_trend_state"] = "stable"
+                except Exception:
+                    live[tk]["portfolio_win_rate_trend_state"] = "stable"
+                # position_pnl_before_entry_state (PnL status of current open positions)
+                try:
+                    _r54_pos_pnl = [float(p.get("unrealized_pnl", 0) or 0)
+                                    for p in tlog.get("positions", {}).values()
+                                    if isinstance(tlog.get("positions", {}), dict)]
+                    if not _r54_pos_pnl:
+                        live[tk]["position_pnl_before_entry_state"] = "no_open_positions"
+                    elif sum(_r54_pos_pnl) > 0:
+                        live[tk]["position_pnl_before_entry_state"] = "portfolio_green"
+                    else:
+                        live[tk]["position_pnl_before_entry_state"] = "portfolio_red"
+                except Exception:
+                    live[tk]["position_pnl_before_entry_state"] = "no_open_positions"
+                # position_size_bucket_state (actual notional dollar bucket)
+                try:
+                    _r54_bp3 = float(tlog.get("buying_power", 0) or 0)
+                    live[tk]["position_size_bucket_state"] = ("large_position" if _r54_bp3 >= 10000
+                                                              else "medium_position" if _r54_bp3 >= 2000
+                                                              else "small_position")
+                except Exception:
+                    live[tk]["position_size_bucket_state"] = "medium_position"
+                # price_gap_size_state (intraday gap between open and prev close)
+                try:
+                    _r54_gap_sz = abs(float(live[tk].get("gap_pct", live[tk].get("change_pct", 0)) or 0))
+                    live[tk]["price_gap_size_state"] = ("large_gap" if _r54_gap_sz > 5
+                                                        else "medium_gap" if _r54_gap_sz > 2
+                                                        else "small_gap" if _r54_gap_sz > 0.5
+                                                        else "no_gap")
+                except Exception:
+                    live[tk]["price_gap_size_state"] = "no_gap"
+                # sector_vs_spy_today_state (is sector outperforming SPY today?)
+                try:
+                    _r54_etf2 = str(live[tk].get("sector_etf", "SPY") or "SPY")
+                    _r54_s1d  = float(live.get(_r54_etf2, {}).get("chg1d", 0) or 0)
+                    _r54_sp1d = float(live.get("SPY",     {}).get("chg1d", 0) or 0)
+                    _r54_sdiff = _r54_s1d - _r54_sp1d
+                    live[tk]["sector_vs_spy_today_state"] = ("sector_leading" if _r54_sdiff > 0.5
+                                                             else "sector_lagging" if _r54_sdiff < -0.5
+                                                             else "sector_inline")
+                except Exception:
+                    live[tk]["sector_vs_spy_today_state"] = "sector_inline"
+                # short_int_tier (short interest tier)
+                try:
+                    _r54_sf = float(live[tk].get("short_float", live[tk].get("short_interest", 0)) or 0)
+                    live[tk]["short_int_tier"] = ("very_high_short" if _r54_sf > 20
+                                                  else "high_short" if _r54_sf > 10
+                                                  else "moderate_short" if _r54_sf > 5
+                                                  else "low_short")
+                except Exception:
+                    live[tk]["short_int_tier"] = "low_short"
+                # social_sentiment_tier (social sentiment proxy from ai_score)
+                try:
+                    _r54_ai_s = float(live[tk].get("ai_score", live[tk].get("sent", 0)) or 0)
+                    live[tk]["social_sentiment_tier"] = ("bullish_social" if _r54_ai_s >= 3
+                                                         else "bearish_social" if _r54_ai_s <= -3
+                                                         else "neutral_social")
+                except Exception:
+                    live[tk]["social_sentiment_tier"] = "neutral_social"
+                # spread_vs_atr_state (bid-ask spread relative to ATR)
+                try:
+                    _r54_sp2   = float(live[tk].get("bid_ask_spread_pct", 0.1) or 0.1)
+                    _r54_atr2  = float(live[tk].get("atr_pct", 1.0) or 1.0)
+                    _r54_ratio = _r54_sp2 / _r54_atr2 if _r54_atr2 > 0 else 0
+                    live[tk]["spread_vs_atr_state"] = ("tight_spread" if _r54_ratio < 0.05
+                                                       else "normal_spread" if _r54_ratio < 0.15
+                                                       else "wide_spread")
+                except Exception:
+                    live[tk]["spread_vs_atr_state"] = "normal_spread"
+                # spy_vs_qqq_divergence_state (SPY vs QQQ relative performance)
+                try:
+                    _r54_spy5 = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                    _r54_qqq5 = float(live.get("QQQ", {}).get("chg5d", 0) or 0)
+                    _r54_divg = _r54_spy5 - _r54_qqq5
+                    live[tk]["spy_vs_qqq_divergence_state"] = ("spy_leading" if _r54_divg > 1.0
+                                                               else "qqq_leading" if _r54_divg < -1.0
+                                                               else "aligned")
+                except Exception:
+                    live[tk]["spy_vs_qqq_divergence_state"] = "aligned"
+                # spy_vwap_state (SPY position vs its own VWAP)
+                try:
+                    _r54_spy_vp = float(live.get("SPY", {}).get("vwap_pos", 0) or 0)
+                    live[tk]["spy_vwap_state"] = ("spy_above_vwap" if _r54_spy_vp > 0.1
+                                                  else "spy_below_vwap" if _r54_spy_vp < -0.1
+                                                  else "spy_at_vwap")
+                except Exception:
+                    live[tk]["spy_vwap_state"] = "spy_at_vwap"
+                # support_quality_state (quality of support at entry)
+                try:
+                    _r54_sq = sum([
+                        bool(live[tk].get("at_support",       False)),
+                        bool(live[tk].get("fib_support",      False)),
+                        bool(live[tk].get("at_demand_zone",   False)),
+                        bool(live[tk].get("near_key_support", False)),
+                        bool(live[tk].get("at_poc",           False)),
+                    ])
+                    live[tk]["support_quality_state"] = ("triple_support" if _r54_sq >= 3
+                                                         else "double_support" if _r54_sq >= 2
+                                                         else "single_support" if _r54_sq >= 1
+                                                         else "no_support")
+                except Exception:
+                    live[tk]["support_quality_state"] = "no_support"
+                # tech_level_confluence (count of technical levels being tested)
+                try:
+                    live[tk]["tech_level_confluence"] = sum(
+                        bool(live[tk].get(k)) for k in (
+                            "at_breakout", "at_support", "near_key_support",
+                            "fib_support", "at_demand_zone", "at_poc",
+                            "vwap_reclaim", "near_52w_high", "above_avwap_52wl",
+                        )
+                    )
+                except Exception:
+                    live[tk]["tech_level_confluence"] = 0
+                # ticker_earnings_beat_streak_state (consecutive earnings beat streak)
+                try:
+                    _r54_beats = int(live[tk].get("eps_beats_last4", 0) or 0)
+                    live[tk]["ticker_earnings_beat_streak_state"] = ("beat_streak_3plus" if _r54_beats >= 3
+                                                                      else "beat_streak_2" if _r54_beats >= 2
+                                                                      else "beat_streak_1" if _r54_beats >= 1
+                                                                      else "no_beat_streak")
+                except Exception:
+                    live[tk]["ticker_earnings_beat_streak_state"] = "no_beat_streak"
+                # trend_age_bucket (how old is the current uptrend?)
+                try:
+                    _r54_age = int(live[tk].get("breakout_age_days", live[tk].get("age_days", 0)) or 0)
+                    live[tk]["trend_age_bucket"] = ("fresh_trend" if _r54_age <= 5
+                                                    else "young_trend" if _r54_age <= 20
+                                                    else "mature_trend" if _r54_age <= 60
+                                                    else "old_trend")
+                except Exception:
+                    live[tk]["trend_age_bucket"] = "young_trend"
+                # vol_contraction_state (is volume contracting, VCP-like?)
+                try:
+                    _r54_vr3 = float(live[tk].get("vol_ratio", 1.0) or 1.0)
+                    _r54_hvc = bool(live[tk].get("hv_contracting", False))
+                    live[tk]["vol_contraction_state"] = ("contracting" if _r54_vr3 < 0.7 or _r54_hvc
+                                                         else "neutral" if _r54_vr3 < 1.2
+                                                         else "expanding")
+                except Exception:
+                    live[tk]["vol_contraction_state"] = "neutral"
+                # vol_price_confirm (does volume confirm price direction?)
+                try:
+                    _r54_chg4 = float(live[tk].get("change_pct", 0) or 0)
+                    _r54_vr4  = float(live[tk].get("vol_ratio",  1.0) or 1.0)
+                    live[tk]["vol_price_confirm"] = ("confirmed_bull" if _r54_chg4 > 0 and _r54_vr4 >= 1.3
+                                                     else "confirmed_bear" if _r54_chg4 < 0 and _r54_vr4 >= 1.3
+                                                     else "diverging" if _r54_chg4 > 0 and _r54_vr4 < 0.7
+                                                     else "no_confirm")
+                except Exception:
+                    live[tk]["vol_price_confirm"] = "no_confirm"
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
