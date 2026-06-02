@@ -30675,6 +30675,211 @@ def run():
                                                  else "normal" if _r50_psigs >= 2 else "weak")
                 except Exception:
                     live[tk]["premium_tier"] = "weak"
+                # ── R51: Market-context dead state-field neurons ──
+                # accum_distrib_state
+                try:
+                    _r51_ad = str(live[tk].get("accum_distrib", "") or "").lower()
+                    if "accum" in _r51_ad:
+                        live[tk]["accum_distrib_state"] = "accumulation"
+                    elif "distrib" in _r51_ad:
+                        live[tk]["accum_distrib_state"] = "distribution"
+                    else:
+                        _r51_obv = live[tk].get("obv_rising")
+                        live[tk]["accum_distrib_state"] = ("accumulation" if _r51_obv is True
+                                                           else "distribution" if _r51_obv is False
+                                                           else "neutral")
+                except Exception:
+                    live[tk]["accum_distrib_state"] = "neutral"
+                # adv_decline_state
+                try:
+                    _r51_adr = float(breadth.get("adv_dec_ratio", 1.0) or 1.0)
+                    live[tk]["adv_decline_state"] = ("strong_adv" if _r51_adr > 2.0
+                                                     else "moderate_adv" if _r51_adr >= 1.0
+                                                     else "neutral" if _r51_adr >= 0.5
+                                                     else "declining")
+                except Exception:
+                    live[tk]["adv_decline_state"] = "neutral"
+                # analyst_rating_momentum
+                try:
+                    _r51_aa = str(live[tk].get("analyst_action", "") or "").lower()
+                    live[tk]["analyst_rating_momentum"] = ("upgraded" if "upgrade" in _r51_aa or "buy" in _r51_aa
+                                                           else "downgraded" if "downgrade" in _r51_aa or "sell" in _r51_aa or "cut" in _r51_aa
+                                                           else "unchanged")
+                except Exception:
+                    live[tk]["analyst_rating_momentum"] = "unchanged"
+                # chg_ytd_bucket_state
+                try:
+                    _r51_ytd = float(live[tk].get("chg_ytd", 0) or 0)
+                    live[tk]["chg_ytd_bucket_state"] = ("strong_ytd" if _r51_ytd > 20
+                                                        else "mid_ytd" if _r51_ytd >= 0
+                                                        else "weak_ytd")
+                except Exception:
+                    live[tk]["chg_ytd_bucket_state"] = "mid_ytd"
+                # crowd_tier (open positions count as proxy)
+                try:
+                    _r51_pos_cnt = len(tlog.get("positions", []))
+                    live[tk]["crowd_tier"] = ("solo" if _r51_pos_cnt <= 1
+                                              else "few" if _r51_pos_cnt <= 3
+                                              else "moderate" if _r51_pos_cnt <= 6
+                                              else "crowded")
+                except Exception:
+                    live[tk]["crowd_tier"] = "few"
+                # dollar_index_state
+                try:
+                    _r51_dxy = float(live.get("DXY", {}).get("chg1d", 0) or
+                                     regime.get("dxy_chg1d", 0) or 0)
+                    live[tk]["dollar_index_state"] = ("dollar_strong" if _r51_dxy > 0.3
+                                                      else "dollar_weak" if _r51_dxy < -0.3
+                                                      else "dollar_flat")
+                except Exception:
+                    live[tk]["dollar_index_state"] = "dollar_flat"
+                # earnings_surprise_direction
+                try:
+                    _r51_eps_surp = float(live[tk].get("eps_surprise_pct", 0) or 0)
+                    live[tk]["earnings_surprise_direction"] = ("beat_estimate" if _r51_eps_surp > 5
+                                                               else "missed_estimate" if _r51_eps_surp < -5
+                                                               else "met_estimate")
+                except Exception:
+                    live[tk]["earnings_surprise_direction"] = "met_estimate"
+                # eps_surprise_history
+                try:
+                    _r51_beats = int(live[tk].get("eps_beats_last4", 0) or 0)
+                    _r51_misses = int(live[tk].get("eps_misses_last4", 0) or 0)
+                    live[tk]["eps_surprise_history"] = ("consistent_beats" if _r51_beats >= 3
+                                                        else "misser" if _r51_misses >= 2
+                                                        else "mixed")
+                except Exception:
+                    live[tk]["eps_surprise_history"] = "mixed"
+                # estimate_revision_trend
+                try:
+                    _r51_etr = str(live[tk].get("eps_estimate_trend", "") or "").lower()
+                    live[tk]["estimate_revision_trend"] = ("revising_up" if "up" in _r51_etr or "rais" in _r51_etr
+                                                           else "revising_down" if "down" in _r51_etr or "cut" in _r51_etr
+                                                           else "stable_estimates")
+                except Exception:
+                    live[tk]["estimate_revision_trend"] = "stable_estimates"
+                # open_futures_state
+                try:
+                    _r51_spy_pm = float(live.get("SPY", {}).get("pm_gap_pct", 0) or 0)
+                    live[tk]["open_futures_state"] = ("futures_strong" if _r51_spy_pm >= 0.5
+                                                      else "futures_up" if _r51_spy_pm >= 0.1
+                                                      else "futures_crash" if _r51_spy_pm <= -1.0
+                                                      else "futures_down" if _r51_spy_pm <= -0.1
+                                                      else "flat")
+                except Exception:
+                    live[tk]["open_futures_state"] = "flat"
+                # insider_buy_recency
+                try:
+                    _r51_ibd = int(live[tk].get("insider_buy_days", 999) or 999)
+                    live[tk]["insider_buy_recency"] = ("recent_buy" if _r51_ibd <= 30
+                                                       else "old_buy" if _r51_ibd <= 90
+                                                       else "no_insider_data")
+                except Exception:
+                    live[tk]["insider_buy_recency"] = "no_insider_data"
+                # institutional_tier
+                try:
+                    _r51_fl   = float(live[tk].get("float_shares_m", 0) or 0)
+                    _r51_vr   = float(live[tk].get("vol_ratio", 1.0) or 1.0)
+                    _r51_mcap = float(live[tk].get("market_cap_b", 0) or 0)
+                    live[tk]["institutional_tier"] = ("tier1_institutional" if _r51_fl > 50 and _r51_vr > 1.5 and _r51_mcap > 5
+                                                      else "tier2_institutional" if _r51_mcap > 1 and _r51_vr >= 1.0
+                                                      else "retail_grade")
+                except Exception:
+                    live[tk]["institutional_tier"] = "retail_grade"
+                # macro_shock_week
+                try:
+                    live[tk]["macro_shock_week"] = ("macro_shock_week" if live[tk].get("macro_shock_day") else "normal_week")
+                except Exception:
+                    live[tk]["macro_shock_week"] = "normal_week"
+                # market_correl_tier
+                try:
+                    _r51_tk5d  = float(live[tk].get("chg5d", 0) or 0)
+                    _r51_spy5d = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                    _r51_qqq5d = float(live.get("QQQ", {}).get("chg5d", 0) or 0)
+                    _r51_mkt5d = (_r51_spy5d + _r51_qqq5d) / 2 if (_r51_spy5d or _r51_qqq5d) else 0
+                    _r51_corr  = (_r51_tk5d / _r51_mkt5d) if _r51_mkt5d != 0 else 0
+                    live[tk]["market_correl_tier"] = ("inverse" if _r51_corr < 0
+                                                      else "high_correl" if _r51_corr >= 1.5
+                                                      else "medium" if _r51_corr >= 0.5
+                                                      else "low")
+                except Exception:
+                    live[tk]["market_correl_tier"] = "medium"
+                # mtf_trend_agree
+                try:
+                    _r51_c5  = float(live[tk].get("chg5d", 0) or 0) > 0
+                    _r51_c1  = float(live[tk].get("chg1d", 0) or 0) > 0
+                    _r51_tt  = bool(live[tk].get("trend_template", False))
+                    _r51_cnt = sum([_r51_c5, _r51_c1, _r51_tt])
+                    live[tk]["mtf_trend_agree"] = ("full_bull" if _r51_cnt == 3
+                                                   else "2of3_bull" if _r51_cnt == 2
+                                                   else "2of3_bear" if _r51_cnt == 1
+                                                   else "full_bear")
+                except Exception:
+                    live[tk]["mtf_trend_agree"] = "mixed"
+                # news_sent_momentum
+                try:
+                    _r51_cur_sent = float(live[tk].get("ai_score", live[tk].get("sent", 0)) or 0)
+                    _r51_hist = [float(t.get("signals", {}).get("ai_score", 0) or 0)
+                                 for t in list(tlog.get("trades", []))[-10:]
+                                 if t.get("ticker") == tk and t.get("signals", {}).get("ai_score") is not None]
+                    _r51_avg  = sum(_r51_hist) / len(_r51_hist) if _r51_hist else _r51_cur_sent
+                    live[tk]["news_sent_momentum"] = ("sentiment_rising" if _r51_cur_sent > _r51_avg + 0.2
+                                                      else "sentiment_falling" if _r51_cur_sent < _r51_avg - 0.2
+                                                      else "sentiment_stable")
+                except Exception:
+                    live[tk]["news_sent_momentum"] = "sentiment_stable"
+                # oi_skew_state
+                try:
+                    _r51_pcr = float(live[tk].get("options_pcr", 1.0) or 1.0)
+                    live[tk]["oi_skew_state"] = ("heavy_calls" if _r51_pcr <= 0.5
+                                                 else "calls_lean" if _r51_pcr <= 0.8
+                                                 else "balanced" if _r51_pcr <= 1.2
+                                                 else "puts_lean" if _r51_pcr <= 1.6
+                                                 else "heavy_puts")
+                except Exception:
+                    live[tk]["oi_skew_state"] = "balanced"
+                # overnight_gap_vol
+                try:
+                    live[tk]["overnight_gap_vol"] = float(live[tk].get("avg_overnight_gap", 0) or 0)
+                except Exception:
+                    live[tk]["overnight_gap_vol"] = 0.0
+                # pos_size_tier (estimated from buying_power fraction; default normal)
+                try:
+                    _r51_bp  = float(tlog.get("buying_power", 0) or 0)
+                    _r51_pv  = float(tlog.get("portfolio_value", _r51_bp) or _r51_bp or 1)
+                    _r51_pct = (_r51_bp / _r51_pv * 100) if _r51_pv > 0 else 0
+                    live[tk]["pos_size_tier"] = ("large_pos" if _r51_pct >= 20
+                                                 else "small_pos" if _r51_pct <= 5
+                                                 else "normal_pos")
+                except Exception:
+                    live[tk]["pos_size_tier"] = "normal_pos"
+                # sector_news_flow_state
+                try:
+                    _r51_snf = sum(1 for k in ("catalyst", "news", "news_headline", "sector_catalyst",
+                                               "sector_news", "news_score")
+                                   if live[tk].get(k))
+                    live[tk]["sector_news_flow_state"] = ("sector_hot" if _r51_snf > 2
+                                                          else "sector_normal" if _r51_snf > 0
+                                                          else "sector_quiet")
+                except Exception:
+                    live[tk]["sector_news_flow_state"] = "sector_quiet"
+                # bond_yield_direction
+                try:
+                    _r51_tlt = float(live.get("TLT", {}).get("chg1d", 0) or 0)
+                    live[tk]["bond_yield_direction"] = ("yields_falling" if _r51_tlt > 0.3
+                                                        else "yields_rising" if _r51_tlt < -0.3
+                                                        else "yields_stable")
+                except Exception:
+                    live[tk]["bond_yield_direction"] = "yields_stable"
+                # options_flow
+                try:
+                    live[tk]["options_flow"] = ("bullish_flow" if (live[tk].get("unusual_calls") or live[tk].get("options_bull"))
+                                                else "neutral")
+                except Exception:
+                    live[tk]["options_flow"] = "neutral"
+                # last_exit_trigger (set at exit time; seed with manual so neuron fires during buys)
+                if not live[tk].get("last_exit_trigger"):
+                    live[tk]["last_exit_trigger"] = "manual"
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
