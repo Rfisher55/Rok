@@ -18997,18 +18997,24 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 reason = f"crypto profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -c_trail and pnl_pct > 0:
                 reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
+            elif _crypto_age_min >= 90 and pnl_pct <= -1.0:
+                # Time-progressive stop: 90+ min at -1% is a confirmed loser — cut before it worsens
+                reason = f"crypto time-stop ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif (_crypto_age_min >= 30 and _crypto_age_min < 75
                   and pnl_pct <= -0.3
-                  and _sig_rsi < 42 and _sig_mslp < 0):
+                  and _sig_rsi < 45 and _sig_mslp < 0):
                 # Early momentum reversal: entered bullish but momentum flipped bearish
                 reason = f"crypto momentum reversal ({pnl_pct:+.1f}% rsi={_sig_rsi:.0f} after {_crypto_age_min:.0f}min)"
-            elif (_crypto_age_min >= 45 and _crypto_age_min < 90
+            elif (_crypto_age_min >= 45 and _crypto_age_min < 150
                   and pnl_pct < 0
                   and _sig_emac < -0.4 and _sig_roc5 < -1):
                 # EMA bearish cross: clear trend shift — cut the loss early
                 reason = f"crypto bearish cross exit ({pnl_pct:+.1f}% ema={_sig_emac:.2f} after {_crypto_age_min:.0f}min)"
-            elif (_crypto_age_min >= 60 and _crypto_age_min < 100
-                  and -0.8 <= pnl_pct <= 0.3
+            elif (_crypto_age_min >= 45 and pnl_pct <= -0.6 and _sig_mslp < 0):
+                # Loss acceleration: still negative at 45min with declining momentum — cut early
+                reason = f"crypto loss acceleration ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif (_crypto_age_min >= 60 and _crypto_age_min < 120
+                  and -1.5 <= pnl_pct <= 0.3
                   and _sig_macd < -0.05 and _sig_mslp < 0 and _sig_rsi < 52):
                 # Stagnant/drifting position: stuck flat-to-negative with deteriorating momentum
                 reason = f"crypto stagnant exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
@@ -19028,14 +19034,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 # 1h profit exit: only trigger at 1%+ — winners ride, not cycle-exited
                 # MOVED before cycle exit so profitable exits get correct category
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= _learned_cycle_min and -1.0 <= pnl_pct < 1.0:
+            elif _crypto_age_min >= _learned_cycle_min and -1.5 <= pnl_pct < 1.0:
                 # Brain-adaptive cycle exit — only for flat/slightly-negative positions.
                 # Winners (pnl >= 1%) are handled above; don't preempt them with a "cycle exit"
-                # that has historically very low WR. Losers deeper than -1% wait for hard stop.
+                # that has historically very low WR. Losers deeper than -1.5% use time-stop above.
                 reason = f"crypto {_learned_cycle_min}min cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= _learned_cycle_min * 1.5 and pnl_pct < -1.0:
-                # Extended timeout for underwater positions: if we're 1.5x past the cycle window
-                # and still losing, exit now rather than waiting for the full hard stop.
+            elif _crypto_age_min >= _learned_cycle_min * 1.5 and pnl_pct < -0.5:
+                # Extended timeout: 1.5x past cycle window and still negative → exit to free capital
                 reason = f"crypto extended timeout ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
