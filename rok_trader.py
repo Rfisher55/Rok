@@ -29849,6 +29849,11 @@ def run():
                     ) if _na_hrs < 999 else "no_catalyst"
                 except Exception:
                     live[tk]["catalyst_age_state"] = "no_catalyst"
+                # grade: N115 grade_perf — momentum_grade not in live[tk] → always "C" → dead neuron
+                try:
+                    live[tk]["grade"] = momentum_grade(live[tk])
+                except Exception:
+                    live[tk]["grade"] = "C"
                 # VIX term structure for vts_perf neuron
                 try:
                     live[tk]["vts_regime_at_entry"] = str(regime.get("vts_regime", "contango") or "contango")
