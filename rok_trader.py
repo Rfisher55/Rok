@@ -29729,6 +29729,18 @@ def run():
                 # sector_etf_1d and sector_day_pct from sector trends
                 live[tk]["sector_etf_1d"]  = live[tk].get("sector_chg1d", 0)
                 live[tk]["sector_day_pct"] = live[tk].get("sector_chg1d", 0)
+                # weekly_trend: N599 weekly_trend_alignment_perf — use price_vs_ema200 as proxy
+                # (weekly_trend never set before → always "neutral_alignment" → dead neuron)
+                _wt_e200 = float(live[tk].get("price_vs_ema200", 0) or 0)
+                live[tk]["weekly_trend"] = (1.0 if _wt_e200 > 3 else -1.0 if _wt_e200 < -3 else 0.0)
+                # advance_decline_ratio: N649 market_breadth_v2_perf — derive from breadth adv_pct
+                # (advance_decline_ratio never set → always "neutral_breadth" → dead neuron)
+                try:
+                    _brd_ap = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
+                    _dec_p = max(0.1, 100 - _brd_ap)
+                    live[tk]["advance_decline_ratio"] = round(_brd_ap / _dec_p, 2)
+                except Exception:
+                    live[tk]["advance_decline_ratio"] = 1.0
                 # News velocity signals from news cache
                 try:
                     _nvc2      = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
