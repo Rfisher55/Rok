@@ -27711,10 +27711,14 @@ def run():
         logger.info(f"Choppy day (eff={day_type_info.get('efficiency',0):.2f}) — raising min score by {abs(_day_score_adj)}")
     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score + _intraday_adj + _spy_tape_score_adj)
 
-    # ── Daily Trade Counter: dynamic threshold to hit 100 trades/day target ───
-    # Count trades placed today (UTC date). If behind the hourly pace needed for 100/day,
+    # Hard cap: stacking guards must never push effective threshold above 80
+    # (prevents total lock-up when rolling WR + regime + drawdown all stack simultaneously)
+    _eff_min_score = min(_eff_min_score, 80)
+
+    # ── Daily Trade Counter: dynamic threshold to hit 300 trades/day target ───
+    # Count trades placed today (UTC date). If behind the hourly pace needed for 300/day,
     # reduce effective min score to generate more entries. Learning requires volume.
-    DAILY_TRADE_TARGET = 100
+    DAILY_TRADE_TARGET = 300
     _today_str = now_utc.strftime("%Y-%m-%d")
     _all_trades_today = [t for t in tlog.get("trades", [])
                          if t.get("time", "")[:10] == _today_str]
@@ -27724,15 +27728,17 @@ def run():
     _paced_target = int(DAILY_TRADE_TARGET * (_hours_market_elapsed / 6.5)) if _hours_market_elapsed > 0 else 0
     _trade_deficit = max(0, _paced_target - _trades_today_count)
     _pace_regime_ok = regime.get("regime", "neutral") not in ("bear",)  # don't push volume in bear market
-    if _trade_deficit >= 30 and _pace_regime_ok:
-        _pace_adj = -8  # far behind: lower aggressively
-        # Floor: in bear/vix-spike regimes use MIN_BUY_SCORE-5, else use 20
+    if _trade_deficit >= 50 and _pace_regime_ok:
+        _pace_adj = -15  # far behind 300/day target: lower aggressively toward 300
         _pace_floor = 20 if not _vix_spike else max(MIN_BUY_SCORE, 30)
         _eff_min_score = max(_pace_floor, _eff_min_score + _pace_adj)
         logger.info(f"Trade pace EMERGENCY: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, threshold → {_eff_min_score}")
-    elif _trade_deficit >= 30:
-        _pace_adj = -4  # bear market: less aggressive pace push
-        logger.info(f"Trade pace (bear mode): deficit {_trade_deficit}, modest adj -4")
+    elif _trade_deficit >= 50:
+        _pace_adj = -8  # bear market: less aggressive pace push
+        logger.info(f"Trade pace (bear mode): deficit {_trade_deficit}, adj -8")
+    elif _trade_deficit >= 30 and _pace_regime_ok:
+        _pace_adj = -12
+        logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 12")
     elif _trade_deficit >= 15 and _pace_regime_ok:
         _pace_adj = -8
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, lowering threshold by 8")
@@ -27744,7 +27750,7 @@ def run():
         logger.info(f"Trade pace: {_trades_today_count}/{_paced_target} today — lowering threshold by 3")
     else:
         _pace_adj = 0
-    if _trade_deficit < 30:  # regular (non-emergency) pace adj
+    if _trade_deficit < 50:  # regular (non-emergency) pace adj
         _eff_min_score = max(20, _eff_min_score + _pace_adj)
     tlog["daily_trade_count"]  = _trades_today_count
     tlog["daily_trade_target"] = DAILY_TRADE_TARGET
