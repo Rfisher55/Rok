@@ -28920,12 +28920,13 @@ def run():
                     _learned_bonus += _npen("vwap_perf", "at_vwap", 45, -1)  # 44.7% WR n=38
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
-                # SPY alignment v1: neutral=20.7% WR n=29 — compute SPY dir from tlog (not in fetch_batch; injected after LB)
+                # SPY alignment v1: spy_intraday_pct never set in tlog — use breadth adv_pct as SPY proxy
+                # (same logic as injection at line 29637: >62% advancing = up, <38% = down)
                 try:
-                    _spy_intra_pct = float(tlog.get("spy_intraday_pct", 0) or 0)
+                    _spy_adv_pct_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
                 except Exception:
-                    _spy_intra_pct = 0.0
-                _spy_intra_lb = ("up" if _spy_intra_pct > 0.2 else "down" if _spy_intra_pct < -0.2 else "flat")
+                    _spy_adv_pct_lb = 50.0
+                _spy_intra_lb = ("up" if _spy_adv_pct_lb > 62 else "down" if _spy_adv_pct_lb < 38 else "flat")
                 _stk_chg_lb = float(_tk_sig_sc.get("change_pct", _tk_sig_sc.get("chg1d", 0)) or 0)
                 if _spy_intra_lb == "flat" and abs(_stk_chg_lb) < 0.3:
                     _learned_bonus += _npen("spy_alignment_v1_perf", "neutral", 25, -5)  # 20.7% WR n=29
