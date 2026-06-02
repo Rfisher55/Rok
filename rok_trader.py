@@ -26285,10 +26285,14 @@ def run():
                 if _entry_date_str < _today_str:
                     _cross_day_force = True
                     logger.warning(f"CROSS-DAY FORCE {sym}: entry={_entry_date_str} today={_today_str} age={_fast_age_min:.0f}min — forcing exit")
-                # Also force-exit if age > 8h regardless (belt + suspenders)
-                elif _fast_age_min >= 480 and pnl_pct < 5.0:
+                # Also force-exit if age > 4h regardless (belt + suspenders) — reduced from 8h
+                elif _fast_age_min >= 240 and pnl_pct < 5.0:
                     _cross_day_force = True
                     logger.warning(f"STALE POSITION {sym}: {_fast_age_min:.0f}min old ({pnl_pct:+.1f}%) — forcing exit")
+                # CATASTROPHIC LOSS emergency exit: never hold past -8% regardless of age
+                elif pnl_pct <= -8.0:
+                    _cross_day_force = True
+                    logger.warning(f"CATASTROPHIC LOSS {sym}: {pnl_pct:+.1f}% — EMERGENCY EXIT")
             except Exception:
                 pass
 
@@ -26307,13 +26311,13 @@ def run():
                     logger.warning(f"Cross-day force sell failed {sym}: {_cxe}")
                 continue
 
-            # Overnight grace window: positions held >6h with strong P&L get a 30min extension.
-            # Let winners run at market open instead of dumping immediately on the 90min timer.
-            _is_overnight = _fast_age_min >= 360  # held 6+ hours = overnight hold
+            # Overnight grace window: positions held >4h with strong P&L get a 30min extension.
+            # Let winners run at market open instead of dumping immediately on the timer.
+            _is_overnight = _fast_age_min >= 240  # held 4+ hours = overnight hold (reduced from 6h)
             _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
-            if _fast_age_min >= 120 and not _grace_override:
-                # 120min hard limit — always exit, no exceptions
-                _fast_reason = f"120min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+            if _fast_age_min >= 60 and not _grace_override:
+                # 60min hard limit (reduced from 120min) — cycle capital faster for 500 trades/day
+                _fast_reason = f"60min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
                     alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
@@ -26326,16 +26330,16 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
-            elif _fast_age_min >= 90 and not _grace_override:
-                # 90min check: exit flat/losing positions; allow super-momentum to ride to 120min
+            elif _fast_age_min >= 45 and not _grace_override:
+                # 45min check (reduced from 90min): exit flat/losing positions; allow super-momentum to ride to 60min
                 _fast_d_90 = live.get(sym, {}) or {}
                 _fast_sc_90 = score(sym, _fast_d_90) if _fast_d_90 else 0
                 _fast_rvol_90 = float(_fast_d_90.get("rvol", 1.0) or 1.0)
-                # Super-momentum extension: pnl>1% AND score>=60 AND rvol>1.5 = still running
-                if pnl_pct >= 1.0 and _fast_sc_90 >= 60 and _fast_rvol_90 >= 1.5 and not _close_guard:
-                    logger.info(f"HOLD {sym} 90min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 120min)")
+                # Super-momentum extension: pnl>1.5% AND score>=70 AND rvol>2.0 = still running strong
+                if pnl_pct >= 1.5 and _fast_sc_90 >= 70 and _fast_rvol_90 >= 2.0 and not _close_guard:
+                    logger.info(f"HOLD {sym} 45min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 60min)")
                 else:
-                    _fast_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+                    _fast_reason = f"45min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                     try:
                         alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
@@ -26444,9 +26448,9 @@ def run():
                     except Exception as _fe:
                         logger.warning(f"40min moderate loss sell failed {sym}: {_fe}")
                     continue
-            elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
-                # 30min flat/drifting exit: wider window frees capital for fresh setups faster
-                _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
+            elif _fast_age_min >= 20 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
+                # 20min flat/drifting exit (reduced from 30min): faster capital recycling for 500 trades/day
+                _fast_reason = f"20min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
                     alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
@@ -27808,7 +27812,7 @@ def run():
     # ── Daily Trade Counter: dynamic threshold to hit 300 trades/day target ───
     # Count trades placed today (UTC date). If behind the hourly pace needed for 300/day,
     # reduce effective min score to generate more entries. Learning requires volume.
-    DAILY_TRADE_TARGET = 300
+    DAILY_TRADE_TARGET = 500  # raised from 300 — 500 trades/day target
     _today_str = now_utc.strftime("%Y-%m-%d")
     _all_trades_today = [t for t in tlog.get("trades", [])
                          if t.get("time", "")[:10] == _today_str]
@@ -28093,6 +28097,20 @@ def run():
             if _avg_vol_pre > 0 and _dollar_vol < 500_000:
                 logger.debug(f"SKIP {tk} — dollar vol ${_dollar_vol/1e3:.0f}K < $500K minimum")
                 _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"thin dollar vol ${_dollar_vol/1e3:.0f}K"})
+                continue
+            # RSI overbought filter: don't chase tops — RSI>82 = likely peak, immediate reversal
+            # HPE rsi=93, MRVL rsi=85, MS rsi=85 all reversed same day. Skip extreme overbought.
+            _rsi_pre = float(_d_pre.get("rsi", 50) or 50)
+            if _rsi_pre > 82 and tk not in breakout_52w_cands:
+                logger.debug(f"SKIP {tk} — RSI={_rsi_pre:.0f} > 82 overbought, not a 52w breakout")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"RSI={_rsi_pre:.0f} overbought"})
+                continue
+            # RVOL filter: need real volume confirmation — rvol<0.3 = nobody trading, fills bad
+            # MS rvol=0.10, ETN rvol=0.06 both reversed quickly. Require minimum volume activity.
+            _rvol_pre = float(_d_pre.get("rvol", 1.0) or 1.0)
+            if _rvol_pre < 0.3 and tk not in vol_surge_cands and tk not in squeeze_cands:
+                logger.debug(f"SKIP {tk} — rvol={_rvol_pre:.2f} < 0.3 — no volume confirmation")
+                _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"rvol={_rvol_pre:.2f} too low"})
                 continue
             # Correlation guard: skip if >0.85 correlated with a held position
             _held_syms = [s for s in longs if s != tk]
