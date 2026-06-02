@@ -28555,7 +28555,8 @@ def run():
                 if float(_tk_sig_sc.get("rs63", 0) or 0) >= 1.5:
                     _learned_bonus += _nbns("rs63_q_tier_perf", "elite", 65, 3)
                 if bool(_tk_sig_sc.get("at_breakout", False)):
-                    _learned_bonus += _nbns("at_breakout_perf", "breakout", 65, 2)
+                    _learned_bonus += _nbns("at_breakout_perf", "breakout", 65, 2)   # fires only if WR>=65%
+                    _learned_bonus += _npen("signal_performance", "at_breakout", 45, -2)  # 44% WR n=34
                 _rvol_lb = float(_tk_sig_sc.get("rvol", 1.0) or 1.0)
                 if _rvol_lb >= 3.0:
                     _learned_bonus += _nbns("rvol_tier_perf", "extreme", 62, 2)
@@ -28625,8 +28626,9 @@ def run():
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
                     _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    # gap_and_hold alone = 50% WR but combos are 16-33% WR — consistent loser signal
-                    _learned_bonus += _npen("gap_hold_perf", "holding", 55, -4)  # data: drags all combos to 16-33% WR
+                    # gap_and_hold: 37% WR at entry, 35% WR in signal_performance — consistent loser
+                    _learned_bonus += _npen("gap_hold_perf", "holding", 45, -4)   # 37% WR threshold tightened
+                    _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 35% WR n=20
                 if bool(_tk_sig_sc.get("supertrend_bull", False)):
                     _learned_bonus += _nbns("supertrend_perf", "bull", 62, 1)
                 if bool(_tk_sig_sc.get("ttm_squeeze_fired", False)):
@@ -28634,9 +28636,12 @@ def run():
                 if bool(_tk_sig_sc.get("donchian_up", False)):
                     _learned_bonus += _nbns("donchian_breakout_entry_perf", "donchian_up", 62, 1)
                 if not bool(_tk_sig_sc.get("orb_breakout", False)) and not bool(_tk_sig_sc.get("orb_active", False)):
-                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 62, 2)  # no_orb=80% WR n=15
+                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 62, 2)  # no_orb: WR=63% — clean trend
                 elif bool(_tk_sig_sc.get("orb_active", False)) and not bool(_tk_sig_sc.get("orb_breakout", False)):
-                    _learned_bonus += _npen("orb_quality_perf", "consolidating", 47, -2)  # 44.4% WR n=36 — stuck in range
+                    _learned_bonus += _npen("orb_quality_perf", "consolidating", 47, -2)  # consolidating: ~47% WR
+                elif bool(_tk_sig_sc.get("orb_breakout", False)):
+                    _learned_bonus += _npen("orb_quality_perf", "breakout", 25, -5)   # 14% WR n=7 — false breakout trap!
+                    _learned_bonus += _npen("signal_performance", "orb_breakout", 25, -3)  # direct signal WR also 14%
                 # chart_pattern single (1 pattern): WR=38.5% n=13 — weak single-trigger, real moves need multi-pattern
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
                     _learned_bonus += _nbns("vwap_reclaim_perf", "reclaim", 62, 1)
