@@ -2947,7 +2947,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n124 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n124_align = _buy_n124.get("spy_alignment_at_entry", "neutral") if _buy_n124 else "neutral"
-            _n124_perf = tlog.setdefault("spy_alignment_perf", {})
+            _n124_perf = tlog.setdefault("spy_alignment_v1_perf", {})
             _n124p = _n124_perf.setdefault(_n124_align, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n124_align})
             _n124p["total"] += 1; _n124p["total_pnl"] = round(_n124p["total_pnl"] + pnl, 2)
             if pnl > 0: _n124p["wins"] += 1
@@ -3131,7 +3131,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n134 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n134_tier = _buy_n134.get("sector_leadership_tier", "mid") if _buy_n134 else "mid"
-            _n134_perf = tlog.setdefault("sector_leadership_perf", {})
+            _n134_perf = tlog.setdefault("sector_leadership_v1_perf", {})
             _n134p = _n134_perf.setdefault(_n134_tier, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n134_tier})
             _n134p["total"] += 1; _n134p["total_pnl"] = round(_n134p["total_pnl"] + pnl, 2)
             if pnl > 0: _n134p["wins"] += 1
@@ -4556,7 +4556,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n222 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n222_field = _buy_n222.get("sector_etf_momentum_state", "sector_flat") if _buy_n222 else "sector_flat"
-            _n222_perf = tlog.setdefault("sector_etf_momentum_perf", {})
+            _n222_perf = tlog.setdefault("sector_etf_momentum_v1_perf", {})
             _n222p = _n222_perf.setdefault(_n222_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n222_field})
             _n222p["total"] += 1; _n222p["total_pnl"] = round(_n222p["total_pnl"] + pnl, 2)
             if pnl > 0: _n222p["wins"] += 1
@@ -5295,7 +5295,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n270 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n270_field = _buy_n270.get("time_since_last_trade_state", "normal_pace") if _buy_n270 else "normal_pace"
-            _n270_perf = tlog.setdefault("time_since_last_trade_perf", {})
+            _n270_perf = tlog.setdefault("time_since_trade_v1_perf", {})
             _n270p = _n270_perf.setdefault(_n270_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n270_field})
             _n270p["total"] += 1; _n270p["total_pnl"] = round(_n270p["total_pnl"] + pnl, 2)
             if pnl > 0: _n270p["wins"] += 1
@@ -5640,7 +5640,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n293 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n293_field = _buy_n293.get("spy_trend_strength_state", "weak_bull") if _buy_n293 else "weak_bull"
-            _n293_perf = tlog.setdefault("spy_trend_strength_perf", {})
+            _n293_perf = tlog.setdefault("spy_trend_strength_v1_perf", {})
             _n293p = _n293_perf.setdefault(_n293_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n293_field})
             _n293p["total"] += 1; _n293p["total_pnl"] = round(_n293p["total_pnl"] + pnl, 2)
             if pnl > 0: _n293p["wins"] += 1
@@ -6195,7 +6195,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n330 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n330_field = _buy_n330.get("volume_trend_3d_state", "volume_normal") if _buy_n330 else "volume_normal"
-            _n330_perf = tlog.setdefault("volume_trend_3d_perf", {})
+            _n330_perf = tlog.setdefault("volume_trend_3d_v1_perf", {})
             _n330p = _n330_perf.setdefault(_n330_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n330_field})
             _n330p["total"] += 1; _n330p["total_pnl"] = round(_n330p["total_pnl"] + pnl, 2)
             if pnl > 0: _n330p["wins"] += 1
@@ -11789,8 +11789,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n703 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n703_field = _buy_n703.get("trend_exhaustion_perf", "fresh_trend") if _buy_n703 else "fresh_trend"
-            _n703_perf = tlog.setdefault("trend_exhaustion_perf", {})
+            _n703_field = _buy_n703.get("trend_exhaustion_v1_perf", "fresh_trend") if _buy_n703 else "fresh_trend"
+            _n703_perf = tlog.setdefault("trend_exhaustion_v1_perf", {})
             _n703p = _n703_perf.setdefault(_n703_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n703_field})
             _n703p["total"] += 1; _n703p["total_pnl"] = round(_n703p["total_pnl"] + pnl, 2)
             if pnl > 0: _n703p["wins"] += 1
@@ -23251,6 +23251,71 @@ def score(tk, d, sentiment=0, regime_adj=0):
             elif _n737_rs_v >= -5: _n737_rs_q = "neutral_rs"
             else:                  _n737_rs_q = "weak_rs"
             _nsl_adj += _nde("rs_quality_v2_perf", _n737_rs_q)
+
+            # N124: SPY/stock alignment (aligned_bull/diverging_bull/diverging_bear/aligned_bear/neutral)
+            _n124_spy_v  = float(d.get("spy_chg1d", d.get("spy_1d", 0)) or 0)
+            _n124_stk_v  = float(d.get("chg1d", d.get("chg_pct", 0)) or 0)
+            if   _n124_spy_v > 0.2 and _n124_stk_v > 0.2:  _n124_al_q = "aligned_bull"
+            elif _n124_spy_v < -0.2 and _n124_stk_v > 0.2: _n124_al_q = "diverging_bull"
+            elif _n124_spy_v > 0.2 and _n124_stk_v < -0.2: _n124_al_q = "diverging_bear"
+            elif _n124_spy_v < -0.2 and _n124_stk_v < -0.2: _n124_al_q = "aligned_bear"
+            else:                                             _n124_al_q = "neutral"
+            _nsl_adj += _nde("spy_alignment_v1_perf", _n124_al_q)
+
+            # N134: Sector leadership tier (leader/laggard/mid)
+            _n134_sec_v = float(d.get("sector_etf_5d", d.get("sector_5d", d.get("rs_sector", 0))) or 0)
+            if   _n134_sec_v >= 1.5: _n134_sl_q = "leader"
+            elif _n134_sec_v <= -1.5: _n134_sl_q = "laggard"
+            else:                     _n134_sl_q = "mid"
+            _nsl_adj += _nde("sector_leadership_v1_perf", _n134_sl_q)
+
+            # N222: Sector ETF momentum (sector_up/sector_down/sector_flat)
+            _n222_sec_v = float(d.get("sector_etf_5d", d.get("sector_5d", d.get("rs63", 0))) or 0)
+            if   _n222_sec_v > 1.0:  _n222_sm_q = "sector_up"
+            elif _n222_sec_v < -1.0: _n222_sm_q = "sector_down"
+            else:                    _n222_sm_q = "sector_flat"
+            _nsl_adj += _nde("sector_etf_momentum_v1_perf", _n222_sm_q)
+
+            # N270: Time since last trade (quick_trade/normal_pace/slow_pace)
+            _n270_pace_v = float(d.get("time_since_last_trade_h", d.get("trade_gap_hours", 4.0)) or 4.0)
+            if   _n270_pace_v < 1.0:  _n270_pace_q = "quick_trade"
+            elif _n270_pace_v <= 4.0: _n270_pace_q = "normal_pace"
+            else:                     _n270_pace_q = "slow_pace"
+            _nsl_adj += _nde("time_since_trade_v1_perf", _n270_pace_q)
+
+            # N293: SPY 5d trend strength (strong_bull/weak_bull/weak_bear)
+            _n293_spy5_v = float(d.get("spy_5d", d.get("spy_chg5d", 0)) or 0)
+            if   _n293_spy5_v > 2.0: _n293_spy_q = "strong_bull"
+            elif _n293_spy5_v > 0:   _n293_spy_q = "weak_bull"
+            else:                    _n293_spy_q = "weak_bear"
+            _nsl_adj += _nde("spy_trend_strength_v1_perf", _n293_spy_q)
+
+            # N330: Volume trend 3D (volume_expanding/volume_contracting/volume_normal)
+            _n330_vr_v  = float(d.get("rvol", d.get("vol_ratio", 1.0)) or 1.0)
+            _n330_chg_v = float(d.get("chg1d", d.get("chg_pct", 0)) or 0)
+            if   _n330_vr_v > 1.3 and _n330_chg_v > 0: _n330_vt_q = "volume_expanding"
+            elif _n330_vr_v < 0.7:                      _n330_vt_q = "volume_contracting"
+            else:                                        _n330_vt_q = "volume_normal"
+            _nsl_adj += _nde("volume_trend_3d_v1_perf", _n330_vt_q)
+
+            # N703: Trend exhaustion RSI-based (extreme_trend_exhaustion/.../fresh_trend)
+            _n703_rsi_v  = float(d.get("rsi", 50) or 50)
+            _n703_pve_v  = float(d.get("price_vs_ema200", d.get("pct_vs_ema200", 0)) or 0)
+            if   _n703_rsi_v > 80 and _n703_pve_v > 40: _n703_te_q = "extreme_trend_exhaustion"
+            elif _n703_rsi_v > 75:                       _n703_te_q = "high_exhaustion_risk"
+            elif _n703_rsi_v > 65:                       _n703_te_q = "moderate_exhaustion"
+            elif _n703_rsi_v > 50:                       _n703_te_q = "trend_healthy"
+            else:                                         _n703_te_q = "fresh_trend"
+            _nsl_adj += _nde("trend_exhaustion_v1_perf", _n703_te_q)
+
+            # N724: Risk per trade (conservative_risk/normal_risk/moderate_risk/elevated_risk/high_risk)
+            _n724_rp_v = float(d.get("risk_per_trade", d.get("stop_loss_pct", d.get("atr_pct", 1.0))) or 1.0)
+            if   _n724_rp_v < 0.5: _n724_rp_q = "conservative_risk"
+            elif _n724_rp_v < 1.0: _n724_rp_q = "normal_risk"
+            elif _n724_rp_v < 2.0: _n724_rp_q = "moderate_risk"
+            elif _n724_rp_v < 3.0: _n724_rp_q = "elevated_risk"
+            else:                   _n724_rp_q = "high_risk"
+            _nsl_adj += _nde("risk_per_trade_perf", _n724_rp_q)
 
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
@@ -35089,7 +35154,7 @@ def run():
                             _n703_s = "fresh_trend"
                     except Exception:
                         _n703_s = "fresh_trend"
-                    _buy_signals_merged["trend_exhaustion_perf"] = _n703_s
+                    _buy_signals_merged["trend_exhaustion_v1_perf"] = _n703_s
                     # N704: Institutional footprint
                     try:
                         _n704_tier = str(cand.get("institutional_tier", "") or "").lower()
@@ -39170,7 +39235,7 @@ def run():
         _n121_insights = _prev_learned.get("si_squeeze_perf", [])
         _n122_insights = _prev_learned.get("dist_200ema_perf", [])
         _n123_insights = _prev_learned.get("sector_etf_strength_perf", [])
-        _n124_insights = _prev_learned.get("spy_alignment_perf", [])
+        _n124_insights = _prev_learned.get("spy_alignment_v1_perf", [])
         _n125_insights = _prev_learned.get("news_velocity_count_perf", [])
         _n126_insights = _prev_learned.get("gap_entry_perf", [])
         _n127_insights = _prev_learned.get("rs_tier_entry_perf", [])
@@ -39180,7 +39245,7 @@ def run():
         _n131_insights = _prev_learned.get("earnings_timing_perf", [])
         _n132_insights = _prev_learned.get("analyst_momentum_perf", [])
         _n133_insights = _prev_learned.get("beta_tier_perf", [])
-        _n134_insights = _prev_learned.get("sector_leadership_perf", [])
+        _n134_insights = _prev_learned.get("sector_leadership_v1_perf", [])
         _n135_insights = _prev_learned.get("pm_volume_perf", [])
         _n136_insights = _prev_learned.get("accum_distrib_perf", [])
         _n137_insights = _prev_learned.get("vol_price_confirm_perf", [])
@@ -39268,7 +39333,7 @@ def run():
         _n219_insights = _prev_learned.get("technical_pattern_strength_perf", [])
         _n220_insights = _prev_learned.get("position_duration_target_perf", [])
         _n221_insights = _prev_learned.get("dollar_index_perf", [])
-        _n222_insights = _prev_learned.get("sector_etf_momentum_perf", [])
+        _n222_insights = _prev_learned.get("sector_etf_momentum_v1_perf", [])
         _n223_insights = _prev_learned.get("position_count_at_entry_perf", [])
         _n224_insights = _prev_learned.get("spy_5d_trend_perf", [])
         _n225_insights = _prev_learned.get("vix_regime_perf", [])
@@ -39316,7 +39381,7 @@ def run():
         _n267_insights = _prev_learned.get("market_cap_proxy_perf", [])
         _n268_insights = _prev_learned.get("trend_acceleration_perf", [])
         _n269_insights = _prev_learned.get("sector_etf_trend_perf", [])
-        _n270_insights = _prev_learned.get("time_since_last_trade_perf", [])
+        _n270_insights = _prev_learned.get("time_since_trade_v1_perf", [])
         _n271_insights = _prev_learned.get("market_internals_trend_perf", [])
         _n272_insights = _prev_learned.get("news_volume_perf", [])
         _n273_insights = _prev_learned.get("spy_distance_from_52w_high_perf", [])
@@ -39339,7 +39404,7 @@ def run():
         _n290_insights = _prev_learned.get("ticker_beta_bucket_perf", [])
         _n291_insights = _prev_learned.get("rvol_quality_tier_perf", [])
         _n292_insights = _prev_learned.get("price_above_200ma_perf", [])
-        _n293_insights = _prev_learned.get("spy_trend_strength_perf", [])
+        _n293_insights = _prev_learned.get("spy_trend_strength_v1_perf", [])
         _n294_insights = _prev_learned.get("rsi_at_entry_perf", [])
         _n295_insights = _prev_learned.get("gap_overnight_direction_perf", [])
         _n296_insights = _prev_learned.get("vix_level_perf", [])
@@ -39376,7 +39441,7 @@ def run():
         _n327_insights = _prev_learned.get("entry_at_support_perf", [])
         _n328_insights = _prev_learned.get("psar_bull_entry_perf", [])
         _n329_insights = _prev_learned.get("adx_trend_strength_v1_perf", [])
-        _n330_insights = _prev_learned.get("volume_trend_3d_perf", [])
+        _n330_insights = _prev_learned.get("volume_trend_3d_v1_perf", [])
         _n331_insights = _prev_learned.get("sector_rotation_signal_perf", [])
         _n332_insights = _prev_learned.get("spy_above_200ma_perf", [])
         _n333_insights = _prev_learned.get("fear_greed_bucket_perf", [])
@@ -39854,7 +39919,8 @@ def run():
         _n700_list = _prev_learned.get("composite_technical_score_perf", [])
         _n701_list = _prev_learned.get("parabolic_extension_perf", [])
         _n702_list = _prev_learned.get("volume_climax_perf", [])
-        _n703_list = _prev_learned.get("trend_exhaustion_perf", [])
+        _n703_list = _prev_learned.get("trend_exhaustion_v1_perf", [])
+        _n724_list = _prev_learned.get("risk_per_trade_perf", [])
         _n704_list = _prev_learned.get("institutional_footprint_perf", [])
         _n705_list = _prev_learned.get("smart_stop_placement_perf", [])
         _n706_list = _prev_learned.get("risk_adjusted_return_perf", [])
@@ -41361,7 +41427,7 @@ def run():
             _learn_log.append(f"N123 sector ETF: best={_best_sec['state']}({_best_sec['win_rate']:.0f}%WR) worst={_worst_sec['state']}({_worst_sec['win_rate']:.0f}%WR)")
 
         # ── N124: Intraday SPY Alignment (multi-tier) ───────────────────────────────
-        _n124_raw = tlog.get("spy_alignment_perf", {})
+        _n124_raw = tlog.get("spy_alignment_v1_perf", {})
         _n124_insights = []
         for _n24k, _n24d in _n124_raw.items():
             if _n24d.get("total", 0) >= 2:
@@ -42354,7 +42420,7 @@ def run():
                 _learn_log.append(f"N221 dollar: strong={_ds_n221['win_rate']:.0f}% weak={_dw_n221['win_rate']:.0f}%WR")
 
         # ── N222: Sector ETF Momentum tuner ───────────────────────────────────────
-        _n222_raw = tlog.get("sector_etf_momentum_perf", {})
+        _n222_raw = tlog.get("sector_etf_momentum_v1_perf", {})
         _n222_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n222_raw.items() if v.get("total", 0) >= 2]
@@ -42872,7 +42938,7 @@ def run():
                 _learn_log.append(f"N269 sector breadth: expanding={_se_n269['win_rate']:.0f}% contracting={_sc_n269['win_rate']:.0f}%WR")
 
         # ── N270: Time Since Last Trade tuner ─────────────────────────────────────────
-        _n270_raw = tlog.get("time_since_last_trade_perf", {})
+        _n270_raw = tlog.get("time_since_trade_v1_perf", {})
         _n270_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n270_raw.items() if v.get("total", 0) >= 2]
@@ -43124,7 +43190,7 @@ def run():
                 _learn_log.append(f"N292 200ma: above={_ab_n292['win_rate']:.0f}% below={_bl_n292['win_rate']:.0f}%WR")
 
         # ── N293: SPY Trend Strength tuner ────────────────────────────────────────────
-        _n293_raw = tlog.get("spy_trend_strength_perf", {})
+        _n293_raw = tlog.get("spy_trend_strength_v1_perf", {})
         _n293_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n293_raw.items() if v.get("total", 0) >= 2]
@@ -43532,7 +43598,7 @@ def run():
                 _learn_log.append(f"N329 adx strength: strong={_st_n329['win_rate']:.0f}% weak={_wt_n329['win_rate']:.0f}%WR")
 
         # ── N330: Volume Trend 3D tuner ─────────────────────────────────────────────────
-        _n330_raw = tlog.get("volume_trend_3d_perf", {})
+        _n330_raw = tlog.get("volume_trend_3d_v1_perf", {})
         _n330_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n330_raw.items() if v.get("total", 0) >= 2]
@@ -46715,12 +46781,20 @@ def run():
             _learn_log.append(f"N702 VolumeClimax: above_avg={_a_n702['win_rate']:.0f}% blow_off={_b_n702['win_rate']:.0f}%WR")
 
         # ── N703: Trend Exhaustion entry tuner ────────────────────
-        _n703_raw = tlog.get("trend_exhaustion_perf", {})
+        _n703_raw = tlog.get("trend_exhaustion_v1_perf", {})
         _n703_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n703_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n703 = next((s for s in _n703_list if s.get("state")=="fresh_trend"), _n703_list[0] if _n703_list else {"win_rate":50})
         _b_n703 = next((s for s in _n703_list if s.get("state")=="extreme_trend_exhaustion"), _n703_list[-1] if _n703_list else {"win_rate":50})
         if _n703_list:
             _learn_log.append(f"N703 TrendExhaustion: fresh={_a_n703['win_rate']:.0f}% extreme_exhaustion={_b_n703['win_rate']:.0f}%WR")
+
+        # ── N724: Risk Per Trade entry tuner ────────────────────
+        _n724_raw = tlog.get("risk_per_trade_perf", {})
+        _n724_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n724_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n724 = next((s for s in _n724_list if s.get("state")=="conservative_risk"), _n724_list[0] if _n724_list else {"win_rate":50})
+        _b_n724 = next((s for s in _n724_list if s.get("state")=="high_risk"), _n724_list[-1] if _n724_list else {"win_rate":50})
+        if _n724_list:
+            _learn_log.append(f"N724 RiskPerTrade: conservative={_a_n724['win_rate']:.0f}% high_risk={_b_n724['win_rate']:.0f}%WR")
 
         # ── N704: Institutional Footprint entry tuner ────────────────────
         _n704_raw = tlog.get("institutional_footprint_perf", {})
@@ -46987,6 +47061,13 @@ def run():
             ("earnings_drift_entry_perf",      "earnings_drift_entry"),
             ("analyst_revision_v1_perf",       "analyst_revision_v1"),
             ("rs_quality_v2_perf",             "rs_quality_v2"),
+            ("spy_alignment_v1_perf",          "spy_alignment_v1"),
+            ("sector_leadership_v1_perf",      "sector_leadership_v1"),
+            ("sector_etf_momentum_v1_perf",    "sector_etf_momentum_v1"),
+            ("time_since_trade_v1_perf",       "time_since_trade_v1"),
+            ("spy_trend_strength_v1_perf",     "spy_trend_strength_v1"),
+            ("volume_trend_3d_v1_perf",        "volume_trend_3d_v1"),
+            ("trend_exhaustion_v1_perf",       "trend_exhaustion_v1"),
             ("intraday_momentum_perf", "intraday_momentum"),
             ("closing_strength_perf",  "closing_strength"),
             ("multi_day_pattern_perf", "multi_day_pattern"),
@@ -47104,6 +47185,13 @@ def run():
             ("earnings_drift_entry_perf",       "earnings_drift_entry"),
             ("analyst_revision_v1_perf",        "analyst_revision_v1"),
             ("rs_quality_v2_perf",              "rs_quality_v2"),
+            ("spy_alignment_v1_perf",           "spy_alignment_v1"),
+            ("sector_leadership_v1_perf",       "sector_leadership_v1"),
+            ("sector_etf_momentum_v1_perf",     "sector_etf_momentum_v1"),
+            ("time_since_trade_v1_perf",        "time_since_trade_v1"),
+            ("spy_trend_strength_v1_perf",      "spy_trend_strength_v1"),
+            ("volume_trend_3d_v1_perf",         "volume_trend_3d_v1"),
+            ("trend_exhaustion_v1_perf",        "trend_exhaustion_v1"),
             ("news_sent_score_v1_perf",         "news_sent_score_v1"),
             ("short_int_ratio_v1_perf",         "short_int_ratio_v1"),
             ("sector_rs_quality_perf",          "sector_rs_quality"),
@@ -47179,6 +47267,13 @@ def run():
             ("earnings_drift_entry_perf",       "earnings_drift_entry"),
             ("analyst_revision_v1_perf",        "analyst_revision_v1"),
             ("rs_quality_v2_perf",              "rs_quality_v2"),
+            ("spy_alignment_v1_perf",           "spy_alignment_v1"),
+            ("sector_leadership_v1_perf",       "sector_leadership_v1"),
+            ("sector_etf_momentum_v1_perf",     "sector_etf_momentum_v1"),
+            ("time_since_trade_v1_perf",        "time_since_trade_v1"),
+            ("spy_trend_strength_v1_perf",      "spy_trend_strength_v1"),
+            ("volume_trend_3d_v1_perf",         "volume_trend_3d_v1"),
+            ("trend_exhaustion_v1_perf",        "trend_exhaustion_v1"),
             ("signal_freshness_perf",           "signal_freshness"),
             ("order_flow_pressure_perf",     "order_flow_pressure"),
             ("time_weighted_momentum_perf",  "time_weighted_momentum"),
@@ -47347,7 +47442,7 @@ def run():
             _learn_log.append(f"N133 beta tiers: {_beta_sum}")
 
         # ── N134: Sector Leadership Tier (multi-tier) ────────────────────────────────
-        _n134_raw = tlog.get("sector_leadership_perf", {})
+        _n134_raw = tlog.get("sector_leadership_v1_perf", {})
         _n134_insights = []
         for _n34k, _n34d in _n134_raw.items():
             if _n34d.get("total", 0) >= 2:
@@ -47706,7 +47801,7 @@ def run():
             "technical_pattern_strength_perf": _n219_insights, # N219: technical pattern strength tier vs outcome
             "position_duration_target_perf": _n220_insights,  # N220: position duration target vs outcome
             "dollar_index_perf":          _n221_insights,     # N221: DXY/dollar trend (UUP ETF) vs outcome
-            "sector_etf_momentum_perf":   _n222_insights,     # N222: sector ETF 5d momentum vs outcome
+            "sector_etf_momentum_v1_perf": _n222_insights,     # N222: sector ETF momentum (sector_up/down/flat) vs outcome
             "position_count_at_entry_perf": _n223_insights,   # N223: number of open positions at entry vs outcome
             "spy_5d_trend_perf":          _n224_insights,     # N224: SPY 5-day trend direction vs outcome
             "vix_regime_perf":            _n225_insights,     # N225: VIX regime bucket at entry vs outcome
@@ -47754,7 +47849,7 @@ def run():
             "market_cap_proxy_perf":       _n267_insights,   # N267: market cap tier (proxy via vol*price) vs outcome
             "trend_acceleration_perf":     _n268_insights,   # N268: trend acceleration (5d vs 20d rate) vs outcome
             "sector_etf_trend_perf":       _n269_insights,   # N269: sector ETF trend (expanding/contracting/neutral) vs outcome
-            "time_since_last_trade_perf":  _n270_insights,   # N270: time since last BUY (trade pace) vs outcome
+            "time_since_trade_v1_perf":    _n270_insights,   # N270: time since last BUY (quick/normal/slow pace) vs outcome
             "market_internals_trend_perf": _n271_insights,   # N271: market internals trend (mq today vs 3d avg) vs outcome
             "news_volume_perf":            _n272_insights,   # N272: news volume (articles scanned) vs outcome
             "spy_distance_from_52w_high_perf": _n273_insights, # N273: SPY distance from 52-week high vs outcome
@@ -47777,7 +47872,7 @@ def run():
             "ticker_beta_bucket_perf":         _n290_insights,   # N290: ticker beta bucket (sector proxy) vs outcome
             "rvol_quality_tier_perf":          _n291_insights,   # N291: relative volume quality (rvol_high/normal/low) vs outcome
             "price_above_200ma_perf":          _n292_insights,   # N292: price above/near/below 200MA at entry vs outcome
-            "spy_trend_strength_perf":         _n293_insights,   # N293: SPY 5d trend strength at entry vs outcome
+            "spy_trend_strength_v1_perf":      _n293_insights,   # N293: SPY 5d trend strength (strong_bull/weak_bull/weak_bear) vs outcome
             "rsi_at_entry_perf":               _n294_insights,   # N294: ticker RSI zone at entry vs outcome
             "gap_overnight_direction_perf":    _n295_insights,   # N295: overnight gap direction at entry vs outcome
             "vix_level_perf":                  _n296_insights,   # N296: VIX level bucket at entry vs outcome
@@ -47814,7 +47909,7 @@ def run():
             "entry_at_support_perf":            _n327_insights,   # N327: entry at support (price vs SMA21) at entry vs outcome
             "psar_bull_entry_perf":             _n328_insights,   # N328: PSAR bull entry (psar_bull flag) at entry vs outcome
             "adx_trend_strength_v1_perf":        _n329_insights,   # N329: ADX trend strength (strong/moderate/weak_trend) vs outcome
-            "volume_trend_3d_perf":             _n330_insights,   # N330: volume trend 3D (vol_ratio + direction) at entry vs outcome
+            "volume_trend_3d_v1_perf":          _n330_insights,   # N330: volume trend 3D (volume_expanding/contracting/normal) vs outcome
             "sector_rotation_signal_perf":      _n331_insights,   # N331: sector rotation signal at entry vs outcome
             "spy_above_200ma_perf":             _n332_insights,   # N332: SPY above/below 200MA at entry vs outcome
             "fear_greed_bucket_perf":           _n333_insights,   # N333: fear/greed bucket (VIX) at entry vs outcome
@@ -48190,7 +48285,8 @@ def run():
             "composite_technical_score_perf": _n700_list,  # N700: composite technical score (elite_composite/strong_composite/solid_composite/average_composite/weak_composite) vs outcome
             "parabolic_extension_perf": _n701_list,  # N701: parabolic extension (extreme_parabolic/strong_parabolic/moderate_extension/mild_extension/not_extended) vs outcome
             "volume_climax_perf": _n702_list,  # N702: volume climax (blow_off_climax/climax_alert/elevated_volume/above_avg_volume/normal_volume) vs outcome
-            "trend_exhaustion_perf": _n703_list,  # N703: trend exhaustion (extreme_trend_exhaustion/high_exhaustion_risk/moderate_exhaustion/trend_healthy/fresh_trend) vs outcome
+            "trend_exhaustion_v1_perf": _n703_list,  # N703: trend exhaustion (extreme_trend_exhaustion/high_exhaustion_risk/moderate_exhaustion/trend_healthy/fresh_trend) vs outcome
+            "risk_per_trade_perf":     _n724_list,  # N724: risk per trade (conservative/normal/moderate/elevated/high_risk) vs outcome
             "institutional_footprint_perf": _n704_list,  # N704: institutional footprint (strong_institutional_footprint/moderate_institutional/no_institutional_footprint/unknown_institutional) vs outcome
             "smart_stop_placement_perf": _n705_list,  # N705: smart stop placement (wide_atr_stop/normal_atr_stop/tight_atr_stop/very_tight_stop) vs outcome
             "risk_adjusted_return_perf": _n706_list,  # N706: risk-adjusted return (exceptional_rr/excellent_rr/good_rr/acceptable_rr/poor_rr) vs outcome
@@ -48265,6 +48361,13 @@ def run():
             "earnings_drift_entry_perf": [],
             "analyst_revision_v1_perf":  [],
             "rs_quality_v2_perf":        [],
+            "spy_alignment_v1_perf":     [],
+            "sector_leadership_v1_perf": [],
+            "sector_etf_momentum_v1_perf": [],
+            "time_since_trade_v1_perf":  [],
+            "spy_trend_strength_v1_perf": [],
+            "volume_trend_3d_v1_perf":   [],
+            "trend_exhaustion_v1_perf":  [],
             "closing_strength_perf":  [],
             "multi_day_pattern_perf": [],
             "base_breakout_perf":     [],
@@ -48372,6 +48475,13 @@ def run():
             "earnings_drift_entry_perf":       [],
             "analyst_revision_v1_perf":        [],
             "rs_quality_v2_perf":              [],
+            "spy_alignment_v1_perf":           [],
+            "sector_leadership_v1_perf":       [],
+            "sector_etf_momentum_v1_perf":     [],
+            "time_since_trade_v1_perf":        [],
+            "spy_trend_strength_v1_perf":      [],
+            "volume_trend_3d_v1_perf":         [],
+            "trend_exhaustion_v1_perf":        [],
             "sector_leadership_perf":          [],
             "options_iv_environment_perf":     [],
             "breadth_alignment_perf":          [],
@@ -48399,6 +48509,13 @@ def run():
             "earnings_drift_entry_perf":       [],
             "analyst_revision_v1_perf":        [],
             "rs_quality_v2_perf":              [],
+            "spy_alignment_v1_perf":           [],
+            "sector_leadership_v1_perf":       [],
+            "sector_etf_momentum_v1_perf":     [],
+            "time_since_trade_v1_perf":        [],
+            "spy_trend_strength_v1_perf":      [],
+            "volume_trend_3d_v1_perf":         [],
+            "trend_exhaustion_v1_perf":        [],
             "volume_trend_perf":               [],
             "market_internals_perf":           [],
             "fundamental_quality_perf":        [],
@@ -48516,7 +48633,7 @@ def run():
             "oi_skew_perf":         _n142_insights,          # N142: options OI put/call skew at entry
             "eps_surprise_perf":    _n143_insights,          # N143: earnings surprise history (beats/mixed/misser)
             "sector_etf_strength_perf": _n123_insights,     # N123: sector ETF 5d momentum at entry vs outcome
-            "spy_alignment_perf":   _n124_insights,          # N124: stock intraday alignment vs SPY direction
+            "spy_alignment_v1_perf": _n124_insights,         # N124: stock/SPY alignment (aligned_bull/diverging_bull/aligned_bear/neutral) vs outcome
             "news_velocity_count_perf": _n125_insights,      # N125: pre-entry news velocity count (hot/warm/cool/cold)
             "gap_entry_perf":       _n126_insights,          # N126: pre-market gap % at entry vs outcome
             "rs_tier_entry_perf":   _n127_insights,          # N127: RS rating tier at entry vs outcome
@@ -48526,7 +48643,7 @@ def run():
             "earnings_timing_perf": _n131_insights,          # N131: days to earnings at entry vs outcome
             "analyst_momentum_perf": _n132_insights,         # N132: analyst rating momentum at entry vs outcome
             "beta_tier_perf":       _n133_insights,          # N133: stock beta tier at entry vs outcome
-            "sector_leadership_perf": _n134_insights,        # N134: sector leadership tier at entry vs outcome
+            "sector_leadership_v1_perf": _n134_insights,     # N134: sector leadership tier (leader/laggard/mid) vs outcome
             "pm_volume_perf":       _n135_insights,          # N135: pre-market volume surge tier vs outcome
             "accum_distrib_perf":   _n136_insights,          # N136: accumulation/distribution state vs outcome
             "vol_price_confirm_perf": _n137_insights,        # N137: volume-price trend confirmation at entry
