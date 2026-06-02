@@ -28962,15 +28962,17 @@ def run():
                     _learned_bonus += _nbns("stoch_zone_perf", "overbought", 62, 1)  # momentum continuation
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)   # reversal risk in trend sys
-                # LR quality (R²): strong trend fit vs choppy
-                _lr2_lb = float(_tk_sig_sc.get("lr_r2", 0) or 0)
-                _lr_q_lb = ("strong" if _lr2_lb >= 0.85 else "moderate" if _lr2_lb >= 0.6 else "weak")
-                if _lr_q_lb == "strong":
-                    _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3
-                elif _lr_q_lb == "moderate":
-                    _learned_bonus += _nbns("lr_quality_perf", "moderate", 62, 1)  # 66.7% WR n=24 — reliable
-                elif _lr_q_lb == "weak":
-                    _learned_bonus += _npen("lr_quality_perf", "weak", 50, -3)     # 47% WR n=19: choppy trend
+                # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
+                _lr2_raw_lb = _tk_sig_sc.get("lr_r2")
+                if _lr2_raw_lb is not None:
+                    _lr2_lb = float(_lr2_raw_lb or 0)
+                    _lr_q_lb = ("strong" if _lr2_lb >= 0.85 else "moderate" if _lr2_lb >= 0.6 else "weak")
+                    if _lr_q_lb == "strong":
+                        _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3
+                    elif _lr_q_lb == "moderate":
+                        _learned_bonus += _nbns("lr_quality_perf", "moderate", 62, 1)  # 66.7% WR n=24
+                    elif _lr_q_lb == "weak":
+                        _learned_bonus += _npen("lr_quality_perf", "weak", 50, -3)     # 47% WR n=19
                 # Donchian zone: near top of range (breakout) vs weakness
                 _dc_lb = float(_tk_sig_sc.get("donchian_pct", 50) or 50)
                 _dc_zone_lb = ("breakout" if _dc_lb >= 75 else "weakness" if _dc_lb < 25 else "middle")
@@ -28990,19 +28992,23 @@ def run():
                     _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_leading", 60, 1)
                 elif _sec_etf_lb == "sector_lagging":
                     _learned_bonus += _npen("sector_etf_momentum_perf", "sector_lagging", 40, -2)
-                # ROC acceleration: both roc5 and roc20 positive AND roc5 > roc20 = momentum build
-                _roc5_acc = float(_tk_sig_sc.get("roc5", 0) or 0)
-                _roc20_acc = float(_tk_sig_sc.get("roc20", 0) or 0)
-                if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
-                    _learned_bonus += _nbns("roc_perf", "accelerating", 62, 1)  # momentum building
-                elif _roc5_acc <= 0 and _roc20_acc <= 0:
-                    _learned_bonus += _npen("roc_perf", "negative", 35, -1)     # both negative: avoid
+                # ROC acceleration: only penalize negative when signals explicitly present
+                _roc5_acc = _tk_sig_sc.get("roc5")
+                _roc20_acc = _tk_sig_sc.get("roc20")
+                if _roc5_acc is not None and _roc20_acc is not None:
+                    _roc5_acc = float(_roc5_acc or 0); _roc20_acc = float(_roc20_acc or 0)
+                    if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
+                        _learned_bonus += _nbns("roc_perf", "accelerating", 62, 1)
+                    elif _roc5_acc <= 0 and _roc20_acc <= 0:
+                        _learned_bonus += _npen("roc_perf", "negative", 35, -1)  # both negative: avoid
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
-                _rs5_acc = float(_tk_sig_sc.get("rs5", 0) or 0)
-                _rs63_acc = float(_tk_sig_sc.get("rs63", 0) or 0)
-                if _rs5_acc > 1.0 and _rs63_acc > 1.0:
+                _rs5_acc = _tk_sig_sc.get("rs5")
+                _rs63_acc = _tk_sig_sc.get("rs63")
+                if _rs5_acc is not None and _rs63_acc is not None:
+                    _rs5_acc = float(_rs5_acc or 0); _rs63_acc = float(_rs63_acc or 0)
+                if _rs5_acc is not None and float(_rs5_acc) > 1.0 and _rs63_acc is not None and float(_rs63_acc) > 1.0:
                     _learned_bonus += _nbns("rs_mom_perf", "leading", 62, 1)    # both outperforming
-                elif _rs5_acc <= 0 and _rs63_acc <= 0:
+                elif _rs5_acc is not None and _rs63_acc is not None and float(_rs5_acc) <= 0 and float(_rs63_acc) <= 0:
                     _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -1)   # both lagging
                 # Signal freshness: just appeared on scanner = early entry advantage
                 _persist_lb = int(_tk_sig_sc.get("persist_count", _tk_sig_sc.get("consecutive_strong_scans", 0)) or 0)
