@@ -145,12 +145,17 @@ SECTOR_MAP = {
     "MU":"tech","ADI":"tech","AMD":"tech","PLTR":"tech","ARM":"tech",
     "DELL":"tech","SNOW":"tech","DDOG":"tech","NET":"tech","CRWD":"tech",
     "SMCI":"tech","AXON":"tech",
+    "TWLO":"tech","SAIC":"tech","EPAM":"tech","GDDY":"tech","UI":"tech",
+    "CRWV":"tech","FTNT":"tech","ZS":"tech","OKTA":"tech","MDB":"tech",
+    "HUBS":"tech","TEAM":"tech","WDAY":"tech","VEEV":"tech","ZI":"tech",
     # Consumer Tech / Growth
     "AMZN":"consumer_tech","TSLA":"consumer_tech","NFLX":"consumer_tech",
     "UBER":"consumer_tech","BKNG":"consumer_tech","SHOP":"consumer_tech",
     "SQ":"consumer_tech","RBLX":"consumer_tech","HOOD":"consumer_tech",
     "DKNG":"consumer_tech","ABNB":"consumer_tech","DASH":"consumer_tech",
     "ROKU":"consumer_tech","PYPL":"consumer_tech",
+    "LYFT":"consumer_tech","SNAP":"consumer_tech","PINS":"consumer_tech",
+    "TMHC":"consumer_tech","OPEN":"consumer_tech","SPCE":"speculative",
     # Financials
     "JPM":"finance","V":"finance","MA":"finance","BAC":"finance","GS":"finance",
     "MS":"finance","AXP":"finance","SCHW":"finance","BLK":"finance",
@@ -170,8 +175,17 @@ SECTOR_MAP = {
     "CAT":"industrial","DE":"industrial","HON":"industrial","BA":"industrial",
     "RTX":"industrial","GE":"industrial","UPS":"industrial","ETN":"industrial",
     "LMT":"industrial","NOC":"industrial","ACN":"industrial",
+    # Biotech / Pharma
+    "BIIB":"biotech","ILMN":"biotech","MRNA":"biotech","BNTX":"biotech",
+    "VRTX":"biotech","JAZZ":"biotech","PCVX":"biotech","CMPS":"biotech",
+    "SGEN":"biotech","ALNY":"biotech","BMRN":"biotech","ACAD":"biotech",
     # Crypto / Speculative
     "COIN":"crypto","MSTR":"crypto","IBIT":"crypto","BTBT":"crypto","CLSK":"crypto",
+    "MARA":"crypto","RIOT":"crypto","HUT":"crypto","HIVE":"crypto",
+    # Speculative / Meme
+    "AMC":"speculative","GME":"speculative","BBBY":"speculative",
+    "CLOV":"speculative","EXPR":"speculative","KOSS":"speculative",
+    "SKM":"consumer","NET2":"tech",
     # Fintech
     "SOFI":"fintech","AFRM":"fintech","UPST":"fintech","LC":"fintech","OPEN":"fintech",
     # Utilities
@@ -21989,7 +22003,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # ── SECTOR CONTEXT LAYER: sectors with poor historical win rates penalized ─
     try:
         _sector_key = SECTOR_MAP.get(tk, "other")
-        if _sector_key == "other":
+        if _sector_key == "speculative":
+            s -= 12  # meme/speculative stocks: extreme sentiment risk, hard penalty
+        elif _sector_key == "other":
             s -= 6   # unmapped sector: unknown quality, require stronger evidence
         elif _LEARNED_COLD_SECTORS and _sector_key in _LEARNED_COLD_SECTORS:
             s -= 5   # this sector has been losing: raise the bar
@@ -26461,10 +26477,17 @@ def run():
                     _scalp_pthr = max(0.8, _scalp_pthr - 0.2)
             except Exception:
                 pass
+            # Time-adaptive stop tightening: longer the position has been losing, sooner we exit
+            # 20-45min: use normal scalp_sthr; 45-90min: tighten by 0.3%; 90+min: tighten by 0.5%
+            _time_adj_sthr = _scalp_sthr
+            if age_minutes >= 90:
+                _time_adj_sthr = min(_scalp_sthr + 0.5, -0.8)  # tightest: exit if down > 0.8% at 90min+
+            elif age_minutes >= 45:
+                _time_adj_sthr = min(_scalp_sthr + 0.3, -1.0)  # moderate: exit if down > 1.0% at 45-90min
             if 20 <= age_minutes:
                 if pnl_pct >= _scalp_pthr and age_minutes <= 90 and not half_out:
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif pnl_pct <= _scalp_sthr and age_minutes >= 20:
+                elif pnl_pct <= _time_adj_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif age_minutes >= 45 and pnl_pct >= 0.6 and not half_out:
                     # 45min exit: only if signal has degraded; if still strong, extend to 90min
@@ -28329,8 +28352,12 @@ def run():
                     _ng_green_lights += 2  # elite score tier = strong green
                 elif tech_sc >= 85 and (_n180_ng.get("score_85_95", 0) >= 70 or _n180_ng.get("score_85_plus", 0) >= 70):
                     _ng_green_lights += 1
+                # N995: speculative sector (AMC/GME-type) = immediate 3-strike veto
+                _n995_sec = SECTOR_MAP.get(tk, "other")
+                if _n995_sec == "speculative":
+                    _ng_strikes += 3; _ng_reasons.append(f"speculative/meme sector: auto-veto (AMC/GME-type)")
                 # N999: other-sector + light/no accum = 2 strikes (CMPS/SAIC-type: worst risk-adjusted entries)
-                _n999_sec = SECTOR_MAP.get(tk, "other")
+                _n999_sec = _n995_sec  # reuse already computed sector
                 _n999_accum = int(_tk_sig.get("accum_score", 0) or 0)
                 _n999_acperf = _ALL_NEURON_PERFS.get("accum_perf", {}).get("none", {})
                 if _n999_sec == "other" and _n999_accum <= 2:
