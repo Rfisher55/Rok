@@ -563,6 +563,7 @@ def _save_prices_json(tlog: dict, live: dict | None = None) -> None:
 
 
 def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=None, signals=None):
+    pnl_pct = pnl  # alias so neuron update blocks (which use pnl_pct) work correctly
     e = {
         "time":    datetime.now(timezone.utc).isoformat(),
         "action":  action,
@@ -18711,9 +18712,10 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 120 and pnl_pct > -(CRYPTO_STOP_PCT * 100):
-                # 2h cycle: exit anything not already at stop-loss territory (was >= -2%; widened to avoid stuck zone -2% to -5%)
-                reason = f"crypto 2h cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= _learned_cycle_min and pnl_pct > -(CRYPTO_STOP_PCT * 100):
+                # Brain-adaptive cycle exit: threshold adjusts based on learned best hold duration
+                # Default 120min; shortens to 90 if scalp wins, extends to 150 if longer holds win
+                reason = f"crypto {_learned_cycle_min}min cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= 60 and pnl_pct >= 0.5:
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
@@ -18818,6 +18820,22 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     _cn889 = tlog.get("crypto_dow_perf", {})        # N889 day of week
     _cn890 = tlog.get("crypto_asset_perf", {})      # N890 asset class
 
+    # Wire dead learned params into live decisions
+    _best_et_hour  = _lp_cth.get("best_et_hour")    # e.g. "14:30"
+    _worst_et_hour = _lp_cth.get("worst_et_hour")   # e.g. "03:00"
+    _best_hold_bkt = _lp_cth.get("best_crypto_hold") # e.g. "scalp_<4h" or "intraday_4-24h"
+    # Determine current ET half-hour bucket
+    _now_et_hr  = (now_utc.hour - 4) % 24  # rough ET (no DST correction)
+    _now_et_min = now_utc.minute
+    _cur_et_bkt = f"{_now_et_hr:02d}:{'30' if _now_et_min >= 30 else '00'}"
+    # Adjust crypto cycle exit threshold based on learned best hold duration
+    _learned_cycle_min = 120  # default 2h
+    if _best_hold_bkt == "scalp_<4h":
+        _learned_cycle_min = 90   # brain learned: shorter holds win → tighten to 90min
+    elif _best_hold_bkt in ("intraday_4-24h", "swing_1-3d"):
+        _learned_cycle_min = 150  # brain learned: longer holds win → extend to 2.5h
+    logger.info(f"Crypto cycle threshold: {_learned_cycle_min}min (hold_pref={_best_hold_bkt}) | ET={_cur_et_bkt} best={_best_et_hour} worst={_worst_et_hour}")
+
     scored = []
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
@@ -18868,6 +18886,14 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _coin_reduce_list = _lp_cth.get("crypto_coin_reduce", [])
             if _coin_name in _coin_boost_list:   sc = min(100, sc + 5)
             elif _coin_name in _coin_reduce_list: sc = max(0,   sc - 5)
+
+            # ET hour performance: boost score during learned best hour, reduce at worst
+            _et_hr_perf = tlog.get("et_hour_perf", {})
+            _cur_hr_wr = _et_hr_perf.get(_cur_et_bkt, {}).get("win_rate", 50.0)
+            _cur_hr_n  = _et_hr_perf.get(_cur_et_bkt, {}).get("total", 0)
+            if _cur_hr_n >= 4:  # only apply when we have enough data
+                if _cur_hr_wr >= 65:   sc = min(100, sc + 3)  # best hour — be more aggressive
+                elif _cur_hr_wr <= 35: sc = max(0,   sc - 3)  # worst hour — be more cautious
         except Exception:
             pass
 
