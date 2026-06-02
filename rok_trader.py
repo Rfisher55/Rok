@@ -18863,6 +18863,27 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     # If already holding 4+ alts and 0 majors, heavily penalize additional alts
     _corr_alt_penalty = max(0, (_held_alts - 3) * 4)  # +4 penalty per alt beyond 3
 
+    # Session-level circuit breaker: if recent crypto trades are consistently losing,
+    # raise the effective threshold to protect against bad market conditions.
+    # Looks at the last 6 crypto trades in this session (within 4 hours).
+    _session_cutoff = (now_utc - __import__('datetime').timedelta(hours=4)).isoformat()
+    _session_crypto_sells = [t for t in tlog.get("trades", [])
+                              if t.get("action") in ("SELL","SELL_HALF")
+                              and "/" in t.get("ticker","")
+                              and t.get("pnl_pct") is not None
+                              and t.get("time","") >= _session_cutoff]
+    if len(_session_crypto_sells) >= 3:
+        _sess_wr = sum(1 for t in _session_crypto_sells if float(t.get("pnl_pct",0)or 0) > 0) / len(_session_crypto_sells)
+        if _sess_wr <= 0.25:  # 25% or worse in last 4h: raise bar by 8
+            _effective_crypto_min += 8
+            logger.info(f"Crypto circuit breaker: session WR={_sess_wr:.0%} ({len(_session_crypto_sells)} trades) → raising threshold to {_effective_crypto_min:.0f}")
+        elif _sess_wr <= 0.40:  # 25-40%: raise bar by 4
+            _effective_crypto_min += 4
+            logger.info(f"Crypto caution mode: session WR={_sess_wr:.0%} → threshold={_effective_crypto_min:.0f}")
+        elif _sess_wr >= 0.70:  # hot streak: lower bar slightly
+            _effective_crypto_min = max(CRYPTO_MIN_SCORE, _effective_crypto_min - 3)
+            logger.info(f"Crypto hot streak: session WR={_sess_wr:.0%} → threshold={_effective_crypto_min:.0f}")
+
     scored = []
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
@@ -18918,6 +18939,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             if _vol_wr > 60: sc = min(100, sc + 3)
             elif _vol_wr < 40: sc = max(0, sc - 3)
 
+            # N888: EMA cross state at entry (bull_cross / bear_cross / none)
+            _ema_c_val = float(sig.get("ema_cross", 0) or 0)
+            _ema_cross_state = ("bull_cross" if _ema_c_val > 0.5 else "bear_cross" if _ema_c_val < -0.5 else "none")
+            _ema_wr = _cn888.get(_ema_cross_state, {}).get("win_rate", 50.0)
+            if _ema_wr > 60: sc = min(100, sc + 3)
+            elif _ema_wr < 40: sc = max(0, sc - 3)
+
             _dow_now = now_utc.weekday()
             _dow_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][_dow_now]
             _dow_wr = _cn889.get(_dow_name, {}).get("win_rate", 50.0)
@@ -18928,6 +18956,15 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _asset_wr = _cn890.get(_asset_key, {}).get("win_rate", 50.0)
             if _asset_wr > 65: sc = min(100, sc + 5)
             elif _asset_wr < 35: sc = max(0, sc - 5)
+
+            # N885: BTC dominance at entry — learn whether high/low dom periods are better
+            _cn885 = tlog.get("crypto_btcdom_perf", {})
+            _btcdom_state = ("high_dom" if btc_dom > 60 else "low_dom" if btc_dom < 50 else "neutral_dom")
+            _btcdom_wr = _cn885.get(_btcdom_state, {}).get("win_rate", 50.0)
+            _btcdom_n  = _cn885.get(_btcdom_state, {}).get("total", 0)
+            if _btcdom_n >= 3:  # only use when enough data
+                if _btcdom_wr > 60: sc = min(100, sc + 3)
+                elif _btcdom_wr < 40: sc = max(0, sc - 3)
 
             # Per-coin track record from brain learning
             _coin_name = alpaca_sym.split("/")[0]
