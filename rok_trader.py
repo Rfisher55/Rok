@@ -26889,6 +26889,20 @@ def run():
                 reason = f"chandelier exit (price ${price:.2f} < stop ${_chan_stop:.2f}, {pnl_pct:+.1f}%)"
             elif pnl_pct <= -_atr_stop_pct:
                 reason = f"stop loss ({pnl_pct:+.1f}% ≤ -{_atr_stop_pct:.1f}%)"
+            elif pnl_pct <= -0.5 and age_minutes >= 10:
+                # ── THESIS-BROKEN EXIT: score decayed hard + position is losing ────
+                # Placed BEFORE the profitable block so it can fire for losing positions.
+                # Was previously (incorrectly) nested inside pnl_pct > 1.0 and was unreachable.
+                try:
+                    _n41_entry_sc = peaks.get(sym, {}).get("entry_score", 0) or 0
+                    if _n41_entry_sc > 0:
+                        _n41_live_sig = live.get(sym, {})
+                        _n41_live_sc = score(sym, _n41_live_sig, regime_adj=regime_adj) if _n41_live_sig else _n41_entry_sc
+                        _n41_decay = _n41_entry_sc - _n41_live_sc
+                        if _n41_decay >= 25:
+                            reason = f"thesis broken exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
+                except Exception:
+                    pass
             elif pnl_pct > 1.0 and age_days >= 0.5:
                 # ── SCORE DECAY EXIT (Neuron 41) ──────────────────────────────────
                 # If the live setup score has collapsed vs entry, the thesis is broken.
@@ -26903,10 +26917,6 @@ def run():
                         _n41_thresh = max(10.0, min(25.0, _n41_thresh))
                         if _n41_decay >= _n41_thresh and pnl_pct > 1.0:
                             reason = f"score decay exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
-                        # Early loss protection: thesis broken (score fell hard) + position losing
-                        elif (_n41_decay >= 25 and pnl_pct <= -0.5 and age_minutes >= 10
-                              and not reason):
-                            reason = f"thesis broken exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
                 except Exception:
                     pass
             # ── Volume decay exit: setup failed if rvol has collapsed for 2+ consecutive scans ──
