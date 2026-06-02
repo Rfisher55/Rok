@@ -18754,6 +18754,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             if _coin_key_sell in _coin_reduce_sell:
                 _stop_pct = _stop_pct * 0.70  # 5% → ~3.5%; stop the bleeding faster
 
+            # Live signal state for early momentum exits
+            _sig_rsi   = float(sig.get("rsi", 50) or 50)
+            _sig_macd  = float(sig.get("macd", 0) or 0)
+            _sig_mslp  = float(sig.get("macd_slope", 0) or 0)
+            _sig_emac  = float(sig.get("ema_cross", 0) or 0)
+            _sig_roc5  = float(sig.get("roc5", 0) or 0)
+
             reason = None
             if pnl_pct <= -(_stop_pct * 100):
                 reason = f"crypto stop loss ({pnl_pct:+.1f}%)"
@@ -18761,6 +18768,21 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 reason = f"crypto profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -c_trail and pnl_pct > 0:
                 reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
+            elif (_crypto_age_min >= 30 and _crypto_age_min < 75
+                  and pnl_pct <= -0.3
+                  and _sig_rsi < 42 and _sig_mslp < 0):
+                # Early momentum reversal: entered bullish but momentum flipped bearish
+                reason = f"crypto momentum reversal ({pnl_pct:+.1f}% rsi={_sig_rsi:.0f} after {_crypto_age_min:.0f}min)"
+            elif (_crypto_age_min >= 45 and _crypto_age_min < 90
+                  and pnl_pct < 0
+                  and _sig_emac < -0.4 and _sig_roc5 < -1):
+                # EMA bearish cross: clear trend shift — cut the loss early
+                reason = f"crypto bearish cross exit ({pnl_pct:+.1f}% ema={_sig_emac:.2f} after {_crypto_age_min:.0f}min)"
+            elif (_crypto_age_min >= 60 and _crypto_age_min < 100
+                  and -0.6 <= pnl_pct <= 0.2
+                  and _sig_macd < -0.1 and _sig_mslp < 0 and _sig_rsi < 47):
+                # Stagnant/drifting position: stuck flat-to-negative with deteriorating momentum
+                reason = f"crypto stagnant exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
@@ -18874,12 +18896,14 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     logger.info(f"Crypto entry threshold: {_effective_crypto_min:.0f} (learned: {_learned_crypto_min:.0f})")
 
     # Load learned neuron adjustments for crypto (N881-N890)
-    _cn881 = tlog.get("crypto_momentum_perf", {})   # N881 BTC momentum tier
-    _cn886 = tlog.get("crypto_rsi_zone_perf", {})   # N886 RSI zone
-    _cn887 = tlog.get("crypto_vol_surge_perf", {})  # N887 volume surge
-    _cn888 = tlog.get("crypto_ema_cross_perf", {})  # N888 EMA cross state
-    _cn889 = tlog.get("crypto_dow_perf", {})        # N889 day of week
-    _cn890 = tlog.get("crypto_asset_perf", {})      # N890 asset class
+    _cn881 = tlog.get("crypto_momentum_perf", {})     # N881 BTC momentum tier
+    _cn882 = tlog.get("crypto_ai_sentiment_perf", {}) # N882 AI sentiment
+    _cn884 = tlog.get("crypto_score_tier_perf", {})   # N884 score tier
+    _cn886 = tlog.get("crypto_rsi_zone_perf", {})     # N886 RSI zone
+    _cn887 = tlog.get("crypto_vol_surge_perf", {})    # N887 volume surge
+    _cn888 = tlog.get("crypto_ema_cross_perf", {})    # N888 EMA cross state
+    _cn889 = tlog.get("crypto_dow_perf", {})          # N889 day of week
+    _cn890 = tlog.get("crypto_asset_perf", {})        # N890 asset class
 
     # Wire dead learned params into live decisions
     _best_et_hour  = _lp_cth.get("best_et_hour")    # e.g. "14:30"
@@ -18996,6 +19020,23 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _asset_wr = _cn890.get(_asset_key, {}).get("win_rate", 50.0)
             if _asset_wr > 65: sc = min(100, sc + 5)
             elif _asset_wr < 35: sc = max(0, sc - 5)
+
+            # N882: AI sentiment tier at entry (positive/neutral/negative)
+            _c882_ai_now = float(sig.get("ai_sentiment", sig.get("sentiment_score", 0)) or 0)
+            _c882_bkt_now = ("positive" if _c882_ai_now > 2 else "neutral" if _c882_ai_now >= -2 else "negative")
+            _c882_wr = _cn882.get(_c882_bkt_now, {}).get("win_rate", 50.0)
+            _c882_n  = _cn882.get(_c882_bkt_now, {}).get("total", 0)
+            if _c882_n >= 3:
+                if _c882_wr > 60: sc = min(100, sc + 3)
+                elif _c882_wr < 40: sc = max(0, sc - 3)
+
+            # N884: Score tier — which tier actually wins (speculative/low/medium/high)
+            _sc_tier_now = ("high" if sc >= 40 else "medium" if sc >= 25 else "low" if sc >= 15 else "speculative")
+            _c884_wr = _cn884.get(_sc_tier_now, {}).get("win_rate", 50.0)
+            _c884_n  = _cn884.get(_sc_tier_now, {}).get("total", 0)
+            if _c884_n >= 3:
+                if _c884_wr > 60: sc = min(100, sc + 3)
+                elif _c884_wr < 40: sc = max(0, sc - 3)
 
             # N885: BTC dominance at entry — learn whether high/low dom periods are better
             _cn885 = tlog.get("crypto_btcdom_perf", {})
@@ -22163,6 +22204,62 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           "decelerating" if d.get("price_accel_neg") else "stable")
             _nsl_adj += _nde("price_accel_perf", _fb_pa_bkt)
 
+            # Institutional accumulation score: smart money buying footprint
+            _fb_ac = int(d.get("accum_score", 0) or 0)
+            _fb_ac_bkt = ("heavy" if _fb_ac >= 8 else "moderate" if _fb_ac >= 5 else "light" if _fb_ac >= 2 else "none")
+            _nsl_adj += _nde("accum_perf", _fb_ac_bkt)
+
+            # Intraday trend quality: higher highs all day = institutional conviction
+            _fb_itq = float(d.get("intraday_tq", 0) or 0)
+            _fb_itq_bkt = ("strong" if _fb_itq >= 0.66 else "weak" if _fb_itq <= -0.33 else "neutral")
+            _nsl_adj += _nde("intraday_trend_quality_perf", _fb_itq_bkt)
+
+            # Linear regression trend quality: clean trend vs choppy
+            _fb_lr_r2  = float(d.get("lr_r2", 0) or 0)
+            _fb_lr_bkt = ("clean" if _fb_lr_r2 >= 0.85 else "moderate" if _fb_lr_r2 >= 0.6 else "choppy")
+            _nsl_adj += _nde("lr_trend_quality_entry_perf", _fb_lr_bkt)
+
+            # Breakout confirmation: at key resistance level on volume
+            _fb_atb_bkt = "at_level" if d.get("at_breakout") else "not_at_level"
+            _nsl_adj += _nde("breakout_confirmation_perf", _fb_atb_bkt)
+
+            # Breakout volume confirmation: needs BOTH breakout AND volume surge
+            _fb_bvc_bkt = ("confirmed" if d.get("at_breakout") and d.get("rvol_surge")
+                           else "unconfirmed" if d.get("at_breakout") else "none")
+            _nsl_adj += _nde("breakout_volume_confirm_perf", _fb_bvc_bkt)
+
+            # Near 52-week high: breakout zone vs consolidation zone
+            _fb_52w = float(d.get("near_52w_high", 1.0) or 1.0)
+            _fb_52w_bkt = ("new_high" if _fb_52w >= 0.98 else "near_high" if _fb_52w >= 0.90 else "mid_range" if _fb_52w >= 0.70 else "depressed")
+            _nsl_adj += _nde("breakout_52w_entry_perf", _fb_52w_bkt)
+
+            # Ichimoku position: above cloud = institutional trend confirmed
+            _fb_ichi_bkt = ("above" if d.get("ichimoku_above") else "below")
+            _nsl_adj += _nde("ichimoku_perf", _fb_ichi_bkt)
+
+            # Williams %R momentum zone
+            _fb_wr_v = float(d.get("williams_r", -50) or -50)
+            _fb_wr_bkt = ("oversold" if _fb_wr_v < -80 else "overbought" if _fb_wr_v > -20 else "trending")
+            _nsl_adj += _nde("wr_zone_perf", _fb_wr_bkt)
+
+            # MFI zone: overbought buying = poor timing
+            _fb_mfi_v = float(d.get("mfi", 50) or 50)
+            _fb_mfi_bkt = ("oversold" if _fb_mfi_v < 30 else "distribution" if _fb_mfi_v > 80 else "neutral")
+            _nsl_adj += _nde("mfi_zone_perf", _fb_mfi_bkt)
+
+            # ATR regime: high ATR = more movement but riskier entries
+            _fb_atr_v = float(d.get("atr_pct", 0) or 0)
+            _fb_atr_reg = ("volatile" if _fb_atr_v > 4 else "elevated" if _fb_atr_v > 2 else "calm")
+            _nsl_adj += _nde("atr_regime_perf", _fb_atr_reg)
+
+            # Supertrend alignment
+            _fb_st_bkt = ("bull" if d.get("supertrend_bull") else "bear")
+            _nsl_adj += _nde("supertrend_perf", _fb_st_bkt) if "supertrend_perf" in _ALL_NEURON_PERFS else 0
+
+            # Keltner channel position: breakout above = momentum confirmed
+            _fb_kc = ("breakout" if d.get("kc_breakout") else "oversold" if d.get("kc_oversold") else "inside")
+            _nsl_adj += _nde("kc_zone_perf", _fb_kc)
+
             # Cap the full neural layer at ±20 (wider cap as brain accumulates more data)
             s += max(-20, min(20, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -23161,6 +23258,9 @@ def run():
                           or "crypto 2h" in _r or "4h" in _r
                           or "cycle exit" in _r):                  _cat = "crypto_cycle"
                     elif "extended timeout" in _r:                 _cat = "crypto_timeout"
+                    elif ("momentum reversal" in _r
+                          or "bearish cross" in _r
+                          or "stagnant exit" in _r):               _cat = "early_reversal"
                     elif "stop loss" in _r or "scalp stop" in _r:  _cat = "stop_loss"
                     elif ("profit" in _r or "target" in _r
                           or "early win" in _r or "1h profit" in _r): _cat = "profit_target"
