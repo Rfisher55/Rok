@@ -28879,8 +28879,8 @@ def run():
                     elif _adx_bkt_lb == "developing":
                         _learned_bonus += _nbns("adx_perf", "developing", 55, 2)  # 55.6% WR n=27 — threshold lowered
                     elif _adx_bkt_lb == "strong":
-                        # adx_perf["strong"] = 47.2% WR n=36 — no bonus, mild penalty
-                        _learned_bonus += _npen("adx_perf", "strong", 48, -1)  # 47.2% WR n=36
+                        # adx_perf["strong"] = 51.3% WR n=39 — slightly above coin flip, no action
+                        pass
                 # else: adx absent → no bonus/penalty (neutral)
                 _cat_type_raw = _tk_sig_sc.get("catalyst_type")
                 _cat_type_lb = str(_cat_type_raw or "")
@@ -29246,15 +29246,12 @@ def run():
                     _drsi_lb = float(_drsi_lb or 50)
                     if _drsi_lb >= 70:
                         _learned_bonus += _npen("rsi_at_entry_perf", "overbought", 30, -3)  # 20% WR n=10 daily overbought
-                # Trade momentum: entering right after a loss = WR=29% n=14 — contrarian streak trap
-                _tm_lb = str(_tk_sig_sc.get("trade_momentum_state", "") or "")
-                if not _tm_lb:
-                    _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
-                    _tm_lb = "losing_1" if _tm_wstrk == -1 else "losing_2+" if _tm_wstrk <= -2 else ""
-                if _tm_lb == "losing_1":
-                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 31.2% WR n=16 — loss chasing
-                elif not _tm_lb:  # "neutral" state: WR=30.8% n=13 — also bad!
-                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 31, -1)  # 30.8% WR n=13
+                # Trade momentum: losing/neutral streaks both bad (30-31% WR)
+                _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
+                if _tm_wstrk == -1:
+                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 31.2% WR n=16
+                elif _tm_wstrk == 0:
+                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 31, -1)   # 30.8% WR n=13
                 # Position count: 4-7=28.6% WR n=14; 13+=33.3% WR n=15; medium_book=60.9% n=46
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
