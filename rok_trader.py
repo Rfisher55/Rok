@@ -22196,20 +22196,24 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_ha = "bull" if d.get("ha_bull", True) else "bear"
             _nsl_adj += _nde("ha_trend_perf", _fb_ha)
 
-            # N871: Order flow imbalance (RVOL + direction)
+            # N871: Order flow imbalance — 5-tier pressure labels match buy-loop N871 storage
             _fb_n871_rvol = float(d.get("rvol", 1.0) or 1.0)
             _fb_n871_chg  = float(d.get("change_pct", 0) or 0)
-            _fb_n871_bkt  = ("buy_dominated" if _fb_n871_rvol >= 1.5 and _fb_n871_chg > 0
-                             else "sell_dominated" if _fb_n871_rvol >= 1.5 and _fb_n871_chg < 0
-                             else "balanced_flow")
+            if   _fb_n871_rvol > 3.0 and _fb_n871_chg > 1.0:    _fb_n871_bkt = "heavy_buy_pressure"
+            elif _fb_n871_rvol > 2.0 and _fb_n871_chg > 0.5:    _fb_n871_bkt = "light_buy_pressure"
+            elif _fb_n871_rvol > 2.0 and _fb_n871_chg < -0.5:   _fb_n871_bkt = "light_sell_pressure"
+            elif _fb_n871_rvol > 3.0 and _fb_n871_chg < -1.0:   _fb_n871_bkt = "heavy_sell_pressure"
+            else:                                                  _fb_n871_bkt = "balanced_flow"
             _nsl_adj += _nde("order_flow_imbalance_perf", _fb_n871_bkt)
 
-            # N872: Time-weighted momentum (ROC5 + MACD slope direction)
+            # N872: Time-weighted momentum — labels match buy-loop N872 storage (roc5+rsi)
             _fb_n872_roc5 = float(d.get("roc5", 0) or 0)
-            _fb_n872_mslp = float(d.get("macd_slope", 0) or 0)
-            _fb_n872_bkt  = ("accelerating" if _fb_n872_roc5 > 1 and _fb_n872_mslp > 0
-                             else "decelerating" if _fb_n872_roc5 < -1 or _fb_n872_mslp < 0
-                             else "flat")
+            _fb_n872_rsi  = float(d.get("rsi", 50) or 50)
+            if   _fb_n872_roc5 > 5.0 and _fb_n872_rsi > 60:   _fb_n872_bkt = "strong_up_momentum"
+            elif _fb_n872_roc5 > 2.0 and _fb_n872_rsi > 50:   _fb_n872_bkt = "moderate_up"
+            elif _fb_n872_roc5 < -5.0 and _fb_n872_rsi < 40:  _fb_n872_bkt = "strong_down_momentum"
+            elif _fb_n872_roc5 < -2.0 and _fb_n872_rsi < 50:  _fb_n872_bkt = "moderate_down"
+            else:                                               _fb_n872_bkt = "flat"
             _nsl_adj += _nde("time_weighted_momentum_perf", _fb_n872_bkt)
 
             # N873: Relative volume burst — buckets match log_trade N873 state labels
@@ -22217,18 +22221,6 @@ def score(tk, d, sentiment=0, regime_adj=0):
                             else "moderate_surge" if _fb_n871_rvol > 1.5 else "normal_vol" if _fb_n871_rvol > 0.8
                             else "low_vol_day")
             _nsl_adj += _nde("relative_volume_burst_perf", _fb_n873_bkt)
-
-            # N875: MTF alignment state
-            _fb_n875_bkt = "aligned_all" if d.get("mtf_aligned") else "mixed_signals"
-            _nsl_adj += _nde("multi_timeframe_alignment_perf", _fb_n875_bkt)
-
-            # N879: Smart money divergence (OBV vs price direction)
-            _fb_n879_obv = bool(d.get("obv_rising", False))
-            _fb_n879_chg = float(d.get("change_pct", 0) or 0)
-            _fb_n879_bkt = ("diverging_bullish" if _fb_n879_obv and _fb_n879_chg < 0
-                            else "diverging_bearish" if not _fb_n879_obv and _fb_n879_chg > 0
-                            else "aligned")
-            _nsl_adj += _nde("smart_money_divergence_perf", _fb_n879_bkt)
 
             # N880: Volatility regime shift — VIX-tier labels match buy-loop N880 storage
             _fb_n880_vix = float(d.get("vix_at_entry", d.get("vix_level", 18)) or 18)
@@ -22614,37 +22606,34 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                             _n719_s = "no_earnings_catalyst"
             _nsl_adj += _nde("earnings_beat_entry_perf", _n719_s)
 
-            # N876: Market maker activity (rvol_surge = MM pulling orders or institutions stepping in)
-            _n876_s = "mm_active" if d.get("rvol_surge") else "mm_normal"
+            # N876: Market maker activity — 4-tier labels match buy-loop N876 storage
+            _n876_vol = float(d.get("vol_ratio", d.get("rvol", 1.0)) or 1.0)
+            _n876_chg_abs = abs(float(d.get("change_pct", 0) or 0))
+            if   _n876_vol > 3.0 and _n876_chg_abs > 2.0:   _n876_s = "mm_very_active"
+            elif _n876_vol > 2.0 and _n876_chg_abs > 1.0:   _n876_s = "mm_active"
+            elif _n876_vol > 1.5:                            _n876_s = "mm_normal"
+            else:                                            _n876_s = "mm_inactive"
             _nsl_adj += _nde("market_maker_activity_perf", _n876_s)
 
-            # N877: Alpha decay risk — based on session timing (morning = fresh, late = stale)
-            _n877_et_h = int(d.get("et_hour", d.get("et_hour_at_entry", -1)) or -1)
-            if 9 <= _n877_et_h <= 11:    _n877_s = "low_decay"
-            elif _n877_et_h >= 15:       _n877_s = "high_decay"
-            elif _n877_et_h >= 0:        _n877_s = "moderate_decay"
-            else:                        _n877_s = "moderate_decay"
+            # N877: Alpha decay risk — persist_count labels match buy-loop N877 storage
+            _n877_persist = int(d.get("persist_count", d.get("consecutive_strong_scans", 0)) or 0)
+            if   _n877_persist == 0:   _n877_s = "fresh_alpha"
+            elif _n877_persist <= 2:   _n877_s = "early_alpha"
+            elif _n877_persist <= 5:   _n877_s = "mid_alpha"
+            elif _n877_persist <= 10:  _n877_s = "late_alpha"
+            else:                      _n877_s = "stale_alpha"
             _nsl_adj += _nde("alpha_decay_risk_perf", _n877_s)
 
-            # N875: Multi-TF alignment (aligned_all vs mixed)
-            _n875_s = ("aligned_all" if d.get("mtf_aligned") else "mixed_signals")
+            # N875: Multi-TF alignment — 5-tier labels match buy-loop N875 rs63/rs21/rsi storage
+            _n875_rs63 = float(d.get("rs63", 0) or 0)
+            _n875_rs21 = float(d.get("rs21", 0) or 0)
+            _n875_rsi  = float(d.get("rsi", 50) or 50)
+            if   _n875_rs63 > 3 and _n875_rs21 > 2 and _n875_rsi > 55:   _n875_s = "all_aligned_up"
+            elif _n875_rs63 > 0 and _n875_rs21 > 0:                       _n875_s = "daily_weekly_up"
+            elif _n875_rs63 < -3 and _n875_rs21 < -2 and _n875_rsi < 45: _n875_s = "all_aligned_down"
+            elif _n875_rs63 < 0 and _n875_rs21 < 0:                       _n875_s = "daily_weekly_down"
+            else:                                                           _n875_s = "mixed_signals"
             _nsl_adj += _nde("multi_timeframe_alignment_perf", _n875_s)
-
-            # N871: Order flow imbalance — volume + direction
-            _n871_rvol = float(d.get("rvol", 1.0) or 1.0)
-            _n871_chg  = float(d.get("change_pct", 0) or 0)
-            if _n871_rvol >= 1.5 and _n871_chg > 0:   _n871_s = "buy_dominated"
-            elif _n871_rvol >= 1.5 and _n871_chg < 0: _n871_s = "sell_dominated"
-            else:                                       _n871_s = "balanced_flow"
-            _nsl_adj += _nde("order_flow_imbalance_perf", _n871_s)
-
-            # N872: Time-weighted momentum — roc5 + macd slope
-            _n872_roc5 = float(d.get("roc5", 0) or 0)
-            _n872_mslp = float(d.get("macd_slope", 0) or 0)
-            if _n872_roc5 > 1 and _n872_mslp > 0:        _n872_s = "accelerating"
-            elif _n872_roc5 < -1 or _n872_mslp < 0:      _n872_s = "decelerating"
-            else:                                          _n872_s = "flat"
-            _nsl_adj += _nde("time_weighted_momentum_perf", _n872_s)
 
             # N874: Catalyst timing — 4-tier labels match log_trade N874 state storage
             _n874_nc  = int(d.get("news_count_24h", d.get("news_count", 0)) or 0)
@@ -22655,18 +22644,28 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                                   _n874_cat_s = "stale_catalyst"
             _nsl_adj += _nde("catalyst_timing_perf", _n874_cat_s)
 
-            # N878: Price discovery phase — near 52W high = discovery_up
-            _n878_52wh = float(d.get("near_52w_high", 1.0) or 1.0)
-            _n878_s = ("discovery_up" if _n878_52wh >= 0.98 else "established" if _n878_52wh >= 0.85
-                       else "recovery")
+            # N878: Price discovery phase — labels match buy-loop N878 storage
+            _n878_brk52 = bool(d.get("breakout_52w", d.get("at_breakout_level", False)))
+            _n878_at_brk = bool(d.get("at_breakout", False))
+            _n878_vwap = bool(d.get("vwap_reclaim", False))
+            _n878_chg_v = float(d.get("change_pct", 0) or 0)
+            if   _n878_brk52:                              _n878_s = "new_breakout"
+            elif _n878_at_brk and _n878_vwap:              _n878_s = "continuation"
+            elif _n878_vwap and _n878_chg_v < 0.5:         _n878_s = "consolidating"
+            elif not _n878_vwap and _n878_chg_v < -2.5:   _n878_s = "reversal"
+            elif not _n878_vwap and _n878_chg_v < -1.0:   _n878_s = "distribution"
+            else:                                          _n878_s = "continuation"
             _nsl_adj += _nde("price_discovery_phase_perf", _n878_s)
 
-            # N879: Smart money divergence — OBV divergence from price
-            _n879_obv = bool(d.get("obv_rising", False))
-            _n879_chg = float(d.get("change_pct", 0) or 0)
-            if _n879_obv and _n879_chg < 0:    _n879_s = "diverging_bullish"
-            elif not _n879_obv and _n879_chg > 0: _n879_s = "diverging_bearish"
-            else:                               _n879_s = "aligned"
+            # N879: Smart money divergence — labels match buy-loop N879 options_flow/vol/sentiment storage
+            _n879_opt  = bool(d.get("options_flow", d.get("options_bull", False)))
+            _n879_vol  = float(d.get("vol_ratio", d.get("rvol", 1.0)) or 1.0)
+            _n879_sent = float(d.get("sentiment_score", 5.0) or 5.0)
+            if   _n879_opt and _n879_vol > 2.0 and _n879_sent < 6.0:   _n879_s = "smart_buying_retail_selling"
+            elif _n879_opt and _n879_vol > 1.5:                          _n879_s = "both_buying"
+            elif not _n879_opt and _n879_vol < 0.8 and _n879_sent > 7:  _n879_s = "smart_selling_retail_buying"
+            elif _n879_vol < 0.6:                                        _n879_s = "both_selling"
+            else:                                                        _n879_s = "neutral_flow"
             _nsl_adj += _nde("smart_money_divergence_perf", _n879_s)
 
             # N86/N87: News count and acceleration — high news activity with acceleration is bullish
