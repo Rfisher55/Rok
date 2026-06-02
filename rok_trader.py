@@ -18937,6 +18937,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 })
 
     # ── Sell / manage open crypto positions ──────────────────────────────
+    _sold_this_call = set()  # re-entry cooldown: coins sold this call can't be immediately re-bought
     for sym, pos in list(held_crypto.items()):
         try:
             # Use Alpaca's raw symbol for orders (may differ from our normalized sym)
@@ -19106,6 +19107,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                     made_trades_ref.append(True)
                     peaks.pop(sym, None)
                     held_crypto.pop(sym, None)  # free slot so buy section can refill immediately
+                    _sold_this_call.add(sym)   # re-entry cooldown: block same-call re-buy
+                    tlog.setdefault("crypto_recently_sold", {})[sym] = now_utc.isoformat()
                 except requests.HTTPError as _he:
                     _resp_body = _he.response.text[:300] if hasattr(_he, "response") and _he.response is not None else "no body"
                     logger.warning(f"Crypto sell HTTP {sym}: {_he} | body={_resp_body}")
@@ -19201,9 +19204,18 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                               and "/" in t.get("ticker","")
                               and t.get("pnl_pct") is not None
                               and t.get("time","") >= _session_cutoff]
+    _fallback_disabled = False  # set True when market conditions are too bad for any fallback buy
     if len(_session_crypto_sells) >= 3:
         _sess_wr = sum(1 for t in _session_crypto_sells if float(t.get("pnl_pct",0)or 0) > 0) / len(_session_crypto_sells)
-        if _sess_wr <= 0.25:  # 25% or worse in last 4h: raise bar by 8
+        if _sess_wr == 0 and len(_session_crypto_sells) >= 4:  # 0% on 4+ trades: stop all crypto buying
+            _effective_crypto_min += 20
+            _fallback_disabled = True
+            logger.info(f"Crypto HALT: 0% WR on {len(_session_crypto_sells)} trades — raising threshold to {_effective_crypto_min:.0f}, fallback disabled")
+        elif _sess_wr <= 0.15:  # ≤15% WR: strong brake — raise by 15, disable fallback
+            _effective_crypto_min += 15
+            _fallback_disabled = True
+            logger.info(f"Crypto circuit breaker (severe): session WR={_sess_wr:.0%} ({len(_session_crypto_sells)} trades) → threshold={_effective_crypto_min:.0f}, fallback disabled")
+        elif _sess_wr <= 0.25:  # ≤25% WR: raise bar by 8
             _effective_crypto_min += 8
             logger.info(f"Crypto circuit breaker: session WR={_sess_wr:.0%} ({len(_session_crypto_sells)} trades) → raising threshold to {_effective_crypto_min:.0f}")
         elif _sess_wr <= 0.40:  # 25-40%: raise bar by 4
@@ -19214,6 +19226,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             logger.info(f"Crypto hot streak: session WR={_sess_wr:.0%} → threshold={_effective_crypto_min:.0f}")
 
     scored = []
+    _adj_scores = {}  # adjusted score for every eligible coin (used in fallback paths)
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
             continue
@@ -19410,26 +19423,39 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             except Exception:
                 pass
 
+        _adj_scores[alpaca_sym] = sc  # save final adjusted score for fallback paths
         if sc >= _effective_crypto_min:
             scored.append((alpaca_sym, sc, sig))
-    # Track all scored for force-buy fallback
-    _all_scored = [(alpaca_sym, sc, sig) for alpaca_sym, sig in crypto_data.items()
-                   if alpaca_sym not in held_crypto]
-    _all_scored.sort(key=lambda x: -crypto_score(x[2]))
     scored.sort(key=lambda x: -x[1])
     logger.info(f"Crypto candidates above threshold: {[(s, sc) for s,sc,_ in scored]}")
 
+    # Re-entry cooldown: skip coins sold recently (same-call or within last 30min via tlog)
+    _recently_sold = tlog.get("crypto_recently_sold", {})
+    _cooldown_cutoff = (now_utc - __import__('datetime').timedelta(minutes=30)).isoformat()
+    # Prune stale entries (> 2h old) to keep tlog clean
+    _expired = [s for s, ts in _recently_sold.items() if ts < (now_utc - __import__('datetime').timedelta(hours=2)).isoformat()]
+    for _s in _expired:
+        _recently_sold.pop(_s, None)
+    def _eligible(sym):
+        if sym in _sold_this_call:
+            return False  # sold earlier in this call — never immediately re-buy
+        _sold_ts = _recently_sold.get(sym, "")
+        return not (_sold_ts and _sold_ts >= _cooldown_cutoff)
+
     # Force-buy fallback: if nothing scored above threshold but we have empty slots,
     # buy top-scoring coins to keep capital working, but only BTC/ETH at reduced floor.
+    # IMPORTANT: all fallback paths use _adj_scores (fully adjusted) not raw crypto_score().
     # Data shows low-score alt entries (<25) are consistently losing — raised floor.
+    scored = [(s, sc, sig) for s, sc, sig in scored if _eligible(s)]
     _buy_list = scored[:open_slots]
     _fb_coin_reduce = _lp_cth.get("crypto_coin_reduce", [])
     _fallback_floor = max(20, int(CRYPTO_MIN_SCORE * 0.70))  # 70% of min (was 50%) — tighter quality bar
-    if not _buy_list and open_slots > 0:
+    if not _buy_list and open_slots > 0 and not _fallback_disabled:
         # Only allow BTC/ETH in the primary fallback — most liquid, lowest noise
-        _fallback = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
+        _fallback = [(sym, _adj_scores.get(sym, 0), sig) for sym, sig in crypto_data.items()
                      if sym not in held_crypto
-                     and crypto_score(sig) >= _fallback_floor
+                     and _eligible(sym)
+                     and _adj_scores.get(sym, 0) >= _fallback_floor
                      and ("BTC" in sym or "ETH" in sym)  # majors only at reduced threshold
                      and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
         _fallback.sort(key=lambda x: -x[1])
@@ -19440,23 +19466,24 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         else:
             # Secondary fallback: any coin but at 80% of regular min (was 50% floor/2 ≈ 25%)
             _alt_floor = max(22, int(CRYPTO_MIN_SCORE * 0.80))
-            _fallback_any = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
+            _fallback_any = [(sym, _adj_scores.get(sym, 0), sig) for sym, sig in crypto_data.items()
                              if sym not in held_crypto
-                             and crypto_score(sig) >= _alt_floor
+                             and _eligible(sym)
+                             and _adj_scores.get(sym, 0) >= _alt_floor
                              and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
             _fallback_any.sort(key=lambda x: -x[1])
             if _fallback_any:
                 _buy_list = _fallback_any[:min(open_slots, 1)]  # max 1 slot for alt fallback
-                logger.info(f"Crypto force-buy alt-fallback: {_buy_list[0][0]} (score>={_alt_floor})")
+                logger.info(f"Crypto force-buy alt-fallback: {_buy_list[0][0]} (adj_score>={_alt_floor})")
 
     # BTC core holding: ensure BTC/USD is always in the portfolio when possible.
     # If BTC not held and not in buy list, replace the weakest-performing coin in the
     # buy list with BTC (using brain's crypto_coin_perf) — or add it if there's room.
     _btc_held   = "BTC/USD" in held_crypto
     _btc_in_list= any("BTC" in sym for sym, _, _ in _buy_list)
-    if not _btc_held and not _btc_in_list and "BTC/USD" in crypto_data:
+    if not _btc_held and not _btc_in_list and "BTC/USD" in crypto_data and _eligible("BTC/USD") and not _fallback_disabled:
         _btc_sig = crypto_data["BTC/USD"]
-        _btc_sc  = crypto_score(_btc_sig)
+        _btc_sc  = _adj_scores.get("BTC/USD", crypto_score(_btc_sig))  # use adjusted score
         if _btc_sc >= max(15, CRYPTO_MIN_SCORE // 2):  # require meaningful BTC score before forcing
             if open_slots > len(_buy_list):
                 # Spare slot — add BTC directly
