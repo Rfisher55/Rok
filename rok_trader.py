@@ -23585,7 +23585,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nde("position_sizing_outcome_perf", _n717_ps_q)
 
             # N129: Exit trigger (labels: trailing_stop/stop_loss/take_profit/time_exit/manual)
-            _n129_trig_v = str(d.get("last_exit_trigger", d.get("exit_trigger", "take_profit")) or "take_profit")
+            _n129_trig_v = str(d.get("last_exit_trigger", d.get("exit_trigger", "manual")) or "manual")
             _nsl_adj += _nde("exit_trigger_v1_perf", _n129_trig_v)
             # N172: Exit trigger (labels: trailing_stop/profit_target/signal_flip/time_exit/manual)
             _n172_trig_v = "profit_target" if _n129_trig_v == "take_profit" else (
@@ -26526,15 +26526,6 @@ def run():
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= _time_adj_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif age_minutes >= 45 and pnl_pct >= 0.6 and not half_out:
-                    # 45min exit: only if signal has degraded; if still strong, extend to 90min
-                    _live_d_45 = live.get(sym, {}) or {}
-                    _sc_45 = score(sym, _live_d_45) if _live_d_45 else 0
-                    _rvol_45 = float(_live_d_45.get("rvol", 1.0) or 1.0)
-                    if _sc_45 >= 65 and _rvol_45 >= 1.5 and pnl_pct < _scalp_pthr:
-                        pass  # signal still hot — ride to 90min cycle
-                    else:
-                        _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
                     # Smart 60min exit: if position is just slightly negative (-0.5% to 0%)
                     # and current live score is still strong (≥55), extend to 90min.
@@ -28773,7 +28764,7 @@ def run():
                 # ATR pct: 4%+ = 74% WR (high volatility entries work well)
                 _atr_pct_lb = float(_tk_sig_sc.get("atr_pct", _tk_sig_sc.get("atr", 0)) or 0)
                 if _atr_pct_lb >= 4.0:
-                    _learned_bonus += _nbns("atr_perf", "4%+", 60, 1)           # 74% WR
+                    _learned_bonus += _nbns("atr_perf", "4%+", 60, 2)           # 74% WR n=19 — boosted
                 # ROC: positive = 71% WR
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
