@@ -29923,6 +29923,278 @@ def run():
                                                       "day4_7" if _r47_dsb <= 7 else "extended")
                 except Exception:
                     live[tk]["breakout_age_tier"] = "day4_7"
+                # ── R48: More state-field batch neurons — datetime, SPY, ticker buckets ──
+                # N151: entry_dow — day of week at entry
+                try:
+                    _r48_dow = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]
+                    live[tk]["entry_dow"] = _r48_dow[datetime.now(ZoneInfo("America/New_York")).weekday()]
+                except Exception:
+                    live[tk]["entry_dow"] = "unknown"
+                # N187: morning_star_time_state — first 90 min of trading
+                try:
+                    _r48_et_hr = datetime.now(ZoneInfo("America/New_York")).hour
+                    live[tk]["morning_star_time_state"] = "morning_star" if _r48_et_hr < 11 else "rest_of_day"
+                except Exception:
+                    live[tk]["morning_star_time_state"] = "rest_of_day"
+                # N306: time_of_day_bucket_state — minutes since open bucket
+                try:
+                    _r48_mins = _minutes_since_open if market_open else 999
+                    live[tk]["time_of_day_bucket_state"] = ("morning_rush" if _r48_mins < 60 else
+                                                             "midday_drift" if _r48_mins < 210 else
+                                                             "power_hour" if _r48_mins < 360 else "after_power")
+                except Exception:
+                    live[tk]["time_of_day_bucket_state"] = "midday_drift"
+                # N180: opex_week — within 4 days of 3rd Friday of month
+                try:
+                    import calendar as _cal_r48
+                    _r48_et_now = datetime.now(ZoneInfo("America/New_York"))
+                    _r48_fridays = [d for d in range(1, 32)
+                                    if _r48_et_now.replace(day=d).weekday() == 4
+                                    if d <= _cal_r48.monthrange(_r48_et_now.year, _r48_et_now.month)[1]]
+                    _r48_third_fri = _r48_fridays[2] if len(_r48_fridays) >= 3 else _r48_fridays[-1]
+                    live[tk]["opex_week"] = "opex_week" if abs(_r48_third_fri - _r48_et_now.day) <= 4 else "normal_week"
+                except Exception:
+                    live[tk]["opex_week"] = "normal_week"
+                # N191: fed_week — within 3 days of 3rd Wednesday of month
+                try:
+                    import calendar as _cal_r48b
+                    _r48_fed_now = datetime.now(ZoneInfo("America/New_York"))
+                    _r48_weds = [d for d in range(1, 32)
+                                 if _r48_fed_now.replace(day=d).weekday() == 2
+                                 if d <= _cal_r48b.monthrange(_r48_fed_now.year, _r48_fed_now.month)[1]]
+                    _r48_fomc_wed = _r48_weds[2] if len(_r48_weds) >= 3 else _r48_weds[-1]
+                    live[tk]["fed_week"] = "fed_meeting_week" if abs(_r48_fomc_wed - _r48_fed_now.day) <= 3 else "normal_week"
+                except Exception:
+                    live[tk]["fed_week"] = "normal_week"
+                # N193: spy_rsi_zone — SPY RSI overbought/oversold/neutral
+                try:
+                    _r48_srsi = float(live.get("SPY", {}).get("rsi", 55) or 55)
+                    live[tk]["spy_rsi_zone"] = ("overbought" if _r48_srsi > 70 else
+                                                 "oversold" if _r48_srsi < 40 else "neutral")
+                except Exception:
+                    live[tk]["spy_rsi_zone"] = "neutral"
+                # N282: spy_rsi_overbought_state — finer SPY RSI buckets
+                try:
+                    _r48_srsi2 = float(live.get("SPY", {}).get("rsi", 55) or 55)
+                    live[tk]["spy_rsi_overbought_state"] = ("spy_overbought" if _r48_srsi2 > 68 else
+                                                              "spy_oversold" if _r48_srsi2 < 35 else "spy_neutral")
+                except Exception:
+                    live[tk]["spy_rsi_overbought_state"] = "spy_neutral"
+                # N285: spy_volume_vs_avg_state — SPY vol_ratio bucket
+                try:
+                    _r48_svr = float(live.get("SPY", {}).get("vol_ratio", 1) or 1)
+                    live[tk]["spy_volume_vs_avg_state"] = ("spy_high_vol" if _r48_svr > 1.5 else
+                                                            "spy_low_vol" if _r48_svr < 0.7 else "spy_normal_vol")
+                except Exception:
+                    live[tk]["spy_volume_vs_avg_state"] = "spy_normal_vol"
+                # N261: spy_close_vs_open_state — SPY chg1d direction
+                try:
+                    _r48_sc1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    live[tk]["spy_close_vs_open_state"] = ("close_above_open" if _r48_sc1d > 0.1 else
+                                                            "close_below_open" if _r48_sc1d < -0.1 else "flat_close")
+                except Exception:
+                    live[tk]["spy_close_vs_open_state"] = "flat_close"
+                # N218: cross_asset_momentum — SPY/QQQ/IWM all in same direction?
+                try:
+                    _r48_s1 = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r48_q1 = float(live.get("QQQ", {}).get("chg1d", 0) or 0)
+                    _r48_i1 = float(live.get("IWM", {}).get("chg1d", 0) or 0)
+                    if _r48_s1 > 0.3 and _r48_q1 > 0.3 and _r48_i1 > 0.3:
+                        live[tk]["cross_asset_momentum"] = "all_risk_on"
+                    elif _r48_s1 < -0.3 and _r48_q1 < -0.3 and _r48_i1 < -0.3:
+                        live[tk]["cross_asset_momentum"] = "all_risk_off"
+                    else:
+                        live[tk]["cross_asset_momentum"] = "mixed_signals"
+                except Exception:
+                    live[tk]["cross_asset_momentum"] = "mixed_signals"
+                # N211: cap_regime — large-cap vs small-cap leading (SPY vs IWM)
+                try:
+                    _r48_spy1 = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r48_iwm1 = float(live.get("IWM", {}).get("chg1d", 0) or 0)
+                    _r48_diff = _r48_spy1 - _r48_iwm1
+                    live[tk]["cap_regime"] = ("large_cap_leading" if _r48_diff > 1.0 else
+                                               "small_cap_leading" if _r48_diff < -1.0 else "equal_performance")
+                except Exception:
+                    live[tk]["cap_regime"] = "equal_performance"
+                # N234: rs_rating_tier_state — RS rating bucket
+                try:
+                    _r48_rs = float(live[tk].get("rs_rating", 50) or 50)
+                    live[tk]["rs_rating_tier_state"] = ("elite" if _r48_rs >= 90 else
+                                                         "strong" if _r48_rs >= 75 else
+                                                         "average" if _r48_rs >= 50 else "weak")
+                except Exception:
+                    live[tk]["rs_rating_tier_state"] = "average"
+                # N230: prior_day_gap_state — chg1d bucket
+                try:
+                    _r48_c1d = float(live[tk].get("chg1d", 0) or 0)
+                    live[tk]["prior_day_gap_state"] = ("gap_up_big" if _r48_c1d > 3.0 else
+                                                        "gap_up_small" if _r48_c1d > 0.5 else
+                                                        "flat_open" if _r48_c1d >= -0.5 else
+                                                        "gap_down_small" if _r48_c1d >= -3.0 else "gap_down_big")
+                except Exception:
+                    live[tk]["prior_day_gap_state"] = "flat_open"
+                # N325: consecutive_green_days_state — consec_green bucket
+                try:
+                    _r48_cg = int(live[tk].get("consec_green", 0) or 0)
+                    live[tk]["consecutive_green_days_state"] = ("green_streak_3plus" if _r48_cg >= 3 else
+                                                                 "green_streak_1_2" if _r48_cg >= 1 else "no_streak")
+                except Exception:
+                    live[tk]["consecutive_green_days_state"] = "no_streak"
+                # N183: volume_surge_state — rvol bucket
+                try:
+                    _r48_rv = float(live[tk].get("rvol", live[tk].get("vol_ratio", 1)) or 1)
+                    live[tk]["volume_surge_state"] = ("rvol_extreme" if _r48_rv > 3 else
+                                                       "rvol_high" if _r48_rv > 2 else
+                                                       "rvol_normal" if _r48_rv >= 1 else "rvol_low")
+                except Exception:
+                    live[tk]["volume_surge_state"] = "rvol_normal"
+                # N298: atr_as_pct_price_state — ATR/price bucket
+                try:
+                    _r48_atr = float(live[tk].get("atr_pct", 0) or 0)
+                    if _r48_atr == 0:
+                        _r48_atr_p = float(live[tk].get("price", 1) or 1)
+                        _r48_atr = (float(live[tk].get("atr", 0) or 0) / _r48_atr_p * 100) if _r48_atr_p > 0 else 0
+                    live[tk]["atr_as_pct_price_state"] = ("high_atr_pct" if _r48_atr > 3.0 else
+                                                           "mid_atr_pct" if _r48_atr >= 1.5 else "low_atr_pct")
+                except Exception:
+                    live[tk]["atr_as_pct_price_state"] = "mid_atr_pct"
+                # N242: prior_week_trend_state — chg5d bucket
+                try:
+                    _r48_c5d = float(live[tk].get("chg5d", 0) or 0)
+                    live[tk]["prior_week_trend_state"] = ("up_week" if _r48_c5d > 3.0 else
+                                                           "mild_up_week" if _r48_c5d > 1.0 else
+                                                           "flat_week" if _r48_c5d >= -1.0 else "down_week")
+                except Exception:
+                    live[tk]["prior_week_trend_state"] = "flat_week"
+                # N190: pre_market_action_state — pm_change_pct bucket
+                try:
+                    _r48_pm = float(live[tk].get("pm_change_pct", 0) or 0)
+                    live[tk]["pre_market_action_state"] = "active_premarket" if abs(_r48_pm) > 0.5 else "quiet_premarket"
+                except Exception:
+                    live[tk]["pre_market_action_state"] = "quiet_premarket"
+                # N162: streak_state — last 3 closed trades win/loss streak
+                try:
+                    _r48_pnls = [t.get("pnl") for t in tlog.get("trades", [])
+                                 if t.get("action") in ("SELL","COVER") and t.get("pnl") is not None][-6:]
+                    if len(_r48_pnls) >= 3:
+                        _r48_last3 = _r48_pnls[-3:]
+                        _r48_w3 = sum(1 for p in _r48_last3 if p > 0)
+                        if _r48_w3 == 3:    live[tk]["streak_state"] = "hot_streak"
+                        elif _r48_w3 == 2:  live[tk]["streak_state"] = "warm"
+                        elif _r48_w3 == 0:  live[tk]["streak_state"] = "cold_streak"
+                        else:               live[tk]["streak_state"] = "cold"
+                    else:
+                        live[tk]["streak_state"] = "neutral"
+                except Exception:
+                    live[tk]["streak_state"] = "neutral"
+                # N299: consecutive_win_streak_state — last 3 SELL pnl trend
+                try:
+                    _r48_sells3 = [t for t in tlog.get("trades", [])
+                                   if t.get("action") in ("SELL","SELL_HALF","COVER")][-3:]
+                    if len(_r48_sells3) == 3:
+                        _r48_pnl3 = [float(t.get("pnl", 0) or 0) for t in _r48_sells3]
+                        if all(p > 0 for p in _r48_pnl3):    live[tk]["consecutive_win_streak_state"] = "hot_streak"
+                        elif all(p <= 0 for p in _r48_pnl3): live[tk]["consecutive_win_streak_state"] = "cold_streak"
+                        else:                                  live[tk]["consecutive_win_streak_state"] = "mixed"
+                    else:
+                        live[tk]["consecutive_win_streak_state"] = "mixed"
+                except Exception:
+                    live[tk]["consecutive_win_streak_state"] = "mixed"
+                # N227: consec_wins_bucket — consecutive wins from recent SELL trades
+                try:
+                    _r48_cw = 0
+                    for _t48 in reversed(tlog.get("trades", [])[:10]):
+                        if _t48.get("action") not in ("SELL","SELL_HALF","COVER"):
+                            continue
+                        if (_t48.get("pnl_pct") or 0) > 0:
+                            _r48_cw += 1
+                        else:
+                            break
+                    live[tk]["consec_wins_bucket"] = ("hot_streak" if _r48_cw >= 3 else
+                                                        "positive" if _r48_cw >= 1 else "neutral")
+                except Exception:
+                    live[tk]["consec_wins_bucket"] = "neutral"
+                # N223: position_count_bucket — positions open bucket
+                try:
+                    _r48_pc = len(tlog.get("positions", []))
+                    live[tk]["position_count_bucket"] = ("solo" if _r48_pc <= 1 else
+                                                          "few" if _r48_pc <= 3 else "crowded")
+                except Exception:
+                    live[tk]["position_count_bucket"] = "few"
+                # N300: position_count_at_entry_state — positions open (crowded/normal/light)
+                try:
+                    _r48_pc2 = len(tlog.get("positions", []))
+                    live[tk]["position_count_at_entry_state"] = ("crowded_book" if _r48_pc2 >= 7 else
+                                                                   "normal_book" if _r48_pc2 >= 3 else "light_book")
+                except Exception:
+                    live[tk]["position_count_at_entry_state"] = "normal_book"
+                # N214: entry_premium_count_bucket — count of premium signals
+                try:
+                    _r48_prem = sum(1 for k in ("vcp","cup_handle","at_breakout","mtf_triple",
+                                                 "ttm_squeeze_fired","gap_and_hold","orb_breakout",
+                                                 "rvol_surge","supertrend_bull","obv_rising")
+                                    if live[tk].get(k))
+                    live[tk]["entry_premium_count_bucket"] = ("no_premium" if _r48_prem == 0 else
+                                                               "one_premium" if _r48_prem == 1 else
+                                                               "two_premium" if _r48_prem == 2 else "multi_premium")
+                except Exception:
+                    live[tk]["entry_premium_count_bucket"] = "no_premium"
+                # N219: pattern_strength — score + premium signals composite
+                try:
+                    _r48_sc = float(live[tk].get("score", 0) or 0)
+                    _r48_vcp = bool(live[tk].get("vcp"))
+                    _r48_cup = bool(live[tk].get("cup_handle"))
+                    _r48_pp  = sum(1 for k in ("at_breakout","mtf_triple","ttm_squeeze_fired",
+                                                "orb_breakout","rvol_surge","supertrend_bull")
+                                   if live[tk].get(k))
+                    if _r48_sc >= 85 and (_r48_vcp or _r48_cup):    live[tk]["pattern_strength"] = "pattern_elite"
+                    elif _r48_sc >= 75 and _r48_pp >= 1:             live[tk]["pattern_strength"] = "pattern_strong"
+                    elif _r48_sc >= 60:                               live[tk]["pattern_strength"] = "pattern_normal"
+                    else:                                              live[tk]["pattern_strength"] = "pattern_weak"
+                except Exception:
+                    live[tk]["pattern_strength"] = "pattern_normal"
+                # N217: yield_curve_state — TLT vs SHY 5d relative performance
+                try:
+                    _r48_tlt = float(live.get("TLT", {}).get("chg5d", 0) or 0)
+                    _r48_shy = float(live.get("SHY", {}).get("chg5d", 0) or 0)
+                    _r48_ycs = _r48_tlt - _r48_shy
+                    live[tk]["yield_curve_state"] = ("steepening" if _r48_ycs > 0.5 else
+                                                      "inverting" if _r48_ycs < -0.5 else "flat")
+                except Exception:
+                    live[tk]["yield_curve_state"] = "flat"
+                # N178: trade_cadence — buy count in last 60 min
+                try:
+                    _r48_rbuys = sum(1 for t in tlog.get("trades", [])
+                                     if t.get("action") == "BUY" and
+                                     (now_utc - datetime.fromisoformat(
+                                         t.get("ts","1970").replace("Z","+00:00")
+                                     )).total_seconds() < 3600)
+                    live[tk]["trade_cadence"] = ("first_trade" if _r48_rbuys == 0 else
+                                                  "moderate_cadence" if _r48_rbuys <= 2 else "high_cadence")
+                except Exception:
+                    live[tk]["trade_cadence"] = "moderate_cadence"
+                # N156: regime_duration — how many runs in current regime
+                try:
+                    _r48_rrc = int(tlog.get("regime_run_count", 0) or 0)
+                    live[tk]["regime_duration"] = ("fresh" if _r48_rrc <= 4 else
+                                                    "established" if _r48_rrc <= 20 else "extended")
+                except Exception:
+                    live[tk]["regime_duration"] = "established"
+                # N249: recent_buy_count_state — buys in last 5 calendar days
+                try:
+                    _r48_cutoff = (now_utc - timedelta(days=5)).isoformat()
+                    _r48_rbc = sum(1 for t in tlog.get("trades", [])
+                                   if t.get("action") == "BUY" and t.get("time", "") >= _r48_cutoff)
+                    live[tk]["recent_buy_count_state"] = ("high_activity" if _r48_rbc >= 4 else
+                                                           "moderate" if _r48_rbc >= 2 else
+                                                           "low" if _r48_rbc >= 1 else "first_buy")
+                except Exception:
+                    live[tk]["recent_buy_count_state"] = "low"
+                # macro_event_at_entry: alias of macro_event already set
+                try:
+                    live[tk]["macro_event_at_entry"] = live[tk].get("macro_event", "none") or "none"
+                except Exception:
+                    live[tk]["macro_event_at_entry"] = "none"
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
