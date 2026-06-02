@@ -26419,6 +26419,22 @@ def run():
                     except Exception as _fe:
                         logger.warning(f"35min deep loss sell failed {sym}: {_fe}")
                     continue
+            elif _fast_age_min >= 40 and _fast_age_min < 60 and not _fast_half_out and -1.5 < pnl_pct <= -0.5:
+                # 40min moderate loss: losing but not deep enough for 35min exit — check if setup still valid
+                _fast_d_40 = live.get(sym, {}) or {}
+                _fast_sc_40 = score(sym, _fast_d_40) if _fast_d_40 else 0
+                if _fast_sc_40 < 45:
+                    _fast_reason = f"40min losing exit ({pnl_pct:+.1f}%, score={_fast_sc_40} — cut moderate loss)"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"40min moderate loss sell failed {sym}: {_fe}")
+                    continue
             elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
                 # 30min flat/drifting exit: wider window frees capital for fresh setups faster
                 _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
