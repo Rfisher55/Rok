@@ -110,8 +110,8 @@ CRYPTO_UNIVERSE  = {
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
-CRYPTO_MIN_SCORE = 15       # minimum technical score for crypto entry
-CRYPTO_MIN_COMBINED = -3    # AI score gate — only mildly negative AI allowed
+CRYPTO_MIN_SCORE = 30       # minimum technical score for crypto entry (raised: 22% WR at 15 → needs higher bar)
+CRYPTO_MIN_COMBINED = 0     # AI score gate — require neutral-to-positive AI for crypto
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
