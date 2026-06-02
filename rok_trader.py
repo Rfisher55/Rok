@@ -1102,7 +1102,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         # Re-entry detection: was this ticker sold within the last 48h?
         try:
             _re_cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
-            _prior_sell = next((t for t in tlog.get("trades", [])
+            _prior_sell = next((t for t in reversed(tlog.get("trades", []))
                                if t.get("ticker") == sym
                                and t.get("action") in ("SELL", "SELL_HALF", "COVER")
                                and t.get("pnl_pct") is not None
@@ -1394,7 +1394,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             # Look up the regime at time of entry from the trade record
-            _buy_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _reg_key = "unknown"
             if _buy_entry:
                 _reg_key = _buy_entry.get("regime", "unknown")
@@ -1419,7 +1419,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Hold time performance tracking
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_t and _buy_t.get("time"):
                 from datetime import datetime as _hdt, timezone as _htz
                 _entry_t = _hdt.fromisoformat(_buy_t["time"].replace("Z", "+00:00"))
@@ -1464,7 +1464,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The bot learns whether it should be more/less aggressive at each VIX level.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t2 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t2 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _vix_ent = _buy_t2.get("vix_at_entry") if _buy_t2 else None
             if _vix_ent is not None:
                 _vbkt = ("low" if float(_vix_ent) < 14 else
@@ -1487,7 +1487,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Key "HHMM" is the UTC 30-min window when the BUY was entered.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t3 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t3 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_t3 and _buy_t3.get("time"):
                 _entry_dt3 = datetime.fromisoformat(_buy_t3["time"].replace("Z", "+00:00"))
                 _hw_key = f"{_entry_dt3.hour:02d}{'30' if _entry_dt3.minute >= 30 else '00'}"
@@ -1508,7 +1508,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: are pre-earnings drift plays working? Are day-of entries too risky?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t4 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t4 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _earn_days = _buy_t4.get("earnings_days_at_entry") if _buy_t4 else None
             if _earn_days is not None:
                 _earn_bkt = ("0-2d" if _earn_days <= 2 else
@@ -1531,7 +1531,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The bot learns: does RVOL > 3x actually lead to better outcomes?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t5 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t5 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _rvol_e = float(_buy_t5.get("rvol_at_entry", 1.0) or 1.0) if _buy_t5 else None
             if _rvol_e is not None:
                 _rv_bkt = ("low" if _rvol_e < 1.5 else
@@ -1554,7 +1554,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: below what quality score do entries fail? Above what do they thrive?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t6 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t6 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _mq_e = int(_buy_t6.get("mkt_quality_at_entry", 50) or 50) if _buy_t6 else None
             if _mq_e is not None:
                 _mq_bkt = ("poor" if _mq_e < 40 else
@@ -1577,7 +1577,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Validates: are higher-grade setups actually more profitable?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t7 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t7 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _grd = _buy_t7.get("grade_at_entry") if _buy_t7 else None
             if _grd and _grd != "?":
                 _grd_perf = tlog.setdefault("grade_perf", {})
@@ -1598,7 +1598,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # while others need large cap liquidity.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t8 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t8 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ptier = _buy_t8.get("price_tier") if _buy_t8 else None
             if not _ptier:
                 # Fall back to estimating from sell price
@@ -1620,7 +1620,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: do entries in strong breadth (>65%) days outperform narrow markets?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_t9 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_t9 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _br_e = float(_buy_t9.get("breadth_at_entry", 50) or 50) if _buy_t9 else None
             if _br_e is not None:
                 _br_bkt = ("weak" if _br_e < 40 else
@@ -1679,7 +1679,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: does buying oversold (<35) or momentum (>60) produce better results?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ta = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ta = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _rsi_e = float(_buy_ta.get("rsi_at_entry", 50) or 50) if _buy_ta else None
             if _rsi_e is not None:
                 _rsi_bkt = ("oversold" if _rsi_e < 35 else
@@ -1702,7 +1702,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: should the bot avoid entering on FOMC day? Does day_before hurt?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_tb = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_tb = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _macro_lbl = _buy_tb.get("macro_label", "normal") if _buy_tb else "normal"
             _macro_ev  = _buy_tb.get("macro_event", "none") if _buy_tb else "none"
             _macro_key = f"{_macro_lbl}_{_macro_ev}" if _macro_ev != "none" else "normal"
@@ -1724,7 +1724,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # counts (too few = weak, too many = late/crowded) get a penalty.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_tc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_tc = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _sc = _buy_tc.get("signal_count_at_entry", 0) if _buy_tc else 0
             _sc_bkt = ("1-3" if _sc <= 3 else "4-6" if _sc <= 6 else "7-10" if _sc <= 10 else "11+")
             _sc_perf = tlog.setdefault("signal_count_perf", {})
@@ -1744,7 +1744,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # or diversified (5+ positions). This informs optimal portfolio sizing.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_cp = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_cp = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _conc_bkt = _buy_cp.get("concentration_bucket", "3-4") if _buy_cp else "3-4"
             _conc_perf = tlog.setdefault("concentration_perf", {})
             _cpp = _conc_perf.setdefault(_conc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _conc_bkt})
@@ -1763,7 +1763,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Fri = end-of-week position trimming by institutions can hurt longs.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_dw = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_dw = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _day_nm = _buy_dw.get("day_name", "Mon") if _buy_dw else "Mon"
             _dow_perf = tlog.setdefault("dow_perf", {})
             _dwp = _dow_perf.setdefault(_day_nm, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "day": _day_nm})
@@ -1783,7 +1783,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # a working theme" from "falling knife" behavior.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_re = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_re = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_re and _buy_re.get("is_reentry"):
                 _re_type = _buy_re.get("reentry_type", "unknown")
                 _re_perf = tlog.setdefault("reentry_perf", {})
@@ -1803,7 +1803,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # positions produce different risk-adjusted returns. The bot learns its optimal bet.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ps = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ps = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ps_bkt = _buy_ps.get("pos_size_bucket", "2-5%") if _buy_ps else "2-5%"
             _ps_perf = tlog.setdefault("pos_size_perf", {})
             _psp = _ps_perf.setdefault(_ps_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _ps_bkt})
@@ -1823,7 +1823,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # urgency level predicts trade success.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_nu = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_nu = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _nu_bkt = _buy_nu.get("urgency_bucket", "low") if _buy_nu else "low"
             _nu_perf = tlog.setdefault("urgency_perf", {})
             _nup = _nu_perf.setdefault(_nu_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _nu_bkt})
@@ -1843,7 +1843,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The bot learns whether above-VWAP entries produce consistently better outcomes.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_vw = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_vw = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _vw_bkt = _buy_vw.get("vwap_bucket", "at_vwap") if _buy_vw else "at_vwap"
             _vw_perf = tlog.setdefault("vwap_perf", {})
             _vwp = _vw_perf.setdefault(_vw_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _vw_bkt})
@@ -1862,7 +1862,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # recovering = crossing from negative; negative = counter-trend entry risk.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_mc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_mc = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _mc_bkt = _buy_mc.get("macd_state", "negative") if _buy_mc else "negative"
             _mc_perf = tlog.setdefault("macd_state_perf", {})
             _mcp = _mc_perf.setdefault(_mc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _mc_bkt})
@@ -1881,7 +1881,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The bot learns whether squeeze-fired entries outperform standard momentum entries.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_sq = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_sq = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _sq_fired = _buy_sq.get("squeeze_fired", False) if _buy_sq else False
             _sq_key = "squeeze" if _sq_fired else "no_squeeze"
             _sq_perf = tlog.setdefault("squeeze_perf", {})
@@ -1901,7 +1901,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # High accum_score = OBV rising + MFI bullish + demand zone + options flow all agree.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ac = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ac = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ac_bkt = _buy_ac.get("accum_bucket", "light") if _buy_ac else "light"
             _ac_perf = tlog.setdefault("accum_perf", {})
             _acp = _ac_perf.setdefault(_ac_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _ac_bkt})
@@ -1920,7 +1920,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # IBD data shows RS90+ stocks outperform the market 4:1 — let's verify with live data.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_rs = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_rs = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _rs_bkt = _buy_rs.get("rs_bucket", "average") if _buy_rs else "average"
             _rs_perf = tlog.setdefault("rs_rating_perf", {})
             _rsp = _rs_perf.setdefault(_rs_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _rs_bkt})
@@ -1939,7 +1939,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The O'Neil Trend Template is the institutional-grade entry quality benchmark.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_tt = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_tt = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _tt_bkt = _buy_tt.get("tt_bucket", "fair") if _buy_tt else "fair"
             _tt_perf = tlog.setdefault("tt_perf", {})
             _ttp = _tt_perf.setdefault(_tt_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _tt_bkt})
@@ -1958,7 +1958,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: is 2-3 green days the sweet spot, or does it signal exhaustion (4d+)?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_cg = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_cg = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _cg_bkt = _buy_cg.get("consec_green_bucket", "0d") if _buy_cg else "0d"
             _cg_perf = tlog.setdefault("consec_green_perf", {})
             _cgp = _cg_perf.setdefault(_cg_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _cg_bkt})
@@ -1977,7 +1977,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: do entries during sector acceleration phases produce better outcomes?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_sm = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_sm = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _sm_bkt = _buy_sm.get("sector_etf_momentum", "neutral") if _buy_sm else "neutral"
             _sm_perf = tlog.setdefault("sector_momentum_v1_perf", {})
             _smp = _sm_perf.setdefault(_sm_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "momentum": _sm_bkt})
@@ -1996,7 +1996,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Helps the bot avoid gap-and-fail traps while confirming gap-and-hold strength.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_pg = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_pg = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _pg_bkt = _buy_pg.get("pm_gap_bucket", "flat") if _buy_pg else "flat"
             _pg_perf = tlog.setdefault("pm_gap_perf", {})
             _pgp = _pg_perf.setdefault(_pg_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _pg_bkt})
@@ -2034,7 +2034,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The bot learns if it should prefer tight or wide stop distances.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_at = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_at = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _at_bkt = _buy_at.get("atr_bucket", "1-2%") if _buy_at else "1-2%"
             _at_perf = tlog.setdefault("atr_perf", {})
             _atp = _at_perf.setdefault(_at_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _at_bkt})
@@ -2051,7 +2051,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── EMA50 Position Neuron (N110): price distance from 50 EMA at entry ────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_e50r = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_e50r = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _e50_v = float(_buy_e50r.get("price_vs_ema50", 0) or 0) if _buy_e50r else 0
             _e50_bkt = ("above_far" if _e50_v > 10 else "above" if _e50_v > 2 else "below" if _e50_v > -10 else "below_far")
             _e50r_perf = tlog.setdefault("ema50_position_perf", {})
@@ -2067,7 +2067,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── EMA200 Position Neuron (N111): price distance from 200 EMA at entry ──────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_e200r = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_e200r = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _e200_v = float(_buy_e200r.get("price_vs_ema200", 0) or 0) if _buy_e200r else 0
             _e200_bkt = ("above" if _e200_v > 5 else "near" if _e200_v > -5 else "below")
             _e200r_perf = tlog.setdefault("ema200_position_perf", {})
@@ -2083,7 +2083,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Chart Pattern Entry Neuron (N140/N141): cup/vcp/double_bottom at entry ──
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_pat = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_pat = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_pat:
                 _pat_perf = tlog.setdefault("pattern_entry_perf", {})
                 for _pat_key in ("cup_handle", "vcp_breakout", "double_bottom"):
@@ -2101,7 +2101,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── ATR Bucket Neuron (N129): tight/normal/wide/very_wide at entry ────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_atrb = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_atrb = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _atrb_v = float(_buy_atrb.get("atr_pct", 0) or 0) if _buy_atrb else 0
             _atrb_bkt = ("tight" if _atrb_v < 1 else "normal" if _atrb_v < 2.5 else "wide" if _atrb_v < 5 else "very_wide")
             _atrb_perf = tlog.setdefault("atr_bucket_perf", {})
@@ -2117,7 +2117,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── DCA Context Neuron (N149): was entry a DCA (averaging down) or fresh? ──
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_dcar = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_dcar = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _dcar_bkt = "dca" if (_buy_dcar and _buy_dcar.get("is_dca")) else "fresh"
             _dcar_perf = tlog.setdefault("dca_performance", {})
             _dcar_rec  = _dcar_perf.setdefault(_dcar_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
@@ -2134,7 +2134,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # The bot learns whether entries during rising score phases produce better outcomes.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_st = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_st = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _st_trend = _buy_st.get("score_trend", "flat") if _buy_st else "flat"
             _st_perf = tlog.setdefault("score_trend_perf", {})
             _stp = _st_perf.setdefault(_st_trend, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "trend": _st_trend})
@@ -2154,7 +2154,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # This is a key market regime micro-signal that goes beyond just "bull/bear".
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_td = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_td = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _spy_bkt = _buy_td.get("spy_day_bucket", "flat") if _buy_td else "flat"
             _spy_ret = _buy_td.get("spy_day_return", 0.0) if _buy_td else 0.0
             _spy_perf = tlog.setdefault("spy_day_perf", {})
@@ -2179,7 +2179,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: do breakout entries (>2% above POC) outperform near-POC or below-POC entries?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_pc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_pc = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _pc_bkt = _buy_pc.get("poc_dist_bucket", "at_poc") if _buy_pc else "at_poc"
             _pc_perf = tlog.setdefault("poc_dist_perf", {})
             _pcp = _pc_perf.setdefault(_pc_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _pc_bkt})
@@ -2197,7 +2197,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates for ORB entries vs non-ORB entries.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ob = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ob = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ob_state = _buy_ob.get("orb_state", "consolidating") if _buy_ob else "consolidating"
             _ob_perf = tlog.setdefault("orb_perf", {})
             _obp = _ob_perf.setdefault(_ob_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _ob_state})
@@ -2215,7 +2215,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates when gap_and_hold confirms institutional accumulation at entry.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_gh = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_gh = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _gh_state = _buy_gh.get("gap_hold_state", "normal") if _buy_gh else "normal"
             _gh_perf = tlog.setdefault("gap_hold_perf", {})
             _ghp = _gh_perf.setdefault(_gh_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _gh_state})
@@ -2232,7 +2232,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Supertrend+PSAR Neuron (61): trend confirmation layer ─────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n61 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n61 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n61_state = _buy_n61.get("trend_conf_state", "neither") if _buy_n61 else "neither"
             _n61_perf = tlog.setdefault("trend_conf_perf", {})
             _n61p = _n61_perf.setdefault(_n61_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n61_state})
@@ -2249,7 +2249,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Bollinger Band Position Neuron (62): band zone at entry ─────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n62 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n62 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n62_zone = _buy_n62.get("bb_zone", "mid") if _buy_n62 else "mid"
             _n62_perf = tlog.setdefault("bb_zone_perf", {})
             _n62p = _n62_perf.setdefault(_n62_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _n62_zone})
@@ -2266,7 +2266,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Candle Pattern Score Neuron (63): bullish candles at entry ──────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n63 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n63 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n63_state = _buy_n63.get("candle_state", "none") if _buy_n63 else "none"
             _n63_perf = tlog.setdefault("candle_pattern_perf", {})
             _n63p = _n63_perf.setdefault(_n63_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n63_state})
@@ -2283,7 +2283,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Volume Dry-Up Neuron (64): tight consolidation before breakout ──────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n64 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n64 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n64_state = _buy_n64.get("vol_dry_state", "normal_vol") if _buy_n64 else "normal_vol"
             _n64_perf = tlog.setdefault("vol_dry_perf", {})
             _n64p = _n64_perf.setdefault(_n64_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n64_state})
@@ -2300,7 +2300,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Chart Pattern Score Neuron (65): bull_flag, cup_handle, vcp, pocket_pivot ─
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n65 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n65 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n65_state = _buy_n65.get("chart_pattern_state", "none") if _buy_n65 else "none"
             _n65_perf = tlog.setdefault("chart_pattern_perf", {})
             _n65p = _n65_perf.setdefault(_n65_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n65_state})
@@ -2317,7 +2317,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── ROC Momentum Neuron (66): rate-of-change alignment at entry ─────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n66 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n66 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n66_state = _buy_n66.get("roc_state", "negative") if _buy_n66 else "negative"
             _n66_perf = tlog.setdefault("roc_perf", {})
             _n66p = _n66_perf.setdefault(_n66_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n66_state})
@@ -2334,7 +2334,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Relative Strength Momentum Neuron (67): RS5 vs RS63 ─────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n67 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n67 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n67_state = _buy_n67.get("rs_mom_state", "lagging") if _buy_n67 else "lagging"
             _n67_perf = tlog.setdefault("rs_mom_perf", {})
             _n67p = _n67_perf.setdefault(_n67_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n67_state})
@@ -2351,7 +2351,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Demand Zone Proximity Neuron (68): at/near institutional demand ──────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n68 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n68 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n68_state = _buy_n68.get("demand_zone_state", "no_zone") if _buy_n68 else "no_zone"
             _n68_perf = tlog.setdefault("demand_zone_perf", {})
             _n68p = _n68_perf.setdefault(_n68_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n68_state})
@@ -2368,7 +2368,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Higher Lows Pattern Neuron (69): ascending support confirmation ──────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n69 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n69 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n69_state = _buy_n69.get("higher_lows_state", "not_confirmed") if _buy_n69 else "not_confirmed"
             _n69_perf = tlog.setdefault("higher_lows_perf", {})
             _n69p = _n69_perf.setdefault(_n69_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n69_state})
@@ -2385,7 +2385,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── HA Consecutive Bull Neuron (70): streak of green Heikin Ashi candles ─────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n70 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n70 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n70_state = _buy_n70.get("ha_consec_state", "early") if _buy_n70 else "early"
             _n70_perf = tlog.setdefault("ha_consec_perf", {})
             _n70p = _n70_perf.setdefault(_n70_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n70_state})
@@ -2402,7 +2402,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── NR7 Signal Neuron (71): narrowest range in 7 days = coiled spring ────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n71 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n71 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n71_state = _buy_n71.get("nr7_state", "normal_range") if _buy_n71 else "normal_range"
             _n71_perf = tlog.setdefault("nr7_perf", {})
             _n71p = _n71_perf.setdefault(_n71_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n71_state})
@@ -2419,7 +2419,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── EMA Structure Neuron (72): price vs EMA50 + EMA200 trend health ──────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n72 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n72 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n72_state = _buy_n72.get("ema_struct_state", "below_both") if _buy_n72 else "below_both"
             _n72_perf = tlog.setdefault("ema_struct_perf", {})
             _n72p = _n72_perf.setdefault(_n72_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n72_state})
@@ -2436,7 +2436,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── MACD Divergence Neuron (73): bullish div = hidden accumulation ────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n73 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n73 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n73_state = _buy_n73.get("macd_div_state", "no_div") if _buy_n73 else "no_div"
             _n73_perf = tlog.setdefault("macd_div_perf", {})
             _n73p = _n73_perf.setdefault(_n73_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n73_state})
@@ -2453,7 +2453,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── MFI Divergence Neuron (74): MFI bull div = money in vs price down ────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n74 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n74 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n74_state = _buy_n74.get("mfi_div_state", "no_div") if _buy_n74 else "no_div"
             _n74_perf = tlog.setdefault("mfi_div_perf", {})
             _n74p = _n74_perf.setdefault(_n74_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n74_state})
@@ -2470,7 +2470,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Vol Ratio + Momentum Combo Neuron (75): volume confirms momentum ──────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n75 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n75 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n75_state = _buy_n75.get("vol_ratio_mom_state", "weak") if _buy_n75 else "weak"
             _n75_perf = tlog.setdefault("vol_ratio_mom_perf", {})
             _n75p = _n75_perf.setdefault(_n75_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _n75_state})
@@ -2487,7 +2487,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── Neurons 76-90 SELL tracking (compact form) ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ref = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ref = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             def _track(perf_key, state_key, default_state):
                 st = _buy_ref.get(state_key, default_state) if _buy_ref else default_state
                 perf = tlog.setdefault(perf_key, {})
@@ -2543,7 +2543,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # VIX 30+: panic → either great mean-reversion OR prolonged drawdown.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n103 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n103 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _vix_n103 = float(_buy_n103.get("vix_at_entry", 20) or 20) if _buy_n103 else 20.0
             _vix_bkt = ("extreme_fear" if _vix_n103 >= 35 else
                         "high_fear"   if _vix_n103 >= 25 else
@@ -2568,7 +2568,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # power_hour (3pm-3:45pm): strong closing momentum, high conviction.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n104 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n104 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _sess_n104 = _buy_n104.get("entry_session", "unknown") if _buy_n104 else "unknown"
             _n104_perf = tlog.setdefault("entry_session_perf", {})
             _n104p = _n104_perf.setdefault(_sess_n104, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_sess_n104})
@@ -2586,7 +2586,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Weak breadth (<40%): only strongest stocks survive — need higher conviction.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n105 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n105 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _breadth_n105 = float(_buy_n105.get("breadth_at_entry", 50) or 50) if _buy_n105 else 50.0
             _bkt_n105 = ("strong" if _breadth_n105 >= 65 else
                          "moderate" if _breadth_n105 >= 50 else
@@ -2607,7 +2607,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # 7-12 positions = diversified (smooth risk, but diluted gains).
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n106 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n106 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n_held = int(_buy_n106.get("n_open_at_entry", 5) or 5) if _buy_n106 else 5
             _conc_bkt = ("concentrated" if _n_held <= 3 else
                          "moderate"     if _n_held <= 6 else
@@ -2628,7 +2628,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Bot learns: does it perform better buying same-day or next-day catalysts?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n107 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n107 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _cat_age = _buy_n107.get("catalyst_age_state", "no_catalyst") if _buy_n107 else "no_catalyst"
             _n107_perf = tlog.setdefault("catalyst_age_perf", {})
             _n107p = _n107_perf.setdefault(_cat_age, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_cat_age})
@@ -2646,7 +2646,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # This neuron optimizes which template quality the bot should require.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n108 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n108 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _tt_score = int(_buy_n108.get("trend_template", 0) or 0) if _buy_n108 else 0
             _tt_bkt = ("elite" if _tt_score >= 7 else "strong" if _tt_score >= 5 else "moderate" if _tt_score >= 3 else "weak")
             _n108_perf = tlog.setdefault("trend_template_tier_perf", {})
@@ -2665,7 +2665,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # better intraday follow-through vs normal pre-market activity?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n109 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n109 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _pm_vol = float(_buy_n109.get("rvol", 1.0) or 1.0) if _buy_n109 else 1.0
             _pm_bkt = ("explosive" if _pm_vol >= 5.0 else "surge" if _pm_vol >= 2.5 else "elevated" if _pm_vol >= 1.5 else "normal")
             _n109_perf = tlog.setdefault("rvol_entry_tier_perf", {})
@@ -2685,7 +2685,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Bot learns: what's the actual edge of buying above vs below SPY VWAP?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n111 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n111 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _spy_vwap_state = _buy_n111.get("spy_vwap_state", "unknown") if _buy_n111 else "unknown"
             _n111_perf = tlog.setdefault("spy_vwap_entry_perf", {})
             _n111p = _n111_perf.setdefault(_spy_vwap_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_spy_vwap_state})
@@ -2704,7 +2704,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # many = crowded/overextended trade).
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n112 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n112 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n112_sig_ct = int(_buy_n112.get("signal_count_at_entry", 0) or 0) if _buy_n112 else 0
             _sig_bkt = ("strong" if _n112_sig_ct >= 8 else "good" if _n112_sig_ct >= 5 else "moderate" if _n112_sig_ct >= 3 else "weak")
             _n112_perf = tlog.setdefault("signal_density_perf", {})
@@ -2724,7 +2724,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # is already priced in vs. a raw +10 with unusual options activity.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n113 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n113 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ai_sent = float(_buy_n113.get("ai_sentiment", 0) or 0) if _buy_n113 else 0.0
             _sent_bkt = ("very_pos" if _ai_sent >= 50 else "pos" if _ai_sent >= 20 else "neutral" if _ai_sent >= -10 else "neg")
             _n113_perf = tlog.setdefault("ai_sentiment_tier_perf", {})
@@ -2743,7 +2743,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Informs adaptive exit timing — when the bot should be impatient vs patient.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n114 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n114 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _hold_d = 0.0
             if _buy_n114:
                 try:
@@ -2773,7 +2773,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Bot learns actual performance split by market cap tier.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n115 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n115 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _mktcap = float((_buy_n115 or {}).get("market_cap_b", 0) or 0)
             _mc_bkt = ("mega" if _mktcap >= 100 else "large" if _mktcap >= 10 else "mid" if _mktcap >= 2 else "small")
             _n115_perf = tlog.setdefault("mktcap_tier_perf", {})
@@ -2792,7 +2792,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks float tier at entry: thin (<50M), normal (50-500M), large (500M+).
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n116 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n116 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _float_m = float((_buy_n116 or {}).get("float_shares_m", 200) or 200)
             _float_bkt = ("thin" if _float_m < 50 else "normal" if _float_m < 500 else "large")
             _n116_perf = tlog.setdefault("float_tier_perf", {})
@@ -2811,7 +2811,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Bot learns: does buying during VIX backwardation (panic) outperform contango entries?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n117 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n117 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _vts_state = (_buy_n117 or {}).get("vts_regime_at_entry", "contango")
             _n117_perf = tlog.setdefault("vts_perf", {})
             _n117p = _n117_perf.setdefault(_vts_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_vts_state})
@@ -2829,7 +2829,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Bot learns: are pullback entries (2-3 red days) actually better than buying on green days?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n118 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n118 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _red_days = int((_buy_n118 or {}).get("consec_red_days_at_entry", 0) or 0)
             _red_bkt = ("green_run" if _red_days == 0 else "pullback_1" if _red_days == 1 else
                         "pullback_2_3" if _red_days <= 3 else "knife_catch")
@@ -2849,7 +2849,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # produce better outcomes when the position is already well-positioned?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n119 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n119 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _macro_at_entry = (_buy_n119 or {}).get("macro_event_at_entry", "none")
             _n119_perf = tlog.setdefault("macro_hold_perf", {})
             _n119p = _n119_perf.setdefault(_macro_at_entry, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_macro_at_entry})
@@ -2867,7 +2867,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Bot learns: does moderate PCR actually predict better long outcomes than extremes?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n120 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n120 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _pcr = float((_buy_n120 or {}).get("options_pcr", 1.0) or 1.0)
             _pcr_bkt = ("extreme_calls" if _pcr < 0.5 else "bullish" if _pcr < 0.75 else
                         "balanced" if _pcr < 1.1 else "hedged" if _pcr < 1.5 else "fear")
@@ -2887,7 +2887,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks: high_si_squeeze (SI>15%+RVOL>3x), high_si_no_surge, low_si.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n121 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n121 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _si_pct = float((_buy_n121 or {}).get("short_float", 0) or 0) * 100
             _rvol_121 = float((_buy_n121 or {}).get("rvol", 1.0) or 1.0)
             _n121_bkt = ("squeeze_setup" if _si_pct >= 15 and _rvol_121 >= 3.0 else
@@ -2909,7 +2909,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # = classic institutional accumulation zone. Bot learns optimal distance for entries.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n122 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n122 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _dist200 = float((_buy_n122 or {}).get("dist_from_200ema_pct", 0) or 0)
             _d200_bkt = ("extended" if _dist200 >= 30 else "strong" if _dist200 >= 15 else
                          "moderate" if _dist200 >= 5 else "near_200" if _dist200 >= -5 else "below_200")
@@ -2928,7 +2928,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # strong_bull(>3%/5d), bull(>1%), neutral, bear(<-1%), strong_bear(<-3%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n123 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n123 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n123_chg = float(_buy_n123.get("sector_etf_chg5d_at_entry", 0) or 0) if _buy_n123 else 0
             _n123_bkt = ("strong_bull" if _n123_chg >= 3 else "bull" if _n123_chg >= 1 else
                          "bear" if _n123_chg <= -1 else "strong_bear" if _n123_chg <= -3 else "neutral")
@@ -2947,7 +2947,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # aligned_bull: both SPY+stock up; aligned_bear: both down; diverging: stock up/SPY down or vice versa.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n124 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n124 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n124_align = _buy_n124.get("spy_alignment_at_entry", "neutral") if _buy_n124 else "neutral"
             _n124_perf = tlog.setdefault("spy_alignment_v1_perf", {})
             _n124p = _n124_perf.setdefault(_n124_align, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n124_align})
@@ -2964,7 +2964,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # hot(≥4 recent headlines), warm(2-3), cool(1), cold(0)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n125 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n125 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n125_vel = _buy_n125.get("news_velocity_at_entry", "cold") if _buy_n125 else "cold"
             _n125_perf = tlog.setdefault("news_velocity_count_perf", {})
             _n125p = _n125_perf.setdefault(_n125_vel, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n125_vel})
@@ -2981,7 +2981,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # large_gap(>3%), gap(>1%), flat(-1% to 1%), gap_down(<-1%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n126 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n126 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n126_gap = float(_buy_n126.get("gap_pct_at_entry", 0) or 0) if _buy_n126 else 0
             _n126_bkt = ("large_gap" if _n126_gap >= 3 else "gap" if _n126_gap >= 1 else
                          "gap_down" if _n126_gap <= -1 else "flat")
@@ -2999,7 +2999,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates by O'Neil-style RS rating tier: elite(≥90), strong(≥70), average(≥50), weak
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n127 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n127 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n127_rs = float(_buy_n127.get("rs_rating_at_entry", 50) or 50) if _buy_n127 else 50
             _n127_bkt = ("elite" if _n127_rs >= 90 else "strong" if _n127_rs >= 70 else
                          "average" if _n127_rs >= 50 else "weak")
@@ -3018,7 +3018,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # elite(score≥80), strong(≥65), moderate(≥50), borderline(<50)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n128 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n128 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n128_sc = float(_buy_n128.get("score", 0) or 0) if _buy_n128 else 0
             _n128_bkt = ("elite" if _n128_sc >= 80 else "strong" if _n128_sc >= 65 else
                          "moderate" if _n128_sc >= 50 else "borderline")
@@ -3036,7 +3036,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks which exit trigger produced the best outcomes: stop_loss/take_profit/trail/time
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n129 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n129 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n129_trig = "manual"
             if reason:
                 _r = str(reason).lower()
@@ -3060,7 +3060,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # heavy_dd(>20%), moderate(10-20%), mild(5-10%), stable(<5%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n130 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n130 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n130_dd = float(_buy_n130.get("max_drawdown_1m_at_entry", 0) or 0) if _buy_n130 else 0
             _n130_bkt = ("heavy_dd" if _n130_dd >= 20 else "moderate" if _n130_dd >= 10 else
                          "mild" if _n130_dd >= 5 else "stable")
@@ -3079,7 +3079,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # imminent(<3d), near(3-7d), approaching(8-21d), safe(>21d or unknown)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n131 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n131 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n131_days = float(_buy_n131.get("days_to_earnings_at_entry", 99) or 99) if _buy_n131 else 99
             _n131_bkt = ("imminent" if _n131_days < 3 else "near" if _n131_days < 7 else
                          "approaching" if _n131_days < 21 else "safe")
@@ -3097,7 +3097,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates by recent analyst action: upgraded/downgraded/unchanged
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n132 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n132 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n132_rating = _buy_n132.get("analyst_rating_momentum", "unchanged") if _buy_n132 else "unchanged"
             _n132_perf = tlog.setdefault("analyst_momentum_perf", {})
             _n132p = _n132_perf.setdefault(_n132_rating, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n132_rating})
@@ -3113,7 +3113,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates by how high-beta the stock was: high_beta(>1.5), normal, defensive(<0.8)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n133 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n133 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n133_beta = float(_buy_n133.get("beta_at_entry", 1.0) or 1.0) if _buy_n133 else 1.0
             _n133_bkt = ("high_beta" if _n133_beta >= 1.5 else "normal" if _n133_beta >= 0.8 else "defensive")
             _n133_perf = tlog.setdefault("beta_tier_perf", {})
@@ -3131,7 +3131,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # when we entered. Sector leaders outperform in bull markets.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n134 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n134 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n134_tier = _buy_n134.get("sector_leadership_tier", "mid") if _buy_n134 else "mid"
             _n134_perf = tlog.setdefault("sector_leadership_v1_perf", {})
             _n134p = _n134_perf.setdefault(_n134_tier, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n134_tier})
@@ -3148,7 +3148,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # surge(>3x PM), elevated(>1.5x), normal
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n135 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n135 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n135_pm = _buy_n135.get("pm_volume_tier", "normal") if _buy_n135 else "normal"
             _n135_perf = tlog.setdefault("pm_volume_perf", {})
             _n135p = _n135_perf.setdefault(_n135_pm, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n135_pm})
@@ -3164,7 +3164,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates by A/D line direction: accumulation vs distribution vs neutral
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n136 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n136 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n136_ad = _buy_n136.get("accum_distrib_state", "neutral") if _buy_n136 else "neutral"
             _n136_perf = tlog.setdefault("accum_distrib_perf", {})
             _n136p = _n136_perf.setdefault(_n136_ad, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n136_ad})
@@ -3181,7 +3181,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # high_vol_up (best), high_vol_down (avoid), low_vol_up (weak), low_vol_down
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n137 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n137 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n137_vpt = _buy_n137.get("vol_price_confirm", "low_vol_up") if _buy_n137 else "low_vol_up"
             _n137_perf = tlog.setdefault("vol_price_confirm_perf", {})
             _n137p = _n137_perf.setdefault(_n137_vpt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n137_vpt})
@@ -3198,7 +3198,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # persistent_strong, rising, new_entry, declining — from score_history
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n138 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n138 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n138_persist = _buy_n138.get("score_persistence", "new_entry") if _buy_n138 else "new_entry"
             _n138_perf = tlog.setdefault("score_persistence_v1_perf", {})
             _n138p = _n138_perf.setdefault(_n138_persist, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n138_persist})
@@ -3215,7 +3215,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # volatile(avg>2%), moderate(1-2%), stable(<1%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n139 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n139 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n139_gap = float(_buy_n139.get("overnight_gap_vol", 0) or 0) if _buy_n139 else 0
             _n139_bkt = ("volatile" if _n139_gap >= 2 else "moderate" if _n139_gap >= 1 else "stable")
             _n139_perf = tlog.setdefault("overnight_gap_vol_perf", {})
@@ -3233,7 +3233,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # tight(<0.05%), normal(0.05-0.2%), wide(>0.2%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n140 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n140 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n140_spread = float(_buy_n140.get("bid_ask_spread_pct", 0.1) or 0.1) if _buy_n140 else 0.1
             _n140_bkt = ("tight" if _n140_spread < 0.05 else "wide" if _n140_spread >= 0.2 else "normal")
             _n140_perf = tlog.setdefault("microstructure_perf", {})
@@ -3251,7 +3251,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # daily move: strong_bull(above VWAP + up >1%), weak_bull, flat, weak_bear, strong_bear
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n141 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n141 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n141_state = _buy_n141.get("intraday_momentum_state", "flat") if _buy_n141 else "flat"
             _n141_perf = tlog.setdefault("intraday_momentum_v1_perf", {})
             _n141p = _n141_perf.setdefault(_n141_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n141_state})
@@ -3267,7 +3267,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates by put/call OI skew at entry: heavy_calls/calls_lean/balanced/puts_lean/heavy_puts
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n142 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n142 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n142_oi = _buy_n142.get("oi_skew_state", "balanced") if _buy_n142 else "balanced"
             _n142_perf = tlog.setdefault("oi_skew_perf", {})
             _n142p = _n142_perf.setdefault(_n142_oi, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n142_oi})
@@ -3284,7 +3284,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # consistent_beats(3+), mixed, misser(2+ misses recently)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n143 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n143 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n143_eps = _buy_n143.get("eps_surprise_history", "mixed") if _buy_n143 else "mixed"
             _n143_perf = tlog.setdefault("eps_surprise_perf", {})
             _n143p = _n143_perf.setdefault(_n143_eps, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n143_eps})
@@ -3301,7 +3301,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # full_bull(all 3 up), 2of3_bull, mixed, 2of3_bear, full_bear
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n144 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n144 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n144_mtf = _buy_n144.get("mtf_trend_agree", "mixed") if _buy_n144 else "mixed"
             _n144_perf = tlog.setdefault("mtf_agree_perf", {})
             _n144p = _n144_perf.setdefault(_n144_mtf, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n144_mtf})
@@ -3318,7 +3318,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # recent_buy(≤30d), old_buy(31-90d), no_insider_data
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n145 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n145 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n145_ins = _buy_n145.get("insider_buy_recency", "no_insider_data") if _buy_n145 else "no_insider_data"
             _n145_perf = tlog.setdefault("insider_timing_perf", {})
             _n145p = _n145_perf.setdefault(_n145_ins, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n145_ins})
@@ -3335,7 +3335,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # 4plus / 2to3 / single / none — more patterns = higher-conviction setup
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n146 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n146 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n146_ct = int(_buy_n146.get("pattern_confluence_count", 0) or 0) if _buy_n146 else 0
             _n146_bkt = ("4plus" if _n146_ct >= 4 else "2to3" if _n146_ct >= 2 else "single" if _n146_ct >= 1 else "none")
             _n146_perf = tlog.setdefault("pattern_confluence_perf", {})
@@ -3353,7 +3353,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # defensive(utilities/REITs/staples), growth(tech/biotech/consumer_disc), cyclical(energy/financials/industrials)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n147 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n147 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n147_sec_type = _buy_n147.get("sector_type", "cyclical") if _buy_n147 else "cyclical"
             _n147_perf = tlog.setdefault("sector_type_perf", {})
             _n147p = _n147_perf.setdefault(_n147_sec_type, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n147_sec_type})
@@ -3370,7 +3370,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # aligned_large(large cap leading + large cap stock), aligned_small, misaligned
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n148 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n148 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n148_style = _buy_n148.get("cap_style_alignment", "neutral") if _buy_n148 else "neutral"
             _n148_perf = tlog.setdefault("cap_style_perf", {})
             _n148p = _n148_perf.setdefault(_n148_style, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n148_style})
@@ -3387,7 +3387,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # futures_strong(>0.5%), futures_up, flat, futures_down, futures_crash(<-1%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n149 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n149 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n149_fut = _buy_n149.get("open_futures_state", "flat") if _buy_n149 else "flat"
             _n149_perf = tlog.setdefault("futures_signal_perf", {})
             _n149p = _n149_perf.setdefault(_n149_fut, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n149_fut})
@@ -3421,7 +3421,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Which weekday at entry produces best outcomes? monday/tuesday/wednesday/thursday/friday
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n151 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n151 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n151_dow = _buy_n151.get("entry_dow", "unknown") if _buy_n151 else "unknown"
             _n151_perf = tlog.setdefault("entry_dow_perf", {})
             _n151p = _n151_perf.setdefault(_n151_dow, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n151_dow})
@@ -3438,7 +3438,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # vix_falling / vix_stable / vix_rising
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n152 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n152 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n152_vt = _buy_n152.get("vix_trend_at_entry", "vix_stable") if _buy_n152 else "vix_stable"
             _n152_perf = tlog.setdefault("vix_trend_perf", {})
             _n152p = _n152_perf.setdefault(_n152_vt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n152_vt})
@@ -3454,7 +3454,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # How many open positions when we enter? solo(1)/few(2-3)/moderate(4-6)/crowded(7+)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n153 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n153 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n153_crowd = _buy_n153.get("crowd_tier", "moderate") if _buy_n153 else "moderate"
             _n153_perf = tlog.setdefault("crowd_tier_perf", {})
             _n153p = _n153_perf.setdefault(_n153_crowd, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n153_crowd})
@@ -3471,7 +3471,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # sec_above_50d / sec_at_50d / sec_below_50d
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n154 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n154 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n154_stt = _buy_n154.get("sector_50d_trend", "sec_at_50d") if _buy_n154 else "sec_at_50d"
             _n154_perf = tlog.setdefault("sector_50d_trend_perf", {})
             _n154p = _n154_perf.setdefault(_n154_stt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n154_stt})
@@ -3488,7 +3488,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # low(<5%) / medium(5-15%) / high(15-25%) / extreme(>25%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n155 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n155 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n155_si = _buy_n155.get("short_int_tier", "medium") if _buy_n155 else "medium"
             _n155_perf = tlog.setdefault("short_int_perf", {})
             _n155p = _n155_perf.setdefault(_n155_si, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n155_si})
@@ -3505,7 +3505,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # fresh(<5 runs)/established(5-20)/extended(>20)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n156 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n156 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n156_rd = _buy_n156.get("regime_duration", "established") if _buy_n156 else "established"
             _n156_perf = tlog.setdefault("regime_duration_perf", {})
             _n156p = _n156_perf.setdefault(_n156_rd, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n156_rd})
@@ -3522,7 +3522,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # orb_break / orb_near / no_orb
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n157 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n157 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n157_orb = _buy_n157.get("orb_state", "no_orb") if _buy_n157 else "no_orb"
             _n157_perf = tlog.setdefault("orb_quality_perf", {})
             _n157p = _n157_perf.setdefault(_n157_orb, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n157_orb})
@@ -3539,7 +3539,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # earnings / analyst / product / macro / sector / other
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n158 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n158 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n158_cat = _buy_n158.get("catalyst_type", "other") if _buy_n158 else "other"
             _n158_perf = tlog.setdefault("catalyst_type_v1_perf", {})
             _n158p = _n158_perf.setdefault(_n158_cat, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n158_cat})
@@ -3556,7 +3556,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # new_high_zone(>-2%) / near_high(-2 to -5%) / middle(-5 to -15%) / near_low(-15 to -25%) / low_zone(>-25%)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n159 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n159 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n159_spy = _buy_n159.get("spy_52wh_zone", "middle") if _buy_n159 else "middle"
             _n159_perf = tlog.setdefault("spy_52wh_zone_perf", {})
             _n159p = _n159_perf.setdefault(_n159_spy, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n159_spy})
@@ -3573,7 +3573,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # day1 / day2_3 / day4_7 / extended(>7d)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n160 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n160 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n160_bkage = _buy_n160.get("breakout_age_tier", "day4_7") if _buy_n160 else "day4_7"
             _n160_perf = tlog.setdefault("breakout_age_perf", {})
             _n160p = _n160_perf.setdefault(_n160_bkage, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n160_bkage})
@@ -3590,7 +3590,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # high_liq(>$500M/day) / medium_liq($50-500M) / low_liq(<$50M)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n161 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n161 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n161_liq = _buy_n161.get("dollar_vol_tier", "medium_liq") if _buy_n161 else "medium_liq"
             _n161_perf = tlog.setdefault("dollar_vol_perf", {})
             _n161p = _n161_perf.setdefault(_n161_liq, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n161_liq})
@@ -3607,7 +3607,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # hot_streak(3+ wins) / warm(1-2 wins) / neutral / cold(1-2 losses) / cold_streak(3+ losses)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n162 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n162 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n162_streak = _buy_n162.get("streak_state", "neutral") if _buy_n162 else "neutral"
             _n162_perf = tlog.setdefault("streak_state_perf", {})
             _n162p = _n162_perf.setdefault(_n162_streak, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n162_streak})
@@ -3624,7 +3624,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # bull_high / bull_low / bear_high / bear_low / neutral_any
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n163 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n163 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n163_align = _buy_n163.get("score_regime_align", "neutral_any") if _buy_n163 else "neutral_any"
             _n163_perf = tlog.setdefault("score_regime_align_perf", {})
             _n163p = _n163_perf.setdefault(_n163_align, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n163_align})
@@ -3641,7 +3641,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # accelerating / stable / decelerating
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n164 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n164 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n164_mac = _buy_n164.get("sector_mom_accel", "stable") if _buy_n164 else "stable"
             _n164_perf = tlog.setdefault("sector_mom_accel_perf", {})
             _n164p = _n164_perf.setdefault(_n164_mac, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n164_mac})
@@ -3658,7 +3658,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # high_correl(>0.8) / medium(0.4-0.8) / low(<0.4) / inverse(<0)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n165 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n165 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n165_corr = _buy_n165.get("market_correl_tier", "medium") if _buy_n165 else "medium"
             _n165_perf = tlog.setdefault("market_correl_perf", {})
             _n165p = _n165_perf.setdefault(_n165_corr, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n165_corr})
@@ -3675,7 +3675,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # revising_up / stable_estimates / revising_down
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n166 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n166 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n166_est = _buy_n166.get("estimate_revision_trend", "stable_estimates") if _buy_n166 else "stable_estimates"
             _n166_perf = tlog.setdefault("estimate_revision_perf", {})
             _n166p = _n166_perf.setdefault(_n166_est, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n166_est})
@@ -3692,7 +3692,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # sentiment_rising / sentiment_stable / sentiment_falling
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n167 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n167 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n167_sm = _buy_n167.get("news_sent_momentum", "sentiment_stable") if _buy_n167 else "sentiment_stable"
             _n167_perf = tlog.setdefault("news_sent_mom_perf", {})
             _n167p = _n167_perf.setdefault(_n167_sm, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n167_sm})
@@ -3709,7 +3709,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # high_confluence(4+) / medium(2-3) / low(1) / none(0)
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n168 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n168 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n168_tc = _buy_n168.get("tech_level_confluence", "low") if _buy_n168 else "low"
             _n168_perf = tlog.setdefault("tech_confluence_perf", {})
             _n168p = _n168_perf.setdefault(_n168_tc, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n168_tc})
@@ -3726,7 +3726,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # breadth_improving / breadth_stable / breadth_worsening
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n169 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n169 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n169_bd = _buy_n169.get("breadth_direction", "breadth_stable") if _buy_n169 else "breadth_stable"
             _n169_perf = tlog.setdefault("breadth_direction_perf", {})
             _n169p = _n169_perf.setdefault(_n169_bd, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n169_bd})
@@ -3743,7 +3743,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # risk_on / neutral_rotation / risk_off
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n170 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n170 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n170_ro = _buy_n170.get("risk_rotation", "neutral_rotation") if _buy_n170 else "neutral_rotation"
             _n170_perf = tlog.setdefault("risk_rotation_perf", {})
             _n170p = _n170_perf.setdefault(_n170_ro, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n170_ro})
@@ -3759,7 +3759,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Does holding for short/medium/long/overnight periods improve outcomes?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n171 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n171 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_n171:
                 _entry_ts = _buy_n171.get("time", _buy_n171.get("ts", "")) or ""
                 _hold_mins = 0
@@ -3814,7 +3814,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Does position size relative to portfolio affect outcomes?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n173 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n173 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n173_size = _buy_n173.get("pos_size_tier", "normal") if _buy_n173 else "normal"
             _n173_perf = tlog.setdefault("pos_size_tier_perf", {})
             _n173p = _n173_perf.setdefault(_n173_size, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n173_size})
@@ -3830,7 +3830,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Are outcomes worse when entering after recent losses? Loss aversion detection.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n174 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n174 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n174_loss_state = _buy_n174.get("consec_loss_state", "no_loss") if _buy_n174 else "no_loss"
             _n174_perf = tlog.setdefault("consec_loss_perf", {})
             _n174p = _n174_perf.setdefault(_n174_loss_state, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n174_loss_state})
@@ -3846,7 +3846,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Trades entered on gap-up vs flat vs gap-down open — does it matter?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n175 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n175 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n175_gap = _buy_n175.get("open_gap_state", "flat_open") if _buy_n175 else "flat_open"
             _n175_perf = tlog.setdefault("open_gap_perf", {})
             _n175p = _n175_perf.setdefault(_n175_gap, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n175_gap})
@@ -3862,7 +3862,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # OpEx weeks (3rd Friday) can cause unusual volatility — does it affect win rate?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n176 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n176 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n176_opex = _buy_n176.get("opex_week", "normal_week") if _buy_n176 else "normal_week"
             _n176_perf = tlog.setdefault("opex_week_perf", {})
             _n176p = _n176_perf.setdefault(_n176_opex, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n176_opex})
@@ -3878,7 +3878,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Is the stock's sector outperforming, in-line, or underperforming SPY?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n177 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n177 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n177_sec_rs = _buy_n177.get("sector_rs_phase", "neutral_rs") if _buy_n177 else "neutral_rs"
             _n177_perf = tlog.setdefault("sector_rs_phase_perf", {})
             _n177p = _n177_perf.setdefault(_n177_sec_rs, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n177_sec_rs})
@@ -3894,7 +3894,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Fresh bot (just started trading) vs ongoing vs resting — does trading frequency affect quality?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n178 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n178 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n178_cadence = _buy_n178.get("trade_cadence", "moderate_cadence") if _buy_n178 else "moderate_cadence"
             _n178_perf = tlog.setdefault("trade_cadence_perf", {})
             _n178p = _n178_perf.setdefault(_n178_cadence, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n178_cadence})
@@ -3910,7 +3910,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Is SPY trending up/flat/down on the 5-min chart at the moment of entry?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n179 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n179 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n179_spy_trend = _buy_n179.get("spy_intraday_trend", "spy_flat") if _buy_n179 else "spy_flat"
             _n179_perf = tlog.setdefault("spy_intraday_perf", {})
             _n179p = _n179_perf.setdefault(_n179_spy_trend, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n179_spy_trend})
@@ -3926,7 +3926,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Do trades scoring 55-60 underperform vs 70-80 vs 80+? Learn score reliability.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n180 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n180 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n180_score_decile = _buy_n180.get("entry_score_decile", "score_60_70") if _buy_n180 else "score_60_70"
             _n180_perf = tlog.setdefault("entry_score_decile_perf", {})
             _n180p = _n180_perf.setdefault(_n180_score_decile, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n180_score_decile})
@@ -3941,7 +3941,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N181: ATR % of Price at Entry ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n181 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n181 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n181_field = _buy_n181.get("atr_pct_state", "normal_atr") if _buy_n181 else "normal_atr"
             _n181_perf = tlog.setdefault("atr_pct_perf", {})
             _n181p = _n181_perf.setdefault(_n181_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n181_field})
@@ -3956,7 +3956,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N182: SPY Above/Below 200-Day MA ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n182 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n182 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n182_field = _buy_n182.get("spy_200d_position", "spy_above_200d") if _buy_n182 else "spy_above_200d"
             _n182_perf = tlog.setdefault("spy_200d_position_perf", {})
             _n182p = _n182_perf.setdefault(_n182_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n182_field})
@@ -3971,7 +3971,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N183: Volume Surge State (RVOL) ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n183 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n183 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n183_field = _buy_n183.get("volume_surge_state", "rvol_normal") if _buy_n183 else "rvol_normal"
             _n183_perf = tlog.setdefault("volume_surge_state_perf", {})
             _n183p = _n183_perf.setdefault(_n183_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n183_field})
@@ -3986,7 +3986,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N184: Float Size ──────────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n184 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n184 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n184_field = _buy_n184.get("float_size_state", "mid_float") if _buy_n184 else "mid_float"
             _n184_perf = tlog.setdefault("float_nano_perf", {})
             _n184p = _n184_perf.setdefault(_n184_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n184_field})
@@ -4001,7 +4001,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N185: Momentum Quality Score ──────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n185 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n185 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n185_field = _buy_n185.get("momentum_quality_state", "momentum_moderate") if _buy_n185 else "momentum_moderate"
             _n185_perf = tlog.setdefault("momentum_quality_perf", {})
             _n185p = _n185_perf.setdefault(_n185_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n185_field})
@@ -4016,7 +4016,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N186: Sector News Flow ────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n186 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n186 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n186_field = _buy_n186.get("sector_news_flow_state", "sector_normal") if _buy_n186 else "sector_normal"
             _n186_perf = tlog.setdefault("sector_news_flow_perf", {})
             _n186p = _n186_perf.setdefault(_n186_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n186_field})
@@ -4031,7 +4031,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N187: Morning Star Time ───────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n187 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n187 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n187_field = _buy_n187.get("morning_star_time_state", "rest_of_day") if _buy_n187 else "rest_of_day"
             _n187_perf = tlog.setdefault("morning_star_time_perf", {})
             _n187p = _n187_perf.setdefault(_n187_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n187_field})
@@ -4046,7 +4046,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N188: Support Quality ─────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n188 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n188 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n188_field = _buy_n188.get("support_quality_state", "moderate_support") if _buy_n188 else "moderate_support"
             _n188_perf = tlog.setdefault("support_quality_perf", {})
             _n188p = _n188_perf.setdefault(_n188_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n188_field})
@@ -4061,7 +4061,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N189: Relative 1-Week Performance vs Market ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n189 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n189 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n189_field = _buy_n189.get("relative_perf_1w_state", "in_line") if _buy_n189 else "in_line"
             _n189_perf = tlog.setdefault("relative_perf_1w_perf", {})
             _n189p = _n189_perf.setdefault(_n189_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n189_field})
@@ -4076,7 +4076,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N190: Pre-Market Action ───────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n190 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n190 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n190_field = _buy_n190.get("pre_market_action_state", "quiet_premarket") if _buy_n190 else "quiet_premarket"
             _n190_perf = tlog.setdefault("pre_market_action_perf", {})
             _n190p = _n190_perf.setdefault(_n190_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n190_field})
@@ -4091,7 +4091,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N191: Fed Week Performance ────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n191 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n191 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n191_field = _buy_n191.get("fed_week", "normal_week") if _buy_n191 else "normal_week"
             _n191_perf = tlog.setdefault("fed_week_perf", {})
             _n191p = _n191_perf.setdefault(_n191_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n191_field})
@@ -4106,7 +4106,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N192: Earnings Season Phase ───────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n192 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n192 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n192_field = _buy_n192.get("earnings_season_phase", "off_season") if _buy_n192 else "off_season"
             _n192_perf = tlog.setdefault("earnings_season_perf", {})
             _n192p = _n192_perf.setdefault(_n192_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n192_field})
@@ -4121,7 +4121,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N193: SPY RSI Zone ────────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n193 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n193 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n193_field = _buy_n193.get("spy_rsi_zone", "neutral") if _buy_n193 else "neutral"
             _n193_perf = tlog.setdefault("spy_rsi_zone_perf", {})
             _n193p = _n193_perf.setdefault(_n193_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n193_field})
@@ -4136,7 +4136,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N194: Volume vs 30-Day Average ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n194 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n194 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n194_field = _buy_n194.get("vol_vs_avg30", "below_avg") if _buy_n194 else "below_avg"
             _n194_perf = tlog.setdefault("volume_vs_avg30_perf", {})
             _n194p = _n194_perf.setdefault(_n194_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n194_field})
@@ -4151,7 +4151,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N195: Stock Beta Tier ─────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n195 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n195 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n195_field = _buy_n195.get("beta_tier", "normal_beta") if _buy_n195 else "normal_beta"
             _n195_perf = tlog.setdefault("stock_beta_tier_perf", {})
             _n195p = _n195_perf.setdefault(_n195_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n195_field})
@@ -4166,7 +4166,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N196: Price vs VWAP ───────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n196 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n196 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n196_field = _buy_n196.get("price_vs_vwap_state", "at_vwap") if _buy_n196 else "at_vwap"
             _n196_perf = tlog.setdefault("price_vs_vwap_perf", {})
             _n196p = _n196_perf.setdefault(_n196_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n196_field})
@@ -4181,7 +4181,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N197: Seasonal Month ──────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n197 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n197 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n197_field = _buy_n197.get("seasonal_month", "other") if _buy_n197 else "other"
             _n197_perf = tlog.setdefault("seasonal_month_perf", {})
             _n197p = _n197_perf.setdefault(_n197_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n197_field})
@@ -4196,7 +4196,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N198: Market Breadth Level ────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n198 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n198 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n198_field = _buy_n198.get("breadth_level_state", "moderate") if _buy_n198 else "moderate"
             _n198_perf = tlog.setdefault("market_breadth_level_perf", {})
             _n198p = _n198_perf.setdefault(_n198_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n198_field})
@@ -4211,7 +4211,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N199: SPY Gap vs Stock Gap Divergence ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n199 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n199 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n199_field = _buy_n199.get("gap_diverge_state", "both_flat") if _buy_n199 else "both_flat"
             _n199_perf = tlog.setdefault("spy_gap_vs_stock_perf", {})
             _n199p = _n199_perf.setdefault(_n199_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n199_field})
@@ -4226,7 +4226,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N200: Institutional Quality Tier ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n200 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n200 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n200_field = _buy_n200.get("institutional_tier", "retail_grade") if _buy_n200 else "retail_grade"
             _n200_perf = tlog.setdefault("institutional_quality_perf", {})
             _n200p = _n200_perf.setdefault(_n200_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n200_field})
@@ -4241,7 +4241,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N201: Macro Shock Event ───────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n201 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n201 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n201_field = _buy_n201.get("macro_shock_week", "normal_week") if _buy_n201 else "normal_week"
             _n201_perf = tlog.setdefault("macro_shock_perf", {})
             _n201p = _n201_perf.setdefault(_n201_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n201_field})
@@ -4256,7 +4256,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N202: Earnings Surprise Direction ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n202 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n202 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n202_field = _buy_n202.get("earnings_surprise_direction", "met_estimate") if _buy_n202 else "met_estimate"
             _n202_perf = tlog.setdefault("earnings_surprise_direction_perf", {})
             _n202p = _n202_perf.setdefault(_n202_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n202_field})
@@ -4271,7 +4271,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N203: Trend Age Days ──────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n203 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n203 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n203_field = _buy_n203.get("trend_age_bucket", "young_trend") if _buy_n203 else "young_trend"
             _n203_perf = tlog.setdefault("trend_age_days_perf", {})
             _n203p = _n203_perf.setdefault(_n203_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n203_field})
@@ -4286,7 +4286,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N204: Distance from 52-Week High ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n204 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n204 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n204_field = _buy_n204.get("dist_52wk_zone", "middle") if _buy_n204 else "middle"
             _n204_perf = tlog.setdefault("dist_52wk_high_perf", {})
             _n204p = _n204_perf.setdefault(_n204_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n204_field})
@@ -4301,7 +4301,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N205: Advance/Decline Ratio ───────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n205 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n205 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n205_field = _buy_n205.get("adv_decline_state", "neutral") if _buy_n205 else "neutral"
             _n205_perf = tlog.setdefault("adv_decline_ratio_perf", {})
             _n205p = _n205_perf.setdefault(_n205_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n205_field})
@@ -4316,7 +4316,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N206: Option Implied Move ─────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n206 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n206 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n206_field = _buy_n206.get("implied_move_tier", "medium_iv") if _buy_n206 else "medium_iv"
             _n206_perf = tlog.setdefault("option_implied_move_v1_perf", {})
             _n206p = _n206_perf.setdefault(_n206_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n206_field})
@@ -4331,7 +4331,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N207: Relative Volume Early (first 30 min) ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n207 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n207 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n207_field = _buy_n207.get("rvol_early_tier", "normal_open") if _buy_n207 else "normal_open"
             _n207_perf = tlog.setdefault("relative_volume_early_perf", {})
             _n207p = _n207_perf.setdefault(_n207_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n207_field})
@@ -4346,7 +4346,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N208: Bond Yield Direction (TLT proxy) ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n208 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n208 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n208_field = _buy_n208.get("bond_yield_direction", "yields_stable") if _buy_n208 else "yields_stable"
             _n208_perf = tlog.setdefault("bond_yield_direction_perf", {})
             _n208p = _n208_perf.setdefault(_n208_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n208_field})
@@ -4361,7 +4361,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N209: Social Sentiment Score ─────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n209 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n209 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n209_field = _buy_n209.get("social_sentiment_tier", "neutral") if _buy_n209 else "neutral"
             _n209_perf = tlog.setdefault("social_sentiment_score_perf", {})
             _n209p = _n209_perf.setdefault(_n209_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n209_field})
@@ -4376,7 +4376,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N210: Put/Call Ratio ──────────────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n210 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n210 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n210_field = _buy_n210.get("put_call_ratio_tier", "neutral_pcr") if _buy_n210 else "neutral_pcr"
             _n210_perf = tlog.setdefault("pcr_sentiment_perf", {})
             _n210p = _n210_perf.setdefault(_n210_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n210_field})
@@ -4391,7 +4391,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N211: Market Cap Regime Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n211 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n211 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n211_field = _buy_n211.get("cap_regime", "equal_performance") if _buy_n211 else "equal_performance"
             _n211_perf = tlog.setdefault("market_cap_regime_perf", {})
             _n211p = _n211_perf.setdefault(_n211_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n211_field})
@@ -4406,7 +4406,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N212: Gold Signal Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n212 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n212 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n212_field = _buy_n212.get("gold_signal", "gold_flat") if _buy_n212 else "gold_flat"
             _n212_perf = tlog.setdefault("gold_signal_perf", {})
             _n212p = _n212_perf.setdefault(_n212_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n212_field})
@@ -4421,7 +4421,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N213: Sector Concentration Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n213 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n213 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n213_field = _buy_n213.get("sector_conc", "first_in_sector") if _buy_n213 else "first_in_sector"
             _n213_perf = tlog.setdefault("sector_concentration_perf", {})
             _n213p = _n213_perf.setdefault(_n213_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n213_field})
@@ -4436,7 +4436,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N214: Entry Premium Count Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n214 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n214 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n214_field = _buy_n214.get("entry_premium_count_bucket", "no_premium") if _buy_n214 else "no_premium"
             _n214_perf = tlog.setdefault("entry_premium_count_perf", {})
             _n214p = _n214_perf.setdefault(_n214_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n214_field})
@@ -4451,7 +4451,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N215: Daily Drawdown State Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n215 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n215 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n215_field = _buy_n215.get("daily_dd_state", "flat_today") if _buy_n215 else "flat_today"
             _n215_perf = tlog.setdefault("daily_drawdown_state_perf", {})
             _n215p = _n215_perf.setdefault(_n215_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n215_field})
@@ -4466,7 +4466,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N216: Advance/Decline Line Trend Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n216 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n216 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n216_field = _buy_n216.get("adl_trend", "adl_mixed") if _buy_n216 else "adl_mixed"
             _n216_perf = tlog.setdefault("adv_decline_line_perf", {})
             _n216p = _n216_perf.setdefault(_n216_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n216_field})
@@ -4481,7 +4481,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N217: Yield Curve Performance ─────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n217 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n217 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n217_field = _buy_n217.get("yield_curve_state", "flat") if _buy_n217 else "flat"
             _n217_perf = tlog.setdefault("yield_curve_perf", {})
             _n217p = _n217_perf.setdefault(_n217_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n217_field})
@@ -4496,7 +4496,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N218: Cross-Asset Momentum Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n218 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n218 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n218_field = _buy_n218.get("cross_asset_momentum", "mixed_signals") if _buy_n218 else "mixed_signals"
             _n218_perf = tlog.setdefault("cross_asset_momentum_perf", {})
             _n218p = _n218_perf.setdefault(_n218_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n218_field})
@@ -4511,7 +4511,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N219: Technical Pattern Strength Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n219 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n219 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n219_field = _buy_n219.get("pattern_strength", "pattern_normal") if _buy_n219 else "pattern_normal"
             _n219_perf = tlog.setdefault("technical_pattern_strength_perf", {})
             _n219p = _n219_perf.setdefault(_n219_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n219_field})
@@ -4526,7 +4526,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N220: Position Duration Target Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n220 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n220 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n220_field = _buy_n220.get("duration_target", "swing_target") if _buy_n220 else "swing_target"
             _n220_perf = tlog.setdefault("position_duration_target_perf", {})
             _n220p = _n220_perf.setdefault(_n220_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n220_field})
@@ -4541,7 +4541,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N221: Dollar Index Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n221 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n221 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n221_field = _buy_n221.get("dollar_index_state", "dollar_flat") if _buy_n221 else "dollar_flat"
             _n221_perf = tlog.setdefault("dollar_index_perf", {})
             _n221p = _n221_perf.setdefault(_n221_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n221_field})
@@ -4556,7 +4556,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N222: Sector ETF Momentum Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n222 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n222 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n222_field = _buy_n222.get("sector_etf_momentum_state", "sector_flat") if _buy_n222 else "sector_flat"
             _n222_perf = tlog.setdefault("sector_etf_momentum_v1_perf", {})
             _n222p = _n222_perf.setdefault(_n222_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n222_field})
@@ -4571,7 +4571,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N223: Position Count At Entry Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n223 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n223 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n223_field = _buy_n223.get("position_count_bucket", "few") if _buy_n223 else "few"
             _n223_perf = tlog.setdefault("position_count_at_entry_perf", {})
             _n223p = _n223_perf.setdefault(_n223_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n223_field})
@@ -4586,7 +4586,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N224: SPY 5-Day Trend Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n224 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n224 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n224_field = _buy_n224.get("spy_5d_trend_state", "spy_flat_week") if _buy_n224 else "spy_flat_week"
             _n224_perf = tlog.setdefault("spy_5d_trend_perf", {})
             _n224p = _n224_perf.setdefault(_n224_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n224_field})
@@ -4601,7 +4601,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N225: VIX Regime Performance ──────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n225 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n225 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n225_field = _buy_n225.get("vix_regime_state", "normal") if _buy_n225 else "normal"
             _n225_perf = tlog.setdefault("vix_regime_perf", {})
             _n225p = _n225_perf.setdefault(_n225_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n225_field})
@@ -4616,7 +4616,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N226: Entry Hour Bucket Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n226 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n226 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n226_field = _buy_n226.get("entry_hour_bucket", "other_hours") if _buy_n226 else "other_hours"
             _n226_perf = tlog.setdefault("entry_hour_bucket_perf", {})
             _n226p = _n226_perf.setdefault(_n226_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n226_field})
@@ -4631,7 +4631,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N227: Consecutive Wins Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n227 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n227 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n227_field = _buy_n227.get("consec_wins_bucket", "neutral") if _buy_n227 else "neutral"
             _n227_perf = tlog.setdefault("consecutive_wins_perf", {})
             _n227p = _n227_perf.setdefault(_n227_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n227_field})
@@ -4646,7 +4646,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N228: Market Open Momentum Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n228 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n228 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n228_field = _buy_n228.get("market_open_momentum_state", "neutral_open") if _buy_n228 else "neutral_open"
             _n228_perf = tlog.setdefault("market_open_momentum_perf", {})
             _n228p = _n228_perf.setdefault(_n228_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n228_field})
@@ -4661,7 +4661,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N229: SPY vs VIX Divergence Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n229 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n229 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n229_field = _buy_n229.get("spy_vix_diverge_state", "normal_negative") if _buy_n229 else "normal_negative"
             _n229_perf = tlog.setdefault("spy_vs_vix_diverge_perf", {})
             _n229p = _n229_perf.setdefault(_n229_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n229_field})
@@ -4676,7 +4676,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N230: Ticker Prior Day Gap Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n230 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n230 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n230_field = _buy_n230.get("prior_day_gap_state", "flat_open") if _buy_n230 else "flat_open"
             _n230_perf = tlog.setdefault("ticker_prior_day_gap_perf", {})
             _n230p = _n230_perf.setdefault(_n230_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n230_field})
@@ -4691,7 +4691,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N231: SPY RSI 5-Day Change Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n231 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n231 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n231_field = _buy_n231.get("spy_rsi_5d_state", "rsi_flat") if _buy_n231 else "rsi_flat"
             _n231_perf = tlog.setdefault("spy_rsi_5d_change_perf", {})
             _n231p = _n231_perf.setdefault(_n231_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n231_field})
@@ -4706,7 +4706,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N232: Market Internals Score Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n232 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n232 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n232_field = _buy_n232.get("market_internals_state", "internals_neutral") if _buy_n232 else "internals_neutral"
             _n232_perf = tlog.setdefault("market_internals_score_perf", {})
             _n232p = _n232_perf.setdefault(_n232_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n232_field})
@@ -4721,7 +4721,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N233: Position Age At Exit Performance (EXIT-computed) ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n233 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n233 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_n233:
                 _n233_buy_ts = _buy_n233.get("buy_time_for_age") or _buy_n233.get("time", "")
                 try:
@@ -4748,7 +4748,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N234: Ticker RS Rating Tier Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n234 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n234 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n234_field = _buy_n234.get("rs_rating_tier_state", "average") if _buy_n234 else "average"
             _n234_perf = tlog.setdefault("ticker_rs_rating_tier_perf", {})
             _n234p = _n234_perf.setdefault(_n234_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n234_field})
@@ -4763,7 +4763,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N235: SPY 50d vs 200d MA Relationship Performance ────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n235 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n235 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n235_field = _buy_n235.get("spy_ma_cross_state", "golden_zone") if _buy_n235 else "golden_zone"
             _n235_perf = tlog.setdefault("spy_50d_vs_200d_perf", {})
             _n235p = _n235_perf.setdefault(_n235_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n235_field})
@@ -4778,7 +4778,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N236: Sector Rotation Strength Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n236 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n236 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n236_field = _buy_n236.get("sector_rotation_state", "no_rotation") if _buy_n236 else "no_rotation"
             _n236_perf = tlog.setdefault("sector_rotation_strength_perf", {})
             _n236p = _n236_perf.setdefault(_n236_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n236_field})
@@ -4793,7 +4793,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N237: News Catalyst Urgency Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n237 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n237 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n237_field = _buy_n237.get("catalyst_urgency_state", "low_urgency") if _buy_n237 else "low_urgency"
             _n237_perf = tlog.setdefault("news_catalyst_urgency_perf", {})
             _n237p = _n237_perf.setdefault(_n237_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n237_field})
@@ -4808,7 +4808,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N238: Earnings Proximity Performance (EXIT-computed from saved raw value) ──
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n238 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n238 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_n238:
                 _n238_days = int(_buy_n238.get("earnings_days_at_entry_raw", 999) or 999)
                 if _n238_days <= 1:    _n238_field = "earnings_today"
@@ -4830,7 +4830,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N239: Stop Distance Pct Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n239 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n239 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n239_field = _buy_n239.get("stop_distance_state", "normal_stop") if _buy_n239 else "normal_stop"
             _n239_perf = tlog.setdefault("stop_distance_pct_perf", {})
             _n239p = _n239_perf.setdefault(_n239_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n239_field})
@@ -4845,7 +4845,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N240: Pre-Market Gap Direction Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n240 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n240 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n240_field = _buy_n240.get("premarket_gap_dir_state", "neutral") if _buy_n240 else "neutral"
             _n240_perf = tlog.setdefault("premarket_gap_direction_perf", {})
             _n240p = _n240_perf.setdefault(_n240_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n240_field})
@@ -4860,7 +4860,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N241: Volume Contraction Entry Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n241 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n241 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n241_field = _buy_n241.get("vol_contraction_state", "normal_vol") if _buy_n241 else "normal_vol"
             _n241_perf = tlog.setdefault("vol_contraction_entry_perf", {})
             _n241p = _n241_perf.setdefault(_n241_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n241_field})
@@ -4875,7 +4875,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N242: Prior Week Trend Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n242 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n242 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n242_field = _buy_n242.get("prior_week_trend_state", "flat_week") if _buy_n242 else "flat_week"
             _n242_perf = tlog.setdefault("prior_week_trend_perf", {})
             _n242p = _n242_perf.setdefault(_n242_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n242_field})
@@ -4890,7 +4890,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N243: Market Phase Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n243 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n243 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n243_field = _buy_n243.get("market_phase_state", "consolidation") if _buy_n243 else "consolidation"
             _n243_perf = tlog.setdefault("market_phase_perf", {})
             _n243p = _n243_perf.setdefault(_n243_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n243_field})
@@ -4905,7 +4905,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N244: Intraday Reversal Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n244 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n244 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n244_field = _buy_n244.get("intraday_reversal_state", "no_reversal") if _buy_n244 else "no_reversal"
             _n244_perf = tlog.setdefault("intraday_reversal_v1_perf", {})
             _n244p = _n244_perf.setdefault(_n244_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n244_field})
@@ -4920,7 +4920,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N245: Sector ETF vs SPY Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n245 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n245 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n245_field = _buy_n245.get("sector_etf_vs_spy_state", "sector_in_line") if _buy_n245 else "sector_in_line"
             _n245_perf = tlog.setdefault("sector_etf_vs_spy_perf", {})
             _n245p = _n245_perf.setdefault(_n245_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n245_field})
@@ -4935,7 +4935,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N246: Advance/Decline Ratio Today Performance ─────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n246 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n246 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n246_field = _buy_n246.get("adv_decline_ratio_today_state", "breadth_neutral") if _buy_n246 else "breadth_neutral"
             _n246_perf = tlog.setdefault("adv_decline_ratio_today_perf", {})
             _n246p = _n246_perf.setdefault(_n246_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n246_field})
@@ -4950,7 +4950,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N247: Entry Near 52-Week High/Low Performance ─────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n247 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n247 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n247_field = _buy_n247.get("entry_near_high_low_state", "mid_range") if _buy_n247 else "mid_range"
             _n247_perf = tlog.setdefault("entry_near_high_low_perf", {})
             _n247p = _n247_perf.setdefault(_n247_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n247_field})
@@ -4965,7 +4965,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N248: Catalyst Sector Match Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n248 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n248 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n248_field = _buy_n248.get("catalyst_sector_match_state", "neutral_sector") if _buy_n248 else "neutral_sector"
             _n248_perf = tlog.setdefault("catalyst_sector_match_perf", {})
             _n248p = _n248_perf.setdefault(_n248_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n248_field})
@@ -4980,7 +4980,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N249: Recent Buy Count Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n249 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n249 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n249_field = _buy_n249.get("recent_buy_count_state", "low") if _buy_n249 else "low"
             _n249_perf = tlog.setdefault("recent_buy_count_perf", {})
             _n249p = _n249_perf.setdefault(_n249_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n249_field})
@@ -4995,7 +4995,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N250: Macro Stress Index Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n250 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n250 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n250_field = _buy_n250.get("macro_stress_index_state", "moderate_stress") if _buy_n250 else "moderate_stress"
             _n250_perf = tlog.setdefault("macro_stress_index_perf", {})
             _n250p = _n250_perf.setdefault(_n250_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n250_field})
@@ -5010,7 +5010,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N251: Overnight Gap Follow-Through Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n251 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n251 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n251_field = _buy_n251.get("overnight_gap_follow_state", "flat_open") if _buy_n251 else "flat_open"
             _n251_perf = tlog.setdefault("overnight_gap_follow_perf", {})
             _n251p = _n251_perf.setdefault(_n251_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n251_field})
@@ -5025,7 +5025,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N252: SPY Breadth Thrust Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n252 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n252 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n252_field = _buy_n252.get("spy_breadth_thrust_state", "neutral_breadth") if _buy_n252 else "neutral_breadth"
             _n252_perf = tlog.setdefault("spy_breadth_thrust_perf", {})
             _n252p = _n252_perf.setdefault(_n252_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n252_field})
@@ -5040,7 +5040,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N253: TICK Extreme Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n253 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n253 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n253_field = _buy_n253.get("tick_extreme_state", "tick_neutral") if _buy_n253 else "tick_neutral"
             _n253_perf = tlog.setdefault("tick_extreme_perf", {})
             _n253p = _n253_perf.setdefault(_n253_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n253_field})
@@ -5055,7 +5055,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N254: Sector Leader/Lag Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n254 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n254 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n254_field = _buy_n254.get("sector_leader_lag_state", "neutral_sector") if _buy_n254 else "neutral_sector"
             _n254_perf = tlog.setdefault("sector_leader_lag_perf", {})
             _n254p = _n254_perf.setdefault(_n254_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n254_field})
@@ -5070,7 +5070,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N255: Put/Call Ratio Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n255 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n255 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n255_field = _buy_n255.get("put_call_ratio_state", "neutral_pc") if _buy_n255 else "neutral_pc"
             _n255_perf = tlog.setdefault("vix_sentiment_perf", {})
             _n255p = _n255_perf.setdefault(_n255_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n255_field})
@@ -5085,7 +5085,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N256: Options Expiry Week Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n256 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n256 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n256_field = _buy_n256.get("options_expiry_week_state", "non_opex") if _buy_n256 else "non_opex"
             _n256_perf = tlog.setdefault("options_expiry_week_perf", {})
             _n256p = _n256_perf.setdefault(_n256_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n256_field})
@@ -5100,7 +5100,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N257: Momentum Divergence Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n257 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n257 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n257_field = _buy_n257.get("momentum_divergence_state", "aligned") if _buy_n257 else "aligned"
             _n257_perf = tlog.setdefault("momentum_divergence_tier_perf", {})
             _n257p = _n257_perf.setdefault(_n257_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n257_field})
@@ -5115,7 +5115,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N258: Gap Fill Tendency Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n258 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n258 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n258_field = _buy_n258.get("gap_fill_tendency_state", "no_gap") if _buy_n258 else "no_gap"
             _n258_perf = tlog.setdefault("gap_fill_tendency_v1_perf", {})
             _n258p = _n258_perf.setdefault(_n258_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n258_field})
@@ -5130,7 +5130,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N259: Earnings Season Phase Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n259 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n259 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n259_field = _buy_n259.get("earnings_season_phase_state", "quiet_period") if _buy_n259 else "quiet_period"
             _n259_perf = tlog.setdefault("earnings_season_v1_perf", {})
             _n259p = _n259_perf.setdefault(_n259_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n259_field})
@@ -5145,7 +5145,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N260: Liquidity Score Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n260 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n260 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n260_field = _buy_n260.get("liquidity_score_state", "medium_liquidity") if _buy_n260 else "medium_liquidity"
             _n260_perf = tlog.setdefault("liquidity_tier_v1_perf", {})
             _n260p = _n260_perf.setdefault(_n260_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n260_field})
@@ -5160,7 +5160,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N261: SPY Close vs Open Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n261 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n261 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n261_field = _buy_n261.get("spy_close_vs_open_state", "flat_close") if _buy_n261 else "flat_close"
             _n261_perf = tlog.setdefault("spy_close_vs_open_perf", {})
             _n261p = _n261_perf.setdefault(_n261_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n261_field})
@@ -5175,7 +5175,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N262: ATR Regime Performance ──────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n262 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n262 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n262_field = _buy_n262.get("atr_regime_state", "medium_atr") if _buy_n262 else "medium_atr"
             _n262_perf = tlog.setdefault("atr_regime_perf", {})
             _n262p = _n262_perf.setdefault(_n262_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n262_field})
@@ -5190,7 +5190,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N263: Consecutive SPY Direction Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n263 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n263 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n263_field = _buy_n263.get("consecutive_spy_up_state", "spy_mixed") if _buy_n263 else "spy_mixed"
             _n263_perf = tlog.setdefault("consecutive_spy_up_perf", {})
             _n263p = _n263_perf.setdefault(_n263_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n263_field})
@@ -5205,7 +5205,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N264: VWAP Position Performance ───────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n264 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n264 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n264_field = _buy_n264.get("vwap_position_state", "at_vwap") if _buy_n264 else "at_vwap"
             _n264_perf = tlog.setdefault("vwap_position_perf", {})
             _n264p = _n264_perf.setdefault(_n264_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n264_field})
@@ -5220,7 +5220,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N265: Weekly RS Trend Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n265 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n265 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n265_field = _buy_n265.get("weekly_rs_trend_state", "stable_rs") if _buy_n265 else "stable_rs"
             _n265_perf = tlog.setdefault("weekly_rs_trend_perf", {})
             _n265p = _n265_perf.setdefault(_n265_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n265_field})
@@ -5235,7 +5235,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N266: Pre-Market Volume Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n266 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n266 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n266_field = _buy_n266.get("pre_market_volume_state", "no_premarket_data") if _buy_n266 else "no_premarket_data"
             _n266_perf = tlog.setdefault("pre_market_volume_v1_perf", {})
             _n266p = _n266_perf.setdefault(_n266_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n266_field})
@@ -5250,7 +5250,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N267: Market Cap Tier Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n267 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n267 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n267_field = _buy_n267.get("market_cap_tier_state", "large_cap") if _buy_n267 else "large_cap"
             _n267_perf = tlog.setdefault("market_cap_proxy_perf", {})
             _n267p = _n267_perf.setdefault(_n267_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n267_field})
@@ -5265,7 +5265,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N268: Trend Acceleration Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n268 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n268 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n268_field = _buy_n268.get("trend_acceleration_state", "flat_trend") if _buy_n268 else "flat_trend"
             _n268_perf = tlog.setdefault("trend_acceleration_perf", {})
             _n268p = _n268_perf.setdefault(_n268_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n268_field})
@@ -5280,7 +5280,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N269: Sector Breadth Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n269 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n269 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n269_field = _buy_n269.get("sector_breadth_state", "sector_neutral") if _buy_n269 else "sector_neutral"
             _n269_perf = tlog.setdefault("sector_etf_trend_perf", {})
             _n269p = _n269_perf.setdefault(_n269_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n269_field})
@@ -5295,7 +5295,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N270: Time Since Last Trade Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n270 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n270 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n270_field = _buy_n270.get("time_since_last_trade_state", "normal_pace") if _buy_n270 else "normal_pace"
             _n270_perf = tlog.setdefault("time_since_trade_v1_perf", {})
             _n270p = _n270_perf.setdefault(_n270_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n270_field})
@@ -5310,7 +5310,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N271: Market Internals Trend Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n271 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n271 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n271_field = _buy_n271.get("market_internals_trend_state", "stable_internals") if _buy_n271 else "stable_internals"
             _n271_perf = tlog.setdefault("market_internals_trend_perf", {})
             _n271p = _n271_perf.setdefault(_n271_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n271_field})
@@ -5325,7 +5325,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N272: News Volume Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n272 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n272 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n272_field = _buy_n272.get("news_volume_state", "normal_news_vol") if _buy_n272 else "normal_news_vol"
             _n272_perf = tlog.setdefault("news_volume_v1_perf", {})
             _n272p = _n272_perf.setdefault(_n272_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n272_field})
@@ -5340,7 +5340,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N273: SPY Distance From 52-Week High Performance ───────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n273 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n273 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n273_field = _buy_n273.get("spy_distance_from_52w_high_state", "mid_range") if _buy_n273 else "mid_range"
             _n273_perf = tlog.setdefault("spy_distance_from_52w_high_perf", {})
             _n273p = _n273_perf.setdefault(_n273_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n273_field})
@@ -5355,7 +5355,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N274: Position Concentration Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n274 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n274 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n274_field = _buy_n274.get("position_concentration_state", "balanced") if _buy_n274 else "balanced"
             _n274_perf = tlog.setdefault("position_concentration_v1_perf", {})
             _n274p = _n274_perf.setdefault(_n274_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n274_field})
@@ -5370,7 +5370,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N275: Regime Duration Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n275 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n275 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n275_field = _buy_n275.get("regime_duration_state", "established_regime") if _buy_n275 else "established_regime"
             _n275_perf = tlog.setdefault("regime_duration_N275_perf", {})
             _n275p = _n275_perf.setdefault(_n275_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n275_field})
@@ -5385,7 +5385,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N276: Crypto Correlation Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n276 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n276 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n276_field = _buy_n276.get("crypto_correlation_state", "crypto_neutral") if _buy_n276 else "crypto_neutral"
             _n276_perf = tlog.setdefault("crypto_correlation_perf", {})
             _n276p = _n276_perf.setdefault(_n276_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n276_field})
@@ -5400,7 +5400,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N277: Intraday Trend Persistence Performance ───────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n277 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n277 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n277_field = _buy_n277.get("intraday_trend_persistence_state", "choppy_trend") if _buy_n277 else "choppy_trend"
             _n277_perf = tlog.setdefault("intraday_trend_persistence_perf", {})
             _n277p = _n277_perf.setdefault(_n277_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n277_field})
@@ -5415,7 +5415,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N278: Entry Quality Score Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n278 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n278 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n278_field = _buy_n278.get("entry_quality_score_state", "medium_quality") if _buy_n278 else "medium_quality"
             _n278_perf = tlog.setdefault("entry_quality_score_perf", {})
             _n278p = _n278_perf.setdefault(_n278_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n278_field})
@@ -5430,7 +5430,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N279: Sector Momentum Rank Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n279 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n279 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n279_field = _buy_n279.get("sector_momentum_rank_state", "mid_sector") if _buy_n279 else "mid_sector"
             _n279_perf = tlog.setdefault("sector_rank_tier_perf", {})
             _n279p = _n279_perf.setdefault(_n279_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n279_field})
@@ -5445,7 +5445,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N280: Fed Meeting Week Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n280 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n280 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n280_field = _buy_n280.get("fed_meeting_week_state", "non_fed_week") if _buy_n280 else "non_fed_week"
             _n280_perf = tlog.setdefault("fed_meeting_week_N280_perf", {})
             _n280p = _n280_perf.setdefault(_n280_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n280_field})
@@ -5460,7 +5460,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N281: Opening Range Breakout Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n281 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n281 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n281_field = _buy_n281.get("opening_range_breakout_state", "no_orb") if _buy_n281 else "no_orb"
             _n281_perf = tlog.setdefault("orb_15min_perf", {})
             _n281p = _n281_perf.setdefault(_n281_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n281_field})
@@ -5475,7 +5475,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N282: SPY RSI Overbought/Oversold Performance ──────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n282 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n282 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n282_field = _buy_n282.get("spy_rsi_overbought_state", "spy_neutral") if _buy_n282 else "spy_neutral"
             _n282_perf = tlog.setdefault("spy_rsi_overbought_perf", {})
             _n282p = _n282_perf.setdefault(_n282_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n282_field})
@@ -5490,7 +5490,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N283: Ticker Earnings Beat Streak Performance ──────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n283 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n283 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n283_field = _buy_n283.get("ticker_earnings_beat_streak_state", "no_beat_data") if _buy_n283 else "no_beat_data"
             _n283_perf = tlog.setdefault("ticker_earnings_beat_streak_perf", {})
             _n283p = _n283_perf.setdefault(_n283_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n283_field})
@@ -5505,7 +5505,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N284: Holding Cost vs Cash Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n284 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n284 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n284_field = _buy_n284.get("holding_cost_vs_cash_state", "medium_invested") if _buy_n284 else "medium_invested"
             _n284_perf = tlog.setdefault("holding_cost_vs_cash_perf", {})
             _n284p = _n284_perf.setdefault(_n284_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n284_field})
@@ -5520,7 +5520,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N285: SPY Volume vs Average Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n285 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n285 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n285_field = _buy_n285.get("spy_volume_vs_avg_state", "spy_normal_vol") if _buy_n285 else "spy_normal_vol"
             _n285_perf = tlog.setdefault("spy_volume_vs_avg_perf", {})
             _n285p = _n285_perf.setdefault(_n285_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n285_field})
@@ -5535,7 +5535,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N286: Technical Score Bucket Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n286 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n286 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n286_field = _buy_n286.get("technical_score_bucket_state", "score_55_69") if _buy_n286 else "score_55_69"
             _n286_perf = tlog.setdefault("technical_score_bucket_perf", {})
             _n286p = _n286_perf.setdefault(_n286_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n286_field})
@@ -5550,7 +5550,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N287: Day of Week Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n287 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n287 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n287_field = _buy_n287.get("day_of_week_state", "wednesday") if _buy_n287 else "wednesday"
             _n287_perf = tlog.setdefault("day_of_week_v1_perf", {})
             _n287p = _n287_perf.setdefault(_n287_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n287_field})
@@ -5565,7 +5565,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N288: Market Hours Quadrant Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n288 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n288 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n288_field = _buy_n288.get("market_hours_quadrant_state", "midday") if _buy_n288 else "midday"
             _n288_perf = tlog.setdefault("market_hours_quadrant_perf", {})
             _n288p = _n288_perf.setdefault(_n288_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n288_field})
@@ -5580,7 +5580,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N289: Position P&L Before Entry Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n289 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n289 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n289_field = _buy_n289.get("position_pnl_before_entry_state", "portfolio_flat") if _buy_n289 else "portfolio_flat"
             _n289_perf = tlog.setdefault("position_pnl_before_entry_perf", {})
             _n289p = _n289_perf.setdefault(_n289_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n289_field})
@@ -5595,7 +5595,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N290: Ticker Beta Bucket Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n290 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n290 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n290_field = _buy_n290.get("ticker_beta_bucket_state", "medium_beta") if _buy_n290 else "medium_beta"
             _n290_perf = tlog.setdefault("ticker_beta_bucket_perf", {})
             _n290p = _n290_perf.setdefault(_n290_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n290_field})
@@ -5610,7 +5610,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N291: Relative Volume Quality Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n291 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n291 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n291_field = _buy_n291.get("relative_volume_quality_state", "rvol_normal") if _buy_n291 else "rvol_normal"
             _n291_perf = tlog.setdefault("rvol_quality_tier_perf", {})
             _n291p = _n291_perf.setdefault(_n291_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n291_field})
@@ -5625,7 +5625,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N292: Price Above 200MA Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n292 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n292 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n292_field = _buy_n292.get("price_above_200ma_state", "above_200ma") if _buy_n292 else "above_200ma"
             _n292_perf = tlog.setdefault("price_above_200ma_perf", {})
             _n292p = _n292_perf.setdefault(_n292_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n292_field})
@@ -5640,7 +5640,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N293: SPY Trend Strength Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n293 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n293 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n293_field = _buy_n293.get("spy_trend_strength_state", "weak_bull") if _buy_n293 else "weak_bull"
             _n293_perf = tlog.setdefault("spy_trend_strength_v1_perf", {})
             _n293p = _n293_perf.setdefault(_n293_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n293_field})
@@ -5655,7 +5655,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N294: RSI At Entry Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n294 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n294 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n294_field = _buy_n294.get("rsi_at_entry_state", "neutral") if _buy_n294 else "neutral"
             _n294_perf = tlog.setdefault("rsi_at_entry_perf", {})
             _n294p = _n294_perf.setdefault(_n294_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n294_field})
@@ -5670,7 +5670,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N295: Gap Overnight Direction Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n295 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n295 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n295_field = _buy_n295.get("gap_overnight_direction_state", "flat_open") if _buy_n295 else "flat_open"
             _n295_perf = tlog.setdefault("gap_overnight_direction_perf", {})
             _n295p = _n295_perf.setdefault(_n295_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n295_field})
@@ -5685,7 +5685,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N296: VIX Level Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n296 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n296 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n296_field = _buy_n296.get("vix_level_state", "vix_elevated") if _buy_n296 else "vix_elevated"
             _n296_perf = tlog.setdefault("vix_level_perf", {})
             _n296p = _n296_perf.setdefault(_n296_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n296_field})
@@ -5700,7 +5700,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N297: Ticker Momentum Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n297 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n297 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n297_field = _buy_n297.get("ticker_momentum_state", "mild_momentum") if _buy_n297 else "mild_momentum"
             _n297_perf = tlog.setdefault("ticker_momentum_perf", {})
             _n297p = _n297_perf.setdefault(_n297_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n297_field})
@@ -5715,7 +5715,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N298: ATR as Pct Price Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n298 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n298 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n298_field = _buy_n298.get("atr_as_pct_price_state", "mid_atr_pct") if _buy_n298 else "mid_atr_pct"
             _n298_perf = tlog.setdefault("atr_as_pct_price_perf", {})
             _n298p = _n298_perf.setdefault(_n298_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n298_field})
@@ -5730,7 +5730,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N299: Consecutive Win Streak Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n299 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n299 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n299_field = _buy_n299.get("consecutive_win_streak_state", "mixed") if _buy_n299 else "mixed"
             _n299_perf = tlog.setdefault("consecutive_win_streak_perf", {})
             _n299p = _n299_perf.setdefault(_n299_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n299_field})
@@ -5745,7 +5745,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N300: Position Count At Entry Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n300 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n300 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n300_field = _buy_n300.get("position_count_at_entry_state", "normal_book") if _buy_n300 else "normal_book"
             _n300_perf = tlog.setdefault("open_position_count_perf", {})
             _n300p = _n300_perf.setdefault(_n300_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n300_field})
@@ -5760,7 +5760,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N301: Spread vs ATR Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n301 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n301 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n301_field = _buy_n301.get("spread_vs_atr_state", "normal_spread") if _buy_n301 else "normal_spread"
             _n301_perf = tlog.setdefault("spread_vs_atr_perf", {})
             _n301p = _n301_perf.setdefault(_n301_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n301_field})
@@ -5775,7 +5775,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N302: Price vs Open Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n302 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n302 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n302_field = _buy_n302.get("price_vs_open_state", "at_open") if _buy_n302 else "at_open"
             _n302_perf = tlog.setdefault("price_vs_open_perf", {})
             _n302p = _n302_perf.setdefault(_n302_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n302_field})
@@ -5790,7 +5790,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N303: Sector vs SPY Today Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n303 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n303 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n303_field = _buy_n303.get("sector_vs_spy_today_state", "sector_inline") if _buy_n303 else "sector_inline"
             _n303_perf = tlog.setdefault("sector_vs_spy_today_perf", {})
             _n303p = _n303_perf.setdefault(_n303_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n303_field})
@@ -5805,7 +5805,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N304: Portfolio Drawdown Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n304 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n304 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n304_field = _buy_n304.get("portfolio_drawdown_state", "clean_slate") if _buy_n304 else "clean_slate"
             _n304_perf = tlog.setdefault("portfolio_drawdown_perf", {})
             _n304p = _n304_perf.setdefault(_n304_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n304_field})
@@ -5820,7 +5820,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N305: Buy Score vs Threshold Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n305 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n305 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n305_field = _buy_n305.get("buy_score_vs_threshold_state", "barely_above") if _buy_n305 else "barely_above"
             _n305_perf = tlog.setdefault("buy_score_vs_threshold_perf", {})
             _n305p = _n305_perf.setdefault(_n305_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n305_field})
@@ -5835,7 +5835,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N306: Time of Day Bucket Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n306 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n306 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n306_field = _buy_n306.get("time_of_day_bucket_state", "midday_drift") if _buy_n306 else "midday_drift"
             _n306_perf = tlog.setdefault("time_of_day_bucket_perf", {})
             _n306p = _n306_perf.setdefault(_n306_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n306_field})
@@ -5850,7 +5850,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N307: SPY vs QQQ Divergence Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n307 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n307 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n307_field = _buy_n307.get("spy_vs_qqq_divergence_state", "inline") if _buy_n307 else "inline"
             _n307_perf = tlog.setdefault("spy_vs_qqq_divergence_perf", {})
             _n307p = _n307_perf.setdefault(_n307_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n307_field})
@@ -5865,7 +5865,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N308: Entry After Halt Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n308 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n308 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n308_field = _buy_n308.get("entry_after_halt_state", "normal_entry") if _buy_n308 else "normal_entry"
             _n308_perf = tlog.setdefault("entry_after_halt_perf", {})
             _n308p = _n308_perf.setdefault(_n308_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n308_field})
@@ -5880,7 +5880,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N309: Macro Day Risk Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n309 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n309 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n309_field = _buy_n309.get("macro_day_risk_state", "normal_day") if _buy_n309 else "normal_day"
             _n309_perf = tlog.setdefault("macro_day_risk_perf", {})
             _n309p = _n309_perf.setdefault(_n309_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n309_field})
@@ -5895,7 +5895,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N310: Regime Quality Combined Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n310 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n310 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n310_field = _buy_n310.get("regime_quality_combined_state", "good_conditions") if _buy_n310 else "good_conditions"
             _n310_perf = tlog.setdefault("regime_quality_combined_perf", {})
             _n310p = _n310_perf.setdefault(_n310_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n310_field})
@@ -5910,7 +5910,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N311: Entry Rank in Session Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n311 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n311 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n311_field = _buy_n311.get("entry_rank_in_session_state", "early_session") if _buy_n311 else "early_session"
             _n311_perf = tlog.setdefault("entry_rank_in_session_perf", {})
             _n311p = _n311_perf.setdefault(_n311_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n311_field})
@@ -5925,7 +5925,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N312: VWAP Distance Pct Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n312 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n312 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n312_field = _buy_n312.get("vwap_distance_pct_state", "near_vwap") if _buy_n312 else "near_vwap"
             _n312_perf = tlog.setdefault("vwap_distance_pct_perf", {})
             _n312p = _n312_perf.setdefault(_n312_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n312_field})
@@ -5940,7 +5940,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N313: ATR Multiple Gain Potential Performance ─────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n313 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n313 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n313_field = _buy_n313.get("atr_multiple_gain_potential_state", "medium_reward_risk") if _buy_n313 else "medium_reward_risk"
             _n313_perf = tlog.setdefault("atr_multiple_gain_potential_perf", {})
             _n313p = _n313_perf.setdefault(_n313_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n313_field})
@@ -5955,7 +5955,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N314: MFI Zone Performance ───────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n314 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n314 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n314_field = _buy_n314.get("mfi_zone_state", "mfi_neutral") if _buy_n314 else "mfi_neutral"
             _n314_perf = tlog.setdefault("mfi_zone_N314_perf", {})
             _n314p = _n314_perf.setdefault(_n314_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n314_field})
@@ -5970,7 +5970,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N315: Recent Market Breadth Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n315 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n315 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n315_field = _buy_n315.get("recent_market_breadth_state", "breadth_neutral") if _buy_n315 else "breadth_neutral"
             _n315_perf = tlog.setdefault("recent_market_breadth_perf", {})
             _n315p = _n315_perf.setdefault(_n315_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n315_field})
@@ -5985,7 +5985,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N316: Price Gap Size Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n316 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n316 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n316_field = _buy_n316.get("price_gap_size_state", "small_gap") if _buy_n316 else "small_gap"
             _n316_perf = tlog.setdefault("price_gap_size_perf", {})
             _n316p = _n316_perf.setdefault(_n316_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n316_field})
@@ -6000,7 +6000,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N317: Sector Strength Score Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n317 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n317 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n317_field = _buy_n317.get("sector_strength_score_state", "neutral_sector") if _buy_n317 else "neutral_sector"
             _n317_perf = tlog.setdefault("sector_strength_score_perf", {})
             _n317p = _n317_perf.setdefault(_n317_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n317_field})
@@ -6015,7 +6015,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N318: Earnings Distance Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n318 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n318 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n318_field = _buy_n318.get("earnings_distance_state", "no_earnings_near") if _buy_n318 else "no_earnings_near"
             _n318_perf = tlog.setdefault("earnings_distance_perf", {})
             _n318p = _n318_perf.setdefault(_n318_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n318_field})
@@ -6030,7 +6030,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N319: Portfolio Win Rate Trend Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n319 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n319 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n319_field = _buy_n319.get("portfolio_win_rate_trend_state", "stable_winrate") if _buy_n319 else "stable_winrate"
             _n319_perf = tlog.setdefault("portfolio_win_rate_trend_perf", {})
             _n319p = _n319_perf.setdefault(_n319_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n319_field})
@@ -6045,7 +6045,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N320: Position Size Bucket Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n320 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n320 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n320_field = _buy_n320.get("position_size_bucket_state", "medium_position") if _buy_n320 else "medium_position"
             _n320_perf = tlog.setdefault("position_size_bucket_perf", {})
             _n320p = _n320_perf.setdefault(_n320_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n320_field})
@@ -6060,7 +6060,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N321: YTD Change Bucket Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n321 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n321 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n321_field = _buy_n321.get("chg_ytd_bucket_state", "mid_ytd") if _buy_n321 else "mid_ytd"
             _n321_perf = tlog.setdefault("chg_ytd_bucket_perf", {})
             _n321p = _n321_perf.setdefault(_n321_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n321_field})
@@ -6075,7 +6075,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N322: Market Leader Flag Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n322 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n322 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n322_field = _buy_n322.get("market_leader_flag_state", "market_inline") if _buy_n322 else "market_inline"
             _n322_perf = tlog.setdefault("market_leader_flag_perf", {})
             _n322p = _n322_perf.setdefault(_n322_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n322_field})
@@ -6090,7 +6090,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N323: MACD Cross State Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n323 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n323 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n323_field = _buy_n323.get("macd_cross_state", "macd_bearish") if _buy_n323 else "macd_bearish"
             _n323_perf = tlog.setdefault("macd_cross_state_perf", {})
             _n323p = _n323_perf.setdefault(_n323_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n323_field})
@@ -6105,7 +6105,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N324: Bollinger Band Position Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n324 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n324 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n324_field = _buy_n324.get("bb_position_state", "bb_inside") if _buy_n324 else "bb_inside"
             _n324_perf = tlog.setdefault("bb_position_perf", {})
             _n324p = _n324_perf.setdefault(_n324_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n324_field})
@@ -6120,7 +6120,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N325: Consecutive Green Days Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n325 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n325 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n325_field = _buy_n325.get("consecutive_green_days_state", "no_streak") if _buy_n325 else "no_streak"
             _n325_perf = tlog.setdefault("consecutive_green_days_perf", {})
             _n325p = _n325_perf.setdefault(_n325_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n325_field})
@@ -6135,7 +6135,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N326: SMA50 Slope Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n326 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n326 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n326_field = _buy_n326.get("sma50_slope_state", "sma50_flat") if _buy_n326 else "sma50_flat"
             _n326_perf = tlog.setdefault("sma50_slope_perf", {})
             _n326p = _n326_perf.setdefault(_n326_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n326_field})
@@ -6150,7 +6150,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N327: Entry at Support Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n327 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n327 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n327_field = _buy_n327.get("entry_at_support_state", "at_support") if _buy_n327 else "at_support"
             _n327_perf = tlog.setdefault("entry_at_support_perf", {})
             _n327p = _n327_perf.setdefault(_n327_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n327_field})
@@ -6165,7 +6165,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N328: PSAR Bull Entry Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n328 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n328 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n328_field = _buy_n328.get("psar_bull_entry_state", "psar_neutral") if _buy_n328 else "psar_neutral"
             _n328_perf = tlog.setdefault("psar_bull_entry_perf", {})
             _n328p = _n328_perf.setdefault(_n328_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n328_field})
@@ -6180,7 +6180,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N329: ADX Trend Strength Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n329 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n329 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n329_field = _buy_n329.get("adx_trend_strength_state", "moderate_trend") if _buy_n329 else "moderate_trend"
             _n329_perf = tlog.setdefault("adx_trend_strength_v1_perf", {})
             _n329p = _n329_perf.setdefault(_n329_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n329_field})
@@ -6195,7 +6195,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N330: Volume Trend 3D Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n330 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n330 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n330_field = _buy_n330.get("volume_trend_3d_state", "volume_normal") if _buy_n330 else "volume_normal"
             _n330_perf = tlog.setdefault("volume_trend_3d_v1_perf", {})
             _n330p = _n330_perf.setdefault(_n330_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n330_field})
@@ -6210,7 +6210,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N331: Sector Rotation Signal Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n331 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n331 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n331_field = _buy_n331.get("sector_rotation_signal_perf", "sector_neutral") if _buy_n331 else "sector_neutral"
             _n331_perf = tlog.setdefault("sector_rotation_signal_perf", {})
             _n331p = _n331_perf.setdefault(_n331_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n331_field})
@@ -6225,7 +6225,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N332: SPY Above 200MA Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n332 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n332 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n332_field = _buy_n332.get("spy_above_200ma_perf", "spy_below_200ma") if _buy_n332 else "spy_below_200ma"
             _n332_perf = tlog.setdefault("spy_above_200ma_perf", {})
             _n332p = _n332_perf.setdefault(_n332_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n332_field})
@@ -6240,7 +6240,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N333: Fear/Greed Bucket Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n333 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n333 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n333_field = _buy_n333.get("fear_greed_bucket_perf", "neutral") if _buy_n333 else "neutral"
             _n333_perf = tlog.setdefault("fear_greed_bucket_perf", {})
             _n333p = _n333_perf.setdefault(_n333_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n333_field})
@@ -6255,7 +6255,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N334: Short Float Bucket Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n334 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n334 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n334_field = _buy_n334.get("short_float_bucket_perf", "low_short") if _buy_n334 else "low_short"
             _n334_perf = tlog.setdefault("short_float_bucket_perf", {})
             _n334p = _n334_perf.setdefault(_n334_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n334_field})
@@ -6270,7 +6270,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N335: IV Rank Bucket Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n335 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n335 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n335_field = _buy_n335.get("iv_rank_bucket_perf", "normal_iv") if _buy_n335 else "normal_iv"
             _n335_perf = tlog.setdefault("iv_rank_bucket_perf", {})
             _n335p = _n335_perf.setdefault(_n335_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n335_field})
@@ -6285,7 +6285,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N336: Catalyst Type Performance ───────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n336 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n336 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n336_field = _buy_n336.get("catalyst_type_perf", "technical_catalyst") if _buy_n336 else "technical_catalyst"
             _n336_perf = tlog.setdefault("catalyst_type_perf", {})
             _n336p = _n336_perf.setdefault(_n336_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n336_field})
@@ -6300,7 +6300,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N337: Trend Age Bucket Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n337 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n337 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n337_field = _buy_n337.get("trend_age_bucket_perf", "mature_trend") if _buy_n337 else "mature_trend"
             _n337_perf = tlog.setdefault("trend_age_bucket_perf", {})
             _n337p = _n337_perf.setdefault(_n337_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n337_field})
@@ -6315,7 +6315,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N338: Index Divergence Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n338 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n338 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n338_field = _buy_n338.get("index_divergence_perf", "inline_index") if _buy_n338 else "inline_index"
             _n338_perf = tlog.setdefault("index_divergence_perf", {})
             _n338p = _n338_perf.setdefault(_n338_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n338_field})
@@ -6330,7 +6330,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N339: Opening Gap Follow Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n339 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n339 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n339_field = _buy_n339.get("opening_gap_follow_perf", "no_gap") if _buy_n339 else "no_gap"
             _n339_perf = tlog.setdefault("opening_gap_follow_perf", {})
             _n339p = _n339_perf.setdefault(_n339_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n339_field})
@@ -6345,7 +6345,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N340: Earnings Revision Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n340 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n340 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n340_field = _buy_n340.get("earnings_revision_perf", "no_revision") if _buy_n340 else "no_revision"
             _n340_perf = tlog.setdefault("earnings_revision_perf", {})
             _n340p = _n340_perf.setdefault(_n340_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n340_field})
@@ -6360,7 +6360,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N341: Pre-Market Gap Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n341 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n341 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n341_field = _buy_n341.get("pm_gap_v1_perf", "flat_open") if _buy_n341 else "flat_open"
             _n341_perf = tlog.setdefault("pm_gap_v1_perf", {})
             _n341p = _n341_perf.setdefault(_n341_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n341_field})
@@ -6375,7 +6375,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N342: Regime Transition Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n342 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n342 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n342_field = _buy_n342.get("regime_transition_perf", "stable_regime") if _buy_n342 else "stable_regime"
             _n342_perf = tlog.setdefault("regime_transition_perf", {})
             _n342p = _n342_perf.setdefault(_n342_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n342_field})
@@ -6390,7 +6390,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N343: Ticker Age Bucket Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n343 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n343 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n343_field = _buy_n343.get("ticker_age_bucket_perf", "small_micro_cap") if _buy_n343 else "small_micro_cap"
             _n343_perf = tlog.setdefault("ticker_age_bucket_perf", {})
             _n343p = _n343_perf.setdefault(_n343_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n343_field})
@@ -6405,7 +6405,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N344: SPY Options OI Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n344 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n344 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n344_field = _buy_n344.get("spy_options_oi_perf", "neutral_flow") if _buy_n344 else "neutral_flow"
             _n344_perf = tlog.setdefault("spy_options_oi_perf", {})
             _n344p = _n344_perf.setdefault(_n344_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n344_field})
@@ -6420,7 +6420,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N345: Breakout Confirmation Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n345 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n345 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n345_field = _buy_n345.get("breakout_confirmation_perf", "failed_breakout") if _buy_n345 else "failed_breakout"
             _n345_perf = tlog.setdefault("breakout_confirmation_perf", {})
             _n345p = _n345_perf.setdefault(_n345_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n345_field})
@@ -6435,7 +6435,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N346: Portfolio Heat Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n346 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n346 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n346_field = _buy_n346.get("portfolio_heat_perf", "low_heat") if _buy_n346 else "low_heat"
             _n346_perf = tlog.setdefault("portfolio_heat_perf", {})
             _n346p = _n346_perf.setdefault(_n346_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n346_field})
@@ -6450,7 +6450,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N347: Earnings Momentum Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n347 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n347 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n347_field = _buy_n347.get("earnings_momentum_perf", "no_earnings_driver") if _buy_n347 else "no_earnings_driver"
             _n347_perf = tlog.setdefault("earnings_momentum_perf", {})
             _n347p = _n347_perf.setdefault(_n347_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n347_field})
@@ -6465,7 +6465,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N348: Sector RS Tier Performance (separate dict to avoid collision with N900/N269) ──────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n348 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n348 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n348_field = _buy_n348.get("sector_breadth_perf", "sector_middle") if _buy_n348 else "sector_middle"
             _n348_perf = tlog.setdefault("sector_rs_tier_perf", {})
             _n348p = _n348_perf.setdefault(_n348_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n348_field})
@@ -6480,7 +6480,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N349: Volatility Contraction Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n349 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n349 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n349_field = _buy_n349.get("volatility_contraction_perf", "normal_vol") if _buy_n349 else "normal_vol"
             _n349_perf = tlog.setdefault("volatility_contraction_perf", {})
             _n349p = _n349_perf.setdefault(_n349_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n349_field})
@@ -6495,7 +6495,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N350: Time Since Last Trade Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n350 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n350 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n350_field = _buy_n350.get("time_since_last_trade_perf", "day_plus_apart") if _buy_n350 else "day_plus_apart"
             _n350_perf = tlog.setdefault("time_since_last_trade_perf", {})
             _n350p = _n350_perf.setdefault(_n350_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n350_field})
@@ -6510,7 +6510,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N351: Float Size Bucket Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n351 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n351 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n351_field = _buy_n351.get("float_size_bucket_perf", "medium_float") if _buy_n351 else "medium_float"
             _n351_perf = tlog.setdefault("float_size_bucket_perf", {})
             _n351p = _n351_perf.setdefault(_n351_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n351_field})
@@ -6525,7 +6525,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N352: News Velocity Performance ────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n352 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n352 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n352_field = _buy_n352.get("news_count_quality_perf", "no_news") if _buy_n352 else "no_news"
             _n352_perf = tlog.setdefault("news_count_quality_perf", {})
             _n352p = _n352_perf.setdefault(_n352_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n352_field})
@@ -6540,7 +6540,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N353: Relative PE Performance ──────────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n353 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n353 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n353_field = _buy_n353.get("relative_pe_perf", "fair_pe") if _buy_n353 else "fair_pe"
             _n353_perf = tlog.setdefault("relative_pe_perf", {})
             _n353p = _n353_perf.setdefault(_n353_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n353_field})
@@ -6555,7 +6555,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N354: Intraday Reversal Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n354 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n354 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n354_field = _buy_n354.get("intraday_reversal_perf", "l_shaped_drop") if _buy_n354 else "l_shaped_drop"
             _n354_perf = tlog.setdefault("intraday_reversal_perf", {})
             _n354p = _n354_perf.setdefault(_n354_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n354_field})
@@ -6570,7 +6570,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N355: Market Breadth Score Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n355 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n355 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n355_field = _buy_n355.get("market_breadth_score_perf", "narrow_advance") if _buy_n355 else "narrow_advance"
             _n355_perf = tlog.setdefault("market_breadth_score_perf", {})
             _n355p = _n355_perf.setdefault(_n355_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n355_field})
@@ -6585,7 +6585,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N356: Multi-Timeframe Trend Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n356 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n356 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n356_field = _buy_n356.get("multi_timeframe_trend_perf", "mixed_signals") if _buy_n356 else "mixed_signals"
             _n356_perf = tlog.setdefault("multi_timeframe_trend_perf", {})
             _n356p = _n356_perf.setdefault(_n356_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n356_field})
@@ -6600,7 +6600,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N357: Smart Money Indicator Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n357 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n357 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n357_field = _buy_n357.get("smart_money_indicator_perf", "institutional_selling") if _buy_n357 else "institutional_selling"
             _n357_perf = tlog.setdefault("smart_money_indicator_perf", {})
             _n357p = _n357_perf.setdefault(_n357_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n357_field})
@@ -6615,7 +6615,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N358: Entry Price vs VWAP Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n358 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n358 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n358_field = _buy_n358.get("entry_price_vs_vwap_perf", "at_vwap_entry") if _buy_n358 else "at_vwap_entry"
             _n358_perf = tlog.setdefault("entry_price_vs_vwap_perf", {})
             _n358p = _n358_perf.setdefault(_n358_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n358_field})
@@ -6630,7 +6630,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N359: Catalyst Recency Performance ─────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n359 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n359 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n359_field = _buy_n359.get("catalyst_age_quality_perf", "no_catalyst") if _buy_n359 else "no_catalyst"
             _n359_perf = tlog.setdefault("catalyst_age_quality_perf", {})
             _n359p = _n359_perf.setdefault(_n359_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n359_field})
@@ -6645,7 +6645,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N360: Sector Momentum Quality Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n360 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n360 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n360_field = _buy_n360.get("sector_momentum_quality_perf", "warming_sector") if _buy_n360 else "warming_sector"
             _n360_perf = tlog.setdefault("sector_momentum_quality_perf", {})
             _n360p = _n360_perf.setdefault(_n360_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n360_field})
@@ -6660,7 +6660,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N361: Liquidity Tier Performance ──────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n361 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n361 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n361_field = _buy_n361.get("liquidity_tier_perf", "mid_liquidity") if _buy_n361 else "mid_liquidity"
             _n361_perf = tlog.setdefault("liquidity_tier_perf", {})
             _n361p = _n361_perf.setdefault(_n361_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n361_field})
@@ -6675,7 +6675,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N362: Trend Reversal Signal Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n362 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n362 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n362_field = _buy_n362.get("trend_reversal_signal_perf", "no_reversal") if _buy_n362 else "no_reversal"
             _n362_perf = tlog.setdefault("trend_reversal_signal_perf", {})
             _n362p = _n362_perf.setdefault(_n362_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n362_field})
@@ -6690,7 +6690,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N363: Gap Size Bucket Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n363 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n363 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n363_field = _buy_n363.get("gap_size_bucket_perf", "small_gap") if _buy_n363 else "small_gap"
             _n363_perf = tlog.setdefault("gap_size_bucket_perf", {})
             _n363p = _n363_perf.setdefault(_n363_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n363_field})
@@ -6705,7 +6705,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N364: Sector ETF vs SPY Today Performance ─────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n364 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n364 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n364_field = _buy_n364.get("sector_etf_vs_spy_today_perf", "neutral_sector") if _buy_n364 else "neutral_sector"
             _n364_perf = tlog.setdefault("sector_etf_vs_spy_today_perf", {})
             _n364p = _n364_perf.setdefault(_n364_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n364_field})
@@ -6720,7 +6720,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N365: Price Acceleration Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n365 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n365 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n365_field = _buy_n365.get("price_acceleration_perf", "steady") if _buy_n365 else "steady"
             _n365_perf = tlog.setdefault("price_acceleration_perf", {})
             _n365p = _n365_perf.setdefault(_n365_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n365_field})
@@ -6735,7 +6735,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N366: Opening Strength Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n366 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n366 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n366_field = _buy_n366.get("opening_strength_perf", "flat_open") if _buy_n366 else "flat_open"
             _n366_perf = tlog.setdefault("opening_strength_perf", {})
             _n366p = _n366_perf.setdefault(_n366_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n366_field})
@@ -6750,7 +6750,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N367: VWAP Reclaim Performance ────────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n367 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n367 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n367_field = _buy_n367.get("vwap_reclaim_v1_perf", "at_vwap") if _buy_n367 else "at_vwap"
             _n367_perf = tlog.setdefault("vwap_reclaim_v1_perf", {})
             _n367p = _n367_perf.setdefault(_n367_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n367_field})
@@ -6765,7 +6765,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N368: Institutional Size Entry Performance ─────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n368 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n368 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n368_field = _buy_n368.get("institutional_size_entry_perf", "standard_entry") if _buy_n368 else "standard_entry"
             _n368_perf = tlog.setdefault("institutional_size_entry_perf", {})
             _n368p = _n368_perf.setdefault(_n368_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n368_field})
@@ -6780,7 +6780,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N369: Earnings Drift Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n369 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n369 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n369_field = _buy_n369.get("earnings_drift_perf", "clean") if _buy_n369 else "clean"
             _n369_perf = tlog.setdefault("earnings_drift_perf", {})
             _n369p = _n369_perf.setdefault(_n369_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n369_field})
@@ -6795,7 +6795,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N370: Regime Momentum Sync Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n370 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n370 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n370_field = _buy_n370.get("regime_momentum_sync_perf", "out_of_sync") if _buy_n370 else "out_of_sync"
             _n370_perf = tlog.setdefault("regime_momentum_sync_perf", {})
             _n370p = _n370_perf.setdefault(_n370_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n370_field})
@@ -6810,7 +6810,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N371: Pre-Market vs Prior Close Performance ───────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n371 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n371 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n371_field = _buy_n371.get("pre_market_vs_prior_close_perf", "flat_open") if _buy_n371 else "flat_open"
             _n371_perf = tlog.setdefault("pre_market_vs_prior_close_perf", {})
             _n371p = _n371_perf.setdefault(_n371_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n371_field})
@@ -6825,7 +6825,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N372: Daily ATR Move Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n372 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n372 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n372_field = _buy_n372.get("daily_atr_move_perf", "within_1atr") if _buy_n372 else "within_1atr"
             _n372_perf = tlog.setdefault("daily_atr_move_perf", {})
             _n372p = _n372_perf.setdefault(_n372_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n372_field})
@@ -6840,7 +6840,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N373: Sector Weekly Rank Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n373 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n373 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n373_field = _buy_n373.get("sector_weekly_rank_perf", "mid_sector") if _buy_n373 else "mid_sector"
             _n373_perf = tlog.setdefault("sector_weekly_rank_perf", {})
             _n373p = _n373_perf.setdefault(_n373_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n373_field})
@@ -6855,7 +6855,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N374: Short Squeeze Potential Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n374 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n374 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n374_field = _buy_n374.get("short_squeeze_potential_perf", "no_squeeze") if _buy_n374 else "no_squeeze"
             _n374_perf = tlog.setdefault("short_squeeze_potential_perf", {})
             _n374p = _n374_perf.setdefault(_n374_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n374_field})
@@ -6870,7 +6870,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N375: Entry vs 52-Week High Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n375 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n375 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n375_field = _buy_n375.get("entry_vs_52w_high_perf", "mid_range") if _buy_n375 else "mid_range"
             _n375_perf = tlog.setdefault("entry_vs_52w_high_perf", {})
             _n375p = _n375_perf.setdefault(_n375_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n375_field})
@@ -6885,7 +6885,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N376: SPY Morning Action Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n376 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n376 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n376_field = _buy_n376.get("spy_morning_action_perf", "neutral_spy_morning") if _buy_n376 else "neutral_spy_morning"
             _n376_perf = tlog.setdefault("spy_morning_action_perf", {})
             _n376p = _n376_perf.setdefault(_n376_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n376_field})
@@ -6900,7 +6900,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N377: Position Overlap Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n377 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n377 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n377_field = _buy_n377.get("position_overlap_perf", "no_overlap") if _buy_n377 else "no_overlap"
             _n377_perf = tlog.setdefault("position_overlap_perf", {})
             _n377p = _n377_perf.setdefault(_n377_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n377_field})
@@ -6915,7 +6915,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N378: News Impact Direction Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n378 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n378 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n378_field = _buy_n378.get("news_impact_direction_perf", "no_impact") if _buy_n378 else "no_impact"
             _n378_perf = tlog.setdefault("news_impact_direction_perf", {})
             _n378p = _n378_perf.setdefault(_n378_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n378_field})
@@ -6930,7 +6930,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N379: RSI vs Sector RSI Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n379 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n379 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n379_field = _buy_n379.get("rsi_vs_sector_rsi_perf", "aligned") if _buy_n379 else "aligned"
             _n379_perf = tlog.setdefault("rsi_vs_sector_rsi_perf", {})
             _n379p = _n379_perf.setdefault(_n379_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n379_field})
@@ -6945,7 +6945,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N380: Pre-Entry RVOL Quality Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n380 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n380 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n380_field = _buy_n380.get("pre_entry_rvol_quality_perf", "normal_vol") if _buy_n380 else "normal_vol"
             _n380_perf = tlog.setdefault("pre_entry_rvol_quality_perf", {})
             _n380p = _n380_perf.setdefault(_n380_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n380_field})
@@ -6960,7 +6960,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N381: Trend Quality Score Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n381 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n381 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n381_field = _buy_n381.get("trend_quality_score_perf", "moderate_trend") if _buy_n381 else "moderate_trend"
             _n381_perf = tlog.setdefault("trend_quality_score_perf", {})
             _n381p = _n381_perf.setdefault(_n381_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n381_field})
@@ -6975,7 +6975,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N382: Option Flow Imbalance Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n382 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n382 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n382_field = _buy_n382.get("option_flow_imbalance_perf", "balanced_flow") if _buy_n382 else "balanced_flow"
             _n382_perf = tlog.setdefault("option_flow_imbalance_perf", {})
             _n382p = _n382_perf.setdefault(_n382_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n382_field})
@@ -6990,7 +6990,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N383: Sector Leadership Quality Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n383 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n383 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n383_field = _buy_n383.get("sector_leadership_quality_perf", "neutral_sector") if _buy_n383 else "neutral_sector"
             _n383_perf = tlog.setdefault("sector_leadership_quality_perf", {})
             _n383p = _n383_perf.setdefault(_n383_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n383_field})
@@ -7005,7 +7005,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N384: Entry Candle Quality Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n384 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n384 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n384_field = _buy_n384.get("candle_direction_perf", "neutral_candle") if _buy_n384 else "neutral_candle"
             _n384_perf = tlog.setdefault("candle_direction_perf", {})
             _n384p = _n384_perf.setdefault(_n384_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n384_field})
@@ -7020,7 +7020,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N385: Macro Backdrop Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n385 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n385 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n385_field = _buy_n385.get("macro_backdrop_perf", "neutral_macro") if _buy_n385 else "neutral_macro"
             _n385_perf = tlog.setdefault("macro_backdrop_perf", {})
             _n385p = _n385_perf.setdefault(_n385_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n385_field})
@@ -7035,7 +7035,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N386: Price vs MA20 Performance ───────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n386 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n386 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n386_field = _buy_n386.get("price_vs_ma20_perf", "near_ma20") if _buy_n386 else "near_ma20"
             _n386_perf = tlog.setdefault("price_vs_ma20_perf", {})
             _n386p = _n386_perf.setdefault(_n386_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n386_field})
@@ -7050,7 +7050,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N387: Breakout Volume Quality Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n387 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n387 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n387_field = _buy_n387.get("breakout_volume_quality_perf", "no_breakout") if _buy_n387 else "no_breakout"
             _n387_perf = tlog.setdefault("breakout_volume_quality_perf", {})
             _n387p = _n387_perf.setdefault(_n387_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n387_field})
@@ -7065,7 +7065,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N388: Regime SPY Alignment Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n388 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n388 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n388_field = _buy_n388.get("regime_spy_alignment_perf", "neutral_drift") if _buy_n388 else "neutral_drift"
             _n388_perf = tlog.setdefault("regime_spy_alignment_perf", {})
             _n388p = _n388_perf.setdefault(_n388_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n388_field})
@@ -7080,7 +7080,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N389: Entry Time Quality Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n389 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n389 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n389_field = _buy_n389.get("entry_time_quality_perf", "midday") if _buy_n389 else "midday"
             _n389_perf = tlog.setdefault("entry_time_quality_perf", {})
             _n389p = _n389_perf.setdefault(_n389_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n389_field})
@@ -7095,7 +7095,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N390: Position Risk/Reward Entry Performance ───────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n390 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n390 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n390_field = _buy_n390.get("position_risk_reward_entry_perf", "standard_rr") if _buy_n390 else "standard_rr"
             _n390_perf = tlog.setdefault("position_risk_reward_entry_perf", {})
             _n390p = _n390_perf.setdefault(_n390_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n390_field})
@@ -7110,7 +7110,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N391: Intraday High Quality Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n391 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n391 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n391_field = _buy_n391.get("intraday_high_quality_perf", "mid_range") if _buy_n391 else "mid_range"
             _n391_perf = tlog.setdefault("intraday_high_quality_perf", {})
             _n391p = _n391_perf.setdefault(_n391_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n391_field})
@@ -7125,7 +7125,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N392: Sector ETF Gap Performance ──────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n392 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n392 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n392_field = _buy_n392.get("sector_etf_gap_perf", "sector_flat") if _buy_n392 else "sector_flat"
             _n392_perf = tlog.setdefault("sector_etf_gap_perf", {})
             _n392p = _n392_perf.setdefault(_n392_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n392_field})
@@ -7140,7 +7140,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N393: SPY Open vs Close Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n393 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n393 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n393_field = _buy_n393.get("spy_open_vs_close_perf", "neutral_open") if _buy_n393 else "neutral_open"
             _n393_perf = tlog.setdefault("spy_open_vs_close_perf", {})
             _n393p = _n393_perf.setdefault(_n393_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n393_field})
@@ -7155,7 +7155,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N394: Prior Day Range Performance ─────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n394 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n394 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n394_field = _buy_n394.get("prior_day_range_perf", "normal_range") if _buy_n394 else "normal_range"
             _n394_perf = tlog.setdefault("prior_day_range_perf", {})
             _n394p = _n394_perf.setdefault(_n394_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n394_field})
@@ -7170,7 +7170,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N395: Entry vs Sector Beta Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n395 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n395 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n395_field = _buy_n395.get("entry_vs_sector_beta_perf", "mid_beta_sector") if _buy_n395 else "mid_beta_sector"
             _n395_perf = tlog.setdefault("entry_vs_sector_beta_perf", {})
             _n395p = _n395_perf.setdefault(_n395_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n395_field})
@@ -7185,7 +7185,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N396: Market Internals Quality Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n396 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n396 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n396_field = _buy_n396.get("market_internals_quality_perf", "neutral_internals") if _buy_n396 else "neutral_internals"
             _n396_perf = tlog.setdefault("market_internals_quality_perf", {})
             _n396p = _n396_perf.setdefault(_n396_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n396_field})
@@ -7200,7 +7200,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N397: EMA Stack Quality Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n397 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n397 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n397_field = _buy_n397.get("ema_stack_v1_perf", "partial_stack") if _buy_n397 else "partial_stack"
             _n397_perf = tlog.setdefault("ema_stack_v1_perf", {})
             _n397p = _n397_perf.setdefault(_n397_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n397_field})
@@ -7215,7 +7215,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N398: Vol Expansion at Entry Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n398 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n398 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n398_field = _buy_n398.get("vol_expansion_at_entry_perf", "vol_stable") if _buy_n398 else "vol_stable"
             _n398_perf = tlog.setdefault("vol_expansion_at_entry_perf", {})
             _n398p = _n398_perf.setdefault(_n398_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n398_field})
@@ -7230,7 +7230,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N399: News Age Quality Performance ────────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n399 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n399 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n399_field = _buy_n399.get("news_age_quality_perf", "recent_catalyst") if _buy_n399 else "recent_catalyst"
             _n399_perf = tlog.setdefault("news_age_quality_perf", {})
             _n399p = _n399_perf.setdefault(_n399_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n399_field})
@@ -7245,7 +7245,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N400: Technical Score Quality Performance ──────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n400 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n400 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n400_field = _buy_n400.get("technical_score_quality_perf", "solid_technical") if _buy_n400 else "solid_technical"
             _n400_perf = tlog.setdefault("technical_score_quality_perf", {})
             _n400p = _n400_perf.setdefault(_n400_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n400_field})
@@ -7260,7 +7260,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N401: Relative Strength vs Market Performance ──────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n401 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n401 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n401_field = _buy_n401.get("relative_strength_vs_market_perf", "neutral_relative") if _buy_n401 else "neutral_relative"
             _n401_perf = tlog.setdefault("relative_strength_vs_market_perf", {})
             _n401p = _n401_perf.setdefault(_n401_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n401_field})
@@ -7275,7 +7275,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N402: Sector Rotation Phase Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n402 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n402 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n402_field = _buy_n402.get("sector_rotation_phase_perf", "mid_rotation") if _buy_n402 else "mid_rotation"
             _n402_perf = tlog.setdefault("sector_rotation_phase_perf", {})
             _n402p = _n402_perf.setdefault(_n402_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n402_field})
@@ -7290,7 +7290,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N403: Morning Momentum Quality Performance ─────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n403 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n403 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n403_field = _buy_n403.get("morning_momentum_quality_perf", "post_open") if _buy_n403 else "post_open"
             _n403_perf = tlog.setdefault("morning_momentum_quality_perf", {})
             _n403p = _n403_perf.setdefault(_n403_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n403_field})
@@ -7305,7 +7305,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N404: Volume Profile Entry Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n404 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n404 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n404_field = _buy_n404.get("volume_profile_entry_perf", "near_poc") if _buy_n404 else "near_poc"
             _n404_perf = tlog.setdefault("volume_profile_entry_perf", {})
             _n404p = _n404_perf.setdefault(_n404_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n404_field})
@@ -7320,7 +7320,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N405: Institutional Flow Quality Performance ───────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n405 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n405 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n405_field = _buy_n405.get("institutional_flow_quality_perf", "neutral_inst_flow") if _buy_n405 else "neutral_inst_flow"
             _n405_perf = tlog.setdefault("institutional_flow_quality_perf", {})
             _n405p = _n405_perf.setdefault(_n405_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n405_field})
@@ -7335,7 +7335,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N406: Gap Quality Context Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n406 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n406 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n406_field = _buy_n406.get("gap_quality_context_perf", "no_gap") if _buy_n406 else "no_gap"
             _n406_perf = tlog.setdefault("gap_quality_context_perf", {})
             _n406p = _n406_perf.setdefault(_n406_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n406_field})
@@ -7350,7 +7350,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N407: Support Confluence Quality Performance ───────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n407 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n407 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n407_field = _buy_n407.get("support_confluence_quality_perf", "single_support") if _buy_n407 else "single_support"
             _n407_perf = tlog.setdefault("support_confluence_quality_perf", {})
             _n407p = _n407_perf.setdefault(_n407_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n407_field})
@@ -7365,7 +7365,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N408: Catalyst Quality Tier Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n408 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n408 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n408_field = _buy_n408.get("catalyst_quality_tier_perf", "no_catalyst") if _buy_n408 else "no_catalyst"
             _n408_perf = tlog.setdefault("catalyst_quality_tier_perf", {})
             _n408p = _n408_perf.setdefault(_n408_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n408_field})
@@ -7380,7 +7380,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N409: Pre-Market Volume Quality Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n409 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n409 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n409_field = _buy_n409.get("pre_market_volume_quality_perf", "moderate_pm_volume") if _buy_n409 else "moderate_pm_volume"
             _n409_perf = tlog.setdefault("pre_market_volume_quality_perf", {})
             _n409p = _n409_perf.setdefault(_n409_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n409_field})
@@ -7395,7 +7395,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N410: Conviction Score Tier Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n410 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n410 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n410_field = _buy_n410.get("conviction_tier_v1_perf", "medium_conviction") if _buy_n410 else "medium_conviction"
             _n410_perf = tlog.setdefault("conviction_tier_v1_perf", {})
             _n410p = _n410_perf.setdefault(_n410_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n410_field})
@@ -7410,7 +7410,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N411: Sector Concentration Risk Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n411 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n411 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n411_field = _buy_n411.get("sector_concentration_risk_perf", "moderate_concentration") if _buy_n411 else "moderate_concentration"
             _n411_perf = tlog.setdefault("sector_concentration_risk_perf", {})
             _n411p = _n411_perf.setdefault(_n411_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n411_field})
@@ -7425,7 +7425,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N412: Entry RSI Context Performance ───────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n412 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n412 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n412_field = _buy_n412.get("entry_rsi_context_perf", "neutral_rsi_entry") if _buy_n412 else "neutral_rsi_entry"
             _n412_perf = tlog.setdefault("entry_rsi_context_perf", {})
             _n412p = _n412_perf.setdefault(_n412_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n412_field})
@@ -7440,7 +7440,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N413: SPY 5-Day Momentum Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n413 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n413 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n413_field = _buy_n413.get("spy_5d_momentum_perf", "spy_flat_week") if _buy_n413 else "spy_flat_week"
             _n413_perf = tlog.setdefault("spy_5d_momentum_perf", {})
             _n413p = _n413_perf.setdefault(_n413_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n413_field})
@@ -7455,7 +7455,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N414: Short Float Quality Performance ─────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n414 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n414 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n414_field = _buy_n414.get("short_float_quality_perf", "moderate_short_float") if _buy_n414 else "moderate_short_float"
             _n414_perf = tlog.setdefault("short_float_quality_perf", {})
             _n414p = _n414_perf.setdefault(_n414_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n414_field})
@@ -7470,7 +7470,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N415: Sector News Momentum Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n415 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n415 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n415_field = _buy_n415.get("sector_news_momentum_perf", "neutral_sector_news") if _buy_n415 else "neutral_sector_news"
             _n415_perf = tlog.setdefault("sector_news_momentum_perf", {})
             _n415p = _n415_perf.setdefault(_n415_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n415_field})
@@ -7485,7 +7485,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N416: Weekly Close Quality Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n416 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n416 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n416_field = _buy_n416.get("weekly_close_quality_perf", "neutral_weekly_close") if _buy_n416 else "neutral_weekly_close"
             _n416_perf = tlog.setdefault("weekly_close_quality_perf", {})
             _n416p = _n416_perf.setdefault(_n416_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n416_field})
@@ -7500,7 +7500,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N417: Entry Spread Quality Performance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n417 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n417 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n417_field = _buy_n417.get("entry_spread_quality_perf", "normal_spread") if _buy_n417 else "normal_spread"
             _n417_perf = tlog.setdefault("entry_spread_quality_perf", {})
             _n417p = _n417_perf.setdefault(_n417_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n417_field})
@@ -7515,7 +7515,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N418: Pre-Breakout Compression Performance ────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n418 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n418 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n418_field = _buy_n418.get("pre_breakout_compression_perf", "partial_compression") if _buy_n418 else "partial_compression"
             _n418_perf = tlog.setdefault("pre_breakout_compression_perf", {})
             _n418p = _n418_perf.setdefault(_n418_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n418_field})
@@ -7530,7 +7530,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N419: Sector vs SPX Week Performance ──────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n419 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n419 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n419_field = _buy_n419.get("sector_vs_spx_week_perf", "sector_inline") if _buy_n419 else "sector_inline"
             _n419_perf = tlog.setdefault("sector_vs_spx_week_perf", {})
             _n419p = _n419_perf.setdefault(_n419_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n419_field})
@@ -7545,7 +7545,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N420: Position Size Quality Performance ───────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n420 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n420 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n420_field = _buy_n420.get("position_size_quality_perf", "half_size") if _buy_n420 else "half_size"
             _n420_perf = tlog.setdefault("position_size_quality_perf", {})
             _n420p = _n420_perf.setdefault(_n420_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n420_field})
@@ -7560,7 +7560,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N421: Atr Expansion Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n421 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n421 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n421_field = _buy_n421.get("atr_expansion_entry_perf", "atr_stable") if _buy_n421 else "atr_stable"
             _n421_perf = tlog.setdefault("atr_expansion_entry_perf", {})
             _n421p = _n421_perf.setdefault(_n421_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n421_field})
@@ -7575,7 +7575,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N422: Relative Volume Surge Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n422 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n422 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n422_field = _buy_n422.get("relative_volume_surge_perf", "volume_normal") if _buy_n422 else "volume_normal"
             _n422_perf = tlog.setdefault("relative_volume_surge_perf", {})
             _n422p = _n422_perf.setdefault(_n422_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n422_field})
@@ -7590,7 +7590,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N423: Price Vs Vwap Distance Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n423 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n423 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n423_field = _buy_n423.get("price_vs_vwap_distance_perf", "near_vwap") if _buy_n423 else "near_vwap"
             _n423_perf = tlog.setdefault("price_vs_vwap_distance_perf", {})
             _n423p = _n423_perf.setdefault(_n423_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n423_field})
@@ -7605,7 +7605,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N424: Market Regime Duration Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n424 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n424 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n424_field = _buy_n424.get("market_regime_duration_perf", "established_regime") if _buy_n424 else "established_regime"
             _n424_perf = tlog.setdefault("market_regime_duration_perf", {})
             _n424p = _n424_perf.setdefault(_n424_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n424_field})
@@ -7620,7 +7620,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N425: Entry Day Of Month Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n425 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n425 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n425_field = _buy_n425.get("entry_day_of_month_perf", "mid_month") if _buy_n425 else "mid_month"
             _n425_perf = tlog.setdefault("entry_day_of_month_perf", {})
             _n425p = _n425_perf.setdefault(_n425_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n425_field})
@@ -7635,7 +7635,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N426: Sector Breadth Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n426 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n426 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n426_field = _buy_n426.get("sector_breadth_quality_perf", "neutral_sector_breadth") if _buy_n426 else "neutral_sector_breadth"
             _n426_perf = tlog.setdefault("sector_breadth_quality_perf", {})
             _n426p = _n426_perf.setdefault(_n426_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n426_field})
@@ -7650,7 +7650,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N427: Consecutive Green Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n427 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n427 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n427_field = _buy_n427.get("consecutive_green_entry_perf", "moderate_green") if _buy_n427 else "moderate_green"
             _n427_perf = tlog.setdefault("consecutive_green_entry_perf", {})
             _n427p = _n427_perf.setdefault(_n427_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n427_field})
@@ -7665,7 +7665,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N428: Bollinger Position Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n428 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n428 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n428_field = _buy_n428.get("bollinger_position_entry_perf", "mid_band") if _buy_n428 else "mid_band"
             _n428_perf = tlog.setdefault("bollinger_position_entry_perf", {})
             _n428p = _n428_perf.setdefault(_n428_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n428_field})
@@ -7680,7 +7680,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N429: Earnings Window Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n429 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n429 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n429_field = _buy_n429.get("earnings_window_entry_perf", "no_earnings_window") if _buy_n429 else "no_earnings_window"
             _n429_perf = tlog.setdefault("earnings_window_entry_perf", {})
             _n429p = _n429_perf.setdefault(_n429_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n429_field})
@@ -7695,7 +7695,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N430: Liquidity Dollar Volume Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n430 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n430 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n430_field = _buy_n430.get("liquidity_dollar_volume_perf", "mid_liquidity") if _buy_n430 else "mid_liquidity"
             _n430_perf = tlog.setdefault("liquidity_dollar_volume_perf", {})
             _n430p = _n430_perf.setdefault(_n430_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n430_field})
@@ -7710,7 +7710,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N431: Overnight Gap Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n431 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n431 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n431_field = _buy_n431.get("overnight_gap_entry_perf", "flat") if _buy_n431 else "flat"
             _n431_perf = tlog.setdefault("overnight_gap_entry_perf", {})
             _n431p = _n431_perf.setdefault(_n431_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n431_field})
@@ -7725,7 +7725,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N432: IV Percentile Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n432 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n432 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n432_field = _buy_n432.get("iv_percentile_entry_perf", "mid_iv") if _buy_n432 else "mid_iv"
             _n432_perf = tlog.setdefault("iv_percentile_entry_perf", {})
             _n432p = _n432_perf.setdefault(_n432_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n432_field})
@@ -7740,7 +7740,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N433: Price Momentum 5D Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n433 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n433 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n433_field = _buy_n433.get("price_mom_5d_v1_perf", "mild_up") if _buy_n433 else "mild_up"
             _n433_perf = tlog.setdefault("price_mom_5d_v1_perf", {})
             _n433p = _n433_perf.setdefault(_n433_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n433_field})
@@ -7755,7 +7755,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N434: News Sentiment Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n434 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n434 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n434_field = _buy_n434.get("news_sent_score_v1_perf", "neutral") if _buy_n434 else "neutral"
             _n434_perf = tlog.setdefault("news_sent_score_v1_perf", {})
             _n434p = _n434_perf.setdefault(_n434_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n434_field})
@@ -7770,7 +7770,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N435: Short Interest Ratio Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n435 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n435 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n435_field = _buy_n435.get("short_int_ratio_v1_perf", "mid_si") if _buy_n435 else "mid_si"
             _n435_perf = tlog.setdefault("short_int_ratio_v1_perf", {})
             _n435p = _n435_perf.setdefault(_n435_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n435_field})
@@ -7785,7 +7785,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N436: Analyst Revision Trend Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n436 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n436 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n436_field = _buy_n436.get("analyst_revision_trend_perf", "neutral") if _buy_n436 else "neutral"
             _n436_perf = tlog.setdefault("analyst_revision_trend_perf", {})
             _n436p = _n436_perf.setdefault(_n436_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n436_field})
@@ -7800,7 +7800,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N437: Beta Regime Fit Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n437 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n437 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n437_field = _buy_n437.get("beta_regime_fit_perf", "neutral_fit") if _buy_n437 else "neutral_fit"
             _n437_perf = tlog.setdefault("beta_regime_fit_perf", {})
             _n437p = _n437_perf.setdefault(_n437_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n437_field})
@@ -7815,7 +7815,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N438: Days Since Earnings Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n438 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n438 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n438_field = _buy_n438.get("days_since_earnings_perf", "mid_window") if _buy_n438 else "mid_window"
             _n438_perf = tlog.setdefault("days_since_earnings_perf", {})
             _n438p = _n438_perf.setdefault(_n438_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n438_field})
@@ -7830,7 +7830,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N439: Put/Call Ratio Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n439 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n439 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n439_field = _buy_n439.get("pcr_level_perf", "mid_pcr") if _buy_n439 else "mid_pcr"
             _n439_perf = tlog.setdefault("pcr_level_perf", {})
             _n439p = _n439_perf.setdefault(_n439_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n439_field})
@@ -7845,7 +7845,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N440: Trend Strength ADX Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n440 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n440 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n440_field = _buy_n440.get("trend_strength_adx_perf", "weak_trend") if _buy_n440 else "weak_trend"
             _n440_perf = tlog.setdefault("trend_strength_adx_perf", {})
             _n440p = _n440_perf.setdefault(_n440_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n440_field})
@@ -7860,7 +7860,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N441: Market Cap Tier Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n441 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n441 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n441_field = _buy_n441.get("market_cap_tier_entry_perf", "mid_cap") if _buy_n441 else "mid_cap"
             _n441_perf = tlog.setdefault("market_cap_tier_entry_perf", {})
             _n441p = _n441_perf.setdefault(_n441_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n441_field})
@@ -7875,7 +7875,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N442: Sector Momentum Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n442 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n442 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n442_field = _buy_n442.get("sector_momentum_entry_perf", "sector_flat") if _buy_n442 else "sector_flat"
             _n442_perf = tlog.setdefault("sector_momentum_entry_perf", {})
             _n442p = _n442_perf.setdefault(_n442_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n442_field})
@@ -7890,7 +7890,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N443: Spread Quality Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n443 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n443 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n443_field = _buy_n443.get("spread_quality_entry_perf", "normal") if _buy_n443 else "normal"
             _n443_perf = tlog.setdefault("spread_quality_entry_perf", {})
             _n443p = _n443_perf.setdefault(_n443_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n443_field})
@@ -7905,7 +7905,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N444: Price Above Open Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n444 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n444 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n444_field = _buy_n444.get("price_above_open_perf", "near_open") if _buy_n444 else "near_open"
             _n444_perf = tlog.setdefault("price_above_open_perf", {})
             _n444p = _n444_perf.setdefault(_n444_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n444_field})
@@ -7920,7 +7920,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N445: Week vs Sector Perf Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n445 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n445 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n445_field = _buy_n445.get("week_vs_sector_perf_entry", "in_line") if _buy_n445 else "in_line"
             _n445_perf = tlog.setdefault("week_vs_sector_perf_entry", {})
             _n445p = _n445_perf.setdefault(_n445_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n445_field})
@@ -7935,7 +7935,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N446: Earnings Surprise History Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n446 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n446 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n446_field = _buy_n446.get("earnings_surprise_hist_perf", "mixed") if _buy_n446 else "mixed"
             _n446_perf = tlog.setdefault("earnings_surprise_hist_perf", {})
             _n446p = _n446_perf.setdefault(_n446_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n446_field})
@@ -7950,7 +7950,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N447: Fund Ownership Change Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n447 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n447 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n447_field = _buy_n447.get("fund_ownership_change_perf", "stable") if _buy_n447 else "stable"
             _n447_perf = tlog.setdefault("fund_ownership_change_perf", {})
             _n447p = _n447_perf.setdefault(_n447_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n447_field})
@@ -7965,7 +7965,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N448: Price Range Position Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n448 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n448 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n448_field = _buy_n448.get("price_range_position_perf", "mid_range") if _buy_n448 else "mid_range"
             _n448_perf = tlog.setdefault("price_range_position_perf", {})
             _n448p = _n448_perf.setdefault(_n448_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n448_field})
@@ -7980,7 +7980,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N449: Momentum Quality Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n449 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n449 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n449_field = _buy_n449.get("momentum_quality_score_perf", "medium_quality") if _buy_n449 else "medium_quality"
             _n449_perf = tlog.setdefault("momentum_quality_score_perf", {})
             _n449p = _n449_perf.setdefault(_n449_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n449_field})
@@ -7995,7 +7995,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N450: Sector Relative Strength Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n450 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n450 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n450_field = _buy_n450.get("sector_rs_quality_perf", "sector_neutral") if _buy_n450 else "sector_neutral"
             _n450_perf = tlog.setdefault("sector_rs_quality_perf", {})
             _n450p = _n450_perf.setdefault(_n450_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n450_field})
@@ -8010,7 +8010,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N451: Gap Fill Tendency Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n451 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n451 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n451_field = _buy_n451.get("gap_fill_tendency_perf", "sometimes") if _buy_n451 else "sometimes"
             _n451_perf = tlog.setdefault("gap_fill_tendency_perf", {})
             _n451p = _n451_perf.setdefault(_n451_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n451_field})
@@ -8025,7 +8025,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N452: Volume Trend 3D Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n452 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n452 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n452_field = _buy_n452.get("volume_trend_3d_perf", "steady") if _buy_n452 else "steady"
             _n452_perf = tlog.setdefault("volume_trend_3d_perf", {})
             _n452p = _n452_perf.setdefault(_n452_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n452_field})
@@ -8040,7 +8040,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N453: Institutional Activity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n453 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n453 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n453_field = _buy_n453.get("institutional_activity_perf", "moderate") if _buy_n453 else "moderate"
             _n453_perf = tlog.setdefault("institutional_activity_perf", {})
             _n453p = _n453_perf.setdefault(_n453_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n453_field})
@@ -8055,7 +8055,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N454: TTM Squeeze Setup Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n454 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n454 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n454_field = _buy_n454.get("squeeze_setup_perf", "no_squeeze") if _buy_n454 else "no_squeeze"
             _n454_perf = tlog.setdefault("squeeze_setup_perf", {})
             _n454p = _n454_perf.setdefault(_n454_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n454_field})
@@ -8070,7 +8070,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N455: Price Discovery Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n455 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n455 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n455_field = _buy_n455.get("price_discovery_perf", "consolidating") if _buy_n455 else "consolidating"
             _n455_perf = tlog.setdefault("price_discovery_perf", {})
             _n455p = _n455_perf.setdefault(_n455_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n455_field})
@@ -8085,7 +8085,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N456: Catalyst Freshness Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n456 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n456 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n456_field = _buy_n456.get("catalyst_fresh_v1_perf", "recent") if _buy_n456 else "recent"
             _n456_perf = tlog.setdefault("catalyst_fresh_v1_perf", {})
             _n456p = _n456_perf.setdefault(_n456_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n456_field})
@@ -8100,7 +8100,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N457: Options Unusual Activity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n457 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n457 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n457_field = _buy_n457.get("options_unusualness_perf", "normal_options") if _buy_n457 else "normal_options"
             _n457_perf = tlog.setdefault("options_unusualness_perf", {})
             _n457p = _n457_perf.setdefault(_n457_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n457_field})
@@ -8115,7 +8115,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N458: Relative Volume Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n458 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n458 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n458_field = _buy_n458.get("relative_volume_entry_perf", "normal_vol") if _buy_n458 else "normal_vol"
             _n458_perf = tlog.setdefault("relative_volume_entry_perf", {})
             _n458p = _n458_perf.setdefault(_n458_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n458_field})
@@ -8130,7 +8130,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N459: VWAP Position Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n459 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n459 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n459_field = _buy_n459.get("vwap_position_entry_perf", "below_vwap") if _buy_n459 else "below_vwap"
             _n459_perf = tlog.setdefault("vwap_position_entry_perf", {})
             _n459p = _n459_perf.setdefault(_n459_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n459_field})
@@ -8145,7 +8145,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N460: Daily Range Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n460 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n460 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n460_field = _buy_n460.get("daily_range_quality_perf", "weak_up") if _buy_n460 else "weak_up"
             _n460_perf = tlog.setdefault("daily_range_quality_perf", {})
             _n460p = _n460_perf.setdefault(_n460_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n460_field})
@@ -8160,7 +8160,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N461: Opening Drive Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n461 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n461 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n461_field = _buy_n461.get("opening_drive_quality_perf", "weak_open") if _buy_n461 else "weak_open"
             _n461_perf = tlog.setdefault("opening_drive_quality_perf", {})
             _n461p = _n461_perf.setdefault(_n461_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n461_field})
@@ -8175,7 +8175,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N462: Price vs EMA50 Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n462 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n462 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n462_field = _buy_n462.get("price_vs_ema50_entry_perf", "just_above_50") if _buy_n462 else "just_above_50"
             _n462_perf = tlog.setdefault("price_vs_ema50_entry_perf", {})
             _n462p = _n462_perf.setdefault(_n462_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n462_field})
@@ -8190,7 +8190,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N463: Consecutive Green Days Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n463 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n463 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n463_field = _buy_n463.get("consec_green_days_perf", "one_or_less") if _buy_n463 else "one_or_less"
             _n463_perf = tlog.setdefault("consec_green_days_perf", {})
             _n463p = _n463_perf.setdefault(_n463_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n463_field})
@@ -8205,7 +8205,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N464: Weekly Trend Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n464 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n464 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n464_field = _buy_n464.get("weekly_trend_quality_perf", "weekly_neutral") if _buy_n464 else "weekly_neutral"
             _n464_perf = tlog.setdefault("weekly_trend_quality_perf", {})
             _n464p = _n464_perf.setdefault(_n464_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n464_field})
@@ -8220,7 +8220,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N465: Distance from 52-Week High Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n465 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n465 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n465_field = _buy_n465.get("dist_from_52w_high_perf", "mid_range") if _buy_n465 else "mid_range"
             _n465_perf = tlog.setdefault("dist_from_52w_high_perf", {})
             _n465p = _n465_perf.setdefault(_n465_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n465_field})
@@ -8235,7 +8235,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N466: SPY vs Sector Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n466 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n466 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n466_field = _buy_n466.get("spy_vs_sector_entry_perf", "sector_neutral") if _buy_n466 else "sector_neutral"
             _n466_perf = tlog.setdefault("spy_vs_sector_entry_perf", {})
             _n466p = _n466_perf.setdefault(_n466_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n466_field})
@@ -8250,7 +8250,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N467: ATR Expansion Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n467 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n467 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n467_field = _buy_n467.get("atr_vol_expansion_perf", "stable_vol") if _buy_n467 else "stable_vol"
             _n467_perf = tlog.setdefault("atr_vol_expansion_perf", {})
             _n467p = _n467_perf.setdefault(_n467_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n467_field})
@@ -8265,7 +8265,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N468: Multi-Day Breakout Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n468 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n468 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n468_field = _buy_n468.get("multi_day_breakout_perf", "single_day") if _buy_n468 else "single_day"
             _n468_perf = tlog.setdefault("multi_day_breakout_perf", {})
             _n468p = _n468_perf.setdefault(_n468_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n468_field})
@@ -8280,7 +8280,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N469: Inside Bar Resolution Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n469 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n469 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n469_field = _buy_n469.get("inside_bar_resolution_perf", "normal_bar") if _buy_n469 else "normal_bar"
             _n469_perf = tlog.setdefault("inside_bar_resolution_perf", {})
             _n469p = _n469_perf.setdefault(_n469_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n469_field})
@@ -8295,7 +8295,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N470: Earnings Drift Days Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n470 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n470 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n470_field = _buy_n470.get("earnings_drift_days_perf", "stale_no_drift") if _buy_n470 else "stale_no_drift"
             _n470_perf = tlog.setdefault("earnings_drift_days_perf", {})
             _n470p = _n470_perf.setdefault(_n470_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n470_field})
@@ -8310,7 +8310,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N471: Pre-Market Gap Size Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n471 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n471 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n471_field = _buy_n471.get("premarket_gap_v1_perf", "flat_open") if _buy_n471 else "flat_open"
             _n471_perf = tlog.setdefault("premarket_gap_v1_perf", {})
             _n471p = _n471_perf.setdefault(_n471_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n471_field})
@@ -8325,7 +8325,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N472: Stock Put/Call Ratio Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n472 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n472 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n472_field = _buy_n472.get("stock_pcr_entry_perf", "neutral_pcr") if _buy_n472 else "neutral_pcr"
             _n472_perf = tlog.setdefault("stock_pcr_entry_perf", {})
             _n472p = _n472_perf.setdefault(_n472_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n472_field})
@@ -8340,7 +8340,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N473: Monthly Price Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n473 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n473 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n473_field = _buy_n473.get("monthly_momentum_perf", "flat_month") if _buy_n473 else "flat_month"
             _n473_perf = tlog.setdefault("monthly_momentum_perf", {})
             _n473p = _n473_perf.setdefault(_n473_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n473_field})
@@ -8355,7 +8355,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N474: 52-Week Breakout Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n474 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n474 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n474_field = _buy_n474.get("breakout_52w_entry_perf", "mid_range_52w") if _buy_n474 else "mid_range_52w"
             _n474_perf = tlog.setdefault("breakout_52w_entry_perf", {})
             _n474p = _n474_perf.setdefault(_n474_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n474_field})
@@ -8370,7 +8370,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N475: Historical Volatility Level Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n475 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n475 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n475_field = _buy_n475.get("hist_vol_level_perf", "normal_vol") if _buy_n475 else "normal_vol"
             _n475_perf = tlog.setdefault("hist_vol_level_perf", {})
             _n475p = _n475_perf.setdefault(_n475_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n475_field})
@@ -8385,7 +8385,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N476: AVWAP Distance Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n476 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n476 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n476_field = _buy_n476.get("avwap_dist_entry_perf", "near_avwap") if _buy_n476 else "near_avwap"
             _n476_perf = tlog.setdefault("avwap_dist_entry_perf", {})
             _n476p = _n476_perf.setdefault(_n476_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n476_field})
@@ -8400,7 +8400,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N477: 52-Week Range Position Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n477 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n477 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n477_field = _buy_n477.get("w52_range_position_perf", "upper_half_52w") if _buy_n477 else "upper_half_52w"
             _n477_perf = tlog.setdefault("w52_range_position_perf", {})
             _n477p = _n477_perf.setdefault(_n477_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n477_field})
@@ -8415,7 +8415,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N478: RS Line New High Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n478 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n478 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n478_field = _buy_n478.get("rs_line_new_high_perf", "rs_not_new_high") if _buy_n478 else "rs_not_new_high"
             _n478_perf = tlog.setdefault("rs_line_new_high_perf", {})
             _n478p = _n478_perf.setdefault(_n478_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n478_field})
@@ -8430,7 +8430,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N479: RS Line Trend Direction Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n479 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n479 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n479_field = _buy_n479.get("rs_line_trending_perf", "rs_line_flat") if _buy_n479 else "rs_line_flat"
             _n479_perf = tlog.setdefault("rs_line_trending_perf", {})
             _n479p = _n479_perf.setdefault(_n479_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n479_field})
@@ -8445,7 +8445,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N480: Sector Alpha Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n480 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n480 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n480_field = _buy_n480.get("sector_alpha_entry_perf", "neutral_sector_alpha") if _buy_n480 else "neutral_sector_alpha"
             _n480_perf = tlog.setdefault("sector_alpha_entry_perf", {})
             _n480p = _n480_perf.setdefault(_n480_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n480_field})
@@ -8460,7 +8460,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N481: OBV Slope Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n481 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n481 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n481_field = _buy_n481.get("obv_slope_entry_perf", "obv_flat_fall") if _buy_n481 else "obv_flat_fall"
             _n481_perf = tlog.setdefault("obv_slope_entry_perf", {})
             _n481p = _n481_perf.setdefault(_n481_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n481_field})
@@ -8475,7 +8475,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N482: MACD Slope Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n482 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n482 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n482_field = _buy_n482.get("macd_slope_entry_perf", "falling_macd") if _buy_n482 else "falling_macd"
             _n482_perf = tlog.setdefault("macd_slope_entry_perf", {})
             _n482p = _n482_perf.setdefault(_n482_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n482_field})
@@ -8490,7 +8490,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N483: Price vs 200 EMA Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n483 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n483 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n483_field = _buy_n483.get("price_vs_200ema_entry_perf", "near_200") if _buy_n483 else "near_200"
             _n483_perf = tlog.setdefault("price_vs_200ema_entry_perf", {})
             _n483p = _n483_perf.setdefault(_n483_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n483_field})
@@ -8505,7 +8505,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N484: Higher Lows Pattern Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n484 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n484 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n484_field = _buy_n484.get("higher_lows_entry_perf", "no_hh_hl") if _buy_n484 else "no_hh_hl"
             _n484_perf = tlog.setdefault("higher_lows_entry_perf", {})
             _n484p = _n484_perf.setdefault(_n484_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n484_field})
@@ -8520,7 +8520,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N485: ADX Trend Strength Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n485 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n485 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n485_field = _buy_n485.get("adx_strength_entry_perf", "weak_trend") if _buy_n485 else "weak_trend"
             _n485_perf = tlog.setdefault("adx_strength_entry_perf", {})
             _n485p = _n485_perf.setdefault(_n485_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n485_field})
@@ -8535,7 +8535,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N486: Linear Regression Trend Quality Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n486 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n486 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n486_field = _buy_n486.get("lr_trend_quality_entry_perf", "low_quality") if _buy_n486 else "low_quality"
             _n486_perf = tlog.setdefault("lr_trend_quality_entry_perf", {})
             _n486p = _n486_perf.setdefault(_n486_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n486_field})
@@ -8550,7 +8550,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N487: Stochastic Position Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n487 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n487 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n487_field = _buy_n487.get("stoch_position_entry_perf", "stoch_mid") if _buy_n487 else "stoch_mid"
             _n487_perf = tlog.setdefault("stoch_position_entry_perf", {})
             _n487p = _n487_perf.setdefault(_n487_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n487_field})
@@ -8565,7 +8565,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N488: P/E Ratio Tier Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n488 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n488 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n488_field = _buy_n488.get("pe_ratio_tier_entry_perf", "no_pe") if _buy_n488 else "no_pe"
             _n488_perf = tlog.setdefault("pe_ratio_tier_entry_perf", {})
             _n488p = _n488_perf.setdefault(_n488_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n488_field})
@@ -8580,7 +8580,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N489: Analyst Upgrade Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n489 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n489 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n489_field = _buy_n489.get("analyst_upgrade_entry_perf", "not_upgraded") if _buy_n489 else "not_upgraded"
             _n489_perf = tlog.setdefault("analyst_upgrade_entry_perf", {})
             _n489p = _n489_perf.setdefault(_n489_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n489_field})
@@ -8595,7 +8595,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N490: Short Squeeze Potential Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n490 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n490 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n490_field = _buy_n490.get("short_squeeze_entry_perf", "low_squeeze") if _buy_n490 else "low_squeeze"
             _n490_perf = tlog.setdefault("short_squeeze_entry_perf", {})
             _n490p = _n490_perf.setdefault(_n490_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n490_field})
@@ -8610,7 +8610,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N491: CCI Level Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n491 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n491 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n491_field = _buy_n491.get("cci_level_entry_perf", "cci_neutral") if _buy_n491 else "cci_neutral"
             _n491_perf = tlog.setdefault("cci_level_entry_perf", {})
             _n491p = _n491_perf.setdefault(_n491_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n491_field})
@@ -8625,7 +8625,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N492: Williams %R Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n492 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n492 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n492_field = _buy_n492.get("williams_r_entry_perf", "wr_mid") if _buy_n492 else "wr_mid"
             _n492_perf = tlog.setdefault("williams_r_entry_perf", {})
             _n492p = _n492_perf.setdefault(_n492_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n492_field})
@@ -8640,7 +8640,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N493: Pivot Point Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n493 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n493 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n493_field = _buy_n493.get("pivot_point_entry_perf", "below_pivot") if _buy_n493 else "below_pivot"
             _n493_perf = tlog.setdefault("pivot_point_entry_perf", {})
             _n493p = _n493_perf.setdefault(_n493_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n493_field})
@@ -8655,7 +8655,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N494: MFI Level Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n494 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n494 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n494_field = _buy_n494.get("mfi_level_entry_perf", "mfi_neutral") if _buy_n494 else "mfi_neutral"
             _n494_perf = tlog.setdefault("mfi_level_entry_perf", {})
             _n494p = _n494_perf.setdefault(_n494_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n494_field})
@@ -8670,7 +8670,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N495: ROC Momentum Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n495 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n495 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n495_field = _buy_n495.get("roc_momentum_entry_perf", "moderate_roc") if _buy_n495 else "moderate_roc"
             _n495_perf = tlog.setdefault("roc_momentum_entry_perf", {})
             _n495p = _n495_perf.setdefault(_n495_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n495_field})
@@ -8685,7 +8685,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N496: Keltner Channel Position Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n496 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n496 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n496_field = _buy_n496.get("keltner_position_entry_perf", "within_channel") if _buy_n496 else "within_channel"
             _n496_perf = tlog.setdefault("keltner_position_entry_perf", {})
             _n496p = _n496_perf.setdefault(_n496_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n496_field})
@@ -8700,7 +8700,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N497: Donchian Breakout Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n497 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n497 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n497_field = _buy_n497.get("donchian_breakout_entry_perf", "mid_channel") if _buy_n497 else "mid_channel"
             _n497_perf = tlog.setdefault("donchian_breakout_entry_perf", {})
             _n497p = _n497_perf.setdefault(_n497_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n497_field})
@@ -8715,7 +8715,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N498: CMF Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n498 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n498 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n498_field = _buy_n498.get("cmf_entry_perf", "neutral") if _buy_n498 else "neutral"
             _n498_perf = tlog.setdefault("cmf_entry_perf", {})
             _n498p = _n498_perf.setdefault(_n498_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n498_field})
@@ -8730,7 +8730,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N499: DMI Cross Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n499 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n499 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n499_field = _buy_n499.get("dmi_cross_entry_perf", "no_cross") if _buy_n499 else "no_cross"
             _n499_perf = tlog.setdefault("dmi_cross_entry_perf", {})
             _n499p = _n499_perf.setdefault(_n499_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n499_field})
@@ -8745,7 +8745,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N500: Ichimoku Cloud Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n500 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n500 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n500_field = _buy_n500.get("ichimoku_cloud_entry_perf", "in_cloud") if _buy_n500 else "in_cloud"
             _n500_perf = tlog.setdefault("ichimoku_cloud_entry_perf", {})
             _n500p = _n500_perf.setdefault(_n500_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n500_field})
@@ -8760,7 +8760,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N501: Elder Ray Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n501 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n501 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n501_field = _buy_n501.get("elder_ray_entry_perf", "bull_power_neg") if _buy_n501 else "bull_power_neg"
             _n501_perf = tlog.setdefault("elder_ray_entry_perf", {})
             _n501p = _n501_perf.setdefault(_n501_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n501_field})
@@ -8775,7 +8775,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N502: Aroon Signal Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n502 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n502 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n502_field = _buy_n502.get("aroon_signal_entry_perf", "aroon_neutral") if _buy_n502 else "aroon_neutral"
             _n502_perf = tlog.setdefault("aroon_signal_entry_perf", {})
             _n502p = _n502_perf.setdefault(_n502_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n502_field})
@@ -8790,7 +8790,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N503: Chande Momentum Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n503 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n503 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n503_field = _buy_n503.get("chande_momentum_entry_perf", "neutral_cmo") if _buy_n503 else "neutral_cmo"
             _n503_perf = tlog.setdefault("chande_momentum_entry_perf", {})
             _n503p = _n503_perf.setdefault(_n503_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n503_field})
@@ -8805,7 +8805,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N504: DPO Signal Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n504 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n504 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n504_field = _buy_n504.get("dpo_signal_entry_perf", "dpo_below_zero") if _buy_n504 else "dpo_below_zero"
             _n504_perf = tlog.setdefault("dpo_signal_entry_perf", {})
             _n504p = _n504_perf.setdefault(_n504_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n504_field})
@@ -8820,7 +8820,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N505: Price vs VWAP Deviation Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n505 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n505 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n505_field = _buy_n505.get("price_vs_vwap_deviation_perf", "near_vwap") if _buy_n505 else "near_vwap"
             _n505_perf = tlog.setdefault("price_vs_vwap_deviation_perf", {})
             _n505p = _n505_perf.setdefault(_n505_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n505_field})
@@ -8835,7 +8835,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N506: Accumulation Distribution Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n506 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n506 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n506_field = _buy_n506.get("accumulation_dist_perf", "ad_flat") if _buy_n506 else "ad_flat"
             _n506_perf = tlog.setdefault("accumulation_dist_perf", {})
             _n506p = _n506_perf.setdefault(_n506_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n506_field})
@@ -8850,7 +8850,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N507: Chandelier Exit Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n507 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n507 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n507_field = _buy_n507.get("chandelier_exit_entry_perf", "below_chandelier") if _buy_n507 else "below_chandelier"
             _n507_perf = tlog.setdefault("chandelier_exit_entry_perf", {})
             _n507p = _n507_perf.setdefault(_n507_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n507_field})
@@ -8865,7 +8865,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N508: PPO Signal Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n508 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n508 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n508_field = _buy_n508.get("ppo_signal_entry_perf", "ppo_negative") if _buy_n508 else "ppo_negative"
             _n508_perf = tlog.setdefault("ppo_signal_entry_perf", {})
             _n508p = _n508_perf.setdefault(_n508_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n508_field})
@@ -8880,7 +8880,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N509: Coppock Curve Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n509 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n509 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n509_field = _buy_n509.get("coppock_curve_entry_perf", "coppock_falling") if _buy_n509 else "coppock_falling"
             _n509_perf = tlog.setdefault("coppock_curve_entry_perf", {})
             _n509p = _n509_perf.setdefault(_n509_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n509_field})
@@ -8895,7 +8895,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N510: Hull MA Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n510 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n510 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n510_field = _buy_n510.get("hull_ma_entry_perf", "hull_neutral") if _buy_n510 else "hull_neutral"
             _n510_perf = tlog.setdefault("hull_ma_entry_perf", {})
             _n510p = _n510_perf.setdefault(_n510_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n510_field})
@@ -8910,7 +8910,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N511: Market Internals Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n511 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n511 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n511_field = _buy_n511.get("market_internals_entry_perf", "neutral_internals") if _buy_n511 else "neutral_internals"
             _n511_perf = tlog.setdefault("market_internals_entry_perf", {})
             _n511p = _n511_perf.setdefault(_n511_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n511_field})
@@ -8925,7 +8925,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N512: Tape Speed Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n512 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n512 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n512_field = _buy_n512.get("tape_speed_entry_perf", "normal_tape") if _buy_n512 else "normal_tape"
             _n512_perf = tlog.setdefault("tape_speed_entry_perf", {})
             _n512p = _n512_perf.setdefault(_n512_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n512_field})
@@ -8940,7 +8940,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N513: Options Skew Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n513 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n513 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n513_field = _buy_n513.get("options_skew_entry_perf", "neutral_skew") if _buy_n513 else "neutral_skew"
             _n513_perf = tlog.setdefault("options_skew_entry_perf", {})
             _n513p = _n513_perf.setdefault(_n513_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n513_field})
@@ -8955,7 +8955,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N514: Dark Pool Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n514 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n514 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n514_field = _buy_n514.get("dark_pool_entry_perf", "normal_dark_pool") if _buy_n514 else "normal_dark_pool"
             _n514_perf = tlog.setdefault("dark_pool_entry_perf", {})
             _n514p = _n514_perf.setdefault(_n514_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n514_field})
@@ -8970,7 +8970,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N515: Institutional Ownership Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n515 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n515 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n515_field = _buy_n515.get("inst_own_v1_perf", "medium_inst_own") if _buy_n515 else "medium_inst_own"
             _n515_perf = tlog.setdefault("inst_own_v1_perf", {})
             _n515p = _n515_perf.setdefault(_n515_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n515_field})
@@ -8985,7 +8985,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N516: Float Rotation Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n516 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n516 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n516_field = _buy_n516.get("float_rotation_entry_perf", "normal_rotation") if _buy_n516 else "normal_rotation"
             _n516_perf = tlog.setdefault("float_rotation_entry_perf", {})
             _n516p = _n516_perf.setdefault(_n516_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n516_field})
@@ -9000,7 +9000,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N517: News Sentiment Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n517 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n517 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n517_field = _buy_n517.get("news_sentiment_v2_perf", "slightly_positive") if _buy_n517 else "slightly_positive"
             _n517_perf = tlog.setdefault("news_sentiment_v2_perf", {})
             _n517p = _n517_perf.setdefault(_n517_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n517_field})
@@ -9015,7 +9015,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N518: Social Momentum Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n518 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n518 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n518_field = _buy_n518.get("social_momentum_entry_perf", "no_social_signal") if _buy_n518 else "no_social_signal"
             _n518_perf = tlog.setdefault("social_momentum_entry_perf", {})
             _n518p = _n518_perf.setdefault(_n518_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n518_field})
@@ -9030,7 +9030,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N519: Earnings Surprise Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n519 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n519 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n519_field = _buy_n519.get("earnings_surprise_entry_perf", "small_beat") if _buy_n519 else "small_beat"
             _n519_perf = tlog.setdefault("earnings_surprise_entry_perf", {})
             _n519p = _n519_perf.setdefault(_n519_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n519_field})
@@ -9045,7 +9045,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N520: Guidance Revision Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n520 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n520 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n520_field = _buy_n520.get("guidance_revision_entry_perf", "maintained") if _buy_n520 else "maintained"
             _n520_perf = tlog.setdefault("guidance_revision_entry_perf", {})
             _n520p = _n520_perf.setdefault(_n520_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n520_field})
@@ -9060,7 +9060,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N521: Liquidity Score Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n521 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n521 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n521_field = _buy_n521.get("liquidity_score_entry_perf", "normal_liquidity") if _buy_n521 else "normal_liquidity"
             _n521_perf = tlog.setdefault("liquidity_score_entry_perf", {})
             _n521p = _n521_perf.setdefault(_n521_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n521_field})
@@ -9075,7 +9075,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N522: Sector Rotation Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n522 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n522 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n522_field = _buy_n522.get("sector_rotation_entry_perf", "sector_neutral") if _buy_n522 else "sector_neutral"
             _n522_perf = tlog.setdefault("sector_rotation_entry_perf", {})
             _n522p = _n522_perf.setdefault(_n522_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n522_field})
@@ -9090,7 +9090,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N523: Macro Regime Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n523 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n523 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n523_field = _buy_n523.get("macro_regime_entry_perf", "mixed_macro") if _buy_n523 else "mixed_macro"
             _n523_perf = tlog.setdefault("macro_regime_entry_perf", {})
             _n523p = _n523_perf.setdefault(_n523_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n523_field})
@@ -9105,7 +9105,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N524: Correlation to SPY Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n524 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n524 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n524_field = _buy_n524.get("correlation_spy_entry_perf", "medium_corr_spy") if _buy_n524 else "medium_corr_spy"
             _n524_perf = tlog.setdefault("correlation_spy_entry_perf", {})
             _n524p = _n524_perf.setdefault(_n524_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n524_field})
@@ -9120,7 +9120,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N525: Beta Bucket Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n525 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n525 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n525_field = _buy_n525.get("beta_bucket_entry_perf", "medium_beta") if _buy_n525 else "medium_beta"
             _n525_perf = tlog.setdefault("beta_bucket_entry_perf", {})
             _n525p = _n525_perf.setdefault(_n525_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n525_field})
@@ -9135,7 +9135,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N526: Price vs 52-Week Range Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n526 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n526 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n526_field = _buy_n526.get("price_vs_52w_entry_perf", "midrange_52w") if _buy_n526 else "midrange_52w"
             _n526_perf = tlog.setdefault("price_vs_52w_entry_perf", {})
             _n526p = _n526_perf.setdefault(_n526_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n526_field})
@@ -9150,7 +9150,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N527: Gap Fill Status Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n527 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n527 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n527_field = _buy_n527.get("gap_fill_status_entry_perf", "gap_filled") if _buy_n527 else "gap_filled"
             _n527_perf = tlog.setdefault("gap_fill_status_entry_perf", {})
             _n527p = _n527_perf.setdefault(_n527_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n527_field})
@@ -9165,7 +9165,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N528: Order Flow Imbalance Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n528 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n528 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n528_field = _buy_n528.get("order_flow_pressure_perf", "balanced_flow") if _buy_n528 else "balanced_flow"
             _n528_perf = tlog.setdefault("order_flow_pressure_perf", {})
             _n528p = _n528_perf.setdefault(_n528_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n528_field})
@@ -9180,7 +9180,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N529: Regime Volatility Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n529 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n529 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n529_field = _buy_n529.get("regime_volatility_entry_perf", "normal_vol_regime") if _buy_n529 else "normal_vol_regime"
             _n529_perf = tlog.setdefault("regime_volatility_entry_perf", {})
             _n529p = _n529_perf.setdefault(_n529_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n529_field})
@@ -9195,7 +9195,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N530: Breadth Thrust Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n530 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n530 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n530_field = _buy_n530.get("mkt_breadth_entry_perf", "mixed_breadth") if _buy_n530 else "mixed_breadth"
             _n530_perf = tlog.setdefault("mkt_breadth_entry_perf", {})
             _n530p = _n530_perf.setdefault(_n530_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n530_field})
@@ -9210,7 +9210,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N531: Catalyst Freshness Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n531 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n531 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n531_field = _buy_n531.get("catalyst_freshness_entry_perf", "stale_catalyst") if _buy_n531 else "stale_catalyst"
             _n531_perf = tlog.setdefault("catalyst_freshness_entry_perf", {})
             _n531p = _n531_perf.setdefault(_n531_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n531_field})
@@ -9225,7 +9225,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N532: Entry Timing Session Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n532 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n532 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n532_field = _buy_n532.get("entry_timing_session_perf", "mid_session_entry") if _buy_n532 else "mid_session_entry"
             _n532_perf = tlog.setdefault("entry_timing_session_perf", {})
             _n532p = _n532_perf.setdefault(_n532_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n532_field})
@@ -9240,7 +9240,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N533: Institutional Flow Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n533 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n533 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n533_field = _buy_n533.get("institutional_flow_entry_perf", "inst_neutral") if _buy_n533 else "inst_neutral"
             _n533_perf = tlog.setdefault("institutional_flow_entry_perf", {})
             _n533p = _n533_perf.setdefault(_n533_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n533_field})
@@ -9255,7 +9255,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N534: VWAP Relationship Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n534 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n534 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n534_field = _buy_n534.get("vwap_relationship_entry_perf", "at_vwap") if _buy_n534 else "at_vwap"
             _n534_perf = tlog.setdefault("vwap_relationship_entry_perf", {})
             _n534p = _n534_perf.setdefault(_n534_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n534_field})
@@ -9270,7 +9270,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N535: Momentum Persistence Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n535 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n535 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n535_field = _buy_n535.get("momentum_persistence_entry_perf", "momentum_moderate") if _buy_n535 else "momentum_moderate"
             _n535_perf = tlog.setdefault("momentum_persistence_entry_perf", {})
             _n535p = _n535_perf.setdefault(_n535_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n535_field})
@@ -9285,7 +9285,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N536: Put/Call Skew Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n536 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n536 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n536_field = _buy_n536.get("put_call_skew_entry_perf", "neutral_pcr") if _buy_n536 else "neutral_pcr"
             _n536_perf = tlog.setdefault("put_call_skew_entry_perf", {})
             _n536p = _n536_perf.setdefault(_n536_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n536_field})
@@ -9300,7 +9300,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N537: SPY Momentum Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n537 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n537 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n537_field = _buy_n537.get("spy_momentum_entry_perf", "spy_neutral") if _buy_n537 else "spy_neutral"
             _n537_perf = tlog.setdefault("spy_momentum_entry_perf", {})
             _n537p = _n537_perf.setdefault(_n537_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n537_field})
@@ -9315,7 +9315,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N538: Earnings Proximity Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n538 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n538 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n538_field = _buy_n538.get("earnings_drift_entry_perf", "no_earnings_catalyst") if _buy_n538 else "no_earnings_catalyst"
             _n538_perf = tlog.setdefault("earnings_drift_entry_perf", {})
             _n538p = _n538_perf.setdefault(_n538_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n538_field})
@@ -9330,7 +9330,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N539: Price Acceleration Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n539 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n539 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n539_field = _buy_n539.get("price_acceleration_entry_perf", "steady_trend") if _buy_n539 else "steady_trend"
             _n539_perf = tlog.setdefault("price_acceleration_entry_perf", {})
             _n539p = _n539_perf.setdefault(_n539_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n539_field})
@@ -9345,7 +9345,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N540: Risk/Reward at Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n540 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n540 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n540_field = _buy_n540.get("risk_reward_v1_perf", "good_rr") if _buy_n540 else "good_rr"
             _n540_perf = tlog.setdefault("risk_reward_v1_perf", {})
             _n540p = _n540_perf.setdefault(_n540_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n540_field})
@@ -9360,7 +9360,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N541: Short Interest Ratio Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n541 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n541 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n541_field = _buy_n541.get("short_int_ratio_v2_perf", "moderate_short_interest") if _buy_n541 else "moderate_short_interest"
             _n541_perf = tlog.setdefault("short_int_ratio_v2_perf", {})
             _n541p = _n541_perf.setdefault(_n541_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n541_field})
@@ -9375,7 +9375,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N542: Float Rotation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n542 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n542 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n542_field = _buy_n542.get("float_rotation_v1_perf", "normal_rotation") if _buy_n542 else "normal_rotation"
             _n542_perf = tlog.setdefault("float_rotation_v1_perf", {})
             _n542p = _n542_perf.setdefault(_n542_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n542_field})
@@ -9390,7 +9390,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N543: Tick Trend Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n543 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n543 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n543_field = _buy_n543.get("tick_trend_entry_perf", "tick_neutral") if _buy_n543 else "tick_neutral"
             _n543_perf = tlog.setdefault("tick_trend_entry_perf", {})
             _n543p = _n543_perf.setdefault(_n543_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n543_field})
@@ -9405,7 +9405,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N544: Market Phase Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n544 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n544 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n544_field = _buy_n544.get("market_phase_entry_perf", "late_bull") if _buy_n544 else "late_bull"
             _n544_perf = tlog.setdefault("market_phase_entry_perf", {})
             _n544p = _n544_perf.setdefault(_n544_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n544_field})
@@ -9420,7 +9420,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N545: Sector Relative Strength Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n545 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n545 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n545_field = _buy_n545.get("sector_rs_v2_perf", "sector_inline") if _buy_n545 else "sector_inline"
             _n545_perf = tlog.setdefault("sector_rs_v2_perf", {})
             _n545p = _n545_perf.setdefault(_n545_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n545_field})
@@ -9435,7 +9435,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N546: News Sentiment Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n546 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n546 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n546_field = _buy_n546.get("news_sentiment_v3_perf", "neutral_news") if _buy_n546 else "neutral_news"
             _n546_perf = tlog.setdefault("news_sentiment_v3_perf", {})
             _n546p = _n546_perf.setdefault(_n546_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n546_field})
@@ -9450,7 +9450,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N547: Relative Volume Spike Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n547 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n547 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n547_field = _buy_n547.get("relative_volume_spike_perf", "normal_rvol") if _buy_n547 else "normal_rvol"
             _n547_perf = tlog.setdefault("relative_volume_spike_perf", {})
             _n547p = _n547_perf.setdefault(_n547_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n547_field})
@@ -9465,7 +9465,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N548: ATR Expansion Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n548 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n548 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n548_field = _buy_n548.get("atr_expansion_perf", "stable_atr") if _buy_n548 else "stable_atr"
             _n548_perf = tlog.setdefault("atr_expansion_perf", {})
             _n548p = _n548_perf.setdefault(_n548_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n548_field})
@@ -9480,7 +9480,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N549: Close vs Range Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n549 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n549 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n549_field = _buy_n549.get("close_vs_range_perf", "mid_close") if _buy_n549 else "mid_close"
             _n549_perf = tlog.setdefault("close_vs_range_perf", {})
             _n549p = _n549_perf.setdefault(_n549_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n549_field})
@@ -9495,7 +9495,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N550: Consecutive Up Days Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n550 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n550 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n550_field = _buy_n550.get("consec_up_v1_perf", "neutral_entry") if _buy_n550 else "neutral_entry"
             _n550_perf = tlog.setdefault("consec_up_v1_perf", {})
             _n550p = _n550_perf.setdefault(_n550_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n550_field})
@@ -9510,7 +9510,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N551: Pre-Market Gap Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n551 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n551 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n551_field = _buy_n551.get("pm_gap_direction_perf", "gap_flat") if _buy_n551 else "gap_flat"
             _n551_perf = tlog.setdefault("pm_gap_direction_perf", {})
             _n551p = _n551_perf.setdefault(_n551_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n551_field})
@@ -9525,7 +9525,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N552: Opening Range Breakout Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n552 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n552 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n552_field = _buy_n552.get("orb_quality_v1_perf", "inside_orb") if _buy_n552 else "inside_orb"
             _n552_perf = tlog.setdefault("orb_quality_v1_perf", {})
             _n552p = _n552_perf.setdefault(_n552_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n552_field})
@@ -9540,7 +9540,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N553: Institutional Ownership Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n553 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n553 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n553_field = _buy_n553.get("inst_own_quality_perf", "medium_inst_own") if _buy_n553 else "medium_inst_own"
             _n553_perf = tlog.setdefault("inst_own_quality_perf", {})
             _n553p = _n553_perf.setdefault(_n553_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n553_field})
@@ -9555,7 +9555,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N554: Analyst Consensus Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n554 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n554 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n554_field = _buy_n554.get("analyst_consensus_perf", "mixed_consensus") if _buy_n554 else "mixed_consensus"
             _n554_perf = tlog.setdefault("analyst_consensus_perf", {})
             _n554p = _n554_perf.setdefault(_n554_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n554_field})
@@ -9570,7 +9570,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N555: Earnings Growth Rate Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n555 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n555 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n555_field = _buy_n555.get("earnings_growth_rate_perf", "moderate_growth") if _buy_n555 else "moderate_growth"
             _n555_perf = tlog.setdefault("earnings_growth_rate_perf", {})
             _n555p = _n555_perf.setdefault(_n555_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n555_field})
@@ -9585,7 +9585,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N556: Revenue Growth Rate Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n556 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n556 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n556_field = _buy_n556.get("revenue_growth_rate_perf", "moderate_revenue") if _buy_n556 else "moderate_revenue"
             _n556_perf = tlog.setdefault("revenue_growth_rate_perf", {})
             _n556p = _n556_perf.setdefault(_n556_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n556_field})
@@ -9600,7 +9600,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N557: Profit Margin Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n557 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n557 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n557_field = _buy_n557.get("profit_margin_perf", "average_margin") if _buy_n557 else "average_margin"
             _n557_perf = tlog.setdefault("profit_margin_perf", {})
             _n557p = _n557_perf.setdefault(_n557_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n557_field})
@@ -9615,7 +9615,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N558: Debt-to-Equity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n558 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n558 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n558_field = _buy_n558.get("debt_equity_v1_perf", "moderate_debt") if _buy_n558 else "moderate_debt"
             _n558_perf = tlog.setdefault("debt_equity_v1_perf", {})
             _n558p = _n558_perf.setdefault(_n558_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n558_field})
@@ -9630,7 +9630,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N559: Buyback Activity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n559 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n559 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n559_field = _buy_n559.get("buyback_activity_perf", "minimal_buyback") if _buy_n559 else "minimal_buyback"
             _n559_perf = tlog.setdefault("buyback_activity_perf", {})
             _n559p = _n559_perf.setdefault(_n559_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n559_field})
@@ -9645,7 +9645,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N560: Dividend Yield Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n560 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n560 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n560_field = _buy_n560.get("dividend_yield_entry_perf", "no_yield") if _buy_n560 else "no_yield"
             _n560_perf = tlog.setdefault("dividend_yield_entry_perf", {})
             _n560p = _n560_perf.setdefault(_n560_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n560_field})
@@ -9660,7 +9660,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N561: Price Acceleration 1d Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n561 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n561 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n561_field = _buy_n561.get("price_acceleration_1d_perf", "mild_accel") if _buy_n561 else "mild_accel"
             _n561_perf = tlog.setdefault("price_acceleration_1d_perf", {})
             _n561p = _n561_perf.setdefault(_n561_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n561_field})
@@ -9675,7 +9675,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N562: Market Breadth Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n562 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n562 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n562_field = _buy_n562.get("market_breadth_entry_perf", "mixed_breadth_entry") if _buy_n562 else "mixed_breadth_entry"
             _n562_perf = tlog.setdefault("market_breadth_entry_perf", {})
             _n562p = _n562_perf.setdefault(_n562_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n562_field})
@@ -9690,7 +9690,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N563: SPY Intraday Trend Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n563 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n563 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n563_field = _buy_n563.get("spy_intraday_trend_perf", "spy_flat") if _buy_n563 else "spy_flat"
             _n563_perf = tlog.setdefault("spy_intraday_trend_perf", {})
             _n563p = _n563_perf.setdefault(_n563_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n563_field})
@@ -9705,7 +9705,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N564: Volume vs 50d Average Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n564 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n564 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n564_field = _buy_n564.get("volume_vs_50d_avg_perf", "normal_vol") if _buy_n564 else "normal_vol"
             _n564_perf = tlog.setdefault("volume_vs_50d_avg_perf", {})
             _n564p = _n564_perf.setdefault(_n564_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n564_field})
@@ -9720,7 +9720,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N565: Gap and Go Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n565 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n565 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n565_field = _buy_n565.get("gap_and_go_quality_perf", "no_gap") if _buy_n565 else "no_gap"
             _n565_perf = tlog.setdefault("gap_and_go_quality_perf", {})
             _n565p = _n565_perf.setdefault(_n565_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n565_field})
@@ -9735,7 +9735,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N566: Sector ETF 5d Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n566 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n566 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n566_field = _buy_n566.get("sector_etf_5d_momentum_perf", "sector_etf_flat") if _buy_n566 else "sector_etf_flat"
             _n566_perf = tlog.setdefault("sector_etf_5d_momentum_perf", {})
             _n566p = _n566_perf.setdefault(_n566_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n566_field})
@@ -9750,7 +9750,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N567: Congressional Buy Signal Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n567 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n567 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n567_field = _buy_n567.get("congressional_buy_signal_perf", "no_congress_activity") if _buy_n567 else "no_congress_activity"
             _n567_perf = tlog.setdefault("congressional_buy_signal_perf", {})
             _n567p = _n567_perf.setdefault(_n567_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n567_field})
@@ -9765,7 +9765,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N568: Insider Purchase Signal Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n568 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n568 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n568_field = _buy_n568.get("insider_purchase_signal_perf", "no_insider_buy") if _buy_n568 else "no_insider_buy"
             _n568_perf = tlog.setdefault("insider_purchase_signal_perf", {})
             _n568p = _n568_perf.setdefault(_n568_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n568_field})
@@ -9780,7 +9780,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N569: Social Buzz Velocity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n569 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n569 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n569_field = _buy_n569.get("social_buzz_velocity_perf", "normal_buzz") if _buy_n569 else "normal_buzz"
             _n569_perf = tlog.setdefault("social_buzz_velocity_perf", {})
             _n569p = _n569_perf.setdefault(_n569_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n569_field})
@@ -9795,7 +9795,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N570: Earnings Beat Streak Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n570 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n570 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n570_field = _buy_n570.get("earnings_beat_streak_perf", "occasional_beater") if _buy_n570 else "occasional_beater"
             _n570_perf = tlog.setdefault("earnings_beat_streak_perf", {})
             _n570p = _n570_perf.setdefault(_n570_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n570_field})
@@ -9810,7 +9810,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N571: Options IV Rank Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n571 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n571 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n571_field = _buy_n571.get("options_iv_rank_perf", "mid_iv_rank") if _buy_n571 else "mid_iv_rank"
             _n571_perf = tlog.setdefault("options_iv_rank_perf", {})
             _n571p = _n571_perf.setdefault(_n571_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n571_field})
@@ -9825,7 +9825,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N572: Call Volume Surge Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n572 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n572 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n572_field = _buy_n572.get("call_volume_surge_perf", "normal_calls") if _buy_n572 else "normal_calls"
             _n572_perf = tlog.setdefault("call_volume_surge_perf", {})
             _n572p = _n572_perf.setdefault(_n572_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n572_field})
@@ -9840,7 +9840,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N573: Dark Pool Flow Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n573 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n573 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n573_field = _buy_n573.get("dark_pool_flow_perf", "moderate_dark_pool") if _buy_n573 else "moderate_dark_pool"
             _n573_perf = tlog.setdefault("dark_pool_flow_perf", {})
             _n573p = _n573_perf.setdefault(_n573_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n573_field})
@@ -9855,7 +9855,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N574: Smart Money Flow Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n574 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n574 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n574_field = _buy_n574.get("smart_money_index_perf", "neutral_smart_money") if _buy_n574 else "neutral_smart_money"
             _n574_perf = tlog.setdefault("smart_money_index_perf", {})
             _n574p = _n574_perf.setdefault(_n574_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n574_field})
@@ -9870,7 +9870,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N575: Trending Sector Rotation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n575 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n575 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n575_field = _buy_n575.get("trending_sector_rotation_perf", "stable_sector") if _buy_n575 else "stable_sector"
             _n575_perf = tlog.setdefault("trending_sector_rotation_perf", {})
             _n575p = _n575_perf.setdefault(_n575_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n575_field})
@@ -9885,7 +9885,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N576: Squeeze Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n576 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n576 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n576_field = _buy_n576.get("squeeze_momentum_perf", "no_squeeze") if _buy_n576 else "no_squeeze"
             _n576_perf = tlog.setdefault("squeeze_momentum_perf", {})
             _n576p = _n576_perf.setdefault(_n576_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n576_field})
@@ -9900,7 +9900,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N577: Put Wall Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n577 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n577 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n577_field = _buy_n577.get("put_wall_proximity_perf", "near_put_wall") if _buy_n577 else "near_put_wall"
             _n577_perf = tlog.setdefault("put_wall_proximity_perf", {})
             _n577p = _n577_perf.setdefault(_n577_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n577_field})
@@ -9915,7 +9915,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N578: Weekly Options Expiry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n578 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n578 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n578_field = _buy_n578.get("weekly_options_expiry_perf", "post_expiry") if _buy_n578 else "post_expiry"
             _n578_perf = tlog.setdefault("weekly_options_expiry_perf", {})
             _n578p = _n578_perf.setdefault(_n578_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n578_field})
@@ -9930,7 +9930,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N579: Gamma Exposure Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n579 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n579 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n579_field = _buy_n579.get("gamma_exposure_perf", "positive_gex") if _buy_n579 else "positive_gex"
             _n579_perf = tlog.setdefault("gamma_exposure_perf", {})
             _n579p = _n579_perf.setdefault(_n579_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n579_field})
@@ -9945,7 +9945,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N580: Market Regime VIX Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n580 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n580 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n580_field = _buy_n580.get("market_regime_vix_perf", "normal_vix_regime") if _buy_n580 else "normal_vix_regime"
             _n580_perf = tlog.setdefault("market_regime_vix_perf", {})
             _n580p = _n580_perf.setdefault(_n580_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n580_field})
@@ -9960,7 +9960,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N581: Trend Following Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n581 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n581 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n581_field = _buy_n581.get("trend_following_score_perf", "moderate_trend_follow") if _buy_n581 else "moderate_trend_follow"
             _n581_perf = tlog.setdefault("trend_following_score_perf", {})
             _n581p = _n581_perf.setdefault(_n581_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n581_field})
@@ -9975,7 +9975,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N582: Mean Reversion Setup Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n582 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n582 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n582_field = _buy_n582.get("mean_rev_v1_perf", "no_mean_rev") if _buy_n582 else "no_mean_rev"
             _n582_perf = tlog.setdefault("mean_rev_v1_perf", {})
             _n582p = _n582_perf.setdefault(_n582_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n582_field})
@@ -9990,7 +9990,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N583: Breakout False Signal Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n583 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n583 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n583_field = _buy_n583.get("breakout_false_signal_perf", "suspect_breakout") if _buy_n583 else "suspect_breakout"
             _n583_perf = tlog.setdefault("breakout_false_signal_perf", {})
             _n583p = _n583_perf.setdefault(_n583_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n583_field})
@@ -10005,7 +10005,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N584: Intraday Momentum Shift Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n584 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n584 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n584_field = _buy_n584.get("intraday_momentum_shift_perf", "decelerating") if _buy_n584 else "decelerating"
             _n584_perf = tlog.setdefault("intraday_momentum_shift_perf", {})
             _n584p = _n584_perf.setdefault(_n584_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n584_field})
@@ -10020,7 +10020,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N585: Sector News Catalyst Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n585 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n585 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n585_field = _buy_n585.get("sector_news_catalyst_perf", "no_sector_catalyst") if _buy_n585 else "no_sector_catalyst"
             _n585_perf = tlog.setdefault("sector_news_catalyst_perf", {})
             _n585p = _n585_perf.setdefault(_n585_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n585_field})
@@ -10035,7 +10035,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N586: Analyst Upgrade Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n586 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n586 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n586_field = _buy_n586.get("analyst_upgrade_momentum_perf", "no_upgrade") if _buy_n586 else "no_upgrade"
             _n586_perf = tlog.setdefault("analyst_upgrade_momentum_perf", {})
             _n586p = _n586_perf.setdefault(_n586_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n586_field})
@@ -10050,7 +10050,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N587: Earnings Estimate Revision Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n587 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n587 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n587_field = _buy_n587.get("earnings_estimate_revision_perf", "stable_estimates") if _buy_n587 else "stable_estimates"
             _n587_perf = tlog.setdefault("earnings_estimate_revision_perf", {})
             _n587p = _n587_perf.setdefault(_n587_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n587_field})
@@ -10065,7 +10065,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N588: Technical Pattern Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n588 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n588 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n588_field = _buy_n588.get("tech_pattern_v1_perf", "low_quality_pattern") if _buy_n588 else "low_quality_pattern"
             _n588_perf = tlog.setdefault("tech_pattern_v1_perf", {})
             _n588p = _n588_perf.setdefault(_n588_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n588_field})
@@ -10080,7 +10080,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N589: Market Open Strength Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n589 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n589 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n589_field = _buy_n589.get("market_open_strength_perf", "flat_open") if _buy_n589 else "flat_open"
             _n589_perf = tlog.setdefault("market_open_strength_perf", {})
             _n589p = _n589_perf.setdefault(_n589_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n589_field})
@@ -10095,7 +10095,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N590: Price Range Percentile Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n590 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n590 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n590_field = _buy_n590.get("price_range_percentile_perf", "mid_range") if _buy_n590 else "mid_range"
             _n590_perf = tlog.setdefault("price_range_percentile_perf", {})
             _n590p = _n590_perf.setdefault(_n590_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n590_field})
@@ -10110,7 +10110,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N591: Entry Session Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n591 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n591 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n591_field = _buy_n591.get("entry_session_quality_perf", "midday_session") if _buy_n591 else "midday_session"
             _n591_perf = tlog.setdefault("entry_session_quality_perf", {})
             _n591p = _n591_perf.setdefault(_n591_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n591_field})
@@ -10125,7 +10125,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N592: VWAP Deviation Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n592 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n592 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n592_field = _buy_n592.get("vwap_deviation_entry_perf", "slightly_above_vwap") if _buy_n592 else "slightly_above_vwap"
             _n592_perf = tlog.setdefault("vwap_deviation_entry_perf", {})
             _n592p = _n592_perf.setdefault(_n592_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n592_field})
@@ -10140,7 +10140,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N593: Prior Day Close Relation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n593 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n593 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n593_field = _buy_n593.get("prior_day_close_relation_perf", "near_prior_close") if _buy_n593 else "near_prior_close"
             _n593_perf = tlog.setdefault("prior_day_close_relation_perf", {})
             _n593p = _n593_perf.setdefault(_n593_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n593_field})
@@ -10155,7 +10155,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N594: Intraday High Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n594 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n594 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n594_field = _buy_n594.get("intraday_high_proximity_perf", "mid_range_intraday") if _buy_n594 else "mid_range_intraday"
             _n594_perf = tlog.setdefault("intraday_high_proximity_perf", {})
             _n594p = _n594_perf.setdefault(_n594_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n594_field})
@@ -10170,7 +10170,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N595: Float Size Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n595 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n595 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n595_field = _buy_n595.get("float_micro_perf", "small_float") if _buy_n595 else "small_float"
             _n595_perf = tlog.setdefault("float_micro_perf", {})
             _n595p = _n595_perf.setdefault(_n595_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n595_field})
@@ -10185,7 +10185,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N596: Short Squeeze Velocity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n596 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n596 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n596_field = _buy_n596.get("short_squeeze_velocity_perf", "no_squeeze") if _buy_n596 else "no_squeeze"
             _n596_perf = tlog.setdefault("short_squeeze_velocity_perf", {})
             _n596p = _n596_perf.setdefault(_n596_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n596_field})
@@ -10200,7 +10200,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N597: Tape Reading Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n597 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n597 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n597_field = _buy_n597.get("tape_reading_entry_perf", "neutral_tape") if _buy_n597 else "neutral_tape"
             _n597_perf = tlog.setdefault("tape_reading_entry_perf", {})
             _n597p = _n597_perf.setdefault(_n597_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n597_field})
@@ -10215,7 +10215,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N598: Options Open Interest Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n598 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n598 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n598_field = _buy_n598.get("options_open_interest_perf", "medium_oi_ticker") if _buy_n598 else "medium_oi_ticker"
             _n598_perf = tlog.setdefault("options_open_interest_perf", {})
             _n598p = _n598_perf.setdefault(_n598_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n598_field})
@@ -10230,7 +10230,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N599: Weekly Trend Alignment Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n599 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n599 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n599_field = _buy_n599.get("weekly_trend_alignment_perf", "neutral_alignment") if _buy_n599 else "neutral_alignment"
             _n599_perf = tlog.setdefault("weekly_trend_alignment_perf", {})
             _n599p = _n599_perf.setdefault(_n599_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n599_field})
@@ -10245,7 +10245,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N600: Momentum Score Bucket Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n600 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n600 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n600_field = _buy_n600.get("momentum_score_bucket_perf", "moderate_momentum") if _buy_n600 else "moderate_momentum"
             _n600_perf = tlog.setdefault("momentum_score_bucket_perf", {})
             _n600p = _n600_perf.setdefault(_n600_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n600_field})
@@ -10260,7 +10260,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N601: Bid-Ask Spread Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n601 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n601 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n601_field = _buy_n601.get("bid_ask_spread_perf", "normal_spread") if _buy_n601 else "normal_spread"
             _n601_perf = tlog.setdefault("bid_ask_spread_perf", {})
             _n601p = _n601_perf.setdefault(_n601_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n601_field})
@@ -10275,7 +10275,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N602: News Recency Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n602 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n602 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n602_field = _buy_n602.get("news_recency_perf", "same_day_news") if _buy_n602 else "same_day_news"
             _n602_perf = tlog.setdefault("news_recency_perf", {})
             _n602p = _n602_perf.setdefault(_n602_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n602_field})
@@ -10290,7 +10290,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N603: Sector Rotation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n603 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n603 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n603_field = _buy_n603.get("sector_rotation_v1_perf", "neutral_sector") if _buy_n603 else "neutral_sector"
             _n603_perf = tlog.setdefault("sector_rotation_v1_perf", {})
             _n603p = _n603_perf.setdefault(_n603_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n603_field})
@@ -10305,7 +10305,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N604: Pre-Market Volume Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n604 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n604 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n604_field = _buy_n604.get("pre_market_volume_perf", "moderate_pm_vol") if _buy_n604 else "moderate_pm_vol"
             _n604_perf = tlog.setdefault("pre_market_volume_perf", {})
             _n604p = _n604_perf.setdefault(_n604_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n604_field})
@@ -10320,7 +10320,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N605: Breakout Volume Confirm Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n605 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n605 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n605_field = _buy_n605.get("breakout_volume_confirm_perf", "moderate_vol_breakout") if _buy_n605 else "moderate_vol_breakout"
             _n605_perf = tlog.setdefault("breakout_volume_confirm_perf", {})
             _n605p = _n605_perf.setdefault(_n605_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n605_field})
@@ -10335,7 +10335,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N606: Trend Day Type Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n606 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n606 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n606_field = _buy_n606.get("trend_day_type_perf", "balanced_day") if _buy_n606 else "balanced_day"
             _n606_perf = tlog.setdefault("trend_day_type_perf", {})
             _n606p = _n606_perf.setdefault(_n606_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n606_field})
@@ -10350,7 +10350,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N607: Entry Candle Pattern Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n607 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n607 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n607_field = _buy_n607.get("entry_candle_pattern_perf", "doji_indecision") if _buy_n607 else "doji_indecision"
             _n607_perf = tlog.setdefault("entry_candle_pattern_perf", {})
             _n607p = _n607_perf.setdefault(_n607_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n607_field})
@@ -10365,7 +10365,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N608: Resistance Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n608 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n608 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n608_field = _buy_n608.get("resistance_proximity_perf", "approaching_resistance") if _buy_n608 else "approaching_resistance"
             _n608_perf = tlog.setdefault("resistance_proximity_perf", {})
             _n608p = _n608_perf.setdefault(_n608_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n608_field})
@@ -10380,7 +10380,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N609: Market Breadth Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n609 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n609 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n609_field = _buy_n609.get("market_breadth_perf", "neutral_breadth") if _buy_n609 else "neutral_breadth"
             _n609_perf = tlog.setdefault("market_breadth_perf", {})
             _n609p = _n609_perf.setdefault(_n609_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n609_field})
@@ -10395,7 +10395,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N610: Time of Day Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n610 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n610 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n610_field = _buy_n610.get("time_of_day_score_perf", "good_window") if _buy_n610 else "good_window"
             _n610_perf = tlog.setdefault("time_of_day_score_perf", {})
             _n610p = _n610_perf.setdefault(_n610_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n610_field})
@@ -10410,7 +10410,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N611: Consolidation Length Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n611 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n611 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n611_field = _buy_n611.get("consolidation_length_perf", "tight_consolidation") if _buy_n611 else "tight_consolidation"
             _n611_perf = tlog.setdefault("consolidation_length_perf", {})
             _n611p = _n611_perf.setdefault(_n611_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n611_field})
@@ -10425,7 +10425,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N612: Catalyst Type Detail Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n612 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n612 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n612_field = _buy_n612.get("catalyst_type_detail_perf", "technical_catalyst") if _buy_n612 else "technical_catalyst"
             _n612_perf = tlog.setdefault("catalyst_type_detail_perf", {})
             _n612p = _n612_perf.setdefault(_n612_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n612_field})
@@ -10440,7 +10440,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N613: Price Action Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n613 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n613 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n613_field = _buy_n613.get("price_action_v1_perf", "choppy_action") if _buy_n613 else "choppy_action"
             _n613_perf = tlog.setdefault("price_action_v1_perf", {})
             _n613p = _n613_perf.setdefault(_n613_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n613_field})
@@ -10455,7 +10455,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N614: Market Cap Tier Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n614 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n614 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n614_field = _buy_n614.get("market_cap_size_perf", "small_cap") if _buy_n614 else "small_cap"
             _n614_perf = tlog.setdefault("market_cap_size_perf", {})
             _n614p = _n614_perf.setdefault(_n614_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n614_field})
@@ -10470,7 +10470,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N615: Options Flow Signal Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n615 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n615 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n615_field = _buy_n615.get("options_flow_v1_perf", "neutral_flow") if _buy_n615 else "neutral_flow"
             _n615_perf = tlog.setdefault("options_flow_v1_perf", {})
             _n615p = _n615_perf.setdefault(_n615_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n615_field})
@@ -10485,7 +10485,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N616: Institutional Filing Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n616 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n616 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n616_field = _buy_n616.get("institutional_filing_perf", "no_change") if _buy_n616 else "no_change"
             _n616_perf = tlog.setdefault("institutional_filing_perf", {})
             _n616p = _n616_perf.setdefault(_n616_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n616_field})
@@ -10500,7 +10500,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N617: Relative Strength vs SPY Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n617 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n617 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n617_field = _buy_n617.get("relative_strength_vs_spy_perf", "inline_rs") if _buy_n617 else "inline_rs"
             _n617_perf = tlog.setdefault("relative_strength_vs_spy_perf", {})
             _n617p = _n617_perf.setdefault(_n617_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n617_field})
@@ -10515,7 +10515,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N618: Gap Fill Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n618 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n618 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n618_field = _buy_n618.get("gap_fill_proximity_perf", "far_from_gap") if _buy_n618 else "far_from_gap"
             _n618_perf = tlog.setdefault("gap_fill_proximity_perf", {})
             _n618p = _n618_perf.setdefault(_n618_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n618_field})
@@ -10530,7 +10530,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N619: Multi-Timeframe RSI Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n619 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n619 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n619_field = _buy_n619.get("multi_timeframe_rsi_perf", "mixed_tf") if _buy_n619 else "mixed_tf"
             _n619_perf = tlog.setdefault("multi_timeframe_rsi_perf", {})
             _n619p = _n619_perf.setdefault(_n619_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n619_field})
@@ -10545,7 +10545,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N620: Earnings Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n620 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n620 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n620_field = _buy_n620.get("earnings_qual_v1_perf", "inline_earnings") if _buy_n620 else "inline_earnings"
             _n620_perf = tlog.setdefault("earnings_qual_v1_perf", {})
             _n620p = _n620_perf.setdefault(_n620_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n620_field})
@@ -10560,7 +10560,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N621: Momentum Divergence Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n621 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n621 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n621_field = _buy_n621.get("rsi_divergence_perf", "no_divergence") if _buy_n621 else "no_divergence"
             _n621_perf = tlog.setdefault("rsi_divergence_perf", {})
             _n621p = _n621_perf.setdefault(_n621_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n621_field})
@@ -10575,7 +10575,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N622: ATR Expansion at Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n622 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n622 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n622_field = _buy_n622.get("atr_expansion_at_entry_perf", "stable_atr") if _buy_n622 else "stable_atr"
             _n622_perf = tlog.setdefault("atr_expansion_at_entry_perf", {})
             _n622p = _n622_perf.setdefault(_n622_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n622_field})
@@ -10590,7 +10590,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N623: SPY Alignment Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n623 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n623 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n623_field = _buy_n623.get("spy_alignment_perf", "spy_neutral") if _buy_n623 else "spy_neutral"
             _n623_perf = tlog.setdefault("spy_alignment_perf", {})
             _n623p = _n623_perf.setdefault(_n623_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n623_field})
@@ -10605,7 +10605,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N624: Opening Range Position Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n624 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n624 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n624_field = _buy_n624.get("opening_range_position_perf", "within_opening_range") if _buy_n624 else "within_opening_range"
             _n624_perf = tlog.setdefault("opening_range_position_perf", {})
             _n624p = _n624_perf.setdefault(_n624_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n624_field})
@@ -10620,7 +10620,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N625: Sector Relative Strength Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n625 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n625 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n625_field = _buy_n625.get("sector_relative_strength_perf", "sector_inline") if _buy_n625 else "sector_inline"
             _n625_perf = tlog.setdefault("sector_relative_strength_perf", {})
             _n625p = _n625_perf.setdefault(_n625_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n625_field})
@@ -10635,7 +10635,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N626: Volume Price Trend Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n626 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n626 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n626_field = _buy_n626.get("volume_price_trend_perf", "vpt_flat") if _buy_n626 else "vpt_flat"
             _n626_perf = tlog.setdefault("volume_price_trend_perf", {})
             _n626p = _n626_perf.setdefault(_n626_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n626_field})
@@ -10650,7 +10650,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N627: Gap to Close Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n627 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n627 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n627_field = _buy_n627.get("gap_to_close_performance_perf", "no_gap_trade") if _buy_n627 else "no_gap_trade"
             _n627_perf = tlog.setdefault("gap_to_close_performance_perf", {})
             _n627p = _n627_perf.setdefault(_n627_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n627_field})
@@ -10665,7 +10665,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N628: Fear Greed Index Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n628 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n628 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n628_field = _buy_n628.get("fear_greed_index_perf", "neutral") if _buy_n628 else "neutral"
             _n628_perf = tlog.setdefault("fear_greed_index_perf", {})
             _n628p = _n628_perf.setdefault(_n628_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n628_field})
@@ -10680,7 +10680,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N629: Breakout Retest Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n629 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n629 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n629_field = _buy_n629.get("breakout_retest_perf", "fresh_breakout") if _buy_n629 else "fresh_breakout"
             _n629_perf = tlog.setdefault("breakout_retest_perf", {})
             _n629p = _n629_perf.setdefault(_n629_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n629_field})
@@ -10695,7 +10695,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N630: Trend Line Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n630 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n630 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n630_field = _buy_n630.get("trend_line_proximity_perf", "far_from_trendline") if _buy_n630 else "far_from_trendline"
             _n630_perf = tlog.setdefault("trend_line_proximity_perf", {})
             _n630p = _n630_perf.setdefault(_n630_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n630_field})
@@ -10710,7 +10710,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N631: High-Low Range Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n631 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n631 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n631_field = _buy_n631.get("high_low_range_perf", "normal_range") if _buy_n631 else "normal_range"
             _n631_perf = tlog.setdefault("high_low_range_perf", {})
             _n631p = _n631_perf.setdefault(_n631_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n631_field})
@@ -10725,7 +10725,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N632: Price Momentum 5D Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n632 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n632 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n632_field = _buy_n632.get("price_momentum_5d_perf", "mild_5d_momentum") if _buy_n632 else "mild_5d_momentum"
             _n632_perf = tlog.setdefault("price_momentum_5d_perf", {})
             _n632p = _n632_perf.setdefault(_n632_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n632_field})
@@ -10740,7 +10740,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N633: Catalyst Sector Alignment Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n633 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n633 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n633_field = _buy_n633.get("catalyst_sector_alignment_perf", "no_alignment") if _buy_n633 else "no_alignment"
             _n633_perf = tlog.setdefault("catalyst_sector_alignment_perf", {})
             _n633p = _n633_perf.setdefault(_n633_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n633_field})
@@ -10755,7 +10755,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N634: Volume Consistency Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n634 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n634 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n634_field = _buy_n634.get("volume_consistency_perf", "inconsistent_volume") if _buy_n634 else "inconsistent_volume"
             _n634_perf = tlog.setdefault("volume_consistency_perf", {})
             _n634p = _n634_perf.setdefault(_n634_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n634_field})
@@ -10770,7 +10770,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N635: RSI Trend Alignment Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n635 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n635 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n635_field = _buy_n635.get("rsi_trend_alignment_perf", "aligned_bullish") if _buy_n635 else "aligned_bullish"
             _n635_perf = tlog.setdefault("rsi_trend_alignment_perf", {})
             _n635p = _n635_perf.setdefault(_n635_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n635_field})
@@ -10785,7 +10785,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N636: Order Block Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n636 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n636 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n636_field = _buy_n636.get("order_block_proximity_perf", "no_order_block") if _buy_n636 else "no_order_block"
             _n636_perf = tlog.setdefault("order_block_proximity_perf", {})
             _n636p = _n636_perf.setdefault(_n636_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n636_field})
@@ -10800,7 +10800,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N637: Liquidity Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n637 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n637 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n637_field = _buy_n637.get("liquidity_dollar_vol_perf", "medium_liquidity") if _buy_n637 else "medium_liquidity"
             _n637_perf = tlog.setdefault("liquidity_dollar_vol_perf", {})
             _n637p = _n637_perf.setdefault(_n637_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n637_field})
@@ -10815,7 +10815,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N638: News Catalyst Sentiment Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n638 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n638 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n638_field = _buy_n638.get("news_catalyst_sentiment_perf", "neutral_news") if _buy_n638 else "neutral_news"
             _n638_perf = tlog.setdefault("news_catalyst_sentiment_perf", {})
             _n638p = _n638_perf.setdefault(_n638_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n638_field})
@@ -10830,7 +10830,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N639: Technical Score Trend Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n639 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n639 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n639_field = _buy_n639.get("technical_score_trend_perf", "low_volatile") if _buy_n639 else "low_volatile"
             _n639_perf = tlog.setdefault("technical_score_trend_perf", {})
             _n639p = _n639_perf.setdefault(_n639_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n639_field})
@@ -10845,7 +10845,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N640: EMA Stack Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n640 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n640 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n640_field = _buy_n640.get("ema_stack_quality_perf", "partial_stack") if _buy_n640 else "partial_stack"
             _n640_perf = tlog.setdefault("ema_stack_quality_perf", {})
             _n640p = _n640_perf.setdefault(_n640_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n640_field})
@@ -10860,7 +10860,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N641: Pivot Point Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n641 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n641 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n641_field = _buy_n641.get("pivot_point_proximity_perf", "far_from_pivot") if _buy_n641 else "far_from_pivot"
             _n641_perf = tlog.setdefault("pivot_point_proximity_perf", {})
             _n641p = _n641_perf.setdefault(_n641_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n641_field})
@@ -10875,7 +10875,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N642: Float Rotation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n642 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n642 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n642_field = _buy_n642.get("float_rotation_perf", "low_rotation") if _buy_n642 else "low_rotation"
             _n642_perf = tlog.setdefault("float_rotation_perf", {})
             _n642p = _n642_perf.setdefault(_n642_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n642_field})
@@ -10890,7 +10890,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N643: Short Interest Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n643 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n643 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n643_field = _buy_n643.get("short_interest_perf", "unknown_short") if _buy_n643 else "unknown_short"
             _n643_perf = tlog.setdefault("short_interest_perf", {})
             _n643p = _n643_perf.setdefault(_n643_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n643_field})
@@ -10905,7 +10905,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N644: Insider Activity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n644 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n644 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n644_field = _buy_n644.get("insider_activity_v1_perf", "no_insider_activity") if _buy_n644 else "no_insider_activity"
             _n644_perf = tlog.setdefault("insider_activity_v1_perf", {})
             _n644p = _n644_perf.setdefault(_n644_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n644_field})
@@ -10920,7 +10920,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N645: Earnings Season Phase Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n645 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n645 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n645_field = _buy_n645.get("earnings_season_phase_perf", "non_earnings_season") if _buy_n645 else "non_earnings_season"
             _n645_perf = tlog.setdefault("earnings_season_phase_perf", {})
             _n645p = _n645_perf.setdefault(_n645_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n645_field})
@@ -10935,7 +10935,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N646: Put/Call Ratio Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n646 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n646 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n646_field = _buy_n646.get("put_call_ratio_perf", "neutral_pcr") if _buy_n646 else "neutral_pcr"
             _n646_perf = tlog.setdefault("put_call_ratio_perf", {})
             _n646p = _n646_perf.setdefault(_n646_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n646_field})
@@ -10950,7 +10950,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N647: VWAP Distance Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n647 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n647 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n647_field = _buy_n647.get("vwap_distance_perf", "above_vwap") if _buy_n647 else "above_vwap"
             _n647_perf = tlog.setdefault("vwap_distance_perf", {})
             _n647p = _n647_perf.setdefault(_n647_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n647_field})
@@ -10965,7 +10965,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N648: Day of Week Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n648 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n648 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n648_field = _buy_n648.get("day_of_week_perf", "monday_entry") if _buy_n648 else "monday_entry"
             _n648_perf = tlog.setdefault("day_of_week_perf", {})
             _n648p = _n648_perf.setdefault(_n648_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n648_field})
@@ -10980,7 +10980,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N649: Market Breadth Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n649 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n649 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n649_field = _buy_n649.get("market_breadth_v2_perf", "neutral_breadth") if _buy_n649 else "neutral_breadth"
             _n649_perf = tlog.setdefault("market_breadth_v2_perf", {})
             _n649p = _n649_perf.setdefault(_n649_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n649_field})
@@ -10995,7 +10995,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N650: Pre-Market Volume Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n650 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n650 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n650_field = _buy_n650.get("premarket_volume_perf", "normal_premarket") if _buy_n650 else "normal_premarket"
             _n650_perf = tlog.setdefault("premarket_volume_perf", {})
             _n650p = _n650_perf.setdefault(_n650_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n650_field})
@@ -11010,7 +11010,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N651: Consecutive Up Days Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n651 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n651 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n651_field = _buy_n651.get("consecutive_up_days_perf", "choppy_action") if _buy_n651 else "choppy_action"
             _n651_perf = tlog.setdefault("consecutive_up_days_perf", {})
             _n651p = _n651_perf.setdefault(_n651_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n651_field})
@@ -11025,7 +11025,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N652: Market Cap Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n652 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n652 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n652_field = _buy_n652.get("market_cap_momentum_v1_perf", "mid_cap_breakout") if _buy_n652 else "mid_cap_breakout"
             _n652_perf = tlog.setdefault("market_cap_momentum_v1_perf", {})
             _n652p = _n652_perf.setdefault(_n652_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n652_field})
@@ -11040,7 +11040,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N653: Institutional Ownership Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n653 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n653 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n653_field = _buy_n653.get("institutional_ownership_perf", "moderate_institutional") if _buy_n653 else "moderate_institutional"
             _n653_perf = tlog.setdefault("institutional_ownership_perf", {})
             _n653p = _n653_perf.setdefault(_n653_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n653_field})
@@ -11055,7 +11055,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N654: Analyst Revision Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n654 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n654 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n654_field = _buy_n654.get("analyst_revision_v1_perf", "no_estimate_data") if _buy_n654 else "no_estimate_data"
             _n654_perf = tlog.setdefault("analyst_revision_v1_perf", {})
             _n654p = _n654_perf.setdefault(_n654_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n654_field})
@@ -11070,7 +11070,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N655: Relative Volume Trend Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n655 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n655 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n655_field = _buy_n655.get("relative_volume_trend_perf", "normal_volume") if _buy_n655 else "normal_volume"
             _n655_perf = tlog.setdefault("relative_volume_trend_perf", {})
             _n655p = _n655_perf.setdefault(_n655_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n655_field})
@@ -11085,7 +11085,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N656: Price vs SMA200 Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n656 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n656 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n656_field = _buy_n656.get("price_vs_sma200_perf", "just_above_200sma") if _buy_n656 else "just_above_200sma"
             _n656_perf = tlog.setdefault("price_vs_sma200_perf", {})
             _n656p = _n656_perf.setdefault(_n656_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n656_field})
@@ -11100,7 +11100,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N657: Earnings Revision Direction Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n657 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n657 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n657_field = _buy_n657.get("earnings_revision_direction_perf", "inline_guidance") if _buy_n657 else "inline_guidance"
             _n657_perf = tlog.setdefault("earnings_revision_direction_perf", {})
             _n657p = _n657_perf.setdefault(_n657_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n657_field})
@@ -11115,7 +11115,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N658: Premarket Gap Size Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n658 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n658 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n658_field = _buy_n658.get("premarket_gap_size_perf", "flat_open") if _buy_n658 else "flat_open"
             _n658_perf = tlog.setdefault("premarket_gap_size_perf", {})
             _n658p = _n658_perf.setdefault(_n658_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n658_field})
@@ -11130,7 +11130,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N659: Social Sentiment Velocity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n659 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n659 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n659_field = _buy_n659.get("social_sentiment_velocity_perf", "no_social_signal") if _buy_n659 else "no_social_signal"
             _n659_perf = tlog.setdefault("social_sentiment_velocity_perf", {})
             _n659p = _n659_perf.setdefault(_n659_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n659_field})
@@ -11145,7 +11145,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N660: Option Implied Move Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n660 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n660 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n660_field = _buy_n660.get("option_implied_move_perf", "fair_iv") if _buy_n660 else "fair_iv"
             _n660_perf = tlog.setdefault("option_implied_move_perf", {})
             _n660p = _n660_perf.setdefault(_n660_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n660_field})
@@ -11160,7 +11160,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N661: Trend Age Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n661 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n661 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n661_field = _buy_n661.get("trend_age_perf", "established_trend") if _buy_n661 else "established_trend"
             _n661_perf = tlog.setdefault("trend_age_perf", {})
             _n661p = _n661_perf.setdefault(_n661_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n661_field})
@@ -11175,7 +11175,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N662: Reversal Candle Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n662 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n662 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n662_field = _buy_n662.get("reversal_candle_perf", "no_reversal_pattern") if _buy_n662 else "no_reversal_pattern"
             _n662_perf = tlog.setdefault("reversal_candle_perf", {})
             _n662p = _n662_perf.setdefault(_n662_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n662_field})
@@ -11190,7 +11190,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N663: Weekly Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n663 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n663 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n663_field = _buy_n663.get("weekly_momentum_perf", "flat_weekly") if _buy_n663 else "flat_weekly"
             _n663_perf = tlog.setdefault("weekly_momentum_perf", {})
             _n663p = _n663_perf.setdefault(_n663_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n663_field})
@@ -11205,7 +11205,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N664: Relative Strength Rank Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n664 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n664 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n664_field = _buy_n664.get("relative_strength_rank_perf", "average_rs") if _buy_n664 else "average_rs"
             _n664_perf = tlog.setdefault("relative_strength_rank_perf", {})
             _n664p = _n664_perf.setdefault(_n664_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n664_field})
@@ -11220,7 +11220,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N665: Catalyst Freshness Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n665 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n665 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n665_field = _buy_n665.get("catalyst_freshness_perf", "no_recent_catalyst") if _buy_n665 else "no_recent_catalyst"
             _n665_perf = tlog.setdefault("catalyst_freshness_perf", {})
             _n665p = _n665_perf.setdefault(_n665_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n665_field})
@@ -11235,7 +11235,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N666: Institutional Accumulation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n666 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n666 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n666_field = _buy_n666.get("institutional_accumulation_perf", "neutral_flow") if _buy_n666 else "neutral_flow"
             _n666_perf = tlog.setdefault("institutional_accumulation_perf", {})
             _n666p = _n666_perf.setdefault(_n666_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n666_field})
@@ -11250,7 +11250,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N667: Breakout Volume Confirmation Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n667 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n667 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n667_field = _buy_n667.get("breakout_volume_confirmation_perf", "no_breakout") if _buy_n667 else "no_breakout"
             _n667_perf = tlog.setdefault("breakout_volume_confirmation_perf", {})
             _n667p = _n667_perf.setdefault(_n667_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n667_field})
@@ -11265,7 +11265,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N668: ADX Trend Strength Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n668 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n668 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n668_field = _buy_n668.get("adx_trend_strength_perf", "no_trend") if _buy_n668 else "no_trend"
             _n668_perf = tlog.setdefault("adx_trend_strength_perf", {})
             _n668p = _n668_perf.setdefault(_n668_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n668_field})
@@ -11280,7 +11280,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N669: Risk Reward Ratio Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n669 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n669 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n669_field = _buy_n669.get("risk_reward_ratio_perf", "poor_rr") if _buy_n669 else "poor_rr"
             _n669_perf = tlog.setdefault("risk_reward_ratio_perf", {})
             _n669p = _n669_perf.setdefault(_n669_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n669_field})
@@ -11295,7 +11295,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N670: Sector ETF Momentum Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n670 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n670 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n670_field = _buy_n670.get("sector_etf_momentum_perf", "sector_inline") if _buy_n670 else "sector_inline"
             _n670_perf = tlog.setdefault("sector_etf_momentum_perf", {})
             _n670p = _n670_perf.setdefault(_n670_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n670_field})
@@ -11310,7 +11310,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N671: Gap Type Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n671 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n671 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n671_field = _buy_n671.get("gap_type_quality_perf", "no_gap") if _buy_n671 else "no_gap"
             _n671_perf = tlog.setdefault("gap_type_quality_perf", {})
             _n671p = _n671_perf.setdefault(_n671_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n671_field})
@@ -11325,7 +11325,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N672: Support Level Proximity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n672 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n672 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n672_field = _buy_n672.get("support_level_proximity_perf", "no_clear_support") if _buy_n672 else "no_clear_support"
             _n672_perf = tlog.setdefault("support_level_proximity_perf", {})
             _n672p = _n672_perf.setdefault(_n672_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n672_field})
@@ -11340,7 +11340,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N673: Earnings Proximity Entry Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n673 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n673 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n673_field = _buy_n673.get("earnings_proximity_entry_perf", "safe_distance_from_earnings") if _buy_n673 else "safe_distance_from_earnings"
             _n673_perf = tlog.setdefault("earnings_proximity_entry_perf", {})
             _n673p = _n673_perf.setdefault(_n673_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n673_field})
@@ -11355,7 +11355,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N674: Technical Pattern Quality Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n674 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n674 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n674_field = _buy_n674.get("technical_pattern_quality_perf", "no_clear_pattern") if _buy_n674 else "no_clear_pattern"
             _n674_perf = tlog.setdefault("technical_pattern_quality_perf", {})
             _n674p = _n674_perf.setdefault(_n674_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n674_field})
@@ -11370,7 +11370,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N675: Market Timing Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n675 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n675 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n675_field = _buy_n675.get("market_timing_score_perf", "neutral_timing") if _buy_n675 else "neutral_timing"
             _n675_perf = tlog.setdefault("market_timing_score_perf", {})
             _n675p = _n675_perf.setdefault(_n675_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n675_field})
@@ -11385,7 +11385,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N676: Sector Leadership Position Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n676 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n676 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n676_field = _buy_n676.get("sector_leadership_position_perf", "sector_average") if _buy_n676 else "sector_average"
             _n676_perf = tlog.setdefault("sector_leadership_position_perf", {})
             _n676p = _n676_perf.setdefault(_n676_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n676_field})
@@ -11400,7 +11400,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N677: Conviction Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n677 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n677 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n677_field = _buy_n677.get("conviction_score_perf", "medium_conviction") if _buy_n677 else "medium_conviction"
             _n677_perf = tlog.setdefault("conviction_score_perf", {})
             _n677p = _n677_perf.setdefault(_n677_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n677_field})
@@ -11415,7 +11415,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N678: Price Discovery Phase Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n678 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n678 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n678_field = _buy_n678.get("price_phase_wycoff_perf", "accumulation_phase") if _buy_n678 else "accumulation_phase"
             _n678_perf = tlog.setdefault("price_phase_wycoff_perf", {})
             _n678p = _n678_perf.setdefault(_n678_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n678_field})
@@ -11430,7 +11430,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N679: Float Size Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n679 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n679 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n679_field = _buy_n679.get("float_size_perf", "medium_float") if _buy_n679 else "medium_float"
             _n679_perf = tlog.setdefault("float_size_perf", {})
             _n679p = _n679_perf.setdefault(_n679_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n679_field})
@@ -11445,7 +11445,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N680: Industry Group Rank Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n680 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n680 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n680_field = _buy_n680.get("industry_group_rank_perf", "average_industry") if _buy_n680 else "average_industry"
             _n680_perf = tlog.setdefault("industry_group_rank_perf", {})
             _n680p = _n680_perf.setdefault(_n680_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n680_field})
@@ -11460,7 +11460,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N681: Opening Range Breakout Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n681 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n681 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n681_field = _buy_n681.get("opening_range_breakout_perf", "no_orb_data") if _buy_n681 else "no_orb_data"
             _n681_perf = tlog.setdefault("opening_range_breakout_perf", {})
             _n681p = _n681_perf.setdefault(_n681_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n681_field})
@@ -11475,7 +11475,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N682: News Sentiment Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n682 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n682 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n682_field = _buy_n682.get("news_sentiment_score_perf", "neutral_news") if _buy_n682 else "neutral_news"
             _n682_perf = tlog.setdefault("news_sentiment_score_perf", {})
             _n682p = _n682_perf.setdefault(_n682_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n682_field})
@@ -11490,7 +11490,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N683: Short Interest Ratio Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n683 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n683 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n683_field = _buy_n683.get("short_interest_ratio_perf", "low_short_interest") if _buy_n683 else "low_short_interest"
             _n683_perf = tlog.setdefault("short_interest_ratio_perf", {})
             _n683p = _n683_perf.setdefault(_n683_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n683_field})
@@ -11505,7 +11505,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N684: Options Flow Signal Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n684 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n684 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n684_field = _buy_n684.get("options_flow_signal_perf", "neutral_flow") if _buy_n684 else "neutral_flow"
             _n684_perf = tlog.setdefault("options_flow_signal_perf", {})
             _n684p = _n684_perf.setdefault(_n684_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n684_field})
@@ -11520,7 +11520,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N685: Dark Pool Activity Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n685 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n685 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n685_field = _buy_n685.get("dark_pool_activity_perf", "no_dark_pool_signal") if _buy_n685 else "no_dark_pool_signal"
             _n685_perf = tlog.setdefault("dark_pool_activity_perf", {})
             _n685p = _n685_perf.setdefault(_n685_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n685_field})
@@ -11535,7 +11535,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N686: Momentum Divergence Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n686 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n686 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n686_field = _buy_n686.get("momentum_divergence_perf", "no_divergence") if _buy_n686 else "no_divergence"
             _n686_perf = tlog.setdefault("momentum_divergence_perf", {})
             _n686p = _n686_perf.setdefault(_n686_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n686_field})
@@ -11550,7 +11550,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N687: Liquidity Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n687 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n687 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n687_field = _buy_n687.get("liquidity_score_perf", "adequate_liquidity") if _buy_n687 else "adequate_liquidity"
             _n687_perf = tlog.setdefault("liquidity_score_perf", {})
             _n687p = _n687_perf.setdefault(_n687_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n687_field})
@@ -11565,7 +11565,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N688: Mean Reversion Signal Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n688 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n688 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n688_field = _buy_n688.get("mean_reversion_signal_perf", "neutral_range") if _buy_n688 else "neutral_range"
             _n688_perf = tlog.setdefault("mean_reversion_signal_perf", {})
             _n688p = _n688_perf.setdefault(_n688_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n688_field})
@@ -11580,7 +11580,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N689: Breakout Quality Score Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n689 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n689 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n689_field = _buy_n689.get("breakout_quality_score_perf", "below_avg_breakout") if _buy_n689 else "below_avg_breakout"
             _n689_perf = tlog.setdefault("breakout_quality_score_perf", {})
             _n689p = _n689_perf.setdefault(_n689_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n689_field})
@@ -11595,7 +11595,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N690: Trade Grade Performance ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n690 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n690 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n690_field = _buy_n690.get("trade_grade_performance_perf", "c_or_below_grade") if _buy_n690 else "c_or_below_grade"
             _n690_perf = tlog.setdefault("trade_grade_performance_perf", {})
             _n690p = _n690_perf.setdefault(_n690_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n690_field})
@@ -11610,7 +11610,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N691: Intraday Range Position ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n691 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n691 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n691_field = _buy_n691.get("intraday_range_position_perf", "mid_range") if _buy_n691 else "mid_range"
             _n691_perf = tlog.setdefault("intraday_range_position_perf", {})
             _n691p = _n691_perf.setdefault(_n691_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n691_field})
@@ -11625,7 +11625,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N692: Volume-Weighted Trend ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n692 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n692 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n692_field = _buy_n692.get("volume_weighted_trend_perf", "at_vwap") if _buy_n692 else "at_vwap"
             _n692_perf = tlog.setdefault("volume_weighted_trend_perf", {})
             _n692p = _n692_perf.setdefault(_n692_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n692_field})
@@ -11640,7 +11640,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N693: Smart Money Flow ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n693 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n693 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n693_field = _buy_n693.get("obv_smart_money_perf", "smart_neutral") if _buy_n693 else "smart_neutral"
             _n693_perf = tlog.setdefault("obv_smart_money_perf", {})
             _n693p = _n693_perf.setdefault(_n693_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n693_field})
@@ -11655,7 +11655,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N694: Market Structure Break ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n694 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n694 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n694_field = _buy_n694.get("market_structure_break_perf", "range_bound") if _buy_n694 else "range_bound"
             _n694_perf = tlog.setdefault("market_structure_break_perf", {})
             _n694p = _n694_perf.setdefault(_n694_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n694_field})
@@ -11670,7 +11670,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N695: Order Block Level ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n695 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n695 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n695_field = _buy_n695.get("order_block_level_perf", "no_order_block") if _buy_n695 else "no_order_block"
             _n695_perf = tlog.setdefault("order_block_level_perf", {})
             _n695p = _n695_perf.setdefault(_n695_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n695_field})
@@ -11685,7 +11685,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N696: Fair Value Gap Fill ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n696 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n696 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n696_field = _buy_n696.get("imbalance_fill_perf", "no_fvg") if _buy_n696 else "no_fvg"
             _n696_perf = tlog.setdefault("imbalance_fill_perf", {})
             _n696p = _n696_perf.setdefault(_n696_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n696_field})
@@ -11700,7 +11700,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N697: Squeeze Momentum State ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n697 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n697 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n697_field = _buy_n697.get("squeeze_momentum_state_perf", "no_squeeze") if _buy_n697 else "no_squeeze"
             _n697_perf = tlog.setdefault("squeeze_momentum_state_perf", {})
             _n697p = _n697_perf.setdefault(_n697_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n697_field})
@@ -11715,7 +11715,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N698: Breadth Thrust Entry ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n698 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n698 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n698_field = _buy_n698.get("breadth_thrust_entry_perf", "no_breadth_thrust") if _buy_n698 else "no_breadth_thrust"
             _n698_perf = tlog.setdefault("breadth_thrust_entry_perf", {})
             _n698p = _n698_perf.setdefault(_n698_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n698_field})
@@ -11730,7 +11730,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N699: Fear Greed Entry ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n699 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n699 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n699_field = _buy_n699.get("fear_greed_entry_perf", "neutral_fear_greed") if _buy_n699 else "neutral_fear_greed"
             _n699_perf = tlog.setdefault("fear_greed_entry_perf", {})
             _n699p = _n699_perf.setdefault(_n699_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n699_field})
@@ -11745,7 +11745,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N700: Composite Technical Score ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n700 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n700 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n700_field = _buy_n700.get("composite_technical_score_perf", "weak_composite") if _buy_n700 else "weak_composite"
             _n700_perf = tlog.setdefault("composite_technical_score_perf", {})
             _n700p = _n700_perf.setdefault(_n700_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n700_field})
@@ -11760,7 +11760,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N701: Parabolic Extension ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n701 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n701 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n701_field = _buy_n701.get("parabolic_extension_perf", "not_extended") if _buy_n701 else "not_extended"
             _n701_perf = tlog.setdefault("parabolic_extension_perf", {})
             _n701p = _n701_perf.setdefault(_n701_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n701_field})
@@ -11775,7 +11775,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N702: Volume Climax ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n702 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n702 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n702_field = _buy_n702.get("volume_climax_perf", "normal_volume") if _buy_n702 else "normal_volume"
             _n702_perf = tlog.setdefault("volume_climax_perf", {})
             _n702p = _n702_perf.setdefault(_n702_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n702_field})
@@ -11790,7 +11790,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N703: Trend Exhaustion ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n703 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n703 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n703_field = _buy_n703.get("trend_exhaustion_v1_perf", "fresh_trend") if _buy_n703 else "fresh_trend"
             _n703_perf = tlog.setdefault("trend_exhaustion_v1_perf", {})
             _n703p = _n703_perf.setdefault(_n703_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n703_field})
@@ -11805,7 +11805,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N704: Institutional Footprint ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n704 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n704 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n704_field = _buy_n704.get("institutional_footprint_perf", "unknown_institutional") if _buy_n704 else "unknown_institutional"
             _n704_perf = tlog.setdefault("institutional_footprint_perf", {})
             _n704p = _n704_perf.setdefault(_n704_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n704_field})
@@ -11820,7 +11820,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N705: Smart Stop Placement ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n705 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n705 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n705_field = _buy_n705.get("smart_stop_placement_perf", "normal_atr_stop") if _buy_n705 else "normal_atr_stop"
             _n705_perf = tlog.setdefault("smart_stop_placement_perf", {})
             _n705p = _n705_perf.setdefault(_n705_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n705_field})
@@ -11835,7 +11835,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N706: Risk-Adjusted Return ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n706 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n706 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n706_field = _buy_n706.get("risk_adjusted_return_perf", "poor_rr") if _buy_n706 else "poor_rr"
             _n706_perf = tlog.setdefault("risk_adjusted_return_perf", {})
             _n706p = _n706_perf.setdefault(_n706_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n706_field})
@@ -11850,7 +11850,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N707: Catalyst Duration ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n707 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n707 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n707_field = _buy_n707.get("catalyst_duration_perf", "no_catalyst") if _buy_n707 else "no_catalyst"
             _n707_perf = tlog.setdefault("catalyst_duration_perf", {})
             _n707p = _n707_perf.setdefault(_n707_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n707_field})
@@ -11865,7 +11865,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N708: Position Maturity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n708 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n708 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n708_field = _buy_n708.get("position_maturity_perf", "fresh_entry_day1") if _buy_n708 else "fresh_entry_day1"
             _n708_perf = tlog.setdefault("position_maturity_perf", {})
             _n708p = _n708_perf.setdefault(_n708_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n708_field})
@@ -11880,7 +11880,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N709: Sector Cycle Phase ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n709 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n709 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n709_field = _buy_n709.get("sector_cycle_phase_perf", "sector_contraction_phase") if _buy_n709 else "sector_contraction_phase"
             _n709_perf = tlog.setdefault("sector_cycle_phase_perf", {})
             _n709p = _n709_perf.setdefault(_n709_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n709_field})
@@ -11895,7 +11895,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N710: Macro Tailwind ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n710 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n710 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n710_field = _buy_n710.get("macro_tailwind_perf", "macro_neutral") if _buy_n710 else "macro_neutral"
             _n710_perf = tlog.setdefault("macro_tailwind_perf", {})
             _n710p = _n710_perf.setdefault(_n710_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n710_field})
@@ -11910,7 +11910,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N711: Volatility Regime Entry ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n711 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n711 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n711_field = _buy_n711.get("volatility_regime_entry_perf", "normal_vix") if _buy_n711 else "normal_vix"
             _n711_perf = tlog.setdefault("volatility_regime_entry_perf", {})
             _n711p = _n711_perf.setdefault(_n711_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n711_field})
@@ -11925,7 +11925,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N712: Price Action Pattern ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n712 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n712 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n712_field = _buy_n712.get("price_action_pattern_perf", "no_clear_pattern") if _buy_n712 else "no_clear_pattern"
             _n712_perf = tlog.setdefault("price_action_pattern_perf", {})
             _n712p = _n712_perf.setdefault(_n712_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n712_field})
@@ -11940,7 +11940,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N713: Multi-Timeframe Bias ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n713 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n713 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n713_field = _buy_n713.get("multi_timeframe_bias_perf", "single_tf_only") if _buy_n713 else "single_tf_only"
             _n713_perf = tlog.setdefault("multi_timeframe_bias_perf", {})
             _n713p = _n713_perf.setdefault(_n713_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n713_field})
@@ -11955,7 +11955,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N714: Relative Volume Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n714 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n714 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n714_field = _buy_n714.get("relative_volume_quality_perf", "moderate_volume") if _buy_n714 else "moderate_volume"
             _n714_perf = tlog.setdefault("relative_volume_quality_perf", {})
             _n714p = _n714_perf.setdefault(_n714_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n714_field})
@@ -11970,7 +11970,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N715: Trend Duration ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n715 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n715 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n715_field = _buy_n715.get("trend_duration_perf", "weak_or_no_trend") if _buy_n715 else "weak_or_no_trend"
             _n715_perf = tlog.setdefault("trend_duration_perf", {})
             _n715p = _n715_perf.setdefault(_n715_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n715_field})
@@ -11985,7 +11985,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N716: Setup Timing Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n716 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n716 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n716_field = _buy_n716.get("setup_timing_quality_perf", "caution_timing") if _buy_n716 else "caution_timing"
             _n716_perf = tlog.setdefault("setup_timing_quality_perf", {})
             _n716p = _n716_perf.setdefault(_n716_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n716_field})
@@ -12000,7 +12000,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N717: Position Sizing Outcome ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n717 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n717 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n717_field = _buy_n717.get("position_sizing_outcome_perf", "normal_size_b") if _buy_n717 else "normal_size_b"
             _n717_perf = tlog.setdefault("position_sizing_outcome_perf", {})
             _n717p = _n717_perf.setdefault(_n717_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n717_field})
@@ -12015,7 +12015,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N718: News Timing Entry ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n718 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n718 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n718_field = _buy_n718.get("news_timing_entry_perf", "no_fresh_news") if _buy_n718 else "no_fresh_news"
             _n718_perf = tlog.setdefault("news_timing_entry_perf", {})
             _n718p = _n718_perf.setdefault(_n718_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n718_field})
@@ -12030,7 +12030,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N719: Earnings Beat Entry ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n719 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n719 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n719_field = _buy_n719.get("earnings_beat_entry_perf", "no_earnings_catalyst") if _buy_n719 else "no_earnings_catalyst"
             _n719_perf = tlog.setdefault("earnings_beat_entry_perf", {})
             _n719p = _n719_perf.setdefault(_n719_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n719_field})
@@ -12045,7 +12045,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N720: Institutional Buying Pressure ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n720 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n720 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n720_field = _buy_n720.get("institutional_buying_pressure_perf", "no_institutional_signal") if _buy_n720 else "no_institutional_signal"
             _n720_perf = tlog.setdefault("institutional_buying_pressure_perf", {})
             _n720p = _n720_perf.setdefault(_n720_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n720_field})
@@ -12060,7 +12060,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N721: Accumulation Distribution ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n721 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n721 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n721_field = _buy_n721.get("accumulation_distribution_perf", "distribution_neutral") if _buy_n721 else "distribution_neutral"
             _n721_perf = tlog.setdefault("accumulation_distribution_perf", {})
             _n721p = _n721_perf.setdefault(_n721_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n721_field})
@@ -12075,7 +12075,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N722: Price Momentum Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n722 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n722 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n722_field = _buy_n722.get("price_momentum_quality_perf", "flat_momentum") if _buy_n722 else "flat_momentum"
             _n722_perf = tlog.setdefault("price_momentum_quality_perf", {})
             _n722p = _n722_perf.setdefault(_n722_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n722_field})
@@ -12090,7 +12090,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N723: Entry Candle Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n723 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n723 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n723_field = _buy_n723.get("entry_candle_quality_perf", "neutral_candle") if _buy_n723 else "neutral_candle"
             _n723_perf = tlog.setdefault("entry_candle_quality_perf", {})
             _n723p = _n723_perf.setdefault(_n723_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n723_field})
@@ -12105,7 +12105,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N724: Risk Per Trade ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n724 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n724 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n724_field = _buy_n724.get("risk_per_trade_perf", "normal_risk") if _buy_n724 else "normal_risk"
             _n724_perf = tlog.setdefault("risk_per_trade_perf", {})
             _n724p = _n724_perf.setdefault(_n724_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n724_field})
@@ -12120,7 +12120,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N725: Market Internal Alignment ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n725 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n725 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n725_field = _buy_n725.get("market_internal_alignment_perf", "internals_mixed") if _buy_n725 else "internals_mixed"
             _n725_perf = tlog.setdefault("market_internal_alignment_perf", {})
             _n725p = _n725_perf.setdefault(_n725_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n725_field})
@@ -12135,7 +12135,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N726: Reversal Confirmation ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n726 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n726 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n726_field = _buy_n726.get("reversal_confirmation_perf", "no_reversal_signal") if _buy_n726 else "no_reversal_signal"
             _n726_perf = tlog.setdefault("reversal_confirmation_perf", {})
             _n726p = _n726_perf.setdefault(_n726_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n726_field})
@@ -12150,7 +12150,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N727: Support/Resistance Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n727 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n727 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n727_field = _buy_n727.get("support_resistance_quality_perf", "no_clear_sr") if _buy_n727 else "no_clear_sr"
             _n727_perf = tlog.setdefault("support_resistance_quality_perf", {})
             _n727p = _n727_perf.setdefault(_n727_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n727_field})
@@ -12165,7 +12165,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N728: Price Target Achievability ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n728 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n728 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n728_field = _buy_n728.get("price_target_achievability_perf", "low_probability_target") if _buy_n728 else "low_probability_target"
             _n728_perf = tlog.setdefault("price_target_achievability_perf", {})
             _n728p = _n728_perf.setdefault(_n728_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n728_field})
@@ -12180,7 +12180,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N729: Sector Momentum Rank ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n729 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n729 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n729_field = _buy_n729.get("sector_momentum_rank_perf", "below_avg_sector") if _buy_n729 else "below_avg_sector"
             _n729_perf = tlog.setdefault("sector_momentum_rank_perf", {})
             _n729p = _n729_perf.setdefault(_n729_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n729_field})
@@ -12195,7 +12195,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N730: Conviction Persistence ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n730 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n730 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n730_field = _buy_n730.get("conviction_persistence_perf", "no_persistence") if _buy_n730 else "no_persistence"
             _n730_perf = tlog.setdefault("conviction_persistence_perf", {})
             _n730p = _n730_perf.setdefault(_n730_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n730_field})
@@ -12210,7 +12210,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N731: Order Fill Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n731 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n731 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n731_field = _buy_n731.get("order_fill_quality_perf", "tight") if _buy_n731 else "tight"
             _n731_perf = tlog.setdefault("order_fill_quality_perf", {})
             _n731p = _n731_perf.setdefault(_n731_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n731_field})
@@ -12225,7 +12225,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N732: Spread Cost ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n732 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n732 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n732_field = _buy_n732.get("spread_cost_perf", "low_cost") if _buy_n732 else "low_cost"
             _n732_perf = tlog.setdefault("spread_cost_perf", {})
             _n732p = _n732_perf.setdefault(_n732_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n732_field})
@@ -12240,7 +12240,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N733: Slippage Control ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n733 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n733 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n733_field = _buy_n733.get("slippage_perf", "minimal") if _buy_n733 else "minimal"
             _n733_perf = tlog.setdefault("slippage_perf", {})
             _n733p = _n733_perf.setdefault(_n733_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n733_field})
@@ -12255,7 +12255,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N734: Position Add Timing ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n734 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n734 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n734_field = _buy_n734.get("position_add_perf", "first_entry") if _buy_n734 else "first_entry"
             _n734_perf = tlog.setdefault("position_add_perf", {})
             _n734p = _n734_perf.setdefault(_n734_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n734_field})
@@ -12270,7 +12270,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N735: Exit Discipline ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n735 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n735 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n735_field = _buy_n735.get("exit_discipline_perf", "normal_stop") if _buy_n735 else "normal_stop"
             _n735_perf = tlog.setdefault("exit_discipline_perf", {})
             _n735p = _n735_perf.setdefault(_n735_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n735_field})
@@ -12285,7 +12285,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N736: News Sentiment Shift ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n736 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n736 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n736_field = _buy_n736.get("news_sentiment_shift_perf", "stale_news") if _buy_n736 else "stale_news"
             _n736_perf = tlog.setdefault("news_sentiment_shift_perf", {})
             _n736p = _n736_perf.setdefault(_n736_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n736_field})
@@ -12300,7 +12300,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N737: Analyst Revision ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n737 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n737 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n737_field = _buy_n737.get("rs_quality_v2_perf", "neutral_rs") if _buy_n737 else "neutral_rs"
             _n737_perf = tlog.setdefault("rs_quality_v2_perf", {})
             _n737p = _n737_perf.setdefault(_n737_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n737_field})
@@ -12315,7 +12315,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N738: Short Squeeze Signal ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n738 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n738 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n738_field = _buy_n738.get("short_squeeze_perf", "low_short") if _buy_n738 else "low_short"
             _n738_perf = tlog.setdefault("short_squeeze_perf", {})
             _n738p = _n738_perf.setdefault(_n738_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n738_field})
@@ -12330,7 +12330,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N739: Insider Activity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n739 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n739 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n739_field = _buy_n739.get("insider_activity_perf", "normal_vol") if _buy_n739 else "normal_vol"
             _n739_perf = tlog.setdefault("insider_activity_perf", {})
             _n739p = _n739_perf.setdefault(_n739_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n739_field})
@@ -12345,7 +12345,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N740: Dark Pool Signal ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n740 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n740 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n740_field = _buy_n740.get("dark_pool_perf", "at_vwap") if _buy_n740 else "at_vwap"
             _n740_perf = tlog.setdefault("dark_pool_perf", {})
             _n740p = _n740_perf.setdefault(_n740_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n740_field})
@@ -12360,7 +12360,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N741: Gap Fill Risk ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n741 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n741 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n741_field = _buy_n741.get("gap_fill_risk_perf", "small_gap") if _buy_n741 else "small_gap"
             _n741_perf = tlog.setdefault("gap_fill_risk_perf", {})
             _n741p = _n741_perf.setdefault(_n741_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n741_field})
@@ -12375,7 +12375,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N742: Earnings Proximity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n742 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n742 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n742_field = _buy_n742.get("earnings_proximity_perf", "earnings_far") if _buy_n742 else "earnings_far"
             _n742_perf = tlog.setdefault("earnings_proximity_perf", {})
             _n742p = _n742_perf.setdefault(_n742_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n742_field})
@@ -12390,7 +12390,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N743: Dividend Capture ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n743 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n743 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n743_field = _buy_n743.get("dividend_capture_perf", "no_div_event") if _buy_n743 else "no_div_event"
             _n743_perf = tlog.setdefault("dividend_capture_perf", {})
             _n743p = _n743_perf.setdefault(_n743_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n743_field})
@@ -12405,7 +12405,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N744: Index Rebalance Signal ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n744 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n744 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n744_field = _buy_n744.get("index_rebalance_perf", "no_index") if _buy_n744 else "no_index"
             _n744_perf = tlog.setdefault("index_rebalance_perf", {})
             _n744p = _n744_perf.setdefault(_n744_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n744_field})
@@ -12420,7 +12420,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N745: Lockup Expiry ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n745 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n745 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n745_field = _buy_n745.get("lockup_expiry_perf", "no_lockup") if _buy_n745 else "no_lockup"
             _n745_perf = tlog.setdefault("lockup_expiry_perf", {})
             _n745p = _n745_perf.setdefault(_n745_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n745_field})
@@ -12435,7 +12435,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N746: Options Gamma ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n746 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n746 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n746_field = _buy_n746.get("options_gamma_perf", "low_gamma") if _buy_n746 else "low_gamma"
             _n746_perf = tlog.setdefault("options_gamma_perf", {})
             _n746p = _n746_perf.setdefault(_n746_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n746_field})
@@ -12450,7 +12450,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N747: Put/Call Skew ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n747 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n747 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n747_field = _buy_n747.get("put_call_skew_perf", "neutral_skew") if _buy_n747 else "neutral_skew"
             _n747_perf = tlog.setdefault("put_call_skew_perf", {})
             _n747p = _n747_perf.setdefault(_n747_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n747_field})
@@ -12465,7 +12465,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N748: Implied Move ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n748 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n748 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n748_field = _buy_n748.get("implied_move_perf", "small_implied_move") if _buy_n748 else "small_implied_move"
             _n748_perf = tlog.setdefault("implied_move_perf", {})
             _n748p = _n748_perf.setdefault(_n748_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n748_field})
@@ -12480,7 +12480,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N749: Macro Catalyst ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n749 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n749 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n749_field = _buy_n749.get("macro_catalyst_perf", "macro_clear") if _buy_n749 else "macro_clear"
             _n749_perf = tlog.setdefault("macro_catalyst_perf", {})
             _n749p = _n749_perf.setdefault(_n749_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n749_field})
@@ -12495,7 +12495,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N750: Fed Sensitivity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n750 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n750 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n750_field = _buy_n750.get("fed_sensitivity_perf", "rate_insensitive") if _buy_n750 else "rate_insensitive"
             _n750_perf = tlog.setdefault("fed_sensitivity_perf", {})
             _n750p = _n750_perf.setdefault(_n750_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n750_field})
@@ -12510,7 +12510,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N751: Pre-Market Gap ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n751 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n751 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n751_field = _buy_n751.get("pm_gap_size_v2_perf", "flat_pm") if _buy_n751 else "flat_pm"
             _n751_perf = tlog.setdefault("pm_gap_size_v2_perf", {})
             _n751p = _n751_perf.setdefault(_n751_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n751_field})
@@ -12525,7 +12525,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N752: Opening Range ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n752 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n752 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n752_field = _buy_n752.get("opening_range_perf", "or_mid") if _buy_n752 else "or_mid"
             _n752_perf = tlog.setdefault("opening_range_perf", {})
             _n752p = _n752_perf.setdefault(_n752_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n752_field})
@@ -12540,7 +12540,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N753: VWAP Reclaim ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n753 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n753 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n753_field = _buy_n753.get("vwap_reclaim_perf", "above_vwap_hold") if _buy_n753 else "above_vwap_hold"
             _n753_perf = tlog.setdefault("vwap_reclaim_perf", {})
             _n753p = _n753_perf.setdefault(_n753_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n753_field})
@@ -12555,7 +12555,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N754: Intraday Momentum ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n754 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n754 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n754_field = _buy_n754.get("intraday_momentum_perf", "flat_id") if _buy_n754 else "flat_id"
             _n754_perf = tlog.setdefault("intraday_momentum_perf", {})
             _n754p = _n754_perf.setdefault(_n754_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n754_field})
@@ -12570,7 +12570,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N755: Closing Strength ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n755 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n755 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n755_field = _buy_n755.get("closing_strength_perf", "neutral_close") if _buy_n755 else "neutral_close"
             _n755_perf = tlog.setdefault("closing_strength_perf", {})
             _n755p = _n755_perf.setdefault(_n755_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n755_field})
@@ -12585,7 +12585,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N756: Multi-Day Pattern ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n756 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n756 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n756_field = _buy_n756.get("multi_day_pattern_perf", "multi_day_consolidation") if _buy_n756 else "multi_day_consolidation"
             _n756_perf = tlog.setdefault("multi_day_pattern_perf", {})
             _n756p = _n756_perf.setdefault(_n756_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n756_field})
@@ -12600,7 +12600,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N757: Base Breakout ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n757 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n757 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n757_field = _buy_n757.get("base_breakout_perf", "no_base") if _buy_n757 else "no_base"
             _n757_perf = tlog.setdefault("base_breakout_perf", {})
             _n757p = _n757_perf.setdefault(_n757_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n757_field})
@@ -12615,7 +12615,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N758: Trend Channel ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n758 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n758 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n758_field = _buy_n758.get("trend_channel_perf", "channel_mid") if _buy_n758 else "channel_mid"
             _n758_perf = tlog.setdefault("trend_channel_perf", {})
             _n758p = _n758_perf.setdefault(_n758_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n758_field})
@@ -12630,7 +12630,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N759: Pivot Point ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n759 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n759 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n759_field = _buy_n759.get("pivot_point_perf", "above_pivot") if _buy_n759 else "above_pivot"
             _n759_perf = tlog.setdefault("pivot_point_perf", {})
             _n759p = _n759_perf.setdefault(_n759_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n759_field})
@@ -12645,7 +12645,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N760: Fibonacci Level ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n760 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n760 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n760_field = _buy_n760.get("fibonacci_level_perf", "no_fib_level") if _buy_n760 else "no_fib_level"
             _n760_perf = tlog.setdefault("fibonacci_level_perf", {})
             _n760p = _n760_perf.setdefault(_n760_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n760_field})
@@ -12660,7 +12660,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N761: Breadth Thrust ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n761 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n761 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n761_field = _buy_n761.get("breadth_thrust_perf", "neutral_breadth") if _buy_n761 else "neutral_breadth"
             _n761_perf = tlog.setdefault("breadth_thrust_perf", {})
             _n761p = _n761_perf.setdefault(_n761_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n761_field})
@@ -12675,7 +12675,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N762: Put/Call Ratio Trend ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n762 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n762 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n762_field = _buy_n762.get("put_call_ratio_trend_perf", "pc_neutral") if _buy_n762 else "pc_neutral"
             _n762_perf = tlog.setdefault("put_call_ratio_trend_perf", {})
             _n762p = _n762_perf.setdefault(_n762_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n762_field})
@@ -12690,7 +12690,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N763: New Highs vs Lows ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n763 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n763 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n763_field = _buy_n763.get("new_highs_lows_perf", "balanced_nh_nl") if _buy_n763 else "balanced_nh_nl"
             _n763_perf = tlog.setdefault("new_highs_lows_perf", {})
             _n763p = _n763_perf.setdefault(_n763_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n763_field})
@@ -12705,7 +12705,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N764: Advance/Decline Line ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n764 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n764 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n764_field = _buy_n764.get("advance_decline_perf", "ad_neutral") if _buy_n764 else "ad_neutral"
             _n764_perf = tlog.setdefault("advance_decline_perf", {})
             _n764p = _n764_perf.setdefault(_n764_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n764_field})
@@ -12720,7 +12720,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N765: Institutional Flow ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n765 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n765 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n765_field = _buy_n765.get("inst_flow_quality_perf", "inst_neutral") if _buy_n765 else "inst_neutral"
             _n765_perf = tlog.setdefault("inst_flow_quality_perf", {})
             _n765p = _n765_perf.setdefault(_n765_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n765_field})
@@ -12735,7 +12735,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N766: Retail Flow ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n766 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n766 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n766_field = _buy_n766.get("retail_flow_perf", "retail_neutral") if _buy_n766 else "retail_neutral"
             _n766_perf = tlog.setdefault("retail_flow_perf", {})
             _n766p = _n766_perf.setdefault(_n766_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n766_field})
@@ -12750,7 +12750,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N767: Smart Money Flow ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n767 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n767 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n767_field = _buy_n767.get("smart_money_flow_perf", "smart_neutral") if _buy_n767 else "smart_neutral"
             _n767_perf = tlog.setdefault("smart_money_flow_perf", {})
             _n767p = _n767_perf.setdefault(_n767_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n767_field})
@@ -12765,7 +12765,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N768: Fear & Greed ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n768 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n768 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n768_field = _buy_n768.get("fear_greed_perf", "neutral_fg") if _buy_n768 else "neutral_fg"
             _n768_perf = tlog.setdefault("fear_greed_perf", {})
             _n768p = _n768_perf.setdefault(_n768_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n768_field})
@@ -12780,7 +12780,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N769: VIX Term Structure ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n769 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n769 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n769_field = _buy_n769.get("vix_term_structure_perf", "vix_flat") if _buy_n769 else "vix_flat"
             _n769_perf = tlog.setdefault("vix_term_structure_perf", {})
             _n769p = _n769_perf.setdefault(_n769_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n769_field})
@@ -12795,7 +12795,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N770: Credit Spread ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n770 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n770 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n770_field = _buy_n770.get("credit_spread_perf", "normal_credit_spreads") if _buy_n770 else "normal_credit_spreads"
             _n770_perf = tlog.setdefault("credit_spread_perf", {})
             _n770p = _n770_perf.setdefault(_n770_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n770_field})
@@ -12810,7 +12810,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N771: Earnings Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n771 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n771 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n771_field = _buy_n771.get("earnings_quality_perf", "inline_eps") if _buy_n771 else "inline_eps"
             _n771_perf = tlog.setdefault("earnings_quality_perf", {})
             _n771p = _n771_perf.setdefault(_n771_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n771_field})
@@ -12825,7 +12825,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N772: Revenue Growth ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n772 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n772 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n772_field = _buy_n772.get("revenue_growth_perf", "low_rev_growth") if _buy_n772 else "low_rev_growth"
             _n772_perf = tlog.setdefault("revenue_growth_perf", {})
             _n772p = _n772_perf.setdefault(_n772_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n772_field})
@@ -12840,7 +12840,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N773: Margin Expansion ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n773 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n773 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n773_field = _buy_n773.get("margin_expansion_perf", "margin_stable") if _buy_n773 else "margin_stable"
             _n773_perf = tlog.setdefault("margin_expansion_perf", {})
             _n773p = _n773_perf.setdefault(_n773_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n773_field})
@@ -12855,7 +12855,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N774: Guidance Revision ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n774 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n774 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n774_field = _buy_n774.get("guidance_revision_perf", "guidance_inline") if _buy_n774 else "guidance_inline"
             _n774_perf = tlog.setdefault("guidance_revision_perf", {})
             _n774p = _n774_perf.setdefault(_n774_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n774_field})
@@ -12870,7 +12870,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N775: Insider Buying Intensity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n775 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n775 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n775_field = _buy_n775.get("insider_buying_intensity_perf", "no_insider_activity") if _buy_n775 else "no_insider_activity"
             _n775_perf = tlog.setdefault("insider_buying_intensity_perf", {})
             _n775p = _n775_perf.setdefault(_n775_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n775_field})
@@ -12885,7 +12885,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N776: Institutional Ownership Change ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n776 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n776 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n776_field = _buy_n776.get("institutional_ownership_change_perf", "inst_neutral") if _buy_n776 else "inst_neutral"
             _n776_perf = tlog.setdefault("institutional_ownership_change_perf", {})
             _n776p = _n776_perf.setdefault(_n776_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n776_field})
@@ -12900,7 +12900,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N777: Short Interest Trend ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n777 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n777 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n777_field = _buy_n777.get("short_interest_trend_perf", "si_stable") if _buy_n777 else "si_stable"
             _n777_perf = tlog.setdefault("short_interest_trend_perf", {})
             _n777p = _n777_perf.setdefault(_n777_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n777_field})
@@ -12915,7 +12915,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N778: PE Relative ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n778 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n778 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n778_field = _buy_n778.get("price_earnings_relative_perf", "pe_inline") if _buy_n778 else "pe_inline"
             _n778_perf = tlog.setdefault("price_earnings_relative_perf", {})
             _n778p = _n778_perf.setdefault(_n778_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n778_field})
@@ -12930,7 +12930,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N779: Free Cash Flow Yield ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n779 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n779 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n779_field = _buy_n779.get("free_cash_flow_yield_perf", "moderate_fcf_yield") if _buy_n779 else "moderate_fcf_yield"
             _n779_perf = tlog.setdefault("free_cash_flow_yield_perf", {})
             _n779p = _n779_perf.setdefault(_n779_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n779_field})
@@ -12945,7 +12945,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N780: Debt/Equity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n780 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n780 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n780_field = _buy_n780.get("debt_to_equity_perf", "moderate_debt") if _buy_n780 else "moderate_debt"
             _n780_perf = tlog.setdefault("debt_to_equity_perf", {})
             _n780p = _n780_perf.setdefault(_n780_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n780_field})
@@ -12960,7 +12960,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N781: Price Discovery Zone ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n781 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n781 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n781_field = _buy_n781.get("price_discovery_zone_perf", "mid_range") if _buy_n781 else "mid_range"
             _n781_perf = tlog.setdefault("price_discovery_zone_perf", {})
             _n781p = _n781_perf.setdefault(_n781_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n781_field})
@@ -12975,7 +12975,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N782: Liquidity Trap ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n782 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n782 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n782_field = _buy_n782.get("liquidity_trap_perf", "normal_liquidity") if _buy_n782 else "normal_liquidity"
             _n782_perf = tlog.setdefault("liquidity_trap_perf", {})
             _n782p = _n782_perf.setdefault(_n782_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n782_field})
@@ -12990,7 +12990,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N783: Mean Reversion Setup ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n783 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n783 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n783_field = _buy_n783.get("mean_reversion_setup_perf", "neutral_mr") if _buy_n783 else "neutral_mr"
             _n783_perf = tlog.setdefault("mean_reversion_setup_perf", {})
             _n783p = _n783_perf.setdefault(_n783_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n783_field})
@@ -13005,7 +13005,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N784: Trend Exhaustion ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n784 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n784 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n784_field = _buy_n784.get("trend_exhaustion_perf", "fresh_trend") if _buy_n784 else "fresh_trend"
             _n784_perf = tlog.setdefault("trend_exhaustion_perf", {})
             _n784p = _n784_perf.setdefault(_n784_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n784_field})
@@ -13020,7 +13020,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N785: Squeeze Coil ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n785 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n785 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n785_field = _buy_n785.get("squeeze_coil_perf", "moderate_coil") if _buy_n785 else "moderate_coil"
             _n785_perf = tlog.setdefault("squeeze_coil_perf", {})
             _n785p = _n785_perf.setdefault(_n785_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n785_field})
@@ -13035,7 +13035,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N786: Breakout Quality ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n786 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n786 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n786_field = _buy_n786.get("breakout_qual_v1_perf", "no_breakout") if _buy_n786 else "no_breakout"
             _n786_perf = tlog.setdefault("breakout_qual_v1_perf", {})
             _n786p = _n786_perf.setdefault(_n786_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n786_field})
@@ -13050,7 +13050,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N787: False Breakout Risk ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n787 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n787 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n787_field = _buy_n787.get("false_breakout_risk_perf", "low_false_breakout_risk") if _buy_n787 else "low_false_breakout_risk"
             _n787_perf = tlog.setdefault("false_breakout_risk_perf", {})
             _n787p = _n787_perf.setdefault(_n787_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n787_field})
@@ -13065,7 +13065,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N788: Continuation vs Reversal ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n788 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n788 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n788_field = _buy_n788.get("continuation_vs_reversal_perf", "neutral_setup") if _buy_n788 else "neutral_setup"
             _n788_perf = tlog.setdefault("continuation_vs_reversal_perf", {})
             _n788p = _n788_perf.setdefault(_n788_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n788_field})
@@ -13080,7 +13080,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N789: Pattern Completion ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n789 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n789 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n789_field = _buy_n789.get("pattern_completion_perf", "no_pattern") if _buy_n789 else "no_pattern"
             _n789_perf = tlog.setdefault("pattern_completion_perf", {})
             _n789p = _n789_perf.setdefault(_n789_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n789_field})
@@ -13095,7 +13095,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N790: Entry Timing Precision ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n790 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n790 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n790_field = _buy_n790.get("entry_timing_precision_perf", "good_timing") if _buy_n790 else "good_timing"
             _n790_perf = tlog.setdefault("entry_timing_precision_perf", {})
             _n790p = _n790_perf.setdefault(_n790_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n790_field})
@@ -13110,7 +13110,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N791: Portfolio Beta Risk ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n791 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n791 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n791_field = _buy_n791.get("portfolio_beta_risk_perf", "neutral_beta_add") if _buy_n791 else "neutral_beta_add"
             _n791_perf = tlog.setdefault("portfolio_beta_risk_perf", {})
             _n791p = _n791_perf.setdefault(_n791_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n791_field})
@@ -13125,7 +13125,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N792: Correlation Cluster ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n792 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n792 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n792_field = _buy_n792.get("correlation_cluster_perf", "low_correlation") if _buy_n792 else "low_correlation"
             _n792_perf = tlog.setdefault("correlation_cluster_perf", {})
             _n792p = _n792_perf.setdefault(_n792_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n792_field})
@@ -13140,7 +13140,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N793: Sector Rotation Speed ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n793 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n793 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n793_field = _buy_n793.get("sector_rotation_speed_perf", "slow_rotation") if _buy_n793 else "slow_rotation"
             _n793_perf = tlog.setdefault("sector_rotation_speed_perf", {})
             _n793p = _n793_perf.setdefault(_n793_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n793_field})
@@ -13155,7 +13155,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N794: Market Cap Tier ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n794 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n794 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n794_field = _buy_n794.get("market_cap_tier_v1_perf", "large_cap") if _buy_n794 else "large_cap"
             _n794_perf = tlog.setdefault("market_cap_tier_v1_perf", {})
             _n794p = _n794_perf.setdefault(_n794_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n794_field})
@@ -13170,7 +13170,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N795: Float Rotation Speed ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n795 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n795 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n795_field = _buy_n795.get("float_rotation_speed_perf", "normal_float_rotation") if _buy_n795 else "normal_float_rotation"
             _n795_perf = tlog.setdefault("float_rotation_speed_perf", {})
             _n795p = _n795_perf.setdefault(_n795_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n795_field})
@@ -13185,7 +13185,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N796: News Velocity ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n796 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n796 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n796_field = _buy_n796.get("news_velocity_perf", "stale_news") if _buy_n796 else "stale_news"
             _n796_perf = tlog.setdefault("news_velocity_perf", {})
             _n796p = _n796_perf.setdefault(_n796_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n796_field})
@@ -13200,7 +13200,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N797: Social Momentum ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n797 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n797 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n797_field = _buy_n797.get("social_momentum_perf", "normal_social") if _buy_n797 else "normal_social"
             _n797_perf = tlog.setdefault("social_momentum_perf", {})
             _n797p = _n797_perf.setdefault(_n797_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n797_field})
@@ -13215,7 +13215,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N798: Catalyst Magnitude ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n798 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n798 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n798_field = _buy_n798.get("catalyst_magnitude_perf", "moderate_catalyst") if _buy_n798 else "moderate_catalyst"
             _n798_perf = tlog.setdefault("catalyst_magnitude_perf", {})
             _n798p = _n798_perf.setdefault(_n798_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n798_field})
@@ -13230,7 +13230,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N799: Expected Value Score ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n799 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n799 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n799_field = _buy_n799.get("expected_value_score_perf", "neutral_ev_trade") if _buy_n799 else "neutral_ev_trade"
             _n799_perf = tlog.setdefault("expected_value_score_perf", {})
             _n799p = _n799_perf.setdefault(_n799_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n799_field})
@@ -13245,7 +13245,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N800: Composite Signal Strength ────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n800 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n800 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n800_field = _buy_n800.get("composite_signal_strength_perf", "no_composite_signal") if _buy_n800 else "no_composite_signal"
             _n800_perf = tlog.setdefault("composite_signal_strength_perf", {})
             _n800p = _n800_perf.setdefault(_n800_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n800_field})
@@ -13260,7 +13260,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N801: Macro Regime ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n801 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n801 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n801_field = _buy_n801.get("macro_regime_perf", "neutral_range") if _buy_n801 else "neutral_range"
             _n801_perf = tlog.setdefault("macro_regime_perf", {})
             _n801p = _n801_perf.setdefault(_n801_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n801_field})
@@ -13275,7 +13275,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N802: Fed Policy Stance ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n802 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n802 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n802_field = _buy_n802.get("fed_policy_stance_perf", "neutral_policy") if _buy_n802 else "neutral_policy"
             _n802_perf = tlog.setdefault("fed_policy_stance_perf", {})
             _n802p = _n802_perf.setdefault(_n802_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n802_field})
@@ -13290,7 +13290,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N803: Earnings Proximity ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n803 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n803 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n803_field = _buy_n803.get("earnings_risk_zone_perf", "safe_zone") if _buy_n803 else "safe_zone"
             _n803_perf = tlog.setdefault("earnings_risk_zone_perf", {})
             _n803p = _n803_perf.setdefault(_n803_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n803_field})
@@ -13305,7 +13305,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N804: Post Earnings Drift ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n804 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n804 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n804_field = _buy_n804.get("post_earnings_drift_perf", "no_move_yet") if _buy_n804 else "no_move_yet"
             _n804_perf = tlog.setdefault("post_earnings_drift_perf", {})
             _n804p = _n804_perf.setdefault(_n804_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n804_field})
@@ -13320,7 +13320,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N805: Sector ETF Flow ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n805 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n805 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n805_field = _buy_n805.get("sector_etf_flow_perf", "neutral_flow") if _buy_n805 else "neutral_flow"
             _n805_perf = tlog.setdefault("sector_etf_flow_perf", {})
             _n805p = _n805_perf.setdefault(_n805_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n805_field})
@@ -13335,7 +13335,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N806: Position Concentration ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n806 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n806 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n806_field = _buy_n806.get("position_concentration_perf", "diversified") if _buy_n806 else "diversified"
             _n806_perf = tlog.setdefault("position_concentration_perf", {})
             _n806p = _n806_perf.setdefault(_n806_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n806_field})
@@ -13350,7 +13350,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N807: Intraday Structure ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n807 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n807 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n807_field = _buy_n807.get("intraday_structure_perf", "undefined_structure") if _buy_n807 else "undefined_structure"
             _n807_perf = tlog.setdefault("intraday_structure_perf", {})
             _n807p = _n807_perf.setdefault(_n807_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n807_field})
@@ -13365,7 +13365,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N808: Gap Size ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n808 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n808 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n808_field = _buy_n808.get("gap_size_perf", "flat_open") if _buy_n808 else "flat_open"
             _n808_perf = tlog.setdefault("gap_size_perf", {})
             _n808p = _n808_perf.setdefault(_n808_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n808_field})
@@ -13380,7 +13380,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N809: Short Squeeze Risk ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n809 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n809 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n809_field = _buy_n809.get("short_squeeze_risk_perf", "low_si") if _buy_n809 else "low_si"
             _n809_perf = tlog.setdefault("short_squeeze_risk_perf", {})
             _n809p = _n809_perf.setdefault(_n809_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n809_field})
@@ -13395,7 +13395,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N810: Institutional Flow ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n810 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n810 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n810_field = _buy_n810.get("inst_ownership_perf", "retail_dominated") if _buy_n810 else "retail_dominated"
             _n810_perf = tlog.setdefault("inst_ownership_perf", {})
             _n810p = _n810_perf.setdefault(_n810_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n810_field})
@@ -13410,7 +13410,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N811: Price Discovery Phase ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n811 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n811 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n811_field = _buy_n811.get("price_disc_activity_perf", "normal_trading") if _buy_n811 else "normal_trading"
             _n811_perf = tlog.setdefault("price_disc_activity_perf", {})
             _n811p = _n811_perf.setdefault(_n811_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n811_field})
@@ -13425,7 +13425,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N812: Momentum Persistence ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n812 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n812 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n812_field = _buy_n812.get("momentum_persistence_perf", "no_momentum") if _buy_n812 else "no_momentum"
             _n812_perf = tlog.setdefault("momentum_persistence_perf", {})
             _n812p = _n812_perf.setdefault(_n812_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n812_field})
@@ -13440,7 +13440,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N813: Relative Volume Tier ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n813 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n813 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n813_field = _buy_n813.get("relative_volume_tier_perf", "normal_vol") if _buy_n813 else "normal_vol"
             _n813_perf = tlog.setdefault("relative_volume_tier_perf", {})
             _n813p = _n813_perf.setdefault(_n813_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n813_field})
@@ -13455,7 +13455,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N814: Price Structure Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n814 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n814 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n814_field = _buy_n814.get("price_structure_quality_perf", "neutral_structure") if _buy_n814 else "neutral_structure"
             _n814_perf = tlog.setdefault("price_structure_quality_perf", {})
             _n814p = _n814_perf.setdefault(_n814_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n814_field})
@@ -13470,7 +13470,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N815: Catalyst Recency ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n815 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n815 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n815_field = _buy_n815.get("catalyst_recency_perf", "stale_catalyst") if _buy_n815 else "stale_catalyst"
             _n815_perf = tlog.setdefault("catalyst_recency_perf", {})
             _n815p = _n815_perf.setdefault(_n815_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n815_field})
@@ -13485,7 +13485,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N816: Sector Leadership ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n816 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n816 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n816_field = _buy_n816.get("sector_leadership_perf", "inline_sector") if _buy_n816 else "inline_sector"
             _n816_perf = tlog.setdefault("sector_leadership_perf", {})
             _n816p = _n816_perf.setdefault(_n816_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n816_field})
@@ -13500,7 +13500,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N817: Options IV Environment ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n817 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n817 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n817_field = _buy_n817.get("options_iv_environment_perf", "normal_iv") if _buy_n817 else "normal_iv"
             _n817_perf = tlog.setdefault("options_iv_environment_perf", {})
             _n817p = _n817_perf.setdefault(_n817_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n817_field})
@@ -13515,7 +13515,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N818: Breadth Alignment ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n818 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n818 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n818_field = _buy_n818.get("breadth_alignment_perf", "good_breadth") if _buy_n818 else "good_breadth"
             _n818_perf = tlog.setdefault("breadth_alignment_perf", {})
             _n818p = _n818_perf.setdefault(_n818_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n818_field})
@@ -13530,7 +13530,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N819: Entry vs EMA ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n819 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n819 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n819_field = _buy_n819.get("entry_vs_ema_perf", "above_ema") if _buy_n819 else "above_ema"
             _n819_perf = tlog.setdefault("entry_vs_ema_perf", {})
             _n819p = _n819_perf.setdefault(_n819_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n819_field})
@@ -13545,7 +13545,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N820: Daily PnL Context ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n820 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n820 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n820_field = _buy_n820.get("daily_pnl_context_perf", "neutral_day") if _buy_n820 else "neutral_day"
             _n820_perf = tlog.setdefault("daily_pnl_context_perf", {})
             _n820p = _n820_perf.setdefault(_n820_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n820_field})
@@ -13560,7 +13560,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N821: Market Hour Context ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n821 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n821 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n821_field = _buy_n821.get("market_hour_context_perf", "midday") if _buy_n821 else "midday"
             _n821_perf = tlog.setdefault("market_hour_context_perf", {})
             _n821p = _n821_perf.setdefault(_n821_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n821_field})
@@ -13575,7 +13575,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N822: ATR Environment ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n822 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n822 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n822_field = _buy_n822.get("atr_environment_perf", "normal_vol_env") if _buy_n822 else "normal_vol_env"
             _n822_perf = tlog.setdefault("atr_environment_perf", {})
             _n822p = _n822_perf.setdefault(_n822_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n822_field})
@@ -13590,7 +13590,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N823: Spread Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n823 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n823 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n823_field = _buy_n823.get("spread_quality_perf", "normal_liquid") if _buy_n823 else "normal_liquid"
             _n823_perf = tlog.setdefault("spread_quality_perf", {})
             _n823p = _n823_perf.setdefault(_n823_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n823_field})
@@ -13605,7 +13605,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N824: Trend Channel Position ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n824 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n824 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n824_field = _buy_n824.get("trend_channel_position_perf", "midline") if _buy_n824 else "midline"
             _n824_perf = tlog.setdefault("trend_channel_position_perf", {})
             _n824p = _n824_perf.setdefault(_n824_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n824_field})
@@ -13620,7 +13620,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N825: VWAP Deviation ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n825 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n825 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n825_field = _buy_n825.get("vwap_deviation_perf", "at_vwap") if _buy_n825 else "at_vwap"
             _n825_perf = tlog.setdefault("vwap_deviation_perf", {})
             _n825p = _n825_perf.setdefault(_n825_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n825_field})
@@ -13635,7 +13635,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N826: Pattern Signal Count ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n826 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n826 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n826_field = _buy_n826.get("pattern_signal_count_perf", "no_pattern") if _buy_n826 else "no_pattern"
             _n826_perf = tlog.setdefault("pattern_signal_count_perf", {})
             _n826p = _n826_perf.setdefault(_n826_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n826_field})
@@ -13650,7 +13650,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N827: Conviction Score Tier ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n827 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n827 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n827_field = _buy_n827.get("conviction_score_tier_perf", "moderate_conviction") if _buy_n827 else "moderate_conviction"
             _n827_perf = tlog.setdefault("conviction_score_tier_perf", {})
             _n827p = _n827_perf.setdefault(_n827_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n827_field})
@@ -13665,7 +13665,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N828: Volume Trend ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n828 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n828 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n828_field = _buy_n828.get("volume_trend_perf", "volume_steady") if _buy_n828 else "volume_steady"
             _n828_perf = tlog.setdefault("volume_trend_perf", {})
             _n828p = _n828_perf.setdefault(_n828_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n828_field})
@@ -13680,7 +13680,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N829: Market Internals ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n829 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n829 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n829_field = _buy_n829.get("market_internals_perf", "neutral_internals") if _buy_n829 else "neutral_internals"
             _n829_perf = tlog.setdefault("market_internals_perf", {})
             _n829p = _n829_perf.setdefault(_n829_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n829_field})
@@ -13695,7 +13695,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N830: Fundamental Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n830 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n830 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n830_field = _buy_n830.get("fundamental_quality_perf", "growth_fundamentals") if _buy_n830 else "growth_fundamentals"
             _n830_perf = tlog.setdefault("fundamental_quality_perf", {})
             _n830p = _n830_perf.setdefault(_n830_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n830_field})
@@ -13710,7 +13710,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N831: Gap Type ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n831 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n831 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n831_field = _buy_n831.get("gap_type_perf", "flat_open") if _buy_n831 else "flat_open"
             _n831_perf = tlog.setdefault("gap_type_perf", {})
             _n831p = _n831_perf.setdefault(_n831_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n831_field})
@@ -13725,7 +13725,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N832: Earnings Proximity ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n832 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n832 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n832_field = _buy_n832.get("earnings_phase_perf", "neutral_earnings") if _buy_n832 else "neutral_earnings"
             _n832_perf = tlog.setdefault("earnings_phase_perf", {})
             _n832p = _n832_perf.setdefault(_n832_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n832_field})
@@ -13740,7 +13740,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N833: Institutional Flow ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n833 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n833 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n833_field = _buy_n833.get("institutional_flow_perf", "no_inst_signal") if _buy_n833 else "no_inst_signal"
             _n833_perf = tlog.setdefault("institutional_flow_perf", {})
             _n833p = _n833_perf.setdefault(_n833_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n833_field})
@@ -13755,7 +13755,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N834: Price vs 52-Week Range ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n834 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n834 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n834_field = _buy_n834.get("price_vs_52w_perf", "middle_range") if _buy_n834 else "middle_range"
             _n834_perf = tlog.setdefault("price_vs_52w_perf", {})
             _n834p = _n834_perf.setdefault(_n834_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n834_field})
@@ -13770,7 +13770,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N835: Sector Momentum ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n835 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n835 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n835_field = _buy_n835.get("sector_momentum_perf", "avg_sector") if _buy_n835 else "avg_sector"
             _n835_perf = tlog.setdefault("sector_momentum_perf", {})
             _n835p = _n835_perf.setdefault(_n835_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n835_field})
@@ -13785,7 +13785,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N836: Short Float ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n836 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n836 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n836_field = _buy_n836.get("short_float_perf", "low_short") if _buy_n836 else "low_short"
             _n836_perf = tlog.setdefault("short_float_perf", {})
             _n836p = _n836_perf.setdefault(_n836_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n836_field})
@@ -13800,7 +13800,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N837: Market Cap Tier ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n837 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n837 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n837_field = _buy_n837.get("market_cap_tier_perf", "large_cap") if _buy_n837 else "large_cap"
             _n837_perf = tlog.setdefault("market_cap_tier_perf", {})
             _n837p = _n837_perf.setdefault(_n837_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n837_field})
@@ -13815,7 +13815,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N838: Float Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n838 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n838 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n838_field = _buy_n838.get("float_quality_perf", "medium_float") if _buy_n838 else "medium_float"
             _n838_perf = tlog.setdefault("float_quality_perf", {})
             _n838p = _n838_perf.setdefault(_n838_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n838_field})
@@ -13830,7 +13830,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N839: News Freshness ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n839 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n839 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n839_field = _buy_n839.get("news_freshness_perf", "day_old_news") if _buy_n839 else "day_old_news"
             _n839_perf = tlog.setdefault("news_freshness_perf", {})
             _n839p = _n839_perf.setdefault(_n839_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n839_field})
@@ -13845,7 +13845,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N840: Analyst Sentiment ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n840 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n840 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n840_field = _buy_n840.get("analyst_sentiment_perf", "hold_consensus") if _buy_n840 else "hold_consensus"
             _n840_perf = tlog.setdefault("analyst_sentiment_perf", {})
             _n840p = _n840_perf.setdefault(_n840_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n840_field})
@@ -13860,7 +13860,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N841: Breakout Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n841 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n841 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n841_field = _buy_n841.get("breakout_quality_perf", "no_breakout") if _buy_n841 else "no_breakout"
             _n841_perf = tlog.setdefault("breakout_quality_perf", {})
             _n841p = _n841_perf.setdefault(_n841_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n841_field})
@@ -13875,7 +13875,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N842: ORB Status ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n842 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n842 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n842_field = _buy_n842.get("orb_status_perf", "no_orb") if _buy_n842 else "no_orb"
             _n842_perf = tlog.setdefault("orb_status_perf", {})
             _n842p = _n842_perf.setdefault(_n842_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n842_field})
@@ -13890,7 +13890,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N843: Squeeze Status ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n843 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n843 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n843_field = _buy_n843.get("squeeze_status_perf", "no_squeeze") if _buy_n843 else "no_squeeze"
             _n843_perf = tlog.setdefault("squeeze_status_perf", {})
             _n843p = _n843_perf.setdefault(_n843_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n843_field})
@@ -13905,7 +13905,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N844: Price Level ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n844 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n844 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n844_field = _buy_n844.get("price_level_perf", "mid_price") if _buy_n844 else "mid_price"
             _n844_perf = tlog.setdefault("price_level_perf", {})
             _n844p = _n844_perf.setdefault(_n844_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n844_field})
@@ -13920,7 +13920,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N845: Entry RSI Zone ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n845 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n845 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n845_field = _buy_n845.get("entry_rsi_zone_perf", "neutral_rsi") if _buy_n845 else "neutral_rsi"
             _n845_perf = tlog.setdefault("entry_rsi_zone_perf", {})
             _n845p = _n845_perf.setdefault(_n845_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n845_field})
@@ -13935,7 +13935,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N846: MACD Signal ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n846 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n846 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n846_field = _buy_n846.get("macd_signal_perf", "macd_bearish") if _buy_n846 else "macd_bearish"
             _n846_perf = tlog.setdefault("macd_signal_perf", {})
             _n846p = _n846_perf.setdefault(_n846_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n846_field})
@@ -13950,7 +13950,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N847: Inside Bar Context ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n847 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n847 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n847_field = _buy_n847.get("inside_bar_context_perf", "normal_bar") if _buy_n847 else "normal_bar"
             _n847_perf = tlog.setdefault("inside_bar_context_perf", {})
             _n847p = _n847_perf.setdefault(_n847_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n847_field})
@@ -13965,7 +13965,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N848: SPY Correlation ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n848 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n848 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n848_field = _buy_n848.get("spy_correlation_perf", "market_follower") if _buy_n848 else "market_follower"
             _n848_perf = tlog.setdefault("spy_correlation_perf", {})
             _n848p = _n848_perf.setdefault(_n848_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n848_field})
@@ -13980,7 +13980,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N849: Position Size Tier ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n849 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n849 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n849_field = _buy_n849.get("position_size_tier_perf", "standard") if _buy_n849 else "standard"
             _n849_perf = tlog.setdefault("position_size_tier_perf", {})
             _n849p = _n849_perf.setdefault(_n849_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n849_field})
@@ -14015,7 +14015,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N851: SPY Trend Strength ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n851 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n851 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n851_field = _buy_n851.get("spy_trend_strength_perf", "flat_trend") if _buy_n851 else "flat_trend"
             _n851_perf = tlog.setdefault("spy_trend_strength_perf", {})
             _n851p = _n851_perf.setdefault(_n851_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n851_field})
@@ -14030,7 +14030,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N852: Sector Rotation Phase ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n852 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n852 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n852_field = _buy_n852.get("sector_rotation_perf", "sector_neutral") if _buy_n852 else "sector_neutral"
             _n852_perf = tlog.setdefault("sector_rotation_perf", {})
             _n852p = _n852_perf.setdefault(_n852_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n852_field})
@@ -14045,7 +14045,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N853: Pre-Market Gap Size ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n853 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n853 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n853_field = _buy_n853.get("pre_market_gap_perf", "flat_pm") if _buy_n853 else "flat_pm"
             _n853_perf = tlog.setdefault("pre_market_gap_perf", {})
             _n853p = _n853_perf.setdefault(_n853_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n853_field})
@@ -14060,7 +14060,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N854: Relative Strength Tier ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n854 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n854 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n854_field = _buy_n854.get("relative_strength_tier_perf", "avg_rs") if _buy_n854 else "avg_rs"
             _n854_perf = tlog.setdefault("relative_strength_tier_perf", {})
             _n854p = _n854_perf.setdefault(_n854_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n854_field})
@@ -14075,7 +14075,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N855: Position Count at Entry ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n855 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n855 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n855_field = _buy_n855.get("position_count_v1_perf", "4-7") if _buy_n855 else "4-7"
             _n855_perf = tlog.setdefault("position_count_v1_perf", {})
             _n855p = _n855_perf.setdefault(_n855_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n855_field})
@@ -14090,7 +14090,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N856: Catalyst Strength ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n856 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n856 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n856_field = _buy_n856.get("catalyst_strength_perf", "weak_catalyst") if _buy_n856 else "weak_catalyst"
             _n856_perf = tlog.setdefault("catalyst_strength_perf", {})
             _n856p = _n856_perf.setdefault(_n856_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n856_field})
@@ -14105,7 +14105,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N857: Market Cap Momentum ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n857 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n857 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n857_field = _buy_n857.get("market_cap_momentum_perf", "neutral_cap_momentum") if _buy_n857 else "neutral_cap_momentum"
             _n857_perf = tlog.setdefault("market_cap_momentum_perf", {})
             _n857p = _n857_perf.setdefault(_n857_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n857_field})
@@ -14120,7 +14120,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N858: Open Position PnL Context ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n858 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n858 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n858_field = _buy_n858.get("open_position_pnl_perf", "portfolio_flat") if _buy_n858 else "portfolio_flat"
             _n858_perf = tlog.setdefault("open_position_pnl_perf", {})
             _n858p = _n858_perf.setdefault(_n858_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n858_field})
@@ -14135,7 +14135,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N859: Trend Template Score ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n859 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n859 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n859_field = _buy_n859.get("trend_template_score_perf", "decent_trend") if _buy_n859 else "decent_trend"
             _n859_perf = tlog.setdefault("trend_template_score_perf", {})
             _n859p = _n859_perf.setdefault(_n859_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n859_field})
@@ -14150,7 +14150,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N860: Score Momentum ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n860 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n860 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n860_field = _buy_n860.get("score_momentum_perf", "new_signal") if _buy_n860 else "new_signal"
             _n860_perf = tlog.setdefault("score_momentum_perf", {})
             _n860p = _n860_perf.setdefault(_n860_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n860_field})
@@ -14165,7 +14165,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N861: Intraday Trend Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n861 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n861 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n861_field = _buy_n861.get("intraday_trend_quality_perf", "intraday_flat") if _buy_n861 else "intraday_flat"
             _n861_perf = tlog.setdefault("intraday_trend_quality_perf", {})
             _n861p = _n861_perf.setdefault(_n861_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n861_field})
@@ -14180,7 +14180,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N862: Price Action Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n862 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n862 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n862_field = _buy_n862.get("price_action_quality_perf", "normal_action") if _buy_n862 else "normal_action"
             _n862_perf = tlog.setdefault("price_action_quality_perf", {})
             _n862p = _n862_perf.setdefault(_n862_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n862_field})
@@ -14195,7 +14195,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N863: Earnings Beat Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n863 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n863 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n863_field = _buy_n863.get("earnings_beat_quality_perf", "no_earnings") if _buy_n863 else "no_earnings"
             _n863_perf = tlog.setdefault("earnings_beat_quality_perf", {})
             _n863p = _n863_perf.setdefault(_n863_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n863_field})
@@ -14210,7 +14210,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N864: VCP Quality ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n864 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n864 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n864_field = _buy_n864.get("vcp_quality_perf", "no_vcp") if _buy_n864 else "no_vcp"
             _n864_perf = tlog.setdefault("vcp_quality_perf", {})
             _n864p = _n864_perf.setdefault(_n864_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n864_field})
@@ -14225,7 +14225,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N865: Sector ETF Alignment ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n865 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n865 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n865_field = _buy_n865.get("sector_etf_alignment_perf", "sector_flat") if _buy_n865 else "sector_flat"
             _n865_perf = tlog.setdefault("sector_etf_alignment_perf", {})
             _n865p = _n865_perf.setdefault(_n865_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n865_field})
@@ -14240,7 +14240,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N866: Trade Count Context ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n866 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n866 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n866_field = _buy_n866.get("trade_count_context_perf", "learning_bot") if _buy_n866 else "learning_bot"
             _n866_perf = tlog.setdefault("trade_count_context_perf", {})
             _n866p = _n866_perf.setdefault(_n866_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n866_field})
@@ -14255,7 +14255,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N867: News Volume ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n867 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n867 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n867_field = _buy_n867.get("news_volume_perf", "light_coverage") if _buy_n867 else "light_coverage"
             _n867_perf = tlog.setdefault("news_volume_perf", {})
             _n867p = _n867_perf.setdefault(_n867_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n867_field})
@@ -14270,7 +14270,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N868: Technical Setup Combo ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n868 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n868 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n868_field = _buy_n868.get("technical_setup_combo_perf", "weak_setup") if _buy_n868 else "weak_setup"
             _n868_perf = tlog.setdefault("technical_setup_combo_perf", {})
             _n868p = _n868_perf.setdefault(_n868_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n868_field})
@@ -14285,7 +14285,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N869: Risk/Reward at Entry ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n869 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n869 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n869_field = _buy_n869.get("risk_reward_at_entry_perf", "acceptable_rr") if _buy_n869 else "acceptable_rr"
             _n869_perf = tlog.setdefault("risk_reward_at_entry_perf", {})
             _n869p = _n869_perf.setdefault(_n869_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n869_field})
@@ -14300,7 +14300,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N870: Signal Freshness ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_n870 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_n870 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n870_field = _buy_n870.get("signal_freshness_perf", "building_signal") if _buy_n870 else "building_signal"
             _n870_perf = tlog.setdefault("signal_freshness_perf", {})
             _n870p = _n870_perf.setdefault(_n870_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n870_field})
@@ -14317,7 +14317,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_871 = tlog.get("order_flow_imbalance_perf", {})
             _sf_871_state = "balanced_flow"  # default; overridden by BUY-entry lookup below
-            _sf_871_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_871_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_871_entry:
                 _sf_871_state = _sf_871_entry.get("order_flow_imbalance_state", _sf_871_state)
             if _sf_871_state and _sf_871_state not in ("", None):
@@ -14335,7 +14335,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_872 = tlog.get("time_weighted_momentum_perf", {})
             _sf_872_state = "flat"  # default; overridden by BUY-entry lookup below
-            _sf_872_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_872_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_872_entry:
                 _sf_872_state = _sf_872_entry.get("time_weighted_momentum_state", _sf_872_state)
             if _sf_872_state and _sf_872_state not in ("", None):
@@ -14353,7 +14353,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_873 = tlog.get("relative_volume_burst_perf", {})
             _sf_873_state = "normal_vol"  # default; overridden by BUY-entry lookup below
-            _sf_873_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_873_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_873_entry:
                 _sf_873_state = _sf_873_entry.get("relative_volume_burst_state", _sf_873_state)
             if _sf_873_state and _sf_873_state not in ("", None):
@@ -14371,7 +14371,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_874 = tlog.get("catalyst_timing_perf", {})
             _sf_874_state = "stale_catalyst"  # default; overridden by BUY-entry lookup below
-            _sf_874_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_874_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_874_entry:
                 _sf_874_state = _sf_874_entry.get("catalyst_timing_state", _sf_874_state)
             if _sf_874_state and _sf_874_state not in ("", None):
@@ -14389,7 +14389,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_875 = tlog.get("multi_timeframe_alignment_perf", {})
             _sf_875_state = "mixed_signals"  # default; overridden by BUY-entry lookup below
-            _sf_875_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_875_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_875_entry:
                 _sf_875_state = _sf_875_entry.get("multi_timeframe_alignment_state", _sf_875_state)
             if _sf_875_state and _sf_875_state not in ("", None):
@@ -14407,7 +14407,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_876 = tlog.get("market_maker_activity_perf", {})
             _sf_876_state = "mm_normal"  # default; overridden by BUY-entry lookup below
-            _sf_876_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_876_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_876_entry:
                 _sf_876_state = _sf_876_entry.get("market_maker_activity_state", _sf_876_state)
             if _sf_876_state and _sf_876_state not in ("", None):
@@ -14425,7 +14425,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_877 = tlog.get("alpha_decay_risk_perf", {})
             _sf_877_state = "mid_alpha"  # default; overridden by BUY-entry lookup below
-            _sf_877_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_877_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_877_entry:
                 _sf_877_state = _sf_877_entry.get("alpha_decay_risk_state", _sf_877_state)
             if _sf_877_state and _sf_877_state not in ("", None):
@@ -14443,7 +14443,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_878 = tlog.get("price_discovery_phase_perf", {})
             _sf_878_state = "continuation"  # default; overridden by BUY-entry lookup below
-            _sf_878_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_878_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_878_entry:
                 _sf_878_state = _sf_878_entry.get("price_discovery_phase_state", _sf_878_state)
             if _sf_878_state and _sf_878_state not in ("", None):
@@ -14461,7 +14461,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_879 = tlog.get("smart_money_divergence_perf", {})
             _sf_879_state = "neutral_flow"  # default; overridden by BUY-entry lookup below
-            _sf_879_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_879_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_879_entry:
                 _sf_879_state = _sf_879_entry.get("smart_money_divergence_state", _sf_879_state)
             if _sf_879_state and _sf_879_state not in ("", None):
@@ -14479,7 +14479,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _n_sf_880 = tlog.get("volatility_regime_shift_perf", {})
             _sf_880_state = "stable_low"  # default; overridden by BUY-entry lookup below
-            _sf_880_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _sf_880_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_880_entry:
                 _sf_880_state = _sf_880_entry.get("volatility_regime_shift_state", _sf_880_state)
             if _sf_880_state and _sf_880_state not in ("", None):
@@ -14497,7 +14497,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # BTC explosive momentum may overshoot — learns whether to chase or wait.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c881_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c881_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c881_state = _c881_entry.get("crypto_momentum_tier", "unknown") if _c881_entry else "unknown"
             if _c881_state and _c881_state != "unknown":
                 _c881_perf = tlog.setdefault("crypto_momentum_perf", {})
@@ -14516,7 +14516,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # High AI score + win = AI is useful; high AI score + loss = AI is overrated here.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c882_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c882_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c882_ai = float(_c882_entry.get("crypto_ai_score", 0)) if _c882_entry else 0.0
             _c882_bkt = ("positive" if _c882_ai > 2 else "neutral" if _c882_ai >= -2 else "negative")
             _c882_perf = tlog.setdefault("crypto_ai_sentiment_perf", {})
@@ -14535,7 +14535,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # long holds (>2 days) may ride through full reversals.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c883_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c883_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _c883_entry:
                 from datetime import datetime as _dt883
                 _buy_ts = _c883_entry.get("time", "")
@@ -14568,7 +14568,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Adjusts effective CRYPTO_MIN_SCORE dynamically based on results.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c884_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c884_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c884_state = _c884_entry.get("crypto_score_tier", "low") if _c884_entry else "low"
             _c884_perf  = tlog.setdefault("crypto_score_tier_perf", {})
             _c884_rec   = _c884_perf.setdefault(_c884_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14591,7 +14591,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns whether entering during high/neutral/low BTC dom produces better results.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c885_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c885_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c885_dom   = float(_c885_entry.get("crypto_btc_dom", 55)) if _c885_entry else 55.0
             _c885_bkt   = ("high_dom" if _c885_dom > 60 else "low_dom" if _c885_dom < 50 else "neutral_dom")
             _c885_perf  = tlog.setdefault("crypto_btcdom_perf", {})
@@ -14608,7 +14608,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns whether oversold/neutral/overbought RSI at entry produces best outcomes.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c886_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c886_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c886_state = _c886_entry.get("crypto_rsi_zone", "neutral") if _c886_entry else "neutral"
             _c886_perf  = tlog.setdefault("crypto_rsi_zone_perf", {})
             _c886_rec   = _c886_perf.setdefault(_c886_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14625,7 +14625,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns whether volume surge entries outperform dry/normal volume entries.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c887_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c887_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c887_state = _c887_entry.get("crypto_vol_surge", "normal") if _c887_entry else "normal"
             _c887_perf  = tlog.setdefault("crypto_vol_surge_perf", {})
             _c887_rec   = _c887_perf.setdefault(_c887_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14642,7 +14642,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks whether bull/flat/bear EMA cross at crypto entry predicts outcome.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c888_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c888_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c888_state = _c888_entry.get("crypto_ema_cross", "flat") if _c888_entry else "flat"
             _c888_perf  = tlog.setdefault("crypto_ema_cross_perf", {})
             _c888_rec   = _c888_perf.setdefault(_c888_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14659,7 +14659,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Weekends can have thin liquidity spikes or institutional gaps.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c889_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c889_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c889_state = _c889_entry.get("crypto_dow", "Mon") if _c889_entry else "Mon"
             _c889_perf  = tlog.setdefault("crypto_dow_perf", {})
             _c889_rec   = _c889_perf.setdefault(_c889_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14676,7 +14676,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # If ALTs keep losing, brain learns to concentrate on BTC/ETH in risk-off.
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
-            _c890_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c890_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c890_state = _c890_entry.get("crypto_asset_class", "ALT") if _c890_entry else "ALT"
             _c890_perf  = tlog.setdefault("crypto_asset_perf", {})
             _c890_rec   = _c890_perf.setdefault(_c890_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14698,7 +14698,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # actually predicts outcomes. Self-calibrates the scoring model over time.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _c891_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c891_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c891_sc = int(_c891_entry.get("score", 0) or 0) if _c891_entry else 0
             _c891_bkt = ("elite" if _c891_sc >= 80 else "high" if _c891_sc >= 65 else "medium" if _c891_sc >= 45 else "low")
             _c891_perf = tlog.setdefault("score_accuracy_perf", {})
@@ -14717,7 +14717,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # more dangerous than a flat VIX at 22. Brain learns: is falling VIX actually bullish?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
         try:
-            _c892_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c892_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c892_vix_dir = _c892_entry.get("vix_direction", "flat") if _c892_entry else "flat"
             _c892_perf = tlog.setdefault("vix_direction_perf", {})
             _c892_rec  = _c892_perf.setdefault(_c892_vix_dir, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14735,7 +14735,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Every 30-minute window gets its own win rate. Brain learns the optimal entry clock.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
         try:
-            _c893_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c893_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c893_hr = int(_c893_entry.get("et_hour_at_entry", -1)) if _c893_entry else -1
             if _c893_hr >= 0:
                 _c893_min = int(_c893_entry.get("et_min_at_entry", 0)) if _c893_entry else 0
@@ -14762,7 +14762,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Also tests: does a losing streak mean next trade is more or less likely to win?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _c894_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c894_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c894_streak = int(_c894_entry.get("win_streak_at_entry", 0)) if _c894_entry else 0
             _c894_bkt = ("hot_3+" if _c894_streak >= 3 else "hot_2" if _c894_streak == 2 else "neutral" if _c894_streak == 0 else f"losing_{abs(_c894_streak)}")
             _c894_perf = tlog.setdefault("trade_momentum_perf", {})
@@ -14780,7 +14780,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Affects how aggressively to fill slots when trade deficit is high.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _c895_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c895_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c895_n = int(_c895_entry.get("positions_at_entry", 5)) if _c895_entry else 5
             _c895_bkt = ("1-3" if _c895_n <= 3 else "4-7" if _c895_n <= 7 else "8-12" if _c895_n <= 12 else "13+")
             _c895_perf = tlog.setdefault("position_count_perf", {})
@@ -14799,7 +14799,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # High cash = patient waiting for best setups; low cash = bottom-fishing
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _c896_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c896_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c896_util = float(_c896_entry.get("capital_util_pct", 50)) if _c896_entry else 50.0
             _c896_bkt = ("high_cash" if _c896_util < 30 else "moderate" if _c896_util < 60 else "deployed" if _c896_util < 85 else "max_deployed")
             _c896_perf = tlog.setdefault("capital_util_perf", {})
@@ -14817,7 +14817,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Brain learns: enter when SPY is trending up intraday = confirmation.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
         try:
-            _c897_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c897_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c897_spy = _c897_entry.get("spy_intraday_dir", "flat") if _c897_entry else "flat"
             _c897_perf = tlog.setdefault("spy_intraday_dir_perf", {})
             _c897_rec  = _c897_perf.setdefault(_c897_spy, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14834,7 +14834,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # the bot might be entering on a false signal. Learns: wait for regime confirmation.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _c898_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c898_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c898_stab = _c898_entry.get("regime_stability", "established") if _c898_entry else "established"
             _c898_perf = tlog.setdefault("regime_stability_perf", {})
             _c898_rec  = _c898_perf.setdefault(_c898_stab, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14852,7 +14852,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # consecutive appearances produce the best entries?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _c899_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c899_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c899_runs = int(_c899_entry.get("persistence_runs", 1)) if _c899_entry else 1
             _c899_bkt = ("first_appear" if _c899_runs <= 1 else "two_runs" if _c899_runs == 2 else "three_runs" if _c899_runs == 3 else "persistent_4+")
             _c899_perf = tlog.setdefault("score_persistence_perf", {})
@@ -14871,7 +14871,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # (5+ sectors advancing) = healthy bull; narrow (1-2 sectors) = fragile leadership.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and "/" not in sym:
         try:
-            _c900_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _c900_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c900_secs = int(_c900_entry.get("sectors_advancing", 5)) if _c900_entry else 5
             _c900_bkt = ("broad_6+" if _c900_secs >= 6 else "healthy_4-5" if _c900_secs >= 4 else "narrow_2-3" if _c900_secs >= 2 else "single_sector")
             _c900_perf = tlog.setdefault("sector_breadth_perf", {})
@@ -14888,7 +14888,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates when price_accel_pos confirms upward momentum acceleration.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_pa = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_pa = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _pa_state = _buy_pa.get("price_accel_state", "decelerating") if _buy_pa else "decelerating"
             _pa_perf = tlog.setdefault("price_accel_perf", {})
             _pap = _pa_perf.setdefault(_pa_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _pa_state})
@@ -14907,7 +14907,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # rising = force increasing; weak = low conviction.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_fi = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_fi = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _fi_state = _buy_fi.get("force_index_state", "weak") if _buy_fi else "weak"
             _fi_perf = tlog.setdefault("force_index_perf", {})
             _fip = _fi_perf.setdefault(_fi_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "state": _fi_state})
@@ -14926,7 +14926,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: do entries with rising OBV produce better outcomes (volume leads price)?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ov = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ov = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ov_trend = _buy_ov.get("obv_trend", "rising") if _buy_ov else "rising"
             _ov_perf = tlog.setdefault("obv_trend_perf", {})
             _ovp = _ov_perf.setdefault(_ov_trend, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "trend": _ov_trend})
@@ -14944,7 +14944,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks breakout (above upper KC band) vs inside vs oversold bounce entries.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_kc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_kc = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _kc_zone = _buy_kc.get("kc_zone", "inside") if _buy_kc else "inside"
             _kc_perf = tlog.setdefault("kc_zone_perf", {})
             _kcp = _kc_perf.setdefault(_kc_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _kc_zone})
@@ -14962,7 +14962,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks win rates when HA candles confirm bullish trend vs HA bearish at entry.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ha = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ha = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ha_trend = _buy_ha.get("ha_trend", "bull") if _buy_ha else "bull"
             _ha_perf = tlog.setdefault("ha_trend_perf", {})
             _hap = _ha_perf.setdefault(_ha_trend, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "trend": _ha_trend})
@@ -14980,7 +14980,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Tracks whether entry was at channel breakout (>75%), middle, or weakness (<25%).
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_dc = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_dc = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _dc_zone = _buy_dc.get("donchian_zone", "middle") if _buy_dc else "middle"
             _dc_perf = tlog.setdefault("donchian_perf", {})
             _dcp = _dc_perf.setdefault(_dc_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _dc_zone})
@@ -14999,7 +14999,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Strong R² (≥0.85) = clean trend with low noise; weak (<0.6) = choppy/sideways.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_lr = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_lr = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _lr_q = _buy_lr.get("lr_quality", "moderate") if _buy_lr else "moderate"
             _lr_perf = tlog.setdefault("lr_quality_perf", {})
             _lrp = _lr_perf.setdefault(_lr_q, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "quality": _lr_q})
@@ -15018,7 +15018,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # (transition/uncertain) vs below cloud (bearish). Institutional trend system.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ic = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ic = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ic_pos = _buy_ic.get("ichimoku_position", "inside") if _buy_ic else "inside"
             _ic_perf = tlog.setdefault("ichimoku_perf", {})
             _icp = _ic_perf.setdefault(_ic_pos, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "position": _ic_pos})
@@ -15037,7 +15037,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # vs oversold (<-80). Learns: is trending zone the sweet spot for momentum entries?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_wr = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_wr = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _wr_zone = _buy_wr.get("wr_zone", "trending") if _buy_wr else "trending"
             _wr_perf = tlog.setdefault("wr_zone_perf", {})
             _wrp = _wr_perf.setdefault(_wr_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _wr_zone})
@@ -15056,7 +15056,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # MFI combines price + volume — harder to fake, more reliable than pure RSI.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_mi = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_mi = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _mi_zone = _buy_mi.get("mfi_zone", "neutral") if _buy_mi else "neutral"
             _mi_perf = tlog.setdefault("mfi_zone_perf", {})
             _mip = _mi_perf.setdefault(_mi_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _mi_zone})
@@ -15075,7 +15075,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: do flow-confirmed entries (smart money) outperform unconfirmed?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_of = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_of = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _of_tier = _buy_of.get("options_flow_tier", "neutral") if _buy_of else "neutral"
             _of_perf = tlog.setdefault("options_flow_perf", {})
             _ofp = _of_perf.setdefault(_of_tier, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "tier": _of_tier})
@@ -15094,7 +15094,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # vs partially aligned vs mixed/none. Highest conviction trade = all agree.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_mf = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_mf = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _mf_align = _buy_mf.get("mtf_alignment", "none") if _buy_mf else "none"
             _mf_perf = tlog.setdefault("mtf_align_perf", {})
             _mfp = _mf_perf.setdefault(_mf_align, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "alignment": _mf_align})
@@ -15113,7 +15113,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Overbought (>80) = chasing; neutral (20-80) = momentum zone; oversold (<20) = reversal.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_sk = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_sk = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _sk_zone = _buy_sk.get("stoch_zone", "neutral") if _buy_sk else "neutral"
             _sk_perf = tlog.setdefault("stoch_zone_perf", {})
             _skp = _sk_perf.setdefault(_sk_zone, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "zone": _sk_zone})
@@ -15132,7 +15132,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns if extreme RVOL entries produce better outcomes than moderate volume surges.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_rv = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_rv = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _rv_tier = _buy_rv.get("rvol_tier", "normal") if _buy_rv else "normal"
             _rv_perf = tlog.setdefault("rvol_tier_perf", {})
             _rvp = _rv_perf.setdefault(_rv_tier, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "tier": _rv_tier})
@@ -15151,7 +15151,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # weak ADX (<15) = choppy, counter-trend, high risk for momentum strategies.
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_ax = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_ax = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _ax_bkt = _buy_ax.get("adx_bucket", "developing") if _buy_ax else "developing"
             _ax_perf = tlog.setdefault("adx_perf", {})
             _axp = _ax_perf.setdefault(_ax_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _ax_bkt})
@@ -15171,7 +15171,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # Learns: does early-day entry beat chasing afternoon runners?
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_im = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_im = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _im_bkt = _buy_im.get("intraday_mom_bucket", "early") if _buy_im else "early"
             _im_perf = tlog.setdefault("intraday_mom_perf", {})
             _imp = _im_perf.setdefault(_im_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "bucket": _im_bkt})
@@ -15192,7 +15192,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # but bot held based on other signals), "no_decay" (score was stable at exit).
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
-            _buy_sd = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _buy_sd = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _sd_entry_score = _buy_sd.get("score", 0) if _buy_sd else 0
             _sd_reason = reason or ""
             if "score decay exit" in _sd_reason:
