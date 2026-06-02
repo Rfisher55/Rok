@@ -22417,6 +22417,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
             # N894: Trade momentum / hot hand — is a win streak predictive?
             _fb_streak_now = int(d.get("win_streak_now", 0) or 0)
             _fb_streak_bkt = ("hot_3+" if _fb_streak_now >= 3 else "hot_2" if _fb_streak_now == 2
+                              else "hot_1" if _fb_streak_now == 1
                               else "neutral" if _fb_streak_now == 0 else f"losing_{abs(_fb_streak_now)}")
             _nsl_adj += _nde("trade_momentum_perf", _fb_streak_bkt)
 
@@ -26370,7 +26371,23 @@ def run():
                         except Exception as _ge:
                             logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
                         continue
-            elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.15:
+            elif _fast_age_min >= 20 and _fast_age_min < 30 and not _fast_half_out and pnl_pct <= -0.4:
+                # 20min failed-setup check: losing after 20min with deteriorated score → free slot
+                _fast_d_20 = live.get(sym, {}) or {}
+                _fast_sc_20 = score(sym, _fast_d_20) if _fast_d_20 else 0
+                if _fast_sc_20 < 48:
+                    _fast_reason = f"20min failed setup ({pnl_pct:+.1f}%, score={_fast_sc_20})"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"20min failed setup sell failed {sym}: {_fe}")
+                    continue
+            elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
                 # 30min flat/drifting exit: wider window frees capital for fresh setups faster
                 _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
