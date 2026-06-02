@@ -26361,7 +26361,7 @@ def run():
                 live[tk]["reversal_confirmed"] = bool(
                     _n726_bull
                     and float(live[tk].get("rsi", 50) or 50) > 40
-                    and float(live[tk].get("chg1d", 0) or 0) > 0
+                    and float(live[tk].get("change_pct", live[tk].get("chg1d", 0)) or 0) > 0
                 )
                 # N727: sr_quality — support/resistance quality (near VWAP/support/breakout = high quality)
                 _n727_vwap_near = abs(float(live[tk].get("vwap_pos", 0) or 0)) < 0.5
@@ -26407,6 +26407,33 @@ def run():
                         live[tk]["news_age_hours"] = 999
                 except Exception:
                     live[tk]["news_age_hours"] = 999
+                # N156/N327/N714: signal_count, vol_trend, candle_pattern, market_quality
+                _n156_keys = [
+                    "cup_handle", "at_demand_zone", "mom_accel", "vcp", "obv_rising",
+                    "rvol_surge", "ha_bull", "donchian_up", "psar_bull", "price_accel_pos",
+                    "options_bull", "unusual_calls", "at_breakout", "pocket_pivot",
+                    "ttm_squeeze_fired", "lr_below_channel", "ema21_pullback", "higher_lows",
+                ]
+                live[tk]["signal_count"] = sum(1 for k in _n156_keys if live[tk].get(k))
+                # vol_trend: compare recent rvol to prior average to detect volume momentum
+                _rvol_now = float(live[tk].get("rvol", live[tk].get("vol_ratio", 1.0)) or 1.0)
+                live[tk]["vol_trend"] = ("rising" if _rvol_now > 2.0 else
+                                         "flat" if _rvol_now >= 0.8 else "falling")
+                # candle_pattern: best bullish candle active right now (for N723)
+                if live[tk].get("three_white_soldiers"):   live[tk]["candle_pattern"] = "marubozu"
+                elif live[tk].get("bullish_engulfing"):    live[tk]["candle_pattern"] = "engulfing_bull"
+                elif live[tk].get("morning_star"):         live[tk]["candle_pattern"] = "morning_star"
+                elif live[tk].get("hammer"):               live[tk]["candle_pattern"] = "hammer"
+                elif live[tk].get("shooting_star"):        live[tk]["candle_pattern"] = "shooting_star"
+                else:                                       live[tk]["candle_pattern"] = ""
+                # market_quality: composite of breadth + VIX level + regime
+                _mq_breadth = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
+                _mq_vix_now = float((tlog.get("regime") or {}).get("vix", 20) or 20)
+                _mq_reg     = str((tlog.get("regime") or {}).get("regime", "neutral") or "neutral")
+                _mq_base    = (_mq_breadth - 50) * 0.6  # breadth contributes ±30
+                _mq_vix_pen = max(0, (_mq_vix_now - 20) * -1.5)   # VIX > 20 penalizes
+                _mq_reg_adj = 10 if "bull" in _mq_reg else (-10 if "bear" in _mq_reg else 0)
+                live[tk]["market_quality"] = max(0, min(100, int(50 + _mq_base + _mq_vix_pen + _mq_reg_adj)))
                 # N728: risk/reward ratio from ATR stop and pivot target
                 try:
                     _n728_price  = float(live[tk].get("price", 0) or 0)
@@ -47495,7 +47522,8 @@ def run():
     try:
         _learned_adj = tlog.get("bot_learned_params", {}).get("base_score_adj", 0)
         if _learned_adj != 0:
-            tlog["effective_min_score"] = tlog.get("effective_min_score", MIN_BUY_SCORE) + _learned_adj
+            # Rebase from MIN_BUY_SCORE (not accumulated value) to prevent compounding drift
+            tlog["effective_min_score"] = MIN_BUY_SCORE + _learned_adj
             logger.info(f"Learned score adj: {_learned_adj:+d} → effective_min_score={tlog['effective_min_score']}")
     except Exception:
         pass
