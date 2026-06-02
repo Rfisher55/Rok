@@ -22149,8 +22149,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_sk_bkt = ("overbought" if _fb_sk > 80 else "oversold" if _fb_sk < 20 else "neutral")
             _nsl_adj += _nde("stoch_zone_perf", _fb_sk_bkt)
 
-            # MTF alignment: full agreement across timeframes (N735)
-            _fb_mtf = "full" if d.get("mtf_aligned") else "none"
+            # MTF alignment: full/partial/none — matches log_trade 3-component score
+            _fb_mtf_ok   = bool(d.get("mtf_aligned", False))
+            _fb_ema_bull = bool(d.get("ema_stacked_bull", False))
+            _fb_roc20_v  = float(d.get("roc20", 0) or 0)
+            _fb_mtf_sc   = int(_fb_mtf_ok) + int(_fb_ema_bull) + int(_fb_roc20_v > 0)
+            _fb_mtf = ("full" if _fb_mtf_sc >= 3 else "partial" if _fb_mtf_sc >= 1 else "none")
             _nsl_adj += _nde("mtf_align_perf", _fb_mtf)
 
             # Bollinger band position (N839)
@@ -22181,10 +22185,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_adx_bkt = ("strong" if _fb_adx_v >= 25 else "developing" if _fb_adx_v >= 15 else "weak")
             _nsl_adj += _nde("adx_perf", _fb_adx_bkt)
 
-            # ROC 5-day bucket (N2179)
-            _fb_roc5_v = float(d.get("roc5", 0) or 0)
-            _fb_roc_bkt = ("strong_up" if _fb_roc5_v > 5 else "up" if _fb_roc5_v > 1
-                           else "flat" if abs(_fb_roc5_v) <= 1 else "down")
+            # ROC 5-day bucket (N2179) — state labels match log_trade storage: accelerating/positive/negative
+            _fb_roc5_v  = float(d.get("roc5", 0) or 0)
+            _fb_roc20_v = float(d.get("roc20", 0) or 0)
+            _fb_roc_bkt = ("accelerating" if _fb_roc5_v > 0 and _fb_roc20_v > 0 and _fb_roc5_v > _fb_roc20_v
+                           else "positive" if _fb_roc5_v > 0 or _fb_roc20_v > 0 else "negative")
             _nsl_adj += _nde("roc_perf", _fb_roc_bkt)
 
             # Heikin-Ashi trend at entry (N786): ha_bull is in live signals
@@ -22285,9 +22290,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           "rising" if d.get("force_index_rising") else "weak")
             _nsl_adj += _nde("force_index_perf", _fb_fi_bkt)
 
-            # Price acceleration: momentum building or fading
-            _fb_pa_bkt = ("accelerating" if d.get("price_accel_pos") else
-                          "decelerating" if d.get("price_accel_neg") else "stable")
+            # Price acceleration: momentum building or fading (binary: matches log_trade storage)
+            _fb_pa_bkt = ("accelerating" if d.get("price_accel_pos") else "decelerating")
             _nsl_adj += _nde("price_accel_perf", _fb_pa_bkt)
 
             # Institutional accumulation score: smart money buying footprint
@@ -22330,8 +22334,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
                            else "mid_range_52w")
             _nsl_adj += _nde("breakout_52w_entry_perf", _fb_52w_bkt)
 
-            # Ichimoku position: above cloud = institutional trend confirmed
-            _fb_ichi_bkt = ("above" if d.get("ichimoku_above") else "below")
+            # Ichimoku position: above/inside/below — matches log_trade 3-tier storage
+            _fb_ichi_above = bool(d.get("ichimoku_above", False))
+            _fb_ichi_bull  = bool(d.get("ichimoku_bull_cloud", False))
+            _fb_ichi_bkt   = ("above" if _fb_ichi_above else "inside" if _fb_ichi_bull else "below")
             _nsl_adj += _nde("ichimoku_perf", _fb_ichi_bkt)
 
             # Williams %R momentum zone
@@ -22660,6 +22666,26 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _n87_accel = bool(d.get("news_accelerating", False))
             _n87_state = ("accelerating" if _n87_accel else "steady")
             _nsl_adj += _nsl_edge("news_accel_perf", _n87_state)
+
+            # NR7: Narrowing range — coiled spring compression before breakout
+            _fb_nr7_bkt = ("compressed" if d.get("nr7") else "normal_range")
+            _nsl_adj += _nde("nr7_perf", _fb_nr7_bkt)
+
+            # Double bottom pattern: reversal signal confirmed by second test of support
+            _fb_db_bkt = ("confirmed" if d.get("double_bottom") else "none")
+            _nsl_adj += _nde("double_bottom_perf", _fb_db_bkt)
+
+            # MFI divergence: money flow rising while price falling = hidden accumulation
+            _fb_mfi_div_bkt = ("diverging" if d.get("mfi_bull_div") else "no_div")
+            _nsl_adj += _nde("mfi_div_perf", _fb_mfi_div_bkt)
+
+            # Options flow tier: institutional confirmation from unusual call buying
+            _fb_uc      = bool(d.get("unusual_calls", False))
+            _fb_ob      = bool(d.get("options_bull", False))
+            _fb_pcr     = float(d.get("options_pcr", 1.0) or 1.0)
+            _fb_opt_sc  = int(_fb_uc) + int(_fb_ob) + int(_fb_pcr < 0.7)
+            _fb_opt_bkt = ("confirmed" if _fb_opt_sc >= 2 else "slight" if _fb_opt_sc >= 1 else "neutral")
+            _nsl_adj += _nde("options_flow_perf", _fb_opt_bkt)
 
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
