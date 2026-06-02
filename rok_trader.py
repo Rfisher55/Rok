@@ -2651,7 +2651,15 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n114 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _hold_d = float(age_days) if age_days is not None else 0.0
+            _hold_d = 0.0
+            if _buy_n114:
+                try:
+                    from datetime import datetime as _dt114, timezone as _tz114
+                    _e114_ts = _buy_n114.get("time", "") or ""
+                    _e114_dt = _dt114.fromisoformat(_e114_ts.replace("Z", "+00:00"))
+                    _hold_d = (_dt114.now(_tz114.utc) - _e114_dt).total_seconds() / 86400
+                except Exception:
+                    pass
             _hold_bkt = ("scalp" if _hold_d < 0.5 else
                          "intraday"  if _hold_d < 1.0 else
                          "overnight" if _hold_d < 2.0 else
@@ -3660,12 +3668,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n171 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _buy_n171:
-                _entry_ts = _buy_n171.get("ts", "") or ""
+                _entry_ts = _buy_n171.get("time", _buy_n171.get("ts", "")) or ""
                 _hold_mins = 0
                 try:
-                    from datetime import datetime as _dt171
+                    from datetime import datetime as _dt171, timezone as _tz171
                     _entry_dt = _dt171.fromisoformat(_entry_ts.replace("Z", "+00:00"))
-                    _hold_mins = int((now_utc - _entry_dt).total_seconds() / 60)
+                    _hold_mins = int((_dt171.now(_tz171.utc) - _entry_dt).total_seconds() / 60)
                 except Exception:
                     pass
                 if _hold_mins < 60:          _hold_bucket = "scalp"
@@ -15117,6 +15125,43 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── N901: Scalp PNL Distribution Tracker ─────────────────────────────────────
+    # Accumulates real pnl_pct samples for scalp exits (≤90 min hold).
+    # Self-tune reads scalp_pnl_dist → computes learned_scalp_profit_pct /
+    # learned_scalp_stop_pct → exit logic uses those instead of hardcoded ±1.5%.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl_pct is not None:
+        try:
+            _c901_age_min = 9999.0
+            _c901_entry = next((t for t in tlog.get("trades", [])
+                                if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _c901_entry:
+                try:
+                    from datetime import datetime as _dt901, timezone as _tz901
+                    _c901_et = _dt901.fromisoformat(
+                        (_c901_entry.get("time", "") or "").replace("Z", "+00:00"))
+                    _c901_age_min = (_dt901.now(_tz901.utc) - _c901_et).total_seconds() / 60
+                except Exception:
+                    pass
+            if _c901_age_min <= 90:
+                _spdist = tlog.setdefault("scalp_pnl_dist", {
+                    "n": 0, "sum_pnl": 0.0, "wins": 0, "losses": 0,
+                    "sum_win_pnl": 0.0, "sum_loss_pnl": 0.0,
+                    "max_win": 0.0, "min_loss": 0.0, "samples": [],
+                })
+                _spdist["n"]       = _spdist.get("n", 0) + 1
+                _spdist["sum_pnl"] = round(_spdist.get("sum_pnl", 0.0) + pnl_pct, 4)
+                if pnl_pct > 0:
+                    _spdist["wins"]        = _spdist.get("wins", 0) + 1
+                    _spdist["sum_win_pnl"] = round(_spdist.get("sum_win_pnl", 0.0) + pnl_pct, 4)
+                    _spdist["max_win"]     = round(max(_spdist.get("max_win", 0.0), pnl_pct), 4)
+                else:
+                    _spdist["losses"]       = _spdist.get("losses", 0) + 1
+                    _spdist["sum_loss_pnl"] = round(_spdist.get("sum_loss_pnl", 0.0) + pnl_pct, 4)
+                    _spdist["min_loss"]     = round(min(_spdist.get("min_loss", 0.0), pnl_pct), 4)
+                _spdist["samples"] = (_spdist.get("samples", []) + [round(pnl_pct, 3)])[-100:]
+        except Exception:
+            pass
+
     # Persist every trade immediately — prevents data loss if final save crashes
     try:
         _save(TRADES_FILE, tlog)
@@ -19085,6 +19130,32 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         except Exception:
             pass
 
+        # News freshness gate: stale catalyst = reduced conviction for crypto entry.
+        # Crypto moves fast — news >8h old has already been priced in by the market.
+        try:
+            _news_age_h = float(sig.get("news_age_hours", 0) or 0)
+            if _news_age_h > 12:
+                sc = max(0, sc - 5)   # stale news: slight penalty
+            elif _news_age_h > 8:
+                sc = max(0, sc - 3)   # news aging: mild penalty
+            elif 0 < _news_age_h <= 3:
+                sc = min(120, sc + 4) # fresh catalyst: bonus conviction
+        except Exception:
+            pass
+
+        # Market quality gate: poor equity conditions spill into crypto (especially alts).
+        # If market quality < 35, alts often cascade down with equities.
+        try:
+            _mq_now = int(tlog.get("market_quality", 50) or 50)
+            if _mq_now < 25 and not is_btc:
+                sc = max(0, sc - 8)   # very poor market: strong alt penalty
+            elif _mq_now < 35 and not is_btc and not is_eth:
+                sc = max(0, sc - 5)   # poor market: alt penalty
+            elif _mq_now >= 75:
+                sc = min(120, sc + 3) # high-quality market: slight boost
+        except Exception:
+            pass
+
         # BTC trend gate: protect alts from entering during BTC downtrends.
         # When BTC is selling off, altcoins typically fall harder. This gate
         # suppresses alt entries when BTC momentum is clearly negative.
@@ -22562,6 +22633,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                               _n879_s = "aligned"
             _nsl_adj += _nde("smart_money_divergence_perf", _n879_s)
 
+            # N86/N87: News count and acceleration — high news activity with acceleration is bullish
+            _n86_count = int(d.get("news_count_24h", 0) or 0)
+            _n86_tier  = ("hot" if _n86_count >= 5 else "quiet")
+            _nsl_adj += _nsl_edge("news_count_perf", _n86_tier)
+            _n87_accel = bool(d.get("news_accelerating", False))
+            _n87_state = ("accelerating" if _n87_accel else "steady")
+            _nsl_adj += _nsl_edge("news_accel_perf", _n87_state)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -24403,10 +24482,25 @@ def run():
             half_out = peaks[sym].get("half_out", False)
 
             _scalp_exit_reason = None
+            # Adaptive thresholds: self-tune calibrates these from actual trade distribution.
+            # Defaults of ±1.5% apply until enough scalp trades are accumulated (≥10).
+            _scalp_pthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_profit_pct", 1.5))
+            _scalp_sthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_stop_pct", -1.5))
+            # Regime overlay: in bear/neutral, take profits faster and cut losses sooner.
+            # In bull/strong_bull, let scalp winners run further before exiting.
+            try:
+                _reg_now_sc = regime.get("regime", "neutral")
+                if _reg_now_sc in ("bear",):
+                    _scalp_pthr = max(0.8, _scalp_pthr - 0.3)   # lower target in bear
+                    _scalp_sthr = min(-0.8, _scalp_sthr + 0.3)  # tighter stop in bear (less negative)
+                elif _reg_now_sc in ("strong_bull",):
+                    _scalp_pthr = min(3.0, _scalp_pthr + 0.3)   # higher target in strong bull
+            except Exception:
+                pass
             if 20 <= age_minutes:
-                if pnl_pct >= 1.5 and age_minutes <= 90 and not half_out:
+                if pnl_pct >= _scalp_pthr and age_minutes <= 90 and not half_out:
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif pnl_pct <= -1.5 and age_minutes >= 20:
+                elif pnl_pct <= _scalp_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif age_minutes >= 45 and pnl_pct >= 0.3 and not half_out:
                     _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
@@ -40534,6 +40628,30 @@ def run():
             _worst_hold = min(_n114_insights, key=lambda x: x["avg_pnl"])
             _learn_log.append(f"N114 best hold: {_best_hold['state']}(avg {_best_hold['avg_pnl']:+.1f}%) worst: {_worst_hold['state']}(avg {_worst_hold['avg_pnl']:+.1f}%)")
 
+        # ── Scalp Threshold Calibration ──────────────────────────────────────────
+        # Reads N901 scalp_pnl_dist to set adaptive profit-take and stop-loss targets.
+        # Uses 80% of average winner/loser so threshold is achievable but not too greedy.
+        # Bounds: profit [0.8%, 3.0%], stop [-3.0%, -0.5%] — prevents extremes.
+        _sp_dist = tlog.get("scalp_pnl_dist", {})
+        _sp_n    = _sp_dist.get("n", 0)
+        _learned_scalp_profit_pct = float(_prev_learned.get("learned_scalp_profit_pct", 1.5))
+        _learned_scalp_stop_pct   = float(_prev_learned.get("learned_scalp_stop_pct", -1.5))
+        if _sp_n >= 10:
+            _sp_wins   = _sp_dist.get("wins", 0)
+            _sp_losses = _sp_dist.get("losses", 0)
+            _sum_win   = _sp_dist.get("sum_win_pnl", 0.0)
+            _sum_loss  = _sp_dist.get("sum_loss_pnl", 0.0)
+            if _sp_wins >= 5:
+                _avg_scalp_win = _sum_win / _sp_wins
+                _learned_scalp_profit_pct = round(max(0.8, min(3.0, _avg_scalp_win * 0.80)), 2)
+            if _sp_losses >= 5:
+                _avg_scalp_loss = _sum_loss / _sp_losses  # negative
+                _learned_scalp_stop_pct = round(max(-3.0, min(-0.5, _avg_scalp_loss * 0.80)), 2)
+            _learn_log.append(
+                f"Scalp thresholds ({_sp_n} trades): "
+                f"profit={_learned_scalp_profit_pct:+.2f}% stop={_learned_scalp_stop_pct:+.2f}%"
+            )
+
         # ── N115: Market Cap Tier (multi-tier) ─────────────────────────────────────
         _n115_raw = tlog.get("mktcap_tier_perf", {})
         _n115_insights = []
@@ -47548,6 +47666,8 @@ def run():
             "trades_analyzed":     len(_closed),
             "last_tuned":          now_utc.isoformat(),
             "learn_log":           _learn_log[-20:],     # last 20 learning observations
+            "learned_scalp_profit_pct": _learned_scalp_profit_pct,  # adaptive scalp profit threshold (default 1.5%)
+            "learned_scalp_stop_pct":   _learned_scalp_stop_pct,    # adaptive scalp stop threshold (default -1.5%)
           }
         except Exception as _dict_e:
             logger.warning(f"Brain dict assembly error (NameError?): {_dict_e} — using prev params")
