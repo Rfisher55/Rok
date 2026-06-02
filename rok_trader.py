@@ -24867,6 +24867,8 @@ def run():
     # Market close cleanup: last 30 min before close, liquidate ALL positions > 10min old
     # Extended from 15→30min to prevent overnight holds when 90min timer can't fire
     _close_cleanup = market_open and _minutes_to_close < 30
+    # Morning sweep: first 20 min of market open — force-exit any overnight equity positions
+    _morning_sweep = market_open and _minutes_since_open < 20
     # Market session label — computed early so position sizing can use it
     if not market_open:
         _mkt_sess_hr0 = _et_hour * 60 + _et_min
@@ -26223,6 +26225,18 @@ def run():
 
     # ── MANAGE EXISTING LONGS ─────────────────────────────────────────────
     order_entry_times = get_position_entry_times()
+    # Supplement with tlog trade history so positions older than 200 orders aren't missed.
+    # Alpaca's order lookback only covers ~200 orders; 300 trades/day = 3-day-old positions lost.
+    try:
+        _tlog_trades_et = tlog.get("trades", []) or []
+        for _tlt in reversed(_tlog_trades_et):
+            _tlt_sym = _tlt.get("symbol") or _tlt.get("ticker", "")
+            _tlt_side = str(_tlt.get("action", "") or "")
+            _tlt_ts   = _tlt.get("time") or _tlt.get("timestamp", "")
+            if _tlt_sym and _tlt_side.upper() == "BUY" and _tlt_ts and _tlt_sym not in order_entry_times:
+                order_entry_times[_tlt_sym] = _tlt_ts
+    except Exception:
+        pass
     for sym, pos in list(longs.items()):
         try:
             cost    = float(pos.get("avg_entry_price", 0))
@@ -26251,6 +26265,40 @@ def run():
             except Exception:
                 pass
             _fast_half_out = peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False
+
+            # Cross-day emergency exit: if entry_time resolved to "now" (unknown age) but
+            # today != entry date from any tlog BUY trade, the position is stale overnight.
+            # Also catches the case where peaks.json was lost and order history didn't reach far enough.
+            _cross_day_force = False
+            try:
+                _today_str = now_utc.strftime("%Y-%m-%d")
+                _entry_date_str = _fast_et.strftime("%Y-%m-%d") if _fast_age_min > 0 else _today_str
+                # If entry was on a prior calendar day AND age shows < 2h, the timestamp is wrong.
+                # Force exit to prevent multi-day holds from lost entry times.
+                if _entry_date_str < _today_str and _fast_age_min < 120:
+                    _cross_day_force = True
+                    logger.warning(f"CROSS-DAY DETECTED {sym}: entry_date={_entry_date_str} today={_today_str} — forcing exit")
+                # Also force-exit if age > 8h regardless (belt + suspenders for multi-day holds)
+                elif _fast_age_min >= 480 and pnl_pct < 5.0:
+                    _cross_day_force = True
+                    logger.warning(f"STALE POSITION {sym}: {_fast_age_min:.0f}min old ({pnl_pct:+.1f}%) — forcing exit")
+            except Exception:
+                pass
+
+            if _cross_day_force:
+                _cx_reason = f"stale overnight exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+                logger.info(f"FORCE_SELL {sym} — {_cx_reason}")
+                try:
+                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_cx_reason)
+                    made_trades = True
+                    del longs[sym]
+                    del held[sym]
+                    peaks.pop(sym, None)
+                except Exception as _cxe:
+                    logger.warning(f"Cross-day force sell failed {sym}: {_cxe}")
+                continue
 
             # Overnight grace window: positions held >6h with strong P&L get a 30min extension.
             # Let winners run at market open instead of dumping immediately on the 90min timer.
@@ -26385,13 +26433,18 @@ def run():
             # Trailing peak
             prev_peak  = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else peaks.get(sym, current)
             peak       = max(prev_peak, current)
-            # Entry time: peaks.json → order history → now (for positions first seen this run)
+            # Entry time: peaks.json → order history (tlog-enriched) → now
+            # IMPORTANT: only write "now" into peaks if we truly have no better source.
+            # Avoid overwriting a real entry time with a stale "now" fallback on subsequent runs.
             order_entry  = order_entry_times.get(sym, "")
-            entry_time   = (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or order_entry or now_utc.isoformat()
+            _peaks_time  = peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None
+            entry_time   = _peaks_time or order_entry or now_utc.isoformat()
+            _entry_is_fallback = not (_peaks_time or order_entry)  # True = we're guessing "now"
             _ever_hit = (peaks.get(sym, {}).get("ever_hit_5pct", False) if isinstance(peaks.get(sym), dict) else False) or (pnl_pct >= 5)
             peaks[sym]   = {
                 "peak":           peak,
-                "time":           entry_time,
+                # Don't overwrite a real stored time with a "now" fallback
+                "time":           entry_time if not _entry_is_fallback else (peaks.get(sym, {}).get("time") or entry_time),
                 "half_out":       peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False,
                 "ever_hit_5pct":  _ever_hit,
                 "gap_day":        peaks.get(sym, {}).get("gap_day", "") if isinstance(peaks.get(sym), dict) else "",
@@ -27192,6 +27245,11 @@ def run():
             # Market close cleanup: liquidate ALL positions in last 30 min — no overnight holds
             if not reason and _close_cleanup and age_minutes >= 5:
                 reason = f"close cleanup ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+
+            # Morning sweep: first 20 min of open — exit any positions that survived overnight
+            # age_minutes < 60 guard: new positions entered today at open are fine to hold
+            if not reason and _morning_sweep and age_minutes >= 60:
+                reason = f"morning sweep overnight exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # Track ever-hit-5pct milestone for breakeven lock
             if pnl_pct >= 5 and sym in peaks:
