@@ -25550,7 +25550,9 @@ def run():
                     _r  = _s.get("reason", "")
                     _tk = _s.get("ticker", "")
                     _pnl = float(_s["pnl_pct"])
-                    if "90min" in _r or "90-min" in _r:              _cat = "90min_cycle"
+                    if "stop loss" in _r or "scalp stop" in _r or "hard stop" in _r:
+                        _cat = "stop_loss"   # MUST be first: "scalp stop (-2.4% in 45min)" contains "45min"
+                    elif "90min" in _r or "90-min" in _r:              _cat = "90min_cycle"
                     elif "60min" in _r or "60-min" in _r:          _cat = "60min_cycle"
                     elif "45min" in _r:                            _cat = "45min_profit"
                     elif ("120min" in _r or "150min" in _r
@@ -25560,7 +25562,6 @@ def run():
                     elif ("momentum reversal" in _r
                           or "bearish cross" in _r
                           or "stagnant exit" in _r):               _cat = "early_reversal"
-                    elif "stop loss" in _r or "scalp stop" in _r:  _cat = "stop_loss"
                     elif ("profit" in _r or "target" in _r
                           or "early win" in _r or "1h profit" in _r): _cat = "profit_target"
                     else:                                           _cat = "other"
