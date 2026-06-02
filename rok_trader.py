@@ -14064,7 +14064,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n855 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n855_field = _buy_n855.get("position_count_perf", "medium_book") if _buy_n855 else "medium_book"
+            _n855_field = _buy_n855.get("position_count_perf", "4-7") if _buy_n855 else "4-7"
             _n855_perf = tlog.setdefault("position_count_perf", {})
             _n855p = _n855_perf.setdefault(_n855_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n855_field})
             _n855p["total"] += 1; _n855p["total_pnl"] = round(_n855p["total_pnl"] + pnl, 2)
@@ -36841,22 +36841,20 @@ def run():
                         _buy_signals_merged["relative_strength_tier_perf"] = _n854_s
                     except Exception:
                         _buy_signals_merged["relative_strength_tier_perf"] = "avg_rs"
-                    # N855: Position Count at Entry
+                    # N855: Position Count at Entry — use same "1-3"/"4-7"/"8-12"/"13+" labels as N895
                     try:
                         _n855_cnt = sc.get("open_pos_count", 0)
-                        if _n855_cnt >= 8:
-                            _n855_s = "full_book"
-                        elif _n855_cnt >= 5:
-                            _n855_s = "heavy_book"
-                        elif _n855_cnt >= 3:
-                            _n855_s = "medium_book"
-                        elif _n855_cnt >= 1:
-                            _n855_s = "light_book"
+                        if _n855_cnt <= 3:
+                            _n855_s = "1-3"
+                        elif _n855_cnt <= 7:
+                            _n855_s = "4-7"
+                        elif _n855_cnt <= 12:
+                            _n855_s = "8-12"
                         else:
-                            _n855_s = "empty_book"
+                            _n855_s = "13+"
                         _buy_signals_merged["position_count_perf"] = _n855_s
                     except Exception:
-                        _buy_signals_merged["position_count_perf"] = "medium_book"
+                        _buy_signals_merged["position_count_perf"] = "4-7"
                     # N856: Catalyst Strength
                     try:
                         _cs_sent = sc.get("sent", sc.get("sentiment_score", 5))
