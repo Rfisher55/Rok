@@ -29823,6 +29823,12 @@ def run():
                     live[tk]["spy_day_chg"] = round(_spy_d1_inj, 2)
                 except Exception:
                     live[tk]["spy_day_chg"] = 0.0
+                # spy_5d: N293/N851 spy_trend_strength neurons — never in live[tk]; use regime spy_trend as proxy
+                # (spy_trend = SPY % above 20d EMA; positive=bull, negative=bear — correct directional proxy)
+                try:
+                    live[tk]["spy_5d"] = float((tlog.get("regime") or {}).get("spy_trend", 0) or 0)
+                except Exception:
+                    live[tk]["spy_5d"] = 0.0
                 # POC distance for poc_dist_perf neuron
                 try:
                     _poc_pr_inj = float(live[tk].get("poc_price", 0) or 0)
