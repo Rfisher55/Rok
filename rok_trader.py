@@ -16123,7 +16123,7 @@ def _get_fundamentals(sym: str, max_age_sec: int = 21600) -> dict:
     import time as _ft
     _null = {"earnings_growth": None, "revenue_growth": None, "forward_pe": None,
              "profit_margin": None, "roe": None, "debt_equity": None,
-             "fund_quality": 0}   # fund_quality: -2 to +3 score
+             "fund_quality": 0, "market_cap": 0, "float_shares": 0}  # R45: added market_cap, float_shares
     now_f = _ft.time()
     if sym in _FUNDAMENTAL_CACHE:
         cached, ts = _FUNDAMENTAL_CACHE[sym]
@@ -16131,12 +16131,14 @@ def _get_fundamentals(sym: str, max_age_sec: int = 21600) -> dict:
             return cached
     try:
         info = yf.Ticker(sym).info
-        eg = info.get("earningsGrowth")      # YoY EPS growth (decimal, e.g. 0.35 = 35%)
-        rg = info.get("revenueGrowth")       # YoY revenue growth
-        fpe= info.get("forwardPE")           # Forward P/E
-        pm = info.get("profitMargins")       # Net profit margin
-        roe= info.get("returnOnEquity")      # Return on equity
-        de = info.get("debtToEquity")        # Debt/equity ratio
+        eg  = info.get("earningsGrowth")      # YoY EPS growth (decimal, e.g. 0.35 = 35%)
+        rg  = info.get("revenueGrowth")       # YoY revenue growth
+        fpe = info.get("forwardPE")           # Forward P/E
+        pm  = info.get("profitMargins")       # Net profit margin
+        roe = info.get("returnOnEquity")      # Return on equity
+        de  = info.get("debtToEquity")        # Debt/equity ratio
+        mc  = info.get("marketCap", 0) or 0   # R45: market cap in dollars
+        fs  = info.get("floatShares", 0) or 0 # R45: shares in float
 
         # Composite fundamental quality score: -2 to +3
         fq = 0
@@ -16151,7 +16153,8 @@ def _get_fundamentals(sym: str, max_age_sec: int = 21600) -> dict:
         if de is not None and de > 2.0:   fq -= 1   # high debt = fragile in rising rate environment
 
         result = {"earnings_growth": eg, "revenue_growth": rg, "forward_pe": fpe,
-                  "profit_margin": pm, "roe": roe, "debt_equity": de, "fund_quality": fq}
+                  "profit_margin": pm, "roe": roe, "debt_equity": de, "fund_quality": fq,
+                  "market_cap": float(mc), "float_shares": float(fs)}
         _FUNDAMENTAL_CACHE[sym] = (result, now_f)
         return result
     except Exception:
@@ -21258,6 +21261,9 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig["profit_margin"]    = fq.get("profit_margin")
                             sig["roe"]              = fq.get("roe")
                             sig["fund_quality"]     = fq.get("fund_quality", 0)
+                            sig["debt_equity"]      = fq.get("debt_equity")   # R45: N558 debt_equity_v1_perf
+                            sig["market_cap"]       = fq.get("market_cap", 0) # R45: N614/N794 market cap neurons
+                            sig["float_shares"]     = fq.get("float_shares", 0) # R45: N184/N595/N679 float neurons
                         except Exception:
                             sig.setdefault("earnings_growth", None)
                             sig.setdefault("revenue_growth", None)
@@ -21265,6 +21271,9 @@ def fetch_batch(tickers, held_symbols=None, period_d="90d"):
                             sig.setdefault("profit_margin", None)
                             sig.setdefault("roe", None)
                             sig.setdefault("fund_quality", 0)
+                            sig.setdefault("debt_equity", None)
+                            sig.setdefault("market_cap", 0)
+                            sig.setdefault("float_shares", 0)
                         # Earnings calendar: pre-earnings drift window (5-20d) is a reliable alpha factor
                         try:
                             sig["earnings_days"] = get_earnings_days(tk)
@@ -29791,6 +29800,31 @@ def run():
                     live[tk]["news_velocity"]   = 0.0
                     live[tk]["news_accelerating"] = False
                     live[tk]["news_catalyst"]   = False
+                # ── R45: key-mismatch aliases — score() reads these names but _extract uses different keys ──
+                # N125/N352 news_count_perf: score reads "news_count" but injected as "news_count_24h"
+                live[tk]["news_count"] = live[tk].get("news_count_24h", 0)
+                # NR7 nr7_perf: score reads "nr7" but _extract sets "nr7_signal"
+                live[tk]["nr7"] = bool(live[tk].get("nr7_signal", False))
+                # N384 candle_direction_perf: score reads "ha_trend" bool but _extract sets "ha_bull"
+                live[tk]["ha_trend"] = bool(live[tk].get("ha_bull", False))
+                # N267 market_cap_proxy_perf + N260/N687 liquidity: score reads "avg_volume" but _extract sets "avg_vol_14"
+                live[tk]["avg_volume"] = float(live[tk].get("avg_vol_14", 0) or 0)
+                # N133/N195 beta neurons: score reads "beta" but _extract sets "true_beta"
+                live[tk]["beta"] = float(live[tk].get("true_beta", 1.0) or 1.0)
+                # N274 position_concentration_v1_perf: score reads "open_positions" but injected as "n_open_at_entry"
+                live[tk]["open_positions"] = live[tk].get("n_open_at_entry", live[tk].get("positions_open_now", 5))
+                # N555/N556 earnings/revenue growth neurons: yfinance returns decimals (0.35) but score checks pct (25.0)
+                try:
+                    live[tk]["eps_growth_pct"] = float(live[tk].get("earnings_growth", 0) or 0) * 100
+                    live[tk]["revenue_growth_pct"] = float(live[tk].get("revenue_growth", 0) or 0) * 100
+                except Exception:
+                    live[tk]["eps_growth_pct"] = 0.0
+                    live[tk]["revenue_growth_pct"] = 0.0
+                # N410 conviction_tier_v1_perf: score reads "score" (preliminary tech score)
+                try:
+                    live[tk]["score"] = tech_scores.get(tk, 0)
+                except Exception:
+                    live[tk]["score"] = 0
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
