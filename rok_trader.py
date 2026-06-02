@@ -22563,10 +22563,16 @@ def score(tk, d, sentiment=0, regime_adj=0):
                            else "high" if _fb_rvt < 4.0 else "surge")
             _nsl_adj += _nde("rvol_perf", _fb_rvt_bkt)
 
-            # Catalyst type: none=12%, technical_catalyst=61%, other=71%
-            _fb_cat_tp = str(d.get("catalyst_type", "technical_catalyst") or "technical_catalyst")
+            # N158: catalyst_type field (labels: earnings/analyst/product/macro/sector/other)
+            _fb_cat_tp = str(d.get("catalyst_type", "other") or "other")
             _nsl_adj += _nde("catalyst_type_v1_perf", _fb_cat_tp)
-            _nsl_adj += _nde("catalyst_type_perf", _fb_cat_tp)
+            # N336: derived catalyst label (labels: earnings_catalyst/news_catalyst/technical_catalyst)
+            _n336_cat_str = str(d.get("catalyst", "") or "")
+            _n336_nc_v    = int(d.get("news_count", 0) or 0)
+            if "earn" in _n336_cat_str.lower():   _n336_cat_q = "earnings_catalyst"
+            elif _n336_cat_str or _n336_nc_v > 0: _n336_cat_q = "news_catalyst"
+            else:                                  _n336_cat_q = "technical_catalyst"
+            _nsl_adj += _nde("catalyst_type_perf", _n336_cat_q)
 
             # Portfolio concentration: 3-4 positions=80%, 8+=53%
             _fb_conc_n = int(d.get("positions_open_now", 5) or 5)
