@@ -1074,7 +1074,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
 
     # Store active signals at entry for performance tracking
     if action == "BUY" and signals:
-        _SIGNAL_KEYS = [
+        _SIGNAL_KEYS = list(dict.fromkeys([
             "cup_handle", "at_demand_zone", "mom_accel", "vcp", "obv_rising",
             "kc_breakout", "higher_lows", "double_bottom", "poc_breakout",
             "ema_stacked_bull", "trend_reversal", "bull_flag", "mtf_aligned",
@@ -1083,12 +1083,17 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             "ichimoku_above", "orb_breakout", "above_poc",
             "rvol_surge", "mfi_oversold", "mfi_bull_div", "supertrend_bull",
             "force_index_div", "force_index_rising", "ha_bull", "donchian_up",
-            # New signals (session additions)
             "three_white_soldiers", "morning_star", "bullish_engulfing", "hammer",
             "psar_bull", "price_accel_pos", "unusual_calls", "options_bull",
-            "donchian_up", "ha_bull", "rvol_surge",
-            "lr_below_channel",  # mean reversion buy at LR channel support
-        ]
+            "lr_below_channel",
+            # High-conviction patterns added for deeper synergy learning
+            "pocket_pivot", "htf", "ema21_pullback", "ema21_touch",
+            "mtf_triple", "mtf_conflict",
+            "rs_line_new_high", "rs_line_trending",
+            "vol_dry_up", "near_support", "near_key_support",
+            "squeeze_potential", "unusual_calls", "options_bear",
+            "high_short", "mfi_overbought",
+        ]))
         e["entry_signals"] = list(dict.fromkeys(k for k in _SIGNAL_KEYS if signals.get(k)))
         e["signal_count_at_entry"] = len(e["entry_signals"])
         # SPY day return at entry: up/flat/down market context for trade outcome learning
@@ -1303,7 +1308,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if len(_entry_sigs) >= 2:
                     try:
                         _syn_perf = tlog.setdefault("signal_synergy", {})
-                        _sorted_sigs = sorted(_entry_sigs[:6])  # limit pairs to top 6 signals
+                        _sorted_sigs = sorted(_entry_sigs[:8])  # expanded: top 8 signals for richer pairs
                         for _i in range(len(_sorted_sigs)):
                             for _j in range(_i + 1, len(_sorted_sigs)):
                                 _pair_key = f"{_sorted_sigs[_i]}+{_sorted_sigs[_j]}"
@@ -1316,10 +1321,11 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                                 else:       _syn["losses"] += 1
                                 _syn["win_rate"] = round(_syn["wins"] / _syn["total"] * 100, 1)
                                 _syn["avg_pnl"]  = round(_syn["total_pnl"] / _syn["total"], 2)
-                        # Keep only top 50 pairs by frequency to avoid unbounded growth
-                        if len(_syn_perf) > 60:
-                            _syn_sorted = sorted(_syn_perf.items(), key=lambda x: -x[1]["total"])
-                            tlog["signal_synergy"] = dict(_syn_sorted[:50])
+                        # Keep top 80 pairs by win rate (weighted by frequency) — richer signal map
+                        if len(_syn_perf) > 100:
+                            _syn_sorted = sorted(_syn_perf.items(),
+                                key=lambda x: -(x[1].get("win_rate",50) * min(1.0, x[1].get("total",0)/10.0)))
+                            tlog["signal_synergy"] = dict(_syn_sorted[:80])
                         # ── 3-signal TRIPLE synergy (deepens pattern learning) ──────────
                         if len(_sorted_sigs) >= 3:
                             _tri_perf = tlog.setdefault("signal_triplets", {})
@@ -1336,10 +1342,11 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                                         else:       _tri["losses"] += 1
                                         _tri["win_rate"] = round(_tri["wins"] / _tri["total"] * 100, 1)
                                         _tri["avg_pnl"]  = round(_tri["total_pnl"] / _tri["total"], 2)
-                            # Keep top 40 triplets by frequency
-                            if len(_tri_perf) > 50:
-                                _tri_sorted = sorted(_tri_perf.items(), key=lambda x: -x[1]["total"])
-                                tlog["signal_triplets"] = dict(_tri_sorted[:40])
+                            # Keep top 60 triplets by win rate weighted by frequency
+                            if len(_tri_perf) > 80:
+                                _tri_sorted = sorted(_tri_perf.items(),
+                                    key=lambda x: -(x[1].get("win_rate",50) * min(1.0, x[1].get("total",0)/8.0)))
+                                tlog["signal_triplets"] = dict(_tri_sorted[:60])
                     except Exception:
                         pass
                 break
@@ -21826,7 +21833,15 @@ def score(tk, d, sentiment=0, regime_adj=0):
             "morning_star", "bullish_engulfing", "psar_bull", "price_accel_pos",
             "unusual_calls", "lr_below_channel", "ttm_squeeze_fired",
             "at_breakout", "pocket_pivot", "high_tight_flag",
+            # Expanded: new signals with synergy learning potential
+            "htf", "ema21_pullback", "ema21_touch", "mtf_triple",
+            "rs_line_new_high", "rs_line_trending", "vol_dry_up",
+            "near_support", "squeeze_potential", "rsi_bull_divergence",
+            "vwap_reclaim", "gap_and_hold", "orb_breakout", "nr7_signal",
+            "mfi_oversold", "force_index_div", "force_index_rising",
+            "hammer", "bullish_engulfing",
         ]
+        _all_sig_keys = list(dict.fromkeys(_all_sig_keys))  # deduplicate
         for sig_key in _all_sig_keys:
             if d.get(sig_key) and sig_key in _SIGNAL_WIN_RATES:
                 sdata = _SIGNAL_WIN_RATES[sig_key]
@@ -26265,6 +26280,19 @@ def run():
             # Defaults of ±1.5% apply until enough scalp trades are accumulated (≥10).
             _scalp_pthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_profit_pct", 1.5))
             _scalp_sthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_stop_pct", -1.5))
+            # Hold time learning: if 0-2d trades win more than 3-7d holds, be more aggressive taking profits
+            try:
+                _ht_perf = tlog.get("hold_time_performance", {})
+                _ht_scalp = _ht_perf.get("0-2d", {})
+                _ht_swing = _ht_perf.get("3-7d", {})
+                if (_ht_scalp.get("total", 0) >= 8 and _ht_swing.get("total", 0) >= 5
+                        and _ht_scalp.get("win_rate", 50) > _ht_swing.get("win_rate", 50) + 10):
+                    _scalp_pthr = max(1.0, _scalp_pthr - 0.2)  # scalp more aggressively: lower profit target
+                elif (_ht_swing.get("total", 0) >= 8 and _ht_scalp.get("total", 0) >= 5
+                        and _ht_swing.get("win_rate", 50) > _ht_scalp.get("win_rate", 50) + 10):
+                    _scalp_pthr = min(2.5, _scalp_pthr + 0.2)  # hold longer: raise profit target
+            except Exception:
+                pass
             # Regime overlay: in bear/neutral, take profits faster and cut losses sooner.
             # In bull/strong_bull, let scalp winners run further before exiting.
             try:
