@@ -31524,6 +31524,121 @@ def run():
                                                      else "no_confirm")
                 except Exception:
                     live[tk]["vol_price_confirm"] = "no_confirm"
+                # ── R55: Inline score() dead reads — EMA prices, analyst, earnings, sector ──
+                # ema21 / ema50 / ema200 actual prices (N397 EMA stack quality)
+                try:
+                    _r55_px    = float(live[tk].get("price", 0) or 0)
+                    _r55_e200  = float(live[tk].get("price_vs_ema200", 0) or 0)
+                    _r55_e50   = float(live[tk].get("price_vs_ema50",  0) or 0)
+                    if _r55_px > 0 and _r55_e200 != 0:
+                        live[tk]["ema200"] = round(_r55_px / (1 + _r55_e200 / 100), 2)
+                    if _r55_px > 0 and _r55_e50 != 0:
+                        live[tk]["ema50"] = round(_r55_px / (1 + _r55_e50 / 100), 2)
+                    if _r55_px > 0:
+                        _r55_ec = float(live[tk].get("ema_cross", 0) or 0)
+                        _r55_e50v = live[tk].get("ema50", _r55_px)
+                        live[tk]["ema21"] = round(_r55_e50v + _r55_ec, 2)
+                except Exception:
+                    pass
+                # at_breakout_level / breakout_52w (N_breakout, N878)
+                try:
+                    _r55_wh  = float(live[tk].get("week_high", 0) or 0)
+                    _r55_52h = float(live[tk].get("near_52w_high", 0) or 0)  # ratio price/52w_high
+                    _r55_pxb = float(live[tk].get("price", 0) or 0)
+                    if _r55_52h >= 0.97 and _r55_wh > 0:
+                        live[tk]["at_breakout_level"] = round(_r55_wh, 2)
+                        live[tk]["breakout_52w"]      = True
+                    elif live[tk].get("at_breakout"):
+                        live[tk]["at_breakout_level"] = float(live[tk].get("pivot_r1", _r55_pxb) or _r55_pxb)
+                        live[tk]["breakout_52w"]      = False
+                    else:
+                        live[tk]["at_breakout_level"] = 0.0
+                        live[tk]["breakout_52w"]      = False
+                except Exception:
+                    live[tk]["at_breakout_level"] = 0.0
+                    live[tk]["breakout_52w"]      = False
+                # earnings_surprise_pct / has_earnings_beat / earnings_beat (N719/N538)
+                try:
+                    _r55_surp = float(live[tk].get("eps_surprise_pct",
+                                       live[tk].get("earnings_surprise_pct",
+                                       live[tk].get("eps_surprise", 0))) or 0)
+                    live[tk]["earnings_surprise_pct"] = _r55_surp
+                    live[tk]["has_earnings_beat"] = (_r55_surp > 0 or
+                                                     int(live[tk].get("eps_beats_last4", 0) or 0) > 0)
+                    live[tk]["earnings_beat"] = live[tk]["has_earnings_beat"]
+                except Exception:
+                    live[tk]["earnings_surprise_pct"] = 0.0
+                    live[tk]["has_earnings_beat"]     = False
+                    live[tk]["earnings_beat"]         = False
+                # analyst_rec_score / analyst_score (N554/N842a)
+                try:
+                    _r55_anu = bool(live[tk].get("analyst_upgrade", False))
+                    _r55_anb = int(live[tk].get("analyst_count_buy", 0) or 0)
+                    _r55_anu_p = float(live[tk].get("analyst_upside_pct", 0) or 0)
+                    live[tk]["analyst_rec_score"] = (4 if _r55_anu and _r55_anu_p > 20 else
+                                                     3 if _r55_anu else
+                                                     2 if _r55_anb >= 3 else
+                                                     1 if _r55_anb >= 1 else 0)
+                    live[tk]["analyst_score"] = min(100, max(0, int(
+                        50 + (_r55_anu_p * 2) +
+                        (live[tk]["analyst_rec_score"] * 5)
+                    )))
+                except Exception:
+                    live[tk]["analyst_rec_score"] = 0
+                    live[tk]["analyst_score"]     = 50
+                # days_to_earnings / days_since_earnings (N538 fallback fields)
+                try:
+                    _r55_ed = live[tk].get("earnings_days")
+                    if _r55_ed is None:
+                        _r55_ed = live[tk].get("days_to_earnings", live[tk].get("earnings_days_ahead", 99))
+                    _r55_ed_val = int(float(_r55_ed or 99))
+                    if _r55_ed_val >= 0:
+                        live[tk]["days_to_earnings"]   = _r55_ed_val
+                        live[tk]["days_since_earnings"] = 99
+                    else:
+                        live[tk]["days_to_earnings"]   = 99
+                        live[tk]["days_since_earnings"] = abs(_r55_ed_val)
+                    live[tk]["earnings_days_ahead"] = live[tk]["days_to_earnings"]
+                    live[tk]["earnings_days_ago"]   = live[tk]["days_since_earnings"]
+                except Exception:
+                    live[tk]["days_to_earnings"]    = 99
+                    live[tk]["days_since_earnings"] = 99
+                # time_since_last_trade_h (N270 trade pace)
+                try:
+                    _r55_last_trade = next(
+                        (t for t in reversed(tlog.get("trades", []))
+                         if t.get("action") == "BUY" and t.get("ticker") == tk), None)
+                    if _r55_last_trade:
+                        _r55_lt = datetime.fromisoformat(
+                            _r55_last_trade["time"].replace("Z", "+00:00"))
+                        live[tk]["time_since_last_trade_h"] = round(
+                            (now_utc - _r55_lt).total_seconds() / 3600, 2)
+                    else:
+                        live[tk]["time_since_last_trade_h"] = 24.0
+                except Exception:
+                    live[tk]["time_since_last_trade_h"] = 4.0
+                # smart_money_flow (N691 — proxy from options + OBV)
+                try:
+                    _r55_uc   = bool(live[tk].get("unusual_calls",   False))
+                    _r55_ob   = live[tk].get("obv_rising")
+                    _r55_if   = float(live[tk].get("inst_flow", live[tk].get("large_lot_ratio", 1.0)) or 1.0)
+                    live[tk]["smart_money_flow"] = (
+                        20.0 if _r55_uc and _r55_ob is True else
+                        10.0 if _r55_uc or (_r55_ob is True and _r55_if > 1.2) else
+                        -10.0 if _r55_ob is False and not _r55_uc else
+                        0.0)
+                    live[tk]["smf"] = live[tk]["smart_money_flow"]
+                except Exception:
+                    live[tk]["smart_money_flow"] = 0.0
+                    live[tk]["smf"]              = 0.0
+                # sector_etf_5d (N222 sector momentum)
+                try:
+                    _r55_etf3 = str(live[tk].get("sector_etf", "SPY") or "SPY")
+                    live[tk]["sector_etf_5d"] = float(live.get(_r55_etf3, {}).get("chg5d", 0) or 0)
+                    live[tk]["sector_5d"]     = live[tk]["sector_etf_5d"]
+                except Exception:
+                    live[tk]["sector_etf_5d"] = 0.0
+                    live[tk]["sector_5d"]     = 0.0
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
