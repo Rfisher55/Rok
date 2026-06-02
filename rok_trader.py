@@ -23457,6 +23457,34 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                      _n207_rve_q = "quiet_open"
             _nsl_adj += _nde("relative_volume_early_perf", _n207_rve_q)
 
+            # N822: ATR environment (labels: high_vol_env/elevated_vol_env/normal_vol_env/low_vol_env)
+            _n822_atr_v = float(d.get("atr_pct", d.get("atr_as_pct", 0)) or 0)
+            if   _n822_atr_v > 4:    _n822_atr_q = "high_vol_env"
+            elif _n822_atr_v >= 2.5: _n822_atr_q = "elevated_vol_env"
+            elif _n822_atr_v >= 1.5: _n822_atr_q = "normal_vol_env"
+            else:                     _n822_atr_q = "low_vol_env"
+            _nsl_adj += _nde("atr_environment_perf", _n822_atr_q)
+
+            # N133: Beta tier (labels: high_beta/normal/defensive from beta ≥1.5/≥0.8/else)
+            _n133_beta_v = float(d.get("beta", d.get("beta_at_entry", 1.0)) or 1.0)
+            if   _n133_beta_v >= 1.5: _n133_bt_q = "high_beta"
+            elif _n133_beta_v >= 0.8: _n133_bt_q = "normal"
+            else:                      _n133_bt_q = "defensive"
+            _nsl_adj += _nde("beta_tier_perf", _n133_bt_q)
+
+            # N195: Stock beta tier (labels: high_beta/normal_beta/low_beta from beta >1.5/≥0.8/else)
+            if   _n133_beta_v > 1.5:  _n195_bt_q = "high_beta"
+            elif _n133_beta_v >= 0.8: _n195_bt_q = "normal_beta"
+            else:                      _n195_bt_q = "low_beta"
+            _nsl_adj += _nde("stock_beta_tier_perf", _n195_bt_q)
+
+            # N174: Consecutive loss state (labels: no_loss/one_loss/two_plus_loss from win_streak)
+            _n174_streak_v = int(d.get("win_streak_now", 0) or 0)
+            if   _n174_streak_v <= -2: _n174_cl_q = "two_plus_loss"
+            elif _n174_streak_v == -1: _n174_cl_q = "one_loss"
+            else:                      _n174_cl_q = "no_loss"
+            _nsl_adj += _nde("consec_loss_perf", _n174_cl_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
