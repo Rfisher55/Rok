@@ -28721,12 +28721,12 @@ def run():
                     _learned_bonus += _nbns("rvol_tier_perf", "high", 62, 1)
                 elif _rvol_lb < 0.8:
                     _learned_bonus += _npen("rvol_tier_perf", "below_avg", 42, -1)
-                _e21 = float(_tk_sig_sc.get("ema21", 0) or 0)
-                _e50 = float(_tk_sig_sc.get("ema50", 0) or 0)
-                _e200 = float(_tk_sig_sc.get("ema200", 0) or 0)
-                if bool(_tk_sig_sc.get("ema_stack", False)) or (_e21 > _e50 > _e200 > 0):
+                # EMA stack: use ema_stacked_bull/bear flags from _extract (raw ema21/50/200 not in fetch_batch)
+                _ema_stack_bull_lb = bool(_tk_sig_sc.get("ema_stacked_bull", _tk_sig_sc.get("ema_stack", False)))
+                _ema_stack_bear_lb = bool(_tk_sig_sc.get("ema_stacked_bear", False))
+                if _ema_stack_bull_lb:
                     _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 2)
-                elif _e200 > _e50 > 0:
+                elif _ema_stack_bear_lb:
                     _learned_bonus += _npen("ema_stack_quality_perf", "ema_stack_broken", 42, -2)
                 _rs1_lb = float(_tk_sig_sc.get("rs1", 0) or 0)
                 _adx_lb = float(_tk_sig_sc.get("adx", _tk_sig_sc.get("adx_14", 20)) or 20)
@@ -28948,12 +28948,12 @@ def run():
                     _learned_bonus += _nbns("spy_intraday_trend_perf", "spy_up", 58, 1)
                 elif "down" in _spy_it_lb:
                     _learned_bonus += _npen("spy_intraday_trend_perf", "spy_down", 48, -1)
-                # MACD signal bonus: bullish cross with momentum = higher conviction
+                # MACD: use macd_slope to determine cross (macd_signal not in fetch_batch; use slope as proxy)
                 _macd_lb = float(_tk_sig_sc.get("macd", 0) or 0)
-                _macds_lb = float(_tk_sig_sc.get("macd_signal", _tk_sig_sc.get("macd_sig", 0)) or 0)
-                if _macd_lb > _macds_lb and _macd_lb > 0:
+                _macd_slope_lb = float(_tk_sig_sc.get("macd_slope", 0) or 0)
+                if _macd_lb > 0 and _macd_slope_lb > 0:
                     _learned_bonus += _nbns("macd_cross_state_perf", "macd_bullish_cross", 60, 1)
-                elif _macd_lb < _macds_lb:
+                elif _macd_lb < 0 and _macd_slope_lb < 0:
                     _learned_bonus += _npen("macd_cross_state_perf", "macd_bearish_cross", 48, -1)
                 # Strong close position: price in top 30% of day range = bullish breadth
                 _dh_lb = float(_tk_sig_sc.get("day_high", 0) or 0)
