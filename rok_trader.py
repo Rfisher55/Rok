@@ -26273,12 +26273,12 @@ def run():
             try:
                 _today_str = now_utc.strftime("%Y-%m-%d")
                 _entry_date_str = _fast_et.strftime("%Y-%m-%d") if _fast_age_min > 0 else _today_str
-                # If entry was on a prior calendar day AND age shows < 2h, the timestamp is wrong.
-                # Force exit to prevent multi-day holds from lost entry times.
-                if _entry_date_str < _today_str and _fast_age_min < 120:
+                # If entry was on a prior calendar day, always force exit.
+                # No age restriction — any cross-day hold must be cleared immediately.
+                if _entry_date_str < _today_str:
                     _cross_day_force = True
-                    logger.warning(f"CROSS-DAY DETECTED {sym}: entry_date={_entry_date_str} today={_today_str} — forcing exit")
-                # Also force-exit if age > 8h regardless (belt + suspenders for multi-day holds)
+                    logger.warning(f"CROSS-DAY FORCE {sym}: entry={_entry_date_str} today={_today_str} age={_fast_age_min:.0f}min — forcing exit")
+                # Also force-exit if age > 8h regardless (belt + suspenders)
                 elif _fast_age_min >= 480 and pnl_pct < 5.0:
                     _cross_day_force = True
                     logger.warning(f"STALE POSITION {sym}: {_fast_age_min:.0f}min old ({pnl_pct:+.1f}%) — forcing exit")
@@ -28943,7 +28943,7 @@ def run():
                 # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
-                    _learned_bonus += _nbns("concentration_perf", "3-4", 60, 2)  # 80% WR n=15 — +2 (27pt gap)
+                    _learned_bonus += _nbns("concentration_perf", "3-4", 57, 2)  # 57.1% WR n=28 — threshold 60→57
                 elif _open_pos_lb >= 8:
                     _learned_bonus += _npen("concentration_perf", "8+", 55, -2)  # 53% WR n=30 — stronger penalty
                 # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3
@@ -28976,10 +28976,12 @@ def run():
                         _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 54% WR (neutral, fires if improves)
                     elif 40 <= _rsi_lb < 55:
                         _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
-                # ST gap: normal = 22% WR — heavy penalty
+                # ST gap: normal=16.7% WR n=12 — heavy penalty; wide=54.3% WR n=35 — bonus
                 _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
                 if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
-                    _learned_bonus += _npen("st_gap_perf", "normal", 30, -2)    # 22% WR
+                    _learned_bonus += _npen("st_gap_perf", "normal", 30, -2)    # 16.7% WR n=12
+                elif _st_gap_lb == "wide":
+                    _learned_bonus += _nbns("st_gap_perf", "wide", 54, 1)       # 54.3% WR n=35
                 # Catalyst type other: 71.1% WR n=38 bonus (must not be technical_catalyst or none)
                 _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if _cat_other_lb and _cat_other_lb not in ("", "none", "technical_catalyst", "unknown"):
@@ -29130,7 +29132,7 @@ def run():
                                 + int(bool(_tk_sig_sc.get("vcp", False)))
                                 + int(bool(_tk_sig_sc.get("pocket_pivot", False))))
                 if _chart_sc_lb == 1:
-                    _learned_bonus += _npen("chart_pattern_perf", "single", 42, -3)  # 38.5% WR n=13 — single = weak
+                    _learned_bonus += _npen("chart_pattern_perf", "single", 43, -3)  # 42.9% WR n=14 — threshold 42→43
                 elif _chart_sc_lb >= 2:
                     _learned_bonus += _nbns("chart_pattern_perf", "multi", 58, 2)    # multi-pattern confluence bonus
                 # Stochastic zone: data shows overbought=42.9% WR (bad!), neutral=62.5% WR (good!)
@@ -29181,7 +29183,7 @@ def run():
                     if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
                         _learned_bonus += _npen("roc_perf", "accelerating", 40, -1)  # 37.5% WR n=8 — chasing extended move
                     elif _roc5_acc <= 0 and _roc20_acc <= 0:
-                        _learned_bonus += _npen("roc_perf", "negative", 35, -1)  # both negative: avoid
+                        _learned_bonus += _npen("roc_perf", "negative", 48, -1)  # 47.2% WR n=36 — threshold 35→48
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
                 _rs5_acc = _tk_sig_sc.get("rs5")
                 _rs63_acc = _tk_sig_sc.get("rs63")
@@ -29218,6 +29220,12 @@ def run():
                     _learned_bonus += _nbns("ticker_beta_bucket_perf", "low_beta", 62, 1)  # stable = consistent
                 elif _sec_lb == "other":
                     _learned_bonus += _npen("ticker_beta_bucket_perf", "high_beta", 40, -1)  # unknown = less confidence
+                # Sector performance: tech=67.9% WR n=28 (strong alpha); other=40.6% WR n=32 (avoid)
+                _sec_perf_lb = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other")
+                if _sec_perf_lb == "tech":
+                    _learned_bonus += _nbns("sector_performance", "tech", 65, 1)   # 67.9% WR n=28
+                elif _sec_perf_lb == "other":
+                    _learned_bonus += _npen("sector_performance", "other", 41, -1) # 40.6% WR n=32
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
                 _pve50_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 if _pve50_lb > 20:
@@ -29244,20 +29252,26 @@ def run():
                     _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
                     _tm_lb = "losing_1" if _tm_wstrk == -1 else "losing_2+" if _tm_wstrk <= -2 else ""
                 if _tm_lb == "losing_1":
-                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 29% WR n=14 — avoid loss chasing
-                # Position count: 4-7=26.7% WR n=15; 13+=18.2% WR n=11 — both kill quality
+                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 31.2% WR n=16 — loss chasing
+                elif not _tm_lb:  # "neutral" state: WR=30.8% n=13 — also bad!
+                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 31, -1)  # 30.8% WR n=13
+                # Position count: 4-7=28.6% WR n=14; 13+=33.3% WR n=15; medium_book=60.9% n=46
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
                 if _pos_bkt_lb == "13+":
-                    _learned_bonus += _npen("position_count_perf", "13+", 22, -3)  # 18.2% WR n=11
+                    _learned_bonus += _npen("position_count_perf", "13+", 34, -3)  # 33.3% WR n=15 — threshold 22→34
                 elif _pos_bkt_lb == "4-7":
-                    _learned_bonus += _npen("position_count_perf", "4-7", 30, -2)  # 26.7% WR n=15 — medium book risk
-                # Sector breadth: single_sector=16.7% WR n=12; healthy_4-5=28.6% WR n=14 — both weak
+                    _learned_bonus += _npen("position_count_perf", "4-7", 30, -2)  # 28.6% WR n=14
+                elif _pos_bkt_lb == "8-12":
+                    _learned_bonus += _nbns("position_count_perf", "medium_book", 61, 1)  # 60.9% WR n=46
+                # Sector breadth: single=31.2% WR n=16; healthy_4-5=30.8% WR n=13; sector_middle=60.9% n=46
                 _sec_adv_lb = int(_tk_sig_sc.get("sectors_advancing_now", 5) or 5)
                 if _sec_adv_lb < 2:
-                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 20, -3)  # 16.7% WR n=12
+                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 32, -3)  # 31.2% WR n=16 — threshold 20→32
                 elif 4 <= _sec_adv_lb <= 5:
-                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 30, -2)  # 28.6% WR n=14
+                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 31, -2)  # 30.8% WR n=13 — threshold 30→31
+                elif 6 <= _sec_adv_lb <= 7:
+                    _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
                 _learned_bonus = max(-20, min(18, _learned_bonus))  # expanded penalty floor: -10→-20
             except Exception:
                 _learned_bonus = 0
