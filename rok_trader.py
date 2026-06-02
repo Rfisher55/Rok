@@ -5270,7 +5270,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _buy_n269 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n269_field = _buy_n269.get("sector_breadth_state", "sector_neutral") if _buy_n269 else "sector_neutral"
-            _n269_perf = tlog.setdefault("sector_breadth_perf", {})
+            _n269_perf = tlog.setdefault("sector_etf_trend_perf", {})
             _n269p = _n269_perf.setdefault(_n269_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n269_field})
             _n269p["total"] += 1; _n269p["total_pnl"] = round(_n269p["total_pnl"] + pnl, 2)
             if pnl > 0: _n269p["wins"] += 1
@@ -6450,12 +6450,12 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
-    # ── N348: Sector Breadth Performance ──────────────────────────────────────────
+    # ── N348: Sector RS Tier Performance (separate dict to avoid collision with N900/N269) ──────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n348 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _n348_field = _buy_n348.get("sector_breadth_perf", "sector_middle") if _buy_n348 else "sector_middle"
-            _n348_perf = tlog.setdefault("sector_breadth_perf", {})
+            _n348_perf = tlog.setdefault("sector_rs_tier_perf", {})
             _n348p = _n348_perf.setdefault(_n348_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n348_field})
             _n348p["total"] += 1; _n348p["total_pnl"] = round(_n348p["total_pnl"] + pnl, 2)
             if pnl > 0: _n348p["wins"] += 1
@@ -22526,6 +22526,20 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:
                 _fb_sec_mom = "avg_sector"
             _nsl_adj += _nde("sector_momentum_perf", _fb_sec_mom)
+
+            # N269: Sector ETF trend (now separated from sector_breadth_perf)
+            _fb_sec_1d = float(d.get("sector_etf_1d", d.get("sector_chg1d", 0)) or 0)
+            _fb_sec_5d = float(d.get("sector_etf_5d", d.get("sector_chg5d", 0)) or 0)
+            _fb_sec_etf_tr = ("sector_expanding" if _fb_sec_1d > 0.3 and _fb_sec_5d > 0
+                              else "sector_contracting" if _fb_sec_1d < -0.3 or _fb_sec_5d < -1
+                              else "sector_neutral")
+            _nsl_adj += _nde("sector_etf_trend_perf", _fb_sec_etf_tr)
+
+            # N348: Sector RS tier (now separated from sector_breadth_perf)
+            _fb_sec_rs = float(d.get("sector_rs", d.get("sector_rs_rank", 50)) or 50)
+            _fb_sec_rs_b = ("sector_leading" if _fb_sec_rs >= 70 else
+                            "sector_lagging" if _fb_sec_rs <= 40 else "sector_middle")
+            _nsl_adj += _nde("sector_rs_tier_perf", _fb_sec_rs_b)
 
             # ── Commit 8: N711-N730 + N871-N880 entry quality neurons ──────────
 
@@ -38842,7 +38856,7 @@ def run():
         _n266_insights = _prev_learned.get("pre_market_volume_perf", [])
         _n267_insights = _prev_learned.get("market_cap_tier_perf", [])
         _n268_insights = _prev_learned.get("trend_acceleration_perf", [])
-        _n269_insights = _prev_learned.get("sector_breadth_perf", [])
+        _n269_insights = _prev_learned.get("sector_etf_trend_perf", [])
         _n270_insights = _prev_learned.get("time_since_last_trade_perf", [])
         _n271_insights = _prev_learned.get("market_internals_trend_perf", [])
         _n272_insights = _prev_learned.get("news_volume_perf", [])
@@ -38921,7 +38935,7 @@ def run():
         _n345_insights = _prev_learned.get("breakout_confirmation_perf", [])
         _n346_insights = _prev_learned.get("portfolio_heat_perf", [])
         _n347_insights = _prev_learned.get("earnings_momentum_perf", [])
-        _n348_insights = _prev_learned.get("sector_breadth_perf", [])
+        _n348_insights = _prev_learned.get("sector_rs_tier_perf", [])
         _n349_insights = _prev_learned.get("volatility_contraction_perf", [])
         _n350_insights = _prev_learned.get("time_since_last_trade_perf", [])
         _n351_insights = _prev_learned.get("float_size_bucket_perf", [])
@@ -42377,8 +42391,8 @@ def run():
             if _au_n268 and _du_n268:
                 _learn_log.append(f"N268 trend accel: accel_up={_au_n268['win_rate']:.0f}% decel_up={_du_n268['win_rate']:.0f}%WR")
 
-        # ── N269: Sector Breadth tuner ────────────────────────────────────────────────
-        _n269_raw = tlog.get("sector_breadth_perf", {})
+        # ── N269: Sector ETF Trend tuner ────────────────────────────────────────────────
+        _n269_raw = tlog.get("sector_etf_trend_perf", {})
         _n269_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n269_raw.items() if v.get("total", 0) >= 2]
@@ -43246,8 +43260,8 @@ def run():
             if _se_n347 and _ne_n347:
                 _learn_log.append(f"N347 earnings momentum: strong={_se_n347['win_rate']:.0f}% none={_ne_n347['win_rate']:.0f}%WR")
 
-        # ── N348: Sector Breadth tuner ───────────────────────────────────────────────────
-        _n348_raw = tlog.get("sector_breadth_perf", {})
+        # ── N348: Sector RS Tier tuner ───────────────────────────────────────────────────
+        _n348_raw = tlog.get("sector_rs_tier_perf", {})
         _n348_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n348_raw.items() if v.get("total", 0) >= 2]
@@ -47162,7 +47176,7 @@ def run():
             "pre_market_volume_perf":      _n266_insights,   # N266: pre-market volume (extended hours) vs outcome
             "market_cap_tier_perf":        _n267_insights,   # N267: market cap tier (proxy via vol*price) vs outcome
             "trend_acceleration_perf":     _n268_insights,   # N268: trend acceleration (5d vs 20d rate) vs outcome
-            "sector_breadth_perf":         _n269_insights,   # N269: sector breadth (sector ETF advancing) vs outcome
+            "sector_etf_trend_perf":       _n269_insights,   # N269: sector ETF trend (expanding/contracting/neutral) vs outcome
             "time_since_last_trade_perf":  _n270_insights,   # N270: time since last BUY (trade pace) vs outcome
             "market_internals_trend_perf": _n271_insights,   # N271: market internals trend (mq today vs 3d avg) vs outcome
             "news_volume_perf":            _n272_insights,   # N272: news volume (articles scanned) vs outcome
@@ -47241,7 +47255,7 @@ def run():
             "breakout_confirmation_perf":       _n345_insights,   # N345: breakout confirmation (vol+at_breakout) vs outcome
             "portfolio_heat_perf":              _n346_insights,   # N346: portfolio drawdown heat at entry vs outcome
             "earnings_momentum_perf":           _n347_insights,   # N347: earnings beat+persistence momentum vs outcome
-            "sector_breadth_perf":              _n348_insights,   # N348: sector RS breadth at entry vs outcome
+            "sector_rs_tier_perf":              _n348_insights,   # N348: sector RS tier (leading/middle/lagging) vs outcome
             "volatility_contraction_perf":      _n349_insights,   # N349: ATR contraction/expansion at entry vs outcome
             "time_since_last_trade_perf":       _n350_insights,   # N350: time spacing between trades vs outcome
             "float_size_bucket_perf":           _n351_insights,   # N351: float size bucket at entry vs outcome
