@@ -18912,6 +18912,15 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             if _cur_hr_n >= 4:  # only apply when we have enough data
                 if _cur_hr_wr >= 65:   sc = min(100, sc + 3)  # best hour — be more aggressive
                 elif _cur_hr_wr <= 35: sc = max(0,   sc - 3)  # worst hour — be more cautious
+
+            # UTC hour performance: learned from crypto-specific outcomes by hour of day
+            _utc_hr_perf = _lp_cth.get("crypto_utc_hour_perf", {})
+            _utc_bkt = f"{now_utc.hour:02d}"
+            _utc_hr_wr = _utc_hr_perf.get(_utc_bkt, {}).get("win_rate", 50.0)
+            _utc_hr_n  = _utc_hr_perf.get(_utc_bkt, {}).get("total", 0)
+            if _utc_hr_n >= 3:  # only apply when we have enough crypto-specific data
+                if _utc_hr_wr >= 65:   sc = min(100, sc + 4)  # proven winning hour for crypto
+                elif _utc_hr_wr <= 35: sc = max(0,   sc - 4)  # proven losing hour — be cautious
         except Exception:
             pass
 
@@ -19018,6 +19027,24 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             buying_power -= notional
         except Exception as e:
             logger.warning(f"Crypto buy failed {alpaca_sym}: {e}")
+
+    # Persist held_crypto snapshot to tlog for dashboard display
+    try:
+        _hc_snapshot = {}
+        for _hc_sym, _hc_pos in held_crypto.items():
+            _hc_cost   = float(_hc_pos.get("avg_entry_price", 0) or 0)
+            _hc_cur_px = float(_hc_pos.get("current_price", _hc_cost) or _hc_cost)
+            _hc_unrl   = float(_hc_pos.get("unrealized_plpc", 0) or 0) * 100
+            _hc_entry_t= peaks.get(_hc_sym, {}).get("time", "")
+            _hc_snapshot[_hc_sym] = {
+                "entry_price": round(_hc_cost, 4),
+                "current_price": round(_hc_cur_px, 4),
+                "unrealized_pnl_pct": round(_hc_unrl, 2),
+                "entry_time": _hc_entry_t,
+            }
+        tlog["held_crypto"] = _hc_snapshot
+    except Exception:
+        pass
 
     return buying_power
 
@@ -22855,6 +22882,37 @@ def run():
                     "crypto_avg_pnl": round(sum(float(t["pnl_pct"]) for t in _cr_sells)/max(len(_cr_sells),1), 3),
                     "crypto_wr": round(sum(1 for t in _cr_sells if float(t["pnl_pct"])>0)/max(len(_cr_sells),1)*100, 1),
                 }
+
+            # ── Crypto UTC-hour performance: learn which hours win ──
+            # Groups all crypto sells by UTC hour of the SELL time
+            _all_crypto_sells = [t for t in _oh_trades
+                                  if t.get("action") in ("SELL","SELL_HALF")
+                                  and "/" in t.get("ticker","")
+                                  and t.get("pnl_pct") is not None]
+            if _all_crypto_sells:
+                _utc_hr_perf = _lp.setdefault("crypto_utc_hour_perf", {})
+                _utc_hr_day  = {}
+                for _ucs in _all_crypto_sells:
+                    try:
+                        _ucs_hr = int(_ucs.get("time","00:00")[11:13])
+                        _ucs_bkt = f"{_ucs_hr:02d}"
+                        _utc_hr_day.setdefault(_ucs_bkt, []).append(float(_ucs["pnl_pct"]))
+                    except Exception:
+                        pass
+                for _bkt, _pnls in _utc_hr_day.items():
+                    _ce = _utc_hr_perf.setdefault(_bkt, {"wins": 0, "losses": 0, "total": 0, "win_rate": 50.0})
+                    _ce["total"] += len(_pnls)
+                    _ce["wins"]  += sum(1 for p in _pnls if p > 0)
+                    _ce["losses"]= _ce["total"] - _ce["wins"]
+                    _ce["win_rate"] = round(_ce["wins"] / _ce["total"] * 100, 1)
+                    _ce["avg_pnl"]  = round(sum(float(p) for p in _pnls) / len(_pnls), 3)
+                # Find best and worst UTC hours for crypto (min 3 trades)
+                _best_utc_hr  = max((_bkt for _bkt, _ce in _utc_hr_perf.items() if _ce["total"] >= 3),
+                                    key=lambda b: _utc_hr_perf[b]["win_rate"], default=None)
+                _worst_utc_hr = min((_bkt for _bkt, _ce in _utc_hr_perf.items() if _ce["total"] >= 3),
+                                    key=lambda b: _utc_hr_perf[b]["win_rate"], default=None)
+                if _best_utc_hr:  _lp["best_crypto_utc_hour"]  = _best_utc_hr
+                if _worst_utc_hr: _lp["worst_crypto_utc_hour"] = _worst_utc_hr
 
             # Update daily trade count
             _all_today = [t for t in _oh_trades if t.get("time","").startswith(_oh_today)]
