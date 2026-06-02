@@ -28664,12 +28664,14 @@ def run():
                     _learned_bonus += _nbns("relative_volume_spike_perf", "high_rvol", 58, 1)
                 elif _rv_lb < 0.8:
                     _learned_bonus += _npen("relative_volume_spike_perf", "normal_rvol", 48, -1)
-                # VWAP position bonus: entering above VWAP = trend direction confirmed
+                # VWAP position: above=65.2% WR n=23, at_vwap=56.5% WR n=23
                 _vwp_lb = float(_tk_sig_sc.get("vwap_pos", _tk_sig_sc.get("vwap_distance", 0)) or 0)
-                if _vwp_lb > 0.5:
-                    _learned_bonus += _nbns("vwap_distance_perf", "above_vwap", 60, 1)
-                elif _vwp_lb > 2:
-                    _learned_bonus += _nbns("vwap_distance_perf", "far_above_vwap", 60, 1)
+                _vwap_above_flag = bool(_tk_sig_sc.get("above_vwap", False)) or _vwp_lb > 0
+                if _vwap_above_flag:
+                    _learned_bonus += _nbns("vwap_perf", "above", 62, 1)         # 65.2% WR n=23
+                    _learned_bonus += _nbns("vwap_distance_perf", "above_vwap", 60, 1)  # 60.9% WR n=46
+                    if _vwp_lb > 2:
+                        _learned_bonus += _nbns("vwap_distance_perf", "far_above_vwap", 60, 1)  # extra momentum
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
                 # SPY alignment bonus: trading with the market direction
@@ -28695,13 +28697,14 @@ def run():
                         _learned_bonus += _nbns("close_vs_range_perf", "strong_close", 60, 1)
                     elif _rng_lb <= 0.3:
                         _learned_bonus += _npen("close_vs_range_perf", "weak_close", 48, -1)
-                # Signal density: dense confirmed signals = higher probability setup
+                # Signal density: N112 tracks as "strong"(>=8)/"good"(>=5)/"moderate"(>=3)/"weak"
+                # Fix key mismatch: was "dense_signals"/"moderate_signals" — N112 uses "strong"/"good"
                 _sig_cnt_lb = sum(1 for _sk2 in ["at_breakout","orb_breakout","ttm_squeeze_fired",
                     "obv_rising","higher_lows","vcp","cup_handle","ema_stacked_bull","double_bottom"] if _tk_sig_sc.get(_sk2))
                 if _sig_cnt_lb >= 4:
-                    _learned_bonus += _nbns("signal_density_perf", "dense_signals", 62, 2)
+                    _learned_bonus += _nbns("signal_density_perf", "strong", 62, 2)  # 65.2% WR n=23
                 elif _sig_cnt_lb >= 2:
-                    _learned_bonus += _nbns("signal_density_perf", "moderate_signals", 58, 1)
+                    _learned_bonus += _nbns("signal_density_perf", "good", 58, 1)    # estimate good WR
                 # ── CRITICAL PROVEN-LOSER PENALTIES (data-driven hard guards) ─────────
                 # These states have 11-22% WR in actual trade data — must penalize heavily
                 _accum_sc_lb = int(_tk_sig_sc.get("accum_score", 0) or 0)
@@ -28776,12 +28779,12 @@ def run():
                     _learned_bonus += _npen("ha_consec_perf", "strong", 50, -2)  # 46% WR — overextended
                 elif _ha_consec_lb >= 3:
                     _learned_bonus += _nbns("ha_consec_perf", "building", 60, 1) # 78% WR
-                # Concentration: 3-4 open positions = 80% WR; 8+ positions = 53% WR
+                # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
-                    _learned_bonus += _nbns("concentration_perf", "3-4", 60, 1)  # 80% WR
+                    _learned_bonus += _nbns("concentration_perf", "3-4", 60, 2)  # 80% WR n=15 — +2 (27pt gap)
                 elif _open_pos_lb >= 8:
-                    _learned_bonus += _npen("concentration_perf", "8+", 55, -1)  # 53% WR — spread too thin
+                    _learned_bonus += _npen("concentration_perf", "8+", 55, -2)  # 53% WR n=30 — stronger penalty
                 # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3
                 _reentry_lb = str(_tk_sig_sc.get("reentry_type", "") or "")
                 if "winner" in _reentry_lb or "re_winner" in _reentry_lb:
@@ -28943,7 +28946,9 @@ def run():
                 _lr2_lb = float(_tk_sig_sc.get("lr_r2", 0) or 0)
                 _lr_q_lb = ("strong" if _lr2_lb >= 0.85 else "moderate" if _lr2_lb >= 0.6 else "weak")
                 if _lr_q_lb == "strong":
-                    _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # clean trend = high WR
+                    _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3
+                elif _lr_q_lb == "moderate":
+                    _learned_bonus += _nbns("lr_quality_perf", "moderate", 62, 1)  # 66.7% WR n=24 — reliable
                 elif _lr_q_lb == "weak":
                     _learned_bonus += _npen("lr_quality_perf", "weak", 50, -3)     # 47% WR n=19: choppy trend
                 # Donchian zone: near top of range (breakout) vs weakness
