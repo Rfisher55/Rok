@@ -28815,10 +28815,15 @@ def run():
                 _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if _cat_other_lb and "none" not in _cat_other_lb and "unknown" not in _cat_other_lb:
                     _learned_bonus += _nbns("catalyst_type_perf", "other", 60, 1)  # 71% WR
-                # TT (trend template): fair = 80% WR
-                _tt_lb = str(_tk_sig_sc.get("tt_score", _tk_sig_sc.get("trend_template", "")) or "")
-                if _tt_lb == "fair" or (not _tt_lb and _tk_sig_sc.get("ema_stacked_bull")):
-                    _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # 80% WR
+                # TT (trend template): fair=80% WR, weak=52% WR — score derived from numeric tt value
+                _tt_num_lb = int(_tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw", 0)) or 0)
+                _tt_bkt_lb = ("elite" if _tt_num_lb >= 7 else "good" if _tt_num_lb >= 5 else "fair" if _tt_num_lb >= 3 else "weak")
+                if _tt_bkt_lb == "fair":
+                    _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # 80% WR n=15
+                elif _tt_bkt_lb in ("good", "elite"):
+                    _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # use fair data as proxy
+                elif _tt_bkt_lb == "weak":
+                    _learned_bonus += _npen("tt_perf", "weak", 55, -1)          # 52% WR n=31
                 # OBV trend: rising=80% WR n=20, falling=46% WR n=26
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 3)  # 80% WR n=20 — top signal
