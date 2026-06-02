@@ -29741,6 +29741,18 @@ def run():
                     live[tk]["advance_decline_ratio"] = round(_brd_ap / _dec_p, 2)
                 except Exception:
                     live[tk]["advance_decline_ratio"] = 1.0
+                # on_balance_volume_trend: N693 obv_smart_money_perf — never in live[tk]; derive from obv_rising
+                live[tk]["on_balance_volume_trend"] = (
+                    "rising" if bool(live[tk].get("obv_rising", False)) else "falling")
+                # macd_divergence: N686 momentum_divergence_perf — never in live[tk]; derive from macd_bull_div
+                live[tk]["macd_divergence"] = (
+                    "bullish_divergence" if bool(live[tk].get("macd_bull_div", False)) else "no_divergence")
+                # avg_dollar_vol: N637 liquidity_dollar_vol_perf — derive from avg_vol_14 * price
+                try:
+                    live[tk]["avg_dollar_vol"] = (
+                        float(live[tk].get("avg_vol_14", 0) or 0) * float(live[tk].get("price", 0) or 0))
+                except Exception:
+                    live[tk]["avg_dollar_vol"] = 0.0
                 # News velocity signals from news cache
                 try:
                     _nvc2      = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
