@@ -28580,14 +28580,18 @@ def run():
                     _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 2)    # 80% WR
                 elif "below" in _ich_lb or (not _tk_sig_sc.get("ichimoku_above") and "above" not in _ich_lb and _ich_lb):
                     _learned_bonus += _npen("ichimoku_perf", "below", 30, -2)    # 22% WR
-                # HA consecutive candles: building=78% WR
+                # HA consecutive candles: building(3)=78% WR, strong(5+)=46% WR (reversal risk!)
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
-                if _ha_consec_lb >= 3:
+                if _ha_consec_lb >= 5:
+                    _learned_bonus += _npen("ha_consec_perf", "strong", 50, -2)  # 46% WR — overextended
+                elif _ha_consec_lb >= 3:
                     _learned_bonus += _nbns("ha_consec_perf", "building", 60, 1) # 78% WR
-                # Concentration: 3-4 open positions = 80% WR
+                # Concentration: 3-4 open positions = 80% WR; 8+ positions = 53% WR
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
                     _learned_bonus += _nbns("concentration_perf", "3-4", 60, 1)  # 80% WR
+                elif _open_pos_lb >= 8:
+                    _learned_bonus += _npen("concentration_perf", "8+", 55, -1)  # 53% WR — spread too thin
                 # Reentry type: winner reentry = 80% WR
                 _reentry_lb = str(_tk_sig_sc.get("reentry_type", "") or "")
                 if "winner" in _reentry_lb or "re_winner" in _reentry_lb:
@@ -28635,6 +28639,11 @@ def run():
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
                     _learned_bonus += _npen("rvol_tier_perf", "weak", 45, -2)   # 43% WR n=14
+                # ST gap: no_st=80% WR n=15 (neutral/flat ST is fine); normal=22% WR already penalized above
+                _st_bul_lb = bool(_tk_sig_sc.get("supertrend_bull"))
+                _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
+                if not _st_bul_lb and not _st_bear_lb:
+                    _learned_bonus += _nbns("st_gap_perf", "no_st", 60, 1)      # 80% WR n=15
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
