@@ -41755,6 +41755,11 @@ def run():
     try:
         _prev_learned = tlog.get("bot_learned_params", {})
         _learn_log    = []   # human-readable log of what the bot learned this cycle
+        # Diagnostic: log raw perf key availability for debugging neurons_active=0
+        _diag_nr7 = tlog.get("nr7_perf", {})
+        _diag_accum = tlog.get("accum_perf", {})
+        _diag_closed_cnt = len([t for t in tlog.get("trades",[]) if t.get("action") in ("SELL","SELL_HALF","COVER") and t.get("pnl_pct") is not None])
+        logger.info(f"Brain diag: nr7_perf={len(_diag_nr7)}states accum_perf={len(_diag_accum)}states closed={_diag_closed_cnt}")
         # Initialize ALL neuron insight vars to safe defaults — prevents NameError in dict assembly
         # These are overridden by individual neuron compute blocks below; defaults = prior run data
         _n7_insights = _prev_learned.get("nr7_perf", [])
@@ -43691,6 +43696,7 @@ def run():
 
         # ── 71. NR7 Volatility Compression ──────────────────────────────────────
         _n7_raw = tlog.get("nr7_perf", {})
+        logger.debug(f"Brain N71 debug: nr7_perf has {len(_n7_raw)} states, id(tlog)={id(tlog)}")
         _n7_insights = []
         for _n7k, _n7d in _n7_raw.items():
             if _n7d.get("total", 0) >= 3:
@@ -51395,8 +51401,10 @@ def run():
             "learned_scalp_stop_pct":   _learned_scalp_stop_pct,    # adaptive scalp stop threshold (default -1.5%)
           }
         except Exception as _dict_e:
-            logger.warning(f"Brain dict assembly error (NameError?): {_dict_e} — using prev params")
+            import traceback as _dict_tb
+            logger.warning(f"Brain dict assembly error: {_dict_e}\n{_dict_tb.format_exc()[:1000]}")
             tlog["bot_learned_params"] = _prev_learned.copy() if _prev_learned else {}
+            tlog["bot_learned_params"]["_dict_assembly_error"] = str(_dict_e)
         # Always record fresh stats regardless of dict success
         tlog["bot_learned_params"]["trades_analyzed"] = len(_closed)
         tlog["bot_learned_params"]["last_tuned"]      = now_utc.isoformat()
