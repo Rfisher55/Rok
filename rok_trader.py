@@ -24345,6 +24345,26 @@ def score(tk, d, sentiment=0, regime_adj=0):
                     _ptwr = float(_price_rec.get("win_rate", 50) or 50)
                     if _ptwr <= 25:  _veto_adj -= 8    # Micro-caps with proven poor WR
                     elif _ptwr >= 80: _veto_adj += 4
+                # Ichimoku veto: below=22% WR — proven strong filter
+                _ichi_rec = _ALL_NEURON_PERFS.get("ichimoku_perf", {}).get(_fb_ichi_bkt, {})
+                if isinstance(_ichi_rec, dict) and _ichi_rec.get("total", 0) >= 5:
+                    _iwr = float(_ichi_rec.get("win_rate", 50) or 50)
+                    if _iwr <= 25:   _veto_adj -= 8
+                    elif _iwr >= 80: _veto_adj += 4
+                # ADX veto: weak=12% WR — weak trend = avoid
+                _adx_rec = _ALL_NEURON_PERFS.get("adx_perf", {}).get(_fb_adx_bkt, {})
+                if isinstance(_adx_rec, dict) and _adx_rec.get("total", 0) >= 5:
+                    _dxwr = float(_adx_rec.get("win_rate", 50) or 50)
+                    if _dxwr <= 25:  _veto_adj -= 8
+                    elif _dxwr >= 80: _veto_adj += 4
+                # Supertrend gap veto: normal=22% WR — Supertrend stop too tight
+                _stg_bkt = str(d.get("st_gap_tier", "") or "")
+                if _stg_bkt:
+                    _stg_rec = _ALL_NEURON_PERFS.get("st_gap_perf", {}).get(_stg_bkt, {})
+                    if isinstance(_stg_rec, dict) and _stg_rec.get("total", 0) >= 5:
+                        _stgwr = float(_stg_rec.get("win_rate", 50) or 50)
+                        if _stgwr <= 25:  _veto_adj -= 6
+                        elif _stgwr >= 80: _veto_adj += 4
             except Exception:
                 pass
             _nsl_adj += _veto_adj
