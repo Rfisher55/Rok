@@ -28397,6 +28397,24 @@ def run():
                     ))
                     if _n996_prem < 2:
                         _ng_strikes += 1; _ng_reasons.append(f"zero accum (any sector) + only {_n996_prem} premium sigs (needs 2+)")
+                # N995: data-confirmed loser state — accum=none WR=11% (9 trades) → auto 2 extra strikes
+                try:
+                    _n995_accum_rec = _ALL_NEURON_PERFS.get("accum_perf", {}).get("none", {})
+                    if (isinstance(_n995_accum_rec, dict) and _n995_accum_rec.get("total", 0) >= 5
+                            and float(_n995_accum_rec.get("win_rate", 50)) <= 20 and _n999_accum == 0):
+                        _ng_strikes += 2; _ng_reasons.append(f"accum=none WR={_n995_accum_rec.get('win_rate',0):.0f}% (data-confirmed loser)")
+                except Exception:
+                    pass
+                # N994: grade=F WR=12% (8 trades) → 2 strikes
+                try:
+                    _n994_grade = momentum_grade(_tk_sig, tech_sc)
+                    _n994_grade_rec = _ALL_NEURON_PERFS.get("grade_perf", {}).get("F", {})
+                    if (_n994_grade == "F" and isinstance(_n994_grade_rec, dict)
+                            and _n994_grade_rec.get("total", 0) >= 5
+                            and float(_n994_grade_rec.get("win_rate", 50)) <= 20):
+                        _ng_strikes += 2; _ng_reasons.append(f"grade=F WR={_n994_grade_rec.get('win_rate',0):.0f}% (data-confirmed loser)")
+                except Exception:
+                    pass
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -28654,18 +28672,18 @@ def run():
                 _accum_sc_lb = int(_tk_sig_sc.get("accum_score", 0) or 0)
                 _accum_bkt_lb = ("heavy" if _accum_sc_lb >= 8 else "moderate" if _accum_sc_lb >= 5 else "light" if _accum_sc_lb >= 2 else "none")
                 if _accum_bkt_lb == "none":
-                    _learned_bonus += _npen("accum_perf", "none", 30, -3)  # 11% WR: massive penalty
+                    _learned_bonus += _npen("accum_perf", "none", 20, -8)  # 11% WR: severe penalty
                 elif _accum_bkt_lb == "heavy":
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)   # strong accumulation = bonus
                 _adx_lb = float(_tk_sig_sc.get("adx", 20) or 20)
                 _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb > 20 else "weak")
                 if _adx_bkt_lb == "weak":
-                    _learned_bonus += _npen("adx_perf", "weak", 30, -3)    # 12% WR: massive penalty
+                    _learned_bonus += _npen("adx_perf", "weak", 20, -8)    # 12% WR: block-level penalty
                 elif _adx_bkt_lb == "developing":
-                    _learned_bonus += _nbns("adx_perf", "developing", 60, 2)  # 80% WR: solid bonus
+                    _learned_bonus += _nbns("adx_perf", "developing", 60, 3)  # 80% WR: solid bonus
                 _cat_type_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if not _cat_type_lb or "none" in _cat_type_lb:
-                    _learned_bonus += _npen("catalyst_type_perf", "none", 30, -2)  # 12% WR: harsh penalty
+                    _learned_bonus += _npen("catalyst_type_perf", "none", 20, -6)  # 12% WR: harsh penalty
                 _bb_pos_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
                 if _bb_pos_lb > 0.85:
                     _learned_bonus += _nbns("bb_zone_perf", "upper", 60, 2)   # 83% WR at upper band
@@ -28680,9 +28698,9 @@ def run():
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
                 _grade_lb = momentum_grade(_tk_sig_sc, tech_sc)
                 if _grade_lb == "F":
-                    _learned_bonus += _npen("grade_perf", "F", 30, -4)    # 12% WR: huge penalty
+                    _learned_bonus += _npen("grade_perf", "F", 20, -10)   # 12% WR: block-level penalty
                 elif _grade_lb == "D":
-                    _learned_bonus += _npen("grade_perf", "D", 35, -2)    # ~30% WR: moderate penalty
+                    _learned_bonus += _npen("grade_perf", "D", 35, -4)    # ~30% WR: hard penalty
                 elif _grade_lb in ("A+", "A"):
                     _learned_bonus += _nbns("grade_perf", "A+", 65, 2)    # A+ bonus when data shows good WR
                 # Price tier: micro-cap (<$10) has 14% WR — penalize when confirmed
@@ -28695,9 +28713,9 @@ def run():
                 # Ichimoku cloud position: inside=80% WR, below=22% WR
                 _ich_lb = str(_tk_sig_sc.get("ichimoku_state", _tk_sig_sc.get("ichimoku_pos", "")) or "")
                 if "inside" in _ich_lb or _tk_sig_sc.get("ichimoku_above"):
-                    _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 2)    # 80% WR
+                    _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 3)    # 80% WR — strong boost
                 elif "below" in _ich_lb or (not _tk_sig_sc.get("ichimoku_above") and "above" not in _ich_lb and _ich_lb):
-                    _learned_bonus += _npen("ichimoku_perf", "below", 30, -2)    # 22% WR
+                    _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 22% WR — strong penalty
                 # HA consecutive candles: building(3)=78% WR, strong(5+)=46% WR (reversal risk!)
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
                 if _ha_consec_lb >= 5:
@@ -28744,7 +28762,7 @@ def run():
                     _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # 80% WR
                 # OBV trend: rising=80% WR n=20, falling=46% WR n=26
                 if bool(_tk_sig_sc.get("obv_rising", False)):
-                    _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 2)  # 80% WR n=20
+                    _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 3)  # 80% WR n=20 — top signal
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 48, -1)  # 46% WR n=26
                 # Higher lows confirmed: 86% WR n=7
