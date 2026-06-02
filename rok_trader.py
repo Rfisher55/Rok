@@ -51543,7 +51543,7 @@ def run():
 
         # ── Neuron Activity Stats: how many neurons have learned insights ────────
         _lp_conv = tlog.get("bot_learned_params", {})
-        _neuron_active = sum(1 for k in (
+        _neuron_active = sum(1 for k in _ALL_NEURON_PERFS if _ALL_NEURON_PERFS.get(k)) if _ALL_NEURON_PERFS else sum(1 for k in (
             "score_decay_perf","poc_dist_perf","intraday_mom_perf","adx_perf",
             "rvol_tier_perf","stoch_zone_perf","mtf_align_perf","options_flow_perf",
             "mfi_zone_perf","wr_zone_perf","ichimoku_perf","lr_quality_perf",
@@ -51756,7 +51756,7 @@ def run():
             "earnings_growth_rate_perf", "revenue_growth_rate_perf",
             "profit_margin_perf", "debt_to_equity_perf",
             "buyback_activity_perf", "dividend_yield_entry_perf",
-        ) if _lp_conv.get(k))
+        ) if _lp_conv.get(k))  # fallback: use bot_learned_params list keys
         _pt_elite_wr = next((s.get("win_rate", 50) for s in _lp_conv.get("premium_tier_perf", [])
                               if s.get("state") == "elite"), 50)
         tlog["bot_conviction"]    = _conv_final
