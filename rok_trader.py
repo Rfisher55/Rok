@@ -21986,13 +21986,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nsl_edge("market_regime_vix_perf", _nsl_vix_s)
 
             # N564: Volume vs 50d average (institutional participation)
-            _nsl_vol_s = ("extreme_vol" if vr >= 3.0 else "above_avg" if vr >= 1.5 else
+            _nsl_vol_s = ("extreme_vol" if vr >= 3.0 else "above_avg_vol" if vr >= 1.5 else
                           "low_vol" if vr < 0.75 else "normal_vol")
             _nsl_adj += _nsl_edge("volume_vs_50d_avg_perf", _nsl_vol_s)
 
-            # RSI at entry (momentum vs mean-reversion context)
-            _nsl_rsi_s = ("rsi_oversold" if rsi < 30 else "rsi_overbought" if rsi >= 70 else
-                          "rsi_rising_mid" if rsi >= 50 else "rsi_mid_range")
+            # N294: RSI at entry — matches buy-loop labels: oversold/neutral/overbought
+            _nsl_rsi_s = ("oversold" if rsi < 30 else "overbought" if rsi >= 70 else "neutral")
             _nsl_adj += _nsl_edge("rsi_at_entry_perf", _nsl_rsi_s)
 
             # N258/ADX: trend strength quality (directional conviction)
@@ -22014,10 +22013,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
                            "afternoon_session" if 14 <= _nsl_et_hr <= 16 else "midday_session")
             _nsl_adj += _nsl_edge("entry_session_quality_perf", _nsl_sess_s)
 
-            # N599: Weekly trend alignment (higher timeframe context)
-            _nsl_w_chg = float(d.get("week_chg", d.get("chg5d", 0)) or 0)
-            _nsl_wtrend_s = ("strong_weekly_uptrend" if _nsl_w_chg >= 3 else
-                             "weekly_downtrend" if _nsl_w_chg <= -1 else "weak_weekly_trend")
+            # N599: Weekly trend alignment — matches buy-loop: weekly_daily_aligned/conflict/neutral
+            _nsl_wt = float(d.get("weekly_trend", d.get("wk_trend", 0)) or 0)
+            _nsl_dt = float(d.get("daily_trend", 0) or 0)
+            _nsl_wtrend_s = ("weekly_daily_aligned" if _nsl_wt > 0 and _nsl_dt > 0 else
+                             "weekly_daily_conflict" if (_nsl_wt > 0 and _nsl_dt < 0) or (_nsl_wt < 0 and _nsl_dt > 0) else
+                             "neutral_alignment")
             _nsl_adj += _nsl_edge("weekly_trend_alignment_perf", _nsl_wtrend_s)
 
             # N600: Composite momentum score bucket (overall signal density)
