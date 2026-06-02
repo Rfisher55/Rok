@@ -29172,7 +29172,11 @@ def run():
                 # KC zone breakout: 64% WR n=22
                 _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — dead bonus removed (penalty already above)
-                # Consecutive green days: 0d=57% WR n=23 (updated — not bad), 4d+=60% WR n=5
+                # Consec green entry "no_streak": 21.4% WR n=28 — no prior green days = very bad
+                _cge_state_lb = str(_tk_sig_sc.get("consec_green_entry_perf", "") or "")
+                if _cge_state_lb == "no_streak":
+                    _learned_bonus += _npen("consec_green_entry_perf", "no_streak", 25, -6)  # 21.4% WR n=28
+                # Consecutive green days: 0d=43.6% WR n=39 penalty; 4d+=60% WR n=5 bonus
                 _cg_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_lb >= 3:
                     _learned_bonus += _nbns("consec_green_perf", "3d+", 60, 1)
