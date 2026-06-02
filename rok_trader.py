@@ -4044,7 +4044,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n183 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n183_field = _buy_n183.get("volume_surge_state", "rvol_normal") if _buy_n183 else "rvol_normal"
+            _n183_rvol = float((_buy_n183 or {}).get("vol_ratio_at_entry", 1.0) or 1.0)
+            _n183_field = ("rvol_surge" if _n183_rvol >= 2.0 else "rvol_elevated" if _n183_rvol >= 1.5 else "rvol_weak" if _n183_rvol < 0.8 else "rvol_normal")
             _n183_perf = tlog.setdefault("volume_surge_state_perf", {})
             _n183p = _n183_perf.setdefault(_n183_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n183_field})
             _n183p["total"] += 1; _n183p["total_pnl"] = round(_n183p["total_pnl"] + pnl, 2)
@@ -4674,7 +4675,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n225 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n225_field = _buy_n225.get("vix_regime_state", "normal") if _buy_n225 else "normal"
+            _n225_vix_v = float((_buy_n225 or {}).get("vix_at_entry", 20) or 20)
+            _n225_field = ("low_vix" if _n225_vix_v < 15 else "high_vix" if _n225_vix_v >= 25 else "extreme_vix" if _n225_vix_v >= 35 else "normal")
             _n225_perf = tlog.setdefault("vix_regime_perf", {})
             _n225p = _n225_perf.setdefault(_n225_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n225_field})
             _n225p["total"] += 1; _n225p["total_pnl"] = round(_n225p["total_pnl"] + pnl, 2)
@@ -5728,7 +5730,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n294 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n294_field = _buy_n294.get("rsi_at_entry_state", "neutral") if _buy_n294 else "neutral"
+            _n294_rsi_val = float((_buy_n294 or {}).get("rsi_at_entry", 50) or 50)
+            _n294_field = ("overbought" if _n294_rsi_val >= 70 else "oversold" if _n294_rsi_val < 30 else "neutral")
             _n294_perf = tlog.setdefault("rsi_at_entry_perf", {})
             _n294p = _n294_perf.setdefault(_n294_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n294_field})
             _n294p["total"] += 1; _n294p["total_pnl"] = round(_n294p["total_pnl"] + pnl, 2)
@@ -5758,7 +5761,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n296 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n296_field = _buy_n296.get("vix_level_state", "vix_elevated") if _buy_n296 else "vix_elevated"
+            _n296_vix_v = float((_buy_n296 or {}).get("vix_at_entry", 20) or 20)
+            _n296_field = ("vix_low" if _n296_vix_v < 15 else "vix_elevated" if _n296_vix_v >= 25 else "vix_extreme" if _n296_vix_v >= 35 else "vix_normal")
             _n296_perf = tlog.setdefault("vix_level_perf", {})
             _n296p = _n296_perf.setdefault(_n296_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n296_field})
             _n296p["total"] += 1; _n296p["total_pnl"] = round(_n296p["total_pnl"] + pnl, 2)
@@ -6253,7 +6257,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n329 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n329_field = _buy_n329.get("adx_trend_strength_state", "moderate_trend") if _buy_n329 else "moderate_trend"
+            _n329_adx_b = str((_buy_n329 or {}).get("adx_bucket", "developing") or "developing")
+            _n329_field = ("weak_trend" if _n329_adx_b == "weak" else "strong_trend" if _n329_adx_b == "strong" else "moderate_trend")
             _n329_perf = tlog.setdefault("adx_trend_strength_v1_perf", {})
             _n329p = _n329_perf.setdefault(_n329_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n329_field})
             _n329p["total"] += 1; _n329p["total_pnl"] = round(_n329p["total_pnl"] + pnl, 2)
@@ -6268,7 +6273,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n330 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n330_field = _buy_n330.get("volume_trend_3d_state", "volume_normal") if _buy_n330 else "volume_normal"
+            _n330_obv = str((_buy_n330 or {}).get("obv_trend", "neutral") or "neutral")
+            _n330_field = ("volume_rising" if _n330_obv == "rising" else "volume_falling" if _n330_obv == "falling" else "volume_normal")
             _n330_perf = tlog.setdefault("volume_trend_3d_v1_perf", {})
             _n330p = _n330_perf.setdefault(_n330_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n330_field})
             _n330p["total"] += 1; _n330p["total_pnl"] = round(_n330p["total_pnl"] + pnl, 2)
@@ -28595,10 +28601,6 @@ def run():
                     _learned_bonus += _nbns("cup_handle_perf", "cup", 65, 2)
                 if bool(_tk_sig_sc.get("double_bottom", False)):
                     _learned_bonus += _nbns("double_bottom_perf", "double_bottom", 65, 2)
-                if bool(_tk_sig_sc.get("obv_rising", False)):
-                    _learned_bonus += _nbns("obv_trend_perf", "rising", 62, 1)
-                if bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 62, 2)
                 if bool(_tk_sig_sc.get("force_index_rising", False)):
                     _learned_bonus += _nbns("force_index_perf", "rising", 60, 1)
                 if bool(_tk_sig_sc.get("mom_accel", False)):
@@ -28776,10 +28778,12 @@ def run():
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
                     _learned_bonus += _nbns("roc_perf", "positive", 60, 1)      # 71% WR
-                # RSI entry: neutral (40-60) = 30% WR — penalize
+                # RSI entry: overbought (>=70) = 69% WR bonus; neutral (40-55) = 30% WR penalty
                 _rsi_lb = float(_tk_sig_sc.get("rsi", 50) or 50)
-                if 40 <= _rsi_lb <= 60:
-                    _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -2) # 30% WR
+                if _rsi_lb >= 70:
+                    _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 69% WR — momentum works
+                elif 40 <= _rsi_lb < 55:
+                    _learned_bonus += _npen("rsi_entry_perf", "neutral", 35, -2) # 30% WR
                 # ST gap: normal = 22% WR — heavy penalty
                 _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
                 if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
