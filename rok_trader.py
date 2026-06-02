@@ -28374,6 +28374,17 @@ def run():
                     return pts if _nwr(key, state) >= thr and _nn(key, state) >= _MIN_N else 0
                 def _npen(key, state, thr=42, pts=-1):
                     return pts if _nwr(key, state) <= thr and _nn(key, state) >= _MIN_N else 0
+                # Ticker memory: penalize proven 0%-WR tickers with 2+ trades (before minsamp=3 kicks in)
+                _tk_mem_rec = _ALL_NEURON_PERFS.get("ticker_memory", {}).get(tk, {})
+                if isinstance(_tk_mem_rec, dict) and _tk_mem_rec.get("total", 0) >= 2:
+                    _tk_mem_wr = float(_tk_mem_rec.get("win_rate", 50) or 50)
+                    _tk_mem_n  = int(_tk_mem_rec.get("total", 0))
+                    if _tk_mem_wr == 0 and _tk_mem_n >= 2:
+                        _learned_bonus += -4  # 0% WR on 2+ trades — strong penalty
+                    elif _tk_mem_wr <= 25 and _tk_mem_n >= 3:
+                        _learned_bonus += -3  # ≤25% WR on 3+ trades
+                    elif _tk_mem_wr >= 80 and _tk_mem_n >= 3:
+                        _learned_bonus += 2   # 80%+ WR on 3+ trades — proven winner
                 if bool(_tk_sig_sc.get("mtf_triple", False)):
                     _learned_bonus += _nbns("mtf_triple_perf", "triple", 68, 3)
                 if bool(_tk_sig_sc.get("vcp", False)):
