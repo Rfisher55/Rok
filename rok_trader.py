@@ -26296,6 +26296,10 @@ def run():
                 # N730: consecutive_strong_scans — count from score_history in peaks
                 _css_hist = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
                 live[tk]["consecutive_strong_scans"] = sum(1 for _sc_h in _css_hist[-5:] if _sc_h >= _eff_min_score)
+                # N716: timing_quality — global session quality (0=avoid, 1=neutral, 2=good, 3=prime)
+                live[tk]["timing_quality"] = int(tlog.get("timing_quality", 1) or 1)
+                # N711: vix_at_entry — snapshot of VIX level for volatility regime classification
+                live[tk]["vix_at_entry"] = float((tlog.get("regime") or {}).get("vix", 20) or 20)
                 # N893: inject current ET hour so score() can look up et_hour_perf
                 # (previously dead because live[tk] never had "et_hour")
                 _now_et_ctx = datetime.now(timezone.utc)
