@@ -1201,14 +1201,11 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         # Win streak at entry (N894) — positive = wins, negative = losses
         try:
             _streak = 0
-            for _pt in tlog.get("trades", []):
+            for _pt in reversed(list(tlog.get("trades", []))):  # most recent first
                 if _pt.get("action") not in ("SELL", "SELL_HALF", "COVER"): continue
                 if _pt.get("pnl_pct") is None: continue
-                if _pt.get("pnl_pct", 0) > 0:
-                    _streak = max(0, _streak) + 1
-                else:
-                    _streak = min(0, _streak) - 1
-                break  # only last closed trade
+                _streak = 1 if _pt.get("pnl_pct", 0) > 0 else -1  # most recent result
+                break
             e["win_streak_at_entry"] = _streak
         except Exception:
             e["win_streak_at_entry"] = 0
@@ -14849,7 +14846,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         try:
             _c894_entry = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             _c894_streak = int(_c894_entry.get("win_streak_at_entry", 0)) if _c894_entry else 0
-            _c894_bkt = ("hot_3+" if _c894_streak >= 3 else "hot_2" if _c894_streak == 2 else "neutral" if _c894_streak == 0 else f"losing_{abs(_c894_streak)}")
+            _c894_bkt = ("hot_1" if _c894_streak >= 1 else "neutral" if _c894_streak == 0 else "losing_1")
             _c894_perf = tlog.setdefault("trade_momentum_perf", {})
             _c894_rec  = _c894_perf.setdefault(_c894_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c894_rec["total"] += 1
@@ -28605,19 +28602,19 @@ def run():
                 if bool(_tk_sig_sc.get("vcp", False)):
                     _learned_bonus += _nbns("vcp_perf", "vcp", 68, 3)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    _learned_bonus += _nbns("gap_hold_perf", "holding", 65, 2)
+                    _learned_bonus += _npen("gap_hold_perf", "holding", 34, -3)  # 33.3% WR n=21 — dead bonus removed
                 if bool(_tk_sig_sc.get("nr7_signal", False)):
                     _learned_bonus += _nbns("nr7_perf", "compressed", 65, 2)
                 if bool(_tk_sig_sc.get("at_demand_zone", False)):
-                    _learned_bonus += _nbns("demand_zone_perf", "at_zone", 65, 2)
+                    _learned_bonus += _npen("demand_zone_perf", "at_zone", 21, -2)  # 20% WR n=5 — dead bonus → penalty
                 _rs63_val_lb = float(_tk_sig_sc.get("rs63", 0) or 0)
                 if _rs63_val_lb >= 1.5:
-                    _learned_bonus += _nbns("rs63_q_tier_perf", "elite", 65, 3)
-                elif _rs63_val_lb < 0:  # rs63 lagging: 48.7% WR n=39 — below 50% coin flip
-                    _learned_bonus += _npen("rs63_q_tier_perf", "lagging", 50, -1)
+                    _learned_bonus += _npen("rs63_q_tier_perf", "elite", 44, -1)  # 43.8% WR n=32 — dead bonus → penalty
+                elif _rs63_val_lb < 0:  # rs63 lagging: 46.3% WR n=41 — coin flip
+                    pass  # no longer penalizing, WR improved to near 50%
                 if bool(_tk_sig_sc.get("at_breakout", False)):
-                    _learned_bonus += _nbns("at_breakout_perf", "breakout", 65, 2)
-                    _learned_bonus += _npen("signal_performance", "at_breakout", 51, -2)  # 50% WR n=34 — coin flip
+                    # at_breakout_perf["breakout"] state doesn't exist in dict (uses at_level/not_at_level) — removed dead bonus
+                    _learned_bonus += _npen("signal_performance", "at_breakout", 51, -2)  # 44.1% WR n=34
                     # at_breakout combos without higher_lows: sub-50% WR with large samples
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
                         if bool(_tk_sig_sc.get("mom_accel", False)):
@@ -28766,11 +28763,11 @@ def run():
                     # signal_performance["donchian_up"] = 48.3% WR n=29 — below 50%
                     _learned_bonus += _npen("signal_performance", "donchian_up", 50, -1)  # fires at <=50%
                 if not bool(_tk_sig_sc.get("orb_breakout", False)) and not bool(_tk_sig_sc.get("orb_active", False)):
-                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 57, 2)  # no_orb: 57.1% WR n=28 — threshold 62→57
+                    _learned_bonus += _nbns("orb_quality_perf", "no_orb", 52, 2)  # 53.3% WR n=30 — threshold 57→52
                 elif bool(_tk_sig_sc.get("orb_active", False)) and not bool(_tk_sig_sc.get("orb_breakout", False)):
-                    _learned_bonus += _npen("orb_quality_perf", "consolidating", 47, -2)  # consolidating: ~47% WR
+                    _learned_bonus += _npen("orb_quality_perf", "consolidating", 41, -2)  # 40.0% WR n=40
                 elif bool(_tk_sig_sc.get("orb_breakout", False)):
-                    _learned_bonus += _npen("orb_quality_perf", "breakout", 25, -5)   # 14% WR n=7 — false breakout trap!
+                    _learned_bonus += _npen("orb_quality_perf", "breakout", 41, -3)  # 40.0% WR n=5 — threshold 25→41
                     _learned_bonus += _npen("signal_performance", "orb_breakout", 25, -3)  # direct signal WR also 14%
                 # chart_pattern single (1 pattern): WR=38.5% n=13 — weak single-trigger, real moves need multi-pattern
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
@@ -28963,17 +28960,17 @@ def run():
                 _atr_pct_lb = float(_tk_sig_sc.get("atr_pct", _tk_sig_sc.get("atr", 0)) or 0)
                 if _atr_pct_lb >= 4.0:
                     _learned_bonus += _nbns("atr_perf", "4%+", 60, 2)           # 74% WR n=19 — boosted
-                # ROC: positive = 71% WR
+                # ROC: positive = 48.3% WR n=29 (dead bonus removed; coin flip)
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
-                    _learned_bonus += _nbns("roc_perf", "positive", 60, 1)      # 71% WR
+                    pass  # roc_perf["positive"] = 48.3% WR — no bonus warranted
                 # RSI entry: neutral (40-55) = 25% WR n=12 (very bad!); overbought=54% WR (neutral)
                 # Only penalize when RSI is explicitly present (avoid default=50 false positive)
                 _rsi_raw_lb = _tk_sig_sc.get("rsi")
                 _rsi_lb = float(_rsi_raw_lb) if _rsi_raw_lb is not None else None
                 if _rsi_lb is not None:
                     if _rsi_lb >= 70:
-                        _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 54% WR (neutral, fires if improves)
+                        pass  # rsi_entry_perf["overbought"] = 46.4% WR n=28 — dead bonus removed
                     elif 40 <= _rsi_lb < 55:
                         _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
                 # ST gap: normal=16.7% WR n=12 — heavy penalty; wide=54.3% WR n=35 — bonus
@@ -29002,14 +28999,18 @@ def run():
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
-                # Higher lows confirmed: 66.7% WR n=9 (updated); synergy combos 66-75% WR
+                # Higher lows confirmed: 75% WR n=8 (updated); synergy combos 75-86% WR
                 if bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 66.7% WR n=9
-                    # higher_lows synergy bonuses: all combos show strong alpha (66-75% WR n=8-9)
-                    for _hl_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ema_stacked_bull"):
+                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 75% WR n=8
+                    # higher_lows synergy: use sorted key order to match signal_synergy dict
+                    for _hl_synergy_sig in ("kc_breakout","mom_accel","mtf_aligned"):
                         if bool(_tk_sig_sc.get(_hl_synergy_sig, False)):
-                            _learned_bonus += _nbns("signal_synergy", f"higher_lows+{_hl_synergy_sig}", 64, 2)  # 66-75% WR
-                            break  # one synergy bonus at a time
+                            _learned_bonus += _nbns("signal_synergy", f"higher_lows+{_hl_synergy_sig}", 64, 2)  # 75-86% WR
+                            break
+                    if bool(_tk_sig_sc.get("at_breakout", False)):
+                        _learned_bonus += _nbns("signal_synergy", "at_breakout+higher_lows", 64, 2)  # 85.7% WR n=7
+                    elif bool(_tk_sig_sc.get("ema_stacked_bull", False)):
+                        _learned_bonus += _nbns("signal_synergy", "ema_stacked_bull+higher_lows", 64, 2)  # 75% WR n=8
                 # HA trend: bear=31.2% WR n=16 — strengthened penalty
                 if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16 — strong bear signal
@@ -29018,15 +29019,15 @@ def run():
                 if _rvol_t_lb < 0.8:
                     _learned_bonus += _npen("rvol_tier_perf", "weak", 35, -2)   # 33.3% WR n=21
                 elif 0.8 <= _rvol_t_lb < 1.5:
-                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 54, 1)  # 54.3% WR n=46 — threshold lowered
+                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 51, 1)  # 52.1% WR n=48 — threshold 54→51
                 # ST gap: no_st=55.6% WR n=27 (updated); normal=18.2% WR n=11 — penalize "normal" gap
                 _st_bul_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
                 if not _st_bul_lb and not _st_bear_lb:
                     _learned_bonus += _nbns("st_gap_perf", "no_st", 54, 1)      # 55.6% WR n=27 — lowered threshold
                 else:
-                    # "normal" or "wide" ST state: 18.2% WR n=11 for "normal" — significant penalty
-                    _learned_bonus += _npen("st_gap_perf", "normal", 22, -4)  # 18.2% WR n=11
+                    # "normal" ST state: 25% WR n=12 — penalty threshold 22→26
+                    _learned_bonus += _npen("st_gap_perf", "normal", 26, -4)  # 25% WR n=12
                 # Price acceleration: price_accel_perf["accelerating"] = 44.1% WR n=34 (updated — was stale 64%)
                 # signal_performance["price_accel_pos"] = 47.2% WR n=36 — below 50%
                 if bool(_tk_sig_sc.get("price_accel_pos", False)):
@@ -29223,9 +29224,9 @@ def run():
                 # Sector performance: tech=67.9% WR n=28 (strong alpha); other=40.6% WR n=32 (avoid)
                 _sec_perf_lb = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other")
                 if _sec_perf_lb == "tech":
-                    _learned_bonus += _nbns("sector_performance", "tech", 65, 1)   # 67.9% WR n=28
+                    _learned_bonus += _nbns("sector_performance", "tech", 62, 1)   # 63% WR n=27 — threshold 65→62
                 elif _sec_perf_lb == "other":
-                    _learned_bonus += _npen("sector_performance", "other", 41, -1) # 40.6% WR n=32
+                    _learned_bonus += _npen("sector_performance", "other", 39, -1) # 38.7% WR n=31 — threshold updated
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
                 _pve50_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 if _pve50_lb > 20:
@@ -29276,13 +29277,11 @@ def run():
             _et_hour_adj = 0  # default; overwritten below after ET time is computed
             # Inject live state context for N893-N900 dead neurons (not in signals dict)
             try:
-                _n894_trades = [t for t in tlog.get("trades", [])
-                                if t.get("action") in ("SELL","SELL_HALF","COVER")
-                                and t.get("pnl_pct") is not None][:5]
-                _n894_streak = 0
-                for _n894_t in _n894_trades:
-                    if float(_n894_t.get("pnl_pct", 0) or 0) > 0: _n894_streak = max(0, _n894_streak) + 1
-                    else:                                           _n894_streak = min(0, _n894_streak) - 1
+                _n894_recent = next((t for t in reversed(list(tlog.get("trades", [])))
+                                     if t.get("action") in ("SELL","SELL_HALF","COVER")
+                                     and t.get("pnl_pct") is not None), None)
+                _n894_streak = (1 if _n894_recent and float(_n894_recent.get("pnl_pct",0) or 0) > 0
+                                else -1 if _n894_recent else 0)
                 live[tk]["win_streak_now"]        = _n894_streak
                 live[tk]["positions_open_now"]    = len(held)
                 _pv_ctx = float(tlog.get("portfolio_value", 100000) or 100000)
