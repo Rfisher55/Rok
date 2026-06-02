@@ -23485,6 +23485,27 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                      _n174_cl_q = "no_loss"
             _nsl_adj += _nde("consec_loss_perf", _n174_cl_q)
 
+            # N821: Market hour context (labels: prime_open/morning_run/midday/afternoon/power_hour/after_hours)
+            _n821_et_h = int(d.get("et_hour", 13) or 13)
+            if   9 <= _n821_et_h < 10:  _n821_mh_q = "prime_open"
+            elif 10 <= _n821_et_h < 11: _n821_mh_q = "morning_run"
+            elif 11 <= _n821_et_h < 14: _n821_mh_q = "midday"
+            elif 14 <= _n821_et_h < 15: _n821_mh_q = "afternoon"
+            elif 15 <= _n821_et_h < 16: _n821_mh_q = "power_hour"
+            else:                        _n821_mh_q = "after_hours"
+            _nsl_adj += _nde("market_hour_context_perf", _n821_mh_q)
+
+            # N622: ATR expansion at entry (labels: expanding_atr/contracting_atr/stable_atr)
+            _n622_hv5_v  = float(d.get("hv5", 0) or 0)
+            _n622_hv20_v = float(d.get("hv20", 0) or 0)
+            if _n622_hv20_v > 0 and _n622_hv5_v > _n622_hv20_v * 1.20:
+                _n622_atr_q = "expanding_atr"
+            elif _n622_hv20_v > 0 and _n622_hv5_v < _n622_hv20_v * 0.80:
+                _n622_atr_q = "contracting_atr"
+            else:
+                _n622_atr_q = "stable_atr"
+            _nsl_adj += _nde("atr_expansion_at_entry_perf", _n622_atr_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
