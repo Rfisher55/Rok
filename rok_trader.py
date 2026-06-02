@@ -28687,7 +28687,11 @@ def run():
                 if _hw_utc_lb == "1730":
                     _learned_bonus += _npen("halfhour_performance", "1730", 40, -2)  # 39.3% WR n=28
                 elif _hw_utc_lb == "1900":
-                    _learned_bonus += _nbns("halfhour_performance", "1900", 61, 2)   # 62.5% WR n=8 — bonus
+                    _learned_bonus += _nbns("halfhour_performance", "1900", 61, 2)   # 62.5% WR n=8
+                # Day of week: Wednesday entries = 60.9% WR n=46; Monday = 45.9% WR
+                _dow_now_lb = datetime.utcnow().weekday()  # 0=Mon, 2=Wed
+                if _dow_now_lb == 2:
+                    _learned_bonus += _nbns("day_of_week_perf", "wednesday", 60, 1)  # 60.9% WR n=46
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
                     _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
                     _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
@@ -29182,6 +29186,8 @@ def run():
                 _sec_etf_lb = str(_tk_sig_sc.get("sector_etf_momentum_perf", "sector_inline") or "sector_inline")
                 if _sec_etf_lb == "sector_leading":
                     _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_leading", 60, 1)
+                elif _sec_etf_lb == "sector_flat":
+                    _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_flat", 60, 1)  # 60.9% WR n=46
                 elif _sec_etf_lb == "sector_lagging":
                     _learned_bonus += _npen("sector_etf_momentum_perf", "sector_lagging", 40, -2)
                 # ROC acceleration: only penalize negative when signals explicitly present
