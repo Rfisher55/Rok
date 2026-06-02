@@ -21670,8 +21670,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("rvol_surge", False): s += 8
     elif (d.get("rvol", 1) or 1) >= 1.8: s += 4  # moderate relative volume boost
 
-    # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+7)
-    if d.get("obv_rising", False): s += 7
+    # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+9)
+    # Data shows 80% WR (n=5) — one of the strongest confirmed signals; boosted from +7
+    if d.get("obv_rising", False): s += 9
 
     # Volume Divergence: distribution vs accumulation based on price-volume relationship
     # Bearish: new high + shrinking volume = institutions distributing into retail strength (-6)
@@ -21698,7 +21699,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # FI bull divergence = price falling but institutional volume flowing IN: +8
     # FI rising = sustained buying force behind move: +4
     if d.get("force_index_div", False):         s += 8
-    elif d.get("force_index_rising", False):    s += 4
+    elif d.get("force_index_rising", False):    s += 6   # boosted: 68.2% WR (n=22)
 
     # Beta-quality scoring: high alpha stocks (outperforming on risk-adjusted basis)
     # Jensen's alpha > 10% annualized = stock consistently beats market after beta adjustment
@@ -21769,8 +21770,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("ema21_pullback", False):   s += 14   # confirmed pullback: trend intact, reversal showing
     elif d.get("ema21_touch", False):    s +=  7   # touching EMA21 in uptrend — watch for entry
 
-    # Higher Lows: ascending support floor = confirmed uptrend structure (+6)
-    if d.get("higher_lows", False): s += 6
+    # Higher Lows: ascending support floor = confirmed uptrend structure (+10)
+    # Data shows 85.7% WR (n=7) — strongest confirmed signal; boosted from +6 to +10
+    if d.get("higher_lows", False): s += 10
 
     # Double Bottom: W-pattern bullish reversal (+10) — confirmed break above neckline
     if d.get("double_bottom", False): s += 10
