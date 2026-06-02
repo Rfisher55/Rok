@@ -28668,14 +28668,14 @@ def run():
                     _learned_bonus += _nbns("vix_entry_perf", "low", 62, 1)
                 elif _vix_br == "elevated":
                     _learned_bonus += _npen("vix_entry_perf", "elevated", 42, -2)
-                # capital_util: moderate=26.7% WR n=15, high_cash=12.5% WR n=8 — both catastrophic
+                # capital_util: high_cash=3.1% WR n=32, moderate=12.9% WR n=31 — both catastrophic
                 _cap_pv_lb = float(tlog.get("portfolio_value", 100000) or 100000)
                 _cap_bp_lb = float(tlog.get("buying_power", _cap_pv_lb) or _cap_pv_lb)
                 _cap_util_pct_lb = (1 - _cap_bp_lb / max(_cap_pv_lb, 1)) * 100
                 if _cap_util_pct_lb < 30:
-                    _learned_bonus += _npen("capital_util_perf", "high_cash", 13, -3)   # 12.5% WR n=8
+                    _learned_bonus += _npen("capital_util_perf", "high_cash", 4, -8)    # 3.1% WR n=32 — near-block
                 elif _cap_util_pct_lb < 60:
-                    _learned_bonus += _npen("capital_util_perf", "moderate", 28, -3)    # 26.7% WR n=15
+                    _learned_bonus += _npen("capital_util_perf", "moderate", 13, -5)    # 12.9% WR n=31
                 # breadth_perf["mixed"]: 41.3% WR n=46 — mixed breadth = adverse entry conditions
                 _brd_adv_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
                 _brd_bkt_lb = ("strong" if _brd_adv_lb >= 70 else "broad" if _brd_adv_lb >= 55
@@ -28771,7 +28771,7 @@ def run():
                     _learned_bonus += _npen("signal_performance", "orb_breakout", 25, -3)  # direct signal WR also 14%
                 # chart_pattern single (1 pattern): WR=38.5% n=13 — weak single-trigger, real moves need multi-pattern
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
-                    _learned_bonus += _nbns("vwap_reclaim_perf", "reclaim", 62, 1)
+                    pass  # vwap_reclaim_perf state "reclaim" doesn't match dict keys — dead bonus removed
                 if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
                     _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 1)
                     if bool(_tk_sig_sc.get("ichimoku_above", False)):
@@ -28952,14 +28952,18 @@ def run():
                 # Candle pattern present: 65% WR n=17 vs no pattern 59% WR
                 if bool(_tk_sig_sc.get("candle_pattern", False)) or bool(_tk_sig_sc.get("three_white_soldiers", False)) or bool(_tk_sig_sc.get("hammer", False)):
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 62, 1)  # 65% WR n=17
-                # MFI distribution zone: 75% WR
+                # MFI: distribution=66.7% WR n=9; neutral=42.6% WR n=68
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
                 if _mfi_lb >= 60:
-                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 1)  # 75% WR
-                # ATR pct: 4%+ = 74% WR (high volatility entries work well)
+                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 1)  # 66.7% WR n=9
+                elif 40 <= _mfi_lb < 60:
+                    _learned_bonus += _npen("mfi_zone_perf", "neutral", 43, -2)      # 42.6% WR n=68 — large sample
+                # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad)
                 _atr_pct_lb = float(_tk_sig_sc.get("atr_pct", _tk_sig_sc.get("atr", 0)) or 0)
                 if _atr_pct_lb >= 4.0:
-                    _learned_bonus += _nbns("atr_perf", "4%+", 60, 2)           # 74% WR n=19 — boosted
+                    _learned_bonus += _nbns("atr_perf", "4%+", 51, 1)           # 51.7% WR n=29 — threshold lowered
+                elif 2.0 <= _atr_pct_lb < 4.0:
+                    _learned_bonus += _npen("atr_perf", "2-4%", 26, -2)         # 25% WR n=8
                 # ROC: positive = 48.3% WR n=29 (dead bonus removed; coin flip)
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
@@ -29253,21 +29257,21 @@ def run():
                     _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 31.2% WR n=16
                 elif _tm_wstrk == 0:
                     _learned_bonus += _npen("trade_momentum_perf", "neutral", 31, -1)   # 30.8% WR n=13
-                # Position count: 4-7=28.6% WR n=14; 13+=33.3% WR n=15; medium_book=60.9% n=46
+                # Position count: 4-7=14.7% WR n=34; 13+=4.7% WR n=43; 8-12=60.9% n=46
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
                 if _pos_bkt_lb == "13+":
-                    _learned_bonus += _npen("position_count_perf", "13+", 34, -3)  # 33.3% WR n=15 — threshold 22→34
+                    _learned_bonus += _npen("position_count_perf", "13+", 5, -8)  # 4.7% WR n=43 — near-block
                 elif _pos_bkt_lb == "4-7":
-                    _learned_bonus += _npen("position_count_perf", "4-7", 30, -2)  # 28.6% WR n=14
+                    _learned_bonus += _npen("position_count_perf", "4-7", 15, -5)  # 14.7% WR n=34
                 elif _pos_bkt_lb == "8-12":
                     _learned_bonus += _nbns("position_count_perf", "medium_book", 61, 1)  # 60.9% WR n=46
-                # Sector breadth: single=31.2% WR n=16; healthy_4-5=30.8% WR n=13; sector_middle=60.9% n=46
+                # Sector breadth: single=5.4% WR n=37; healthy_4-5=16.1% WR n=31; sector_middle=60.9% n=46
                 _sec_adv_lb = int(_tk_sig_sc.get("sectors_advancing_now", 5) or 5)
                 if _sec_adv_lb < 2:
-                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 32, -3)  # 31.2% WR n=16 — threshold 20→32
+                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 6, -8)  # 5.4% WR n=37 — near-block
                 elif 4 <= _sec_adv_lb <= 5:
-                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 31, -2)  # 30.8% WR n=13 — threshold 30→31
+                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 17, -5)  # 16.1% WR n=31
                 elif 6 <= _sec_adv_lb <= 7:
                     _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
                 _learned_bonus = max(-20, min(18, _learned_bonus))  # expanded penalty floor: -10→-20
