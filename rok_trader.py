@@ -28744,8 +28744,7 @@ def run():
                     _learned_bonus += _npen("regime_performance", "bull", 48, -1)
                 elif _regime_lb == "bear":
                     _learned_bonus += _npen("regime_spy_alignment_perf", "bear_counter", 42, -2)
-                if bool(_tk_sig_sc.get("options_flow", False)):
-                    _learned_bonus += _nbns("option_flow_imbalance_perf", "call_dominated", 65, 1)
+                # options_flow boolean never set in live[tk] — dead bonus removed (use options_bull/unusual_calls instead)
                 if _rvol_lb >= 2.0:
                     _learned_bonus += _nbns("vol_expansion_at_entry_perf", "vol_expanding", 65, 1)
                 elif _rvol_lb < 0.6:
@@ -29184,7 +29183,9 @@ def run():
                     _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
                 # ST gap: no_st=55.6% WR n=27 (updated); normal=18.2% WR n=11 — penalize "normal" gap
                 _st_bul_lb = bool(_tk_sig_sc.get("supertrend_bull"))
-                _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
+                # supertrend_bear not in _extract; derive from supertrend_dir (1=bull,-1=bear; default=1 exception case)
+                _st_dir_lb = int(_tk_sig_sc.get("supertrend_dir", 1) or 1)
+                _st_bear_lb = (_st_dir_lb == -1)  # bearish when dir=-1; default 1=no active bear signal
                 if not _st_bul_lb and not _st_bear_lb:
                     _learned_bonus += _nbns("st_gap_perf", "no_st", 54, 1)      # 55.6% WR n=27 — lowered threshold
                 else:
