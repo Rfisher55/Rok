@@ -31639,6 +31639,184 @@ def run():
                 except Exception:
                     live[tk]["sector_etf_5d"] = 0.0
                     live[tk]["sector_5d"]     = 0.0
+                # ── R56: Alias fields — score reads alternate key names ──
+                # ai_score alias for sentiment_score/sent
+                live[tk]["ai_score"]        = live[tk].get("sent", live[tk].get("sentiment_score", 0))
+                # adv_dec / advance_pct (breadth advance count / pct)
+                try:
+                    live[tk]["adv_dec"]    = float(breadth.get("adv_count", breadth.get("adv_pct", 50)) or 50)
+                    live[tk]["advance_pct"] = float(breadth.get("adv_pct", 50) or 50)
+                except Exception:
+                    live[tk]["adv_dec"]    = 50.0
+                    live[tk]["advance_pct"] = 50.0
+                # atr_as_pct alias for atr_pct
+                live[tk]["atr_as_pct"] = live[tk].get("atr_pct", 0)
+                # avg_vol alias
+                live[tk]["avg_vol"] = live[tk].get("avg_vol_14", live[tk].get("avg_volume", 0))
+                # bb_pct alias for bb_pos
+                live[tk]["bb_pct"] = live[tk].get("bb_pos", 50)
+                # beta_at_entry alias
+                live[tk]["beta_at_entry"] = live[tk].get("beta", 1.0)
+                # bond_yield_direction_val (TLT 1d float)
+                try:
+                    live[tk]["bond_yield_direction_val"] = float(live.get("TLT", {}).get("chg1d", 0) or 0)
+                    live[tk]["tlt_1d"]  = live[tk]["bond_yield_direction_val"]
+                    live[tk]["tlt_chg1d"] = live[tk]["bond_yield_direction_val"]
+                except Exception:
+                    live[tk]["bond_yield_direction_val"] = 0.0
+                    live[tk]["tlt_1d"] = 0.0
+                    live[tk]["tlt_chg1d"] = 0.0
+                # breadth_at_entry from current breadth
+                try:
+                    live[tk]["breadth_at_entry"] = float(breadth.get("adv_pct", 50) or 50)
+                except Exception:
+                    live[tk]["breadth_at_entry"] = 50.0
+                # btc_dom / btc_dominance (BTC.D proxy — default 55%)
+                try:
+                    _r56_btcd = float(live.get("BTC/USD", {}).get("dominance",
+                                       live.get("BTCUSD", {}).get("dominance", 55)) or 55)
+                    live[tk]["btc_dom"]       = _r56_btcd
+                    live[tk]["btc_dominance"] = _r56_btcd
+                except Exception:
+                    live[tk]["btc_dom"]       = 55.0
+                    live[tk]["btc_dominance"] = 55.0
+                # change_5d alias
+                live[tk]["change_5d"] = live[tk].get("chg5d", live[tk].get("rs5", 0))
+                # chg_pct alias
+                live[tk]["chg_pct"] = live[tk].get("change_pct", 0)
+                # consec_up alias
+                live[tk]["consec_up"] = live[tk].get("consec_green", 0)
+                # crypto_ai_score (crypto sentiment — alias ai_score for crypto)
+                live[tk]["crypto_ai_score"] = live[tk].get("ai_score", 0)
+                # debt_equity_ratio alias
+                live[tk]["debt_equity_ratio"] = live[tk].get("debt_equity", 1.0)
+                # dollar_vol_30d alias
+                try:
+                    live[tk]["dollar_vol_30d"] = live[tk].get("avg_dollar_vol",
+                        float(live[tk].get("avg_volume", 0)) * float(live[tk].get("price", 1)))
+                except Exception:
+                    live[tk]["dollar_vol_30d"] = 0.0
+                # earnings_surprise alias (same as eps_surprise_pct)
+                live[tk]["earnings_surprise"] = live[tk].get("earnings_surprise_pct", 0)
+                live[tk]["eps_surprise"]      = live[tk].get("earnings_surprise_pct", 0)
+                # exit_trigger / trade_gap_hours / last_exit_trigger aliases
+                if not live[tk].get("exit_trigger"):
+                    live[tk]["exit_trigger"] = live[tk].get("last_exit_trigger", "manual")
+                try:
+                    live[tk]["trade_gap_hours"] = live[tk].get("time_since_last_trade_h", 4.0)
+                except Exception:
+                    live[tk]["trade_gap_hours"] = 4.0
+                # float alias
+                live[tk]["float"]    = live[tk].get("float_shares", live[tk].get("float_shares_m", 50e6) * 1e6)
+                # gap_pct / gapper (intraday gap)
+                live[tk]["gap_pct"]  = live[tk].get("pm_gap_pct", live[tk].get("change_pct", 0))
+                live[tk]["gapper"]   = bool(abs(float(live[tk].get("gap_pct", 0) or 0)) > 2.0)
+                live[tk]["gap_and_go"] = live[tk].get("gapper", False)
+                live[tk]["gap_pct_at_entry"] = live[tk].get("pm_gap_pct", 0)
+                # intraday_chg_pct alias
+                live[tk]["intraday_chg_pct"] = live[tk].get("intraday", live[tk].get("change_pct", 0))
+                # inst_own / inst_flow / large_lot_ratio
+                live[tk]["inst_own"]          = float(live[tk].get("inst_ownership_pct",
+                                                live[tk].get("institutional_ownership", 50)) or 50) / 100
+                live[tk]["inst_flow"]         = float(live[tk].get("large_lot_ratio", 1.0) or 1.0)
+                live[tk]["inst_ownership_pct"] = float(live[tk].get("institutional_ownership",
+                                                  live[tk].get("inst_own", 0.5)) or 0.5) * 100
+                # iv / iv_hv_ratio (implied volatility — from options data)
+                try:
+                    live[tk]["iv"]        = float(live[tk].get("atm_iv", live[tk].get("hv20", 20)) or 20)
+                    live[tk]["iv_hv_ratio"] = round(live[tk]["iv"] / max(float(live[tk].get("hv20", 1) or 1), 1), 2)
+                    live[tk]["iv_vs_hv_ratio"] = live[tk]["iv_hv_ratio"]
+                except Exception:
+                    live[tk]["iv"]         = 20.0
+                    live[tk]["iv_hv_ratio"] = 1.0
+                    live[tk]["iv_vs_hv_ratio"] = 1.0
+                # last_earnings_beat alias
+                live[tk]["last_earnings_beat"] = live[tk].get("earnings_beat", False)
+                # macd_cross / macd_hist_pos / macd_positive
+                try:
+                    _r56_ec2 = float(live[tk].get("ema_cross", 0) or 0)
+                    live[tk]["macd_cross"]   = (_r56_ec2 > 0.01)
+                    live[tk]["macd_positive"] = bool(float(live[tk].get("macd", 0) or 0) > 0)
+                    live[tk]["macd_hist_pos"] = live[tk]["macd_positive"]
+                except Exception:
+                    live[tk]["macd_cross"]   = False
+                    live[tk]["macd_positive"] = False
+                    live[tk]["macd_hist_pos"] = False
+                # market_pcr / pcr (market-wide PCR proxy)
+                try:
+                    live[tk]["market_pcr"] = float(live.get("SPY", {}).get("options_pcr",
+                                             live[tk].get("options_pcr", 1.0)) or 1.0)
+                    live[tk]["pcr"] = live[tk]["market_pcr"]
+                except Exception:
+                    live[tk]["market_pcr"] = 1.0
+                    live[tk]["pcr"]        = 1.0
+                # mktcap / mktcap_bln / market_cap_bln
+                try:
+                    _r56_mc = float(live[tk].get("market_cap", live[tk].get("market_cap_b", 0) * 1e9) or 0)
+                    live[tk]["mktcap"]      = _r56_mc
+                    live[tk]["mktcap_bln"]  = round(_r56_mc / 1e9, 3) if _r56_mc > 0 else live[tk].get("market_cap_b", 0)
+                    live[tk]["market_cap_bln"] = live[tk]["mktcap_bln"]
+                except Exception:
+                    live[tk]["mktcap"]      = 0.0
+                    live[tk]["mktcap_bln"]  = 0.0
+                    live[tk]["market_cap_bln"] = 0.0
+                # news_items / news_velocity_at_entry
+                live[tk]["news_items"]             = live[tk].get("news_count_24h", live[tk].get("news_count", 0))
+                live[tk]["news_velocity_at_entry"] = live[tk].get("news_velocity", 0.0)
+                # orb_up alias
+                live[tk]["orb_up"] = bool(live[tk].get("orb_breakout", False))
+                # pct_vs_ema200 alias
+                live[tk]["pct_vs_ema200"] = live[tk].get("price_vs_ema200", 0)
+                # portfolio_positions / pos_count
+                try:
+                    _r56_npos = len(tlog.get("positions", {}) if isinstance(tlog.get("positions", {}), dict) else [])
+                    live[tk]["portfolio_positions"] = _r56_npos
+                    live[tk]["pos_count"]           = _r56_npos
+                except Exception:
+                    live[tk]["portfolio_positions"] = 0
+                    live[tk]["pos_count"]           = 0
+                # premarket_gap_pct alias
+                live[tk]["premarket_gap_pct"] = live[tk].get("pm_gap_pct", 0)
+                live[tk]["premarket_vol"]     = live[tk].get("pm_volume", live[tk].get("pm_price", 0))
+                # rev_growth alias
+                live[tk]["rev_growth"] = live[tk].get("revenue_growth_pct", live[tk].get("revenue_growth", 0))
+                # risk_reward / rr_ratio
+                live[tk]["risk_reward"] = live[tk].get("rr", 1.5)
+                live[tk]["rr_ratio"]    = live[tk].get("rr", 1.5)
+                live[tk]["risk_per_trade"] = live[tk].get("stop_loss_pct", live[tk].get("atr_pct", 1.0))
+                live[tk]["stop_loss_pct"]  = live[tk].get("atr_pct", 1.0)
+                # rsi_bear_divergence alias (from macd_bear_div as proxy)
+                live[tk]["rsi_bear_divergence"] = bool(live[tk].get("macd_bear_div", live[tk].get("bearish_divergence", False)))
+                # sector_etf_chg5d alias
+                live[tk]["sector_etf_chg5d"] = live[tk].get("sector_etf_5d", 0)
+                live[tk]["sector_momentum"]  = live[tk].get("sector_etf_5d", 0)
+                # short_interest alias
+                live[tk]["short_interest"] = live[tk].get("short_float", live[tk].get("short_ratio", 0))
+                # spy aliases
+                try:
+                    live[tk]["spy_1d"]    = float(live.get("SPY", {}).get("chg1d",    0) or 0)
+                    live[tk]["spy_chg5d"] = float(live.get("SPY", {}).get("chg5d",    0) or 0)
+                    live[tk]["spy_intraday_chg"] = live[tk].get("intraday", 0)
+                except Exception:
+                    live[tk]["spy_1d"]    = 0.0
+                    live[tk]["spy_chg5d"] = 0.0
+                    live[tk]["spy_intraday_chg"] = 0.0
+                # unusual_options alias
+                live[tk]["unusual_options"] = bool(live[tk].get("unusual_calls") or live[tk].get("unusual_puts"))
+                # vix_level alias
+                live[tk]["vix_level"] = live[tk].get("vix", float(regime.get("vix", 20) or 20))
+                # volume_avg alias
+                live[tk]["volume_avg"] = live[tk].get("avg_volume", live[tk].get("avg_vol_14", 0))
+                # implied_move_pct (from expected_move_wk or IV proxy)
+                try:
+                    live[tk]["implied_move_pct"] = float(live[tk].get("expected_move_pct_wk",
+                                                         live[tk].get("iv", 20)) or 20) * 0.2
+                except Exception:
+                    live[tk]["implied_move_pct"] = 4.0
+                # insider_buying / insider_net_shares / insider_shares
+                live[tk]["insider_buying"]    = bool(live[tk].get("insider_buy_recency", "no_insider_data") != "no_insider_data")
+                live[tk]["insider_shares"]    = float(live[tk].get("insider_net_shares", 0) or 0)
+                live[tk]["crypto_score_tier_val"] = float(live[tk].get("ai_score", 0) or 0)
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
