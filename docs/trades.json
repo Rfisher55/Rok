@@ -30361,7 +30361,7 @@
       "pos_health": 6
     }
   ],
-  "last_updated": "2026-06-02T13:44:48.823733+00:00",
+  "last_updated": "2026-06-02T13:47:30.623411+00:00",
   "portfolio_value": 96423.91,
   "buying_power": 126938.68,
   "status": "ok",
@@ -55335,5 +55335,7 @@
       "total": 7,
       "win_rate": 14.3
     }
-  }
+  },
+  "error": "Bot crashed: ['Close']",
+  "traceback": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 52583, in <module>\n    run()\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 25950, in run\n    live = fetch_batch(candidates, held_symbols=set(held.keys()))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 21128, in fetch_batch\n    [(tk, _quick_score(quick_daily.get(tk))) for tk in tickers\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 21128, in <listcomp>\n    [(tk, _quick_score(quick_daily.get(tk))) for tk in tickers\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 21045, in _quick_score\n    d = daily_5d.dropna(subset=[\"Close\"])\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/core/frame.py\", line 7801, in dropna\n    raise KeyError(np.array(subset)[check].tolist())\nKeyError: ['Close']\n"
 }
