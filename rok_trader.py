@@ -110,7 +110,7 @@ CRYPTO_UNIVERSE  = {
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
-CRYPTO_MIN_SCORE = 30       # minimum technical score for crypto entry (raised: 22% WR at 15 → needs higher bar)
+CRYPTO_MIN_SCORE = 40       # data: 0% WR at scores 30-39 — raised bar to require stronger signals
 CRYPTO_MIN_COMBINED = 0     # AI score gate — require neutral-to-positive AI for crypto
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
@@ -19289,6 +19289,23 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             if _utc_hr_n >= 3:  # only apply when we have enough crypto-specific data
                 if _utc_hr_wr >= 65:   sc = min(120, sc + 4)  # proven winning hour for crypto
                 elif _utc_hr_wr <= 35: sc = max(0,   sc - 4)  # proven losing hour — be cautious
+        except Exception:
+            pass
+
+        # Ticker memory gate: penalize coins with proven poor track record in this brain
+        try:
+            _ctm_rec = _ALL_NEURON_PERFS.get("ticker_memory", {}).get(alpaca_sym, {})
+            if isinstance(_ctm_rec, dict) and _ctm_rec.get("total", 0) >= 2:
+                _ctm_wr = float(_ctm_rec.get("win_rate", 50) or 50)
+                _ctm_n  = int(_ctm_rec.get("total", 0))
+                if _ctm_wr == 0 and _ctm_n >= 2:
+                    sc = max(0, sc - 20)  # 0% WR on 2+ crypto trades: kill the score
+                elif _ctm_wr <= 20 and _ctm_n >= 3:
+                    sc = max(0, sc - 12)  # ≤20% WR on 3+: strong penalty
+                elif _ctm_wr <= 35 and _ctm_n >= 4:
+                    sc = max(0, sc - 8)   # ≤35% WR on 4+: moderate penalty
+                elif _ctm_wr >= 70 and _ctm_n >= 3:
+                    sc = min(120, sc + 6) # proven winner: boost
         except Exception:
             pass
 
