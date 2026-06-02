@@ -619,6 +619,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _dow = datetime.now(timezone.utc).weekday()
         e["day_of_week"] = _dow
         e["day_name"] = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][_dow]
+        e["entry_dow"] = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"][_dow]
         # Breadth at entry (% sectors/stocks advancing)
         _breadth_entry = tlog.get("market_breadth", {})
         e["breadth_at_entry"] = round(float(_breadth_entry.get("adv_pct", 50) or 50), 1)
