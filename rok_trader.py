@@ -26387,6 +26387,22 @@ def run():
                     except Exception as _fe:
                         logger.warning(f"20min failed setup sell failed {sym}: {_fe}")
                     continue
+            elif _fast_age_min >= 45 and _fast_age_min < 60 and not _fast_half_out and 0 < pnl_pct < 0.5:
+                # 45min stalling-winner check: small profit but losing steam → free slot for better setup
+                _fast_d_45 = live.get(sym, {}) or {}
+                _fast_sc_45 = score(sym, _fast_d_45) if _fast_d_45 else 0
+                if _fast_sc_45 < 52:
+                    _fast_reason = f"45min stalling exit ({pnl_pct:+.1f}%, score={_fast_sc_45} — momentum gone)"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"45min stalling sell failed {sym}: {_fe}")
+                    continue
             elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
                 # 30min flat/drifting exit: wider window frees capital for fresh setups faster
                 _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
