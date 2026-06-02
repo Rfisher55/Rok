@@ -26408,15 +26408,35 @@ def run():
                     _scalp_pthr = min(3.0, _scalp_pthr + 0.3)   # higher target in strong bull
             except Exception:
                 pass
+            # Signal-specific exit overlay: breakout entries get extra room to run;
+            # mean-reversion setups take profits faster (less runway expected)
+            try:
+                _entry_sigs = peaks[sym].get("entry_premium_signals", [])
+                _is_breakout_entry = any(s in _entry_sigs for s in ("at_breakout","orb_breakout","vcp","cup_handle"))
+                _is_squeeze_entry  = "ttm_squeeze_fired" in _entry_sigs
+                _is_gap_entry      = "gap_and_hold" in _entry_sigs
+                if _is_breakout_entry or _is_squeeze_entry:
+                    # Breakout/squeeze entries: let winners run +0.3% higher target
+                    _scalp_pthr = min(3.5, _scalp_pthr + 0.3)
+                elif _is_gap_entry and not _is_breakout_entry:
+                    # Gap entries fade faster: take profits sooner (-0.2% target)
+                    _scalp_pthr = max(0.8, _scalp_pthr - 0.2)
+            except Exception:
+                pass
             if 20 <= age_minutes:
                 if pnl_pct >= _scalp_pthr and age_minutes <= 90 and not half_out:
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= _scalp_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif age_minutes >= 45 and pnl_pct >= 0.6 and not half_out:
-                    # 45min exit: raised threshold 0.3→0.6% — 90min cycle exits avg +1.2% vs 45min at -0.17%
-                    # Only take early profits if gain is meaningful (≥0.6%), otherwise ride to 90min
-                    _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
+                    # 45min exit: only if signal has degraded; if still strong, extend to 90min
+                    _live_d_45 = live.get(sym, {}) or {}
+                    _sc_45 = score(sym, _live_d_45) if _live_d_45 else 0
+                    _rvol_45 = float(_live_d_45.get("rvol", 1.0) or 1.0)
+                    if _sc_45 >= 65 and _rvol_45 >= 1.5 and pnl_pct < _scalp_pthr:
+                        pass  # signal still hot — ride to 90min cycle
+                    else:
+                        _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
                     # Smart 60min exit: if position is just slightly negative (-0.5% to 0%)
                     # and current live score is still strong (≥55), extend to 90min.
@@ -27042,6 +27062,24 @@ def run():
                 peaks[sym]["ever_hit_5pct"] = True
 
             if reason:
+                # Compute exit score for exit_score_at_sell neuron tracking
+                try:
+                    _exit_live = live.get(sym, {}) or {}
+                    _exit_sc_now = score(sym, _exit_live) if _exit_live else 0
+                    _exit_sc_state = (
+                        "exit_high_score" if _exit_sc_now >= 65 else
+                        "exit_mid_score" if _exit_sc_now >= 45 else "exit_low_score")
+                    _exit_sc_perf = tlog.setdefault("exit_score_at_sell_perf", {})
+                    _es_bucket = _exit_sc_perf.setdefault(_exit_sc_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                    _es_bucket["total"] = _es_bucket.get("total", 0) + 1
+                    _es_bucket["total_pnl"] = round(_es_bucket.get("total_pnl", 0.0) + (pnl_pct or 0), 2)
+                    if (pnl_pct or 0) > 0: _es_bucket["wins"] = _es_bucket.get("wins", 0) + 1
+                    else: _es_bucket["losses"] = _es_bucket.get("losses", 0) + 1
+                    if _es_bucket["total"] > 0:
+                        _es_bucket["win_rate"] = round(_es_bucket["wins"] / _es_bucket["total"] * 100, 1)
+                        _es_bucket["avg_pnl"]  = round(_es_bucket["total_pnl"] / _es_bucket["total"], 2)
+                except Exception:
+                    pass
                 logger.info(f"SELL {sym} — {reason}")
                 alpaca_post("/v2/orders", {
                     "symbol": sym, "qty": str(qty),
@@ -28982,6 +29020,51 @@ def run():
                     _inj_epr = float(_inj_d.get("eps_revision_pct", 0) or 0)
                     live[tk]["earnings_revision_perf"] = (
                         "revised_higher" if _inj_epr > 5 else "revised_lower" if _inj_epr < -5 else "no_revision")
+                except Exception: pass
+                try:  # N549: close vs day range (strong/mid/weak close)
+                    _inj_h = float(_inj_d.get("day_high", 0) or 0)
+                    _inj_l = float(_inj_d.get("day_low", 0) or 0)
+                    _inj_c = float(_inj_d.get("price", _inj_d.get("last", 0)) or 0)
+                    if _inj_h > _inj_l and _inj_c > 0:
+                        _inj_rng = (_inj_c - _inj_l) / (_inj_h - _inj_l)
+                        live[tk]["close_vs_range_perf"] = (
+                            "strong_close" if _inj_rng >= 0.7 else "weak_close" if _inj_rng <= 0.3 else "mid_close")
+                except Exception: pass
+                try:  # N428: bollinger band position
+                    _inj_bb = float(_inj_d.get("bb_pctb", _inj_d.get("bb_percent_b", 0.5)) or 0.5)
+                    live[tk]["bollinger_position_entry_perf"] = (
+                        "upper_band" if _inj_bb > 0.85 else "lower_band" if _inj_bb < 0.15 else "mid_band")
+                except Exception: pass
+                try:  # N550: consecutive up days
+                    _inj_cu = int(_inj_d.get("consec_up", _inj_d.get("streak", _inj_d.get("consec_green", 0))) or 0)
+                    live[tk]["consec_up_v1_perf"] = (
+                        "streak_entry" if _inj_cu >= 3 else "pullback_entry" if _inj_cu <= -2 else "neutral_entry")
+                except Exception: pass
+                try:  # N427: consecutive green days at entry (coarser N427 variant)
+                    _inj_cg3 = int(_inj_d.get("consec_green_days", _inj_d.get("consec_green", 0)) or 0)
+                    live[tk]["consecutive_green_entry_perf"] = (
+                        "extended_green" if _inj_cg3 >= 4 else "fresh_green" if _inj_cg3 == 1 else "moderate_green")
+                except Exception: pass
+                try:  # N663: weekly momentum
+                    _inj_rs5 = float(_inj_d.get("rs5", 0) or 0)
+                    live[tk]["weekly_momentum_perf"] = (
+                        "strong_weekly_up" if _inj_rs5 > 5 else "mild_weekly_up" if _inj_rs5 > 1 else
+                        "weekly_downtrend" if _inj_rs5 < -2 else "flat_weekly")
+                except Exception: pass
+                try:  # N551: pre-market gap direction
+                    _inj_pmg = float(_inj_d.get("premarket_gap_pct", _inj_d.get("gap_pct", 0)) or 0)
+                    live[tk]["pm_gap_direction_perf"] = (
+                        "gap_up_strong" if _inj_pmg > 1.5 else "gap_down_strong" if _inj_pmg < -1.5 else "gap_flat")
+                except Exception: pass
+                try:  # N345: breakout confirmation (at_breakout + volume)
+                    _inj_bo2 = bool(_inj_d.get("at_breakout", False))
+                    _inj_vr2 = float(_inj_d.get("vol_ratio", _inj_d.get("rvol", 1.0)) or 1.0)
+                    if _inj_bo2 and _inj_vr2 >= 1.5:
+                        live[tk]["breakout_confirmation_perf"] = "high_vol_breakout"
+                    elif _inj_bo2:
+                        live[tk]["breakout_confirmation_perf"] = "low_vol_breakout"
+                    else:
+                        live[tk]["breakout_confirmation_perf"] = "no_breakout"
                 except Exception: pass
             except Exception:
                 pass
@@ -42159,6 +42242,22 @@ def run():
             if _iht_best["win_rate"] - _iht_worst["win_rate"] >= 15:
                 _learn_log.append(f"Best hold window: '{_iht_best['bucket']}' ({_iht_best['win_rate']:.0f}% WR). Worst: '{_iht_worst['bucket']}' ({_iht_worst['win_rate']:.0f}% WR)")
 
+        # ── Exit score quality: learn if exits at high/mid/low score are premature ──
+        _ess_raw = tlog.get("exit_score_at_sell_perf", {})
+        _ess_insights = []
+        for _essbk in ("exit_high_score", "exit_mid_score", "exit_low_score"):
+            _essd = _ess_raw.get(_essbk, {})
+            if _essd.get("total", 0) >= 3:
+                _ess_insights.append({"bucket": _essbk, "win_rate": _essd.get("win_rate", 50),
+                                      "avg_pnl": _essd.get("avg_pnl", 0), "total": _essd.get("total", 0)})
+        if _ess_insights:
+            _ess_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR(avg{s['avg_pnl']:+.2f}%,n={s['total']})" for s in _ess_insights)
+            _learn_log.append(f"Exit score quality: {_ess_sum}")
+            _ess_hi = next((s for s in _ess_insights if s["bucket"] == "exit_high_score"), None)
+            _ess_lo = next((s for s in _ess_insights if s["bucket"] == "exit_low_score"), None)
+            if _ess_hi and _ess_lo and _ess_hi["win_rate"] > _ess_lo["win_rate"] + 15:
+                _learn_log.append(f"Exits at high score ({_ess_hi['win_rate']:.0f}%WR) outperform low-score exits ({_ess_lo['win_rate']:.0f}%WR) — score is reliable exit signal")
+
         # ── 37. MACD State Neuron: MACD phase at entry vs outcome ─────────────────
         _mc_raw = tlog.get("macd_state_perf", {})
         _mc_insights = []
@@ -50555,6 +50654,7 @@ def run():
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
             "intraday_hold_time_perf": _iht_insights,        # intraday hold window vs outcome (<30/30-60/60-90/90-120/120min+)
+            "exit_score_at_sell_perf": _ess_insights,        # exit score quality (high/mid/low score at exit)
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
