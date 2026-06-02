@@ -26269,7 +26269,9 @@ def run():
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= _scalp_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
-                elif age_minutes >= 45 and pnl_pct >= 0.3 and not half_out:
+                elif age_minutes >= 45 and pnl_pct >= 0.6 and not half_out:
+                    # 45min exit: raised threshold 0.3→0.6% — 90min cycle exits avg +1.2% vs 45min at -0.17%
+                    # Only take early profits if gain is meaningful (≥0.6%), otherwise ride to 90min
                     _scalp_exit_reason = f"45min profit exit ({pnl_pct:+.1f}%)"
                 elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
                     # Smart 60min exit: if position is just slightly negative (-0.5% to 0%)
