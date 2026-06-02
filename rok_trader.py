@@ -29057,12 +29057,20 @@ def run():
                     _learned_bonus += _nbns("concentration_perf", "3-4", 57, 2)  # 57.1% WR n=28 — threshold 60→57
                 elif _open_pos_lb >= 8:
                     _learned_bonus += _npen("concentration_perf", "8+", 55, -2)  # 53% WR n=30 — stronger penalty
-                # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3
-                _reentry_lb = str(_tk_sig_sc.get("reentry_type", "") or "")
-                if "winner" in _reentry_lb or "re_winner" in _reentry_lb:
-                    _learned_bonus += _nbns("reentry_perf", "winner", 60, 2)     # 80% WR
-                elif "loser" in _reentry_lb or "re_loser" in _reentry_lb:
-                    _learned_bonus += _npen("reentry_perf", "loser", 40, -3)     # 33% WR n=3
+                # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3 — compute directly
+                if tk in recent_sells:
+                    try:
+                        _re_trades = [t for t in tlog.get("trades", [])
+                                      if t.get("ticker") == tk and t.get("action") in ("SELL","COVER")
+                                      and t.get("pnl_pct") is not None]
+                        _re_last = sorted(_re_trades, key=lambda x: x.get("time",""))[-1] if _re_trades else None
+                        _reentry_lb = ("winner" if _re_last and float(_re_last.get("pnl_pct",0) or 0) > 0 else "loser")
+                    except Exception:
+                        _reentry_lb = "no_reentry"
+                    if _reentry_lb == "winner":
+                        _learned_bonus += _nbns("reentry_perf", "winner", 60, 2)   # 80% WR
+                    elif _reentry_lb == "loser":
+                        _learned_bonus += _npen("reentry_perf", "loser", 40, -3)   # 33% WR n=3
                 # Candle pattern present: 65% WR n=17 vs no pattern 59% WR
                 if bool(_tk_sig_sc.get("candle_pattern", False)) or bool(_tk_sig_sc.get("three_white_soldiers", False)) or bool(_tk_sig_sc.get("hammer", False)):
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 62, 1)  # 65% WR n=17
