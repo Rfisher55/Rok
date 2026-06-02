@@ -14327,7 +14327,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _n_sf_880 = tlog.get("volatility_regime_shift_perf", {})
-            _sf_880_state = held.get(sym, {}).get("volatility_regime_shift_state", "stable_low")
+            _sf_880_state = "stable_low"  # default; overridden by BUY-entry lookup below
             _sf_880_entry = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
             if _sf_880_entry:
                 _sf_880_state = _sf_880_entry.get("volatility_regime_shift_state", _sf_880_state)
