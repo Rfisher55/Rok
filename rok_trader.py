@@ -7739,8 +7739,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n433 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n433_field = _buy_n433.get("price_momentum_5d_perf", "mild_up") if _buy_n433 else "mild_up"
-            _n433_perf = tlog.setdefault("price_momentum_5d_perf", {})
+            _n433_field = _buy_n433.get("price_mom_5d_v1_perf", "mild_up") if _buy_n433 else "mild_up"
+            _n433_perf = tlog.setdefault("price_mom_5d_v1_perf", {})
             _n433p = _n433_perf.setdefault(_n433_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n433_field})
             _n433p["total"] += 1; _n433p["total_pnl"] = round(_n433p["total_pnl"] + pnl, 2)
             if pnl > 0: _n433p["wins"] += 1
@@ -8084,8 +8084,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n456 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n456_field = _buy_n456.get("catalyst_freshness_perf", "recent") if _buy_n456 else "recent"
-            _n456_perf = tlog.setdefault("catalyst_freshness_perf", {})
+            _n456_field = _buy_n456.get("catalyst_fresh_v1_perf", "recent") if _buy_n456 else "recent"
+            _n456_perf = tlog.setdefault("catalyst_fresh_v1_perf", {})
             _n456p = _n456_perf.setdefault(_n456_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n456_field})
             _n456p["total"] += 1; _n456p["total_pnl"] = round(_n456p["total_pnl"] + pnl, 2)
             if pnl > 0: _n456p["wins"] += 1
@@ -9494,8 +9494,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n550 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n550_field = _buy_n550.get("consecutive_up_days_perf", "neutral_entry") if _buy_n550 else "neutral_entry"
-            _n550_perf = tlog.setdefault("consecutive_up_days_perf", {})
+            _n550_field = _buy_n550.get("consec_up_v1_perf", "neutral_entry") if _buy_n550 else "neutral_entry"
+            _n550_perf = tlog.setdefault("consec_up_v1_perf", {})
             _n550p = _n550_perf.setdefault(_n550_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n550_field})
             _n550p["total"] += 1; _n550p["total_pnl"] = round(_n550p["total_pnl"] + pnl, 2)
             if pnl > 0: _n550p["wins"] += 1
@@ -9614,8 +9614,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n558 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n558_field = _buy_n558.get("debt_to_equity_perf", "moderate_debt") if _buy_n558 else "moderate_debt"
-            _n558_perf = tlog.setdefault("debt_to_equity_perf", {})
+            _n558_field = _buy_n558.get("debt_equity_v1_perf", "moderate_debt") if _buy_n558 else "moderate_debt"
+            _n558_perf = tlog.setdefault("debt_equity_v1_perf", {})
             _n558p = _n558_perf.setdefault(_n558_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n558_field})
             _n558p["total"] += 1; _n558p["total_pnl"] = round(_n558p["total_pnl"] + pnl, 2)
             if pnl > 0: _n558p["wins"] += 1
@@ -10064,8 +10064,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n588 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n588_field = _buy_n588.get("technical_pattern_quality_perf", "low_quality_pattern") if _buy_n588 else "low_quality_pattern"
-            _n588_perf = tlog.setdefault("technical_pattern_quality_perf", {})
+            _n588_field = _buy_n588.get("tech_pattern_v1_perf", "low_quality_pattern") if _buy_n588 else "low_quality_pattern"
+            _n588_perf = tlog.setdefault("tech_pattern_v1_perf", {})
             _n588p = _n588_perf.setdefault(_n588_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n588_field})
             _n588p["total"] += 1; _n588p["total_pnl"] = round(_n588p["total_pnl"] + pnl, 2)
             if pnl > 0: _n588p["wins"] += 1
@@ -10439,8 +10439,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n613 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n613_field = _buy_n613.get("price_action_quality_perf", "choppy_action") if _buy_n613 else "choppy_action"
-            _n613_perf = tlog.setdefault("price_action_quality_perf", {})
+            _n613_field = _buy_n613.get("price_action_v1_perf", "choppy_action") if _buy_n613 else "choppy_action"
+            _n613_perf = tlog.setdefault("price_action_v1_perf", {})
             _n613p = _n613_perf.setdefault(_n613_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n613_field})
             _n613p["total"] += 1; _n613p["total_pnl"] = round(_n613p["total_pnl"] + pnl, 2)
             if pnl > 0: _n613p["wins"] += 1
@@ -10544,8 +10544,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n620 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n620_field = _buy_n620.get("earnings_quality_perf", "inline_earnings") if _buy_n620 else "inline_earnings"
-            _n620_perf = tlog.setdefault("earnings_quality_perf", {})
+            _n620_field = _buy_n620.get("earnings_qual_v1_perf", "inline_earnings") if _buy_n620 else "inline_earnings"
+            _n620_perf = tlog.setdefault("earnings_qual_v1_perf", {})
             _n620p = _n620_perf.setdefault(_n620_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n620_field})
             _n620p["total"] += 1; _n620p["total_pnl"] = round(_n620p["total_pnl"] + pnl, 2)
             if pnl > 0: _n620p["wins"] += 1
@@ -13034,8 +13034,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n786 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n786_field = _buy_n786.get("breakout_quality_perf", "no_breakout") if _buy_n786 else "no_breakout"
-            _n786_perf = tlog.setdefault("breakout_quality_perf", {})
+            _n786_field = _buy_n786.get("breakout_qual_v1_perf", "no_breakout") if _buy_n786 else "no_breakout"
+            _n786_perf = tlog.setdefault("breakout_qual_v1_perf", {})
             _n786p = _n786_perf.setdefault(_n786_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n786_field})
             _n786p["total"] += 1; _n786p["total_pnl"] = round(_n786p["total_pnl"] + pnl, 2)
             if pnl > 0: _n786p["wins"] += 1
@@ -23131,6 +23131,76 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                 _n644_ins_q = "no_insider_activity"
             _nsl_adj += _nde("insider_activity_v1_perf", _n644_ins_q)
 
+            # N433: Price momentum 5D (strong_up/mild_up/flat_neg)
+            _n433_chg5_v = float(d.get("rs5", d.get("change_5d", 0)) or 0)
+            if _n433_chg5_v > 5:   _n433_mom_q = "strong_up"
+            elif _n433_chg5_v < 0: _n433_mom_q = "flat_neg"
+            else:                  _n433_mom_q = "mild_up"
+            _nsl_adj += _nde("price_mom_5d_v1_perf", _n433_mom_q)
+
+            # N456: Catalyst freshness (fresh_catalyst/recent/stale)
+            _n456_cat_s  = d.get("catalyst", "") or ""
+            _n456_pc_v   = int(d.get("persist_count", 0) or 0)
+            if _n456_cat_s and _n456_pc_v == 0:   _n456_fresh_q = "fresh_catalyst"
+            elif _n456_cat_s and _n456_pc_v <= 7: _n456_fresh_q = "recent"
+            else:                                  _n456_fresh_q = "stale"
+            _nsl_adj += _nde("catalyst_fresh_v1_perf", _n456_fresh_q)
+
+            # N550: Consecutive up days (streak_entry/neutral_entry/pullback_entry)
+            _n550_consec_v = int(d.get("consec_up", d.get("consec_green", 0)) or 0)
+            if   _n550_consec_v >= 3:  _n550_consec_q = "streak_entry"
+            elif _n550_consec_v <= -2: _n550_consec_q = "pullback_entry"
+            else:                      _n550_consec_q = "neutral_entry"
+            _nsl_adj += _nde("consec_up_v1_perf", _n550_consec_q)
+
+            # N558: Debt/equity ratio (low_debt/moderate_debt/high_debt)
+            _n558_de_v = float(d.get("debt_equity_ratio", d.get("debt_equity", 1.0)) or 1.0)
+            if   _n558_de_v <= 1.0: _n558_de_q = "low_debt"
+            elif _n558_de_v <= 2.0: _n558_de_q = "moderate_debt"
+            else:                   _n558_de_q = "high_debt"
+            _nsl_adj += _nde("debt_equity_v1_perf", _n558_de_q)
+
+            # N588: Technical pattern quality (high/medium/low_quality_pattern)
+            _n588_cp = (int(bool(d.get("cup_handle", False))) + int(bool(d.get("double_bottom", False)))
+                        + int(bool(d.get("bull_flag", False))) + int(bool(d.get("vcp", False))))
+            if   _n588_cp >= 2: _n588_pat_q = "high_quality_pattern"
+            elif _n588_cp == 1: _n588_pat_q = "medium_quality_pattern"
+            else:               _n588_pat_q = "low_quality_pattern"
+            _nsl_adj += _nde("tech_pattern_v1_perf", _n588_pat_q)
+
+            # N613: Price action quality (smooth_uptrend/recovering_action/choppy_action)
+            _n613_paq_v = d.get("price_action_quality", d.get("hh_hl_score", 0))
+            if isinstance(_n613_paq_v, str):
+                _n613_paq_s = _n613_paq_v.lower()
+                if any(x in _n613_paq_s for x in ("smooth", "uptrend", "clean")): _n613_pa_q = "smooth_uptrend"
+                elif any(x in _n613_paq_s for x in ("recover", "bounce")):         _n613_pa_q = "recovering_action"
+                else:                                                                _n613_pa_q = "choppy_action"
+            else:
+                _n613_paq_f = float(_n613_paq_v or 0)
+                if   _n613_paq_f >= 2: _n613_pa_q = "smooth_uptrend"
+                elif _n613_paq_f >= 1: _n613_pa_q = "recovering_action"
+                else:                  _n613_pa_q = "choppy_action"
+            _nsl_adj += _nde("price_action_v1_perf", _n613_pa_q)
+
+            # N620: Earnings quality (strong_beat/modest_beat/inline_earnings/miss_earnings)
+            _n620_eps_v = float(d.get("eps_surprise", d.get("earnings_surprise", 0)) or 0)
+            if   _n620_eps_v > 10:  _n620_eq_q = "strong_beat"
+            elif _n620_eps_v > 2:   _n620_eq_q = "modest_beat"
+            elif _n620_eps_v >= -2: _n620_eq_q = "inline_earnings"
+            else:                   _n620_eq_q = "miss_earnings"
+            _nsl_adj += _nde("earnings_qual_v1_perf", _n620_eq_q)
+
+            # N786: Breakout quality (strong_volume_breakout/breakout_moderate_vol/gap_and_hold/pattern_breakout/no_breakout)
+            _n786_rvol_v = float(d.get("rvol", 1.0) or 1.0)
+            _n786_brk_v  = bool(d.get("at_breakout", d.get("at_breakout_level", False)))
+            _n786_gap_v  = bool(d.get("gap_and_go", d.get("gapper", False)))
+            if   _n786_rvol_v > 3.0 and _n786_brk_v: _n786_bq_q = "strong_volume_breakout"
+            elif _n786_rvol_v > 2.0 and _n786_brk_v: _n786_bq_q = "breakout_moderate_vol"
+            elif _n786_gap_v:                          _n786_bq_q = "gap_and_hold"
+            elif _n786_brk_v:                          _n786_bq_q = "pattern_breakout"
+            else:                                      _n786_bq_q = "no_breakout"
+            _nsl_adj += _nde("breakout_qual_v1_perf", _n786_bq_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -31484,7 +31554,7 @@ def run():
                             _n433_s = "mild_up"
                     except Exception:
                         _n433_s = "mild_up"
-                    _buy_signals_merged["price_momentum_5d_perf"] = _n433_s
+                    _buy_signals_merged["price_mom_5d_v1_perf"] = _n433_s
                     # N434: news sentiment score at entry
                     try:
                         _n434_sent = float(live.get(tk, {}).get("news_sentiment") or live.get(tk, {}).get("sentiment_score") or 0)
@@ -31757,7 +31827,7 @@ def run():
                             _n456_s = "stale"
                     except Exception:
                         _n456_s = "recent"
-                    _buy_signals_merged["catalyst_freshness_perf"] = _n456_s
+                    _buy_signals_merged["catalyst_fresh_v1_perf"] = _n456_s
                     # N457: unusual options activity at entry
                     try:
                         _n457_of = bool(live.get(tk, {}).get('options_flow', False))
@@ -32888,7 +32958,7 @@ def run():
                             _n550_s = "neutral_entry"
                     except Exception:
                         _n550_s = "neutral_entry"
-                    _buy_signals_merged["consecutive_up_days_perf"] = _n550_s
+                    _buy_signals_merged["consec_up_v1_perf"] = _n550_s
                     # N551: Pre-market gap direction at entry
                     try:
                         _n551_gap = float(d.get("premarket_gap_pct", d.get("gap_pct", 0)) or 0)
@@ -32985,7 +33055,7 @@ def run():
                             _n558_s = "high_debt"
                     except Exception:
                         _n558_s = "moderate_debt"
-                    _buy_signals_merged["debt_to_equity_perf"] = _n558_s
+                    _buy_signals_merged["debt_equity_v1_perf"] = _n558_s
                     # N559: Share buyback activity at entry
                     try:
                         _n559_bb = float(d.get("buyback_yield", d.get("buyback_pct", 0)) or 0)
@@ -33350,7 +33420,7 @@ def run():
                             _n588_s = "low_quality_pattern"
                     except Exception:
                         _n588_s = "low_quality_pattern"
-                    _buy_signals_merged["technical_pattern_quality_perf"] = _n588_s
+                    _buy_signals_merged["tech_pattern_v1_perf"] = _n588_s
                     # N589: Market open strength at entry
                     try:
                         _n589_moc = float(tlog.get("market_open_chg", d.get("market_open_chg", d.get("spy_open_30min", 0))) or 0)
@@ -33674,7 +33744,7 @@ def run():
                                 _n613_s = "choppy_action"
                     except Exception:
                         _n613_s = "choppy_action"
-                    _buy_signals_merged["price_action_quality_perf"] = _n613_s
+                    _buy_signals_merged["price_action_v1_perf"] = _n613_s
                     # N614: Market cap tier at entry
                     try:
                         _n614_mc = float(d.get("market_cap", d.get("mktcap", 0)) or 0)
@@ -33767,7 +33837,7 @@ def run():
                             _n620_s = "miss_earnings"
                     except Exception:
                         _n620_s = "inline_earnings"
-                    _buy_signals_merged["earnings_quality_perf"] = _n620_s
+                    _buy_signals_merged["earnings_qual_v1_perf"] = _n620_s
                     # N621: Price vs momentum divergence at entry
                     try:
                         _n621_bull = bool(d.get("rsi_bull_divergence", False))
@@ -36201,7 +36271,7 @@ def run():
                             _n786_s = "no_breakout"
                     except Exception:
                         _n786_s = "no_breakout"
-                    _buy_signals_merged["breakout_quality_perf"] = _n786_s
+                    _buy_signals_merged["breakout_qual_v1_perf"] = _n786_s
                     # N787: False Breakout Risk
                     try:
                         if sc.get("vol_ratio", 1) < 1.2 and sc.get("at_breakout", False):
@@ -39462,7 +39532,7 @@ def run():
         _n430_list = _prev_learned.get("liquidity_dollar_volume_perf", [])
         _n431_list = _prev_learned.get("overnight_gap_entry_perf", [])
         _n432_list = _prev_learned.get("iv_percentile_entry_perf", [])
-        _n433_list = _prev_learned.get("price_momentum_5d_perf", [])
+        _n433_list = _prev_learned.get("price_mom_5d_v1_perf", [])
         _n434_list = _prev_learned.get("news_sent_score_v1_perf", [])
         _n435_list = _prev_learned.get("short_int_ratio_v1_perf", [])
         _n436_list = _prev_learned.get("analyst_revision_trend_perf", [])
@@ -39485,7 +39555,7 @@ def run():
         _n453_list = _prev_learned.get("institutional_activity_perf", [])
         _n454_list = _prev_learned.get("squeeze_setup_perf", [])
         _n455_list = _prev_learned.get("price_discovery_perf", [])
-        _n456_list = _prev_learned.get("catalyst_freshness_perf", [])
+        _n456_list = _prev_learned.get("catalyst_fresh_v1_perf", [])
         _n457_list = _prev_learned.get("options_unusualness_perf", [])
         _n458_list = _prev_learned.get("relative_volume_entry_perf", [])
         _n459_list = _prev_learned.get("vwap_position_entry_perf", [])
@@ -39579,7 +39649,7 @@ def run():
         _n547_list = _prev_learned.get("relative_volume_spike_perf", [])
         _n548_list = _prev_learned.get("atr_expansion_perf", [])
         _n549_list = _prev_learned.get("close_vs_range_perf", [])
-        _n550_list = _prev_learned.get("consecutive_up_days_perf", [])
+        _n550_list = _prev_learned.get("consec_up_v1_perf", [])
         _n551_list = _prev_learned.get("pm_gap_direction_perf", [])
         _n552_list = _prev_learned.get("orb_quality_v1_perf", [])
         _n553_list = _prev_learned.get("inst_own_quality_perf", [])
@@ -39587,7 +39657,7 @@ def run():
         _n555_list = _prev_learned.get("earnings_growth_rate_perf", [])
         _n556_list = _prev_learned.get("revenue_growth_rate_perf", [])
         _n557_list = _prev_learned.get("profit_margin_perf", [])
-        _n558_list = _prev_learned.get("debt_to_equity_perf", [])
+        _n558_list = _prev_learned.get("debt_equity_v1_perf", [])
         _n559_list = _prev_learned.get("buyback_activity_perf", [])
         _n560_list = _prev_learned.get("dividend_yield_entry_perf", [])
         _n561_list = _prev_learned.get("price_acceleration_1d_perf", [])
@@ -39617,7 +39687,7 @@ def run():
         _n585_list = _prev_learned.get("sector_news_catalyst_perf", [])
         _n586_list = _prev_learned.get("analyst_upgrade_momentum_perf", [])
         _n587_list = _prev_learned.get("earnings_estimate_revision_perf", [])
-        _n588_list = _prev_learned.get("technical_pattern_quality_perf", [])
+        _n588_list = _prev_learned.get("tech_pattern_v1_perf", [])
         _n589_list = _prev_learned.get("market_open_strength_perf", [])
         _n590_list = _prev_learned.get("price_range_percentile_perf", [])
         _n591_list = _prev_learned.get("entry_session_quality_perf", [])
@@ -39642,14 +39712,14 @@ def run():
         _n610_list = _prev_learned.get("time_of_day_score_perf", [])
         _n611_list = _prev_learned.get("consolidation_length_perf", [])
         _n612_list = _prev_learned.get("catalyst_type_detail_perf", [])
-        _n613_list = _prev_learned.get("price_action_quality_perf", [])
+        _n613_list = _prev_learned.get("price_action_v1_perf", [])
         _n614_list = _prev_learned.get("market_cap_size_perf", [])
         _n615_list = _prev_learned.get("options_flow_v1_perf", [])
         _n616_list = _prev_learned.get("institutional_filing_perf", [])
         _n617_list = _prev_learned.get("relative_strength_vs_spy_perf", [])
         _n618_list = _prev_learned.get("gap_fill_proximity_perf", [])
         _n619_list = _prev_learned.get("multi_timeframe_rsi_perf", [])
-        _n620_list = _prev_learned.get("earnings_quality_perf", [])
+        _n620_list = _prev_learned.get("earnings_qual_v1_perf", [])
         _n621_list = _prev_learned.get("rsi_divergence_perf", [])
         _n622_list = _prev_learned.get("atr_expansion_at_entry_perf", [])
         _n623_list = _prev_learned.get("spy_alignment_perf", [])
@@ -39742,6 +39812,7 @@ def run():
         _n709_list = _prev_learned.get("sector_cycle_phase_perf", [])
         _n710_list = _prev_learned.get("macro_tailwind_perf", [])
         _n751_list = _prev_learned.get("pm_gap_size_v2_perf", [])
+        _n786_list = _prev_learned.get("breakout_qual_v1_perf", [])
         _n803_list = _prev_learned.get("earnings_risk_zone_perf", [])
         _n832_list = _prev_learned.get("earnings_phase_perf", [])
 
@@ -44416,7 +44487,7 @@ def run():
             _learn_log.append(f"N432 IV percentile: high_iv={_a_n432['win_rate']:.0f}% low_iv={_b_n432['win_rate']:.0f}%WR")
 
         # ── N433: price momentum 5D tuner ────────────────────
-        _n433_raw = tlog.get("price_momentum_5d_perf", {})
+        _n433_raw = tlog.get("price_mom_5d_v1_perf", {})
         _n433_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n433_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n433 = next((s for s in _n433_list if s.get("state")=="strong_up"), _n433_list[0] if _n433_list else {"win_rate":50})
         _b_n433 = next((s for s in _n433_list if s.get("state")=="flat_neg"), _n433_list[-1] if _n433_list else {"win_rate":50})
@@ -44600,7 +44671,7 @@ def run():
             _learn_log.append(f"N455 Price Discovery: price_discovery={_a_n455['win_rate']:.0f}% consolidating={_b_n455['win_rate']:.0f}%WR")
 
         # ── N456: catalyst freshness tuner ────────────────────
-        _n456_raw = tlog.get("catalyst_freshness_perf", {})
+        _n456_raw = tlog.get("catalyst_fresh_v1_perf", {})
         _n456_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n456_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n456 = next((s for s in _n456_list if s.get("state")=="fresh_catalyst"), _n456_list[0] if _n456_list else {"win_rate":50})
         _b_n456 = next((s for s in _n456_list if s.get("state")=="stale"), _n456_list[-1] if _n456_list else {"win_rate":50})
@@ -45352,7 +45423,7 @@ def run():
             _learn_log.append(f"N549 Close vs Range: strong_close={_a_n549['win_rate']:.0f}% weak_close={_b_n549['win_rate']:.0f}%WR")
 
         # ── N550: Consecutive Up Days entry tuner ────────────────────
-        _n550_raw = tlog.get("consecutive_up_days_perf", {})
+        _n550_raw = tlog.get("consec_up_v1_perf", {})
         _n550_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n550_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n550 = next((s for s in _n550_list if s.get("state")=="streak_entry"), _n550_list[0] if _n550_list else {"win_rate":50})
         _b_n550 = next((s for s in _n550_list if s.get("state")=="pullback_entry"), _n550_list[-1] if _n550_list else {"win_rate":50})
@@ -45416,7 +45487,7 @@ def run():
             _learn_log.append(f"N557 Profit Margin: high_margin={_a_n557['win_rate']:.0f}% thin_margin={_b_n557['win_rate']:.0f}%WR")
 
         # ── N558: Debt-to-Equity entry tuner ────────────────────
-        _n558_raw = tlog.get("debt_to_equity_perf", {})
+        _n558_raw = tlog.get("debt_equity_v1_perf", {})
         _n558_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n558_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n558 = next((s for s in _n558_list if s.get("state")=="low_debt"), _n558_list[0] if _n558_list else {"win_rate":50})
         _b_n558 = next((s for s in _n558_list if s.get("state")=="high_debt"), _n558_list[-1] if _n558_list else {"win_rate":50})
@@ -45656,7 +45727,7 @@ def run():
             _learn_log.append(f"N587 EPS Revisions: rising_estimates={_a_n587['win_rate']:.0f}% falling_estimates={_b_n587['win_rate']:.0f}%WR")
 
         # ── N588: Technical Pattern Quality entry tuner ────────────────────
-        _n588_raw = tlog.get("technical_pattern_quality_perf", {})
+        _n588_raw = tlog.get("tech_pattern_v1_perf", {})
         _n588_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n588_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n588 = next((s for s in _n588_list if s.get("state")=="high_quality_pattern"), _n588_list[0] if _n588_list else {"win_rate":50})
         _b_n588 = next((s for s in _n588_list if s.get("state")=="low_quality_pattern"), _n588_list[-1] if _n588_list else {"win_rate":50})
@@ -45856,7 +45927,7 @@ def run():
             _learn_log.append(f"N612 CatalystDetail: earnings_catalyst={_a_n612['win_rate']:.0f}% technical_catalyst={_b_n612['win_rate']:.0f}%WR")
 
         # ── N613: Price Action Quality entry tuner ────────────────────
-        _n613_raw = tlog.get("price_action_quality_perf", {})
+        _n613_raw = tlog.get("price_action_v1_perf", {})
         _n613_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n613_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n613 = next((s for s in _n613_list if s.get("state")=="smooth_uptrend"), _n613_list[0] if _n613_list else {"win_rate":50})
         _b_n613 = next((s for s in _n613_list if s.get("state")=="choppy_action"), _n613_list[-1] if _n613_list else {"win_rate":50})
@@ -45912,7 +45983,7 @@ def run():
             _learn_log.append(f"N619 MTF_RSI: bullish_all_tf={_a_n619['win_rate']:.0f}% bearish_all_tf={_b_n619['win_rate']:.0f}%WR")
 
         # ── N620: Earnings Quality entry tuner ────────────────────
-        _n620_raw = tlog.get("earnings_quality_perf", {})
+        _n620_raw = tlog.get("earnings_qual_v1_perf", {})
         _n620_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n620_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n620 = next((s for s in _n620_list if s.get("state")=="strong_beat"), _n620_list[0] if _n620_list else {"win_rate":50})
         _b_n620 = next((s for s in _n620_list if s.get("state")=="miss_earnings"), _n620_list[-1] if _n620_list else {"win_rate":50})
@@ -46655,6 +46726,14 @@ def run():
         if _n751_list:
             _learn_log.append(f"N751 PMGapV2: strong_pm_gap_up={_a_n751['win_rate']:.0f}% pm_gap_down={_b_n751['win_rate']:.0f}%WR")
 
+        # ── N786: Breakout Quality v1 entry tuner ────────────────────
+        _n786_raw = tlog.get("breakout_qual_v1_perf", {})
+        _n786_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n786_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
+        _a_n786 = next((s for s in _n786_list if s.get("state")=="strong_volume_breakout"), _n786_list[0] if _n786_list else {"win_rate":50})
+        _b_n786 = next((s for s in _n786_list if s.get("state")=="no_breakout"), _n786_list[-1] if _n786_list else {"win_rate":50})
+        if _n786_list:
+            _learn_log.append(f"N786 BreakoutQual: strong_vol={_a_n786['win_rate']:.0f}% no_breakout={_b_n786['win_rate']:.0f}%WR")
+
         # ── N803: Earnings Risk Zone entry tuner ────────────────────
         _n803_raw = tlog.get("earnings_risk_zone_perf", {})
         _n803_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n803_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
@@ -47011,6 +47090,14 @@ def run():
             ("sector_rotation_v1_perf",         "sector_rotation_v1"),
             ("options_flow_v1_perf",            "options_flow_v1"),
             ("insider_activity_v1_perf",        "insider_activity_v1"),
+            ("price_mom_5d_v1_perf",            "price_mom_5d_v1"),
+            ("catalyst_fresh_v1_perf",          "catalyst_fresh_v1"),
+            ("consec_up_v1_perf",               "consec_up_v1"),
+            ("debt_equity_v1_perf",             "debt_equity_v1"),
+            ("tech_pattern_v1_perf",            "tech_pattern_v1"),
+            ("price_action_v1_perf",            "price_action_v1"),
+            ("earnings_qual_v1_perf",           "earnings_qual_v1"),
+            ("breakout_qual_v1_perf",           "breakout_qual_v1"),
             ("signal_freshness_perf",           "signal_freshness"),
             ("order_flow_pressure_perf",     "order_flow_pressure"),
             ("time_weighted_momentum_perf",  "time_weighted_momentum"),
@@ -47749,7 +47836,7 @@ def run():
             "liquidity_dollar_volume_perf": _n430_list,  # N430: liquidity dollar volume at entry vs outcome
             "overnight_gap_entry_perf": _n431_list,  # N431: overnight gap entry at entry vs outcome
             "iv_percentile_entry_perf": _n432_list,  # N432: IV percentile entry at entry vs outcome
-            "price_momentum_5d_perf": _n433_list,  # N433: price momentum 5D at entry vs outcome
+            "price_mom_5d_v1_perf": _n433_list,  # N433: price momentum 5D v1 at entry vs outcome
             "news_sent_score_v1_perf":   _n434_list,  # N434: news sentiment score v1 at entry vs outcome
             "short_int_ratio_v1_perf":   _n435_list,  # N435: short interest ratio v1 at entry vs outcome
             "analyst_revision_trend_perf": _n436_list,  # N436: analyst revision trend at entry vs outcome
@@ -47772,7 +47859,7 @@ def run():
             "institutional_activity_perf": _n453_list,  # N453: institutional/dark pool activity at entry vs outcome
             "squeeze_setup_perf": _n454_list,  # N454: TTM squeeze setup at entry vs outcome
             "price_discovery_perf": _n455_list,  # N455: price discovery (52w breakout) at entry vs outcome
-            "catalyst_freshness_perf": _n456_list,  # N456: catalyst freshness at entry vs outcome
+            "catalyst_fresh_v1_perf": _n456_list,  # N456: catalyst freshness v1 at entry vs outcome
             "options_unusualness_perf": _n457_list,  # N457: unusual options activity at entry vs outcome
             "relative_volume_entry_perf": _n458_list,  # N458: relative volume at entry vs outcome
             "vwap_position_entry_perf": _n459_list,  # N459: VWAP position at entry vs outcome
@@ -47866,7 +47953,7 @@ def run():
             "relative_volume_spike_perf": _n547_list,  # N547: RVOL spike (extreme/high/normal/low) at entry vs outcome
             "atr_expansion_perf": _n548_list,  # N548: ATR expansion (expanding/stable/contracting) at entry vs outcome
             "close_vs_range_perf": _n549_list,  # N549: close vs day range (strong/mid/weak close) at entry vs outcome
-            "consecutive_up_days_perf": _n550_list,  # N550: consecutive up days (streak/neutral/pullback) at entry vs outcome
+            "consec_up_v1_perf": _n550_list,  # N550: consecutive up days v1 (streak/neutral/pullback_entry) vs outcome
             "pm_gap_direction_perf": _n551_list,  # N551: pre-market gap direction (gap_up_strong/gap_flat/gap_down_strong) at entry vs outcome
             "pm_gap_size_v2_perf": _n751_list,  # N751: pre-market gap size tier (strong_pm_gap_up/small_pm_gap_up/flat_pm/pm_gap_down) vs outcome
             "orb_quality_v1_perf": _n552_list,  # N552: ORB quality v1 (orb_breakout/inside_orb/orb_breakdown) vs outcome
@@ -47875,7 +47962,7 @@ def run():
             "earnings_growth_rate_perf": _n555_list,  # N555: EPS growth rate (high/moderate/low) at entry vs outcome
             "revenue_growth_rate_perf": _n556_list,  # N556: revenue growth rate (strong/moderate/weak) at entry vs outcome
             "profit_margin_perf": _n557_list,  # N557: net profit margin (high/average/thin) at entry vs outcome
-            "debt_to_equity_perf": _n558_list,  # N558: debt-to-equity ratio (low/moderate/high) at entry vs outcome
+            "debt_equity_v1_perf": _n558_list,  # N558: debt/equity ratio v1 (low/moderate/high_debt) vs outcome
             "buyback_activity_perf": _n559_list,  # N559: share buyback activity (active/minimal/diluting) at entry vs outcome
             "dividend_yield_entry_perf": _n560_list,  # N560: dividend yield at entry (high/moderate/no_yield) vs outcome
             "price_acceleration_1d_perf": _n561_list,  # N561: 1-day price acceleration (strong_accel/mild_accel/decel_flat) at entry vs outcome
@@ -47905,7 +47992,7 @@ def run():
             "sector_news_catalyst_perf": _n585_list,  # N585: sector news catalyst (bullish/bearish/no_sector_catalyst) at entry vs outcome
             "analyst_upgrade_momentum_perf": _n586_list,  # N586: analyst upgrade recency (fresh/stale/no_upgrade) at entry vs outcome
             "earnings_estimate_revision_perf": _n587_list,  # N587: EPS estimate revision (rising/stable/falling_estimates) at entry vs outcome
-            "technical_pattern_quality_perf": _n588_list,  # N588: technical pattern quality (high/medium/low_quality_pattern) at entry vs outcome
+            "tech_pattern_v1_perf": _n588_list,  # N588: technical pattern quality v1 (high/medium/low_quality_pattern) vs outcome
             "market_open_strength_perf": _n589_list,  # N589: market open strength (strong/weak/flat_open) at entry vs outcome
             "price_range_percentile_perf": _n590_list,  # N590: 52-week range position (upper/mid/lower_range) at entry vs outcome
             "entry_session_quality_perf": _n591_list,  # N591: trading session quality at entry (morning/midday/afternoon_session) vs outcome
@@ -47930,14 +48017,14 @@ def run():
             "time_of_day_score_perf": _n610_list,  # N610: time-of-day score bucket (prime/good/avoid_window) vs outcome
             "consolidation_length_perf": _n611_list,  # N611: consolidation length before breakout (tight/extended/stale_consolidation) vs outcome
             "catalyst_type_detail_perf": _n612_list,  # N612: detailed catalyst type (earnings/product/upgrade/news/technical_catalyst) vs outcome
-            "price_action_quality_perf": _n613_list,  # N613: price action quality at entry (smooth_uptrend/recovering_action/choppy_action) vs outcome
+            "price_action_v1_perf": _n613_list,  # N613: price action quality v1 (smooth_uptrend/recovering_action/choppy_action) vs outcome
             "market_cap_size_perf": _n614_list,   # N614: market cap size (nano/micro/small/mid_cap) vs outcome
             "options_flow_v1_perf": _n615_list,  # N615: options flow v1 (bullish_sweep/call_buying/put_buying/neutral_flow) vs outcome
             "institutional_filing_perf": _n616_list,  # N616: 13F institutional filing signal (new_inst_position/increased/no_change/decreased_inst) vs outcome
             "relative_strength_vs_spy_perf": _n617_list,  # N617: RS vs SPY on entry day (strong_rs/inline_rs/weak_rs) vs outcome
             "gap_fill_proximity_perf": _n618_list,  # N618: distance to gap fill level (approaching_gap_fill/gap_fill_done/far_from_gap) vs outcome
             "multi_timeframe_rsi_perf": _n619_list,  # N619: multi-timeframe RSI agreement (bullish_all_tf/mixed_tf/bearish_all_tf) vs outcome
-            "earnings_quality_perf": _n620_list,  # N620: most recent earnings quality (strong_beat/modest_beat/inline_earnings/miss_earnings) vs outcome
+            "earnings_qual_v1_perf": _n620_list,  # N620: earnings quality v1 (strong_beat/modest_beat/inline_earnings/miss_earnings) vs outcome
             "rsi_divergence_perf": _n621_list,  # N621: RSI divergence (bullish_divergence/no_divergence/bearish_divergence) vs outcome
             "atr_expansion_at_entry_perf": _n622_list,  # N622: ATR expanding or contracting at entry (expanding_atr/stable_atr/contracting_atr) vs outcome
             "spy_alignment_perf": _n623_list,  # N623: SPY trend alignment (spy_strongly_bullish/spy_neutral/spy_bearish) vs outcome
@@ -48029,6 +48116,7 @@ def run():
             "position_maturity_perf": _n708_list,  # N708: position maturity (fresh_entry_day1/early_hold_2d/developing_hold/mature_hold/long_hold) vs outcome
             "sector_cycle_phase_perf": _n709_list,  # N709: sector cycle phase (sector_expansion_phase/sector_leadership_phase/sector_recovery_phase/sector_contraction_phase) vs outcome
             "macro_tailwind_perf": _n710_list,  # N710: macro tailwind (strong_macro_tailwind/mild_macro_tailwind/macro_neutral/macro_headwind) vs outcome
+            "breakout_qual_v1_perf":   _n786_list,  # N786: breakout quality v1 (strong_volume_breakout/breakout_moderate_vol/gap_and_hold/pattern_breakout/no_breakout) vs outcome
             "earnings_risk_zone_perf": _n803_list,  # N803: earnings risk zone (safe_zone/aware_window/caution_window/danger_zone) vs outcome
             "earnings_phase_perf": _n832_list,      # N832: earnings phase (neutral_earnings/pre_earnings/post_earnings/earnings_imminent) vs outcome
             "volatility_regime_entry_perf": [],     # N711 Volatility Regime Entry
@@ -48160,6 +48248,14 @@ def run():
             "sector_rotation_v1_perf":         [],
             "options_flow_v1_perf":            [],
             "insider_activity_v1_perf":        [],
+            "price_mom_5d_v1_perf":            [],
+            "catalyst_fresh_v1_perf":          [],
+            "consec_up_v1_perf":               [],
+            "debt_equity_v1_perf":             [],
+            "tech_pattern_v1_perf":            [],
+            "price_action_v1_perf":            [],
+            "earnings_qual_v1_perf":           [],
+            "breakout_qual_v1_perf":           [],
             "institutional_flow_perf":         [],
             "inst_flow_quality_perf":          [],
             "inst_ownership_perf":             [],
@@ -48242,6 +48338,14 @@ def run():
             "mean_rev_v1_perf":                [],
             "options_flow_v1_perf":            [],
             "insider_activity_v1_perf":        [],
+            "price_mom_5d_v1_perf":            [],
+            "catalyst_fresh_v1_perf":          [],
+            "consec_up_v1_perf":               [],
+            "debt_equity_v1_perf":             [],
+            "tech_pattern_v1_perf":            [],
+            "price_action_v1_perf":            [],
+            "earnings_qual_v1_perf":           [],
+            "breakout_qual_v1_perf":           [],
             "pm_gap_direction_perf":           [],
             "pm_gap_size_v2_perf":             [],
             "relative_strength_tier_perf":     [],
@@ -48268,6 +48372,14 @@ def run():
             "sector_rotation_v1_perf":         [],
             "options_flow_v1_perf":            [],
             "insider_activity_v1_perf":        [],
+            "price_mom_5d_v1_perf":            [],
+            "catalyst_fresh_v1_perf":          [],
+            "consec_up_v1_perf":               [],
+            "debt_equity_v1_perf":             [],
+            "tech_pattern_v1_perf":            [],
+            "price_action_v1_perf":            [],
+            "earnings_qual_v1_perf":           [],
+            "breakout_qual_v1_perf":           [],
             "signal_freshness_perf":           [],
             "order_flow_imbalance_perf":    [],
             "order_flow_pressure_perf":     [],
