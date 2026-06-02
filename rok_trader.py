@@ -26521,8 +26521,18 @@ def run():
                     else:
                         _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
                 elif age_minutes >= 120:
-                    # 120min absolute timeout — exit regardless to force capital recycling
-                    _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                    # Smart 120min exit: if up 1.5%+ and score still strong, let winners run to 180min
+                    _live_d_120 = live.get(sym, {}) or {}
+                    _sc_120 = score(sym, _live_d_120) if _live_d_120 else 0
+                    _rvol_120 = float(_live_d_120.get("rvol", 1.0) or 1.0)
+                    if (pnl_pct >= 1.5 and _sc_120 >= 65 and _rvol_120 >= 1.2
+                            and pnl_pct < _scalp_pthr and age_minutes < 180):
+                        pass  # strong winner still hot — extend to 180min cap
+                    else:
+                        _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 180:
+                    # 180min absolute timeout — hard cap, exit regardless
+                    _scalp_exit_reason = f"180min timeout exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
             # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
