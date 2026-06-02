@@ -24365,6 +24365,21 @@ def score(tk, d, sentiment=0, regime_adj=0):
                         _stgwr = float(_stg_rec.get("win_rate", 50) or 50)
                         if _stgwr <= 25:  _veto_adj -= 6
                         elif _stgwr >= 80: _veto_adj += 4
+                # ── Compound elite combo: accum(moderate/heavy) + ichimoku(above) ──
+                # accum=moderate: 100% WR; ichimoku=above: 64% WR — together = very high confidence
+                _combo_accum_good  = _fb_ac_bkt in ("moderate", "heavy")
+                _combo_ichi_good   = _fb_ichi_bkt == "above"
+                _combo_adx_good    = _fb_adx_bkt in ("strong", "developing")
+                _combo_grade_good  = _fb_grade in ("A", "A+", "B+")
+                _elite_combo_count = sum([_combo_accum_good, _combo_ichi_good, _combo_adx_good, _combo_grade_good])
+                if _elite_combo_count >= 4:
+                    _veto_adj += 6   # all four elite conditions → very high conviction
+                elif _elite_combo_count >= 3 and _combo_accum_good:
+                    _veto_adj += 3   # accum + 2 other positives → meaningful boost
+                # Hard anti-combo: no accum + weak ichimoku/ADX = almost always losing
+                _anti_combo_count = sum([_fb_ac_bkt == "none", _fb_ichi_bkt == "below", _fb_adx_bkt == "weak"])
+                if _anti_combo_count >= 2:
+                    _veto_adj -= 10  # two anti-patterns together = high-probability loser
             except Exception:
                 pass
             _nsl_adj += _veto_adj
