@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 40      # raised from 10: data shows 0-20% WR for scores 20-39, 70%+ WR at 100
+MIN_BUY_SCORE      = 60      # raised from 40: 77% of entries score 100+ (compression) — 60 filters weak setups
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 6       # more positions per sector to generate more data
@@ -24992,7 +24992,7 @@ def run():
             if not tlog.get("strategy_mode"):
                 tlog["strategy_mode"] = "MARKET_CLOSED"
             if not tlog.get("effective_min_score"):
-                tlog["effective_min_score"] = 40
+                tlog["effective_min_score"] = 60
 
             # Bot brain summary for the frontend
             tlog["bot_brain_summary"] = {
@@ -29195,7 +29195,7 @@ def run():
                 _sec_adv_lb = int(_tk_sig_sc.get("sectors_advancing_now", 5) or 5)
                 if _sec_adv_lb < 2:
                     _learned_bonus += _npen("sector_breadth_perf", "single_sector", 35, -3)  # 29% WR n=17
-                _learned_bonus = max(-10, min(18, _learned_bonus))
+                _learned_bonus = max(-20, min(18, _learned_bonus))  # expanded penalty floor: -10→-20
             except Exception:
                 _learned_bonus = 0
 
