@@ -28599,7 +28599,7 @@ def run():
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
                     _learned_bonus += _nbns("pocket_pivot_perf", "pp", 65, 2)
                 if bool(_tk_sig_sc.get("ha_bull", False)):
-                    _learned_bonus += _nbns("ha_trend_perf", "bullish", 62, 1)
+                    _learned_bonus += _nbns("ha_trend_perf", "bull", 60, 2)  # 69.7% WR n=33 (key fix: was "bullish")
                 # Expanded learned bonus checks — more signal/state combinations
                 if bool(_tk_sig_sc.get("cup_handle", False)):
                     _learned_bonus += _nbns("cup_handle_perf", "cup", 65, 2)
@@ -28708,6 +28708,8 @@ def run():
                 _accum_bkt_lb = ("heavy" if _accum_sc_lb >= 8 else "moderate" if _accum_sc_lb >= 5 else "light" if _accum_sc_lb >= 2 else "none")
                 if _accum_bkt_lb == "none":
                     _learned_bonus += _npen("accum_perf", "none", 20, -8)  # 11% WR: severe penalty
+                elif _accum_bkt_lb == "light":
+                    _learned_bonus += _nbns("accum_perf", "light", 60, 2)  # 69.7% WR n=33 — common + reliable
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # moderate=100% WR, heavy=strong
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)     # separate heavy bonus
@@ -28814,7 +28816,7 @@ def run():
                 # Catalyst type other: 71% WR bonus
                 _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if _cat_other_lb and "none" not in _cat_other_lb and "unknown" not in _cat_other_lb:
-                    _learned_bonus += _nbns("catalyst_type_perf", "other", 60, 1)  # 71% WR
+                    _learned_bonus += _nbns("catalyst_type_perf", "other", 60, 2)  # 71% WR n=38 — most reliable signal
                 # TT (trend template): fair=80% WR, weak=52% WR — score derived from numeric tt value
                 _tt_num_lb = int(_tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw", 0)) or 0)
                 _tt_bkt_lb = ("elite" if _tt_num_lb >= 7 else "good" if _tt_num_lb >= 5 else "fair" if _tt_num_lb >= 3 else "weak")
@@ -28828,7 +28830,7 @@ def run():
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 3)  # 80% WR n=20 — top signal
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
-                    _learned_bonus += _npen("obv_trend_perf", "falling", 48, -1)  # 46% WR n=26
+                    _learned_bonus += _npen("obv_trend_perf", "falling", 48, -2)  # 46% WR n=26 — reliable signal
                 # Higher lows confirmed: 88% WR n=8 (strongest signal in dataset)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 4)  # 88% WR — boosted to +4
@@ -28837,10 +28839,12 @@ def run():
                 # HA trend: bear=38% WR n=13 (penalty), bull=70% is fine
                 if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -2)    # 38% WR n=13
-                # RVOL tier: weak (rvol<0.8) = 43% WR n=14
+                # RVOL tier: normal(0.8-1.5)=70% WR n=30 (+1 bonus!), weak(<0.8)=43% WR n=14
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
                     _learned_bonus += _npen("rvol_tier_perf", "weak", 45, -2)   # 43% WR n=14
+                elif 0.8 <= _rvol_t_lb < 1.5:
+                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 60, 1)  # 70% WR n=30 — surprisingly strong
                 # ST gap: no_st=80% WR n=15 (neutral/flat ST is fine); normal=22% WR already penalized above
                 _st_bul_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
