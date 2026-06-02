@@ -28557,6 +28557,52 @@ def run():
                     _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
                 elif _ptier_lb == "small":
                     _learned_bonus += _nbns("price_tier_perf", "small", 60, 1)   # 80% WR in data!
+                # Ichimoku cloud position: inside=80% WR, below=22% WR
+                _ich_lb = str(_tk_sig_sc.get("ichimoku_state", _tk_sig_sc.get("ichimoku_pos", "")) or "")
+                if "inside" in _ich_lb or _tk_sig_sc.get("ichimoku_above"):
+                    _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 2)    # 80% WR
+                elif "below" in _ich_lb or (not _tk_sig_sc.get("ichimoku_above") and "above" not in _ich_lb and _ich_lb):
+                    _learned_bonus += _npen("ichimoku_perf", "below", 30, -2)    # 22% WR
+                # HA consecutive candles: building=78% WR
+                _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
+                if _ha_consec_lb >= 3:
+                    _learned_bonus += _nbns("ha_consec_perf", "building", 60, 1) # 78% WR
+                # Concentration: 3-4 open positions = 80% WR
+                _open_pos_lb = len(held) if "held" in dir() else 0
+                if 3 <= _open_pos_lb <= 4:
+                    _learned_bonus += _nbns("concentration_perf", "3-4", 60, 1)  # 80% WR
+                # Reentry type: winner reentry = 80% WR
+                _reentry_lb = str(_tk_sig_sc.get("reentry_type", "") or "")
+                if "winner" in _reentry_lb or "re_winner" in _reentry_lb:
+                    _learned_bonus += _nbns("reentry_perf", "winner", 60, 2)     # 80% WR
+                # MFI distribution zone: 75% WR
+                _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
+                if _mfi_lb >= 60:
+                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 1)  # 75% WR
+                # ATR pct: 4%+ = 74% WR (high volatility entries work well)
+                _atr_pct_lb = float(_tk_sig_sc.get("atr_pct", _tk_sig_sc.get("atr", 0)) or 0)
+                if _atr_pct_lb >= 4.0:
+                    _learned_bonus += _nbns("atr_perf", "4%+", 60, 1)           # 74% WR
+                # ROC: positive = 71% WR
+                _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
+                if _roc_lb > 0:
+                    _learned_bonus += _nbns("roc_perf", "positive", 60, 1)      # 71% WR
+                # RSI entry: neutral (40-60) = 30% WR — penalize
+                _rsi_lb = float(_tk_sig_sc.get("rsi", 50) or 50)
+                if 40 <= _rsi_lb <= 60:
+                    _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -2) # 30% WR
+                # ST gap: normal = 22% WR — heavy penalty
+                _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
+                if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
+                    _learned_bonus += _npen("st_gap_perf", "normal", 30, -2)    # 22% WR
+                # Catalyst type other: 71% WR bonus
+                _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
+                if _cat_other_lb and "none" not in _cat_other_lb and "unknown" not in _cat_other_lb:
+                    _learned_bonus += _nbns("catalyst_type_perf", "other", 60, 1)  # 71% WR
+                # TT (trend template): fair = 80% WR
+                _tt_lb = str(_tk_sig_sc.get("tt_score", _tk_sig_sc.get("trend_template", "")) or "")
+                if _tt_lb == "fair" or (not _tt_lb and _tk_sig_sc.get("ema_stacked_bull")):
+                    _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # 80% WR
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
