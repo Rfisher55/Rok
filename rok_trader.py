@@ -1114,6 +1114,46 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             e["is_reentry"] = False
 
+        # ── N871-N880: entry state tags for advanced neurons ─────────────────
+        try:
+            _n871_rvol = float(signals.get("rvol", 1.0) or 1.0)
+            _n871_chg  = float(signals.get("change_pct", 0) or 0)
+            e["order_flow_imbalance_state"] = ("buy_dominated" if _n871_rvol >= 1.5 and _n871_chg > 0
+                                               else "sell_dominated" if _n871_rvol >= 1.5 and _n871_chg < 0
+                                               else "balanced_flow")
+            _n872_roc5 = float(signals.get("roc5", 0) or 0)
+            _n872_mslp = float(signals.get("macd_slope", 0) or 0)
+            e["time_weighted_momentum_state"] = ("accelerating" if _n872_roc5 > 1 and _n872_mslp > 0
+                                                 else "decelerating" if _n872_roc5 < -1 or _n872_mslp < 0
+                                                 else "flat")
+            e["relative_volume_burst_state"] = ("burst_3x" if _n871_rvol >= 3.0
+                                                else "elevated_2x" if _n871_rvol >= 2.0
+                                                else "normal_vol")
+            _n874_cat = bool(signals.get("catalyst", False) or signals.get("news_catalyst", False)
+                             or signals.get("earnings_beat", False) or int(signals.get("news_count_24h", 0) or 0) >= 5)
+            e["catalyst_timing_state"] = "fresh_catalyst" if _n874_cat else "stale_catalyst"
+            e["multi_timeframe_alignment_state"] = ("aligned_all" if signals.get("mtf_aligned")
+                                                     else "mixed_signals")
+            e["market_maker_activity_state"] = ("mm_active" if signals.get("rvol_surge") else "mm_normal")
+            _n877_et_h = e.get("et_hour_at_entry", -1)
+            e["alpha_decay_risk_state"] = ("low_decay" if 9 <= _n877_et_h <= 11
+                                           else "high_decay" if _n877_et_h >= 15
+                                           else "moderate_decay")
+            _n878_52wh = float(signals.get("near_52w_high", 1.0) or 1.0)
+            e["price_discovery_phase_state"] = ("discovery_up" if _n878_52wh >= 0.98
+                                                else "established" if _n878_52wh >= 0.85
+                                                else "recovery")
+            _n879_obv = bool(signals.get("obv_rising", False))
+            _n879_chg = float(signals.get("change_pct", 0) or 0)
+            e["smart_money_divergence_state"] = ("diverging_bullish" if _n879_obv and _n879_chg < 0
+                                                 else "diverging_bearish" if not _n879_obv and _n879_chg > 0
+                                                 else "aligned")
+            e["volatility_regime_shift_state"] = ("vol_expanding" if signals.get("hv_expanding")
+                                                  else "vol_contracting" if signals.get("hv_contracting")
+                                                  else "stable_vol")
+        except Exception:
+            pass
+
         # ── N891-N900: entry state tags ───────────────────────────────────────
         # VIX direction at entry (N892)
         try:
@@ -21972,6 +22012,157 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_sq_bkt = ("squeeze" if d.get("ttm_squeeze_fired") or d.get("in_squeeze") else "no_squeeze")
             _nsl_adj += _nde("squeeze_perf", _fb_sq_bkt)
 
+            # OBV trend: rising OBV = institutional accumulation (N799)
+            # obv_rising is in live signals; obv_trend is only in entry records
+            _fb_obv = "rising" if d.get("obv_rising", False) else "falling"
+            _nsl_adj += _nde("obv_trend_perf", _fb_obv)
+
+            # Stochastic zone: overbought entries often fail (N726)
+            _fb_sk = float(d.get("stoch_k", 50) or 50)
+            _fb_sk_bkt = ("overbought" if _fb_sk > 80 else "oversold" if _fb_sk < 20 else "neutral")
+            _nsl_adj += _nde("stoch_zone_perf", _fb_sk_bkt)
+
+            # MTF alignment: full agreement across timeframes (N735)
+            _fb_mtf = "full" if d.get("mtf_aligned") else "none"
+            _nsl_adj += _nde("mtf_align_perf", _fb_mtf)
+
+            # Bollinger band position (N839)
+            _fb_bb_v = float(d.get("bb_pos", 50) or 50)
+            _fb_bb_bkt = ("upper" if _fb_bb_v >= 80 else "lower" if _fb_bb_v <= 20 else "mid")
+            _nsl_adj += _nde("bb_zone_perf", _fb_bb_bkt)
+
+            # IBD RS Rating bracket (N665)
+            _fb_rs_r = float(d.get("rs_rating", 50) or 50)
+            _fb_rs_bkt = ("elite" if _fb_rs_r >= 90 else "strong" if _fb_rs_r >= 75 else "average" if _fb_rs_r >= 50 else "weak")
+            _nsl_adj += _nde("rs_rating_perf", _fb_rs_bkt)
+
+            # RS momentum state: leading both short+long-term (N879)
+            _fb_rs5_v  = float(d.get("rs5", 0) or 0)
+            _fb_rs63_v = float(d.get("rs63", 0) or 0)
+            _fb_rsmom = ("leading" if _fb_rs5_v > 1.0 and _fb_rs63_v > 1.0
+                         else "improving" if _fb_rs5_v > _fb_rs63_v else "lagging")
+            _nsl_adj += _nde("rs_mom_perf", _fb_rsmom)
+
+            # Intraday momentum bucket (N703): % from open
+            _fb_id_mom = float(d.get("intraday", 0) or 0)
+            _fb_im_bkt = ("extended" if _fb_id_mom > 5.0 else "runner" if _fb_id_mom > 2.0
+                          else "early" if abs(_fb_id_mom) <= 2.0 else "pullback")
+            _nsl_adj += _nde("intraday_mom_perf", _fb_im_bkt)
+
+            # ADX trend strength bucket (N713)
+            _fb_adx_v = float(d.get("adx", 0) or 0)
+            _fb_adx_bkt = ("strong" if _fb_adx_v >= 25 else "developing" if _fb_adx_v >= 15 else "weak")
+            _nsl_adj += _nde("adx_perf", _fb_adx_bkt)
+
+            # ROC 5-day bucket (N2179)
+            _fb_roc5_v = float(d.get("roc5", 0) or 0)
+            _fb_roc_bkt = ("strong_up" if _fb_roc5_v > 5 else "up" if _fb_roc5_v > 1
+                           else "flat" if abs(_fb_roc5_v) <= 1 else "down")
+            _nsl_adj += _nde("roc_perf", _fb_roc_bkt)
+
+            # Heikin-Ashi trend at entry (N786): ha_bull is in live signals
+            _fb_ha = "bull" if d.get("ha_bull", True) else "bear"
+            _nsl_adj += _nde("ha_trend_perf", _fb_ha)
+
+            # N871: Order flow imbalance (RVOL + direction)
+            _fb_n871_rvol = float(d.get("rvol", 1.0) or 1.0)
+            _fb_n871_chg  = float(d.get("change_pct", 0) or 0)
+            _fb_n871_bkt  = ("buy_dominated" if _fb_n871_rvol >= 1.5 and _fb_n871_chg > 0
+                             else "sell_dominated" if _fb_n871_rvol >= 1.5 and _fb_n871_chg < 0
+                             else "balanced_flow")
+            _nsl_adj += _nde("order_flow_imbalance_perf", _fb_n871_bkt)
+
+            # N872: Time-weighted momentum (ROC5 + MACD slope direction)
+            _fb_n872_roc5 = float(d.get("roc5", 0) or 0)
+            _fb_n872_mslp = float(d.get("macd_slope", 0) or 0)
+            _fb_n872_bkt  = ("accelerating" if _fb_n872_roc5 > 1 and _fb_n872_mslp > 0
+                             else "decelerating" if _fb_n872_roc5 < -1 or _fb_n872_mslp < 0
+                             else "flat")
+            _nsl_adj += _nde("time_weighted_momentum_perf", _fb_n872_bkt)
+
+            # N873: Relative volume burst tier
+            _fb_n873_bkt = ("burst_3x" if _fb_n871_rvol >= 3.0 else "elevated_2x" if _fb_n871_rvol >= 2.0 else "normal_vol")
+            _nsl_adj += _nde("relative_volume_burst_perf", _fb_n873_bkt)
+
+            # N875: MTF alignment state
+            _fb_n875_bkt = "aligned_all" if d.get("mtf_aligned") else "mixed_signals"
+            _nsl_adj += _nde("multi_timeframe_alignment_perf", _fb_n875_bkt)
+
+            # N879: Smart money divergence (OBV vs price direction)
+            _fb_n879_obv = bool(d.get("obv_rising", False))
+            _fb_n879_chg = float(d.get("change_pct", 0) or 0)
+            _fb_n879_bkt = ("diverging_bullish" if _fb_n879_obv and _fb_n879_chg < 0
+                            else "diverging_bearish" if not _fb_n879_obv and _fb_n879_chg > 0
+                            else "aligned")
+            _nsl_adj += _nde("smart_money_divergence_perf", _fb_n879_bkt)
+
+            # N880: Volatility regime shift (HV expanding vs contracting)
+            _fb_n880_bkt = ("vol_expanding" if d.get("hv_expanding") else
+                            "vol_contracting" if d.get("hv_contracting") else "stable_vol")
+            _nsl_adj += _nde("volatility_regime_shift_perf", _fb_n880_bkt)
+
+            # Candle pattern quality at entry (hammer, engulfing, morning star, etc.)
+            _fb_candle_sc = (int(d.get("hammer", False)) + int(d.get("bullish_engulfing", False))
+                             + int(d.get("morning_star", False)) + int(d.get("three_white_soldiers", False)))
+            _fb_candle_bkt = ("strong" if _fb_candle_sc >= 2 else "present" if _fb_candle_sc == 1 else "none")
+            _nsl_adj += _nde("candle_pattern_perf", _fb_candle_bkt)
+
+            # Chart pattern quality: multi-pattern setups win more
+            _fb_chart_sc = (int(d.get("cup_handle", False)) + int(d.get("double_bottom", False))
+                            + int(d.get("bull_flag", False)) + int(d.get("vcp", False)))
+            _fb_chart_bkt = ("multi" if _fb_chart_sc >= 2 else "single" if _fb_chart_sc == 1 else "none")
+            _nsl_adj += _nde("chart_pattern_perf", _fb_chart_bkt)
+
+            # Demand zone proximity: at institutional buy zone
+            _fb_dz_sc = (int(bool(d.get("at_demand_zone", False)))
+                         + int(bool(d.get("near_support", False)))
+                         + int(bool(d.get("fib_support", False))))
+            _fb_dz_bkt = ("at_zone" if d.get("at_demand_zone") else "near_zone" if _fb_dz_sc >= 1 else "no_zone")
+            _nsl_adj += _nde("demand_zone_perf", _fb_dz_bkt)
+
+            # EMA structure: both above EMA50+200 = best trend health
+            _fb_e50_bool = float(d.get("price_vs_ema50", 0) or 0) > 0
+            _fb_e200_bool = float(d.get("price_vs_ema200", 0) or 0) > 0
+            _fb_ema_struct = ("both" if _fb_e50_bool and _fb_e200_bool
+                              else "ema50_only" if _fb_e50_bool else "below_both")
+            _nsl_adj += _nde("ema_struct_perf", _fb_ema_struct)
+
+            # MACD bullish divergence: hidden strength signal
+            _fb_mcd = ("diverging" if d.get("macd_bull_div") else "no_div")
+            _nsl_adj += _nde("macd_div_perf", _fb_mcd)
+
+            # Donchian channel position: breakout vs weakness
+            _fb_dc_pct = float(d.get("donchian_pct", 50) or 50)
+            _fb_dc_bkt = ("breakout" if _fb_dc_pct >= 75 else "middle" if _fb_dc_pct >= 25 else "weakness")
+            _nsl_adj += _nde("donchian_perf", _fb_dc_bkt)
+
+            # Gap and hold: institutional conviction signal
+            _fb_gah_bkt = "holding" if d.get("gap_and_hold") else "normal"
+            _nsl_adj += _nde("gap_hold_perf", _fb_gah_bkt)
+
+            # ORB breakout: opening range cleared on volume
+            _fb_orb_bkt = "breakout" if d.get("orb_breakout") else "consolidating"
+            _nsl_adj += _nde("orb_perf", _fb_orb_bkt)
+
+            # Trend confirmation: supertrend + PSAR aligned
+            _fb_tc_sc = int(d.get("supertrend_bull", False)) + int(d.get("psar_bull", False))
+            _fb_tc_bkt = ("both" if _fb_tc_sc >= 2 else "one" if _fb_tc_sc == 1 else "neither")
+            _nsl_adj += _nde("trend_conf_perf", _fb_tc_bkt)
+
+            # Volume dry-up: selling exhaustion at support
+            _fb_vdu_bkt = "dry_up" if d.get("vol_dry_up") else "normal_vol"
+            _nsl_adj += _nde("vol_dry_perf", _fb_vdu_bkt)
+
+            # Force index state: buying pressure strength
+            _fb_fi_bkt = ("bull_div" if d.get("force_index_div") else
+                          "rising" if d.get("force_index_rising") else "weak")
+            _nsl_adj += _nde("force_index_perf", _fb_fi_bkt)
+
+            # Price acceleration: momentum building or fading
+            _fb_pa_bkt = ("accelerating" if d.get("price_accel_pos") else
+                          "decelerating" if d.get("price_accel_neg") else "stable")
+            _nsl_adj += _nde("price_accel_perf", _fb_pa_bkt)
+
             # Cap the full neural layer at ±20 (wider cap as brain accumulates more data)
             s += max(-20, min(20, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -25329,14 +25520,14 @@ def run():
                 # N136 strike: distribution phase entries historically bad
                 _n136_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("accum_distrib_perf",[])}
                 if _n136_ng.get("distribution", 50) < 35 and len(_n136_ng) >= 2:
-                    _obv_tr = live.get(tk, {}).get("obv_trend", "neutral")
+                    _obv_tr = "falling" if not live.get(tk, {}).get("obv_rising", True) else "rising"
                     _ad_state_ng = str(live.get(tk, {}).get("accum_distrib", "neutral") or "neutral").lower()
                     if "distrib" in _ad_state_ng or _obv_tr == "falling":
                         _ng_strikes += 1; _ng_reasons.append(f"distribution phase historically fails({_n136_ng.get('distribution',50):.0f}%WR)")
                 # N136 green: accumulation phase historically best
                 if _n136_ng.get("accumulation", 0) >= 65:
                     _ad_state_ng2 = str(live.get(tk, {}).get("accum_distrib", "neutral") or "neutral").lower()
-                    _obv_tr2 = live.get(tk, {}).get("obv_trend", "neutral")
+                    _obv_tr2 = "rising" if live.get(tk, {}).get("obv_rising", False) else "falling"
                     if "accum" in _ad_state_ng2 or _obv_tr2 == "rising":
                         _ng_green_lights += 1
                 # N137 strike: high vol down days historically bad entries
@@ -26745,8 +26936,9 @@ def run():
                         elif "distrib" in _ad_state or "sell" in _ad_state:
                             _ad_bkt = "distribution"
                         else:
-                            _obv_trend = live.get(tk, {}).get("obv_trend", "neutral")
-                            _ad_bkt = "accumulation" if _obv_trend == "rising" else "distribution" if _obv_trend == "falling" else "neutral"
+                            _obv_rising_flag = live.get(tk, {}).get("obv_rising", None)
+                            _ad_bkt = ("accumulation" if _obv_rising_flag is True else
+                                       "distribution" if _obv_rising_flag is False else "neutral")
                         _buy_signals_merged["accum_distrib_state"] = _ad_bkt
                     except Exception:
                         _buy_signals_merged["accum_distrib_state"] = "neutral"
