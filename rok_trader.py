@@ -26457,9 +26457,19 @@ def run():
                         pass  # extend to 90min — signal still valid, give it time
                     else:
                         _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 90:
-                    # 90min backup: unconditional exit to force capital recycling
-                    _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 90 and age_minutes < 120:
+                    # Smart 90min exit: if position is profitable AND signal still strong,
+                    # let it run to 120min — don't cap winners at 90min.
+                    _live_d_90 = live.get(sym, {}) or {}
+                    _sc_90    = score(sym, _live_d_90) if _live_d_90 else 0
+                    _rvol_90  = float(_live_d_90.get("rvol", 1.0) or 1.0)
+                    if pnl_pct >= 0.5 and _sc_90 >= 62 and _rvol_90 >= 1.3 and pnl_pct < _scalp_pthr:
+                        pass  # still hot + profitable — let it run to 120min
+                    else:
+                        _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 120:
+                    # 120min absolute timeout — exit regardless to force capital recycling
+                    _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
             # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
@@ -28414,6 +28424,18 @@ def run():
                     _learned_bonus += _nbns("obv_trend_perf", "rising", 62, 1)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 62, 2)
+                if bool(_tk_sig_sc.get("force_index_rising", False)):
+                    _learned_bonus += _nbns("force_index_div_perf", "rising", 60, 1)
+                if bool(_tk_sig_sc.get("mom_accel", False)):
+                    _learned_bonus += _nbns("momentum_persistence_perf", "accelerating", 60, 1)
+                if bool(_tk_sig_sc.get("ichimoku_above", False)):
+                    _learned_bonus += _nbns("ichimoku_cloud_entry_perf", "above_cloud", 60, 1)
+                if bool(_tk_sig_sc.get("psar_bull", False)):
+                    _learned_bonus += _nbns("psar_bull_entry_perf", "bullish", 60, 1)
+                if bool(_tk_sig_sc.get("kc_breakout", False)):
+                    _learned_bonus += _nbns("keltner_position_entry_perf", "kc_breakout", 60, 1)
+                if bool(_tk_sig_sc.get("three_white_soldiers", False)):
+                    _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
                     # gap_and_hold historically weak — penalize unless learned WR is good
                     _gap_hold_wr = (_ALL_NEURON_PERFS.get("gap_hold_perf", {}).get("holding", {}).get("win_rate", 50))
