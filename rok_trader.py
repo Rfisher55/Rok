@@ -28925,8 +28925,13 @@ def run():
                 _stk_chg_lb = float(_tk_sig_sc.get("change_pct", _tk_sig_sc.get("chg1d", 0)) or 0)
                 if _spy_intra_lb == "flat" and abs(_stk_chg_lb) < 0.3:
                     _learned_bonus += _npen("spy_alignment_v1_perf", "neutral", 25, -5)  # 20.7% WR n=29
-                # Sector leadership: mid tier (-1.5% to +1.5% sector 5d) = 18.5% WR n=27
-                _sec_5d_lb = float(_tk_sig_sc.get("sector_etf_5d", _tk_sig_sc.get("rs_sector", 0)) or 0)
+                # Sector leadership: mid tier (-1.5% to +1.5% sector 5d) = 18.5% WR n=27 — compute from tlog (sector_etf_5d not in fetch_batch)
+                try:
+                    _sec_lbl_lb = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other")
+                    _sec_etf_rec = tlog.get("sector_etf_trends", {}).get(_sec_lbl_lb, {})
+                    _sec_5d_lb = float(_sec_etf_rec.get("chg5d", 99) or 99)  # default 99 = outside mid band → no penalty
+                except Exception:
+                    _sec_5d_lb = 99
                 if -1.5 < _sec_5d_lb < 1.5:
                     _learned_bonus += _npen("sector_leadership_v1_perf", "mid", 25, -5)  # 18.5% WR n=27
                 # Consecutive green days 0d: 43.6% WR n=39 — no streak at entry = mild negative
@@ -29096,8 +29101,10 @@ def run():
                     _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 1)  # 66.7% WR n=9
                 elif 40 <= _mfi_lb < 60:
                     _learned_bonus += _npen("mfi_zone_perf", "neutral", 43, -2)      # 42.6% WR n=68 — large sample
-                # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad)
-                _atr_pct_lb = float(_tk_sig_sc.get("atr_pct", _tk_sig_sc.get("atr", 0)) or 0)
+                # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
+                _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
+                _px_raw_lb  = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 1)) or 1)
+                _atr_pct_lb = (_atr_raw_lb / max(_px_raw_lb, 0.01) * 100) if _atr_raw_lb > 0 else 0.0
                 if _atr_pct_lb >= 4.0:
                     _learned_bonus += _nbns("atr_perf", "4%+", 51, 1)           # 51.7% WR n=29 — threshold lowered
                 elif 2.0 <= _atr_pct_lb < 4.0:
@@ -29263,8 +29270,8 @@ def run():
                 # EMA200 "near" (-5 to +5%) = 19.2% WR n=26 — unstable zone, explicit hard penalty
                 if -5 < _e200_pct_lb <= 5:
                     _learned_bonus += _npen("ema200_position_perf", "near", 25, -5)  # 19.2% WR n=26
-                # ATR tight (<1%) = 21.4% WR n=28 — insufficient volatility for momentum entries
-                _atr_pct_bkt = float(_tk_sig_sc.get("atr_pct", 0) or 0)
+                # ATR tight (<1%) = 21.4% WR n=28 — compute as % (atr_pct injected after LB, reuse _atr_pct_lb computed above)
+                _atr_pct_bkt = _atr_pct_lb  # already computed above as atr/price*100
                 if 0 < _atr_pct_bkt < 1.0:
                     _learned_bonus += _npen("atr_bucket_perf", "tight", 25, -5)  # 21.4% WR n=28
                 # Market quality "good" (50-74) = 40.9% WR n=44 — worse than weak/poor quality
@@ -29386,8 +29393,8 @@ def run():
                     _learned_bonus += _npen("rs_mom_perf", "leading", 46, -1)  # 44.1% WR n=34
                 elif _rs5_acc is not None and _rs63_acc is not None and float(_rs5_acc) <= 0 and float(_rs63_acc) <= 0:
                     _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -1)   # both lagging
-                # Signal freshness: building_signal=45.5% WR n=77 — penalize; fresh_signal state never exists in dict
-                _persist_lb = int(_tk_sig_sc.get("persist_count", _tk_sig_sc.get("consecutive_strong_scans", 0)) or 0)
+                # Signal freshness: building_signal=45.5% WR n=77 — compute directly (persist_count/consecutive_strong_scans injected after this block)
+                _persist_lb = int(_curr_persist.get(tk, 0) or 0)  # direct from persist counter
                 _fresh_lb = ("fresh_signal" if _persist_lb <= 1 else "building_signal" if _persist_lb <= 3
                              else "stale_signal" if _persist_lb <= 6 else "very_stale_signal")
                 if _fresh_lb == "building_signal":
