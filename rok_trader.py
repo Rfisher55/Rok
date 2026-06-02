@@ -1430,7 +1430,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
             if _buy_t and _buy_t.get("time"):
                 from datetime import datetime as _hdt, timezone as _htz
                 _entry_t = _hdt.fromisoformat(_buy_t["time"].replace("Z", "+00:00"))
-                _hold_d  = max(0, int((_entry_t.utcnow().replace(tzinfo=_htz.utc) - _entry_t).total_seconds() / 86400))
+                _hold_min = max(0, (_entry_t.utcnow().replace(tzinfo=_htz.utc) - _entry_t).total_seconds() / 60)
+                _hold_d  = int(_hold_min / 1440)  # convert to days
                 _ht_bucket = "0-2d" if _hold_d <= 2 else ("3-7d" if _hold_d <= 7 else ("8-14d" if _hold_d <= 14 else "15d+"))
                 _ht_perf = tlog.setdefault("hold_time_performance", {})
                 _htp = _ht_perf.setdefault(_ht_bucket, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
@@ -1443,6 +1444,21 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
                 if _htp["total"] > 0:
                     _htp["win_rate"] = round(_htp["wins"] / _htp["total"] * 100, 1)
                     _htp["avg_pnl"]  = round(_htp["total_pnl"] / _htp["total"], 2)
+                # Intraday hold time buckets (more granular for scalp-focused system)
+                if _hold_d == 0:
+                    _intra_bucket = ("<30min" if _hold_min < 30 else
+                                     "30-60min" if _hold_min < 60 else
+                                     "60-90min" if _hold_min < 90 else
+                                     "90-120min" if _hold_min < 120 else "120min+")
+                    _intra_perf = tlog.setdefault("intraday_hold_time_perf", {})
+                    _ihtp = _intra_perf.setdefault(_intra_bucket, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                    _ihtp["total"] = _ihtp.get("total", 0) + 1
+                    _ihtp["total_pnl"] = round(_ihtp.get("total_pnl", 0.0) + pnl, 2)
+                    if pnl > 0: _ihtp["wins"] = _ihtp.get("wins", 0) + 1
+                    else: _ihtp["losses"] = _ihtp.get("losses", 0) + 1
+                    if _ihtp["total"] > 0:
+                        _ihtp["win_rate"] = round(_ihtp["wins"] / _ihtp["total"] * 100, 1)
+                        _ihtp["avg_pnl"]  = round(_ihtp["total_pnl"] / _ihtp["total"], 2)
         except Exception:
             pass
 
@@ -26355,6 +26371,32 @@ def run():
                     _scalp_pthr = min(2.5, _scalp_pthr + 0.2)  # hold longer: raise profit target
             except Exception:
                 pass
+            # Intraday bucket learning: fine-grained <30/30-60/60-90/90-120/120min+ hold windows
+            # If the early exit bucket wins more than longer holds → take profits faster
+            # If mid-window (30-60min) wins more than the fast-exit window → let trades breathe
+            try:
+                _iht_perf = tlog.get("intraday_hold_time_perf", {})
+                _iht_fast  = _iht_perf.get("<30min",   {})
+                _iht_mid   = _iht_perf.get("30-60min", {})
+                _iht_long  = _iht_perf.get("60-90min", {})
+                _iht_wr_fast = _iht_fast.get("win_rate", 50)
+                _iht_wr_mid  = _iht_mid.get("win_rate", 50)
+                _iht_wr_long = _iht_long.get("win_rate", 50)
+                _iht_n_fast  = _iht_fast.get("total", 0)
+                _iht_n_mid   = _iht_mid.get("total", 0)
+                _iht_n_long  = _iht_long.get("total", 0)
+                if _iht_n_fast >= 8 and _iht_n_mid >= 8:
+                    if _iht_wr_fast > _iht_wr_mid + 12:
+                        # Fast exits clearly better → lower profit target to take gains earlier
+                        _scalp_pthr = max(0.9, _scalp_pthr - 0.15)
+                    elif _iht_wr_mid > _iht_wr_fast + 12:
+                        # Mid-window clearly better → let trades breathe a little longer
+                        _scalp_pthr = min(2.5, _scalp_pthr + 0.15)
+                if _iht_n_long >= 8 and _iht_n_mid >= 8 and _iht_wr_long < _iht_wr_mid - 10:
+                    # 60-90min window worse than 30-60min → reinforce tighter exit
+                    _scalp_pthr = max(0.9, _scalp_pthr - 0.1)
+            except Exception:
+                pass
             # Regime overlay: in bear/neutral, take profits faster and cut losses sooner.
             # In bull/strong_bull, let scalp winners run further before exiting.
             try:
@@ -28833,6 +28875,113 @@ def run():
                         "above_vwap" if _inj_vwp > 0.3 else
                         "at_vwap" if _inj_vwp >= -0.3 else
                         "below_vwap" if _inj_vwp >= -2 else "far_below_vwap")
+                except Exception: pass
+                # reentry_type: was most recent completed trade on this ticker a winner?
+                try:
+                    _inj_re_trades = [t for t in tlog.get("trades", [])
+                                      if t.get("ticker") == tk and t.get("action") in ("SELL","COVER")
+                                      and t.get("pnl_pct") is not None]
+                    if _inj_re_trades:
+                        _inj_re_last = sorted(_inj_re_trades, key=lambda x: x.get("time",""))[-1]
+                        live[tk]["reentry_type"] = "winner" if float(_inj_re_last.get("pnl_pct", 0) or 0) > 0 else "loser"
+                    else:
+                        live[tk]["reentry_type"] = "no_reentry"
+                except Exception: pass
+                # ── Inject N900+ batch loop states ──────────────────────────────────
+                _inj_d = live[tk]
+                try:  # N333: fear/greed via VIX
+                    _inj_vix = float(_inj_d.get("vix", 20) or 20)
+                    live[tk]["fear_greed_bucket_perf"] = (
+                        "extreme_greed" if _inj_vix < 15 else "greed" if _inj_vix < 18 else
+                        "neutral" if _inj_vix < 22 else "fear" if _inj_vix < 28 else "extreme_fear")
+                except Exception: pass
+                try:  # N334: short float bucket
+                    _inj_sf = float(_inj_d.get("short_float", 0) or 0)
+                    live[tk]["short_float_bucket_perf"] = (
+                        "high_short" if _inj_sf > 20 else "medium_short" if _inj_sf > 10 else "low_short")
+                except Exception: pass
+                try:  # N335: IV rank bucket
+                    _inj_ivr = float(_inj_d.get("iv_rank", 50) or 50)
+                    live[tk]["iv_rank_bucket_perf"] = (
+                        "high_iv" if _inj_ivr > 70 else "low_iv" if _inj_ivr < 30 else "normal_iv")
+                except Exception: pass
+                try:  # N351: float size bucket
+                    _inj_fl = float(_inj_d.get("float_shares", _inj_d.get("float", 0)) or 0)
+                    live[tk]["float_size_bucket_perf"] = (
+                        "large_float" if _inj_fl > 200 else "medium_float" if _inj_fl > 20 else
+                        "small_float" if _inj_fl > 5 else "micro_float")
+                except Exception: pass
+                try:  # N363: gap size bucket
+                    _inj_gp = abs(float(_inj_d.get("gap_pct", _inj_d.get("pm_gap", 0)) or 0))
+                    live[tk]["gap_size_bucket_perf"] = (
+                        "large_gap" if _inj_gp > 5 else "medium_gap" if _inj_gp > 2 else
+                        "small_gap" if _inj_gp > 0.3 else "no_gap")
+                except Exception: pass
+                try:  # N463: consecutive green days (coarse bucket)
+                    _inj_cg2 = int(_inj_d.get("consec_green", _inj_d.get("consecutive_green_days", 0)) or 0)
+                    live[tk]["consec_green_days_perf"] = (
+                        "multi_day_run" if _inj_cg2 >= 3 else "fresh_momentum" if _inj_cg2 == 2 else
+                        "after_down_day" if _inj_cg2 == 0 else "one_green")
+                except Exception: pass
+                try:  # N648: day of week
+                    from datetime import datetime as _inj_dt, timezone as _inj_tz
+                    _inj_dow = _inj_dt.now(_inj_tz.utc).strftime("%A").lower()
+                    live[tk]["day_of_week_perf"] = _inj_dow + "_entry"
+                except Exception: pass
+                try:  # N485/N668: ADX trend strength
+                    _inj_adx = float(_inj_d.get("adx", 20) or 20)
+                    _inj_adx_s = ("strong_trend" if _inj_adx > 35 else "moderate_trend" if _inj_adx > 20 else "weak_trend")
+                    live[tk]["adx_strength_entry_perf"] = _inj_adx_s
+                    live[tk]["adx_trend_strength_perf"] = _inj_adx_s
+                except Exception: pass
+                try:  # N336: catalyst type
+                    _inj_cat = str(_inj_d.get("catalyst", "") or "")
+                    _inj_nc = int(_inj_d.get("news_count", 0) or 0)
+                    live[tk]["catalyst_type_perf"] = (
+                        "earnings_catalyst" if "earn" in _inj_cat.lower() else
+                        "news_catalyst" if (_inj_cat or _inj_nc > 0) else "technical_catalyst")
+                except Exception: pass
+                try:  # N337: trend age
+                    _inj_rs1 = float(_inj_d.get("rs1", 0) or 0)
+                    _inj_rs5 = float(_inj_d.get("rs5", 0) or 0)
+                    _inj_rs63 = float(_inj_d.get("rs63", 0) or 0)
+                    live[tk]["trend_age_bucket_perf"] = (
+                        "young_trend" if (_inj_rs1 > _inj_rs5 > _inj_rs63) else
+                        "aging_trend" if (_inj_rs63 > _inj_rs5 > _inj_rs1) else "mature_trend")
+                except Exception: pass
+                try:  # N338: index divergence
+                    _inj_rs1b = float(_inj_d.get("rs1", 0) or 0)
+                    live[tk]["index_divergence_perf"] = (
+                        "outperforming_index" if _inj_rs1b > 3 else
+                        "underperforming_index" if _inj_rs1b < -1 else "inline_index")
+                except Exception: pass
+                try:  # N344: SPY put/call ratio
+                    _inj_pcr = float(_inj_d.get("put_call_ratio", 1.0) or 1.0)
+                    live[tk]["spy_options_oi_perf"] = (
+                        "bullish_flow" if _inj_pcr < 0.7 else "bearish_flow" if _inj_pcr > 1.1 else "neutral_flow")
+                except Exception: pass
+                try:  # N342: regime transition
+                    _inj_rq = float(_inj_d.get("regime_quality", 0) or 0)
+                    _inj_rqp = float(_inj_d.get("regime_quality_prior", 0) or 0)
+                    live[tk]["regime_transition_perf"] = (
+                        "improving_regime" if _inj_rq > _inj_rqp else
+                        "deteriorating_regime" if _inj_rq < _inj_rqp else "stable_regime")
+                except Exception: pass
+                try:  # N343: ticker size bucket (via market_cap in billions)
+                    _inj_mc = float(_inj_d.get("market_cap", 0) or 0)
+                    live[tk]["ticker_age_bucket_perf"] = (
+                        "established_stock" if _inj_mc > 50 else
+                        "mid_cap_growth" if _inj_mc >= 5 else "small_micro_cap")
+                except Exception: pass
+                try:  # N339: opening gap follow
+                    _inj_gf = float(_inj_d.get("gap_pct", 0) or 0)
+                    live[tk]["opening_gap_follow_perf"] = (
+                        "gap_up_follow" if _inj_gf > 1 else "gap_down_follow" if _inj_gf < -1 else "no_gap")
+                except Exception: pass
+                try:  # N340: earnings revision
+                    _inj_epr = float(_inj_d.get("eps_revision_pct", 0) or 0)
+                    live[tk]["earnings_revision_perf"] = (
+                        "revised_higher" if _inj_epr > 5 else "revised_lower" if _inj_epr < -5 else "no_revision")
                 except Exception: pass
             except Exception:
                 pass
@@ -41993,6 +42142,23 @@ def run():
             if _best_vden and _best_vden["win_rate"] >= 65:
                 _learn_log.append(f"Best VWAP entry tier '{_best_vden['bucket']}': {_best_vden['win_rate']:.0f}% WR")
 
+        # ── Intraday hold time learning: which hold window wins most ──────────────
+        _iht_learn = tlog.get("intraday_hold_time_perf", {})
+        _iht_buckets = ["<30min", "30-60min", "60-90min", "90-120min", "120min+"]
+        _iht_insights = []
+        for _ihtbk in _iht_buckets:
+            _ihtd = _iht_learn.get(_ihtbk, {})
+            if _ihtd.get("total", 0) >= 5:
+                _iht_insights.append({"bucket": _ihtbk, "win_rate": _ihtd.get("win_rate", 50),
+                                      "avg_pnl": _ihtd.get("avg_pnl", 0), "total": _ihtd.get("total", 0)})
+        if _iht_insights:
+            _iht_sum = " | ".join(f"{s['bucket']}:{s['win_rate']:.0f}%WR/avg{s['avg_pnl']:+.2f}%({s['total']})" for s in _iht_insights)
+            _learn_log.append(f"Intraday hold time WRs: {_iht_sum}")
+            _iht_best = max(_iht_insights, key=lambda x: x["win_rate"])
+            _iht_worst = min(_iht_insights, key=lambda x: x["win_rate"])
+            if _iht_best["win_rate"] - _iht_worst["win_rate"] >= 15:
+                _learn_log.append(f"Best hold window: '{_iht_best['bucket']}' ({_iht_best['win_rate']:.0f}% WR). Worst: '{_iht_worst['bucket']}' ({_iht_worst['win_rate']:.0f}% WR)")
+
         # ── 37. MACD State Neuron: MACD phase at entry vs outcome ─────────────────
         _mc_raw = tlog.get("macd_state_perf", {})
         _mc_insights = []
@@ -50388,6 +50554,7 @@ def run():
             "eg_tier_perf":         _eg_insights,            # earnings growth tier vs outcome
             "st_gap_perf":          _stg_insights,           # Supertrend stop gap (tight/normal/wide) vs outcome
             "premium_tier_perf":    _pt_insights,            # premium signal count tier vs outcome (MASTER)
+            "intraday_hold_time_perf": _iht_insights,        # intraday hold window vs outcome (<30/30-60/60-90/90-120/120min+)
             "recent_wr":           round(_r20_wr, 3),
             "recent_avg_pnl":      round(_r20_avg_pnl, 2),
             "trades_analyzed":     len(_closed),
