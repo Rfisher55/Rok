@@ -23432,6 +23432,31 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                      _n660_im_q = "low_iv_opportunity"
             _nsl_adj += _nde("option_implied_move_perf", _n660_im_q)
 
+            # N258: Gap fill tendency v1 (labels: above_gap/below_gap/no_gap)
+            _n258_chg_v = float(d.get("chg1d", d.get("chg_pct", 0)) or 0)
+            if   _n258_chg_v > 1.0:  _n258_gap_q = "above_gap"
+            elif _n258_chg_v < -1.0: _n258_gap_q = "below_gap"
+            else:                     _n258_gap_q = "no_gap"
+            _nsl_adj += _nde("gap_fill_tendency_v1_perf", _n258_gap_q)
+            # N451: Gap fill tendency (labels: gap_filler/gap_holder/sometimes)
+            _n451_gap_q = str(d.get("gap_fill_tendency_perf", "sometimes") or "sometimes")
+            _nsl_adj += _nde("gap_fill_tendency_perf", _n451_gap_q)
+
+            # N208: Bond yield direction (labels: yields_falling/yields_rising/yields_stable)
+            _n208_tlt_v = float(d.get("tlt_chg1d", d.get("tlt_1d", d.get("bond_yield_direction_val", 0))) or 0)
+            if   _n208_tlt_v > 0.3:  _n208_byd_q = "yields_falling"
+            elif _n208_tlt_v < -0.3: _n208_byd_q = "yields_rising"
+            else:                     _n208_byd_q = str(d.get("bond_yield_direction", "yields_stable") or "yields_stable")
+            _nsl_adj += _nde("bond_yield_direction_perf", _n208_byd_q)
+
+            # N207: Relative volume early (labels: hot_open/active_open/normal_open/quiet_open)
+            _n207_rvol_v = float(d.get("rvol_early", d.get("rvol", 1.0)) or 1.0)
+            if   _n207_rvol_v > 3:    _n207_rve_q = "hot_open"
+            elif _n207_rvol_v >= 1.5: _n207_rve_q = "active_open"
+            elif _n207_rvol_v >= 0.8: _n207_rve_q = "normal_open"
+            else:                      _n207_rve_q = "quiet_open"
+            _nsl_adj += _nde("relative_volume_early_perf", _n207_rve_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
