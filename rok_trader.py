@@ -25592,10 +25592,11 @@ def run():
                           and t.get("pnl_pct") is not None]
             _lp = tlog.setdefault("bot_learned_params", {})
 
-            # Always recalculate recent_wr from ALL closed trades (last 20)
+            # Always recalculate recent_wr from last 20 EQUITY trades (crypto excluded — different WR baseline)
             _all_closed = [t for t in _oh_trades
                            if t.get("action") in ("SELL", "SELL_HALF", "COVER")
-                           and t.get("pnl_pct") is not None]
+                           and t.get("pnl_pct") is not None
+                           and "/" not in t.get("ticker", "")]
             if _all_closed:
                 _r20 = sorted(_all_closed, key=lambda t: t.get("time",""))[-20:]
                 _lp["recent_wr"]      = round(sum(1 for t in _r20 if float(t.get("pnl_pct",0)) > 0) / len(_r20), 3)
@@ -32612,7 +32613,8 @@ def run():
                             live[tk]["insider_net_shares"] = 0
                 except Exception:
                     live[tk]["insider_net_shares"] = 0
-                # estimate_revision (N654 analyst_revision_v1_perf — always 0 → estimates_stable)
+                # estimate_revision (N654 analyst_revision_v1_perf — was always 0 → estimates_stable)
+                # Proxy: use multiple signals to estimate whether analysts are revising up/down
                 try:
                     if not live[tk].get("estimate_revision"):
                         _r57_er = float(live[tk].get("eps_revision_pct", 0) or 0)
@@ -32622,6 +32624,26 @@ def run():
                                 _r57_er = 5.0
                             elif "falling" in _r57_ert or "lower" in _r57_ert or "cut" in _r57_ert:
                                 _r57_er = -5.0
+                        if _r57_er == 0:
+                            # Second proxy: rvol + chg1d pattern = implied revision signal
+                            _r57_rv3 = float(live[tk].get("rvol", 1.0) or 1.0)
+                            _r57_c1d = float(live[tk].get("chg1d", live[tk].get("change_pct", 0)) or 0)
+                            _r57_cat = str(catalyst or live[tk].get("catalyst", "") or "").lower()
+                            # Bullish: strong volume + up price move (earnings beat / upgrade pattern)
+                            if ("beat" in _r57_cat or "raised" in _r57_cat or "upgrade" in _r57_cat
+                                    or "exceed" in _r57_cat or "guidance" in _r57_cat):
+                                _r57_er = 5.0  # explicit catalyst mention = strong revision signal
+                            elif ("miss" in _r57_cat or "cut" in _r57_cat or "downgrade" in _r57_cat
+                                    or "lower" in _r57_cat):
+                                _r57_er = -5.0  # explicit negative catalyst = revision down
+                            elif _r57_rv3 > 2.5 and _r57_c1d > 2:
+                                _r57_er = 3.5   # strong volume + strong up: likely positive surprise
+                            elif _r57_rv3 > 1.5 and _r57_c1d > 1:
+                                _r57_er = 2.5   # elevated volume + up: moderate positive
+                            elif _r57_rv3 > 2.0 and _r57_c1d < -2:
+                                _r57_er = -3.5  # strong volume + down: possible estimate cut
+                            elif _r57_c1d < -1.5:
+                                _r57_er = -2.5  # down day: mild revision risk
                         live[tk]["estimate_revision"] = _r57_er
                 except Exception:
                     live[tk]["estimate_revision"] = 0.0
@@ -43867,8 +43889,12 @@ def run():
         logger.debug(f"Rolling stats: {_rstats_e}")
 
     # Compute profit factor, Sharpe-like ratio, and max drawdown from trade history
-    _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "SELL_HALF", "COVER") and t.get("pnl_pct") is not None]
-    logger.info(f"Brain: {len(_closed)} closed trades from {len(tlog.get('trades',[]))} total")
+    # EQUITY ONLY for P&L stats and learning: crypto is on a different strategy with different WR expectations
+    _closed = [t for t in tlog.get("trades", [])
+               if t.get("action") in ("SELL", "SELL_HALF", "COVER")
+               and t.get("pnl_pct") is not None
+               and "/" not in t.get("ticker", "")]
+    logger.info(f"Brain: {len(_closed)} closed equity trades from {len(tlog.get('trades',[]))} total")
     _closed_pnl = [(t, float(t["pnl_pct"] or 0)) for t in _closed]
     _gross_wins  = sum(p for _, p in _closed_pnl if p > 0) or 0
     _gross_losses= abs(sum(p for _, p in _closed_pnl if p < 0)) or 1
