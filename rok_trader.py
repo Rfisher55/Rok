@@ -28920,8 +28920,12 @@ def run():
                     _learned_bonus += _npen("vwap_perf", "at_vwap", 45, -1)  # 44.7% WR n=38
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
-                # SPY alignment v1: neutral=20.7% WR n=29 — flat SPY+stock = no edge
-                _spy_intra_lb = str(_tk_sig_sc.get("spy_intraday_dir", "flat") or "flat")
+                # SPY alignment v1: neutral=20.7% WR n=29 — compute SPY dir from tlog (not in fetch_batch; injected after LB)
+                try:
+                    _spy_intra_pct = float(tlog.get("spy_intraday_pct", 0) or 0)
+                except Exception:
+                    _spy_intra_pct = 0.0
+                _spy_intra_lb = ("up" if _spy_intra_pct > 0.2 else "down" if _spy_intra_pct < -0.2 else "flat")
                 _stk_chg_lb = float(_tk_sig_sc.get("change_pct", _tk_sig_sc.get("chg1d", 0)) or 0)
                 if _spy_intra_lb == "flat" and abs(_stk_chg_lb) < 0.3:
                     _learned_bonus += _npen("spy_alignment_v1_perf", "neutral", 25, -5)  # 20.7% WR n=29
@@ -28938,8 +28942,8 @@ def run():
                 _cg_streak_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_streak_lb == 0:
                     _learned_bonus += _npen("consec_green_perf", "0d", 45, -1)  # 43.6% WR n=39
-                # SPY alignment bonus: trading with the market direction
-                _spy_it_lb = str(_tk_sig_sc.get("spy_intraday_trend", _tk_sig_sc.get("spy_intraday_dir", "flat")) or "flat")
+                # SPY alignment bonus: reuse _spy_intra_lb computed above from tlog
+                _spy_it_lb = _spy_intra_lb  # "up"/"down"/"flat" from tlog.spy_intraday_pct
                 if "up" in _spy_it_lb:
                     _learned_bonus += _nbns("spy_intraday_trend_perf", "spy_up", 58, 1)
                 elif "down" in _spy_it_lb:
@@ -29022,7 +29026,9 @@ def run():
                 elif _cat_type_raw is not None and _cat_type_lb not in ("", "none", "technical_catalyst"):
                     # "other" catalyst = non-technical event (news, macro, sector rotation) = 71.1% WR n=38!
                     _learned_bonus += _nbns("catalyst_type_perf", "other", 68, 3)  # 71.1% WR n=38 — top signal
-                _bb_pos_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
+                # bb_pctb not in fetch_batch — use bb_pos (0-100 scale) converted to 0-1 fraction
+                _bb_pos_raw = float(_tk_sig_sc.get("bb_pos", 50) or 50)
+                _bb_pos_lb = _bb_pos_raw / 100.0
                 if _bb_pos_lb > 0.85:
                     _learned_bonus += _nbns("bb_zone_perf", "upper", 55, 1)   # 55.6% WR n=9 — threshold lowered (was stale 83%)
                 _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
@@ -29440,8 +29446,8 @@ def run():
                 _opt_fl_lb = str(_tk_sig_sc.get("options_flow_state", _tk_sig_sc.get("options_flow", "")) or "")
                 if _opt_fl_lb == "neutral" or (not _uc_lb2 and not _ob_lb2):
                     _learned_bonus += _npen("options_flow_perf", "neutral", 44, -1)  # 43.2% WR n=44
-                # BB zone mid (pctB 0.3-0.7): 44.1% WR n=68 — middle of BB = no edge, just noise
-                _bb_pctb_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
+                # BB zone mid (pctB 0.3-0.7): 44.1% WR n=68 — use bb_pos/100 (bb_pctb not in fetch_batch)
+                _bb_pctb_lb = _bb_pos_lb  # reuse bb_pos/100 computed above
                 if 0.3 <= _bb_pctb_lb <= 0.7:
                     _learned_bonus += _npen("bb_zone_perf", "mid", 45, -1)  # 44.1% WR n=68
                 # Pre-market gap: small gap-up = bullish setup; gap down = caution
