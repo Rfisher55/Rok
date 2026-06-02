@@ -28782,7 +28782,7 @@ def run():
                     _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 3)    # 80% WR — strong boost
                 elif "above" in _ich_lb or _ich_above_flag:
                     _learned_bonus += _nbns("ichimoku_perf", "above", 60, 2)     # 64% WR — moderate boost
-                elif "below" in _ich_lb or (_ich_lb and not _ich_above_flag and "above" not in _ich_lb):
+                elif "below" in _ich_lb:  # only explicitly "below" — other states are neutral
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 22% WR — strong penalty
                 # HA consecutive candles: building(3)=78% WR, strong(5+)=46% WR (reversal risk!)
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
@@ -28818,11 +28818,14 @@ def run():
                 if _roc_lb > 0:
                     _learned_bonus += _nbns("roc_perf", "positive", 60, 1)      # 71% WR
                 # RSI entry: overbought (>=70) = 69% WR bonus; neutral (40-55) = 30% WR penalty
-                _rsi_lb = float(_tk_sig_sc.get("rsi", 50) or 50)
-                if _rsi_lb >= 70:
-                    _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 69% WR — momentum works
-                elif 40 <= _rsi_lb < 55:
-                    _learned_bonus += _npen("rsi_entry_perf", "neutral", 35, -2) # 30% WR
+                # Only penalize when RSI is explicitly present (avoid default=50 false positive)
+                _rsi_raw_lb = _tk_sig_sc.get("rsi")
+                _rsi_lb = float(_rsi_raw_lb) if _rsi_raw_lb is not None else None
+                if _rsi_lb is not None:
+                    if _rsi_lb >= 70:
+                        _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 69% WR
+                    elif 40 <= _rsi_lb < 55:
+                        _learned_bonus += _npen("rsi_entry_perf", "neutral", 35, -2)    # 30% WR
                 # ST gap: normal = 22% WR — heavy penalty
                 _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
                 if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
@@ -28832,14 +28835,18 @@ def run():
                 if _cat_other_lb and "none" not in _cat_other_lb and "unknown" not in _cat_other_lb:
                     _learned_bonus += _nbns("catalyst_type_perf", "other", 60, 2)  # 71% WR n=38 — most reliable signal
                 # TT (trend template): fair=80% WR, weak=52% WR — score derived from numeric tt value
-                _tt_num_lb = int(_tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw", 0)) or 0)
-                _tt_bkt_lb = ("elite" if _tt_num_lb >= 7 else "good" if _tt_num_lb >= 5 else "fair" if _tt_num_lb >= 3 else "weak")
-                if _tt_bkt_lb == "fair":
-                    _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # 80% WR n=15
-                elif _tt_bkt_lb in ("good", "elite"):
-                    _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # use fair data as proxy
-                elif _tt_bkt_lb == "weak":
-                    _learned_bonus += _npen("tt_perf", "weak", 55, -1)          # 52% WR n=31
+                # TT: only score when signal explicitly present (absent → neutral, not "weak")
+                _tt_raw_lb = _tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw"))
+                if _tt_raw_lb is not None:
+                    _tt_num_lb = int(_tt_raw_lb or 0)
+                    _tt_bkt_lb = ("elite" if _tt_num_lb >= 7 else "good" if _tt_num_lb >= 5
+                                  else "fair" if _tt_num_lb >= 3 else "weak")
+                    if _tt_bkt_lb == "fair":
+                        _learned_bonus += _nbns("tt_perf", "fair", 60, 1)       # 80% WR n=15
+                    elif _tt_bkt_lb in ("good", "elite"):
+                        _learned_bonus += _nbns("tt_perf", "fair", 60, 1)
+                    elif _tt_bkt_lb == "weak":
+                        _learned_bonus += _npen("tt_perf", "weak", 55, -1)      # 52% WR n=31
                 # OBV trend: rising=80% WR n=20, falling=46% WR n=26
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 3)  # 80% WR n=20 — top signal
@@ -28888,8 +28895,10 @@ def run():
                 _mtf_sc_lb = (int(bool(_tk_sig_sc.get("mtf_aligned")))
                               + int(bool(_tk_sig_sc.get("ema_stacked_bull")))
                               + int(float(_tk_sig_sc.get("roc20", 0) or 0) > 0))
-                # Force index weak: 54% WR n=24 — mild, reduce to -1
-                if not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
+                # Force index weak: 54% WR n=24 — only penalize when force_index IS computed but weak
+                _fi_present = ("force_index_rising" in _tk_sig_sc or "force_index_div" in _tk_sig_sc
+                               or "force_index" in _tk_sig_sc)
+                if _fi_present and not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
                     _learned_bonus += _npen("force_index_perf", "weak", 55, -1)
                 # RS rating tier: elite>=90 = 69% WR n=13 (bonus); average WR=57% n=28 (mild)
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
