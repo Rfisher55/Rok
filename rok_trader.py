@@ -2804,8 +2804,13 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n113 = next((t for t in reversed(tlog.get("trades", [])) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _ai_sent = float(_buy_n113.get("ai_sentiment", 0) or 0) if _buy_n113 else 0.0
-            _sent_bkt = ("very_pos" if _ai_sent >= 50 else "pos" if _ai_sent >= 20 else "neutral" if _ai_sent >= -10 else "neg")
+            _ai_raw = _buy_n113.get("ai_sentiment", 0) if _buy_n113 else 0
+            if isinstance(_ai_raw, str) and _ai_raw in ("very_pos", "pos", "neutral", "neg", "very_neg"):
+                _sent_bkt = _ai_raw  # use categorical string directly
+            else:
+                _ai_sent = float(_ai_raw or 0)
+                # sent is on -10..+10 scale (not 0-100)
+                _sent_bkt = ("very_pos" if _ai_sent >= 5 else "pos" if _ai_sent >= 2 else "neutral" if _ai_sent >= -2 else "neg" if _ai_sent >= -5 else "very_neg")
             _n113_perf = tlog.setdefault("ai_sentiment_tier_perf", {})
             _n113p = _n113_perf.setdefault(_sent_bkt, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_sent_bkt})
             _n113p["total"] += 1; _n113p["total_pnl"] = round(_n113p["total_pnl"] + pnl, 2)
@@ -33431,8 +33436,14 @@ def run():
                         _buy_signals_merged["signal_count_at_entry"] = _sig_ct
                     except Exception:
                         _buy_signals_merged["signal_count_at_entry"] = 0
-                    # N113: AI sentiment at entry (written after ai_sentiment() call above)
-                    _buy_signals_merged["ai_sentiment"] = sent  # already computed
+                    # N113: AI sentiment at entry — preserve R54 categorical string (very_pos/pos/neutral/neg/very_neg)
+                    # R54 already set live[tk]["ai_sentiment"] to the categorical bucket; _buy_signals_merged
+                    # was copied from live[tk] so the categorical value is already present. Store raw sent separately.
+                    if not isinstance(_buy_signals_merged.get("ai_sentiment"), str):
+                        _r_sent = float(sent if isinstance(sent, (int, float)) else 0)
+                        _buy_signals_merged["ai_sentiment"] = ("very_pos" if _r_sent >= 5 else "pos" if _r_sent >= 2
+                            else "neutral" if _r_sent >= -2 else "neg" if _r_sent >= -5 else "very_neg")
+                    _buy_signals_merged["ai_score_raw"] = float(sent if isinstance(sent, (int, float)) else 0)
                     # N115: market cap tier at entry (in billions)
                     _buy_signals_merged["market_cap_b"] = float(live.get(tk, {}).get("market_cap_b", 0) or 0)
                     # N116: float shares at entry (in millions)
