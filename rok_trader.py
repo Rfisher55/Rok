@@ -24402,11 +24402,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
                     _veto_adj -= 10  # two anti-patterns together = high-probability loser
             except Exception:
                 pass
-            _nsl_adj += _veto_adj
             # Cap the full neural layer at ±30 (raised from 25 to match 765-neuron set)
             s += max(-30, min(30, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
             s += max(-12, min(12, round(_nsl_adj)))
+            # ── VETO applied AFTER neural cap: ensures high-confidence signals
+            # can't be swamped by uniform positive bias from 0-spread neurons ──
+            s += max(-25, min(10, round(_veto_adj)))
     except Exception:
         pass
 
