@@ -29066,8 +29066,8 @@ def run():
                     _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)
                 elif "below" in _ich_lb:  # only explicitly "below" — other states are neutral
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
-                # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=35.3% WR n=17
-                _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
+                # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=35.3% WR n=17 — field is ha_consec_bull in _extract
+                _ha_consec_lb = int(_tk_sig_sc.get("ha_consec_bull", _tk_sig_sc.get("ha_consec", 0)) or 0)
                 if _ha_consec_lb >= 5:
                     _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
                 elif _ha_consec_lb >= 3:
@@ -29146,7 +29146,7 @@ def run():
                 # signal_performance["obv_rising"] = 45.5% WR n=11 — below 50%
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
-                elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
+                elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
                 # Higher lows confirmed: 75% WR n=8 (updated); synergy combos 75-86% WR
                 if bool(_tk_sig_sc.get("higher_lows", False)):
@@ -29348,9 +29348,12 @@ def run():
                     _learned_bonus += _nbns("score_trend_perf", "rising", 60, 1)   # improving conviction
                 elif _sc_trend_lb == "falling":
                     _learned_bonus += _npen("score_trend_perf", "falling", 40, -1) # weakening setup
-                # Breakout age: day4_7=45.8% WR n=72 — stale breakouts underperform fresh ones
-                _bkage_dsb_lb = int(_tk_sig_sc.get("days_since_breakout", 99) or 99)
-                if 4 <= _bkage_dsb_lb <= 7:
+                # Breakout age: day4_7=45.8% WR n=72 — days_since_breakout not in fetch_batch → always 99 → always-firing
+                # Use persist_count as proxy: 0-1 runs = fresh; 4-7 runs = building; 8+ runs = stale
+                _bkage_dsb_lb = int(_tk_sig_sc.get("days_since_breakout", 0) or 0)  # real value if present
+                if _bkage_dsb_lb == 0:  # absent = unknown, don't penalize
+                    pass
+                elif 4 <= _bkage_dsb_lb <= 7:
                     _learned_bonus += _npen("breakout_age_perf", "day4_7", 47, -1)  # 45.8% WR n=72
                 elif _bkage_dsb_lb > 7:
                     _learned_bonus += _npen("breakout_age_perf", "extended", 47, -1)  # stale breakout
