@@ -23841,6 +23841,54 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                    _n869_rr_q = "bad_rr"
             _nsl_adj += _nde("risk_reward_at_entry_perf", _n869_rr_q)
 
+            # N870b: Dow perf (labels: Mon/Tue/Wed/Thu/Fri — same labels as dow_performance but separate dict)
+            _n870b_dow_q = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][datetime.now(timezone.utc).weekday()]
+            _nsl_adj += _nde("dow_perf", _n870b_dow_q)
+            # Crypto-specific neurons (only active for crypto tickers with "/" in name)
+            if "/" in tk:
+                # C881: Crypto momentum tier (labels: explosive/strong/moderate/flat/falling)
+                _c881_roc5_v = float(d.get("roc5", d.get("change_pct", 0)) or 0)
+                if   _c881_roc5_v > 10:  _c881_cm_q = "explosive"
+                elif _c881_roc5_v > 4:   _c881_cm_q = "strong"
+                elif _c881_roc5_v > 1:   _c881_cm_q = "moderate"
+                elif _c881_roc5_v > -1:  _c881_cm_q = "flat"
+                else:                     _c881_cm_q = "falling"
+                _nsl_adj += _nde("crypto_momentum_perf", _c881_cm_q)
+                # C882: Crypto AI sentiment (labels: positive/neutral/negative)
+                _c882_ai_v = float(d.get("crypto_ai_score", d.get("ai_score", 0)) or 0)
+                _c882_ai_q = ("positive" if _c882_ai_v > 2 else "neutral" if _c882_ai_v >= -2 else "negative")
+                _nsl_adj += _nde("crypto_ai_sentiment_perf", _c882_ai_q)
+                # C884: Crypto score tier (labels: high/medium/low/speculative)
+                _c884_sc_v = float(d.get("crypto_score_tier_val", 0) or 0)
+                # use roc5 + vol_ratio as proxy for score tier
+                _c884_tier_q = ("high" if _c881_roc5_v > 4 and (d.get("vol_ratio", 1) or 1) > 1.5 else
+                                 "medium" if _c881_roc5_v > 1 else
+                                 "low" if _c881_roc5_v > -1 else "speculative")
+                _nsl_adj += _nde("crypto_score_tier_perf", _c884_tier_q)
+                # C885: BTC dominance (labels: high_dom/neutral_dom/low_dom)
+                _c885_dom_v = float(d.get("btc_dom", d.get("btc_dominance", 55)) or 55)
+                _c885_dom_q = ("high_dom" if _c885_dom_v > 60 else "low_dom" if _c885_dom_v < 50 else "neutral_dom")
+                _nsl_adj += _nde("crypto_btcdom_perf", _c885_dom_q)
+                # C886: Crypto RSI zone (labels: oversold/neutral/overbought)
+                _c886_rsi_v = float(d.get("rsi", 50) or 50)
+                _c886_rz_q  = ("oversold" if _c886_rsi_v < 30 else "overbought" if _c886_rsi_v >= 60 else "neutral")
+                _nsl_adj += _nde("crypto_rsi_zone_perf", _c886_rz_q)
+                # C887: Crypto volume surge (labels: surge/elevated/normal/dry)
+                _c887_vr_v = float(d.get("vol_ratio", d.get("rvol", 1)) or 1)
+                _c887_vs_q = ("surge" if _c887_vr_v > 3 else "elevated" if _c887_vr_v > 1.5 else
+                               "normal" if _c887_vr_v > 0.7 else "dry")
+                _nsl_adj += _nde("crypto_vol_surge_perf", _c887_vs_q)
+                # C888: Crypto EMA cross (labels: bull/bear/flat)
+                _c888_ema_v = float(d.get("ema_cross", 0) or 0)
+                _c888_ec_q  = ("bull" if _c888_ema_v > 0.5 else "bear" if _c888_ema_v < -0.5 else "flat")
+                _nsl_adj += _nde("crypto_ema_cross_perf", _c888_ec_q)
+                # C889: Crypto day of week (labels: Mon/Tue/Wed/Thu/Fri/Sat/Sun)
+                _c889_dow_q = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][datetime.now(timezone.utc).weekday()]
+                _nsl_adj += _nde("crypto_dow_perf", _c889_dow_q)
+                # C890: Crypto asset class (labels: BTC/ETH/ALT)
+                _c890_ac_q = ("BTC" if "BTC" in tk else "ETH" if "ETH" in tk else "ALT")
+                _nsl_adj += _nde("crypto_asset_perf", _c890_ac_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
