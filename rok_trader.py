@@ -30213,6 +30213,343 @@ def run():
                     live[tk]["macro_event_at_entry"] = live[tk].get("macro_event", "none") or "none"
                 except Exception:
                     live[tk]["macro_event_at_entry"] = "none"
+                # ── R49: Remaining dead state-field neurons ──
+                # score_regime_align
+                try:
+                    _r49_reg = regime.get("regime", "neutral")
+                    _r49_sc  = float(live[tk].get("score", 60) or 60)
+                    if _r49_reg == "bull" and _r49_sc >= 70:       live[tk]["score_regime_align"] = "bull_high"
+                    elif _r49_reg == "bull" and _r49_sc < 60:      live[tk]["score_regime_align"] = "bull_low"
+                    elif _r49_reg == "bear" and _r49_sc >= 70:     live[tk]["score_regime_align"] = "bear_high"
+                    elif _r49_reg == "bear" and _r49_sc < 60:      live[tk]["score_regime_align"] = "bear_low"
+                    else:                                            live[tk]["score_regime_align"] = "neutral_any"
+                except Exception:
+                    live[tk]["score_regime_align"] = "neutral_any"
+                # sector_mom_accel
+                try:
+                    _r49_setf2  = str(live[tk].get("sector_etf", "SPY") or "SPY")
+                    _r49_sec1d  = float(live.get(_r49_setf2, {}).get("chg1d", 0) or 0)
+                    _r49_sec5d  = float(live.get(_r49_setf2, {}).get("chg5d", 0) or 0)
+                    _r49_avg5   = _r49_sec5d / 5 if _r49_sec5d != 0 else 0
+                    if _r49_sec1d > _r49_avg5 + 0.2:   live[tk]["sector_mom_accel"] = "accelerating"
+                    elif _r49_sec1d < _r49_avg5 - 0.2: live[tk]["sector_mom_accel"] = "decelerating"
+                    else:                               live[tk]["sector_mom_accel"] = "stable"
+                except Exception:
+                    live[tk]["sector_mom_accel"] = "stable"
+                # risk_rotation: (QQQ+IWM)/2 vs (XLP+XLU)/2
+                try:
+                    _r49_qqq = float(live.get("QQQ", {}).get("chg1d", 0) or 0)
+                    _r49_iwm = float(live.get("IWM", {}).get("chg1d", 0) or 0)
+                    _r49_xlp = float(live.get("XLP", {}).get("chg1d", 0) or 0)
+                    _r49_xlu = float(live.get("XLU", {}).get("chg1d", 0) or 0)
+                    _r49_rod = ((_r49_qqq + _r49_iwm) / 2) - ((_r49_xlp + _r49_xlu) / 2)
+                    if _r49_rod >= 0.5:    live[tk]["risk_rotation"] = "risk_on"
+                    elif _r49_rod <= -0.5: live[tk]["risk_rotation"] = "risk_off"
+                    else:                  live[tk]["risk_rotation"] = "neutral_rotation"
+                except Exception:
+                    live[tk]["risk_rotation"] = "neutral_rotation"
+                # sector_rs_phase
+                try:
+                    _r49_sec_map = {"technology":"XLK","healthcare":"XLV","financials":"XLF",
+                                    "energy":"XLE","consumer discretionary":"XLY","industrials":"XLI",
+                                    "utilities":"XLU","materials":"XLB","real estate":"XLRE",
+                                    "communication services":"XLC","consumer staples":"XLP"}
+                    _r49_secn  = str(live[tk].get("sector", "other") or "other").lower()
+                    _r49_setf3 = next((v for k, v in _r49_sec_map.items() if k in _r49_secn), None)
+                    if _r49_setf3 and _r49_setf3 in live:
+                        _r49_sdiff = (float(live[_r49_setf3].get("chg_pct", 0) or 0) -
+                                      float(live.get("SPY", {}).get("chg_pct", 0) or 0))
+                        if _r49_sdiff >= 0.5:    live[tk]["sector_rs_phase"] = "sector_leading"
+                        elif _r49_sdiff <= -0.5: live[tk]["sector_rs_phase"] = "sector_lagging"
+                        else:                    live[tk]["sector_rs_phase"] = "neutral_rs"
+                    else:
+                        live[tk]["sector_rs_phase"] = "neutral_rs"
+                except Exception:
+                    live[tk]["sector_rs_phase"] = "neutral_rs"
+                # market_open_momentum_state
+                try:
+                    _r49_spy1d  = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r49_hret   = now_utc.hour - 4
+                    _r49_early  = _r49_hret < 10 or (_r49_hret == 10 and now_utc.minute < 30)
+                    if _r49_early and _r49_spy1d > 0.5:    live[tk]["market_open_momentum_state"] = "strong_open"
+                    elif _r49_early and _r49_spy1d < -0.5: live[tk]["market_open_momentum_state"] = "weak_open"
+                    else:                                   live[tk]["market_open_momentum_state"] = "neutral_open"
+                except Exception:
+                    live[tk]["market_open_momentum_state"] = "neutral_open"
+                # spy_vix_diverge_state
+                try:
+                    _r49_spyd = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r49_vixd = float(live.get("VIX", {}).get("chg1d", 0) or 0)
+                    if _r49_spyd > 0.3 and _r49_vixd > 5.0:       live[tk]["spy_vix_diverge_state"] = "both_up"
+                    elif _r49_spyd > 0 and _r49_vixd <= 0:         live[tk]["spy_vix_diverge_state"] = "normal_positive"
+                    elif _r49_spyd < -0.3 and _r49_vixd < -5.0:   live[tk]["spy_vix_diverge_state"] = "diverge_down"
+                    else:                                            live[tk]["spy_vix_diverge_state"] = "normal_negative"
+                except Exception:
+                    live[tk]["spy_vix_diverge_state"] = "normal_negative"
+                # sector_rotation_state
+                try:
+                    _r49_flips = len(tlog.get("rotation_flip_sectors", []))
+                    if _r49_flips >= 3:    live[tk]["sector_rotation_state"] = "strong_rotation"
+                    elif _r49_flips >= 1:  live[tk]["sector_rotation_state"] = "mild_rotation"
+                    else:                  live[tk]["sector_rotation_state"] = "no_rotation"
+                except Exception:
+                    live[tk]["sector_rotation_state"] = "no_rotation"
+                # stop_distance_state
+                try:
+                    _r49_sdp  = float(live[tk].get("price", 0) or 0)
+                    _r49_satr = float(live[tk].get("atr", 0) or 0)
+                    _r49_stp  = float(live[tk].get("stop_price", 0) or 0)
+                    if _r49_sdp > 0 and _r49_stp > 0:
+                        _r49_dist = (_r49_sdp - _r49_stp) / _r49_sdp * 100
+                    elif _r49_sdp > 0 and _r49_satr > 0:
+                        _r49_dist = _r49_satr / _r49_sdp * 100 * 1.5
+                    else:
+                        _r49_dist = 3.0
+                    if _r49_dist < 2.0:    live[tk]["stop_distance_state"] = "tight_stop"
+                    elif _r49_dist <= 4.0: live[tk]["stop_distance_state"] = "normal_stop"
+                    else:                  live[tk]["stop_distance_state"] = "wide_stop"
+                except Exception:
+                    live[tk]["stop_distance_state"] = "normal_stop"
+                # sector_etf_vs_spy_state
+                try:
+                    _r49_s245  = SECTOR_MAP.get(tk, "other")
+                    _r49_se5d  = float(tlog.get("sector_etf_trends", {}).get(_r49_s245, {}).get("chg5d", 0) or 0)
+                    _r49_sp5d  = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                    _r49_ediff = _r49_se5d - _r49_sp5d
+                    if _r49_ediff > 1.5:    live[tk]["sector_etf_vs_spy_state"] = "sector_leading"
+                    elif _r49_ediff >= -1.5: live[tk]["sector_etf_vs_spy_state"] = "sector_in_line"
+                    else:                    live[tk]["sector_etf_vs_spy_state"] = "sector_lagging"
+                except Exception:
+                    live[tk]["sector_etf_vs_spy_state"] = "sector_in_line"
+                # adv_decline_ratio_today_state
+                try:
+                    _r49_adv = float(tlog.get("market_breadth", {}).get("adv_pct", 50) or
+                                     breadth.get("adv_pct", 50) or 50)
+                    if _r49_adv > 70:     live[tk]["adv_decline_ratio_today_state"] = "breadth_thrust"
+                    elif _r49_adv >= 55:  live[tk]["adv_decline_ratio_today_state"] = "breadth_positive"
+                    elif _r49_adv >= 45:  live[tk]["adv_decline_ratio_today_state"] = "breadth_neutral"
+                    else:                 live[tk]["adv_decline_ratio_today_state"] = "breadth_negative"
+                except Exception:
+                    live[tk]["adv_decline_ratio_today_state"] = "breadth_neutral"
+                # entry_near_high_low_state
+                try:
+                    _r49_nh = float(live[tk].get("near_52w_high", 1.0) or 1.0)
+                    if _r49_nh < 0.98:    live[tk]["entry_near_high_low_state"] = "at_52w_high"
+                    elif _r49_nh <= 1.1:  live[tk]["entry_near_high_low_state"] = "near_high"
+                    elif _r49_nh <= 1.3:  live[tk]["entry_near_high_low_state"] = "mid_range"
+                    else:                 live[tk]["entry_near_high_low_state"] = "far_from_high"
+                except Exception:
+                    live[tk]["entry_near_high_low_state"] = "mid_range"
+                # spy_breadth_thrust_state
+                try:
+                    _r49_sbt = float(tlog.get("market_breadth", {}).get("adv_pct", 50) or
+                                     breadth.get("adv_pct", 50) or 50)
+                    if _r49_sbt > 65:    live[tk]["spy_breadth_thrust_state"] = "thrust_up"
+                    elif _r49_sbt < 35:  live[tk]["spy_breadth_thrust_state"] = "thrust_down"
+                    else:                live[tk]["spy_breadth_thrust_state"] = "neutral_breadth"
+                except Exception:
+                    live[tk]["spy_breadth_thrust_state"] = "neutral_breadth"
+                # tick_extreme_state
+                try:
+                    _r49_tadv = float(tlog.get("market_breadth", {}).get("adv_pct", 50) or
+                                      breadth.get("adv_pct", 50) or 50)
+                    _r49_tspy = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    _r49_tick = (_r49_tadv - 50) * 0.4 + _r49_tspy * 10
+                    if _r49_tick > 200:    live[tk]["tick_extreme_state"] = "tick_high"
+                    elif _r49_tick < -200: live[tk]["tick_extreme_state"] = "tick_low"
+                    else:                  live[tk]["tick_extreme_state"] = "tick_neutral"
+                except Exception:
+                    live[tk]["tick_extreme_state"] = "tick_neutral"
+                # sector_leader_lag_state
+                try:
+                    _r49_sl  = SECTOR_MAP.get(tk, "other")
+                    _r49_s3d = float(tlog.get("sector_etf_trends", {}).get(_r49_sl, {}).get("chg5d", 0) or 0)
+                    _r49_s3spy = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                    _r49_sld = _r49_s3d - _r49_s3spy
+                    if _r49_sld > 1.0:    live[tk]["sector_leader_lag_state"] = "leader_sector"
+                    elif _r49_sld < -1.0: live[tk]["sector_leader_lag_state"] = "lagging_sector"
+                    else:                 live[tk]["sector_leader_lag_state"] = "neutral_sector"
+                except Exception:
+                    live[tk]["sector_leader_lag_state"] = "neutral_sector"
+                # options_expiry_week_state
+                try:
+                    import calendar as _cal49
+                    _r49_oew = datetime.now(ZoneInfo("America/New_York"))
+                    _r49_3fri = next(d for d in range(15, 22)
+                                     if datetime(_r49_oew.year, _r49_oew.month, d).weekday() == 4)
+                    _r49_wkst = _r49_3fri - 4
+                    live[tk]["options_expiry_week_state"] = ("opex_week"
+                                                              if _r49_wkst <= _r49_oew.day <= _r49_3fri
+                                                              else "non_opex")
+                except Exception:
+                    live[tk]["options_expiry_week_state"] = "non_opex"
+                # momentum_divergence_state
+                try:
+                    _r49_chg1d = float(live[tk].get("chg1d", 0) or 0)
+                    _r49_mrsi  = float(live[tk].get("rsi", 50) or live[tk].get("daily_rsi", 50) or 50)
+                    if _r49_chg1d > 0.3 and _r49_mrsi < 45:    live[tk]["momentum_divergence_state"] = "price_up_mom_weak"
+                    elif _r49_chg1d < -0.3 and _r49_mrsi > 55: live[tk]["momentum_divergence_state"] = "price_down_mom_strong"
+                    else:                                        live[tk]["momentum_divergence_state"] = "aligned"
+                except Exception:
+                    live[tk]["momentum_divergence_state"] = "aligned"
+                # gap_fill_tendency_state
+                try:
+                    _r49_gft = float(live[tk].get("chg1d", 0) or 0)
+                    if _r49_gft > 1.0:     live[tk]["gap_fill_tendency_state"] = "above_gap"
+                    elif _r49_gft < -1.0:  live[tk]["gap_fill_tendency_state"] = "below_gap"
+                    else:                   live[tk]["gap_fill_tendency_state"] = "no_gap"
+                except Exception:
+                    live[tk]["gap_fill_tendency_state"] = "no_gap"
+                # weekly_rs_trend_state
+                try:
+                    _r49_tk5d  = float(live[tk].get("chg5d", 0) or 0)
+                    _r49_spy5d = float(live.get("SPY", {}).get("chg5d", 0) or 0)
+                    _r49_wrs   = _r49_tk5d - _r49_spy5d
+                    if _r49_wrs > 1.5:    live[tk]["weekly_rs_trend_state"] = "improving_rs"
+                    elif _r49_wrs < -1.5: live[tk]["weekly_rs_trend_state"] = "declining_rs"
+                    else:                 live[tk]["weekly_rs_trend_state"] = "stable_rs"
+                except Exception:
+                    live[tk]["weekly_rs_trend_state"] = "stable_rs"
+                # trend_acceleration_state
+                try:
+                    _r49_c5  = float(live[tk].get("chg5d", 0) or 0)
+                    _r49_c20 = float(live[tk].get("chg20d", 0) or 0)
+                    _r49_r5  = _r49_c5 / 5.0
+                    _r49_r20 = _r49_c20 / 20.0
+                    if _r49_r5 > _r49_r20 + 0.1 and _r49_c5 > 0:    live[tk]["trend_acceleration_state"] = "accelerating_up"
+                    elif _r49_r5 < _r49_r20 - 0.1 and _r49_c5 > 0:  live[tk]["trend_acceleration_state"] = "decelerating_up"
+                    elif _r49_r5 > _r49_r20 + 0.1 and _r49_c5 < 0:  live[tk]["trend_acceleration_state"] = "accelerating_down"
+                    else:                                               live[tk]["trend_acceleration_state"] = "flat_trend"
+                except Exception:
+                    live[tk]["trend_acceleration_state"] = "flat_trend"
+                # market_internals_trend_state
+                try:
+                    _r49_mq   = float(tlog.get("market_quality", 50) or 50)
+                    _r49_mq3d = float(tlog.get("mq_3d_avg", 50) or 50)
+                    if _r49_mq > _r49_mq3d + 5:    live[tk]["market_internals_trend_state"] = "improving_internals"
+                    elif _r49_mq < _r49_mq3d - 5:  live[tk]["market_internals_trend_state"] = "deteriorating_internals"
+                    else:                            live[tk]["market_internals_trend_state"] = "stable_internals"
+                except Exception:
+                    live[tk]["market_internals_trend_state"] = "stable_internals"
+                # entry_quality_score_state
+                try:
+                    _r49_eq = float(live[tk].get("score", 60) or 60)
+                    if _r49_eq >= 70:   live[tk]["entry_quality_score_state"] = "high_quality_entry"
+                    elif _r49_eq >= 50: live[tk]["entry_quality_score_state"] = "medium_quality"
+                    else:               live[tk]["entry_quality_score_state"] = "low_quality"
+                except Exception:
+                    live[tk]["entry_quality_score_state"] = "medium_quality"
+                # technical_score_bucket_state
+                try:
+                    _r49_tb = float(live[tk].get("score", 60) or 60)
+                    if _r49_tb >= 90:   live[tk]["technical_score_bucket_state"] = "score_90plus"
+                    elif _r49_tb >= 70: live[tk]["technical_score_bucket_state"] = "score_70_89"
+                    else:               live[tk]["technical_score_bucket_state"] = "score_55_69"
+                except Exception:
+                    live[tk]["technical_score_bucket_state"] = "score_55_69"
+                # portfolio_drawdown_state
+                try:
+                    _r49_dd = float(tlog.get("drawdown_pct", 0) or 0)
+                    if _r49_dd < 2:    live[tk]["portfolio_drawdown_state"] = "clean_slate"
+                    elif _r49_dd < 5:  live[tk]["portfolio_drawdown_state"] = "mild_drawdown"
+                    else:              live[tk]["portfolio_drawdown_state"] = "deep_drawdown"
+                except Exception:
+                    live[tk]["portfolio_drawdown_state"] = "clean_slate"
+                # buy_score_vs_threshold_state
+                try:
+                    _r49_scbt = float(live[tk].get("score", 60) or 60)
+                    _r49_mbs  = float(MIN_BUY_SCORE)
+                    if _r49_scbt >= _r49_mbs * 2:      live[tk]["buy_score_vs_threshold_state"] = "strong_above_threshold"
+                    elif _r49_scbt >= _r49_mbs * 1.5:  live[tk]["buy_score_vs_threshold_state"] = "moderate_above"
+                    else:                                live[tk]["buy_score_vs_threshold_state"] = "barely_above"
+                except Exception:
+                    live[tk]["buy_score_vs_threshold_state"] = "barely_above"
+                # regime_quality_combined_state
+                try:
+                    _r49_rqr  = regime.get("regime", "neutral")
+                    _r49_rqmq = float(tlog.get("market_quality", 50) or 50)
+                    _r49_rqv  = float(regime.get("vix", 20) or 20)
+                    if _r49_rqr == "bull" and _r49_rqmq >= 70 and _r49_rqv < 18:
+                        live[tk]["regime_quality_combined_state"] = "ideal_conditions"
+                    elif _r49_rqr in ("bull", "neutral") and _r49_rqmq >= 50:
+                        live[tk]["regime_quality_combined_state"] = "good_conditions"
+                    else:
+                        live[tk]["regime_quality_combined_state"] = "poor_conditions"
+                except Exception:
+                    live[tk]["regime_quality_combined_state"] = "good_conditions"
+                # atr_multiple_gain_potential_state
+                try:
+                    _r49_amg_atr = float(live[tk].get("atr", 0) or 0)
+                    _r49_amg_px  = float(live[tk].get("price", 1) or 1)
+                    _r49_amg_g   = 0.10 * _r49_amg_px / _r49_amg_atr if _r49_amg_atr > 0 else 1.0
+                    if _r49_amg_g > 3:    live[tk]["atr_multiple_gain_potential_state"] = "high_reward_risk"
+                    elif _r49_amg_g >= 1: live[tk]["atr_multiple_gain_potential_state"] = "medium_reward_risk"
+                    else:                 live[tk]["atr_multiple_gain_potential_state"] = "low_reward_risk"
+                except Exception:
+                    live[tk]["atr_multiple_gain_potential_state"] = "medium_reward_risk"
+                # recent_market_breadth_state
+                try:
+                    _r49_rmb = float(tlog.get("market_quality", 50) or 50)
+                    if _r49_rmb > 65:    live[tk]["recent_market_breadth_state"] = "breadth_expanding"
+                    elif _r49_rmb >= 40: live[tk]["recent_market_breadth_state"] = "breadth_neutral"
+                    else:                live[tk]["recent_market_breadth_state"] = "breadth_contracting"
+                except Exception:
+                    live[tk]["recent_market_breadth_state"] = "breadth_neutral"
+                # sector_strength_score_state
+                try:
+                    _r49_sss_sec = str(live[tk].get("sector", "") or "")
+                    _r49_sss_5d  = float(tlog.get("sector_etf_trends", {}).get(_r49_sss_sec, {}).get("chg5d", 0) or 0)
+                    if _r49_sss_5d > 3:    live[tk]["sector_strength_score_state"] = "strong_sector"
+                    elif _r49_sss_5d >= 0: live[tk]["sector_strength_score_state"] = "neutral_sector"
+                    else:                   live[tk]["sector_strength_score_state"] = "weak_sector"
+                except Exception:
+                    live[tk]["sector_strength_score_state"] = "neutral_sector"
+                # market_leader_flag_state
+                try:
+                    _r49_mlr = float(live[tk].get("chg1d", 0) or 0) - float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    if _r49_mlr > 2:    live[tk]["market_leader_flag_state"] = "market_leader"
+                    elif _r49_mlr < -2: live[tk]["market_leader_flag_state"] = "market_laggard"
+                    else:               live[tk]["market_leader_flag_state"] = "market_inline"
+                except Exception:
+                    live[tk]["market_leader_flag_state"] = "market_inline"
+                # entry_at_support_state
+                try:
+                    _r49_sma21 = float(live[tk].get("sma21", 0) or 0)
+                    _r49_epx   = float(live[tk].get("price", 0) or 0)
+                    if _r49_sma21 > 0 and _r49_epx >= _r49_sma21 and _r49_epx <= _r49_sma21 * 1.02:
+                        live[tk]["entry_at_support_state"] = "bounce_from_support"
+                    elif _r49_sma21 > 0 and _r49_epx < _r49_sma21:
+                        live[tk]["entry_at_support_state"] = "below_support"
+                    else:
+                        live[tk]["entry_at_support_state"] = "at_support"
+                except Exception:
+                    live[tk]["entry_at_support_state"] = "at_support"
+                # psar_bull_entry_state
+                try:
+                    live[tk]["psar_bull_entry_state"] = ("psar_bullish_entry" if live[tk].get("psar_bull", True)
+                                                          else "psar_bearish_entry")
+                except Exception:
+                    live[tk]["psar_bull_entry_state"] = "psar_neutral"
+                # sector_conc: open positions already in same sector
+                try:
+                    _r49_sc_sec = SECTOR_MAP.get(tk, "other")
+                    _r49_sc_ct  = sum(1 for p in tlog.get("positions", [])
+                                      if SECTOR_MAP.get(str(p.get("ticker", "") or ""), "other") == _r49_sc_sec)
+                    if _r49_sc_ct == 0:   live[tk]["sector_conc"] = "first_in_sector"
+                    elif _r49_sc_ct == 1: live[tk]["sector_conc"] = "two_in_sector"
+                    else:                  live[tk]["sector_conc"] = "three_plus_in_sector"
+                except Exception:
+                    live[tk]["sector_conc"] = "first_in_sector"
+                # entry_score_decile
+                try:
+                    _r49_ed = float(live[tk].get("score", 60) or 60)
+                    if _r49_ed >= 95:      live[tk]["entry_score_decile"] = "score_95_plus"
+                    elif _r49_ed >= 85:    live[tk]["entry_score_decile"] = "score_85_95"
+                    elif _r49_ed >= 75:    live[tk]["entry_score_decile"] = "score_75_85"
+                    elif _r49_ed >= 65:    live[tk]["entry_score_decile"] = "score_65_75"
+                    else:                  live[tk]["entry_score_decile"] = "score_55_65"
+                except Exception:
+                    live[tk]["entry_score_decile"] = "score_65_75"
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
