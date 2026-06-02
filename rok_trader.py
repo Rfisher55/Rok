@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 10      # aggressive learning phase: enter on more signals
+MIN_BUY_SCORE      = 40      # raised from 10: data shows 0-20% WR for scores 20-39, 70%+ WR at 100
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 6       # more positions per sector to generate more data
@@ -21034,10 +21034,11 @@ def momentum_grade(d, final_score=0):
 # ── Signal scoring ────────────────────────────────────────────────────────────
 def score(tk, d, sentiment=0, regime_adj=0):
     """
-    Composite score 0-100 combining:
+    Composite score 0-120 combining:
     daily momentum, intraday, volume, RSI, EMA cross, MACD,
     Bollinger, VWAP position, 52W proximity, range position, AI sentiment.
     Regime adjustment shifts threshold (-5 to +5 from market AI).
+    Cap raised from 100→120 to allow top-tier entries to differentiate.
     """
     s     = 10
     chg   = d.get("change_pct",   0) or 0
@@ -22346,8 +22347,149 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_sec_mom = d.get("sector_etf_momentum", "neutral") or "neutral"
             _nsl_adj += _nde("sector_momentum_perf", _fb_sec_mom)
 
-            # Cap the full neural layer at ±20 (wider cap as brain accumulates more data)
-            s += max(-20, min(20, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
+            # ── Commit 8: N711-N730 + N871-N880 entry quality neurons ──────────
+
+            # N711: VIX regime at entry — calm = better edge
+            _n711_vix = float(d.get("vix_at_entry", 20) or 20)
+            _n711_s = ("low_vix_calm" if _n711_vix < 14 else "normal_vix" if _n711_vix < 20
+                       else "elevated_vix" if _n711_vix < 25 else "high_vix" if _n711_vix < 30
+                       else "extreme_vix_fearful")
+            _nsl_adj += _nde("volatility_regime_entry_perf", _n711_s)
+
+            # N712: Price action pattern at entry
+            if d.get("cup_handle"):         _n712_s = "cup_and_handle_breakout"
+            elif d.get("at_breakout"):       _n712_s = "clean_breakout"
+            elif d.get("ema21_pullback"):    _n712_s = "ema21_pullback_buy"
+            elif d.get("double_bottom"):     _n712_s = "double_bottom_reversal"
+            elif d.get("at_demand_zone"):    _n712_s = "demand_zone_bounce"
+            else:                            _n712_s = "no_clear_pattern"
+            _nsl_adj += _nde("price_action_pattern_perf", _n712_s)
+
+            # N713: Multi-TF bias — triple alignment strongest
+            _n713_s = ("three_tf_aligned_bullish" if d.get("mtf_triple")
+                       else "two_tf_aligned" if d.get("mtf_aligned") else "single_tf_only")
+            _nsl_adj += _nde("multi_timeframe_bias_perf", _n713_s)
+
+            # N714: Relative volume quality — surge + trend combo
+            _n714_rvol = float(d.get("rvol", 1.0) or 1.0)
+            _n714_vt   = str(d.get("vol_trend", "flat") or "flat")
+            if _n714_rvol > 3 and _n714_vt == "rising": _n714_s = "surge_with_rising_trend"
+            elif _n714_rvol > 3:   _n714_s = "strong_surge"
+            elif _n714_rvol > 1.5: _n714_s = "above_avg_quality"
+            elif _n714_rvol > 1.0: _n714_s = "moderate_volume"
+            else:                  _n714_s = "below_avg_volume"
+            _nsl_adj += _nde("relative_volume_quality_perf", _n714_s)
+
+            # N715: Trend duration — mature HTF trend = institutional backing
+            _n715_htf = int(d.get("htf_consec", 0) or 0)
+            _n715_tt  = int(d.get("trend_template", 0) or 0)
+            if _n715_htf >= 10:   _n715_s = "mature_htf_trend_10plus"
+            elif _n715_htf >= 5:  _n715_s = "established_htf_trend"
+            elif _n715_tt >= 7:   _n715_s = "strong_trend_template"
+            elif _n715_tt >= 5:   _n715_s = "moderate_trend"
+            else:                 _n715_s = "weak_or_no_trend"
+            _nsl_adj += _nde("trend_duration_perf", _n715_s)
+
+            # N718: News timing — fresh news outperforms stale
+            _n718_age = float(d.get("news_age_hours", 999) or 999)
+            if _n718_age < 2:     _n718_s = "fresh_news_momentum"
+            elif _n718_age < 6:   _n718_s = "early_news_play"
+            elif _n718_age < 24:  _n718_s = "same_day_news"
+            elif _n718_age < 72:  _n718_s = "recent_news"
+            else:                 _n718_s = "no_fresh_news"
+            _nsl_adj += _nde("news_timing_entry_perf", _n718_s)
+
+            # N720: Institutional buying pressure
+            _n720_as = int(d.get("accum_score", 0) or 0)
+            _n720_fq = int(d.get("fund_quality", 0) or 0)
+            if _n720_as > 8 or _n720_fq > 4:   _n720_s = "heavy_institutional_accumulation"
+            elif _n720_as > 5 or _n720_fq > 2: _n720_s = "moderate_institutional_buying"
+            elif _n720_as > 2:                  _n720_s = "light_accumulation"
+            else:                               _n720_s = "no_institutional_signal"
+            _nsl_adj += _nde("institutional_buying_pressure_perf", _n720_s)
+
+            # N721: Accumulation/distribution trend
+            _n721_ad = str(d.get("ad_trend", "flat") or "flat")
+            if _n721_ad == "rising_fast": _n721_s = "strong_accumulation_trend"
+            elif _n721_ad == "rising":    _n721_s = "moderate_accumulation"
+            elif _n721_ad == "flat":      _n721_s = "distribution_neutral"
+            elif _n721_ad == "falling":   _n721_s = "distribution_phase"
+            else:                         _n721_s = "heavy_distribution"
+            _nsl_adj += _nde("accumulation_distribution_perf", _n721_s)
+
+            # N722: Price momentum quality (roc5-based)
+            _n722_roc = float(d.get("roc5", 0) or 0)
+            if _n722_roc > 8:    _n722_s = "very_strong_momentum"
+            elif _n722_roc > 4:  _n722_s = "strong_momentum"
+            elif _n722_roc > 1:  _n722_s = "moderate_momentum"
+            elif _n722_roc > -1: _n722_s = "flat_momentum"
+            else:                _n722_s = "negative_momentum"
+            _nsl_adj += _nde("price_momentum_quality_perf", _n722_s)
+
+            # N725: Market internal alignment — breadth + VIX confirming
+            _n725_ba = bool(d.get("breadth_aligned", False))
+            _n725_vd = bool(d.get("vix_declining", False))
+            if _n725_ba and _n725_vd:  _n725_s = "all_internals_aligned"
+            elif _n725_ba:             _n725_s = "breadth_aligned"
+            elif _n725_vd:             _n725_s = "vix_confirming"
+            else:                      _n725_s = "internals_mixed"
+            _nsl_adj += _nde("market_internal_alignment_perf", _n725_s)
+
+            # N726: Reversal confirmation — higher lows + confirmed reversal
+            _n726_rc = bool(d.get("reversal_confirmed", False))
+            _n726_hl = bool(d.get("higher_lows", False))
+            if _n726_rc and _n726_hl: _n726_s = "strong_reversal_confirmed"
+            elif _n726_rc:            _n726_s = "reversal_confirmed"
+            elif _n726_hl:            _n726_s = "higher_lows_forming"
+            else:                     _n726_s = "no_reversal_signal"
+            _nsl_adj += _nde("reversal_confirmation_perf", _n726_s)
+
+            # N729: Sector momentum rank at entry
+            _n729_sr = float(d.get("sector_rs_rank", 50) or 50)
+            if _n729_sr < 10:   _n729_s = "top_decile_sector"
+            elif _n729_sr < 25: _n729_s = "top_quartile_sector"
+            elif _n729_sr < 50: _n729_s = "above_avg_sector"
+            elif _n729_sr < 75: _n729_s = "below_avg_sector"
+            else:               _n729_s = "bottom_sector"
+            _nsl_adj += _nde("sector_momentum_rank_perf", _n729_s)
+
+            # N871: Order flow imbalance — volume + direction
+            _n871_rvol = float(d.get("rvol", 1.0) or 1.0)
+            _n871_chg  = float(d.get("change_pct", 0) or 0)
+            if _n871_rvol >= 1.5 and _n871_chg > 0:   _n871_s = "buy_dominated"
+            elif _n871_rvol >= 1.5 and _n871_chg < 0: _n871_s = "sell_dominated"
+            else:                                       _n871_s = "balanced_flow"
+            _nsl_adj += _nde("order_flow_imbalance_perf", _n871_s)
+
+            # N872: Time-weighted momentum — roc5 + macd slope
+            _n872_roc5 = float(d.get("roc5", 0) or 0)
+            _n872_mslp = float(d.get("macd_slope", 0) or 0)
+            if _n872_roc5 > 1 and _n872_mslp > 0:        _n872_s = "accelerating"
+            elif _n872_roc5 < -1 or _n872_mslp < 0:      _n872_s = "decelerating"
+            else:                                          _n872_s = "flat"
+            _nsl_adj += _nde("time_weighted_momentum_perf", _n872_s)
+
+            # N874: Catalyst timing — fresh catalyst = edge
+            _n874_cat = bool(d.get("catalyst") or d.get("news_catalyst") or d.get("earnings_beat")
+                             or int(d.get("news_count_24h", 0) or 0) >= 5)
+            _nsl_adj += _nde("catalyst_timing_perf", "fresh_catalyst" if _n874_cat else "stale_catalyst")
+
+            # N878: Price discovery phase — near 52W high = discovery_up
+            _n878_52wh = float(d.get("near_52w_high", 1.0) or 1.0)
+            _n878_s = ("discovery_up" if _n878_52wh >= 0.98 else "established" if _n878_52wh >= 0.85
+                       else "recovery")
+            _nsl_adj += _nde("price_discovery_phase_perf", _n878_s)
+
+            # N879: Smart money divergence — OBV divergence from price
+            _n879_obv = bool(d.get("obv_rising", False))
+            _n879_chg = float(d.get("change_pct", 0) or 0)
+            if _n879_obv and _n879_chg < 0:    _n879_s = "diverging_bullish"
+            elif not _n879_obv and _n879_chg > 0: _n879_s = "diverging_bearish"
+            else:                               _n879_s = "aligned"
+            _nsl_adj += _nde("smart_money_divergence_perf", _n879_s)
+
+            # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
+            s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
             s += max(-12, min(12, round(_nsl_adj)))
     except Exception:
@@ -22363,7 +22505,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Market regime adjustment
     s += regime_adj
 
-    return max(0, min(100, int(s)))
+    return max(0, min(120, int(s)))
 
 
 def bearish_score(tk, d):
@@ -22771,7 +22913,7 @@ def run():
             if not tlog.get("strategy_mode"):
                 tlog["strategy_mode"] = "MARKET_CLOSED"
             if not tlog.get("effective_min_score"):
-                tlog["effective_min_score"] = 60
+                tlog["effective_min_score"] = 40
 
             # Bot brain summary for the frontend
             tlog["bot_brain_summary"] = {
@@ -25346,9 +25488,11 @@ def run():
         pass
 
     # ── FINAL score floor: pace emergency overrides ALL other adjustments ─────────
+    # Relative floor: large deficit drops threshold, but not below 20 (data shows <20 = junk)
     if _trade_deficit >= 15:
-        _eff_min_score = min(_eff_min_score, 5)
-        logger.info(f"PACE OVERRIDE: deficit={_trade_deficit} — final threshold capped at {_eff_min_score}")
+        _pace_floor = max(20, MIN_BUY_SCORE - 20)
+        _eff_min_score = min(_eff_min_score, _pace_floor)
+        logger.info(f"PACE OVERRIDE: deficit={_trade_deficit} — threshold capped at {_eff_min_score}")
 
     # ── Portfolio Risk Limit Guard ─────────────────────────────────────────────
     # If total stop-loss exposure > 25% of portfolio, halt new buys.
@@ -25664,7 +25808,7 @@ def run():
                 # N128 strike: borderline score entries historically bad
                 _n128_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("entry_score_tier_perf",[])}
                 if _n128_ng.get("borderline", 50) < 35 and len(_n128_ng) >= 3:
-                    if tech_sc < 50:
+                    if tech_sc < MIN_BUY_SCORE + 20:  # within 20pts of threshold = borderline
                         _ng_strikes += 1; _ng_reasons.append(f"borderline score({tech_sc:.0f}) historically fails({_n128_ng.get('borderline',50):.0f}%WR)")
                 # N131 strike: imminent earnings historically bad AND <3 days to earnings
                 _n131_ng = {s.get("state",""):s.get("win_rate",50) for s in _lp_ng.get("earnings_proximity_perf",[])}
