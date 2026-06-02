@@ -28708,6 +28708,8 @@ def run():
                     _learned_bonus += _npen("adx_perf", "weak", 20, -8)    # 12% WR: block-level penalty
                 elif _adx_bkt_lb == "developing":
                     _learned_bonus += _nbns("adx_perf", "developing", 60, 3)  # 80% WR: solid bonus
+                elif _adx_bkt_lb == "strong":
+                    _learned_bonus += _nbns("adx_perf", "strong", 60, 2)   # 65% WR n=23: solid bonus
                 _cat_type_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if not _cat_type_lb or "none" in _cat_type_lb:
                     _learned_bonus += _npen("catalyst_type_perf", "none", 20, -6)  # 12% WR: harsh penalty
