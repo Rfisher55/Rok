@@ -29311,6 +29311,12 @@ def run():
                     _learned_bonus += _npen("score_persistence_perf", "first_appear", 15, -8)  # 9.1% WR n=77
                 if _sp_type_lb == "new_entry":
                     _learned_bonus += _nbns("score_persistence_perf", "new_entry", 58, 2)  # 60.9% WR n=46
+                elif _sp_type_lb == "persistent_strong":
+                    _learned_bonus += _nbns("score_persistence_v1_perf", "persistent_strong", 60, 2)  # consistently high scores = best setups
+                elif _sp_type_lb == "rising":
+                    _learned_bonus += _nbns("score_persistence_v1_perf", "rising", 56, 1)   # building momentum
+                elif _sp_type_lb == "declining":
+                    _learned_bonus += _npen("score_persistence_v1_perf", "declining", 44, -2)  # fading signal, thesis weakening
                 # VWAP dist entry: at_vwap=22.6% WR n=31 — hugging VWAP = indecision, not breakout
                 _vwap_de_lb = str(_tk_sig_sc.get("vwap_dist_entry_perf", "") or "")
                 if _vwap_de_lb == "at_vwap":
@@ -29500,6 +29506,19 @@ def run():
                                                 "down" if _spy_adv_inj < 38 else "flat")
                 live[tk]["market_breadth"]   = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
                 live[tk]["persistence_runs"] = int(_curr_persist.get(tk, 0))
+                # score_persistence injection: compute quality label from score_history in peaks
+                try:
+                    _sp_sh = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    if len(_sp_sh) >= 3:
+                        _sp_avg = sum(_sp_sh) / len(_sp_sh); _sp_last = _sp_sh[-1]; _sp_first = _sp_sh[0]
+                        if _sp_avg >= 65 and _sp_last >= 65: live[tk]["score_persistence"] = "persistent_strong"
+                        elif _sp_last > _sp_first + 5:       live[tk]["score_persistence"] = "rising"
+                        elif _sp_last < _sp_first - 5:       live[tk]["score_persistence"] = "declining"
+                        else:                                 live[tk]["score_persistence"] = "stable"
+                    else:
+                        live[tk]["score_persistence"] = "new_entry"
+                except Exception:
+                    live[tk]["score_persistence"] = "new_entry"
                 # N718: news_age_hours — age of freshest news headline (from news velocity cache)
                 try:
                     _nvc_data = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
