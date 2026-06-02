@@ -31128,6 +31128,84 @@ def run():
                 except Exception:
                     live[tk]["weekly_trend"] = 0.0
                     live[tk]["wk_trend"]     = 0.0
+                # ── R53: ai_sentiment output + signal density + sector RS neurons ──
+                # sent (N856 catalyst_strength_perf reads d.get("sent") first)
+                try:
+                    live[tk]["sent"] = float(sent if isinstance(sent, (int, float)) else 0)
+                except Exception:
+                    live[tk]["sent"] = 0.0
+                # catalyst (N336/N359/N456/N856 — string description from ai_sentiment)
+                try:
+                    live[tk]["catalyst"] = str(catalyst or live[tk].get("catalyst", "") or "")
+                except Exception:
+                    live[tk]["catalyst"] = ""
+                # score_history (N_SL score persistence — list of {s, t} dicts from peaks)
+                try:
+                    live[tk]["score_history"] = peaks.get(tk, {}).get("score_history", [])
+                except Exception:
+                    live[tk]["score_history"] = []
+                # persist_count (N877/N859/N860/N870c — consecutive strong scan count)
+                try:
+                    live[tk]["persist_count"] = int(_curr_persist.get(tk, 0) or 0)
+                except Exception:
+                    live[tk]["persist_count"] = 0
+                # rs21 (N875 — 21-day relative strength; approximate from chg21d or rs5 proxy)
+                try:
+                    _r53_spy21 = float(live.get("SPY", {}).get("chg1mo", live.get("SPY", {}).get("chg5d", 0)) or 0)
+                    _r53_tk21  = float(live[tk].get("chg1mo", live[tk].get("chg5d", 0) or 0) or 0)
+                    live[tk]["rs21"] = round(_r53_tk21 - _r53_spy21, 3)
+                except Exception:
+                    live[tk]["rs21"] = 0.0
+                # rs_sector (N603/N134/N852 — sector ETF day pct vs SPY)
+                try:
+                    _r53_etf = str(live[tk].get("sector_etf", "SPY") or "SPY")
+                    _r53_etf_1d = float(live.get(_r53_etf, {}).get("chg1d", 0) or 0)
+                    _r53_spy_1d = float(live.get("SPY", {}).get("chg1d", 0) or 0)
+                    live[tk]["rs_sector"] = round(_r53_etf_1d - _r53_spy_1d, 3)
+                    live[tk]["sector_rs"] = float(live[tk].get("sector_rs_rank", 50) or
+                                                   live[tk].get("sector_rs", 50) or 50)
+                except Exception:
+                    live[tk]["rs_sector"] = 0.0
+                    live[tk]["sector_rs"] = 50.0
+                # breadth_pct (N818 — advance % from breadth, falls back to market_breadth)
+                try:
+                    live[tk]["breadth_pct"] = float(breadth.get("adv_pct",
+                                                    tlog.get("breadth_adv_pct", 50)) or 50)
+                except Exception:
+                    live[tk]["breadth_pct"] = 50.0
+                # bid_ask_spread_pct (N_MS liquidity — proxy from market cap size tier)
+                try:
+                    _r53_mcap = float(live[tk].get("market_cap_b", 0) or 0)
+                    _r53_px3  = float(live[tk].get("price", 10) or 10)
+                    if _r53_mcap >= 10:      _r53_sp = 0.03   # mega cap: very tight spread
+                    elif _r53_mcap >= 2:     _r53_sp = 0.08   # large cap
+                    elif _r53_mcap >= 0.5:   _r53_sp = 0.15   # mid cap
+                    elif _r53_px3 >= 20:     _r53_sp = 0.25   # small cap reasonable price
+                    else:                    _r53_sp = 0.50   # penny/micro cap: wide spread
+                    live[tk]["bid_ask_spread_pct"] = _r53_sp
+                except Exception:
+                    live[tk]["bid_ask_spread_pct"] = 0.1
+                # pattern_confluence_count (N_pattern — count of True pattern signals)
+                try:
+                    live[tk]["pattern_confluence_count"] = sum(
+                        bool(live[tk].get(k)) for k in (
+                            "vcp", "cup_handle", "at_breakout", "mtf_triple", "ttm_squeeze_fired",
+                            "gap_and_hold", "orb_breakout", "rvol_surge", "supertrend_bull",
+                            "obv_rising", "double_bottom", "ema21_pullback", "mom_accel",
+                            "higher_lows", "ema_stacked_bull", "pocket_pivot", "morning_star",
+                        )
+                    )
+                except Exception:
+                    live[tk]["pattern_confluence_count"] = 0
+                # is_dca (N_DCA — True if there is already an open position in this ticker)
+                try:
+                    _r53_pos = tlog.get("positions", {})
+                    live[tk]["is_dca"] = bool(
+                        _r53_pos.get(tk) or
+                        any(p.get("symbol") == tk for p in (_r53_pos if isinstance(_r53_pos, list) else []))
+                    )
+                except Exception:
+                    live[tk]["is_dca"] = False
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
