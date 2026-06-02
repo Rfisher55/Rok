@@ -29753,6 +29753,21 @@ def run():
                         float(live[tk].get("avg_vol_14", 0) or 0) * float(live[tk].get("price", 0) or 0))
                 except Exception:
                     live[tk]["avg_dollar_vol"] = 0.0
+                # ema_stack: N397 ema_stack_v1_perf — raw ema21/50/200 never in live[tk] → always "partial_stack"
+                live[tk]["ema_stack"] = bool(live[tk].get("ema_stacked_bull", False))
+                # near_ath: N678 price_phase_wycoff_perf — never in live[tk]; derive from near_52w_high ratio
+                try:
+                    live[tk]["near_ath"] = bool(float(live[tk].get("near_52w_high", 0) or 0) >= 0.97)
+                except Exception:
+                    live[tk]["near_ath"] = False
+                # adv_pct: N530 mkt_breadth_entry_perf — alias of market_breadth (already injected above)
+                live[tk]["adv_pct"] = float(live[tk].get("market_breadth", 50) or 50)
+                # spy_chg1d: N124 spy_alignment_v1_perf — SPY 1d numeric proxy from spy_intraday_dir
+                try:
+                    _spy_it_dir = str(live[tk].get("spy_intraday_dir", "flat") or "flat")
+                    live[tk]["spy_chg1d"] = (0.5 if _spy_it_dir == "up" else -0.5 if _spy_it_dir == "down" else 0.0)
+                except Exception:
+                    live[tk]["spy_chg1d"] = 0.0
                 # News velocity signals from news cache
                 try:
                     _nvc2      = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
