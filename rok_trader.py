@@ -17241,6 +17241,8 @@ SECTOR_ETFS = {
     "real_estate":   "XLRE",
     "comm_services": "XLC",
     "crypto":        "IBIT",
+    "biotech":       "IBB",   # iShares Biotechnology ETF
+    "fintech":       "XLF",   # Proxy with financials (no pure fintech ETF)
 }
 
 def sector_rotation() -> dict:
