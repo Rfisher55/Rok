@@ -22316,6 +22316,36 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           else "good" if _fb_mq < 75 else "excellent")
             _nsl_adj += _nde("mkt_quality_perf", _fb_mq_bkt)
 
+            # ── Commit 7: additional validated entry neurons ──────────────────────
+
+            # RVOL tier: normal=70% WR vs weak=43% (N45 explicit tier)
+            _fb_rvolt = ("explosive" if vr >= 5.0 else "strong" if vr >= 2.0
+                         else "normal" if vr >= 1.0 else "weak")
+            _nsl_adj += _nde("rvol_tier_perf", _fb_rvolt)
+
+            # Vol ratio + momentum combo: confirmed > partial > weak (N75)
+            _fb_vratio = float(d.get("vol_ratio", 1.0) or 1.0)
+            _fb_mom_acc = bool(d.get("mom_accel", False))
+            _fb_vrm = ("confirmed" if _fb_vratio >= 1.5 and _fb_mom_acc
+                       else "partial" if _fb_vratio >= 1.2 or _fb_mom_acc else "weak")
+            _nsl_adj += _nde("vol_ratio_mom_perf", _fb_vrm)
+
+            # RS tier at entry: more granular RS rating bucket
+            _fb_rst = float(d.get("rs_rating", 50) or 50)
+            _fb_rst_bkt = ("elite" if _fb_rst >= 90 else "strong" if _fb_rst >= 75
+                           else "average" if _fb_rst >= 50 else "weak")
+            _nsl_adj += _nde("rs_tier_entry_perf", _fb_rst_bkt)
+
+            # Consecutive green days: 1d = best momentum quality
+            _fb_cg_v = int(d.get("consec_green", 0) or 0)
+            _fb_cg_bkt = ("0d" if _fb_cg_v == 0 else "1d" if _fb_cg_v == 1
+                          else "2-3d" if _fb_cg_v <= 3 else "4d+")
+            _nsl_adj += _nde("consec_green_perf", _fb_cg_bkt)
+
+            # Sector momentum at entry: accelerating sector outperforms
+            _fb_sec_mom = d.get("sector_etf_momentum", "neutral") or "neutral"
+            _nsl_adj += _nde("sector_momentum_perf", _fb_sec_mom)
+
             # Cap the full neural layer at ±20 (wider cap as brain accumulates more data)
             s += max(-20, min(20, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -26458,8 +26488,15 @@ def run():
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
-            for tk, sc, sent, sec, catalyst in final_scores[:open_long_slots]:
+            # Per-run buy cap: max 5 new positions per scan to spread entries and stay selective
+            # Validated: brain data shows buying top-ranked (lower position count) outperforms.
+            # With 5-min cron, 5 buys/run x 12 runs/h x 6.5h = 390 slots available — plenty for 100+/day
+            _per_run_cap = min(5, open_long_slots)
+            _this_run_buys = 0
+            for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
+                    if _this_run_buys >= _per_run_cap:
+                        break
                     # Earnings proximity guard: don't buy within 2 days of earnings report
                     if earnings_too_close(tk, guard_days=2):
                         logger.info(f"SKIP {tk} — earnings within 2 days (gap-risk guard)")
@@ -36601,6 +36638,7 @@ def run():
                                  "entry_premium_signals": _entry_prem_sigs}
                     sector_counts[sec] = sector_counts.get(sec, 0) + 1
                     made_trades  = True
+                    _this_run_buys += 1
                     buying_power -= notional
                 except Exception as e:
                     logger.warning(f"BUY failed {tk}: {e}")
