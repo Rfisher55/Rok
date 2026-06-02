@@ -29768,6 +29768,15 @@ def run():
                     live[tk]["spy_chg1d"] = (0.5 if _spy_it_dir == "up" else -0.5 if _spy_it_dir == "down" else 0.0)
                 except Exception:
                     live[tk]["spy_chg1d"] = 0.0
+                # intra + intraday_reversal: N244 intraday_reversal_v1_perf — never set; derive from intraday
+                live[tk]["intra"] = float(live[tk].get("intraday", 0) or 0)
+                live[tk]["intraday_reversal"] = bool(
+                    live[tk].get("vwap_reclaim", False)
+                    and float(live[tk].get("intraday", 0) or 0) > 0.3)
+                # entry_grade: N717 position_sizing_outcome_perf — never in live[tk]; alias from grade
+                live[tk]["entry_grade"] = str(live[tk].get("grade", "C") or "C")
+                # expected_move_pct: N206 option_implied_move_v1_perf — key mismatch; map from _wk variant
+                live[tk]["expected_move_pct"] = float(live[tk].get("expected_move_pct_wk", 0) or 0)
                 # News velocity signals from news cache
                 try:
                     _nvc2      = _NEWS_VEL_CACHE.get(tk, ({}, 0))[0]
