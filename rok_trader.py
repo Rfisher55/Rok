@@ -28722,8 +28722,9 @@ def run():
                 elif _accum_bkt_lb == "light":
                     _learned_bonus += _nbns("accum_perf", "light", 60, 2)  # 69.7% WR n=33 — reliable
                 elif _accum_bkt_lb in ("moderate", "heavy"):
-                    _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # moderate=100% WR
+                    _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
+                    _learned_bonus += _npen("accum_perf", "moderate", 47, -2)  # 44.4% WR n=9 — moderate accum underperforms
                 # Combo trap: light accum + falling OBV = distribution
                 _obv_now_lb = str(_tk_sig_sc.get("obv_trend", _tk_sig_sc.get("obv_direction", "")) or "")
                 if _accum_bkt_lb == "light" and _obv_now_lb == "falling":
@@ -28819,15 +28820,15 @@ def run():
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
                     _learned_bonus += _nbns("roc_perf", "positive", 60, 1)      # 71% WR
-                # RSI entry: overbought (>=70) = 69% WR bonus; neutral (40-55) = 30% WR penalty
+                # RSI entry: neutral (40-55) = 25% WR n=12 (very bad!); overbought=54% WR (neutral)
                 # Only penalize when RSI is explicitly present (avoid default=50 false positive)
                 _rsi_raw_lb = _tk_sig_sc.get("rsi")
                 _rsi_lb = float(_rsi_raw_lb) if _rsi_raw_lb is not None else None
                 if _rsi_lb is not None:
                     if _rsi_lb >= 70:
-                        _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 69% WR
+                        _learned_bonus += _nbns("rsi_entry_perf", "overbought", 60, 2)  # 54% WR (neutral, fires if improves)
                     elif 40 <= _rsi_lb < 55:
-                        _learned_bonus += _npen("rsi_entry_perf", "neutral", 35, -2)    # 30% WR
+                        _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
                 # ST gap: normal = 22% WR — heavy penalty
                 _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
                 if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
@@ -28859,9 +28860,9 @@ def run():
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 4)  # 88% WR — boosted to +4
                     if bool(_tk_sig_sc.get("obv_rising", False)):
                         _learned_bonus += _nbns("signal_synergy", "higher_lows+obv_rising", 65, 2)  # dual confirmation
-                # HA trend: bear=38% WR n=13 (penalty), bull=70% is fine
+                # HA trend: bear=31.2% WR n=16 — strengthened penalty
                 if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
-                    _learned_bonus += _npen("ha_trend_perf", "bear", 45, -2)    # 38% WR n=13
+                    _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16 — strong bear signal
                 # RVOL tier: normal(0.8-1.5)=70% WR n=30 (+1 bonus!), weak(<0.8)=43% WR n=14
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
@@ -28958,11 +28959,14 @@ def run():
                 if bool(_tk_sig_sc.get("vol_dry_up", False)):
                     _learned_bonus += _nbns("vol_dry_perf", "dry_up", 62, 2)  # clean compression
                 # Chart pattern quality: single pattern=38.5% WR n=13 (weak false positives); multi=better
-                _chart_sc_lb = int(_tk_sig_sc.get("chart_pattern_score", 0) or 0)
-                _chart_st_lb = str(_tk_sig_sc.get("chart_pattern_state", "") or "")
-                if _chart_sc_lb == 1 or _chart_st_lb == "single":
-                    _learned_bonus += _npen("chart_pattern_perf", "single", 42, -3)  # 38.5% WR n=13 — single pattern = weak
-                elif _chart_sc_lb >= 2 or _chart_st_lb == "multi":
+                # Compute from component signals (chart_pattern_score not in live dict)
+                _chart_sc_lb = (int(bool(_tk_sig_sc.get("bull_flag", False)))
+                                + int(bool(_tk_sig_sc.get("cup_handle", False)))
+                                + int(bool(_tk_sig_sc.get("vcp", False)))
+                                + int(bool(_tk_sig_sc.get("pocket_pivot", False))))
+                if _chart_sc_lb == 1:
+                    _learned_bonus += _npen("chart_pattern_perf", "single", 42, -3)  # 38.5% WR n=13 — single = weak
+                elif _chart_sc_lb >= 2:
                     _learned_bonus += _nbns("chart_pattern_perf", "multi", 58, 2)    # multi-pattern confluence bonus
                 # Stochastic zone: data shows overbought=42.9% WR (bad!), neutral=62.5% WR (good!)
                 _sk_lb = float(_tk_sig_sc.get("stoch_k", 50) or 50)
@@ -29009,7 +29013,7 @@ def run():
                 if _roc5_acc is not None and _roc20_acc is not None:
                     _roc5_acc = float(_roc5_acc or 0); _roc20_acc = float(_roc20_acc or 0)
                     if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
-                        _learned_bonus += _nbns("roc_perf", "accelerating", 62, 1)
+                        _learned_bonus += _npen("roc_perf", "accelerating", 40, -1)  # 37.5% WR n=8 — chasing extended move
                     elif _roc5_acc <= 0 and _roc20_acc <= 0:
                         _learned_bonus += _npen("roc_perf", "negative", 35, -1)  # both negative: avoid
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
