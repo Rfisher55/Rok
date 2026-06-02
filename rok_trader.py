@@ -28679,7 +28679,8 @@ def run():
                     # signal_performance["ichimoku_above"] = 45.7% WR n=35 — penalize
                     _learned_bonus += _npen("signal_performance", "ichimoku_above", 47, -1)
                     if bool(_tk_sig_sc.get("mom_accel", False)):
-                        _learned_bonus += _nbns("signal_synergy", "ichimoku_above+mom_accel", 65, 3)  # 100% WR n=5
+                        # ichimoku_above+mom_accel = 50% WR n=16 — dead bonus removed
+                        pass
                 if bool(_tk_sig_sc.get("psar_bull", False)):
                     # psar_bull_entry_perf["psar_bullish_entry"] = 33.3% WR n=3 (small sample)
                     # signal_performance["psar_bull"] = 45.7% WR n=35 — penalize
@@ -28689,13 +28690,19 @@ def run():
                     # signal_performance["kc_breakout"] = 43.8% WR n=32 — penalize
                     _learned_bonus += _npen("signal_performance", "kc_breakout", 46, -2)
                     if bool(_tk_sig_sc.get("ichimoku_above", False)):
-                        _learned_bonus += _nbns("signal_synergy", "ichimoku_above+kc_breakout", 65, 2)  # 83% WR n=6
+                        # ichimoku_above+kc_breakout = 43.8% WR n=16 — penalty, not bonus!
+                        _learned_bonus += _npen("signal_synergy", "ichimoku_above+kc_breakout", 45, -2)
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
                     _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    # gap_and_hold: 37% WR at entry, 35% WR in signal_performance — consistent loser
+                    # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
                     _learned_bonus += _npen("gap_hold_perf", "holding", 45, -4)   # 37% WR threshold tightened
-                    _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 35% WR n=20
+                    _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 31.8% WR n=22
+                    # gap_and_hold synergy penalties: all combos are catastrophic (14-23% WR)
+                    for _gap_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ichimoku_above","ema_stacked_bull"):
+                        if bool(_tk_sig_sc.get(_gap_synergy_sig, False)):
+                            _learned_bonus += _npen("signal_synergy", f"gap_and_hold+{_gap_synergy_sig}", 25, -3)
+                            break  # one extra penalty per position is enough
                 if bool(_tk_sig_sc.get("supertrend_bull", False)):
                     # supertrend_perf MISSING from tlog — dead bonus removed
                     # signal_performance["supertrend_bull"] = 46.9% WR n=32 — penalize mildly
@@ -28825,6 +28832,9 @@ def run():
                 if _cat_type_raw is not None and ("none" in _cat_type_lb or _cat_type_lb == ""):
                     # Only penalize when catalyst_type is explicitly "none" (not merely absent from signals)
                     _learned_bonus += _npen("catalyst_type_perf", "none", 20, -6)  # 12% WR: harsh
+                elif _cat_type_raw is not None and _cat_type_lb not in ("", "none", "technical_catalyst"):
+                    # "other" catalyst = non-technical event (news, macro, sector rotation) = 71.1% WR n=38!
+                    _learned_bonus += _nbns("catalyst_type_perf", "other", 68, 3)  # 71.1% WR n=38 — top signal
                 _bb_pos_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
                 if _bb_pos_lb > 0.85:
                     _learned_bonus += _nbns("bb_zone_perf", "upper", 55, 1)   # 55.6% WR n=9 — threshold lowered (was stale 83%)
@@ -28937,11 +28947,14 @@ def run():
                     _learned_bonus += _npen("signal_performance", "obv_rising", 45, -2)  # 36.4% WR n=11
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
-                # Higher lows confirmed: 88% WR n=8 (strongest signal in dataset)
+                # Higher lows confirmed: 66.7% WR n=9 (updated); synergy combos 66-75% WR
                 if bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 4)  # 88% WR — boosted to +4
-                    if bool(_tk_sig_sc.get("obv_rising", False)):
-                        _learned_bonus += _nbns("signal_synergy", "higher_lows+obv_rising", 65, 2)  # dual confirmation
+                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 66.7% WR n=9
+                    # higher_lows synergy bonuses: all combos show strong alpha (66-75% WR n=8-9)
+                    for _hl_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ema_stacked_bull"):
+                        if bool(_tk_sig_sc.get(_hl_synergy_sig, False)):
+                            _learned_bonus += _nbns("signal_synergy", f"higher_lows+{_hl_synergy_sig}", 64, 2)  # 66-75% WR
+                            break  # one synergy bonus at a time
                 # HA trend: bear=31.2% WR n=16 — strengthened penalty
                 if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16 — strong bear signal
@@ -29076,11 +29089,12 @@ def run():
                     _lr2_lb = float(_lr2_raw_lb or 0)
                     _lr_q_lb = ("strong" if _lr2_lb >= 0.85 else "moderate" if _lr2_lb >= 0.6 else "weak")
                     if _lr_q_lb == "strong":
-                        _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3
+                        _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3 (small but perfect)
                     elif _lr_q_lb == "moderate":
-                        _learned_bonus += _nbns("lr_quality_perf", "moderate", 62, 1)  # 66.7% WR n=24
+                        # lr_quality_perf["moderate"] = 51.2% WR n=41 — coin flip, no bonus at 62%
+                        pass
                     elif _lr_q_lb == "weak":
-                        _learned_bonus += _npen("lr_quality_perf", "weak", 50, -3)     # 47% WR n=19
+                        _learned_bonus += _npen("lr_quality_perf", "weak", 42, -2)     # 40.7% WR n=27 — threshold updated
                 # Donchian zone: near top of range (breakout) vs weakness
                 _dc_lb = float(_tk_sig_sc.get("donchian_pct", 50) or 50)
                 _dc_zone_lb = ("breakout" if _dc_lb >= 75 else "weakness" if _dc_lb < 25 else "middle")
