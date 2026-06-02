@@ -28695,6 +28695,10 @@ def run():
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # moderate=100% WR, heavy=strong
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)     # separate heavy bonus
+                # Combo trap: light accum + falling OBV = distribution into retail strength
+                _obv_now_lb = str(_tk_sig_sc.get("obv_trend", _tk_sig_sc.get("obv_direction", "")) or "")
+                if _accum_bkt_lb == "light" and _obv_now_lb == "falling":
+                    _learned_bonus += -2  # institutions selling while price still rising
                 _adx_lb = float(_tk_sig_sc.get("adx", 20) or 20)
                 _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb > 20 else "weak")
                 if _adx_bkt_lb == "weak":
