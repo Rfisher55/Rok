@@ -26169,9 +26169,9 @@ def run():
     # Neuron state win-rate lookup (used in score() neural state layer)
     global _LEARNED_NEURON_PARAMS, _ALL_NEURON_PERFS, _SIGNAL_SYNERGY_MAP, _SIGNAL_TRIPLETS_MAP
     _LEARNED_NEURON_PARAMS = tlog.get("bot_learned_params", {})
-    # Load ALL *_perf dicts from tlog into global for full 850-neuron feedback loop
+    # Load ALL *_perf dicts + signal_performance from tlog into global for full 850-neuron feedback loop
     _ALL_NEURON_PERFS = {k: v for k, v in tlog.items()
-                         if isinstance(k, str) and k.endswith("_perf") and isinstance(v, dict)}
+                         if isinstance(k, str) and (k.endswith("_perf") or k == "signal_performance") and isinstance(v, dict)}
     _SIGNAL_SYNERGY_MAP   = {k: v for k, v in tlog.get("signal_synergy", {}).items()
                               if isinstance(v, dict) and v.get("total", 0) >= 3}
     _SIGNAL_TRIPLETS_MAP  = {k: v for k, v in tlog.get("signal_triplets", {}).items()
@@ -28608,15 +28608,18 @@ def run():
                 if bool(_tk_sig_sc.get("force_index_rising", False)):
                     _learned_bonus += _nbns("force_index_perf", "rising", 60, 1)
                 if bool(_tk_sig_sc.get("mom_accel", False)):
-                    _learned_bonus += _nbns("momentum_persistence_perf", "accelerating", 60, 1)
+                    # Use signal_performance (WR=68.2% n=22) since momentum_persistence_perf states were misnamed
+                    _learned_bonus += _nbns("signal_performance", "mom_accel", 65, 2)
+                    _learned_bonus += _nbns("momentum_persistence_perf", "multi_day_momentum", 60, 1)
+                    _learned_bonus += _nbns("momentum_persistence_perf", "fresh_breakout", 60, 1)
                 if bool(_tk_sig_sc.get("ichimoku_above", False)):
                     _learned_bonus += _nbns("ichimoku_cloud_entry_perf", "above_cloud", 60, 1)
                     if bool(_tk_sig_sc.get("mom_accel", False)):
                         _learned_bonus += _nbns("signal_synergy", "ichimoku_above+mom_accel", 65, 3)  # 100% WR n=5
                 if bool(_tk_sig_sc.get("psar_bull", False)):
-                    _learned_bonus += _nbns("psar_bull_entry_perf", "bullish", 60, 1)
+                    _learned_bonus += _nbns("psar_bull_entry_perf", "psar_bullish_entry", 60, 1)  # fixed: was "bullish"
                 if bool(_tk_sig_sc.get("kc_breakout", False)):
-                    _learned_bonus += _nbns("keltner_position_entry_perf", "kc_breakout", 60, 1)
+                    _learned_bonus += _nbns("keltner_position_entry_perf", "above_upper", 60, 1)  # fixed: was "kc_breakout"
                     if bool(_tk_sig_sc.get("ichimoku_above", False)):
                         _learned_bonus += _nbns("signal_synergy", "ichimoku_above+kc_breakout", 65, 2)  # 83% WR n=6
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
@@ -28927,10 +28930,13 @@ def run():
                 if _wr_lb > -20:
                     _learned_bonus += _nbns("wr_zone_perf", "overbought", 60, 1)
                 # trending WR is 54% — mild, not worth a harsh penalty
-                # Options flow tier: confirmed=65% WR n=23; neutral=57% WR n=23 (updated data)
+                # Options flow: unusual_calls alone=65.2% WR n=23 (top-8 signal!)
                 _uc_lb2 = bool(_tk_sig_sc.get("unusual_calls", False))
                 _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
                 _pcr_lb2 = float(_tk_sig_sc.get("options_pcr", 1.0) or 1.0)
+                if _uc_lb2:
+                    _learned_bonus += _nbns("call_volume_surge_perf", "unusual_calls", 62, 2)  # fires once data accumulates
+                    _learned_bonus += _nbns("signal_performance", "unusual_calls", 62, 1)       # 65.2% WR n=23 live signal
                 _opt_sc_lb = int(_uc_lb2) + int(_ob_lb2) + int(_pcr_lb2 < 0.7)
                 if _opt_sc_lb >= 2:
                     _learned_bonus += _nbns("options_flow_perf", "confirmed", 60, 1)
@@ -35967,15 +35973,18 @@ def run():
                     except Exception:
                         _n571_s = "mid_iv_rank"
                     _buy_signals_merged["options_iv_rank_perf"] = _n571_s
-                    # N572: Call volume surge at entry
+                    # N572: Call volume surge at entry (unusual_calls flag takes priority)
                     try:
-                        _n572_cvr = float(d.get("call_vol_ratio", d.get("unusual_calls", 1.0)) or 1.0)
-                        if _n572_cvr >= 3.0:
-                            _n572_s = "call_surge"
-                        elif _n572_cvr >= 1.5:
-                            _n572_s = "elevated_calls"
+                        if bool(d.get("unusual_calls", False)):
+                            _n572_s = "unusual_calls"   # explicit smart-money signal takes priority
                         else:
-                            _n572_s = "normal_calls"
+                            _n572_cvr = float(d.get("call_vol_ratio", 1.0) or 1.0)
+                            if _n572_cvr >= 3.0:
+                                _n572_s = "call_surge"
+                            elif _n572_cvr >= 1.5:
+                                _n572_s = "elevated_calls"
+                            else:
+                                _n572_s = "normal_calls"
                     except Exception:
                         _n572_s = "normal_calls"
                     _buy_signals_merged["call_volume_surge_perf"] = _n572_s
