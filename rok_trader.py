@@ -21643,8 +21643,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Opening Range Breakout: cleared the first-hour high on volume — algo algos and funds chase (+13)
     if d.get("orb_breakout", False): s += 13
 
-    # Gap and hold: gapped up 1.5%+ and is holding above the gap — buyers own the tape (+10)
-    if d.get("gap_and_hold", False): s += 10
+    # Gap and hold: data shows 50% WR solo but 16-33% WR in all combos — reduced from +10 to +2
+    if d.get("gap_and_hold", False): s += 2
 
     # ADX trend strength: high ADX confirms momentum signals, low ADX = choppy market
     adx = d.get("adx", 0) or 0
@@ -28745,6 +28745,13 @@ def run():
                     _learned_bonus += _npen("grade_perf", "D", 35, -4)    # ~30% WR: hard penalty
                 elif _grade_lb in ("A+", "A"):
                     _learned_bonus += _nbns("grade_perf", "A+", 65, 2)    # A+ bonus when data shows good WR
+                # EG tier: negative earnings growth = 65% WR n=34; positive = 50% WR n=12
+                # Turnaround/recovery plays outperform in momentum system
+                _eg_lb = float(_tk_sig_sc.get("earnings_growth", 0) or 0)
+                if _eg_lb < 0:
+                    _learned_bonus += _nbns("eg_tier_perf", "negative", 62, 1)  # 65% WR n=34
+                elif 0 < _eg_lb < 25:
+                    _learned_bonus += _npen("eg_tier_perf", "positive", 55, -1)  # 50% WR n=12
                 # Price tier: micro-cap (<$10) has 14% WR — penalize when confirmed
                 _pr_lb2 = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 _ptier_lb = "micro" if _pr_lb2 < 10 else "small" if _pr_lb2 < 30 else "mid" if _pr_lb2 < 100 else "large"
