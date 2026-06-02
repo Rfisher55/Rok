@@ -26504,7 +26504,7 @@ def run():
             _scalp_exit_reason = None
             # Adaptive thresholds: self-tune calibrates these from actual trade distribution.
             # Defaults of ±1.5% apply until enough scalp trades are accumulated (≥10).
-            _scalp_pthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_profit_pct", 1.5))
+            _scalp_pthr = min(1.0, float(tlog.get("bot_learned_params", {}).get("learned_scalp_profit_pct", 1.0)))  # cap at 1.0%
             _scalp_sthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_stop_pct", -1.5))
             # Hold time learning: if 0-2d trades win more than 3-7d holds, be more aggressive taking profits
             try:
