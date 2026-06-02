@@ -24365,6 +24365,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
                         _stgwr = float(_stg_rec.get("win_rate", 50) or 50)
                         if _stgwr <= 25:  _veto_adj -= 6
                         elif _stgwr >= 80: _veto_adj += 4
+                # RSI entry zone veto: neutral RSI (30-55) = 30% WR — entry too early/wrong timing
+                _rsi_rec = _ALL_NEURON_PERFS.get("rsi_entry_perf", {}).get(_fb_rsie_bkt, {})
+                if isinstance(_rsi_rec, dict) and _rsi_rec.get("total", 0) >= 5:
+                    _rsiwr = float(_rsi_rec.get("win_rate", 50) or 50)
+                    if _rsiwr <= 25:  _veto_adj -= 8   # neutral RSI proven loser
+                    elif _rsiwr >= 80: _veto_adj += 4
                 # ── Compound elite combo: accum(moderate/heavy) + ichimoku(above) ──
                 # accum=moderate: 100% WR; ichimoku=above: 64% WR — together = very high confidence
                 _combo_accum_good  = _fb_ac_bkt in ("moderate", "heavy")
