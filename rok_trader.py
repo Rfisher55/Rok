@@ -28804,9 +28804,9 @@ def run():
                                   else "none" if _accum_sc_lb is not None  # explicitly 0
                                   else "unknown")  # signal absent → neutral
                 if _accum_bkt_lb == "none":
-                    _learned_bonus += _npen("accum_perf", "none", 20, -8)  # 11% WR: severe (explicitly 0)
+                    _learned_bonus += _npen("accum_perf", "none", 15, -8)  # 10% WR n=10: severe (explicitly 0)
                 elif _accum_bkt_lb == "light":
-                    _learned_bonus += _nbns("accum_perf", "light", 60, 2)  # 69.7% WR n=33 — reliable
+                    _learned_bonus += _nbns("accum_perf", "light", 55, 2)  # 55.8% WR n=52 — threshold lowered 60→55
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
@@ -28869,21 +28869,22 @@ def run():
                     _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
                 elif _ptier_lb == "small":
                     _learned_bonus += _nbns("price_tier_perf", "small", 60, 1)   # 80% WR in data!
-                # Ichimoku cloud position: inside=80% WR, above=64% WR, below=22% WR
+                # Ichimoku cloud position: inside=55.2% WR n=29, above=48.5% WR n=33, below=20% WR n=10
                 _ich_lb = str(_tk_sig_sc.get("ichimoku_state", _tk_sig_sc.get("ichimoku_pos", "")) or "")
                 _ich_above_flag = bool(_tk_sig_sc.get("ichimoku_above", False))
                 if "inside" in _ich_lb:
-                    _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 3)    # 80% WR — strong boost
+                    _learned_bonus += _nbns("ichimoku_perf", "inside", 54, 1)    # 55.2% WR — threshold lowered (was stale 80%)
                 elif "above" in _ich_lb or _ich_above_flag:
-                    _learned_bonus += _nbns("ichimoku_perf", "above", 60, 2)     # 64% WR — moderate boost
+                    # ichimoku_perf["above"] = 48.5% WR n=33 — below 50%, change to mild penalty
+                    _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)
                 elif "below" in _ich_lb:  # only explicitly "below" — other states are neutral
-                    _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 22% WR — strong penalty
-                # HA consecutive candles: building(3)=78% WR, strong(5+)=46% WR (reversal risk!)
+                    _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
+                # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=35.3% WR n=17
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
                 if _ha_consec_lb >= 5:
-                    _learned_bonus += _npen("ha_consec_perf", "strong", 50, -2)  # 46% WR — overextended
+                    _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
                 elif _ha_consec_lb >= 3:
-                    _learned_bonus += _nbns("ha_consec_perf", "building", 60, 1) # 78% WR
+                    _learned_bonus += _nbns("ha_consec_perf", "building", 62, 1) # 63.6% WR n=11 — fires ✓
                 # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
@@ -29186,15 +29187,19 @@ def run():
                     _tm_lb = "losing_1" if _tm_wstrk == -1 else "losing_2+" if _tm_wstrk <= -2 else ""
                 if _tm_lb == "losing_1":
                     _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 29% WR n=14 — avoid loss chasing
-                # Position count: 13+ positions = WR=31% n=16 — over-diversification kills quality
+                # Position count: 4-7=26.7% WR n=15; 13+=18.2% WR n=11 — both kill quality
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
                 if _pos_bkt_lb == "13+":
-                    _learned_bonus += _npen("position_count_perf", "13+", 38, -3)  # 31% WR n=16
-                # Sector breadth: single_sector = WR=29% n=17 — narrow market = risky entry
+                    _learned_bonus += _npen("position_count_perf", "13+", 22, -3)  # 18.2% WR n=11
+                elif _pos_bkt_lb == "4-7":
+                    _learned_bonus += _npen("position_count_perf", "4-7", 30, -2)  # 26.7% WR n=15 — medium book risk
+                # Sector breadth: single_sector=16.7% WR n=12; healthy_4-5=28.6% WR n=14 — both weak
                 _sec_adv_lb = int(_tk_sig_sc.get("sectors_advancing_now", 5) or 5)
                 if _sec_adv_lb < 2:
-                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 35, -3)  # 29% WR n=17
+                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 20, -3)  # 16.7% WR n=12
+                elif 4 <= _sec_adv_lb <= 5:
+                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 30, -2)  # 28.6% WR n=14
                 _learned_bonus = max(-20, min(18, _learned_bonus))  # expanded penalty floor: -10→-20
             except Exception:
                 _learned_bonus = 0
