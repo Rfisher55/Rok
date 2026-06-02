@@ -32998,7 +32998,7 @@ def run():
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
             # Per-run buy cap: max 10 new positions per scan to maximize daily trade count
-            # Target 300 trades/day: 35 max_pos × 4.3 cycles × 2 (buy+sell) = 300 trades
+            # Target 500 trades/day: 35 max_pos × 7 cycles × 2 (buy+sell) = 490 trades
             _per_run_cap = min(10, open_long_slots)
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
