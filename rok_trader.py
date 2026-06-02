@@ -28699,8 +28699,9 @@ def run():
                 _accum_bkt_lb = ("heavy" if _accum_sc_lb >= 8 else "moderate" if _accum_sc_lb >= 5 else "light" if _accum_sc_lb >= 2 else "none")
                 if _accum_bkt_lb == "none":
                     _learned_bonus += _npen("accum_perf", "none", 20, -8)  # 11% WR: severe penalty
-                elif _accum_bkt_lb == "heavy":
-                    _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)   # strong accumulation = bonus
+                elif _accum_bkt_lb in ("moderate", "heavy"):
+                    _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # moderate=100% WR, heavy=strong
+                    _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)     # separate heavy bonus
                 _adx_lb = float(_tk_sig_sc.get("adx", 20) or 20)
                 _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb > 20 else "weak")
                 if _adx_bkt_lb == "weak":
@@ -28736,11 +28737,14 @@ def run():
                     _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
                 elif _ptier_lb == "small":
                     _learned_bonus += _nbns("price_tier_perf", "small", 60, 1)   # 80% WR in data!
-                # Ichimoku cloud position: inside=80% WR, below=22% WR
+                # Ichimoku cloud position: inside=80% WR, above=64% WR, below=22% WR
                 _ich_lb = str(_tk_sig_sc.get("ichimoku_state", _tk_sig_sc.get("ichimoku_pos", "")) or "")
-                if "inside" in _ich_lb or _tk_sig_sc.get("ichimoku_above"):
+                _ich_above_flag = bool(_tk_sig_sc.get("ichimoku_above", False))
+                if "inside" in _ich_lb:
                     _learned_bonus += _nbns("ichimoku_perf", "inside", 60, 3)    # 80% WR — strong boost
-                elif "below" in _ich_lb or (not _tk_sig_sc.get("ichimoku_above") and "above" not in _ich_lb and _ich_lb):
+                elif "above" in _ich_lb or _ich_above_flag:
+                    _learned_bonus += _nbns("ichimoku_perf", "above", 60, 2)     # 64% WR — moderate boost
+                elif "below" in _ich_lb or (_ich_lb and not _ich_above_flag and "above" not in _ich_lb):
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 22% WR — strong penalty
                 # HA consecutive candles: building(3)=78% WR, strong(5+)=46% WR (reversal risk!)
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec", _tk_sig_sc.get("ha_consecutive", 0)) or 0)
@@ -28791,9 +28795,9 @@ def run():
                     _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 3)  # 80% WR n=20 — top signal
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 48, -1)  # 46% WR n=26
-                # Higher lows confirmed: 86% WR n=7
+                # Higher lows confirmed: 88% WR n=8 (strongest signal in dataset)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 2)  # 86% WR
+                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 4)  # 88% WR — boosted to +4
                 # HA trend: bear=38% WR n=13 (penalty), bull=70% is fine
                 if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -2)    # 38% WR n=13
