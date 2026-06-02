@@ -28731,6 +28731,46 @@ def run():
                 _pr_tier_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 if _pr_tier_lb >= 100:
                     _learned_bonus += _nbns("price_tier_perf", "large", 60, 1)
+                # Williams %R zone: overbought (>-20)=68% WR n=22; trending=11% WR n=9
+                _wr_lb = float(_tk_sig_sc.get("williams_r", -50) or -50)
+                if _wr_lb > -20:
+                    _learned_bonus += _nbns("wr_zone_perf", "overbought", 60, 1)
+                elif -80 <= _wr_lb <= -20:
+                    _learned_bonus += _npen("wr_zone_perf", "trending", 25, -2)
+                # Options flow tier: confirmed=65% WR n=23; neutral=12% WR n=8
+                _uc_lb2 = bool(_tk_sig_sc.get("unusual_calls", False))
+                _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
+                _pcr_lb2 = float(_tk_sig_sc.get("options_pcr", 1.0) or 1.0)
+                _opt_sc_lb = int(_uc_lb2) + int(_ob_lb2) + int(_pcr_lb2 < 0.7)
+                if _opt_sc_lb >= 2:
+                    _learned_bonus += _nbns("options_flow_perf", "confirmed", 60, 1)
+                elif _opt_sc_lb == 0:
+                    _learned_bonus += _npen("options_flow_perf", "neutral", 25, -2)
+                # EMA structure: both=65% WR n=23; below_both=12% WR n=8
+                _e50_pct_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
+                _e200_pct_lb = float(_tk_sig_sc.get("price_vs_ema200", 0) or 0)
+                if _e50_pct_lb > 0 and _e200_pct_lb > 0:
+                    _learned_bonus += _nbns("ema_struct_perf", "both", 60, 1)
+                elif _e50_pct_lb <= 0 and _e200_pct_lb <= 0:
+                    _learned_bonus += _npen("ema_struct_perf", "below_both", 25, -2)
+                # AVWAP: above=65% WR n=23; below=12% WR n=8
+                if bool(_tk_sig_sc.get("above_avwap_52wl", False)):
+                    _learned_bonus += _nbns("avwap_perf", "above", 60, 1)
+                else:
+                    _learned_bonus += _npen("avwap_perf", "below", 25, -2)
+                # POC control: above=64% WR n=22
+                if bool(_tk_sig_sc.get("above_poc", False)):
+                    _learned_bonus += _nbns("poc_control_perf", "above", 60, 1)
+                # KC zone breakout: 64% WR n=22
+                _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
+                if bool(_tk_sig_sc.get("kc_breakout", False)) or _kc_pos_lb2 >= 80:
+                    _learned_bonus += _nbns("kc_zone_perf", "breakout", 60, 1)
+                # Consecutive green days: 0d=12% WR n=8
+                _cg_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
+                if _cg_lb == 0:
+                    _learned_bonus += _npen("consec_green_perf", "0d", 25, -1)
+                elif _cg_lb >= 3:
+                    _learned_bonus += _nbns("consec_green_perf", "3d+", 60, 1)
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
