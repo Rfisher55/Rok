@@ -28615,6 +28615,18 @@ def run():
                 if bool(_tk_sig_sc.get("at_breakout", False)):
                     _learned_bonus += _nbns("at_breakout_perf", "breakout", 65, 2)   # fires only if WR>=65%
                     _learned_bonus += _npen("signal_performance", "at_breakout", 45, -2)  # 44% WR n=34
+                    # at_breakout combos without higher_lows: all 40-46% WR with large samples (n=15-30)
+                    if not bool(_tk_sig_sc.get("higher_lows", False)):
+                        if bool(_tk_sig_sc.get("mom_accel", False)):
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+mom_accel", 44, -1)   # 43.3% n=30
+                        if bool(_tk_sig_sc.get("kc_breakout", False)):
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+kc_breakout", 43, -1) # 42.9% n=28
+                        if bool(_tk_sig_sc.get("mtf_aligned", False)):
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+mtf_aligned", 43, -1) # 42.3% n=26
+                        if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+ema_stacked_bull", 46, -1) # 45.8% n=24
+                        if bool(_tk_sig_sc.get("ichimoku_above", False)):
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+ichimoku_above", 41, -1)   # 40% n=15
                 _rvol_lb = float(_tk_sig_sc.get("rvol", 1.0) or 1.0)
                 if _rvol_lb >= 3.0:
                     _learned_bonus += _nbns("rvol_tier_perf", "extreme", 62, 2)
@@ -28641,7 +28653,9 @@ def run():
                 elif not _spy200_lb or _vix_now_lb > 28:
                     _learned_bonus += _npen("macro_backdrop_perf", "unfavorable_macro", 42, -2)
                 if _regime_lb == "bull":
-                    _learned_bonus += _nbns("regime_spy_alignment_perf", "bull_aligned", 65, 1)
+                    # regime_spy_alignment_perf["bull_aligned"] DOESN'T EXIST in tlog
+                    # regime_performance["bull"] = 47% WR n=66 — bull regime entries consistently lose
+                    _learned_bonus += _npen("regime_performance", "bull", 47, -1)
                 elif _regime_lb == "bear":
                     _learned_bonus += _npen("regime_spy_alignment_perf", "bear_counter", 42, -2)
                 if bool(_tk_sig_sc.get("options_flow", False)):
@@ -28655,6 +28669,24 @@ def run():
                     _learned_bonus += _nbns("vix_entry_perf", "low", 62, 1)
                 elif _vix_br == "elevated":
                     _learned_bonus += _npen("vix_entry_perf", "elevated", 42, -2)
+                # capital_util: moderate=26.7% WR n=15, high_cash=12.5% WR n=8 — both catastrophic
+                _cap_pv_lb = float(tlog.get("portfolio_value", 100000) or 100000)
+                _cap_bp_lb = float(tlog.get("buying_power", _cap_pv_lb) or _cap_pv_lb)
+                _cap_util_pct_lb = (1 - _cap_bp_lb / max(_cap_pv_lb, 1)) * 100
+                if _cap_util_pct_lb < 30:
+                    _learned_bonus += _npen("capital_util_perf", "high_cash", 13, -3)   # 12.5% WR n=8
+                elif _cap_util_pct_lb < 60:
+                    _learned_bonus += _npen("capital_util_perf", "moderate", 28, -3)    # 26.7% WR n=15
+                # breadth_perf["mixed"]: 41.3% WR n=46 — mixed breadth = adverse entry conditions
+                _brd_adv_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
+                _brd_bkt_lb = ("strong" if _brd_adv_lb >= 70 else "broad" if _brd_adv_lb >= 55
+                               else "mixed" if _brd_adv_lb >= 40 else "weak")
+                if _brd_bkt_lb == "mixed":
+                    _learned_bonus += _npen("breadth_perf", "mixed", 42, -2)  # 41.3% WR n=46
+                # halfhour_performance["1730"]: 39.3% WR n=28 — 1:30 PM ET window consistently bad
+                _hw_utc_lb = datetime.utcnow().strftime("%H") + ("30" if datetime.utcnow().minute >= 30 else "00")
+                if _hw_utc_lb == "1730":
+                    _learned_bonus += _npen("halfhour_performance", "1730", 40, -2)  # 39.3% WR n=28
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
                     _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
                     _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
@@ -28674,13 +28706,16 @@ def run():
                     _learned_bonus += _nbns("signal_performance", "mom_accel", 65, 2)
                     _learned_bonus += _nbns("momentum_persistence_perf", "multi_day_momentum", 60, 1)
                     _learned_bonus += _nbns("momentum_persistence_perf", "fresh_breakout", 60, 1)
+                    # mom_accel+mtf_aligned without higher_lows: 46.2% WR n=26 — marginal penalty
+                    if bool(_tk_sig_sc.get("mtf_aligned", False)) and not bool(_tk_sig_sc.get("higher_lows", False)):
+                        _learned_bonus += _npen("signal_synergy", "mom_accel+mtf_aligned", 47, -1)
                 if bool(_tk_sig_sc.get("ichimoku_above", False)):
                     # ichimoku_cloud_entry_perf has "in_cloud" (46.5%) not "above_cloud" — dead bonus removed
                     # signal_performance["ichimoku_above"] = 45.7% WR n=35 — penalize
                     _learned_bonus += _npen("signal_performance", "ichimoku_above", 47, -1)
                     if bool(_tk_sig_sc.get("mom_accel", False)):
-                        # ichimoku_above+mom_accel = 50% WR n=16 — dead bonus removed
-                        pass
+                        # ichimoku_above+mom_accel = 42.9% WR n=14 (was stale 50% n=16)
+                        _learned_bonus += _npen("signal_synergy", "ichimoku_above+mom_accel", 43, -1)
                 if bool(_tk_sig_sc.get("psar_bull", False)):
                     # psar_bull_entry_perf["psar_bullish_entry"] = 33.3% WR n=3 (small sample)
                     # signal_performance["psar_bull"] = 45.7% WR n=35 — penalize
@@ -28692,6 +28727,8 @@ def run():
                     if bool(_tk_sig_sc.get("ichimoku_above", False)):
                         # ichimoku_above+kc_breakout = 43.8% WR n=16 — penalty, not bonus!
                         _learned_bonus += _npen("signal_synergy", "ichimoku_above+kc_breakout", 45, -2)
+                    if bool(_tk_sig_sc.get("mtf_aligned", False)) and not bool(_tk_sig_sc.get("higher_lows", False)):
+                        _learned_bonus += _npen("signal_synergy", "kc_breakout+mtf_aligned", 44, -1)  # 44% WR n=25
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
                     _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
@@ -28703,6 +28740,13 @@ def run():
                         if bool(_tk_sig_sc.get(_gap_synergy_sig, False)):
                             _learned_bonus += _npen("signal_synergy", f"gap_and_hold+{_gap_synergy_sig}", 25, -3)
                             break  # one extra penalty per position is enough
+                # above_poc synergy combos: ALL catastrophic (22-33% WR, n=8-13) — poc kills every combo
+                _above_poc_lb = bool(_tk_sig_sc.get("above_poc", False))
+                if _above_poc_lb:
+                    for _apoc_sig in ("at_breakout","ichimoku_above","mom_accel","kc_breakout","ema_stacked_bull","mtf_aligned"):
+                        if bool(_tk_sig_sc.get(_apoc_sig, False)):
+                            _learned_bonus += _npen("signal_synergy", f"above_poc+{_apoc_sig}", 34, -3)
+                            break  # one penalty per position
                 if bool(_tk_sig_sc.get("supertrend_bull", False)):
                     # supertrend_perf MISSING from tlog — dead bonus removed
                     # signal_performance["supertrend_bull"] = 46.9% WR n=32 — penalize mildly
@@ -28725,6 +28769,8 @@ def run():
                     _learned_bonus += _nbns("vwap_reclaim_perf", "reclaim", 62, 1)
                 if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
                     _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 1)
+                    if bool(_tk_sig_sc.get("ichimoku_above", False)):
+                        _learned_bonus += _npen("signal_synergy", "ema_stacked_bull+ichimoku_above", 37, -2)  # 36.4% WR n=11
                 # Short float extremes: high short interest = squeeze potential, low = clean trend
                 _sf_lb = float(_tk_sig_sc.get("short_float", 0) or 0)
                 if _sf_lb >= 20:
