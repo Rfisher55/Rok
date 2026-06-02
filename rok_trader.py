@@ -28350,8 +28350,18 @@ def run():
                 _regime_lb = str(_regime_lb).lower()
                 _MIN_N = 5  # minimum sample count before trusting a neuron
                 def _nwr(key, state):
+                    # Read from _ALL_NEURON_PERFS (dict format) — the authoritative source
+                    rec = _ALL_NEURON_PERFS.get(key, {}).get(state, {})
+                    if isinstance(rec, dict) and rec.get("total", 0) > 0:
+                        return float(rec.get("win_rate", 50) or 50)
+                    # Fallback: bot_learned_params list format
                     return next((s.get("win_rate", 50) for s in _lp_sc.get(key, []) if s.get("state") == state), 50)
                 def _nn(key, state):
+                    # Read from _ALL_NEURON_PERFS (dict format) — the authoritative source
+                    rec = _ALL_NEURON_PERFS.get(key, {}).get(state, {})
+                    if isinstance(rec, dict):
+                        return int(rec.get("total", 0))
+                    # Fallback: bot_learned_params list format
                     return next((s.get("total", 0) for s in _lp_sc.get(key, []) if s.get("state") == state), 0)
                 def _nbns(key, state, thr=65, pts=2):
                     return pts if _nwr(key, state) >= thr and _nn(key, state) >= _MIN_N else 0
