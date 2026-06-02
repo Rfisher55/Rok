@@ -29039,6 +29039,7 @@ def run():
                 # Higher lows confirmed: 75% WR n=8 (updated); synergy combos 75-86% WR
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 75% WR n=8
+                    _learned_bonus += _nbns("signal_performance", "higher_lows", 64, 1)  # 75% WR n=8
                     # higher_lows synergy: use sorted key order to match signal_synergy dict
                     for _hl_synergy_sig in ("kc_breakout","mom_accel","mtf_aligned"):
                         if bool(_tk_sig_sc.get(_hl_synergy_sig, False)):
@@ -29336,12 +29337,12 @@ def run():
                     _drsi_lb = float(_drsi_lb or 50)
                     if _drsi_lb >= 70:
                         _learned_bonus += _npen("rsi_at_entry_perf", "overbought", 30, -3)  # 20% WR n=10 daily overbought
-                # Trade momentum: losing/neutral streaks both bad (30-31% WR)
+                # Trade momentum: losing=4.4% WR n=45; neutral=15.6% WR n=32 — both catastrophic
                 _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
                 if _tm_wstrk == -1:
-                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 31.2% WR n=16
+                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 7, -7)   # 4.4% WR n=45 → escalated
                 elif _tm_wstrk == 0:
-                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 31, -1)   # 30.8% WR n=13
+                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 18, -5)   # 15.6% WR n=32 → escalated
                 # Position count: 4-7=14.7% WR n=34; 13+=4.7% WR n=43; 8-12=60.9% n=46
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
