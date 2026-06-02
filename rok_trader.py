@@ -29234,17 +29234,39 @@ def run():
                 if _rs5_acc is not None and _rs63_acc is not None:
                     _rs5_acc = float(_rs5_acc or 0); _rs63_acc = float(_rs63_acc or 0)
                 if _rs5_acc is not None and float(_rs5_acc) > 1.0 and _rs63_acc is not None and float(_rs63_acc) > 1.0:
-                    _learned_bonus += _nbns("rs_mom_perf", "leading", 62, 1)    # both outperforming
+                    # rs_mom_perf["leading"] = 44.1% WR n=34 — wrong bonus removed; coin flip or worse
+                    _learned_bonus += _npen("rs_mom_perf", "leading", 46, -1)  # 44.1% WR n=34
                 elif _rs5_acc is not None and _rs63_acc is not None and float(_rs5_acc) <= 0 and float(_rs63_acc) <= 0:
                     _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -1)   # both lagging
-                # Signal freshness: just appeared on scanner = early entry advantage
+                # Signal freshness: building_signal=45.5% WR n=77 — penalize; fresh_signal state never exists in dict
                 _persist_lb = int(_tk_sig_sc.get("persist_count", _tk_sig_sc.get("consecutive_strong_scans", 0)) or 0)
                 _fresh_lb = ("fresh_signal" if _persist_lb <= 1 else "building_signal" if _persist_lb <= 3
                              else "stale_signal" if _persist_lb <= 6 else "very_stale_signal")
-                if _fresh_lb == "fresh_signal":
-                    _learned_bonus += _nbns("signal_freshness_perf", "fresh_signal", 62, 1)
+                if _fresh_lb == "building_signal":
+                    _learned_bonus += _npen("signal_freshness_perf", "building_signal", 47, -1)  # 45.5% WR n=77
                 elif _fresh_lb in ("stale_signal", "very_stale_signal"):
                     _learned_bonus += _npen("signal_freshness_perf", _fresh_lb, 38, -1)
+                # Score persistence: first_appear=9.1% WR n=77 (CATASTROPHIC); new_entry=60.9% WR n=46
+                _pers_runs_lb = int(_tk_sig_sc.get("persistence_runs", 0) or 0)
+                _sp_type_lb = str(_tk_sig_sc.get("score_persistence", "") or "")
+                if _pers_runs_lb <= 0:
+                    _learned_bonus += _npen("score_persistence_perf", "first_appear", 15, -8)  # 9.1% WR n=77
+                if _sp_type_lb == "new_entry":
+                    _learned_bonus += _nbns("score_persistence_perf", "new_entry", 58, 2)  # 60.9% WR n=46
+                # VWAP dist entry: at_vwap=22.6% WR n=31 — hugging VWAP = indecision, not breakout
+                _vwap_de_lb = str(_tk_sig_sc.get("vwap_dist_entry_perf", "") or "")
+                if _vwap_de_lb == "at_vwap":
+                    _learned_bonus += _npen("vwap_dist_entry_perf", "at_vwap", 28, -5)  # 22.6% WR n=31
+                elif _vwap_de_lb == "below_vwap":
+                    _learned_bonus += _npen("vwap_dist_entry_perf", "below_vwap", 40, -2)  # below VWAP = bearish
+                # Options flow neutral: 43.2% WR n=44 — no unusual flow = weak catalyst
+                _opt_fl_lb = str(_tk_sig_sc.get("options_flow_state", _tk_sig_sc.get("options_flow", "")) or "")
+                if _opt_fl_lb == "neutral" or (not _uc_lb2 and not _ob_lb2):
+                    _learned_bonus += _npen("options_flow_perf", "neutral", 44, -1)  # 43.2% WR n=44
+                # BB zone mid (pctB 0.3-0.7): 44.1% WR n=68 — middle of BB = no edge, just noise
+                _bb_pctb_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
+                if 0.3 <= _bb_pctb_lb <= 0.7:
+                    _learned_bonus += _npen("bb_zone_perf", "mid", 45, -1)  # 44.1% WR n=68
                 # Pre-market gap: small gap-up = bullish setup; gap down = caution
                 _pmgap_lb = float(_tk_sig_sc.get("pm_gap_pct", 0) or 0)
                 _pmgap_bkt_lb = ("big_up" if _pmgap_lb > 3 else "small_up" if _pmgap_lb > 0.5
