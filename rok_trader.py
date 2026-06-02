@@ -22761,9 +22761,11 @@ def run():
             from collections import defaultdict as _dd
             _oh_today  = run_start.strftime("%Y-%m-%d")
             _oh_trades = tlog.get("trades", [])
+            # Look back 2 days so day-boundary transitions don't miss yesterday's sells
+            _oh_yesterday = (run_start - __import__('datetime').timedelta(days=1)).strftime("%Y-%m-%d")
             _oh_sells  = [t for t in _oh_trades
                           if t.get("action") in ("SELL", "SELL_HALF")
-                          and t.get("time", "").startswith(_oh_today)
+                          and (t.get("time", "").startswith(_oh_today) or t.get("time", "").startswith(_oh_yesterday))
                           and t.get("pnl_pct") is not None]
             _lp = tlog.setdefault("bot_learned_params", {})
 
@@ -22863,7 +22865,7 @@ def run():
             logger.info(_oh_msg)
         except Exception as _oe:
             import traceback as _oetb
-            logger.debug(f"Off-hours brain update: {_oe} | {_oetb.format_exc()[:200]}")
+            logger.warning(f"Off-hours brain update FAILED: {_oe} | {_oetb.format_exc()[:300]}")
 
         if ENABLE_CRYPTO:
             peaks = _load(PEAK_FILE, {})
@@ -36574,7 +36576,7 @@ def run():
 
     # Rolling 20-trade win rate and portfolio correlation heuristic
     try:
-        _closed_all = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","COVER") and t.get("pnl_pct") is not None]
+        _closed_all = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL","SELL_HALF","COVER") and t.get("pnl_pct") is not None]
         _recent20 = sorted(_closed_all, key=lambda t: t.get("time",""))[-20:]
         if _recent20:
             _r20_wins = sum(1 for t in _recent20 if t["pnl_pct"] > 0)
@@ -36601,7 +36603,7 @@ def run():
         logger.debug(f"Rolling stats: {_rstats_e}")
 
     # Compute profit factor, Sharpe-like ratio, and max drawdown from trade history
-    _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+    _closed = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "SELL_HALF", "COVER") and t.get("pnl_pct") is not None]
     logger.info(f"Brain: {len(_closed)} closed trades from {len(tlog.get('trades',[]))} total")
     _closed_pnl = [(t, float(t["pnl_pct"] or 0)) for t in _closed]
     _gross_wins  = sum(p for _, p in _closed_pnl if p > 0) or 0
@@ -46450,6 +46452,13 @@ def run():
         tlog["bot_learned_params"]["trades_analyzed"] = len(_closed)
         tlog["bot_learned_params"]["last_tuned"]      = now_utc.isoformat()
         tlog["bot_learned_params"]["learn_log"]       = _learn_log[-20:]
+        # Always recompute recent_wr from actual trade data — never leave it at 0.0
+        _st_r20 = sorted(_closed, key=lambda t: t.get("time",""))[-20:] if _closed else []
+        if _st_r20:
+            tlog["bot_learned_params"]["recent_wr"] = round(
+                sum(1 for t in _st_r20 if float(t.get("pnl_pct",0) or 0) > 0) / len(_st_r20), 3)
+            tlog["bot_learned_params"]["recent_avg_pnl"] = round(
+                sum(float(t.get("pnl_pct",0) or 0) for t in _st_r20) / len(_st_r20), 3)
         logger.info(f"Brain learning complete: trades_analyzed={len(_closed)} learn_log_entries={len(_learn_log)}")
         if _learn_log:
             logger.info(f"Self-tuning: {' | '.join(_learn_log[:3])}")
