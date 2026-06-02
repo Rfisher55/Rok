@@ -29136,12 +29136,8 @@ def run():
                         pass  # rsi_entry_perf["overbought"] = 46.4% WR n=28 — dead bonus removed
                     elif 40 <= _rsi_lb < 55:
                         _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
-                # ST gap: normal=16.7% WR n=12 — heavy penalty; wide=54.3% WR n=35 — bonus
-                _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
-                if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
-                    _learned_bonus += _npen("st_gap_perf", "normal", 30, -2)    # 16.7% WR n=12
-                elif _st_gap_lb == "wide":
-                    _learned_bonus += _nbns("st_gap_perf", "wide", 54, 1)       # 54.3% WR n=35
+                # ST gap: st_gap/supertrend_gap not in fetch_batch → removed stale fallback
+                # Correct st_gap_perf logic handled below at supertrend_bull/bear check
                 # Catalyst type other: 71.1% WR n=38 bonus (must not be technical_catalyst or none)
                 _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if _cat_other_lb and _cat_other_lb not in ("", "none", "technical_catalyst", "unknown"):
