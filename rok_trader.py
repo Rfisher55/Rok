@@ -29825,6 +29825,21 @@ def run():
                     live[tk]["score"] = tech_scores.get(tk, 0)
                 except Exception:
                     live[tk]["score"] = 0
+                # ── R46: additional unit-conversion and alias injections ──
+                # market_cap_b: score reads billions (mktcap_tier_perf) but market_cap is raw dollars
+                try:
+                    _mc_raw = float(live[tk].get("market_cap", 0) or 0)
+                    live[tk]["market_cap_b"] = _mc_raw / 1e9 if _mc_raw > 0 else 0.0
+                except Exception:
+                    live[tk]["market_cap_b"] = 0.0
+                # float_shares_m: score float_tier_perf reads millions but float_shares is raw shares
+                try:
+                    _fs_raw = float(live[tk].get("float_shares", 0) or 0)
+                    live[tk]["float_shares_m"] = _fs_raw / 1e6 if _fs_raw > 0 else 0.0
+                except Exception:
+                    live[tk]["float_shares_m"] = 0.0
+                # macd_bull: N848a reads "macd_bull" (never set); derive from ema_cross > 0
+                live[tk]["macd_bull"] = (live[tk].get("ema_cross", 0) or 0) > 0
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
