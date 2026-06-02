@@ -30550,6 +30550,131 @@ def run():
                     else:                  live[tk]["entry_score_decile"] = "score_55_65"
                 except Exception:
                     live[tk]["entry_score_decile"] = "score_65_75"
+                # ── R50: _track() neuron state fields — all 24 dead without these ──
+                try:
+                    live[tk]["double_bottom_state"] = ("confirmed" if live[tk].get("double_bottom") else "none")
+                except Exception:
+                    live[tk]["double_bottom_state"] = "none"
+                try:
+                    live[tk]["at_breakout_state"] = ("at_level" if live[tk].get("at_breakout") else "not_at_level")
+                except Exception:
+                    live[tk]["at_breakout_state"] = "not_at_level"
+                try:
+                    live[tk]["avwap_state"] = ("above" if live[tk].get("above_avwap_52wl") else "below")
+                except Exception:
+                    live[tk]["avwap_state"] = "below"
+                try:
+                    live[tk]["poc_control_state"] = ("above" if live[tk].get("above_poc") else "below")
+                except Exception:
+                    live[tk]["poc_control_state"] = "below"
+                try:
+                    _r50_pmg   = bool(live[tk].get("pm_big_gap_up", False))
+                    _r50_pmgp  = float(live[tk].get("pm_gap_pct", 0) or 0)
+                    live[tk]["pm_gap_state"] = ("big" if _r50_pmg and _r50_pmgp >= 2.0
+                                                 else "small_gap" if _r50_pmgp > 0.5 else "flat")
+                except Exception:
+                    live[tk]["pm_gap_state"] = "flat"
+                try:
+                    live[tk]["htf_state"] = ("aligned" if live[tk].get("htf") else "not_aligned")
+                except Exception:
+                    live[tk]["htf_state"] = "not_aligned"
+                try:
+                    live[tk]["ema21_pb_state"] = ("pullback" if live[tk].get("ema21_pullback") else "extended")
+                except Exception:
+                    live[tk]["ema21_pb_state"] = "extended"
+                try:
+                    live[tk]["mtf_triple_state"] = ("triple" if live[tk].get("mtf_triple") else "partial_or_none")
+                except Exception:
+                    live[tk]["mtf_triple_state"] = "partial_or_none"
+                try:
+                    live[tk]["sq_potential_state"] = ("coiled" if live[tk].get("squeeze_potential") else "not_coiled")
+                except Exception:
+                    live[tk]["sq_potential_state"] = "not_coiled"
+                try:
+                    _r50_nc = int(live[tk].get("news_count_24h", 0) or 0)
+                    live[tk]["news_count_tier"] = ("hot" if _r50_nc >= 10 else "active" if _r50_nc >= 4 else "quiet")
+                except Exception:
+                    live[tk]["news_count_tier"] = "quiet"
+                try:
+                    live[tk]["news_accel_state"] = ("accelerating" if live[tk].get("news_accelerating") else "steady")
+                except Exception:
+                    live[tk]["news_accel_state"] = "steady"
+                try:
+                    _r50_ta = float(live[tk].get("true_alpha", 0) or 0)
+                    live[tk]["true_alpha_tier"] = ("high" if _r50_ta >= 0.5 else "positive" if _r50_ta > 0 else "negative")
+                except Exception:
+                    live[tk]["true_alpha_tier"] = "positive"
+                try:
+                    _r50_ps1   = float(live[tk].get("pivot_s1", 0) or 0)
+                    _r50_ps2   = float(live[tk].get("pivot_s2", 0) or 0)
+                    _r50_pr    = float(live[tk].get("price", 0) or 0)
+                    _r50_atp   = ((_r50_ps1 > 0 and abs(_r50_pr - _r50_ps1) / _r50_ps1 < 0.005) or
+                                  (_r50_ps2 > 0 and abs(_r50_pr - _r50_ps2) / _r50_ps2 < 0.005)) if _r50_pr > 0 else False
+                    live[tk]["pivot_state"] = ("at_support" if _r50_atp else "between")
+                except Exception:
+                    live[tk]["pivot_state"] = "between"
+                try:
+                    live[tk]["vcp_state"] = ("vcp" if live[tk].get("vcp") else "no_vcp")
+                except Exception:
+                    live[tk]["vcp_state"] = "no_vcp"
+                try:
+                    live[tk]["pocket_pivot_state"] = ("pivot" if live[tk].get("pocket_pivot") else "no_pivot")
+                except Exception:
+                    live[tk]["pocket_pivot_state"] = "no_pivot"
+                try:
+                    live[tk]["morning_star_state"] = ("morning_star" if live[tk].get("morning_star") else "none")
+                except Exception:
+                    live[tk]["morning_star_state"] = "none"
+                try:
+                    live[tk]["tws_state"] = ("three_soldiers" if live[tk].get("three_white_soldiers") else "none")
+                except Exception:
+                    live[tk]["tws_state"] = "none"
+                try:
+                    live[tk]["beng_state"] = ("engulfing" if live[tk].get("bullish_engulfing") else "none")
+                except Exception:
+                    live[tk]["beng_state"] = "none"
+                try:
+                    live[tk]["hammer_state"] = ("hammer" if live[tk].get("hammer") else "none")
+                except Exception:
+                    live[tk]["hammer_state"] = "none"
+                try:
+                    _r50_chp   = float(live[tk].get("cup_handle_pivot", 0) or 0)
+                    _r50_chv   = bool(live[tk].get("cup_handle", False))
+                    _r50_chpr  = float(live[tk].get("price", 0) or 0)
+                    _r50_chat  = (_r50_chv and _r50_chp > 0 and
+                                  abs(_r50_chpr - _r50_chp) / _r50_chp < 0.02) if _r50_chp > 0 else _r50_chv
+                    live[tk]["ch_pivot_proximity"] = ("at_pivot" if _r50_chat else
+                                                       "cup_no_pivot" if _r50_chv else "none")
+                except Exception:
+                    live[tk]["ch_pivot_proximity"] = "none"
+                try:
+                    live[tk]["dbn_state"] = ("neckline_break" if live[tk].get("double_bottom_neckline") else "below_neck")
+                except Exception:
+                    live[tk]["dbn_state"] = "below_neck"
+                try:
+                    _r50_eg = float(live[tk].get("earnings_growth", 0) or live[tk].get("eps_growth_pct", 0) or 0)
+                    live[tk]["eg_tier"] = ("accelerating" if _r50_eg >= 50 else "strong" if _r50_eg >= 25
+                                           else "positive" if _r50_eg > 0 else "negative")
+                except Exception:
+                    live[tk]["eg_tier"] = "positive"
+                try:
+                    _r50_stp  = float(live[tk].get("supertrend_stop", 0) or 0)
+                    _r50_spx  = float(live[tk].get("price", 0) or 0)
+                    _r50_sgap = ((_r50_spx - _r50_stp) / _r50_spx * 100) if _r50_stp > 0 and _r50_spx > 0 else 0.0
+                    live[tk]["st_gap_tier"] = ("tight" if 0 < _r50_sgap <= 2.0 else
+                                               "normal" if _r50_sgap <= 5.0 else
+                                               "wide" if _r50_sgap > 5.0 else "no_st")
+                except Exception:
+                    live[tk]["st_gap_tier"] = "no_st"
+                try:
+                    _r50_psigs = sum(1 for k in ("vcp","cup_handle","at_breakout","mtf_triple",
+                                                  "ttm_squeeze_fired","gap_and_hold","orb_breakout",
+                                                  "rvol_surge","supertrend_bull","obv_rising")
+                                     if live[tk].get(k))
+                    live[tk]["premium_tier"] = ("elite" if _r50_psigs >= 6 else "strong" if _r50_psigs >= 4
+                                                 else "normal" if _r50_psigs >= 2 else "weak")
+                except Exception:
+                    live[tk]["premium_tier"] = "weak"
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
