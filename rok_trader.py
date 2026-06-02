@@ -24528,7 +24528,7 @@ def bearish_score(tk, d):
 def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=False,
                   score_val=0, win_rate=0.5, drawdown_pct=0.0, payoff_ratio=1.5,
                   true_beta=1.0, hv_ratio=1.0, premium_count=0,
-                  market_session="", market_quality=50):
+                  market_session="", market_quality=50, accum_score=0):
     """
     ATR-based risk sizing with full Kelly criterion, beta-adjusted, and HV-regime-adaptive sizing.
     Full Kelly: f* = (W*B - L) / B  where W=win%, L=loss%, B=avg_win/avg_loss (payoff)
@@ -24592,6 +24592,10 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
     if premium_count >= 6:   notional *= 1.15   # elite setup: confident, size up
     elif premium_count >= 4: notional *= 1.08   # strong setup: slightly larger
     elif premium_count <= 1: notional *= 0.85   # weak signal count: smaller position
+    # Institutional accumulation multiplier: accum=moderate(100% WR) → 1.10x; none(11%) → 0.80x
+    _as_v = int(accum_score or 0)
+    if   _as_v >= 5:  notional *= 1.10  # moderate/heavy accumulation = institutional backing
+    elif _as_v == 0:  notional *= 0.80  # no accumulation = high-risk entry, size down
 
     # Session-aware scaling: trade larger in high-edge windows, smaller in low-edge periods
     _sess_mult = {
@@ -28881,7 +28885,8 @@ def run():
                                              payoff_ratio=_payoff_ratio, true_beta=_tk_beta,
                                              hv_ratio=_tk_hv_ratio, premium_count=_tk_prem_ct,
                                              market_session=_mkt_sess,
-                                             market_quality=tlog.get("market_quality", 50))
+                                             market_quality=tlog.get("market_quality", 50),
+                                             accum_score=int(d.get("accum_score", 0) or 0))
                     # Portfolio heat adjustment: if sitting on big unrealized gains ("house money"),
                     # allow slightly larger positions; if deeply underwater, shrink further
                     if _portfolio_heat > 5:
