@@ -26403,6 +26403,22 @@ def run():
                     except Exception as _fe:
                         logger.warning(f"45min stalling sell failed {sym}: {_fe}")
                     continue
+            elif _fast_age_min >= 35 and _fast_age_min < 60 and not _fast_half_out and pnl_pct <= -1.5:
+                # 35min deep-loss exit: bleeding >1.5% after 35min with no recovery = cut losses early
+                _fast_d_35 = live.get(sym, {}) or {}
+                _fast_sc_35 = score(sym, _fast_d_35) if _fast_d_35 else 0
+                if _fast_sc_35 < 45:
+                    _fast_reason = f"35min deep loss ({pnl_pct:+.1f}%, score={_fast_sc_35} — stop the bleed)"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"35min deep loss sell failed {sym}: {_fe}")
+                    continue
             elif _fast_age_min >= 30 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
                 # 30min flat/drifting exit: wider window frees capital for fresh setups faster
                 _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
@@ -26416,6 +26432,22 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
+            elif _fast_age_min >= 75 and _fast_age_min < 90 and not _fast_half_out and 0.3 <= pnl_pct < 1.5:
+                # 75min moderate-winner: up but not moving — free slot for fresh momentum
+                _fast_d_75 = live.get(sym, {}) or {}
+                _fast_sc_75 = score(sym, _fast_d_75) if _fast_d_75 else 0
+                if _fast_sc_75 < 52:
+                    _fast_reason = f"75min stalling winner ({pnl_pct:+.1f}%, score={_fast_sc_75} — take profit)"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"75min stalling sell failed {sym}: {_fe}")
+                    continue
             elif _fast_age_min >= 60 and not _fast_half_out and pnl_pct <= 0.3:
                 # 60min exit for losers/flat — winners (>0.3%) ride to 90min
                 # Smart extension: if near-flat (-0.5% to 0%) and live score still strong, ride to 90min
@@ -28717,12 +28749,16 @@ def run():
                     _learned_bonus += _npen("capital_util_perf", "moderate", 13, -5)    # 12.9% WR n=31
                 elif _cap_util_pct_lb >= 60:
                     _learned_bonus += _npen("capital_util_perf", "deployed", 5, -8)     # 0.0% WR n=8 — fully deployed = worst state
-                # breadth_perf["mixed"]: 41.3% WR n=46 — mixed breadth = adverse entry conditions
+                # breadth_perf: mixed=41.3% WR n=46; strong=65%+ with market tailwind; weak<40%=avoid
                 _brd_adv_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
                 _brd_bkt_lb = ("strong" if _brd_adv_lb >= 70 else "broad" if _brd_adv_lb >= 55
                                else "mixed" if _brd_adv_lb >= 40 else "weak")
                 if _brd_bkt_lb == "mixed":
-                    _learned_bonus += _npen("breadth_perf", "mixed", 42, -2)  # 41.3% WR n=46
+                    _learned_bonus += _npen("breadth_perf", "mixed", 42, -2)   # 41.3% WR n=46
+                elif _brd_bkt_lb == "strong":
+                    _learned_bonus += _nbns("breadth_perf", "strong", 62, 1)   # market tailwind — need data to confirm
+                elif _brd_bkt_lb == "weak":
+                    _learned_bonus += _npen("breadth_perf", "weak", 38, -2)    # <40% advancing = adverse
                 # halfhour_performance["1730"]: 39.3% WR n=28 — 1:30 PM ET window consistently bad
                 _hw_utc_lb = datetime.utcnow().strftime("%H") + ("30" if datetime.utcnow().minute >= 30 else "00")
                 if _hw_utc_lb == "1730":
@@ -28739,9 +28775,10 @@ def run():
                     _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
                     _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
                 if bool(_tk_sig_sc.get("ha_bull", False)):
-                    # ha_trend_perf["bull"] = 50.9% WR n=53 — coin flip, no bonus fires at thr=60
-                    # signal_performance["ha_bull"] = 44.4% WR n=27 — below 50%, penalize
+                    # signal_performance["ha_bull"] = 44.4% WR n=27 — penalize when present
                     _learned_bonus += _npen("signal_performance", "ha_bull", 47, -1)
+                    # ha_trend_perf["bull"] = 50.9% WR n=53 — threshold 60 means no fire until proven
+                    _learned_bonus += _nbns("ha_trend_perf", "bull", 60, 1)
                 # Expanded learned bonus checks — more signal/state combinations
                 if bool(_tk_sig_sc.get("cup_handle", False)):
                     _learned_bonus += _nbns("cup_handle_perf", "cup", 65, 2)
