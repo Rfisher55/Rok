@@ -28933,6 +28933,17 @@ def run():
                 _obv_now_lb = str(_tk_sig_sc.get("obv_trend", _tk_sig_sc.get("obv_direction", "")) or "")
                 if _accum_bkt_lb == "light" and _obv_now_lb == "falling":
                     _learned_bonus += -2
+                # Active distribution phase: stock being sold into by institutions
+                _ad_state_lb = str(_tk_sig_sc.get("accum_distrib", "") or "").lower()
+                if "distrib" in _ad_state_lb or "sell" in _ad_state_lb:
+                    _learned_bonus += _npen("accum_distrib_perf", "distribution", 35, -3)  # selling pressure = bad long entry
+                # Vol-price confirmation: high volume on down day = institutional selling
+                _vpc_rvol_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
+                _vpc_chg_lb = float(_tk_sig_sc.get("chg1d", _tk_sig_sc.get("change_pct", 0)) or 0)
+                if _vpc_rvol_lb >= 1.5 and _vpc_chg_lb < -0.3:
+                    _learned_bonus += _npen("vol_price_confirm_perf", "high_vol_down", 35, -3)  # selling into volume
+                elif _vpc_rvol_lb >= 1.5 and _vpc_chg_lb > 0.3:
+                    _learned_bonus += _nbns("vol_price_confirm_perf", "high_vol_up", 62, 2)     # buying into volume
                 _adx_raw = _tk_sig_sc.get("adx")  # None = absent
                 _adx_lb = float(_adx_raw) if _adx_raw is not None else None
                 if _adx_lb is not None:
