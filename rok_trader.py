@@ -14052,13 +14052,20 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     # ── N850: Exit Trigger Type ────────────────────────────────
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
+            _n850_reason = (reason or "").lower()
             _n850_field = "discretionary_exit"
-            if pnl < -3:
+            if pnl < -3 or "stop loss" in _n850_reason or "stop_loss" in _n850_reason:
                 _n850_field = "stop_loss_hit"
-            elif pnl > 5:
+            elif pnl > 5 or "profit target" in _n850_reason:
                 _n850_field = "target_hit"
-            elif 0 <= pnl <= 1:
+            elif ("min" in _n850_reason or "cycle" in _n850_reason or "time" in _n850_reason
+                  or "scalp profit" in _n850_reason or "scalp stop" in _n850_reason
+                  or "profit exit" in _n850_reason or "eod" in _n850_reason):
                 _n850_field = "time_exit"
+            elif pnl < 0 and ("signal" in _n850_reason or "score" in _n850_reason
+                               or "vwap" in _n850_reason or "ema" in _n850_reason
+                               or "macd" in _n850_reason or "rsi" in _n850_reason):
+                _n850_field = "signal_exit"
             _n850_perf = tlog.setdefault("exit_trigger_type_perf", {})
             _n850p = _n850_perf.setdefault(_n850_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n850_field})
             _n850p["total"] += 1; _n850p["total_pnl"] = round(_n850p["total_pnl"] + pnl, 2)
@@ -28613,6 +28620,21 @@ def run():
                 _tt_lb = str(_tk_sig_sc.get("tt_score", _tk_sig_sc.get("trend_template", "")) or "")
                 if _tt_lb == "fair" or (not _tt_lb and _tk_sig_sc.get("ema_stacked_bull")):
                     _learned_bonus += _nbns("tt_perf", "fair", 60, 1)           # 80% WR
+                # OBV trend: rising=80% WR n=20, falling=46% WR n=26
+                if bool(_tk_sig_sc.get("obv_rising", False)):
+                    _learned_bonus += _nbns("obv_trend_perf", "rising", 60, 2)  # 80% WR n=20
+                elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope", 0) or 0) < 0:
+                    _learned_bonus += _npen("obv_trend_perf", "falling", 48, -1)  # 46% WR n=26
+                # Higher lows confirmed: 86% WR n=7
+                if bool(_tk_sig_sc.get("higher_lows", False)):
+                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 2)  # 86% WR
+                # HA trend: bear=38% WR n=13 (penalty), bull=70% is fine
+                if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
+                    _learned_bonus += _npen("ha_trend_perf", "bear", 45, -2)    # 38% WR n=13
+                # RVOL tier: weak (rvol<0.8) = 43% WR n=14
+                _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
+                if _rvol_t_lb < 0.8:
+                    _learned_bonus += _npen("rvol_tier_perf", "weak", 45, -2)   # 43% WR n=14
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
