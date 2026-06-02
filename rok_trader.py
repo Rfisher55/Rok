@@ -24371,6 +24371,20 @@ def score(tk, d, sentiment=0, regime_adj=0):
                     _rsiwr = float(_rsi_rec.get("win_rate", 50) or 50)
                     if _rsiwr <= 25:  _veto_adj -= 8   # neutral RSI proven loser
                     elif _rsiwr >= 80: _veto_adj += 4
+                # Higher lows confirmed = 86% WR proven pattern — extra boost
+                _fb_hl_bkt_v = "confirmed" if d.get("higher_lows") else "not_confirmed"
+                _hl_rec = _ALL_NEURON_PERFS.get("higher_lows_perf", {}).get(_fb_hl_bkt_v, {})
+                if isinstance(_hl_rec, dict) and _hl_rec.get("total", 0) >= 5:
+                    _hlwr = float(_hl_rec.get("win_rate", 50) or 50)
+                    if _hlwr >= 80: _veto_adj += 4    # higher_lows confirmed = very reliable
+                    elif _hlwr <= 25: _veto_adj -= 4
+                # OBV trend veto: falling OBV = 46% WR → slight penalize; rising = 80% boost
+                _fb_obv_bkt_v = str(d.get("obv_trend", "flat") or "flat").lower()
+                _obv_rec = _ALL_NEURON_PERFS.get("obv_trend_perf", {}).get(_fb_obv_bkt_v, {})
+                if isinstance(_obv_rec, dict) and _obv_rec.get("total", 0) >= 5:
+                    _obvwr = float(_obv_rec.get("win_rate", 50) or 50)
+                    if _obvwr >= 80: _veto_adj += 4   # rising OBV = institutional accumulation confirmed
+                    elif _obvwr <= 25: _veto_adj -= 6
                 # ── Compound elite combo: accum(moderate/heavy) + ichimoku(above) ──
                 # accum=moderate: 100% WR; ichimoku=above: 64% WR — together = very high confidence
                 _combo_accum_good  = _fb_ac_bkt in ("moderate", "heavy")
