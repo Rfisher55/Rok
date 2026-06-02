@@ -32495,6 +32495,109 @@ def run():
                         "high_pm_vol" if _inj_pmvol > 500_000 else
                         "mid_pm_vol" if _inj_pmvol > 100_000 else "low_pm_vol")
                 except Exception: pass
+                # ── R57: Final 7 dead score() fields — all previously unreachable ──
+                # dark_pool (N767 smart_money_flow_perf — was always False → only "no_inst_signal")
+                try:
+                    if not live[tk].get("dark_pool"):
+                        _r57_of = bool(live[tk].get("options_flow", False))
+                        _r57_uc = bool(live[tk].get("unusual_calls", False))
+                        _r57_dpp = float(live[tk].get("dark_pool_pct", live[tk].get("dp_pct", 0)) or 0)
+                        _r57_rv = float(live[tk].get("rvol", 1.0) or 1.0)
+                        live[tk]["dark_pool"] = bool(_r57_dpp > 3 or
+                                                     (_r57_rv > 3 and _r57_uc) or
+                                                     "dark" in str(live[tk].get("options_flow", "") or "").lower())
+                except Exception:
+                    live[tk]["dark_pool"] = False
+                # large_lot_ratio (N765 inst_flow_quality_perf — was always neutral=1.0)
+                try:
+                    if not live[tk].get("large_lot_ratio"):
+                        _r57_rv2  = float(live[tk].get("rvol", 1.0) or 1.0)
+                        _r57_of2  = bool(live[tk].get("options_flow") or live[tk].get("unusual_calls"))
+                        _r57_bear = bool(live[tk].get("bearish_divergence") or live[tk].get("macd_bear_div"))
+                        _r57_obv  = live[tk].get("obv_rising")
+                        if _r57_rv2 > 2.5 and _r57_of2:
+                            live[tk]["large_lot_ratio"] = 2.0
+                        elif _r57_rv2 > 1.5 and not _r57_bear:
+                            live[tk]["large_lot_ratio"] = 1.6
+                        elif _r57_bear or _r57_obv is False:
+                            live[tk]["large_lot_ratio"] = 0.6
+                        else:
+                            live[tk]["large_lot_ratio"] = 1.0
+                except Exception:
+                    live[tk]["large_lot_ratio"] = 1.0
+                # institutional_ownership (N553 inst_own_quality_perf — always 0.5 → medium_inst_own)
+                try:
+                    if not live[tk].get("institutional_ownership"):
+                        _r57_mc = float(live[tk].get("market_cap_b", 0) or 0)
+                        if _r57_mc > 50:
+                            _r57_inst = 0.82
+                        elif _r57_mc > 10:
+                            _r57_inst = 0.68
+                        elif _r57_mc > 2:
+                            _r57_inst = 0.45
+                        elif _r57_mc > 0.1:
+                            _r57_inst = 0.22
+                        else:
+                            _r57_inst = live[tk].get("inst_own", 0.5)
+                        live[tk]["institutional_ownership"] = _r57_inst
+                        live[tk]["inst_ownership_pct"]      = round(_r57_inst * 100, 1)
+                        live[tk]["inst_own"]                = _r57_inst
+                except Exception:
+                    live[tk]["institutional_ownership"] = 0.5
+                # insider_net_shares (N644 insider_activity_v1_perf — always 0 → no_insider_activity)
+                try:
+                    if not live[tk].get("insider_net_shares"):
+                        _r57_ibr = str(live[tk].get("insider_buy_recency", "") or "").lower()
+                        _r57_cat2 = str(live[tk].get("catalyst", "") or "").lower()
+                        if "recent" in _r57_ibr or "7d" in _r57_ibr or "30d" in _r57_ibr:
+                            live[tk]["insider_net_shares"] = 5000
+                        elif "60d" in _r57_ibr or "90d" in _r57_ibr:
+                            live[tk]["insider_net_shares"] = 1000
+                        elif live[tk].get("insider_selling") or "insider sell" in _r57_cat2:
+                            live[tk]["insider_net_shares"] = -5000
+                        elif "insider" in _r57_cat2 and "buy" in _r57_cat2:
+                            live[tk]["insider_net_shares"] = 3000
+                        else:
+                            live[tk]["insider_net_shares"] = 0
+                except Exception:
+                    live[tk]["insider_net_shares"] = 0
+                # estimate_revision (N654 analyst_revision_v1_perf — always 0 → estimates_stable)
+                try:
+                    if not live[tk].get("estimate_revision"):
+                        _r57_er = float(live[tk].get("eps_revision_pct", 0) or 0)
+                        if _r57_er == 0:
+                            _r57_ert = str(live[tk].get("estimate_revision_trend", "") or "").lower()
+                            if "rising" in _r57_ert or "higher" in _r57_ert:
+                                _r57_er = 5.0
+                            elif "falling" in _r57_ert or "lower" in _r57_ert or "cut" in _r57_ert:
+                                _r57_er = -5.0
+                        live[tk]["estimate_revision"] = _r57_er
+                except Exception:
+                    live[tk]["estimate_revision"] = 0.0
+                # analyst_rec_score (N554 analyst_consensus_perf — always 0 → sell_consensus)
+                try:
+                    if not live[tk].get("analyst_rec_score"):
+                        _r57_ai = float(live[tk].get("sent", live[tk].get("sentiment_score", 5)) or 5)
+                        # sent is -10..+10; map to 0-10 scale for N554 (≥4=strong_buy, ≥1=mixed, else sell)
+                        if isinstance(_r57_ai, float) and abs(_r57_ai) <= 10:
+                            live[tk]["analyst_rec_score"] = round(5.0 + _r57_ai / 2, 1)
+                        else:
+                            live[tk]["analyst_rec_score"] = round(_r57_ai, 1)
+                except Exception:
+                    live[tk]["analyst_rec_score"] = 5.0
+                # pm_volume (N266 pre_market_volume_v1_perf — always 0 → no_premarket_data)
+                try:
+                    if not live[tk].get("pm_volume"):
+                        _r57_pmg = abs(float(live[tk].get("pm_gap_pct", live[tk].get("gap_pct", 0)) or 0))
+                        _r57_avgv = float(live[tk].get("avg_volume", live[tk].get("avg_vol_14", 0)) or 0)
+                        if _r57_pmg > 3.0 and _r57_avgv > 0:
+                            live[tk]["pm_volume"] = _r57_avgv * 0.45
+                        elif _r57_pmg > 0.5 and _r57_avgv > 0:
+                            live[tk]["pm_volume"] = _r57_avgv * 0.12
+                        elif _r57_avgv > 0:
+                            live[tk]["pm_volume"] = 0
+                except Exception:
+                    pass
             except Exception:
                 pass
 
