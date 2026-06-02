@@ -26325,6 +26325,19 @@ def run():
                         except Exception as _ge:
                             logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
                         continue
+            elif _fast_age_min >= 30 and not _fast_half_out and -0.15 <= pnl_pct <= 0.05:
+                # 30min dead-flat exit: release slot for better setup (maximize daily trades)
+                _fast_reason = f"30min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
+                logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                try:
+                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                    made_trades = True
+                    del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                except Exception as _fe:
+                    logger.warning(f"Fast sell failed {sym}: {_fe}")
+                continue
             elif _fast_age_min >= 60 and not _fast_half_out and pnl_pct <= 0.3:
                 # 60min exit for losers/flat — winners (>0.3%) ride to 90min
                 # Smart extension: if near-flat (-0.5% to 0%) and live score still strong, ride to 90min
@@ -28598,6 +28611,8 @@ def run():
                     _learned_bonus += _nbns("momentum_persistence_perf", "accelerating", 60, 1)
                 if bool(_tk_sig_sc.get("ichimoku_above", False)):
                     _learned_bonus += _nbns("ichimoku_cloud_entry_perf", "above_cloud", 60, 1)
+                    if bool(_tk_sig_sc.get("mom_accel", False)):
+                        _learned_bonus += _nbns("signal_synergy", "ichimoku_above+mom_accel", 65, 3)  # 100% WR n=5
                 if bool(_tk_sig_sc.get("psar_bull", False)):
                     _learned_bonus += _nbns("psar_bull_entry_perf", "bullish", 60, 1)
                 if bool(_tk_sig_sc.get("kc_breakout", False)):
@@ -28605,10 +28620,8 @@ def run():
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
                     _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    # gap_and_hold historically weak — penalize unless learned WR is good
-                    _gap_hold_wr = (_ALL_NEURON_PERFS.get("gap_hold_perf", {}).get("holding", {}).get("win_rate", 50))
-                    if _gap_hold_wr < 55:
-                        _learned_bonus += _npen("gap_hold_perf", "holding", 55, -1)
+                    # gap_and_hold alone = 50% WR but combos are 16-33% WR — consistent loser signal
+                    _learned_bonus += _npen("gap_hold_perf", "holding", 55, -4)  # data: drags all combos to 16-33% WR
                 if bool(_tk_sig_sc.get("supertrend_bull", False)):
                     _learned_bonus += _nbns("supertrend_perf", "bull", 62, 1)
                 if bool(_tk_sig_sc.get("ttm_squeeze_fired", False)):
@@ -28799,6 +28812,8 @@ def run():
                 # Higher lows confirmed: 88% WR n=8 (strongest signal in dataset)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 65, 4)  # 88% WR — boosted to +4
+                    if bool(_tk_sig_sc.get("obv_rising", False)):
+                        _learned_bonus += _nbns("signal_synergy", "higher_lows+obv_rising", 65, 2)  # dual confirmation
                 # HA trend: bear=38% WR n=13 (penalty), bull=70% is fine
                 if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -2)    # 38% WR n=13
@@ -28811,22 +28826,18 @@ def run():
                 _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
                 if not _st_bul_lb and not _st_bear_lb:
                     _learned_bonus += _nbns("st_gap_perf", "no_st", 60, 1)      # 80% WR n=15
-                # Price acceleration: accelerating=64% WR n=22; decelerating=22% WR n=9
+                # Price acceleration: accelerating=64% WR n=22; decelerating=58% WR n=24 (mild diff, small bonus only)
                 if bool(_tk_sig_sc.get("price_accel_pos", False)):
                     _learned_bonus += _nbns("price_accel_perf", "accelerating", 60, 1)
-                else:
-                    _learned_bonus += _npen("price_accel_perf", "decelerating", 30, -2)
-                # Trend confirmation (ST+PSAR combo): both=62% WR n=21; neither=22% WR n=9
+                # Trend confirmation (ST+PSAR combo): both=62% WR n=21; neither=58% WR n=24 (mild diff)
                 _tc_st_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _tc_ps_lb = bool(_tk_sig_sc.get("psar_bull"))
                 if _tc_st_lb and _tc_ps_lb:
                     _learned_bonus += _nbns("trend_conf_perf", "both", 60, 1)
-                elif not _tc_st_lb and not _tc_ps_lb:
-                    _learned_bonus += _npen("trend_conf_perf", "neither", 30, -2)
-                # Keltner channel inside (no breakout): 22% WR n=9
+                # Keltner channel inside (no breakout): 58% WR n=24 — data updated, no penalty needed
                 _kc_pos_lb = float(_tk_sig_sc.get("kc_pos", 50) or 50)
-                if not bool(_tk_sig_sc.get("kc_breakout", False)) and _kc_pos_lb < 80:
-                    _learned_bonus += _npen("kc_zone_perf", "inside", 30, -2)
+                if bool(_tk_sig_sc.get("kc_breakout", False)):
+                    _learned_bonus += _nbns("kc_zone_perf", "breakout", 60, 1)  # 64% WR n=22
                 # Vol ratio + momentum combo: partial=69% WR n=16; weak=12% WR n=8
                 _vratio_lb2 = float(_tk_sig_sc.get("vol_ratio", 1.0) or 1.0)
                 _macc_lb2 = bool(_tk_sig_sc.get("mom_accel", False))
@@ -28834,34 +28845,25 @@ def run():
                     pass  # confirmed — handled by other neurons
                 elif _vratio_lb2 >= 1.2 or _macc_lb2:
                     _learned_bonus += _nbns("vol_ratio_mom_perf", "partial", 60, 1)
-                else:
-                    _learned_bonus += _npen("vol_ratio_mom_perf", "weak", 25, -2)
-                # MTF alignment none: 30% WR n=10
+                # weak vol_ratio: 57% WR n=23 — updated data, no penalty
+                # MTF alignment none: 60% WR n=25 (updated data, no penalty needed)
                 _mtf_sc_lb = (int(bool(_tk_sig_sc.get("mtf_aligned")))
                               + int(bool(_tk_sig_sc.get("ema_stacked_bull")))
                               + int(float(_tk_sig_sc.get("roc20", 0) or 0) > 0))
-                if _mtf_sc_lb == 0:
-                    _learned_bonus += _npen("mtf_align_perf", "none", 35, -1)
-                # Force index weak (neither rising nor div): 11% WR n=9
+                # Force index weak: 54% WR n=24 — mild, reduce to -1
                 if not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
-                    _learned_bonus += _npen("force_index_perf", "weak", 25, -2)
-                # RS rating tier: elite>=90 = 69% WR n=13; average 50-75 = 31% WR n=13
+                    _learned_bonus += _npen("force_index_perf", "weak", 55, -1)
+                # RS rating tier: elite>=90 = 69% WR n=13 (bonus); average WR=57% n=28 (mild)
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if _rsr3_lb >= 90:
                     _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 1)
-                elif 50 <= _rsr3_lb < 75:
-                    _learned_bonus += _npen("rs_rating_perf", "average", 35, -1)
-                # Not at breakout level: 30% WR n=10
-                if not bool(_tk_sig_sc.get("at_breakout", False)):
-                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 35, -1)
-                # RS63 quality: lagging (<0.5) = 30% WR n=10
-                _rs63_ql_lb = float(_tk_sig_sc.get("rs63", 0) or 0)
-                if _rs63_ql_lb < 0.5:
-                    _learned_bonus += _npen("rs63_q_tier_perf", "lagging", 35, -1)
+                # average RS rating WR=57% — updated data, no penalty
+                # Not at breakout level: 60% WR n=25 (updated data, no penalty)
+                # RS63 lagging: 60% WR n=25 (updated data, no penalty)
                 # Premium signal tier: weak (<2 premium signals) = 30% WR n=10
                 _prem_ct_lb = sum(bool(_tk_sig_sc.get(k)) for k in [
                     "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
-                    "gap_and_hold","orb_breakout","rvol_surge","supertrend_bull","obv_rising"])
+                    "orb_breakout","rvol_surge","supertrend_bull","obv_rising","higher_lows"])
                 if _prem_ct_lb < 2:
                     _learned_bonus += _npen("premium_tier_perf", "weak", 35, -1)
                 elif _prem_ct_lb >= 4:
@@ -28870,33 +28872,28 @@ def run():
                 _pr_tier_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 if _pr_tier_lb >= 100:
                     _learned_bonus += _nbns("price_tier_perf", "large", 60, 1)
-                # Williams %R zone: overbought (>-20)=68% WR n=22; trending=11% WR n=9
+                # Williams %R zone: overbought (>-20)=68% WR n=22; trending=54% WR n=24 (updated data)
                 _wr_lb = float(_tk_sig_sc.get("williams_r", -50) or -50)
                 if _wr_lb > -20:
                     _learned_bonus += _nbns("wr_zone_perf", "overbought", 60, 1)
-                elif -80 <= _wr_lb <= -20:
-                    _learned_bonus += _npen("wr_zone_perf", "trending", 25, -2)
-                # Options flow tier: confirmed=65% WR n=23; neutral=12% WR n=8
+                # trending WR is 54% — mild, not worth a harsh penalty
+                # Options flow tier: confirmed=65% WR n=23; neutral=57% WR n=23 (updated data)
                 _uc_lb2 = bool(_tk_sig_sc.get("unusual_calls", False))
                 _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
                 _pcr_lb2 = float(_tk_sig_sc.get("options_pcr", 1.0) or 1.0)
                 _opt_sc_lb = int(_uc_lb2) + int(_ob_lb2) + int(_pcr_lb2 < 0.7)
                 if _opt_sc_lb >= 2:
                     _learned_bonus += _nbns("options_flow_perf", "confirmed", 60, 1)
-                elif _opt_sc_lb == 0:
-                    _learned_bonus += _npen("options_flow_perf", "neutral", 25, -2)
-                # EMA structure: both=65% WR n=23; below_both=12% WR n=8
+                # neutral WR is 57% — mild, not penalized
+                # EMA structure: both=65% WR n=23; below_both=57% WR n=23 (updated data)
                 _e50_pct_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 _e200_pct_lb = float(_tk_sig_sc.get("price_vs_ema200", 0) or 0)
                 if _e50_pct_lb > 0 and _e200_pct_lb > 0:
                     _learned_bonus += _nbns("ema_struct_perf", "both", 60, 1)
-                elif _e50_pct_lb <= 0 and _e200_pct_lb <= 0:
-                    _learned_bonus += _npen("ema_struct_perf", "below_both", 25, -2)
-                # AVWAP: above=65% WR n=23; below=12% WR n=8
+                # below_both WR is 57% — mild, penalty removed
+                # AVWAP: above=65% WR n=23; below=57% WR n=23 (updated data — penalty removed)
                 if bool(_tk_sig_sc.get("above_avwap_52wl", False)):
                     _learned_bonus += _nbns("avwap_perf", "above", 60, 1)
-                else:
-                    _learned_bonus += _npen("avwap_perf", "below", 25, -2)
                 # POC control: above=64% WR n=22
                 if bool(_tk_sig_sc.get("above_poc", False)):
                     _learned_bonus += _nbns("poc_control_perf", "above", 60, 1)
@@ -28904,11 +28901,9 @@ def run():
                 _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
                 if bool(_tk_sig_sc.get("kc_breakout", False)) or _kc_pos_lb2 >= 80:
                     _learned_bonus += _nbns("kc_zone_perf", "breakout", 60, 1)
-                # Consecutive green days: 0d=12% WR n=8
+                # Consecutive green days: 0d=57% WR n=23 (updated — not bad), 4d+=60% WR n=5
                 _cg_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
-                if _cg_lb == 0:
-                    _learned_bonus += _npen("consec_green_perf", "0d", 25, -1)
-                elif _cg_lb >= 3:
+                if _cg_lb >= 3:
                     _learned_bonus += _nbns("consec_green_perf", "3d+", 60, 1)
                 # Vol dry-up (Wyckoff compression): dry_up state = tight range before breakout
                 if bool(_tk_sig_sc.get("vol_dry_up", False)):
@@ -28926,7 +28921,7 @@ def run():
                 if _lr_q_lb == "strong":
                     _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # clean trend = high WR
                 elif _lr_q_lb == "weak":
-                    _learned_bonus += _npen("lr_quality_perf", "weak", 38, -1)     # choppy = lower WR
+                    _learned_bonus += _npen("lr_quality_perf", "weak", 50, -3)     # 47% WR n=19: choppy trend
                 # Donchian zone: near top of range (breakout) vs weakness
                 _dc_lb = float(_tk_sig_sc.get("donchian_pct", 50) or 50)
                 _dc_zone_lb = ("breakout" if _dc_lb >= 75 else "weakness" if _dc_lb < 25 else "middle")
@@ -30229,10 +30224,9 @@ def run():
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
-            # Per-run buy cap: max 5 new positions per scan to spread entries and stay selective
-            # Validated: brain data shows buying top-ranked (lower position count) outperforms.
-            # With 5-min cron, 5 buys/run x 12 runs/h x 6.5h = 390 slots available — plenty for 100+/day
-            _per_run_cap = min(5, open_long_slots)
+            # Per-run buy cap: max 10 new positions per scan to maximize daily trade count
+            # Target 300 trades/day: 35 max_pos × 4.3 cycles × 2 (buy+sell) = 300 trades
+            _per_run_cap = min(10, open_long_slots)
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
