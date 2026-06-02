@@ -28315,6 +28315,18 @@ def run():
                     _ng_green_lights += 2  # elite score tier = strong green
                 elif tech_sc >= 85 and (_n180_ng.get("score_85_95", 0) >= 70 or _n180_ng.get("score_85_plus", 0) >= 70):
                     _ng_green_lights += 1
+                # N999: other-sector + no-accum combo = high uncertainty strike
+                # Unmapped sectors (CMPS/SAIC-type) with zero institutional accumulation
+                # have historically been the worst risk-adjusted entries
+                _n999_sec = SECTOR_MAP.get(tk, "other")
+                _n999_accum = int(_tk_sig.get("accum_score", 0) or 0)
+                _n999_acperf = _ALL_NEURON_PERFS.get("accum_perf", {}).get("none", {})
+                if _n999_sec == "other" and _n999_accum == 0:
+                    _ng_strikes += 1; _ng_reasons.append(f"other sector + zero accum (unknown setup quality)")
+                # N998: accum=none proved bad historically: add a strike when n>=5 and WR<35
+                elif (_n999_acperf.get("total", 0) >= 5 and float(_n999_acperf.get("win_rate", 50)) < 35
+                      and _n999_accum == 0):
+                    _ng_strikes += 1; _ng_reasons.append(f"zero accum historically fails({_n999_acperf.get('win_rate',50):.0f}%WR n={_n999_acperf.get('total',0)})")
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
@@ -28845,6 +28857,31 @@ def run():
                     _learned_bonus += _nbns("pm_gap_perf", "small_up", 60, 1)   # mild gap up: bullish
                 elif _pmgap_bkt_lb in ("small_down", "big_down"):
                     _learned_bonus += _npen("pm_gap_perf", _pmgap_bkt_lb, 40, -1)  # gap down: caution
+                # Ticker beta bucket: high-beta sectors (biotech, fintech, crypto) = more volatile
+                _sec_lb = str(_tk_sig_sc.get("sector", "other") or "other")
+                _beta_map_lb = {"crypto": 2.5, "ev_auto": 1.8, "biotech": 1.6,
+                                "fintech": 1.4, "tech": 1.2, "energy": 1.1,
+                                "consumer": 0.9, "utilities": 0.6}
+                _beta_lb = _beta_map_lb.get(_sec_lb, 1.1)
+                _beta_bkt_lb = ("high_beta" if _beta_lb > 1.5 else "medium_beta" if _beta_lb >= 0.8 else "low_beta")
+                if _beta_bkt_lb == "low_beta":
+                    _learned_bonus += _nbns("ticker_beta_bucket_perf", "low_beta", 62, 1)  # stable = consistent
+                elif _sec_lb == "other":
+                    _learned_bonus += _npen("ticker_beta_bucket_perf", "high_beta", 40, -1)  # unknown = less confidence
+                # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
+                _pve50_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
+                if _pve50_lb > 20:
+                    _learned_bonus += _npen("parabolic_extension_perf", "strong_parabolic", 38, -2)  # reversal risk
+                elif _pve50_lb > 10:
+                    _learned_bonus += _npen("parabolic_extension_perf", "moderate_extension", 40, -1)
+                elif 2 <= _pve50_lb <= 10:
+                    _learned_bonus += _nbns("parabolic_extension_perf", "not_extended", 62, 1)  # healthy extension
+                # Volume climax: blow-off top volume = exhaustion signal
+                _rvol_vc_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
+                if _rvol_vc_lb > 5:
+                    _learned_bonus += _npen("volume_climax_perf", "blow_off_climax", 38, -2)  # potential exhaustion
+                elif _rvol_vc_lb > 2:
+                    _learned_bonus += _nbns("volume_climax_perf", "elevated_volume", 62, 1)   # strong interest
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
