@@ -28518,6 +28518,30 @@ def run():
                     _learned_bonus += _nbns("signal_density_perf", "dense_signals", 62, 2)
                 elif _sig_cnt_lb >= 2:
                     _learned_bonus += _nbns("signal_density_perf", "moderate_signals", 58, 1)
+                # ── CRITICAL PROVEN-LOSER PENALTIES (data-driven hard guards) ─────────
+                # These states have 11-22% WR in actual trade data — must penalize heavily
+                _accum_sc_lb = int(_tk_sig_sc.get("accum_score", 0) or 0)
+                _accum_bkt_lb = ("heavy" if _accum_sc_lb >= 8 else "moderate" if _accum_sc_lb >= 5 else "light" if _accum_sc_lb >= 2 else "none")
+                if _accum_bkt_lb == "none":
+                    _learned_bonus += _npen("accum_perf", "none", 30, -3)  # 11% WR: massive penalty
+                elif _accum_bkt_lb == "heavy":
+                    _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)   # strong accumulation = bonus
+                _adx_lb = float(_tk_sig_sc.get("adx", 20) or 20)
+                _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb > 20 else "weak")
+                if _adx_bkt_lb == "weak":
+                    _learned_bonus += _npen("adx_perf", "weak", 30, -3)    # 12% WR: massive penalty
+                elif _adx_bkt_lb == "developing":
+                    _learned_bonus += _nbns("adx_perf", "developing", 60, 2)  # 80% WR: solid bonus
+                _cat_type_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
+                if not _cat_type_lb or "none" in _cat_type_lb:
+                    _learned_bonus += _npen("catalyst_type_perf", "none", 30, -2)  # 12% WR: harsh penalty
+                _bb_pos_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
+                if _bb_pos_lb > 0.85:
+                    _learned_bonus += _nbns("bb_zone_perf", "upper", 60, 2)   # 83% WR at upper band
+                _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
+                _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
+                if _intra_mom_bkt_lb == "extended":
+                    _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 83% WR
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
