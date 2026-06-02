@@ -28705,7 +28705,8 @@ def run():
                 if bool(_tk_sig_sc.get("double_bottom", False)):
                     _learned_bonus += _nbns("double_bottom_perf", "double_bottom", 65, 2)
                 if bool(_tk_sig_sc.get("force_index_rising", False)):
-                    _learned_bonus += _nbns("force_index_perf", "rising", 60, 1)
+                    # force_index_perf["rising"] = 48.4% WR n=31 — dead bonus removed (coin flip)
+                    _learned_bonus += _npen("signal_performance", "force_index_rising", 46, -1)  # 45.7% WR n=35
                 if bool(_tk_sig_sc.get("mom_accel", False)):
                     # signal_performance["mom_accel"] = 47.1% WR n=34 — coin flip, no bonus warranted
                     _learned_bonus += _nbns("momentum_persistence_perf", "multi_day_momentum", 60, 1)
@@ -28732,7 +28733,7 @@ def run():
                     if bool(_tk_sig_sc.get("mtf_aligned", False)) and not bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _npen("signal_synergy", "kc_breakout+mtf_aligned", 47, -1)  # 46.2% WR n=26
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
-                    _learned_bonus += _nbns("entry_candle_pattern_perf", "three_white", 60, 1)
+                    pass  # entry_candle_pattern_perf["three_white"] state doesn't exist in dict — dead bonus removed
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
                     # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
                     _learned_bonus += _npen("gap_hold_perf", "holding", 45, -4)   # 37% WR threshold tightened
@@ -28744,10 +28745,10 @@ def run():
                             _gap_pair = "+".join(sorted(["gap_and_hold", _gap_synergy_sig]))
                             _learned_bonus += _npen("signal_synergy", _gap_pair, 22, -3)  # 8-21% WR
                             break  # one extra penalty per position
-                # above_poc synergy combos: all sub-50% WR with n=9-14 — poc consistently hurts combos
-                # Thresholds set to actual WR + 3% buffer so they survive a few more wins
+                # above_poc: 45.7% WR n=35 — direct penalty + synergy combos all sub-50%
                 _above_poc_lb = bool(_tk_sig_sc.get("above_poc", False))
                 if _above_poc_lb:
+                    _learned_bonus += _npen("signal_performance", "above_poc", 46, -1)  # 45.7% WR n=35
                     _apoc_penalties = {
                         "at_breakout": 47,      # 46.2% WR n=13
                         "ichimoku_above": 44,   # 42.9% WR n=14
@@ -29109,8 +29110,9 @@ def run():
                 _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
                 _pcr_lb2 = float(_tk_sig_sc.get("options_pcr", 1.0) or 1.0)
                 if _uc_lb2:
-                    _learned_bonus += _nbns("call_volume_surge_perf", "unusual_calls", 62, 2)  # fires once data accumulates
-                    # unusual_calls signal_performance now 47.1% n=34 — bonus threshold 62% won't fire
+                    # call_volume_surge_perf["unusual_calls"] state doesn't exist in dict — dead bonus removed
+                    # unusual_calls = 44.4% WR n=36 — penalize directly
+                    _learned_bonus += _npen("signal_performance", "unusual_calls", 45, -1)  # 44.4% WR n=36
                 if _ob_lb2:
                     # options_bull signal_performance = 45.7% WR n=35 — penalize
                     _learned_bonus += _npen("signal_performance", "options_bull", 47, -1)
