@@ -9164,8 +9164,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n528 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n528_field = _buy_n528.get("order_flow_imbalance_perf", "balanced_flow") if _buy_n528 else "balanced_flow"
-            _n528_perf = tlog.setdefault("order_flow_imbalance_perf", {})
+            _n528_field = _buy_n528.get("order_flow_pressure_perf", "balanced_flow") if _buy_n528 else "balanced_flow"
+            _n528_perf = tlog.setdefault("order_flow_pressure_perf", {})
             _n528p = _n528_perf.setdefault(_n528_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n528_field})
             _n528p["total"] += 1; _n528p["total_pnl"] = round(_n528p["total_pnl"] + pnl, 2)
             if pnl > 0: _n528p["wins"] += 1
@@ -10979,8 +10979,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n649 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n649_field = _buy_n649.get("market_breadth_perf", "neutral_breadth") if _buy_n649 else "neutral_breadth"
-            _n649_perf = tlog.setdefault("market_breadth_perf", {})
+            _n649_field = _buy_n649.get("market_breadth_v2_perf", "neutral_breadth") if _buy_n649 else "neutral_breadth"
+            _n649_perf = tlog.setdefault("market_breadth_v2_perf", {})
             _n649p = _n649_perf.setdefault(_n649_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n649_field})
             _n649p["total"] += 1; _n649p["total_pnl"] = round(_n649p["total_pnl"] + pnl, 2)
             if pnl > 0: _n649p["wins"] += 1
@@ -22089,10 +22089,21 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_dow = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][datetime.now(timezone.utc).weekday()]
             _nsl_adj += _nde("dow_performance", _fb_dow)
 
-            # Market breadth tier (N148)
+            # Market breadth (N609 labels: strong_breadth/neutral_breadth/weak_breadth)
             _fb_brd = float(d.get("market_breadth", 50) or 50)
-            _fb_brd_b = ("thrust" if _fb_brd >= 90 else "strong" if _fb_brd >= 65 else "weak" if _fb_brd <= 35 else "neutral")
+            _fb_brd_b = ("strong_breadth" if _fb_brd >= 65 else "weak_breadth" if _fb_brd <= 35 else "neutral_breadth")
             _nsl_adj += _nde("market_breadth_perf", _fb_brd_b)
+            # N649: market breadth v2 (positive_breadth/strong_breadth/negative_breadth/neutral_breadth via A/D ratio)
+            _fb_ad = float(d.get("advance_decline_ratio", d.get("adv_dec", -1)) or -1)
+            _fb_brd_v2 = ("strong_breadth" if _fb_ad > 3.0 else "positive_breadth" if _fb_ad > 1.5 else
+                          "negative_breadth" if 0 < _fb_ad < 0.67 else "neutral_breadth")
+            _nsl_adj += _nde("market_breadth_v2_perf", _fb_brd_v2)
+            # N528: order flow pressure (buyer_dominated/seller_dominated/balanced_flow)
+            _fb_oflow_rvol = float(d.get("vol_ratio", d.get("rvol", 1.0)) or 1.0)
+            _fb_oflow_chg  = float(d.get("change_pct", d.get("chg_pct", 0)) or 0)
+            _fb_oflow_s = ("buyer_dominated" if _fb_oflow_rvol >= 1.5 and _fb_oflow_chg > 0.5 else
+                           "seller_dominated" if _fb_oflow_rvol >= 1.5 and _fb_oflow_chg < -0.5 else "balanced_flow")
+            _nsl_adj += _nde("order_flow_pressure_perf", _fb_oflow_s)
 
             # Signal count sweet spot (N156) — buckets match log_trade storage: 1-3/4-6/7-10/11+
             _fb_sigs = int(d.get("signal_count", d.get("signal_count_at_entry", 0)) or 0)
@@ -32449,7 +32460,7 @@ def run():
                             _n528_s = "balanced_flow"
                     except Exception:
                         _n528_s = "balanced_flow"
-                    _buy_signals_merged["order_flow_imbalance_perf"] = _n528_s
+                    _buy_signals_merged["order_flow_pressure_perf"] = _n528_s
                     # N529: Regime volatility at entry (VIX level)
                     try:
                         _n529_vix = float(vix or regime.get("vix", 18) or 18)
@@ -34028,7 +34039,7 @@ def run():
                             _n649_s = "neutral_breadth"
                     except Exception:
                         _n649_s = "neutral_breadth"
-                    _buy_signals_merged["market_breadth_perf"] = _n649_s
+                    _buy_signals_merged["market_breadth_v2_perf"] = _n649_s
                     # N650: Pre-market volume ratio
                     try:
                         _n650_pmv = float(d.get("premarket_vol_ratio", d.get("pm_vol_mult", -1)) or -1)
@@ -39415,7 +39426,7 @@ def run():
         _n525_list = _prev_learned.get("beta_bucket_entry_perf", [])
         _n526_list = _prev_learned.get("price_vs_52w_entry_perf", [])
         _n527_list = _prev_learned.get("gap_fill_status_entry_perf", [])
-        _n528_list = _prev_learned.get("order_flow_imbalance_perf", [])
+        _n528_list = _prev_learned.get("order_flow_pressure_perf", [])
         _n529_list = _prev_learned.get("regime_volatility_entry_perf", [])
         _n530_list = _prev_learned.get("breadth_thrust_entry_perf", [])
         _n531_list = _prev_learned.get("catalyst_freshness_entry_perf", [])
@@ -39536,7 +39547,7 @@ def run():
         _n646_list = _prev_learned.get("put_call_ratio_perf", [])
         _n647_list = _prev_learned.get("vwap_distance_perf", [])
         _n648_list = _prev_learned.get("day_of_week_perf", [])
-        _n649_list = _prev_learned.get("market_breadth_perf", [])
+        _n649_list = _prev_learned.get("market_breadth_v2_perf", [])
         _n650_list = _prev_learned.get("premarket_volume_perf", [])
         _n651_list = _prev_learned.get("consecutive_up_days_perf", [])
         _n652_list = _prev_learned.get("market_cap_momentum_perf", [])
@@ -45034,7 +45045,7 @@ def run():
             _learn_log.append(f"N527 Gap Fill Status: unfilled_gap_above={_a_n527['win_rate']:.0f}% unfilled_gap_below={_b_n527['win_rate']:.0f}%WR")
 
         # ── N528: Order Flow Imbalance entry tuner ────────────────────
-        _n528_raw = tlog.get("order_flow_imbalance_perf", {})
+        _n528_raw = tlog.get("order_flow_pressure_perf", {})
         _n528_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n528_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n528 = next((s for s in _n528_list if s.get("state")=="buyer_dominated"), _n528_list[0] if _n528_list else {"win_rate":50})
         _b_n528 = next((s for s in _n528_list if s.get("state")=="seller_dominated"), _n528_list[-1] if _n528_list else {"win_rate":50})
@@ -46002,7 +46013,7 @@ def run():
             _learn_log.append(f"N648 DayOfWeek: tuesday_entry={_a_n648['win_rate']:.0f}% friday_entry={_b_n648['win_rate']:.0f}%WR")
 
         # ── N649: Market Breadth entry tuner ────────────────────
-        _n649_raw = tlog.get("market_breadth_perf", {})
+        _n649_raw = tlog.get("market_breadth_v2_perf", {})
         _n649_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n649_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n649 = next((s for s in _n649_list if s.get("state")=="strong_breadth"), _n649_list[0] if _n649_list else {"win_rate":50})
         _b_n649 = next((s for s in _n649_list if s.get("state")=="negative_breadth"), _n649_list[-1] if _n649_list else {"win_rate":50})
@@ -46853,7 +46864,7 @@ def run():
             ("technical_setup_combo_perf",      "technical_setup_combo"),
             ("risk_reward_at_entry_perf",       "risk_reward_at_entry"),
             ("signal_freshness_perf",           "signal_freshness"),
-            ("order_flow_imbalance_perf",    "order_flow_imbalance"),
+            ("order_flow_pressure_perf",     "order_flow_pressure"),
             ("time_weighted_momentum_perf",  "time_weighted_momentum"),
             ("relative_volume_burst_perf",   "relative_volume_burst"),
             ("catalyst_timing_perf",         "catalyst_timing"),
@@ -47685,7 +47696,7 @@ def run():
             "beta_bucket_entry_perf": _n525_list,  # N525: stock beta bucket (<0.8/med/>1.4) at entry vs outcome
             "price_vs_52w_entry_perf": _n526_list,  # N526: price position in 52-week range at entry vs outcome
             "gap_fill_status_entry_perf": _n527_list,  # N527: gap fill status (unfilled above/filled/below) at entry vs outcome
-            "order_flow_imbalance_perf": _n528_list,  # N528: order flow imbalance (buyer/balanced/seller) at entry vs outcome
+            "order_flow_pressure_perf": _n528_list,   # N528: order flow pressure (buyer_dominated/seller_dominated/balanced_flow) vs outcome
             "regime_volatility_entry_perf": _n529_list,  # N529: VIX-based volatility regime at entry vs outcome
             "breadth_thrust_entry_perf": _n530_list,  # N530: market breadth thrust quality at entry vs outcome
             "catalyst_freshness_entry_perf": _n531_list,  # N531: catalyst freshness (news age hours) at entry vs outcome
@@ -47807,7 +47818,7 @@ def run():
             "put_call_ratio_perf": _n646_list,  # N646: put/call ratio (low_pcr_bullish/neutral_pcr/high_pcr_bearish/extreme_fear_pcr) vs outcome
             "vwap_distance_perf": _n647_list,  # N647: VWAP distance (above_vwap_strong/above_vwap/below_vwap/far_below_vwap) vs outcome
             "day_of_week_perf": _n648_list,  # N648: day of week (monday/tuesday/wednesday/thursday/friday_entry) vs outcome
-            "market_breadth_perf": _n649_list,  # N649: market breadth (strong_breadth/positive_breadth/negative_breadth/neutral_breadth) vs outcome
+            "market_breadth_v2_perf": _n649_list,  # N649: market breadth v2 (strong/positive/negative/neutral_breadth via A/D ratio) vs outcome
             "premarket_volume_perf": _n650_list,  # N650: pre-market volume (elevated/above_avg/normal/low_premarket) vs outcome
             "consecutive_up_days_perf": _n651_list,  # N651: consecutive up days (multi_day_run/fresh_momentum/after_down_day/choppy_action) vs outcome
             "market_cap_momentum_perf": _n652_list,  # N652: market cap momentum (large_cap_leading/mid_cap_breakout/small_cap_momentum/mega_cap_defensive) vs outcome
@@ -48063,6 +48074,8 @@ def run():
             "risk_reward_at_entry_perf":       [],
             "signal_freshness_perf":           [],
             "order_flow_imbalance_perf":    [],
+            "order_flow_pressure_perf":     [],
+            "market_breadth_v2_perf":       [],
             "time_weighted_momentum_perf":  [],
             "relative_volume_burst_perf":   [],
             "catalyst_timing_perf":         [],
@@ -48326,7 +48339,7 @@ def run():
             "earnings_momentum_perf", "volatility_contraction_perf",
             "float_size_bucket_perf", "news_velocity_perf", "news_count_quality_perf",
             "relative_pe_perf", "intraday_reversal_perf",
-            "market_breadth_score_perf", "multi_timeframe_trend_perf",
+            "market_breadth_score_perf", "market_breadth_perf", "market_breadth_v2_perf", "order_flow_imbalance_perf", "order_flow_pressure_perf", "multi_timeframe_trend_perf",
             "smart_money_indicator_perf", "entry_price_vs_vwap_perf",
             "catalyst_recency_perf", "sector_momentum_quality_perf",
             "liquidity_tier_perf", "trend_reversal_signal_perf",
