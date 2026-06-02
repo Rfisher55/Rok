@@ -18796,21 +18796,23 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= _learned_cycle_min and pnl_pct >= -1.0:
-                # Brain-adaptive cycle exit — only if near breakeven or better.
-                # Positions deeper in the red wait for hard stop or recovery; avoids locking in
-                # avoidable losses when the coin just needs more time to recapture entry.
+            elif _crypto_age_min >= 45 and pnl_pct >= 2.5:
+                # Early big-win exit: lock in a strong gain if we hit 2.5%+ within 45min
+                # MOVED before cycle exit so winners aren't mis-labeled as "cycle_exit"
+                reason = f"crypto early win exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 60 and pnl_pct >= 1.0:
+                # 1h profit exit: only trigger at 1%+ — winners ride, not cycle-exited
+                # MOVED before cycle exit so profitable exits get correct category
+                reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= _learned_cycle_min and -1.0 <= pnl_pct < 1.0:
+                # Brain-adaptive cycle exit — only for flat/slightly-negative positions.
+                # Winners (pnl >= 1%) are handled above; don't preempt them with a "cycle exit"
+                # that has historically very low WR. Losers deeper than -1% wait for hard stop.
                 reason = f"crypto {_learned_cycle_min}min cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= _learned_cycle_min * 1.5 and pnl_pct < -1.0:
                 # Extended timeout for underwater positions: if we're 1.5x past the cycle window
                 # and still losing, exit now rather than waiting for the full hard stop.
                 reason = f"crypto extended timeout ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 60 and pnl_pct >= 1.0:
-                # 1h profit exit: only trigger at 1%+ (raised from 0.5%) to avoid tiny-win exits
-                reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 45 and pnl_pct >= 2.5:
-                # Early big-win exit: lock in a strong gain if we hit 2.5%+ within 45min
-                reason = f"crypto early win exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
                 logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
