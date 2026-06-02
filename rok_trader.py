@@ -133,6 +133,8 @@ _LEARNED_FALLING_SCORE_PENALTY: bool = False  # True when falling-score entries 
 _LEARNED_ATR_MULTIPLIER:        float = 2.5   # learned ATR stop multiplier (starts at default)
 _LEARNED_NEURON_PARAMS:         dict  = {}    # raw bot_learned_params — neuron state win rates for real-time scoring
 _ALL_NEURON_PERFS:              dict  = {}    # ALL *_perf dicts from tlog — enables full 850-neuron feedback loop
+_SIGNAL_SYNERGY_MAP:            dict  = {}    # {pair_key: {win_rate, total, avg_pnl}} — learned signal pair outcomes
+_SIGNAL_TRIPLETS_MAP:           dict  = {}    # {triplet_key: {win_rate, total, avg_pnl}} — learned 3-signal combos
 
 # ── Sector map ────────────────────────────────────────────────────────────────
 SECTOR_MAP = {
@@ -21853,6 +21855,36 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _adaptive_adj -= 4.0   # multiple weak signals = noisy/unreliable setup
         s += max(-12, min(12, round(_adaptive_adj)))  # cap total adaptive boost at ±12
 
+    # ── SIGNAL SYNERGY LAYER: learned pair/triplet win rates from actual trades ─
+    if _SIGNAL_SYNERGY_MAP or _SIGNAL_TRIPLETS_MAP:
+        try:
+            _syn_sigs = sorted(k for k in _all_sig_keys if d.get(k))
+            _syn_adj  = 0.0
+            if len(_syn_sigs) >= 2:
+                for _si in range(len(_syn_sigs)):
+                    for _sj in range(_si + 1, len(_syn_sigs)):
+                        _spk = f"{_syn_sigs[_si]}+{_syn_sigs[_sj]}"
+                        _sr  = _SIGNAL_SYNERGY_MAP.get(_spk)
+                        if _sr:
+                            _swr = float(_sr.get("win_rate", 50) or 50)
+                            _sav = min(10.0, max(-10.0, float(_sr.get("avg_pnl", 0) or 0)))
+                            _sw  = min(1.0, (_sr.get("total", 0) ** 0.5) / 5.0)
+                            _syn_adj += ((_swr - 50) * 0.04 + _sav * 0.01) * _sw
+            if len(_syn_sigs) >= 3:
+                for _si in range(len(_syn_sigs)):
+                    for _sj in range(_si + 1, len(_syn_sigs)):
+                        for _sk2 in range(_sj + 1, len(_syn_sigs)):
+                            _tpk = f"{_syn_sigs[_si]}+{_syn_sigs[_sj]}+{_syn_sigs[_sk2]}"
+                            _tr  = _SIGNAL_TRIPLETS_MAP.get(_tpk)
+                            if _tr:
+                                _twr = float(_tr.get("win_rate", 50) or 50)
+                                _tav = min(10.0, max(-10.0, float(_tr.get("avg_pnl", 0) or 0)))
+                                _tw  = min(1.0, (_tr.get("total", 0) ** 0.5) / 5.0)
+                                _syn_adj += ((_twr - 50) * 0.05 + _tav * 0.012) * _tw
+            s += max(-8, min(8, round(_syn_adj)))  # cap synergy layer at ±8
+        except Exception:
+            pass
+
     # ── SECTOR CONTEXT LAYER: sectors with poor historical win rates penalized ─
     try:
         _sector_key = SECTOR_MAP.get(tk, "other")
@@ -25895,12 +25927,17 @@ def run():
     # Clamp to safe range (1.5x to 4x ATR)
     _LEARNED_ATR_MULTIPLIER = max(1.5, min(4.0, _LEARNED_ATR_MULTIPLIER))
     # Neuron state win-rate lookup (used in score() neural state layer)
-    global _LEARNED_NEURON_PARAMS, _ALL_NEURON_PERFS
+    global _LEARNED_NEURON_PARAMS, _ALL_NEURON_PERFS, _SIGNAL_SYNERGY_MAP, _SIGNAL_TRIPLETS_MAP
     _LEARNED_NEURON_PARAMS = tlog.get("bot_learned_params", {})
     # Load ALL *_perf dicts from tlog into global for full 850-neuron feedback loop
     _ALL_NEURON_PERFS = {k: v for k, v in tlog.items()
                          if isinstance(k, str) and k.endswith("_perf") and isinstance(v, dict)}
-    logger.info(f"Brain loaded: {len(_ALL_NEURON_PERFS)} neuron perf dicts active for scoring feedback")
+    _SIGNAL_SYNERGY_MAP   = {k: v for k, v in tlog.get("signal_synergy", {}).items()
+                              if isinstance(v, dict) and v.get("total", 0) >= 3}
+    _SIGNAL_TRIPLETS_MAP  = {k: v for k, v in tlog.get("signal_triplets", {}).items()
+                              if isinstance(v, dict) and v.get("total", 0) >= 3}
+    logger.info(f"Brain loaded: {len(_ALL_NEURON_PERFS)} neuron perf dicts, "
+                f"{len(_SIGNAL_SYNERGY_MAP)} synergy pairs, {len(_SIGNAL_TRIPLETS_MAP)} triplets active")
 
     if _learned:
         logger.info(f"Learned params loaded: score_adj={_learned_score_adj:+d}, size_adj={_learned_pos_size_adj:.2f}x, "
