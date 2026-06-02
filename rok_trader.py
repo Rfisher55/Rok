@@ -22042,8 +22042,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
             # Every perf dict in tlog is loaded via _ALL_NEURON_PERFS.
             # Each wire below closes a feedback loop that previously had no return path.
 
-            # RSI zone at entry (N128)
-            _fb_rsi_z = ("oversold" if rsi < 30 else "neutral" if rsi < 60 else "overbought")
+            # RSI zone at entry (N128) — boundaries match N294 buy-loop: >70=overbought, <30=oversold
+            _fb_rsi_z = ("oversold" if rsi < 30 else "overbought" if rsi >= 70 else "neutral")
             _nsl_adj += _nde("rsi_at_entry_perf", _fb_rsi_z)
 
             # VIX bracket (N127)
