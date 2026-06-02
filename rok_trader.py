@@ -18702,17 +18702,22 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 _crypto_age_min = 0
             logger.info(f"AGE {sym}: {_crypto_age_min:.0f}min | entry={_crypto_entry_ts[:19]} | pnl={pnl_pct:+.2f}% | in_peaks={sym in peaks}")
 
+            # Adaptive stop/target: widen in high-VIX markets, tighten in calm markets
+            _vix_c = float((tlog.get("regime") or {}).get("vix") or 20)
+            _stop_pct  = CRYPTO_STOP_PCT  * (1.4 if _vix_c >= 30 else 0.8 if _vix_c < 14 else 1.0)
+            _target_pct= CRYPTO_TARGET_PCT* (1.3 if _vix_c >= 30 else 0.85 if _vix_c < 14 else 1.0)
+
             reason = None
-            if pnl_pct <= -(CRYPTO_STOP_PCT * 100):
+            if pnl_pct <= -(_stop_pct * 100):
                 reason = f"crypto stop loss ({pnl_pct:+.1f}%)"
-            elif pnl_pct >= (CRYPTO_TARGET_PCT * 100):
+            elif pnl_pct >= (_target_pct * 100):
                 reason = f"crypto profit target ({pnl_pct:+.1f}%)"
             elif trail_drop <= -c_trail and pnl_pct > 0:
                 reason = f"crypto trailing stop ({trail_drop:.1f}% / thr={c_trail:.0f}% from peak)"
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= _learned_cycle_min and pnl_pct > -(CRYPTO_STOP_PCT * 100):
+            elif _crypto_age_min >= _learned_cycle_min and pnl_pct > -(_stop_pct * 100):
                 # Brain-adaptive cycle exit: threshold adjusts based on learned best hold duration
                 # Default 120min; shortens to 90 if scalp wins, extends to 150 if longer holds win
                 reason = f"crypto {_learned_cycle_min}min cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
@@ -18955,7 +18960,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 logger.info(f"SKIP {alpaca_sym} — combined score too low (tech={sc} ai={ai_score:+.0f})")
                 continue
             price    = sig["price"]
-            notional = round(min(portfolio_val * CRYPTO_MAX_PCT, buying_power * 0.3), 2)
+            # Adaptive position sizing based on VIX (fear) and coin score quality
+            _vix_now_c = float((tlog.get("regime") or {}).get("vix") or 20)
+            _vix_scale = (0.50 if _vix_now_c >= VIX_EXTREME_THRESH else
+                          0.70 if _vix_now_c >= VIX_HIGH_THRESH else
+                          1.10 if _vix_now_c < 14 else 1.00)  # low VIX = risk-on boost
+            _score_scale = 1.15 if sc >= 40 else 0.85 if sc < 15 else 1.00
+            notional = round(min(portfolio_val * CRYPTO_MAX_PCT * _vix_scale * _score_scale, buying_power * 0.3), 2)
             if notional < 10:
                 continue
 
