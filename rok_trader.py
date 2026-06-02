@@ -18707,6 +18707,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _stop_pct  = CRYPTO_STOP_PCT  * (1.4 if _vix_c >= 30 else 0.8 if _vix_c < 14 else 1.0)
             _target_pct= CRYPTO_TARGET_PCT* (1.3 if _vix_c >= 30 else 0.85 if _vix_c < 14 else 1.0)
 
+            # Per-coin stop tightening: coins flagged as losers get 30% tighter stops
+            # (brain-flagged via crypto_coin_reduce when win_rate < 35% with ≥3 trades)
+            _coin_key_sell = sym.split("/")[0] if "/" in sym else sym.replace("USD","")
+            _coin_reduce_sell = _lp_cth.get("crypto_coin_reduce", [])
+            if _coin_key_sell in _coin_reduce_sell:
+                _stop_pct = _stop_pct * 0.70  # 5% → ~3.5%; stop the bleeding faster
+
             reason = None
             if pnl_pct <= -(_stop_pct * 100):
                 reason = f"crypto stop loss ({pnl_pct:+.1f}%)"
@@ -18717,12 +18724,21 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= _learned_cycle_min and pnl_pct > -(_stop_pct * 100):
-                # Brain-adaptive cycle exit: threshold adjusts based on learned best hold duration
-                # Default 120min; shortens to 90 if scalp wins, extends to 150 if longer holds win
+            elif _crypto_age_min >= _learned_cycle_min and pnl_pct >= -1.0:
+                # Brain-adaptive cycle exit — only if near breakeven or better.
+                # Positions deeper in the red wait for hard stop or recovery; avoids locking in
+                # avoidable losses when the coin just needs more time to recapture entry.
                 reason = f"crypto {_learned_cycle_min}min cycle exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 60 and pnl_pct >= 0.5:
+            elif _crypto_age_min >= _learned_cycle_min * 1.5 and pnl_pct < -1.0:
+                # Extended timeout for underwater positions: if we're 1.5x past the cycle window
+                # and still losing, exit now rather than waiting for the full hard stop.
+                reason = f"crypto extended timeout ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 60 and pnl_pct >= 1.0:
+                # 1h profit exit: only trigger at 1%+ (raised from 0.5%) to avoid tiny-win exits
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 45 and pnl_pct >= 2.5:
+                # Early big-win exit: lock in a strong gain if we hit 2.5%+ within 45min
+                reason = f"crypto early win exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
 
             if reason:
                 logger.info(f"SELL {sym} — {reason} | raw_sym={_raw_sym} qty={qty:.8f} cost={cost:.4f} cur={current:.4f} age={_crypto_age_min:.0f}min")
@@ -18852,6 +18868,21 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         if alpaca_sym in held_crypto:
             continue
         sc = crypto_score(sig)
+
+        # Falling knife guard: dual-negative momentum = strong downtrend → hard to call the bottom.
+        # Require the score to clear a higher bar before entering (not an outright block, just harder).
+        _fk_chg  = float(sig.get("change_pct", 0) or 0)
+        _fk_roc5 = float(sig.get("roc5", 0) or 0)
+        _fk_macd = float(sig.get("macd", 0) or 0)
+        _fk_mslp = float(sig.get("macd_slope", 0) or 0)
+        _fk_rsi  = float(sig.get("rsi", 50) or 50)
+        if _fk_chg <= -2.0 and _fk_roc5 <= -3.0 and _fk_macd < 0 and _fk_mslp < 0:
+            sc = max(0, sc - 12)  # strong falling knife: hard penalty — need much better signal
+
+        # Bounce confirmation bonus: oversold coin with rising MACD = ideal reversal entry
+        if _fk_rsi < 32 and _fk_mslp > 0 and _fk_macd > -0.5:
+            sc = min(100, sc + 5)  # fresh oversold bounce with upward MACD momentum
+
         logger.info(f"Crypto score {alpaca_sym}: {sc} (chg={sig.get('change_pct',0):+.1f}% roc5={sig.get('roc5',0):+.1f}% vr={sig.get('vol_ratio',1):.1f}x)")
         # BTC dominance adjustments: boost BTC when dom > 60, boost alts when dom < 50
         is_btc = "BTC" in alpaca_sym
@@ -18903,7 +18934,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _coin_boost_list  = _lp_cth.get("crypto_coin_boost", [])
             _coin_reduce_list = _lp_cth.get("crypto_coin_reduce", [])
             if _coin_name in _coin_boost_list:   sc = min(100, sc + 5)
-            elif _coin_name in _coin_reduce_list: sc = max(0,   sc - 5)
+            elif _coin_name in _coin_reduce_list: sc = max(0,   sc - 8)  # stronger penalty vs +5 boost
 
             # ET hour performance: boost score during learned best hour, reduce at worst
             _et_hr_perf = tlog.get("et_hour_perf", {})
@@ -18924,6 +18955,21 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         except Exception:
             pass
 
+        # BTC trend gate: protect alts from entering during BTC downtrends.
+        # When BTC is selling off, altcoins typically fall harder. This gate
+        # suppresses alt entries when BTC momentum is clearly negative.
+        if not is_btc and not is_eth:
+            try:
+                _btc_sig_gate = crypto_data.get("BTC/USD", {})
+                _btc_chg_gate = float(_btc_sig_gate.get("change_pct", 0) or 0)
+                _btc_roc5_gate= float(_btc_sig_gate.get("roc5", 0) or 0)
+                if _btc_chg_gate <= -3.0 or _btc_roc5_gate <= -5.0:
+                    sc = 0  # hard block: BTC in sharp decline — no new alt entries
+                elif _btc_chg_gate <= -1.5 or _btc_roc5_gate <= -2.0:
+                    sc = max(0, sc - 10)  # moderate BTC weakness: require stronger alt signal
+            except Exception:
+                pass
+
         if sc >= _effective_crypto_min:
             scored.append((alpaca_sym, sc, sig))
     # Track all scored for force-buy fallback
@@ -18936,14 +18982,25 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     # Force-buy fallback: if nothing scored above threshold but we have empty slots,
     # buy top-scoring coins anyway to keep capital working 24/7
     _buy_list = scored[:open_slots]
+    _fb_coin_reduce = _lp_cth.get("crypto_coin_reduce", [])
     if not _buy_list and open_slots > 0:
         _fallback = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
-                     if sym not in held_crypto and crypto_score(sig) > 0]
+                     if sym not in held_crypto
+                     and crypto_score(sig) > 0
+                     and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
         _fallback.sort(key=lambda x: -x[1])
         _n_fallback = min(open_slots, max(2, open_slots // 2))
         if _fallback:
             _buy_list = _fallback[:_n_fallback]
-            logger.info(f"Crypto force-buy: {open_slots} open slots, buying top {len(_buy_list)} by score")
+            logger.info(f"Crypto force-buy: {open_slots} open slots, buying top {len(_buy_list)} by score (excluded brain-flagged losers: {_fb_coin_reduce})")
+        elif open_slots > 0:
+            # All non-loser coins already held — allow any coin as last resort
+            _fallback_any = [(sym, crypto_score(sig), sig) for sym, sig in crypto_data.items()
+                             if sym not in held_crypto and crypto_score(sig) > 0]
+            _fallback_any.sort(key=lambda x: -x[1])
+            if _fallback_any:
+                _buy_list = _fallback_any[:min(open_slots, 1)]  # max 1 slot for any-coin fallback
+                logger.info(f"Crypto force-buy last-resort: {_buy_list[0][0]} (all preferred coins held)")
 
     # BTC core holding: ensure BTC/USD is always in the portfolio when possible.
     # If BTC not held and not in buy list, replace the weakest-performing coin in the
@@ -21823,6 +21880,57 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_pers_bkt = ("first_appear" if _fb_persist <= 1 else "two_runs" if _fb_persist == 2 else "three_runs" if _fb_persist == 3 else "persistent_4+")
             _nsl_adj += _nde("score_persistence_perf", _fb_pers_bkt)
 
+            # N894: Trade momentum / hot hand — is a win streak predictive?
+            _fb_streak_now = int(d.get("win_streak_now", 0) or 0)
+            _fb_streak_bkt = ("hot_3+" if _fb_streak_now >= 3 else "hot_2" if _fb_streak_now == 2
+                              else "neutral" if _fb_streak_now == 0 else f"losing_{abs(_fb_streak_now)}")
+            _nsl_adj += _nde("trade_momentum_perf", _fb_streak_bkt)
+
+            # N895: Position count at entry — concentrated vs diversified portfolio
+            _fb_pos_now = int(d.get("positions_open_now", 5) or 5)
+            _fb_pos_bkt = ("1-3" if _fb_pos_now <= 3 else "4-7" if _fb_pos_now <= 7
+                           else "8-12" if _fb_pos_now <= 12 else "13+")
+            _nsl_adj += _nde("position_count_perf", _fb_pos_bkt)
+
+            # N896: Capital utilization — over-deployed or selective?
+            _fb_cap_now = float(d.get("capital_util_now", 50) or 50)
+            _fb_cap_bkt = ("high_cash" if _fb_cap_now < 30 else "moderate" if _fb_cap_now < 60
+                           else "deployed" if _fb_cap_now < 85 else "max_deployed")
+            _nsl_adj += _nde("capital_util_perf", _fb_cap_bkt)
+
+            # N898: Regime stability — new/uncertain vs confirmed/established
+            _fb_reg_stab = d.get("regime_stable_now", "established") or "established"
+            _nsl_adj += _nde("regime_stability_perf", _fb_reg_stab)
+
+            # N900: Sector breadth — how many sectors are advancing at entry
+            _fb_sec_adv = int(d.get("sectors_advancing_now", 5) or 5)
+            _fb_sec_bkt = ("broad_6+" if _fb_sec_adv >= 6 else "healthy_4-5" if _fb_sec_adv >= 4
+                           else "narrow_2-3" if _fb_sec_adv >= 2 else "single_sector")
+            _nsl_adj += _nde("sector_breadth_perf", _fb_sec_bkt)
+
+            # VWAP position at entry (learned: above-VWAP entries win more often)
+            _fb_vwap_p = float(d.get("vwap_pos", d.get("vwap", 0)) or 0)
+            _fb_vwap_bkt = ("above" if _fb_vwap_p > 0.5 else "below" if _fb_vwap_p < -0.5 else "at_vwap")
+            _nsl_adj += _nde("vwap_perf", _fb_vwap_bkt)
+
+            # MACD state at entry — bull_div > rising > recovering > negative
+            _fb_mc_v = float(d.get("macd", 0) or 0)
+            _fb_mc_s = float(d.get("macd_slope", 0) or 0)
+            _fb_mc_bkt = ("bull_div" if d.get("macd_bull_div") else
+                          "rising" if _fb_mc_v > 0 and _fb_mc_s > 0 else
+                          "recovering" if _fb_mc_v < 0 and _fb_mc_s > 0 else "negative")
+            _nsl_adj += _nde("macd_state_perf", _fb_mc_bkt)
+
+            # Market breadth bucket at entry (broader = healthier bull)
+            _fb_brd_raw = float(d.get("market_breadth", d.get("breadth_at_entry", 50)) or 50)
+            _fb_brd_bkt2 = ("strong" if _fb_brd_raw >= 70 else "broad" if _fb_brd_raw >= 55
+                            else "mixed" if _fb_brd_raw >= 40 else "weak")
+            _nsl_adj += _nde("breadth_perf", _fb_brd_bkt2)
+
+            # Squeeze state at entry (TTM coiled vs uncoiled) — second wire
+            _fb_sq_bkt = ("squeeze" if d.get("ttm_squeeze_fired") or d.get("in_squeeze") else "no_squeeze")
+            _nsl_adj += _nde("squeeze_perf", _fb_sq_bkt)
+
             # Cap the full neural layer at ±20 (wider cap as brain accumulates more data)
             s += max(-20, min(20, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -22814,13 +22922,17 @@ def run():
                     _r  = _s.get("reason", "")
                     _tk = _s.get("ticker", "")
                     _pnl = float(_s["pnl_pct"])
-                    if "90min" in _r or "90-min" in _r:        _cat = "90min_cycle"
-                    elif "60min" in _r or "60-min" in _r:      _cat = "60min_cycle"
-                    elif "45min" in _r:                        _cat = "45min_profit"
-                    elif "crypto 2h" in _r or "4h" in _r:      _cat = "crypto_cycle"
-                    elif "stop loss" in _r or "scalp stop" in _r: _cat = "stop_loss"
-                    elif "profit" in _r or "target" in _r:     _cat = "profit_target"
-                    else:                                       _cat = "other"
+                    if "90min" in _r or "90-min" in _r:              _cat = "90min_cycle"
+                    elif "60min" in _r or "60-min" in _r:          _cat = "60min_cycle"
+                    elif "45min" in _r:                            _cat = "45min_profit"
+                    elif ("120min" in _r or "150min" in _r
+                          or "crypto 2h" in _r or "4h" in _r
+                          or "cycle exit" in _r):                  _cat = "crypto_cycle"
+                    elif "extended timeout" in _r:                 _cat = "crypto_timeout"
+                    elif "stop loss" in _r or "scalp stop" in _r:  _cat = "stop_loss"
+                    elif ("profit" in _r or "target" in _r
+                          or "early win" in _r or "1h profit" in _r): _cat = "profit_target"
+                    else:                                           _cat = "other"
                     _exit_perf[_cat].append(_pnl)
                     if "/" in _tk:  # crypto ticker
                         _coin = _tk.split("/")[0]
@@ -22844,7 +22956,7 @@ def run():
                 _PRIOR_N = 5
                 _best_cat, _best_score = None, -999
                 for _cat, _ce in _cum.items():
-                    if _cat in ("stop_loss", "other"):
+                    if _cat in ("stop_loss", "other", "crypto_timeout"):
                         continue
                     _bayes = _ce["total_pnl"] / (_ce["n"] + _PRIOR_N)
                     if _bayes > _best_score:
@@ -25523,6 +25635,27 @@ def run():
                 _learned_bonus = max(-8, min(14, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
+
+            # Inject live state context for N894-N900 dead neurons (not in signals dict)
+            try:
+                _n894_trades = [t for t in tlog.get("trades", [])
+                                if t.get("action") in ("SELL","SELL_HALF","COVER")
+                                and t.get("pnl_pct") is not None][:5]
+                _n894_streak = 0
+                for _n894_t in _n894_trades:
+                    if float(_n894_t.get("pnl_pct", 0) or 0) > 0: _n894_streak = max(0, _n894_streak) + 1
+                    else:                                           _n894_streak = min(0, _n894_streak) - 1
+                live[tk]["win_streak_now"]        = _n894_streak
+                live[tk]["positions_open_now"]    = len(held)
+                _pv_ctx = float(tlog.get("portfolio_value", 100000) or 100000)
+                _bp_ctx = float(tlog.get("buying_power", _pv_ctx) or _pv_ctx)
+                live[tk]["capital_util_now"]      = round((1 - _bp_ctx / max(_pv_ctx, 1)) * 100)
+                _rh_ctx = [r.get("r") for r in tlog.get("regime_history", [])[-3:] if r.get("r")]
+                live[tk]["regime_stable_now"]     = "established" if len(set(_rh_ctx)) <= 1 and len(_rh_ctx) >= 3 else "transitioning"
+                live[tk]["sectors_advancing_now"] = sum(1 for sv in tlog.get("sector_etf_trends", {}).values()
+                                                        if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
+            except Exception:
+                pass
 
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
