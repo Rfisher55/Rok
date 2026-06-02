@@ -2036,6 +2036,87 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── EMA50 Position Neuron (N110): price distance from 50 EMA at entry ────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_e50r = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _e50_v = float(_buy_e50r.get("price_vs_ema50", 0) or 0) if _buy_e50r else 0
+            _e50_bkt = ("above_far" if _e50_v > 10 else "above" if _e50_v > 2 else "below" if _e50_v > -10 else "below_far")
+            _e50r_perf = tlog.setdefault("ema50_position_perf", {})
+            _e50r_rec  = _e50r_perf.setdefault(_e50_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _e50r_rec["total"] += 1; _e50r_rec["total_pnl"] = round(_e50r_rec["total_pnl"] + pnl, 2)
+            if pnl > 0: _e50r_rec["wins"] += 1
+            else:       _e50r_rec["losses"] += 1
+            _e50r_rec["win_rate"] = round(_e50r_rec["wins"] / max(_e50r_rec["total"], 1) * 100, 1)
+            _e50r_rec["avg_pnl"]  = round(_e50r_rec["total_pnl"] / max(_e50r_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── EMA200 Position Neuron (N111): price distance from 200 EMA at entry ──────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_e200r = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _e200_v = float(_buy_e200r.get("price_vs_ema200", 0) or 0) if _buy_e200r else 0
+            _e200_bkt = ("above" if _e200_v > 5 else "near" if _e200_v > -5 else "below")
+            _e200r_perf = tlog.setdefault("ema200_position_perf", {})
+            _e200r_rec  = _e200r_perf.setdefault(_e200_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _e200r_rec["total"] += 1; _e200r_rec["total_pnl"] = round(_e200r_rec["total_pnl"] + pnl, 2)
+            if pnl > 0: _e200r_rec["wins"] += 1
+            else:       _e200r_rec["losses"] += 1
+            _e200r_rec["win_rate"] = round(_e200r_rec["wins"] / max(_e200r_rec["total"], 1) * 100, 1)
+            _e200r_rec["avg_pnl"]  = round(_e200r_rec["total_pnl"] / max(_e200r_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── Chart Pattern Entry Neuron (N140/N141): cup/vcp/double_bottom at entry ──
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_pat = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            if _buy_pat:
+                _pat_perf = tlog.setdefault("pattern_entry_perf", {})
+                for _pat_key in ("cup_handle", "vcp_breakout", "double_bottom"):
+                    if _buy_pat.get(_pat_key):
+                        _pr = _pat_perf.setdefault(_pat_key if _pat_key != "vcp_breakout" else "vcp",
+                                                   {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                        _pr["total"] += 1; _pr["total_pnl"] = round(_pr["total_pnl"] + pnl, 2)
+                        if pnl > 0: _pr["wins"] += 1
+                        else:       _pr["losses"] += 1
+                        _pr["win_rate"] = round(_pr["wins"] / max(_pr["total"], 1) * 100, 1)
+                        _pr["avg_pnl"]  = round(_pr["total_pnl"] / max(_pr["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── ATR Bucket Neuron (N129): tight/normal/wide/very_wide at entry ────────
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_atrb = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _atrb_v = float(_buy_atrb.get("atr_pct", 0) or 0) if _buy_atrb else 0
+            _atrb_bkt = ("tight" if _atrb_v < 1 else "normal" if _atrb_v < 2.5 else "wide" if _atrb_v < 5 else "very_wide")
+            _atrb_perf = tlog.setdefault("atr_bucket_perf", {})
+            _atrb_rec  = _atrb_perf.setdefault(_atrb_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _atrb_rec["total"] += 1; _atrb_rec["total_pnl"] = round(_atrb_rec["total_pnl"] + pnl, 2)
+            if pnl > 0: _atrb_rec["wins"] += 1
+            else:       _atrb_rec["losses"] += 1
+            _atrb_rec["win_rate"] = round(_atrb_rec["wins"] / max(_atrb_rec["total"], 1) * 100, 1)
+            _atrb_rec["avg_pnl"]  = round(_atrb_rec["total_pnl"] / max(_atrb_rec["total"], 1), 2)
+        except Exception:
+            pass
+
+    # ── DCA Context Neuron (N149): was entry a DCA (averaging down) or fresh? ──
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
+        try:
+            _buy_dcar = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
+            _dcar_bkt = "dca" if (_buy_dcar and _buy_dcar.get("is_dca")) else "fresh"
+            _dcar_perf = tlog.setdefault("dca_performance", {})
+            _dcar_rec  = _dcar_perf.setdefault(_dcar_bkt, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+            _dcar_rec["total"] += 1; _dcar_rec["total_pnl"] = round(_dcar_rec["total_pnl"] + pnl, 2)
+            if pnl > 0: _dcar_rec["wins"] += 1
+            else:       _dcar_rec["losses"] += 1
+            _dcar_rec["win_rate"] = round(_dcar_rec["wins"] / max(_dcar_rec["total"], 1) * 100, 1)
+            _dcar_rec["avg_pnl"]  = round(_dcar_rec["total_pnl"] / max(_dcar_rec["total"], 1), 2)
+        except Exception:
+            pass
+
     # ── Score Trend Neuron: was the score rising or falling at entry? ────────────
     # Rising score = momentum building, flat = waiting for a move, falling = late entry.
     # The bot learns whether entries during rising score phases produce better outcomes.
@@ -21987,19 +22068,19 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_sig_b = ("1-3" if _fb_sigs <= 3 else "4-6" if _fb_sigs <= 6 else "7-10" if _fb_sigs <= 10 else "11+")
             _nsl_adj += _nde("signal_count_perf", _fb_sig_b)
 
-            # MACD entry state (N116)
+            # MACD entry state (N116) — redirected to macd_state_perf (same labels, populated)
             _fb_macd_s = ("bull_div" if d.get("macd_bull_div") else
                           "rising" if macd > 0 and (d.get("macd_slope",0) or 0) > 0 else
                           "recovering" if macd < 0 and (d.get("macd_slope",0) or 0) > 0 else "negative")
-            _nsl_adj += _nde("macd_entry_state_perf", _fb_macd_s)
+            _nsl_adj += _nde("macd_state_perf", _fb_macd_s)
 
-            # TTM squeeze (N121)
-            _fb_sqz = ("fired" if d.get("ttm_squeeze_fired") else "in_squeeze" if d.get("in_squeeze") else "none")
-            _nsl_adj += _nde("ttm_squeeze_entry_perf", _fb_sqz)
+            # TTM squeeze (N121) — use squeeze_perf labels (populated)
+            _fb_sqz = "squeeze" if (d.get("ttm_squeeze_fired") or d.get("in_squeeze")) else "no_squeeze"
+            _nsl_adj += _nde("squeeze_perf", _fb_sqz)
 
-            # VWAP position (N124)
+            # VWAP position (N124) — redirected to vwap_perf (same labels, populated)
             _fb_vwap = ("above" if vwap > 0.5 else "below" if vwap < -0.5 else "at_vwap")
-            _nsl_adj += _nde("vwap_performance", _fb_vwap)
+            _nsl_adj += _nde("vwap_perf", _fb_vwap)
 
             # Price tier (N133)
             _fb_ptier = ("micro" if price < 10 else "small" if price < 30 else "mid" if price < 100 else "large")
@@ -22032,18 +22113,18 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_grade = d.get("grade", "C") or "C"
             _nsl_adj += _nde("grade_perf", _fb_grade)
 
-            # Pre-market gap (N125)
+            # Pre-market gap (N125) — redirected to pm_gap_perf (same labels, populated)
             _fb_pm = float(d.get("pm_gap_pct", 0) or 0)
             _fb_pm_b = ("big_up" if _fb_pm > 3 else "small_up" if _fb_pm > 0.5 else "big_down" if _fb_pm < -3 else "small_down" if _fb_pm < -0.5 else "flat")
-            _nsl_adj += _nde("pm_gap_entry_perf", _fb_pm_b)
+            _nsl_adj += _nde("pm_gap_perf", _fb_pm_b)
 
             # Ticker memory (N138) — per-ticker historical performance
             _nsl_adj += _nde("ticker_memory", tk) * 0.5 if tk in _ALL_NEURON_PERFS.get("ticker_memory", {}) else 0
 
-            # Trend template quality (N135)
+            # Trend template quality (N135) — use trend_template_tier_perf labels (populated)
             _fb_tt = int(d.get("trend_template", 0) or 0)
-            _fb_tt_b = ("elite" if _fb_tt >= 7 else "good" if _fb_tt >= 5 else "fair" if _fb_tt >= 3 else "weak")
-            _nsl_adj += _nde("tt_quality_perf", _fb_tt_b)
+            _fb_tt_b = ("elite" if _fb_tt >= 7 else "strong" if _fb_tt >= 5 else "moderate" if _fb_tt >= 3 else "weak")
+            _nsl_adj += _nde("trend_template_tier_perf", _fb_tt_b)
 
             # ATR bucket (N129)
             _fb_atr = float(d.get("atr_pct", 0) or 0)
@@ -22054,13 +22135,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_dca = ("dca" if d.get("is_dca") else "fresh")
             _nsl_adj += _nde("dca_performance", _fb_dca)
 
-            # Earnings proximity (N145)
+            # Earnings proximity (N145) — matches N742 buy-loop labels
             _fb_earn = int(d.get("earnings_days", 99) or 99)
-            _fb_earn_b = ("near_1-2d" if _fb_earn <= 2 else "near_3-7d" if _fb_earn <= 7 else "normal")
+            _fb_earn_b = ("earnings_imminent" if _fb_earn < 5 else "earnings_near" if _fb_earn <= 30 else "earnings_far")
             _nsl_adj += _nde("earnings_proximity_perf", _fb_earn_b)
 
-            # Macro event context (N151)
+            # Macro event context (N151) — "none" maps to "normal" matching log_trade
             _fb_macro = d.get("macro_event", "none") or "none"
+            _fb_macro = "normal" if _fb_macro == "none" else _fb_macro
             _nsl_adj += _nde("macro_event_perf", _fb_macro)
 
             # ── N891-N900 feedback ───────────────────────────────────────────
@@ -22174,10 +22256,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
                          else "improving" if _fb_rs5_v > _fb_rs63_v else "lagging")
             _nsl_adj += _nde("rs_mom_perf", _fb_rsmom)
 
-            # Intraday momentum bucket (N703): % from open
+            # Intraday momentum bucket (N703) — matches entry record: >=0.0="early", negative="pullback"
             _fb_id_mom = float(d.get("intraday", 0) or 0)
             _fb_im_bkt = ("extended" if _fb_id_mom > 5.0 else "runner" if _fb_id_mom > 2.0
-                          else "early" if abs(_fb_id_mom) <= 2.0 else "pullback")
+                          else "early" if _fb_id_mom >= 0.0 else "pullback")
             _nsl_adj += _nde("intraday_mom_perf", _fb_im_bkt)
 
             # ADX trend strength bucket (N713)
@@ -22419,9 +22501,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
                        else "partial" if _fb_vratio >= 1.2 or _fb_mom_acc else "weak")
             _nsl_adj += _nde("vol_ratio_mom_perf", _fb_vrm)
 
-            # RS tier at entry: more granular RS rating bucket
+            # RS tier at entry — threshold 70 matches N127 log_trade storage (not 75)
             _fb_rst = float(d.get("rs_rating", 50) or 50)
-            _fb_rst_bkt = ("elite" if _fb_rst >= 90 else "strong" if _fb_rst >= 75
+            _fb_rst_bkt = ("elite" if _fb_rst >= 90 else "strong" if _fb_rst >= 70
                            else "average" if _fb_rst >= 50 else "weak")
             _nsl_adj += _nde("rs_tier_entry_perf", _fb_rst_bkt)
 
