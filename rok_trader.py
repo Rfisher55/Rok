@@ -23476,7 +23476,11 @@ def run():
                 pass
             _fast_half_out = peaks.get(sym, {}).get("half_out", False) if isinstance(peaks.get(sym), dict) else False
 
-            if _fast_age_min >= 90:
+            # Overnight grace window: positions held >6h with strong P&L get a 30min extension.
+            # Let winners run at market open instead of dumping immediately on the 90min timer.
+            _is_overnight = _fast_age_min >= 360  # held 6+ hours = overnight hold
+            _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
+            if _fast_age_min >= 90 and not _grace_override:
                 # 90min unconditional exit — force capital recycling
                 _fast_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
@@ -23491,6 +23495,38 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
+            elif _grace_override:
+                # Overnight winner: position held 6h+ with ≥3% gain — extend cycle
+                # Exit when P&L drops by 1.5% from current high (protect gains) or at 4h mark
+                _grace_peak = peaks.get(sym, {}).get("peak_pnl", pnl_pct) if isinstance(peaks.get(sym), dict) else pnl_pct
+                if isinstance(peaks.get(sym), dict):
+                    if pnl_pct > _grace_peak:
+                        peaks[sym]["peak_pnl"] = pnl_pct  # track new high
+                    elif pnl_pct < _grace_peak - 1.5:
+                        # Gave back 1.5% from peak — lock in the gain
+                        _g_reason = f"overnight winner trailing exit ({pnl_pct:+.1f}%, peak {_grace_peak:+.1f}%)"
+                        logger.info(f"FAST_SELL {sym} (grace exit) — {_g_reason}")
+                        try:
+                            alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                       "side": "sell", "type": "market", "time_in_force": "day"})
+                            log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_g_reason)
+                            made_trades = True
+                            del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                        except Exception as _ge:
+                            logger.warning(f"Grace sell failed {sym}: {_ge}")
+                        continue
+                    elif _fast_age_min >= 360 + 120:  # 8h max then exit regardless
+                        _g_reason = f"overnight 8h max hold ({pnl_pct:+.1f}%)"
+                        logger.info(f"FAST_SELL {sym} (grace 8h) — {_g_reason}")
+                        try:
+                            alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                       "side": "sell", "type": "market", "time_in_force": "day"})
+                            log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_g_reason)
+                            made_trades = True
+                            del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                        except Exception as _ge:
+                            logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
+                        continue
             elif _fast_age_min >= 60 and not _fast_half_out:
                 # 60min hard exit — unconditional capital cycle
                 _fast_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
