@@ -18984,10 +18984,15 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 # EMA bearish cross: clear trend shift — cut the loss early
                 reason = f"crypto bearish cross exit ({pnl_pct:+.1f}% ema={_sig_emac:.2f} after {_crypto_age_min:.0f}min)"
             elif (_crypto_age_min >= 60 and _crypto_age_min < 100
-                  and -0.6 <= pnl_pct <= 0.2
-                  and _sig_macd < -0.1 and _sig_mslp < 0 and _sig_rsi < 47):
+                  and -0.8 <= pnl_pct <= 0.3
+                  and _sig_macd < -0.05 and _sig_mslp < 0 and _sig_rsi < 52):
                 # Stagnant/drifting position: stuck flat-to-negative with deteriorating momentum
                 reason = f"crypto stagnant exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif (_crypto_age_min >= 75 and _crypto_age_min < 120
+                  and abs(pnl_pct) < 0.15
+                  and _sig_mslp < 0 and _sig_roc5 < 0):
+                # Completely stuck: no gain after 75min AND momentum deteriorating → free capital
+                reason = f"crypto flat-stuck exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
@@ -27449,6 +27454,17 @@ def run():
     if _LEARNED_MIN_BREADTH > 0 and _cur_breadth_adv < _LEARNED_MIN_BREADTH:
         _eff_min_score += 5
         logger.info(f"Breadth below learned floor ({_cur_breadth_adv:.0f}% < {_LEARNED_MIN_BREADTH:.0f}%) — threshold +5 → {_eff_min_score}")
+
+    # Consecutive loss guard: losing streak = market conditions not aligning → demand higher conviction
+    if _loss_streak >= 4:
+        _eff_min_score += 10
+        logger.info(f"Loss streak guard: {_loss_streak} consec losses — raising threshold +10 → {_eff_min_score}")
+    elif _loss_streak >= 3:
+        _eff_min_score += 6
+        logger.info(f"Loss streak guard: {_loss_streak} consec losses — raising threshold +6 → {_eff_min_score}")
+    elif _loss_streak >= 2:
+        _eff_min_score += 3
+        logger.info(f"Loss streak guard: {_loss_streak} consec losses — raising threshold +3 → {_eff_min_score}")
 
     # VIX spike guard: if VIX is spiking rapidly, add extra +8 to threshold
     if _vix_spike:
