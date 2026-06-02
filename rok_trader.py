@@ -22218,11 +22218,23 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_spy_dir = d.get("spy_intraday_dir", "flat") or "flat"
             _nsl_adj += _nde("spy_intraday_dir_perf", _fb_spy_dir)
 
-            # N899: Score persistence (run count)
+            # N138/N899: Score persistence
             _fb_persist = int(d.get("persistence_runs", 1) or 1)
             _fb_pers_bkt = ("first_appear" if _fb_persist <= 1 else "two_runs" if _fb_persist == 2 else "three_runs" if _fb_persist == 3 else "persistent_4+")
-            _nsl_adj += _nde("score_persistence_v1_perf", _fb_pers_bkt)
-            _nsl_adj += _nde("score_persistence_perf", _fb_pers_bkt)
+            _nsl_adj += _nde("score_persistence_perf", _fb_pers_bkt)  # N899: run count labels
+            # N138: score persistence quality labels (persistent_strong/rising/stable/declining/new_entry)
+            _n138_sp_v = str(d.get("score_persistence", "") or "")
+            if not _n138_sp_v:
+                _sh_scores = [h.get("s", 0) for h in d.get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                if len(_sh_scores) >= 3:
+                    _sh_avg = sum(_sh_scores) / len(_sh_scores)
+                    _sh_last, _sh_first = _sh_scores[-1], _sh_scores[0]
+                    if _sh_avg >= 65 and _sh_last >= 65:    _n138_sp_v = "persistent_strong"
+                    elif _sh_last > _sh_first + 5:          _n138_sp_v = "rising"
+                    elif _sh_last < _sh_first - 5:          _n138_sp_v = "declining"
+                    else:                                    _n138_sp_v = "stable"
+                else:                                        _n138_sp_v = "new_entry"
+            _nsl_adj += _nde("score_persistence_v1_perf", _n138_sp_v)
 
             # N894: Trade momentum / hot hand — is a win streak predictive?
             _fb_streak_now = int(d.get("win_streak_now", 0) or 0)
@@ -22594,19 +22606,18 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           else "2-3d" if _fb_cg_v <= 3 else "4d+")
             _nsl_adj += _nde("consec_green_perf", _fb_cg_bkt)
 
-            # Sector momentum at entry: state labels match N835 buy-loop labels
+            # Sector momentum at entry
             _fb_sec_etf = d.get("sector_etf_momentum", "neutral") or "neutral"
             _fb_sec_chg = float(d.get("sector_chg1d", d.get("sector_etf_1d", 0)) or 0)
-            if _fb_sec_chg > 1.0 or _fb_sec_etf == "bullish":
-                _fb_sec_mom = "sector_leader"
-            elif _fb_sec_chg > 0.2 or _fb_sec_etf == "bullish":
-                _fb_sec_mom = "above_avg_sector"
-            elif _fb_sec_chg < -0.2 or _fb_sec_etf == "bearish":
-                _fb_sec_mom = "lagging_sector"
-            else:
-                _fb_sec_mom = "avg_sector"
-            _nsl_adj += _nde("sector_momentum_v1_perf", _fb_sec_mom)
+            # N835 (sector_momentum_perf) uses "sector_leader"/"above_avg_sector"/"lagging_sector"/"avg_sector"
+            if _fb_sec_chg > 1.0:                  _fb_sec_mom = "sector_leader"
+            elif _fb_sec_chg > 0.2:                _fb_sec_mom = "above_avg_sector"
+            elif _fb_sec_chg < -0.2:               _fb_sec_mom = "lagging_sector"
+            else:                                   _fb_sec_mom = "avg_sector"
             _nsl_adj += _nde("sector_momentum_perf", _fb_sec_mom)
+            # Unnamed neuron (sector_momentum_v1_perf) uses "accelerating"/"decelerating"/"neutral"
+            _fb_sec_mom_v1 = _fb_sec_etf  # "accelerating"/"decelerating"/"neutral" from live data
+            _nsl_adj += _nde("sector_momentum_v1_perf", _fb_sec_mom_v1)
 
             # N269: Sector ETF trend (now separated from sector_breadth_perf)
             _fb_sec_1d = float(d.get("sector_etf_1d", d.get("sector_chg1d", 0)) or 0)
