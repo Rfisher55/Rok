@@ -29072,10 +29072,24 @@ def run():
                     _learned_bonus += _npen("volume_climax_perf", "blow_off_climax", 38, -2)  # potential exhaustion
                 elif _rvol_vc_lb > 2:
                     _learned_bonus += _nbns("volume_climax_perf", "elevated_volume", 62, 1)   # strong interest
+                # Daily RSI overbought: WR=20% n=10 (daily_rsi>=70 = extended/overdue reversal)
+                _drsi_lb = _tk_sig_sc.get("daily_rsi")
+                if _drsi_lb is not None:
+                    _drsi_lb = float(_drsi_lb or 50)
+                    if _drsi_lb >= 70:
+                        _learned_bonus += _npen("rsi_at_entry_perf", "overbought", 30, -3)  # 20% WR n=10 daily overbought
+                # Trade momentum: entering right after a loss = WR=29% n=14 — contrarian streak trap
+                _tm_lb = str(_tk_sig_sc.get("trade_momentum_state", "") or "")
+                if not _tm_lb:
+                    _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
+                    _tm_lb = "losing_1" if _tm_wstrk == -1 else "losing_2+" if _tm_wstrk <= -2 else ""
+                if _tm_lb == "losing_1":
+                    _learned_bonus += _npen("trade_momentum_perf", "losing_1", 35, -2)  # 29% WR n=14 — avoid loss chasing
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
 
+            _et_hour_adj = 0  # default; overwritten below after ET time is computed
             # Inject live state context for N893-N900 dead neurons (not in signals dict)
             try:
                 _n894_trades = [t for t in tlog.get("trades", [])
@@ -29118,6 +29132,21 @@ def run():
                 _et_ctx = _now_et_ctx + timedelta(hours=_et_off_ctx)
                 live[tk]["et_hour"] = _et_ctx.hour
                 live[tk]["et_min"]  = _et_ctx.minute
+                # ET hour gate: penalize entry times with proven 0% WR (1:30 PM ET = 13:30)
+                _et_hour_adj = 0
+                try:
+                    _et_bkt_now = f"{_et_ctx.hour:02d}:{'30' if _et_ctx.minute >= 30 else '00'}"
+                    _et_rec_now = _ALL_NEURON_PERFS.get("et_hour_perf", {}).get(_et_bkt_now, {})
+                    _et_wl = int(_et_rec_now.get("wins", 0)) + int(_et_rec_now.get("losses", 0))
+                    _et_wr_now = _et_rec_now.get("wins", 0) / _et_wl * 100 if _et_wl >= 4 else 50.0
+                    if _et_wr_now <= 15 and _et_wl >= 4:
+                        _et_hour_adj = -7   # 0% WR: 1:30 PM ET window = near-block
+                    elif _et_wr_now <= 30 and _et_wl >= 4:
+                        _et_hour_adj = -4
+                    elif _et_wr_now >= 70 and _et_wl >= 4:
+                        _et_hour_adj = +2   # great hour: lean in
+                except Exception:
+                    _et_hour_adj = 0
                 # N721: ad_trend — market A/D trend using score()-compatible string values
                 _n721_adv_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
                 if   _n721_adv_ctx > 70: live[tk]["ad_trend"] = "rising_fast"
@@ -29921,7 +29950,8 @@ def run():
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
-                                             + breakout_adj + _learned_bonus + rotation_flip_adj)
+                                             + breakout_adj + _learned_bonus + rotation_flip_adj
+                                             + _et_hour_adj)
             # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
             # Exception: unknown-sector stocks (other) don't earn the A+ discount
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
