@@ -18978,21 +18978,21 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
 
         # Bounce confirmation bonus: oversold coin with rising MACD = ideal reversal entry
         if _fk_rsi < 32 and _fk_mslp > 0 and _fk_macd > -0.5:
-            sc = min(100, sc + 5)  # fresh oversold bounce with upward MACD momentum
+            sc = min(120, sc + 5)  # fresh oversold bounce with upward MACD momentum
 
         logger.info(f"Crypto score {alpaca_sym}: {sc} (chg={sig.get('change_pct',0):+.1f}% roc5={sig.get('roc5',0):+.1f}% vr={sig.get('vol_ratio',1):.1f}x)")
         # BTC dominance adjustments: boost BTC when dom > 60, boost alts when dom < 50
         is_btc = "BTC" in alpaca_sym
         is_eth = "ETH" in alpaca_sym
         if btc_dom > 60 and not is_btc:   sc = max(0, sc - 3)   # mild penalty for alts in risk-off
-        elif btc_dom < 50 and not is_btc: sc = min(100, sc + 5) # bonus for alts in alt season
-        elif btc_dom > 60 and is_btc:     sc = min(100, sc + 5) # boost BTC in risk-off
+        elif btc_dom < 50 and not is_btc: sc = min(120, sc + 5) # bonus for alts in alt season
+        elif btc_dom > 60 and is_btc:     sc = min(120, sc + 5) # boost BTC in risk-off
 
         # Correlation penalty: reduce alt scores when portfolio already saturated with alts
         if not is_btc and not is_eth:
             sc = max(0, sc - _corr_alt_penalty)
         elif is_btc or is_eth:
-            sc = min(100, sc + (_corr_alt_penalty // 2))  # boost majors when alts overcrowded
+            sc = min(120, sc + (_corr_alt_penalty // 2))  # boost majors when alts overcrowded
 
         # Apply learned neuron adjustments (N881-N890)
         try:
@@ -19000,37 +19000,37 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _mom_tier = ("explosive" if _roc5 > 10 else "strong" if _roc5 > 4
                          else "moderate" if _roc5 > 1 else "flat" if _roc5 > -1 else "falling")
             _mom_wr = _cn881.get(_mom_tier, {}).get("win_rate", 50.0)
-            if _mom_wr > 60: sc = min(100, sc + 4)
+            if _mom_wr > 60: sc = min(120, sc + 4)
             elif _mom_wr < 40: sc = max(0, sc - 4)
 
             _rsi = sig.get("rsi", 50) or 50
             _rsi_zone = ("oversold" if _rsi < 30 else "neutral" if _rsi < 60 else "overbought")
             _rsi_wr = _cn886.get(_rsi_zone, {}).get("win_rate", 50.0)
-            if _rsi_wr > 60: sc = min(100, sc + 3)
+            if _rsi_wr > 60: sc = min(120, sc + 3)
             elif _rsi_wr < 40: sc = max(0, sc - 3)
 
             _vr = sig.get("vol_ratio", 1) or 1
             _vol_tier = ("surge" if _vr > 3 else "elevated" if _vr > 1.5 else "normal" if _vr > 0.7 else "dry")
             _vol_wr = _cn887.get(_vol_tier, {}).get("win_rate", 50.0)
-            if _vol_wr > 60: sc = min(100, sc + 3)
+            if _vol_wr > 60: sc = min(120, sc + 3)
             elif _vol_wr < 40: sc = max(0, sc - 3)
 
             # N888: EMA cross state at entry (bull_cross / bear_cross / none)
             _ema_c_val = float(sig.get("ema_cross", 0) or 0)
             _ema_cross_state = ("bull_cross" if _ema_c_val > 0.5 else "bear_cross" if _ema_c_val < -0.5 else "none")
             _ema_wr = _cn888.get(_ema_cross_state, {}).get("win_rate", 50.0)
-            if _ema_wr > 60: sc = min(100, sc + 3)
+            if _ema_wr > 60: sc = min(120, sc + 3)
             elif _ema_wr < 40: sc = max(0, sc - 3)
 
             _dow_now = now_utc.weekday()
             _dow_name = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][_dow_now]
             _dow_wr = _cn889.get(_dow_name, {}).get("win_rate", 50.0)
-            if _dow_wr > 60: sc = min(100, sc + 3)
+            if _dow_wr > 60: sc = min(120, sc + 3)
             elif _dow_wr < 40: sc = max(0, sc - 3)
 
             _asset_key = "BTC" if "BTC" in alpaca_sym else "ETH" if "ETH" in alpaca_sym else "ALT"
             _asset_wr = _cn890.get(_asset_key, {}).get("win_rate", 50.0)
-            if _asset_wr > 65: sc = min(100, sc + 5)
+            if _asset_wr > 65: sc = min(120, sc + 5)
             elif _asset_wr < 35: sc = max(0, sc - 5)
 
             # N882: AI sentiment tier at entry (positive/neutral/negative)
@@ -19039,7 +19039,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _c882_wr = _cn882.get(_c882_bkt_now, {}).get("win_rate", 50.0)
             _c882_n  = _cn882.get(_c882_bkt_now, {}).get("total", 0)
             if _c882_n >= 3:
-                if _c882_wr > 60: sc = min(100, sc + 3)
+                if _c882_wr > 60: sc = min(120, sc + 3)
                 elif _c882_wr < 40: sc = max(0, sc - 3)
 
             # N884: Score tier — which tier actually wins (speculative/low/medium/high)
@@ -19047,7 +19047,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _c884_wr = _cn884.get(_sc_tier_now, {}).get("win_rate", 50.0)
             _c884_n  = _cn884.get(_sc_tier_now, {}).get("total", 0)
             if _c884_n >= 3:
-                if _c884_wr > 60: sc = min(100, sc + 3)
+                if _c884_wr > 60: sc = min(120, sc + 3)
                 elif _c884_wr < 40: sc = max(0, sc - 3)
 
             # N885: BTC dominance at entry — learn whether high/low dom periods are better
@@ -19056,14 +19056,14 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _btcdom_wr = _cn885.get(_btcdom_state, {}).get("win_rate", 50.0)
             _btcdom_n  = _cn885.get(_btcdom_state, {}).get("total", 0)
             if _btcdom_n >= 3:  # only use when enough data
-                if _btcdom_wr > 60: sc = min(100, sc + 3)
+                if _btcdom_wr > 60: sc = min(120, sc + 3)
                 elif _btcdom_wr < 40: sc = max(0, sc - 3)
 
             # Per-coin track record from brain learning
             _coin_name = alpaca_sym.split("/")[0]
             _coin_boost_list  = _lp_cth.get("crypto_coin_boost", [])
             _coin_reduce_list = _lp_cth.get("crypto_coin_reduce", [])
-            if _coin_name in _coin_boost_list:   sc = min(100, sc + 5)
+            if _coin_name in _coin_boost_list:   sc = min(120, sc + 5)
             elif _coin_name in _coin_reduce_list: sc = max(0,   sc - 8)  # stronger penalty vs +5 boost
 
             # ET hour performance: boost score during learned best hour, reduce at worst
@@ -19071,7 +19071,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _cur_hr_wr = _et_hr_perf.get(_cur_et_bkt, {}).get("win_rate", 50.0)
             _cur_hr_n  = _et_hr_perf.get(_cur_et_bkt, {}).get("total", 0)
             if _cur_hr_n >= 4:  # only apply when we have enough data
-                if _cur_hr_wr >= 65:   sc = min(100, sc + 3)  # best hour — be more aggressive
+                if _cur_hr_wr >= 65:   sc = min(120, sc + 3)  # best hour — be more aggressive
                 elif _cur_hr_wr <= 35: sc = max(0,   sc - 3)  # worst hour — be more cautious
 
             # UTC hour performance: learned from crypto-specific outcomes by hour of day
@@ -19080,7 +19080,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _utc_hr_wr = _utc_hr_perf.get(_utc_bkt, {}).get("win_rate", 50.0)
             _utc_hr_n  = _utc_hr_perf.get(_utc_bkt, {}).get("total", 0)
             if _utc_hr_n >= 3:  # only apply when we have enough crypto-specific data
-                if _utc_hr_wr >= 65:   sc = min(100, sc + 4)  # proven winning hour for crypto
+                if _utc_hr_wr >= 65:   sc = min(120, sc + 4)  # proven winning hour for crypto
                 elif _utc_hr_wr <= 35: sc = max(0,   sc - 4)  # proven losing hour — be cautious
         except Exception:
             pass
@@ -26348,6 +26348,51 @@ def run():
                 _et_ctx = _now_et_ctx + timedelta(hours=_et_off_ctx)
                 live[tk]["et_hour"] = _et_ctx.hour
                 live[tk]["et_min"]  = _et_ctx.minute
+                # N721: ad_trend — market advance/decline trend from breadth
+                _n721_adv_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
+                if   _n721_adv_ctx > 62: live[tk]["ad_trend"] = "uptrend"
+                elif _n721_adv_ctx < 38: live[tk]["ad_trend"] = "downtrend"
+                else:                    live[tk]["ad_trend"] = "flat"
+                # N726: reversal_confirmed — bullish reversal candle + RSI recovery + positive move
+                _n726_bull = (live[tk].get("hammer", False) or live[tk].get("bullish_engulfing", False)
+                              or live[tk].get("morning_star", False))
+                live[tk]["reversal_confirmed"] = bool(
+                    _n726_bull
+                    and float(live[tk].get("rsi", 50) or 50) > 40
+                    and float(live[tk].get("chg1d", 0) or 0) > 0
+                )
+                # N727: sr_quality — support/resistance quality (near VWAP/support/breakout = high quality)
+                _n727_vwap_near = abs(float(live[tk].get("vwap_pos", 0) or 0)) < 0.5
+                live[tk]["sr_quality"] = (
+                    70 * int(_n727_vwap_near)
+                    + 20 * int(bool(live[tk].get("near_support", False)))
+                    + 10 * int(bool(live[tk].get("at_breakout", False)))
+                )
+                # N729: sector_rs_rank — percentile rank of ticker's sector vs all sectors (5d)
+                _n729_sec_lbl = live[tk].get("sector", "")
+                _n729_sec_data = tlog.get("sector_etf_trends", {})
+                if _n729_sec_lbl and _n729_sec_data:
+                    _n729_all = sorted([float(v.get("chg5d", 0) or 0)
+                                        for v in _n729_sec_data.values() if isinstance(v, dict)])
+                    _n729_mine = float((_n729_sec_data.get(_n729_sec_lbl) or {}).get("chg5d", 0) or 0)
+                    live[tk]["sector_rs_rank"] = (
+                        round(sum(1 for c in _n729_all if c <= _n729_mine) / len(_n729_all) * 100)
+                        if _n729_all else 50
+                    )
+                else:
+                    live[tk]["sector_rs_rank"] = 50
+                # meta signals: macro context, VIX direction, SPY intraday, breadth, persistence
+                _macro_ctx_inj = tlog.get("macro_context", {}) or {}
+                live[tk]["macro_event"] = str(_macro_ctx_inj.get("event", "none") or "none")
+                _vix_1d_inj = float((tlog.get("regime") or {}).get("vix_1d", 0) or 0)
+                live[tk]["vix_direction"] = ("rising" if _vix_1d_inj > 0.5 else
+                                             "falling" if _vix_1d_inj < -0.5 else "flat")
+                # spy_intraday_dir — use breadth adv_pct as SPY proxy (>62% = up, <38% = down)
+                _spy_adv_inj = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
+                live[tk]["spy_intraday_dir"] = ("up" if _spy_adv_inj > 62 else
+                                                "down" if _spy_adv_inj < 38 else "flat")
+                live[tk]["market_breadth"]   = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
+                live[tk]["persistence_runs"] = int(_curr_persist.get(tk, 0))
             except Exception:
                 pass
 
@@ -39027,7 +39072,10 @@ def run():
         _optimal_min = MIN_BUY_SCORE  # default
         _positive_buckets = []
         _bucket_insights = []
-        for _bkt, _bkd in sorted(_bucket_perf.items()):
+        # Numeric sort order for score buckets (handles "101-120" before "50-59" alphabetically)
+        _bucket_floors = {"<50": 0, "50-59": 50, "60-69": 60, "70-79": 70,
+                          "80-89": 80, "90-100": 90, "101-120": 101}
+        for _bkt, _bkd in sorted(_bucket_perf.items(), key=lambda x: _bucket_floors.get(x[0], 0)):
             if _bkd.get("trades", 0) >= 4:
                 _bkwr = _bkd.get("wr", 0)
                 _bkavg = _bkd.get("avg_pnl", 0)
@@ -39037,6 +39085,15 @@ def run():
                     _bucket_insights.append(f"Score {_bkt}: {_bkwr}% WR — underperforming, avoid")
                 elif _bkwr >= 65 and _bkd.get("trades", 0) >= 5:
                     _bucket_insights.append(f"Score {_bkt}: {_bkwr}% WR — high accuracy zone")
+        # Derive optimal_min from lowest profitable bucket — learn where the real edge begins
+        if _positive_buckets:
+            _bk_pos_sorted = sorted(_positive_buckets, key=lambda b: _bucket_floors.get(b, 0))
+            _opt_floor = _bucket_floors.get(_bk_pos_sorted[0], MIN_BUY_SCORE)
+            _optimal_min = max(MIN_BUY_SCORE, _opt_floor)
+            _learn_log.append(f"Score bucket analysis: profitable zones={','.join(_bk_pos_sorted)} → optimal_min={_optimal_min}")
+        elif _bucket_insights:
+            # All populated buckets are underperforming — tighten up
+            _learn_log.append(f"Score bucket analysis: no profitable zones found — maintaining min={_optimal_min}")
 
         # ── 3. Signal quality ranking ────────────────────────────────────
         _sig_wr_data = tlog.get("signal_win_rates", {})
@@ -46495,6 +46552,7 @@ def run():
             "best_hours_utc":      _best_hours[:4],
             "worst_hours_utc":     _worst_hours[:4],
             "positive_buckets":    _positive_buckets,
+            "optimal_min_score":   _optimal_min,        # learned optimal entry threshold from score bucket data
             "bucket_insights":     _bucket_insights,
             "top_synapses":        _top_synapses_list,   # best 2-signal combinations
             "top_triplets":        _top_triplets_list,   # best 3-signal combinations
