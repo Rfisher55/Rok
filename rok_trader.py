@@ -28652,9 +28652,8 @@ def run():
                 elif not _spy200_lb or _vix_now_lb > 28:
                     _learned_bonus += _npen("macro_backdrop_perf", "unfavorable_macro", 42, -2)
                 if _regime_lb == "bull":
-                    # regime_spy_alignment_perf["bull_aligned"] DOESN'T EXIST in tlog
-                    # regime_performance["bull"] = 47% WR n=66 — bull regime entries consistently lose
-                    _learned_bonus += _npen("regime_performance", "bull", 47, -1)
+                    # regime_performance["bull"] = 47.1% WR n=68 — threshold 47→48
+                    _learned_bonus += _npen("regime_performance", "bull", 48, -1)
                 elif _regime_lb == "bear":
                     _learned_bonus += _npen("regime_spy_alignment_perf", "bear_counter", 42, -2)
                 if bool(_tk_sig_sc.get("options_flow", False)):
@@ -28667,7 +28666,7 @@ def run():
                 if _vix_br == "low":
                     _learned_bonus += _nbns("vix_entry_perf", "low", 62, 1)
                 elif _vix_br == "elevated":
-                    _learned_bonus += _npen("vix_entry_perf", "elevated", 42, -2)
+                    _learned_bonus += _npen("vix_entry_perf", "elevated", 47, -2)  # 46.6% WR n=73 — threshold 42→47
                 # capital_util: high_cash=3.1% WR n=32, moderate=12.9% WR n=31 — both catastrophic
                 _cap_pv_lb = float(tlog.get("portfolio_value", 100000) or 100000)
                 _cap_bp_lb = float(tlog.get("buying_power", _cap_pv_lb) or _cap_pv_lb)
@@ -28686,6 +28685,8 @@ def run():
                 _hw_utc_lb = datetime.utcnow().strftime("%H") + ("30" if datetime.utcnow().minute >= 30 else "00")
                 if _hw_utc_lb == "1730":
                     _learned_bonus += _npen("halfhour_performance", "1730", 40, -2)  # 39.3% WR n=28
+                elif _hw_utc_lb == "1900":
+                    _learned_bonus += _nbns("halfhour_performance", "1900", 61, 2)   # 62.5% WR n=8 — bonus
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
                     _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
                     _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
