@@ -21769,7 +21769,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if _accum >= 8:   s += 7   # very strong accumulation — rare, high conviction
     elif _accum >= 6: s += 4   # solid institutional buying pattern
     elif _accum >= 4: s += 2   # moderate accumulation
-    elif _accum <= 2: s -= 3   # light/no accumulation = weak institutional support
+    elif _accum == 2: s -= 3   # light accumulation = weak institutional support
+    elif _accum <= 1: s -= 5   # no/minimal accumulation = no smart money confirmation
 
     # News Velocity: accelerating news flow = catalyst building = institutional awareness
     if d.get("news_accelerating", False):   s += 5   # 3+ articles in 24h, accelerating
@@ -28336,6 +28337,14 @@ def run():
                     ))
                     if _n997_prem < 2:
                         _ng_strikes += 1; _ng_reasons.append(f"other sector + only {_n997_prem} premium sigs (needs 2+)")
+                # N996: zero accum in any sector + insufficient premium confirmation (MU-type: no institutional buying)
+                if _n999_accum == 0 and _n999_sec != "other":  # other-sector already covered by N999
+                    _n996_prem = sum(bool(_tk_sig.get(k)) for k in (
+                        "vcp", "cup_handle", "at_breakout", "mtf_triple", "ttm_squeeze_fired",
+                        "gap_and_hold", "orb_breakout", "rvol_surge", "supertrend_bull", "obv_rising"
+                    ))
+                    if _n996_prem < 2:
+                        _ng_strikes += 1; _ng_reasons.append(f"zero accum (any sector) + only {_n996_prem} premium sigs (needs 2+)")
                 if _ng_green_lights >= 2:
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
