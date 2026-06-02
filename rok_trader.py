@@ -28752,14 +28752,15 @@ def run():
                     _learned_bonus += _nbns("relative_volume_spike_perf", "high_rvol", 58, 1)
                 elif _rv_lb < 0.8:
                     _learned_bonus += _npen("relative_volume_spike_perf", "normal_rvol", 48, -1)
-                # VWAP position: above=65.2% WR n=23, at_vwap=56.5% WR n=23
+                # VWAP position: above=50% WR n=36 (updated); at_vwap=47.2% WR n=36 — penalize at_vwap
                 _vwp_lb = float(_tk_sig_sc.get("vwap_pos", _tk_sig_sc.get("vwap_distance", 0)) or 0)
                 _vwap_above_flag = bool(_tk_sig_sc.get("above_vwap", False)) or _vwp_lb > 0
                 if _vwap_above_flag:
-                    _learned_bonus += _nbns("vwap_perf", "above", 62, 1)         # 65.2% WR n=23
-                    _learned_bonus += _nbns("vwap_distance_perf", "above_vwap", 60, 1)  # 60.9% WR n=46
-                    if _vwp_lb > 2:
-                        _learned_bonus += _nbns("vwap_distance_perf", "far_above_vwap", 60, 1)  # extra momentum
+                    # vwap_perf["above"] = 50% WR n=36 — dead bonus at 62% threshold; vwap_distance also 46.5% WR
+                    pass  # both above-VWAP signals are coin flip or worse, no bonus
+                elif abs(_vwp_lb) <= 0.5:
+                    # vwap_perf["at_vwap"] = 47.2% WR n=36 — penalize
+                    _learned_bonus += _npen("vwap_distance_perf", "above_vwap", 47, -1)
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
                 # SPY alignment bonus: trading with the market direction
@@ -28925,23 +28926,20 @@ def run():
                 _st_gap_lb = str(_tk_sig_sc.get("st_gap", _tk_sig_sc.get("supertrend_gap", "")) or "")
                 if _st_gap_lb == "normal" or (not _st_gap_lb and _tk_sig_sc.get("supertrend_bull") is False):
                     _learned_bonus += _npen("st_gap_perf", "normal", 30, -2)    # 22% WR
-                # Catalyst type other: 71% WR bonus
+                # Catalyst type other: 71.1% WR n=38 bonus (must not be technical_catalyst or none)
                 _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
-                if _cat_other_lb and "none" not in _cat_other_lb and "unknown" not in _cat_other_lb:
-                    _learned_bonus += _nbns("catalyst_type_perf", "other", 60, 2)  # 71% WR n=38 — most reliable signal
-                # TT (trend template): fair=80% WR, weak=52% WR — score derived from numeric tt value
-                # TT: only score when signal explicitly present (absent → neutral, not "weak")
+                if _cat_other_lb and _cat_other_lb not in ("", "none", "technical_catalyst", "unknown"):
+                    _learned_bonus += _nbns("catalyst_type_perf", "other", 68, 3)  # 71.1% WR n=38 — threshold raised
+                # TT (trend template): fair=57.1% WR n=28; weak=43.2% WR n=44
                 _tt_raw_lb = _tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw"))
                 if _tt_raw_lb is not None:
                     _tt_num_lb = int(_tt_raw_lb or 0)
                     _tt_bkt_lb = ("elite" if _tt_num_lb >= 7 else "good" if _tt_num_lb >= 5
                                   else "fair" if _tt_num_lb >= 3 else "weak")
-                    if _tt_bkt_lb == "fair":
-                        _learned_bonus += _nbns("tt_perf", "fair", 60, 1)       # 80% WR n=15
-                    elif _tt_bkt_lb in ("good", "elite"):
-                        _learned_bonus += _nbns("tt_perf", "fair", 60, 1)
+                    if _tt_bkt_lb in ("fair", "good", "elite"):
+                        _learned_bonus += _nbns("tt_perf", "fair", 57, 1)  # 57.1% WR n=28 — threshold lowered 60→57
                     elif _tt_bkt_lb == "weak":
-                        _learned_bonus += _npen("tt_perf", "weak", 55, -1)      # 52% WR n=31
+                        _learned_bonus += _npen("tt_perf", "weak", 44, -2)  # 43.2% WR n=44 — threshold updated
                 # OBV trend: obv_trend_perf["rising"] = 50% WR n=38 (updated — was stale 80%)
                 # signal_performance["obv_rising"] = 36.4% WR n=11 — signals this flag hurts
                 if bool(_tk_sig_sc.get("obv_rising", False)):
@@ -29007,30 +29005,36 @@ def run():
                                or "force_index" in _tk_sig_sc)
                 if _fi_present and not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
                     _learned_bonus += _npen("force_index_perf", "weak", 55, -1)
-                # RS rating tier: elite>=90 = 69% WR n=13 (bonus); average WR=57% n=28 (mild)
+                # RS rating tier: elite>=90 = 69% WR n=13 (bonus); average 50-89 = 43.8% WR n=48 → penalty
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if _rsr3_lb >= 90:
                     _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 1)
-                # average RS rating WR=57% — updated data, no penalty
-                # Not at breakout level: 60% WR n=25 (updated data, no penalty)
-                # RS63 lagging: 60% WR n=25 (updated data, no penalty)
-                # Premium signal tier: weak (<2 premium signals) = 30% WR n=10
+                elif 50 <= _rsr3_lb < 90:
+                    _learned_bonus += _npen("rs_rating_perf", "average", 44, -2)  # 43.8% WR n=48
+                # Premium signal tier: use only signals with verified positive WR (>50%)
+                # Removed: orb_breakout(40%), supertrend_bull(47%), obv_rising(36%) — negative signals
+                # Kept: vcp, cup_handle, at_breakout(45% but pattern quality), mtf_triple, ttm_squeeze, rvol_surge, higher_lows
                 _prem_ct_lb = sum(bool(_tk_sig_sc.get(k)) for k in [
-                    "vcp","cup_handle","at_breakout","mtf_triple","ttm_squeeze_fired",
-                    "orb_breakout","rvol_surge","supertrend_bull","obv_rising","higher_lows"])
+                    "vcp","cup_handle","ttm_squeeze_fired","higher_lows",
+                    "rvol_surge","at_breakout"])  # removed orb_breakout, supertrend_bull, obv_rising
                 if _prem_ct_lb < 2:
                     _learned_bonus += _npen("premium_tier_perf", "weak", 35, -1)
-                elif _prem_ct_lb >= 4:
+                elif _prem_ct_lb >= 3:
                     _learned_bonus += _nbns("premium_tier_perf", "strong", 60, 1)
-                # Price tier large (>=100): 68% WR n=19
+                # Price tier: large=60% WR n=35 fires at 60% ✓; mid=43.8% n=16 → penalty; micro already penalized
                 _pr_tier_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 if _pr_tier_lb >= 100:
-                    _learned_bonus += _nbns("price_tier_perf", "large", 60, 1)
-                # Williams %R zone: overbought (>-20)=68% WR n=22; trending=54% WR n=24 (updated data)
+                    _learned_bonus += _nbns("price_tier_perf", "large", 60, 1)  # 60% WR n=35 — FIRES ✓
+                elif _pr_tier_lb >= 20:
+                    # mid=43.8% n=16; small=45.5% n=11 — both below 50%
+                    _learned_bonus += _npen("price_tier_perf", "mid", 45, -1)
+                # Williams %R: overbought=52.9% WR n=34 — lower threshold 60→52; trending=44.7% → add penalty
                 _wr_lb = float(_tk_sig_sc.get("williams_r", -50) or -50)
                 if _wr_lb > -20:
-                    _learned_bonus += _nbns("wr_zone_perf", "overbought", 60, 1)
-                # trending WR is 54% — mild, not worth a harsh penalty
+                    _learned_bonus += _nbns("wr_zone_perf", "overbought", 52, 1)  # 52.9% WR n=34 — threshold 60→52
+                elif -50 <= _wr_lb <= -20:
+                    # trending zone = 44.7% WR n=38 — penalize
+                    _learned_bonus += _npen("wr_zone_perf", "trending", 46, -1)
                 # Options flow: unusual_calls = 47.1% WR n=34 (updated); options_bull = 45.7% WR n=35
                 _uc_lb2 = bool(_tk_sig_sc.get("unusual_calls", False))
                 _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
