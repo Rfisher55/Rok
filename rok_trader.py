@@ -28618,14 +28618,15 @@ def run():
                     # at_breakout combos without higher_lows: sub-50% WR with large samples
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
                         if bool(_tk_sig_sc.get("mom_accel", False)):
-                            _learned_bonus += _npen("signal_synergy", "at_breakout+mom_accel", 49, -1)   # 48.4% WR n=31
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+mom_accel", 44, -1)   # 43.3% WR n=30
                         if bool(_tk_sig_sc.get("kc_breakout", False)):
-                            _learned_bonus += _npen("signal_synergy", "at_breakout+kc_breakout", 46, -1) # 44.8% WR n=29
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+kc_breakout", 44, -1) # 42.9% WR n=28
                         if bool(_tk_sig_sc.get("mtf_aligned", False)):
-                            _learned_bonus += _npen("signal_synergy", "at_breakout+mtf_aligned", 49, -1) # 48.1% WR n=27
-                        # at_breakout+ema_stacked_bull now 52% WR n=25 — positive, removed
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+mtf_aligned", 42, -1) # 40.7% WR n=27
                         if bool(_tk_sig_sc.get("ichimoku_above", False)):
-                            _learned_bonus += _npen("signal_synergy", "at_breakout+ichimoku_above", 48, -1)  # 47.1% WR n=17
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+ichimoku_above", 38, -1)  # 37.5% WR n=16
+                        if bool(_tk_sig_sc.get("obv_rising", False)):
+                            _learned_bonus += _npen("signal_synergy", "at_breakout+obv_rising", 34, -2)  # 33.3% WR n=12
                 _rvol_lb = float(_tk_sig_sc.get("rvol", 1.0) or 1.0)
                 if _rvol_lb >= 3.0:
                     _learned_bonus += _nbns("rvol_tier_perf", "extreme", 62, 2)
@@ -28702,11 +28703,11 @@ def run():
                 if bool(_tk_sig_sc.get("force_index_rising", False)):
                     _learned_bonus += _nbns("force_index_perf", "rising", 60, 1)
                 if bool(_tk_sig_sc.get("mom_accel", False)):
-                    # Use signal_performance (WR=68.2% n=22) since momentum_persistence_perf states were misnamed
-                    _learned_bonus += _nbns("signal_performance", "mom_accel", 65, 2)
+                    # signal_performance["mom_accel"] = 47.1% WR n=34 — coin flip, no bonus warranted
                     _learned_bonus += _nbns("momentum_persistence_perf", "multi_day_momentum", 60, 1)
                     _learned_bonus += _nbns("momentum_persistence_perf", "fresh_breakout", 60, 1)
-                    # mom_accel+mtf_aligned without higher_lows: 51.9% WR n=27 now positive — removed
+                    if bool(_tk_sig_sc.get("obv_rising", False)):
+                        _learned_bonus += _npen("signal_synergy", "mom_accel+obv_rising", 34, -2)  # 33.3% WR n=12
                 if bool(_tk_sig_sc.get("ichimoku_above", False)):
                     # ichimoku_cloud_entry_perf has "in_cloud" (46.5%) not "above_cloud" — dead bonus removed
                     # signal_performance["ichimoku_above"] = 45.7% WR n=35 — penalize
@@ -28732,11 +28733,13 @@ def run():
                     # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
                     _learned_bonus += _npen("gap_hold_perf", "holding", 45, -4)   # 37% WR threshold tightened
                     _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 31.8% WR n=22
-                    # gap_and_hold synergy penalties: all combos are catastrophic (14-23% WR)
+                    # gap_and_hold synergy penalties: all combos catastrophic (8-21% WR)
+                    # Use sorted key order to match signal_synergy dict (alphabetical)
                     for _gap_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ichimoku_above","ema_stacked_bull"):
                         if bool(_tk_sig_sc.get(_gap_synergy_sig, False)):
-                            _learned_bonus += _npen("signal_synergy", f"gap_and_hold+{_gap_synergy_sig}", 25, -3)
-                            break  # one extra penalty per position is enough
+                            _gap_pair = "+".join(sorted(["gap_and_hold", _gap_synergy_sig]))
+                            _learned_bonus += _npen("signal_synergy", _gap_pair, 22, -3)  # 8-21% WR
+                            break  # one extra penalty per position
                 # above_poc synergy combos: all sub-50% WR with n=9-14 — poc consistently hurts combos
                 # Thresholds set to actual WR + 3% buffer so they survive a few more wins
                 _above_poc_lb = bool(_tk_sig_sc.get("above_poc", False))
