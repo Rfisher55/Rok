@@ -29840,6 +29840,89 @@ def run():
                     live[tk]["float_shares_m"] = 0.0
                 # macd_bull: N848a reads "macd_bull" (never set); derive from ema_cross > 0
                 live[tk]["macd_bull"] = (live[tk].get("ema_cross", 0) or 0) > 0
+                # ── R47: State-field batch neurons (N1311-N1370) — all dead without these ──
+                # N216: adl_trend from breadth_history adv_pct trend
+                try:
+                    _r47_bh = [h.get("adv_pct", 50) for h in tlog.get("breadth_history", []) if h.get("adv_pct") is not None]
+                    if len(_r47_bh) >= 3:
+                        _r47_bh3 = _r47_bh[-3:]
+                        if all(_r47_bh3[i] > _r47_bh3[i-1] for i in range(1, len(_r47_bh3))):
+                            _r47_adl = "adl_expanding"
+                        elif all(_r47_bh3[i] < _r47_bh3[i-1] for i in range(1, len(_r47_bh3))):
+                            _r47_adl = "adl_contracting"
+                        else:
+                            _r47_adl = "adl_mixed"
+                    else:
+                        _r47_adl = "adl_mixed"
+                    live[tk]["adl_trend"] = _r47_adl
+                except Exception:
+                    live[tk]["adl_trend"] = "adl_mixed"
+                # N192: earnings_season_phase from current month (ET)
+                try:
+                    _r47_mo = datetime.now(ZoneInfo("America/New_York")).month
+                    live[tk]["earnings_season_phase"] = ("peak_season" if _r47_mo in (1, 4, 7, 10) else
+                                                          "shoulder" if _r47_mo in (2, 5, 8, 11) else "off_season")
+                except Exception:
+                    live[tk]["earnings_season_phase"] = "off_season"
+                # N157: orb_state from price vs opening range high
+                try:
+                    _r47_orb_h = float(live[tk].get("orb_high", 0) or 0)
+                    _r47_px    = float(live[tk].get("price", 0) or 0)
+                    if _r47_orb_h > 0 and _r47_px > 0:
+                        _r47_od = (_r47_px - _r47_orb_h) / _r47_orb_h * 100
+                        live[tk]["orb_state"] = ("orb_break" if _r47_od >= 0.1 else
+                                                  "orb_near" if _r47_od >= -0.5 else "no_orb")
+                    else:
+                        live[tk]["orb_state"] = "no_orb"
+                except Exception:
+                    live[tk]["orb_state"] = "no_orb"
+                # N118: consec_red_days_at_entry from consec_red in _extract
+                try:
+                    live[tk]["consec_red_days_at_entry"] = int(live[tk].get("consec_red", 0) or 0)
+                except Exception:
+                    live[tk]["consec_red_days_at_entry"] = 0
+                # N243: market_phase_state from SPY price vs 50/200 EMAs
+                try:
+                    _r47_spy  = live.get("SPY", {})
+                    _r47_a50  = float(_r47_spy.get("price_vs_ema50", 0) or 0) > 0
+                    _r47_a200 = float(_r47_spy.get("price_vs_ema200", 0) or 0) > 0
+                    if _r47_a50 and _r47_a200:
+                        live[tk]["market_phase_state"] = "bull_phase"
+                    elif _r47_a200 and not _r47_a50:
+                        live[tk]["market_phase_state"] = "early_recovery"
+                    elif not _r47_a50 and not _r47_a200:
+                        live[tk]["market_phase_state"] = "bear_phase"
+                    else:
+                        live[tk]["market_phase_state"] = "consolidation"
+                except Exception:
+                    live[tk]["market_phase_state"] = "consolidation"
+                # N215: daily_dd_state from portfolio daily P&L
+                try:
+                    _r47_dpnl = float(tlog.get("daily_pnl_pct", 0) or 0)
+                    live[tk]["daily_dd_state"] = ("gaining_today" if _r47_dpnl > 0 else
+                                                   "flat_today" if _r47_dpnl >= -1 else
+                                                   "mild_loss_today" if _r47_dpnl >= -2 else
+                                                   "rough_day_today")
+                except Exception:
+                    live[tk]["daily_dd_state"] = "flat_today"
+                # N185: momentum_quality_state from count of premium momentum signals
+                try:
+                    _r47_msigs = sum(1 for _s in ("vcp", "cup_handle", "at_breakout", "mtf_triple",
+                                                   "ttm_squeeze_fired", "gap_and_hold", "orb_breakout",
+                                                   "rvol_surge") if live[tk].get(_s))
+                    live[tk]["momentum_quality_state"] = ("momentum_strong" if _r47_msigs >= 4 else
+                                                           "momentum_moderate" if _r47_msigs >= 2 else
+                                                           "momentum_weak")
+                except Exception:
+                    live[tk]["momentum_quality_state"] = "momentum_moderate"
+                # N160: breakout_age_tier from days_since_breakout (default 99 → "extended")
+                try:
+                    _r47_dsb = int(live[tk].get("days_since_breakout", 99) or 99)
+                    live[tk]["breakout_age_tier"] = ("day1" if _r47_dsb <= 1 else
+                                                      "day2_3" if _r47_dsb <= 3 else
+                                                      "day4_7" if _r47_dsb <= 7 else "extended")
+                except Exception:
+                    live[tk]["breakout_age_tier"] = "day4_7"
                 # TTM squeeze state: in_squeeze (momentum building but not fired yet)
                 live[tk]["in_squeeze"] = (
                     bool(tlog.get("in_squeeze_stocks", {}).get(tk, False))
