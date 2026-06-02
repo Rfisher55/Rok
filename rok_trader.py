@@ -21973,7 +21973,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 return 0.0
 
             def _nde(nkey, nstate, minsamp=3):
-                """Read from _ALL_NEURON_PERFS (dict format) — covers all 850 neurons"""
+                """Read from _ALL_NEURON_PERFS (dict format) — covers all 765+ neurons"""
                 data = _ALL_NEURON_PERFS.get(nkey, {})
                 if not isinstance(data, dict):
                     return 0.0
@@ -21984,9 +21984,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 if n < minsamp:
                     return 0.0
                 wr  = float(rec.get("win_rate", 50) or 50)
-                avg = float(rec.get("avg_pnl", 0) or 0)
-                w   = min(1.0, n / 20.0)
-                return ((wr - 50) * 0.07 + avg * 0.012) * w
+                avg = min(10.0, max(-10.0, float(rec.get("avg_pnl", 0) or 0)))  # cap outlier pnl
+                w   = min(1.0, (n ** 0.6) / (20 ** 0.6))  # sqrt-ish ramp: faster early, smooth late
+                return ((wr - 50) * 0.07 + avg * 0.015) * w  # slightly higher avg_pnl weight
 
             # N580: VIX-based market regime (macro risk level at entry)
             _nsl_vix = float(d.get("vix", 20) or 20)
@@ -23907,7 +23907,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
                          "chandelier_exit_entry_perf","close_vs_range_perf","closing_strength_perf",
                          "cmf_entry_perf","composite_signal_strength_perf","composite_technical_score_perf",
                          "congressional_buy_signal_perf","consecutive_green_entry_perf","consecutive_up_days_perf",
-                         "consolidation_length_perf","continuation_vs_reversal_perf","coppock_curve_entry_perf",
+                         "continuation_vs_reversal_perf","coppock_curve_entry_perf",
                          "correlation_cluster_perf","correlation_spy_entry_perf","credit_spread_perf",
                          "daily_atr_move_perf","daily_range_quality_perf","dark_pool_activity_perf",
                          "dark_pool_entry_perf","dark_pool_flow_perf","dark_pool_perf","days_since_earnings_perf",
@@ -24009,7 +24009,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
                          "spy_correlation_perf","spy_intraday_trend_perf","spy_momentum_entry_perf",
                          "spy_morning_action_perf","spy_open_vs_close_perf","spy_options_oi_perf",
                          "spy_vs_sector_entry_perf","squeeze_coil_perf","squeeze_momentum_perf",
-                         "squeeze_momentum_state_perf","squeeze_setup_perf","stoch_position_entry_perf",
+                         "squeeze_momentum_state_perf","squeeze_setup_perf",
                          "stock_pcr_entry_perf","support_confluence_quality_perf","support_level_proximity_perf",
                          "tape_reading_entry_perf","tape_speed_entry_perf","technical_pattern_quality_perf",
                          "technical_score_quality_perf","technical_score_trend_perf","tick_trend_entry_perf",
@@ -24222,6 +24222,33 @@ def score(tk, d, sentiment=0, regime_adj=0):
             # crypto_correlation_perf: crypto leading vs lagging SPY
             _ccr_st = str(d.get("crypto_correlation_state", "") or "")
             if _ccr_st and "/" in tk: _nsl_adj += _nde("crypto_correlation_perf", _ccr_st)
+            # ── _track() neurons (state set in e[] during data gathering) ──
+            for _pk, _sk in (("double_bottom_perf","double_bottom_state"),
+                              ("at_breakout_perf","at_breakout_state"),
+                              ("avwap_perf","avwap_state"),
+                              ("poc_control_perf","poc_control_state"),
+                              ("pm_gap_perf","pm_gap_state"),
+                              ("htf_perf","htf_state"),
+                              ("ema21_pb_perf","ema21_pb_state"),
+                              ("mtf_triple_perf","mtf_triple_state"),
+                              ("sq_potential_perf","sq_potential_state"),
+                              ("news_count_perf","news_count_tier"),
+                              ("news_accel_perf","news_accel_state"),
+                              ("true_alpha_perf","true_alpha_tier"),
+                              ("pivot_support_perf","pivot_state"),
+                              ("vcp_perf","vcp_state"),
+                              ("pocket_pivot_perf","pocket_pivot_state"),
+                              ("morning_star_perf","morning_star_state"),
+                              ("tws_perf","tws_state"),
+                              ("beng_perf","beng_state"),
+                              ("hammer_perf","hammer_state"),
+                              ("cup_handle_perf","ch_pivot_proximity"),
+                              ("dbn_perf","dbn_state"),
+                              ("eg_tier_perf","eg_tier"),
+                              ("st_gap_perf","st_gap_tier"),
+                              ("premium_tier_perf","premium_tier")):
+                _sv = str(d.get(_sk, "") or "")
+                if _sv: _nsl_adj += _nde(_pk, _sv)
             # Crypto-specific neurons (only active for crypto tickers with "/" in name)
             if "/" in tk:
                 # C881: Crypto momentum tier (labels: explosive/strong/moderate/flat/falling)
@@ -24267,8 +24294,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 _c890_ac_q = ("BTC" if "BTC" in tk else "ETH" if "ETH" in tk else "ALT")
                 _nsl_adj += _nde("crypto_asset_perf", _c890_ac_q)
 
-            # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
-            s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
+            # Cap the full neural layer at ±30 (raised from 25 to match 765-neuron set)
+            s += max(-30, min(30, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
             s += max(-12, min(12, round(_nsl_adj)))
     except Exception:
