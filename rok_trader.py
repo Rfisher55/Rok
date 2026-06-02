@@ -37712,24 +37712,27 @@ def run():
         return {}
 
     # Score bucket accuracy: entry score range → win rate (shows if scoring is predictive)
+    # Cap raised to 120 — now includes 101-120 bucket to show elite entries separately
     try:
         _score_buckets = {
-            "90-100": {"trades":0,"wins":0,"pnl":0.0},
-            "80-89":  {"trades":0,"wins":0,"pnl":0.0},
-            "70-79":  {"trades":0,"wins":0,"pnl":0.0},
-            "60-69":  {"trades":0,"wins":0,"pnl":0.0},
-            "50-59":  {"trades":0,"wins":0,"pnl":0.0},
-            "<50":    {"trades":0,"wins":0,"pnl":0.0},
+            "101-120": {"trades":0,"wins":0,"pnl":0.0},
+            "90-100":  {"trades":0,"wins":0,"pnl":0.0},
+            "80-89":   {"trades":0,"wins":0,"pnl":0.0},
+            "70-79":   {"trades":0,"wins":0,"pnl":0.0},
+            "60-69":   {"trades":0,"wins":0,"pnl":0.0},
+            "50-59":   {"trades":0,"wins":0,"pnl":0.0},
+            "<50":     {"trades":0,"wins":0,"pnl":0.0},
         }
         for _bt in _closed:
             _buy_e  = _find_entry(_bt.get("ticker",""), _bt.get("time",""))
             _sc_entry = _buy_e.get("score", 0) or 0
-            if   _sc_entry >= 90: _bk = "90-100"
-            elif _sc_entry >= 80: _bk = "80-89"
-            elif _sc_entry >= 70: _bk = "70-79"
-            elif _sc_entry >= 60: _bk = "60-69"
-            elif _sc_entry >= 50: _bk = "50-59"
-            else:                 _bk = "<50"
+            if   _sc_entry > 100:  _bk = "101-120"
+            elif _sc_entry >= 90:  _bk = "90-100"
+            elif _sc_entry >= 80:  _bk = "80-89"
+            elif _sc_entry >= 70:  _bk = "70-79"
+            elif _sc_entry >= 60:  _bk = "60-69"
+            elif _sc_entry >= 50:  _bk = "50-59"
+            else:                  _bk = "<50"
             _score_buckets[_bk]["trades"] += 1
             _score_buckets[_bk]["pnl"]    = round(_score_buckets[_bk]["pnl"] + _bt["pnl_pct"], 2)
             if _bt["pnl_pct"] > 0:
