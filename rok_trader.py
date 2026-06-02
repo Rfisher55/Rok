@@ -23561,6 +23561,116 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                                             _n820_dpnl_q = "neutral_day"
             _nsl_adj += _nde("daily_pnl_context_perf", _n820_dpnl_q)
 
+            # N823: Trend Template bucket (labels: elite/good/fair/weak)
+            _n823_tt_v = int(d.get("trend_template", 0) or 0)
+            if   _n823_tt_v >= 7: _n823_tt_q = "elite"
+            elif _n823_tt_v >= 5: _n823_tt_q = "good"
+            elif _n823_tt_v >= 3: _n823_tt_q = "fair"
+            else:                  _n823_tt_q = "weak"
+            _nsl_adj += _nde("tt_perf", _n823_tt_q)
+            # N824: ATR stop distance bucket (labels: <1%/1-2%/2-4%/4%+)
+            _n824_atr_v = float(d.get("atr_pct", 0) or 0)
+            if   _n824_atr_v < 1:   _n824_at_q = "<1%"
+            elif _n824_atr_v < 2:   _n824_at_q = "1-2%"
+            elif _n824_atr_v < 4:   _n824_at_q = "2-4%"
+            else:                    _n824_at_q = "4%+"
+            _nsl_adj += _nde("atr_perf", _n824_at_q)
+            # N825: SPY daily return bucket (labels: up/flat/down)
+            _n825_spy_v = float(d.get("spy_day_chg", 0) or 0)
+            if   _n825_spy_v > 0.5:  _n825_spy_q = "up"
+            elif _n825_spy_v < -0.5: _n825_spy_q = "down"
+            else:                     _n825_spy_q = "flat"
+            _nsl_adj += _nde("spy_day_perf", _n825_spy_q)
+            # N826: POC distance bucket (labels: breakout/above/at_poc/below)
+            _n826_poc_q = str(d.get("poc_dist_bucket", "at_poc") or "at_poc")
+            _nsl_adj += _nde("poc_dist_perf", _n826_poc_q)
+            # N827: Score momentum (labels: rising/flat/falling)
+            _n827_st_q = str(d.get("score_trend", "flat") or "flat")
+            _nsl_adj += _nde("score_trend_perf", _n827_st_q)
+            # N828: Catalyst urgency (labels: high/medium/low)
+            _n828_urg_v = int(d.get("catalyst_urg", 0) or 0)
+            if   _n828_urg_v >= 4: _n828_urg_q = "high"
+            elif _n828_urg_v >= 2: _n828_urg_q = "medium"
+            else:                   _n828_urg_q = "low"
+            _nsl_adj += _nde("urgency_perf", _n828_urg_q)
+            # N829: Half-hour UTC entry bucket (labels: "HHMM" format, e.g. "1400"/"1430")
+            _n829_hw_q = str(d.get("halfhour_utc", "1400") or "1400")
+            _nsl_adj += _nde("halfhour_performance", _n829_hw_q)
+            # N830: Earnings proximity bucket (labels: 0-2d/3-7d/8-20d/21d+)
+            _n830_ed_v = int(d.get("earnings_days", 99) or 99)
+            if   _n830_ed_v <= 2:  _n830_ep_q = "0-2d"
+            elif _n830_ed_v <= 7:  _n830_ep_q = "3-7d"
+            elif _n830_ed_v <= 20: _n830_ep_q = "8-20d"
+            else:                   _n830_ep_q = "21d+"
+            _nsl_adj += _nde("earnings_days_bucket_perf", _n830_ep_q)
+
+            # N831: Rotation flip entry (labels: flip/no_flip)
+            _n831_rf_q = "flip" if bool(d.get("rotation_flip_entry", False)) else "no_flip"
+            _nsl_adj += _nde("rotation_flip_perf", _n831_rf_q)
+            # N832: VIX level at entry (labels: extreme_fear/high_fear/elevated/normal/low)
+            _n832_vix_v = float(d.get("vix", 20) or 20)
+            if   _n832_vix_v >= 35: _n832_vix_q = "extreme_fear"
+            elif _n832_vix_v >= 25: _n832_vix_q = "high_fear"
+            elif _n832_vix_v >= 20: _n832_vix_q = "elevated"
+            elif _n832_vix_v >= 15: _n832_vix_q = "normal"
+            else:                    _n832_vix_q = "low"
+            _nsl_adj += _nde("vix_entry_perf", _n832_vix_q)
+            # N833: Entry session (labels: opening_rush/morning_momentum/lunch_lull/afternoon/power_hour/close_approach)
+            _n833_es_q = str(d.get("entry_session", "morning_momentum") or "morning_momentum")
+            _nsl_adj += _nde("entry_session_perf", _n833_es_q)
+            # N834: Market breadth at entry (labels: strong/moderate/weak/very_weak)
+            _n834_brd_v = float(d.get("market_breadth", d.get("breadth_at_entry", 50)) or 50)
+            if   _n834_brd_v >= 65: _n834_brd_q = "strong"
+            elif _n834_brd_v >= 50: _n834_brd_q = "moderate"
+            elif _n834_brd_v >= 35: _n834_brd_q = "weak"
+            else:                    _n834_brd_q = "very_weak"
+            _nsl_adj += _nde("breadth_entry_perf", _n834_brd_q)
+            # N835: Portfolio concentration (labels: concentrated/moderate/diversified/overdiversified)
+            _n835_pos_v = int(d.get("n_open_at_entry", d.get("open_positions", 5)) or 5)
+            if   _n835_pos_v <= 3:  _n835_pc_q = "concentrated"
+            elif _n835_pos_v <= 6:  _n835_pc_q = "moderate"
+            elif _n835_pos_v <= 10: _n835_pc_q = "diversified"
+            else:                    _n835_pc_q = "overdiversified"
+            _nsl_adj += _nde("portfolio_size_perf", _n835_pc_q)
+            # N836: Catalyst age state (labels: same_day/day_1/day_2_3/stale/no_catalyst)
+            _n836_ca_q = str(d.get("catalyst_age_state", "no_catalyst") or "no_catalyst")
+            _nsl_adj += _nde("catalyst_age_perf", _n836_ca_q)
+            # N837: VIX term structure (labels: contango/backwardation/flat)
+            _n837_vts_q = str(d.get("vts_regime_at_entry", "contango") or "contango")
+            _nsl_adj += _nde("vts_perf", _n837_vts_q)
+            # N838: Options PCR at entry (labels: extreme_calls/bullish/balanced/hedged/fear)
+            _n838_pcr_v = float(d.get("options_pcr", d.get("pcr", d.get("market_pcr", 1.0))) or 1.0)
+            if   _n838_pcr_v < 0.5:  _n838_pcr_q = "extreme_calls"
+            elif _n838_pcr_v < 0.75: _n838_pcr_q = "bullish"
+            elif _n838_pcr_v < 1.1:  _n838_pcr_q = "balanced"
+            elif _n838_pcr_v < 1.5:  _n838_pcr_q = "hedged"
+            else:                     _n838_pcr_q = "fear"
+            _nsl_adj += _nde("pcr_entry_perf", _n838_pcr_q)
+            # N839: Short squeeze potential (labels: squeeze_setup/high_si/moderate_si/low_si)
+            _n839_si_v   = float(d.get("short_float", d.get("short_interest", 0)) or 0)
+            _n839_rvol_v = float(d.get("rvol", d.get("vol_ratio", 1.0)) or 1.0)
+            if   _n839_si_v >= 0.15 and _n839_rvol_v >= 3.0: _n839_si_q = "squeeze_setup"
+            elif _n839_si_v >= 0.15:                          _n839_si_q = "high_si"
+            elif _n839_si_v >= 0.08:                          _n839_si_q = "moderate_si"
+            else:                                              _n839_si_q = "low_si"
+            _nsl_adj += _nde("si_squeeze_perf", _n839_si_q)
+            # N840: Price distance from 200 EMA (labels: extended/strong/moderate/near_200/below_200)
+            _n840_d200_v = float(d.get("price_vs_ema200", d.get("pct_vs_ema200", 0)) or 0)
+            if   _n840_d200_v >= 30:  _n840_d200_q = "extended"
+            elif _n840_d200_v >= 15:  _n840_d200_q = "strong"
+            elif _n840_d200_v >= 5:   _n840_d200_q = "moderate"
+            elif _n840_d200_v >= -5:  _n840_d200_q = "near_200"
+            else:                      _n840_d200_q = "below_200"
+            _nsl_adj += _nde("dist_200ema_perf", _n840_d200_q)
+            # N841: Sector ETF 5d strength (labels: strong_bull/bull/neutral/bear/strong_bear)
+            _n841_s5d_v = float(d.get("sector_chg5d", d.get("sector_etf_chg5d", 0)) or 0)
+            if   _n841_s5d_v >= 3:  _n841_s5d_q = "strong_bull"
+            elif _n841_s5d_v >= 1:  _n841_s5d_q = "bull"
+            elif _n841_s5d_v <= -3: _n841_s5d_q = "strong_bear"
+            elif _n841_s5d_v <= -1: _n841_s5d_q = "bear"
+            else:                    _n841_s5d_q = "neutral"
+            _nsl_adj += _nde("sector_etf_strength_perf", _n841_s5d_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -27524,6 +27634,84 @@ def run():
                 except Exception:
                     live[tk]["rr"] = 1.5
                     live[tk]["target_pct"] = 5.0
+                # SPY daily return for spy_day_perf neuron
+                try:
+                    _spy_d1_inj = float(live.get("SPY", live.get("spy", {})).get("chg1d", live.get("SPY", live.get("spy", {})).get("change_pct", 0)) or 0)
+                    live[tk]["spy_day_chg"] = round(_spy_d1_inj, 2)
+                except Exception:
+                    live[tk]["spy_day_chg"] = 0.0
+                # POC distance for poc_dist_perf neuron
+                try:
+                    _poc_pr_inj = float(live[tk].get("poc_price", 0) or 0)
+                    _px_inj2    = float(live[tk].get("price", 1) or 1)
+                    if _poc_pr_inj > 0 and _px_inj2 > 0:
+                        _poc_dist_inj = round((_px_inj2 - _poc_pr_inj) / _poc_pr_inj * 100, 2)
+                        live[tk]["poc_dist_pct"]    = _poc_dist_inj
+                        live[tk]["poc_dist_bucket"] = ("breakout" if _poc_dist_inj > 2.0 else
+                                                        "above" if _poc_dist_inj > 0.5 else
+                                                        "at_poc" if _poc_dist_inj >= -0.5 else "below")
+                    else:
+                        live[tk]["poc_dist_pct"]    = 0.0
+                        live[tk]["poc_dist_bucket"] = "at_poc"
+                except Exception:
+                    live[tk]["poc_dist_pct"]    = 0.0
+                    live[tk]["poc_dist_bucket"] = "at_poc"
+                # Score trend for score_trend_perf neuron
+                try:
+                    _sh_inj = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    if len(_sh_inj) >= 2:
+                        _sh_delta_inj = _sh_inj[-1] - _sh_inj[0]
+                        live[tk]["score_trend"] = ("rising" if _sh_delta_inj >= 5 else
+                                                   "falling" if _sh_delta_inj <= -5 else "flat")
+                    else:
+                        live[tk]["score_trend"] = "flat"
+                except Exception:
+                    live[tk]["score_trend"] = "flat"
+                # Half-hour UTC key for halfhour_performance neuron
+                try:
+                    import datetime as _dt_inj
+                    _utcnow_inj = _dt_inj.datetime.utcnow()
+                    live[tk]["halfhour_utc"] = f"{_utcnow_inj.hour:02d}{'30' if _utcnow_inj.minute >= 30 else '00'}"
+                except Exception:
+                    live[tk]["halfhour_utc"] = "1400"
+                # Rotation flip entry for rotation_flip_perf neuron
+                try:
+                    live[tk]["rotation_flip_entry"] = bool(sec in _rotation_flip_sectors)
+                except Exception:
+                    live[tk]["rotation_flip_entry"] = False
+                # Entry session for entry_session_perf neuron
+                try:
+                    _mso_inj = _minutes_since_open if market_open else 999
+                    live[tk]["entry_session"] = (
+                        "opening_rush"      if _mso_inj < 15 else
+                        "morning_momentum"  if _mso_inj < 90 else
+                        "lunch_lull"        if _mso_inj < 150 else
+                        "afternoon"         if _mso_inj < 180 else
+                        "power_hour"        if _mso_inj < 225 else "close_approach"
+                    )
+                except Exception:
+                    live[tk]["entry_session"] = "morning_momentum"
+                # Catalyst age state for catalyst_age_perf neuron
+                try:
+                    _na_hrs = float(live[tk].get("news_age_hours", 999) or 999)
+                    live[tk]["catalyst_age_state"] = (
+                        "same_day" if _na_hrs <= 8 else
+                        "day_1"    if _na_hrs <= 24 else
+                        "day_2_3"  if _na_hrs <= 72 else
+                        "stale"    if _na_hrs <= 999 else "no_catalyst"
+                    ) if _na_hrs < 999 else "no_catalyst"
+                except Exception:
+                    live[tk]["catalyst_age_state"] = "no_catalyst"
+                # VIX term structure for vts_perf neuron
+                try:
+                    live[tk]["vts_regime_at_entry"] = str(regime.get("vts_regime", "contango") or "contango")
+                except Exception:
+                    live[tk]["vts_regime_at_entry"] = "contango"
+                # Portfolio concentration for portfolio_size_perf neuron
+                try:
+                    live[tk]["n_open_at_entry"] = int(len(longs))
+                except Exception:
+                    live[tk]["n_open_at_entry"] = 5
             except Exception:
                 pass
 
