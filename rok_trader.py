@@ -23334,55 +23334,61 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                   _n724_rp_q = "high_risk"
             _nsl_adj += _nde("risk_per_trade_perf", _n724_rp_q)
 
-            # N141: Intraday momentum state
-            _n141_idc_v = float(d.get("intraday_chg_pct", d.get("chg1d", 0)) or 0)
-            if   _n141_idc_v > 3:   _n141_id_q = "strong_id_momentum"
-            elif _n141_idc_v >= 1:  _n141_id_q = "moderate_id_momentum"
-            elif _n141_idc_v > -1:  _n141_id_q = "flat_id"
-            else:                   _n141_id_q = "id_selling"
+            # N141: Intraday momentum state (labels: strong_bull/weak_bull/flat/weak_bear/strong_bear)
+            _n141_px_v   = float(d.get("price", 0) or 0)
+            _n141_vwap_v = float(d.get("vwap", 0) or 0)
+            _n141_chg_v  = float(d.get("chg1d", d.get("chg_pct", 0)) or 0)
+            _n141_above_v = _n141_px_v > _n141_vwap_v if _n141_px_v > 0 and _n141_vwap_v > 0 else _n141_chg_v >= 0
+            if   _n141_above_v and _n141_chg_v >= 1.0:      _n141_id_q = "strong_bull"
+            elif _n141_above_v and _n141_chg_v >= 0.3:      _n141_id_q = "weak_bull"
+            elif not _n141_above_v and _n141_chg_v <= -1.0: _n141_id_q = "strong_bear"
+            elif not _n141_above_v and _n141_chg_v <= -0.3: _n141_id_q = "weak_bear"
+            else:                                            _n141_id_q = "flat"
             _nsl_adj += _nde("intraday_momentum_v1_perf", _n141_id_q)
 
-            # N244: Intraday reversal signal
-            _n244_rs1_v = float(d.get("rs1", 0) or 0)
-            _n244_chg_v = float(d.get("chg_pct", d.get("chg1d", 0)) or 0)
-            if   _n244_rs1_v > 2 and _n244_chg_v < 0: _n244_ir_q = "v_bottom_reversal"
-            elif _n244_rs1_v > 2 and _n244_chg_v > 0: _n244_ir_q = "continuation"
-            else:                                       _n244_ir_q = "l_shaped_drop"
+            # N244: Intraday reversal signal (labels: bullish_reversal/bearish_reversal/no_reversal)
+            _n244_rev_v   = bool(d.get("intraday_reversal", False))
+            _n244_intra_v = float(d.get("intra", d.get("intraday_chg_pct", 0)) or 0)
+            if   _n244_intra_v > 0.5 and _n244_rev_v:   _n244_ir_q = "bullish_reversal"
+            elif _n244_intra_v < -0.5 and _n244_rev_v:  _n244_ir_q = "bearish_reversal"
+            else:                                         _n244_ir_q = "no_reversal"
             _nsl_adj += _nde("intraday_reversal_v1_perf", _n244_ir_q)
 
-            # N266: Pre-market volume
-            _n266_pmv_v = float(d.get("pm_volume", d.get("premarket_vol", 0)) or 0)
-            if   _n266_pmv_v > 500000:  _n266_pmv_q = "exceptional_pm_vol"
-            elif _n266_pmv_v >= 100000: _n266_pmv_q = "moderate_pm_vol"
-            else:                       _n266_pmv_q = "low_pm_vol"
+            # N266: Pre-market volume (labels: heavy_premarket/light_premarket/no_premarket_data)
+            _n266_pm_v  = float(d.get("pm_volume", d.get("premarket_vol", 0)) or 0)
+            _n266_avg_v = float(d.get("avg_volume", d.get("avg_vol", d.get("volume_avg", 0))) or 0)
+            if _n266_pm_v > 0 and _n266_avg_v > 0 and _n266_pm_v >= _n266_avg_v * 0.3:
+                _n266_pmv_q = "heavy_premarket"
+            elif _n266_pm_v > 0 and _n266_avg_v > 0 and _n266_pm_v >= _n266_avg_v * 0.05:
+                _n266_pmv_q = "light_premarket"
+            else:
+                _n266_pmv_q = "no_premarket_data"
             _nsl_adj += _nde("pre_market_volume_v1_perf", _n266_pmv_q)
 
-            # N272: News volume coverage
-            _n272_nc_v = int(d.get("news_count", d.get("news_items", 0)) or 0)
-            if   _n272_nc_v >= 5: _n272_nv_q = "heavy_coverage"
-            elif _n272_nc_v >= 3: _n272_nv_q = "moderate_coverage"
-            elif _n272_nc_v >= 1: _n272_nv_q = "light_coverage"
-            else:                 _n272_nv_q = "no_news"
+            # N272: News volume (labels: high_news_vol/normal_news_vol/low_news_vol)
+            _n272_nc_v = int(d.get("news_articles_scanned", d.get("news_count", d.get("news_items", 20))) or 20)
+            if   _n272_nc_v > 50:  _n272_nv_q = "high_news_vol"
+            elif _n272_nc_v >= 10: _n272_nv_q = "normal_news_vol"
+            else:                  _n272_nv_q = "low_news_vol"
             _nsl_adj += _nde("news_volume_v1_perf", _n272_nv_q)
 
-            # N274: Position concentration (sector count)
-            _n274_sc_v = int(d.get("portfolio_sector_count", d.get("sector_count", 0)) or 0)
-            if   _n274_sc_v == 1: _n274_pc_q = "single_sector"
-            elif _n274_sc_v == 2: _n274_pc_q = "duo_sector"
-            elif _n274_sc_v == 3: _n274_pc_q = "tri_sector"
-            else:                 _n274_pc_q = "diversified"
+            # N274: Position concentration (labels: concentrated/balanced/diversified)
+            _n274_pc_v = int(d.get("open_positions", d.get("portfolio_positions", d.get("pos_count", 5))) or 5)
+            if   _n274_pc_v < 3:  _n274_pc_q = "concentrated"
+            elif _n274_pc_v <= 7: _n274_pc_q = "balanced"
+            else:                  _n274_pc_q = "diversified"
             _nsl_adj += _nde("position_concentration_v1_perf", _n274_pc_q)
 
-            # N652: Market cap momentum
+            # N652: Market cap momentum (labels: mega_cap_defensive/large_cap_leading/mid_cap_breakout/small_cap_momentum)
             _n652_mc_v  = float(d.get("market_cap", d.get("mktcap", 0)) or 0)
             _n652_chg_v = float(d.get("chg_pct", d.get("chg1d", 0)) or 0)
-            if   _n652_mc_v > 200e9:                        _n652_mc_q = "mega_cap_defensive"
-            elif _n652_mc_v > 50e9 and _n652_chg_v > 0:    _n652_mc_q = "large_cap_leading"
-            elif _n652_mc_v < 2e9:                          _n652_mc_q = "small_cap_momentum"
-            else:                                            _n652_mc_q = "mid_cap_breakout"
+            if   _n652_mc_v > 200e9:                     _n652_mc_q = "mega_cap_defensive"
+            elif _n652_mc_v > 50e9 and _n652_chg_v > 0: _n652_mc_q = "large_cap_leading"
+            elif _n652_mc_v < 2e9:                       _n652_mc_q = "small_cap_momentum"
+            else:                                         _n652_mc_q = "mid_cap_breakout"
             _nsl_adj += _nde("market_cap_momentum_v1_perf", _n652_mc_q)
 
-            # N717: Position sizing outcome (entry grade)
+            # N717: Position sizing outcome (labels: full_size_aplus/large_size_a_grade/normal_size_bplus/normal_size_b/reduced_size_below_b)
             _n717_grade_v = str(d.get("entry_grade", "B") or "B")
             if   _n717_grade_v == "A+": _n717_ps_q = "full_size_aplus"
             elif _n717_grade_v == "A":  _n717_ps_q = "large_size_a_grade"
@@ -23391,26 +23397,34 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                       _n717_ps_q = "reduced_size_below_b"
             _nsl_adj += _nde("position_sizing_outcome_perf", _n717_ps_q)
 
-            # N129: Exit trigger type (improves learning signal at entry)
+            # N129: Exit trigger (labels: trailing_stop/stop_loss/take_profit/time_exit/manual)
             _n129_trig_v = str(d.get("last_exit_trigger", d.get("exit_trigger", "take_profit")) or "take_profit")
             _nsl_adj += _nde("exit_trigger_v1_perf", _n129_trig_v)
-            _nsl_adj += _nde("exit_trigger_perf", _n129_trig_v)
+            # N172: Exit trigger (labels: trailing_stop/profit_target/signal_flip/time_exit/manual)
+            _n172_trig_v = "profit_target" if _n129_trig_v == "take_profit" else (
+                           "trailing_stop" if _n129_trig_v == "stop_loss" else _n129_trig_v)
+            _nsl_adj += _nde("exit_trigger_perf", _n172_trig_v)
 
             # Exit hour of day (UTC hour → prefer 13-16 UTC = 9am-12pm ET)
-            _exit_hr_v = datetime.now(timezone.utc).hour
-            _exit_hr_s = str(_exit_hr_v)
+            _exit_hr_s = str(datetime.now(timezone.utc).hour)
             _nsl_adj += _nde("exit_hour_v1_perf", _exit_hr_s)
             _nsl_adj += _nde("exit_hour_perf", _exit_hr_s)
 
-            # N206: Option implied move tier
-            _n206_im_v = float(d.get("implied_move_pct", d.get("expected_move_pct", 0)) or 0)
-            if   _n206_im_v > 10:  _n206_im_q = "very_high_iv"
-            elif _n206_im_v > 5:   _n206_im_q = "high_iv"
-            elif _n206_im_v > 2:   _n206_im_q = "moderate_iv"
+            # N206: Option implied move tier (labels: low_iv/medium_iv/high_iv/extreme_iv)
+            _n206_im_v = float(d.get("expected_move_pct", d.get("implied_move_pct", 0)) or 0)
+            if   _n206_im_v >= 15: _n206_im_q = "extreme_iv"
+            elif _n206_im_v >= 7:  _n206_im_q = "high_iv"
+            elif _n206_im_v >= 3:  _n206_im_q = "medium_iv"
             elif _n206_im_v > 0:   _n206_im_q = "low_iv"
-            else:                   _n206_im_q = "no_iv_data"
+            else:                  _n206_im_q = "medium_iv"
             _nsl_adj += _nde("option_implied_move_v1_perf", _n206_im_q)
-            _nsl_adj += _nde("option_implied_move_perf", _n206_im_q)
+            # N660: IV vs HV ratio (labels: high_iv_premium/elevated_iv/fair_iv/low_iv_opportunity)
+            _n660_ivhv_v = float(d.get("iv_vs_hv_ratio", d.get("iv_hv_ratio", 1.0)) or 1.0)
+            if   _n660_ivhv_v > 2.0:  _n660_im_q = "high_iv_premium"
+            elif _n660_ivhv_v >= 1.3: _n660_im_q = "elevated_iv"
+            elif _n660_ivhv_v >= 0.8: _n660_im_q = "fair_iv"
+            else:                      _n660_im_q = "low_iv_opportunity"
+            _nsl_adj += _nde("option_implied_move_perf", _n660_im_q)
 
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
