@@ -23844,6 +23844,41 @@ def score(tk, d, sentiment=0, regime_adj=0):
             # N870b: Dow perf (labels: Mon/Tue/Wed/Thu/Fri — same labels as dow_performance but separate dict)
             _n870b_dow_q = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][datetime.now(timezone.utc).weekday()]
             _nsl_adj += _nde("dow_perf", _n870b_dow_q)
+            # N838b: Float quality (labels: tight_float/small_float/medium_float/large_float)
+            _n838b_fs_v = float(d.get("float_shares", d.get("float", 0)) or 0) / 1e6  # convert to millions
+            if   _n838b_fs_v > 0 and _n838b_fs_v < 20:   _n838b_fq_q = "tight_float"
+            elif _n838b_fs_v < 100:                        _n838b_fq_q = "small_float"
+            elif _n838b_fs_v <= 500:                       _n838b_fq_q = "medium_float"
+            else:                                           _n838b_fq_q = "large_float"
+            _nsl_adj += _nde("float_quality_perf", _n838b_fq_q)
+            # N839b: News freshness (labels: breaking_news/fresh_news/day_old_news/stale_news)
+            _n839b_nh_v = float(d.get("news_age_hours", 999) or 999)
+            if   _n839b_nh_v <= 2:   _n839b_nf_q = "breaking_news"
+            elif _n839b_nh_v <= 12:  _n839b_nf_q = "fresh_news"
+            elif _n839b_nh_v <= 48:  _n839b_nf_q = "day_old_news"
+            else:                     _n839b_nf_q = "stale_news"
+            _nsl_adj += _nde("news_freshness_perf", _n839b_nf_q)
+            # N870c: Signal freshness via persist_count (labels: fresh_signal/building_signal/stale_signal/very_stale_signal)
+            _n870c_pc_v = int(d.get("persist_count", d.get("consecutive_strong_scans", 0)) or 0)
+            if   _n870c_pc_v <= 1:  _n870c_sf_q = "fresh_signal"
+            elif _n870c_pc_v <= 3:  _n870c_sf_q = "building_signal"
+            elif _n870c_pc_v <= 6:  _n870c_sf_q = "stale_signal"
+            else:                    _n870c_sf_q = "very_stale_signal"
+            _nsl_adj += _nde("signal_freshness_perf", _n870c_sf_q)
+            # N855b: Position count v1 (labels: 1-3/4-7/8-12/13+)
+            _n855b_cnt_v = int(d.get("open_positions", d.get("n_open_at_entry", 5)) or 5)
+            if   _n855b_cnt_v <= 3:  _n855b_pc_q = "1-3"
+            elif _n855b_cnt_v <= 7:  _n855b_pc_q = "4-7"
+            elif _n855b_cnt_v <= 12: _n855b_pc_q = "8-12"
+            else:                     _n855b_pc_q = "13+"
+            _nsl_adj += _nde("position_count_v1_perf", _n855b_pc_q)
+            # Pattern entry perf (labels: cup_handle/vcp/double_bottom based on active pattern)
+            if d.get("cup_handle"): _pat_entry_q = "cup_handle"
+            elif d.get("vcp"):      _pat_entry_q = "vcp"
+            elif d.get("double_bottom"): _pat_entry_q = "double_bottom"
+            else:                   _pat_entry_q = None
+            if _pat_entry_q:
+                _nsl_adj += _nde("pattern_entry_perf", _pat_entry_q)
             # Crypto-specific neurons (only active for crypto tickers with "/" in name)
             if "/" in tk:
                 # C881: Crypto momentum tier (labels: explosive/strong/moderate/flat/falling)
