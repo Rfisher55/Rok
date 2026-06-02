@@ -28828,6 +28828,19 @@ def run():
                     _learned_bonus += _npen("vwap_perf", "at_vwap", 45, -1)  # 44.7% WR n=38
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
+                # SPY alignment v1: neutral=20.7% WR n=29 — flat SPY+stock = no edge
+                _spy_intra_lb = str(_tk_sig_sc.get("spy_intraday_dir", "flat") or "flat")
+                _stk_chg_lb = float(_tk_sig_sc.get("change_pct", _tk_sig_sc.get("chg1d", 0)) or 0)
+                if _spy_intra_lb == "flat" and abs(_stk_chg_lb) < 0.3:
+                    _learned_bonus += _npen("spy_alignment_v1_perf", "neutral", 25, -5)  # 20.7% WR n=29
+                # Sector leadership: mid tier (-1.5% to +1.5% sector 5d) = 18.5% WR n=27
+                _sec_5d_lb = float(_tk_sig_sc.get("sector_etf_5d", _tk_sig_sc.get("rs_sector", 0)) or 0)
+                if -1.5 < _sec_5d_lb < 1.5:
+                    _learned_bonus += _npen("sector_leadership_v1_perf", "mid", 25, -5)  # 18.5% WR n=27
+                # Consecutive green days 0d: 43.6% WR n=39 — no streak at entry = mild negative
+                _cg_streak_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
+                if _cg_streak_lb == 0:
+                    _learned_bonus += _npen("consec_green_perf", "0d", 45, -1)  # 43.6% WR n=39
                 # SPY alignment bonus: trading with the market direction
                 _spy_it_lb = str(_tk_sig_sc.get("spy_intraday_trend", _tk_sig_sc.get("spy_intraday_dir", "flat")) or "flat")
                 if "up" in _spy_it_lb:
@@ -29038,6 +29051,7 @@ def run():
                     _learned_bonus += _npen("rvol_tier_perf", "weak", 35, -2)   # 33.3% WR n=21
                 elif 0.8 <= _rvol_t_lb < 1.5:
                     _learned_bonus += _nbns("rvol_tier_perf", "normal", 51, 1)  # 52.1% WR n=48 — threshold 54→51
+                    _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
                 # ST gap: no_st=55.6% WR n=27 (updated); normal=18.2% WR n=11 — penalize "normal" gap
                 _st_bul_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _st_bear_lb = bool(_tk_sig_sc.get("supertrend_bear", _tk_sig_sc.get("supertrend_bear_signal", False)))
