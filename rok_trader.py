@@ -22295,28 +22295,39 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_ac_bkt = ("heavy" if _fb_ac >= 8 else "moderate" if _fb_ac >= 5 else "light" if _fb_ac >= 2 else "none")
             _nsl_adj += _nde("accum_perf", _fb_ac_bkt)
 
-            # Intraday trend quality: higher highs all day = institutional conviction
-            _fb_itq = float(d.get("intraday_tq", 0) or 0)
-            _fb_itq_bkt = ("strong" if _fb_itq >= 0.66 else "weak" if _fb_itq <= -0.33 else "neutral")
+            # Intraday trend quality: state labels match N861 buy-loop labels (SPY intraday direction)
+            _fb_itq_chg = float(d.get("spy_intraday_chg", d.get("intraday", 0)) or 0)
+            _fb_itq_bkt = ("strong_intraday_bull" if _fb_itq_chg > 0.8
+                           else "mild_intraday_bull" if _fb_itq_chg > 0.2
+                           else "mild_intraday_bear" if _fb_itq_chg < -0.2
+                           else "strong_intraday_bear" if _fb_itq_chg < -0.8
+                           else "intraday_flat")
             _nsl_adj += _nde("intraday_trend_quality_perf", _fb_itq_bkt)
 
-            # Linear regression trend quality: clean trend vs choppy
+            # Linear regression trend quality: state labels match N486 buy-loop labels
             _fb_lr_r2  = float(d.get("lr_r2", 0) or 0)
-            _fb_lr_bkt = ("clean" if _fb_lr_r2 >= 0.85 else "moderate" if _fb_lr_r2 >= 0.6 else "choppy")
+            _fb_lr_bkt = ("high_quality" if _fb_lr_r2 >= 0.85 else "medium_quality" if _fb_lr_r2 >= 0.6 else "low_quality")
             _nsl_adj += _nde("lr_trend_quality_entry_perf", _fb_lr_bkt)
 
-            # Breakout confirmation: at key resistance level on volume
-            _fb_atb_bkt = "at_level" if d.get("at_breakout") else "not_at_level"
+            # Breakout confirmation: aligned with buy-loop state labels stored in perf dict
+            _fb_at_bo  = bool(d.get("at_breakout", False))
+            _fb_bo_vr  = float(d.get("vol_ratio", 1) or 1)
+            _fb_atb_bkt = ("confirmed_breakout" if _fb_at_bo and _fb_bo_vr > 1.5
+                           else "unconfirmed" if _fb_at_bo else "failed_breakout")
             _nsl_adj += _nde("breakout_confirmation_perf", _fb_atb_bkt)
 
-            # Breakout volume confirmation: needs BOTH breakout AND volume surge
-            _fb_bvc_bkt = ("confirmed" if d.get("at_breakout") and d.get("rvol_surge")
-                           else "unconfirmed" if d.get("at_breakout") else "none")
+            # Breakout volume confirmation: state labels match buy-loop N605 labels
+            _fb_bvc_bkt = ("volume_confirmed_breakout" if _fb_at_bo and _fb_bo_vr >= 2.0
+                           else "moderate_vol_breakout" if _fb_at_bo and _fb_bo_vr >= 1.5
+                           else "weak_vol_breakout" if _fb_at_bo else "moderate_vol_breakout")
             _nsl_adj += _nde("breakout_volume_confirm_perf", _fb_bvc_bkt)
 
-            # Near 52-week high: breakout zone vs consolidation zone
-            _fb_52w = float(d.get("near_52w_high", 1.0) or 1.0)
-            _fb_52w_bkt = ("new_high" if _fb_52w >= 0.98 else "near_high" if _fb_52w >= 0.90 else "mid_range" if _fb_52w >= 0.70 else "depressed")
+            # Near 52-week high: state labels match buy-loop N474 labels
+            _fb_52w   = float(d.get("near_52w_high", 1.0) or 1.0)
+            _fb_52w_b = float(d.get("at_breakout_level", 0) or d.get("vcp_breakout", 0) or 0)
+            _fb_52w_bkt = ("at_52w_break" if _fb_52w >= 0.97 and _fb_52w_b
+                           else "near_52w_high" if _fb_52w >= 0.92
+                           else "mid_range_52w")
             _nsl_adj += _nde("breakout_52w_entry_perf", _fb_52w_bkt)
 
             # Ichimoku position: above cloud = institutional trend confirmed
@@ -22328,14 +22339,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_wr_bkt = ("oversold" if _fb_wr_v < -80 else "overbought" if _fb_wr_v > -20 else "trending")
             _nsl_adj += _nde("wr_zone_perf", _fb_wr_bkt)
 
-            # MFI zone: overbought buying = poor timing
+            # MFI zone: state labels match log_trade N-series labels
             _fb_mfi_v = float(d.get("mfi", 50) or 50)
-            _fb_mfi_bkt = ("oversold" if _fb_mfi_v < 30 else "distribution" if _fb_mfi_v > 80 else "neutral")
+            _fb_mfi_bkt = ("accumulation" if _fb_mfi_v < 30 else "distribution" if _fb_mfi_v > 80 else "neutral")
             _nsl_adj += _nde("mfi_zone_perf", _fb_mfi_bkt)
 
-            # ATR regime: high ATR = more movement but riskier entries
-            _fb_atr_v = float(d.get("atr_pct", 0) or 0)
-            _fb_atr_reg = ("volatile" if _fb_atr_v > 4 else "elevated" if _fb_atr_v > 2 else "calm")
+            # ATR regime: state labels match N262 buy-loop labels (atr_regime_state)
+            _fb_atr_v   = float(d.get("atr_pct", 0) or 0)
+            _fb_atr_reg = ("high_atr" if _fb_atr_v > 2.0 else "low_atr" if _fb_atr_v < 1.0 else "medium_atr")
             _nsl_adj += _nde("atr_regime_perf", _fb_atr_reg)
 
             # Supertrend alignment
@@ -22416,8 +22427,17 @@ def score(tk, d, sentiment=0, regime_adj=0):
                           else "2-3d" if _fb_cg_v <= 3 else "4d+")
             _nsl_adj += _nde("consec_green_perf", _fb_cg_bkt)
 
-            # Sector momentum at entry: accelerating sector outperforms
-            _fb_sec_mom = d.get("sector_etf_momentum", "neutral") or "neutral"
+            # Sector momentum at entry: state labels match N835 buy-loop labels
+            _fb_sec_etf = d.get("sector_etf_momentum", "neutral") or "neutral"
+            _fb_sec_chg = float(d.get("sector_chg1d", d.get("sector_etf_1d", 0)) or 0)
+            if _fb_sec_chg > 1.0 or _fb_sec_etf == "bullish":
+                _fb_sec_mom = "sector_leader"
+            elif _fb_sec_chg > 0.2 or _fb_sec_etf == "bullish":
+                _fb_sec_mom = "above_avg_sector"
+            elif _fb_sec_chg < -0.2 or _fb_sec_etf == "bearish":
+                _fb_sec_mom = "lagging_sector"
+            else:
+                _fb_sec_mom = "avg_sector"
             _nsl_adj += _nde("sector_momentum_perf", _fb_sec_mom)
 
             # ── Commit 8: N711-N730 + N871-N880 entry quality neurons ──────────
