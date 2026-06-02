@@ -27629,7 +27629,11 @@ def run():
         logger.info(f"Portfolio heat: {_portfolio_heat:+.1f}% (${_total_unrealized_pnl:+,.0f} unrealized)")
 
     # Consecutive loss guard: if last 3 closed trades are all losses, skip new buys this cycle
-    _recent_trades = [t for t in tlog.get("trades", []) if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+    # EQUITY ONLY: exclude crypto (ticker contains "/") — crypto losses must not block equity buying
+    _recent_trades = [t for t in tlog.get("trades", [])
+                      if t.get("action") in ("SELL", "COVER")
+                      and t.get("pnl_pct") is not None
+                      and "/" not in t.get("ticker", "")]
     _recent_trades.sort(key=lambda t: t.get("time", ""), reverse=True)
     _last3_pnl = [t["pnl_pct"] for t in _recent_trades[:3]]
     _last5_pnl = [t["pnl_pct"] for t in _recent_trades[:5]]
@@ -27724,10 +27728,13 @@ def run():
         logger.info(f"Win streak (3W): lowering threshold by 1 → {_eff_min_score}")
 
     # Rolling 20-trade WR guard: tighten threshold when recent performance is poor
+    # EQUITY ONLY: exclude crypto (ticker contains "/") — crypto WR must not bias equity threshold
     # This is the fastest feedback loop — responds to current market conditions in <20 trades
     try:
         _all_closed = [t for t in tlog.get("trades", [])
-                       if t.get("action") in ("SELL", "COVER") and t.get("pnl_pct") is not None]
+                       if t.get("action") in ("SELL", "COVER")
+                       and t.get("pnl_pct") is not None
+                       and "/" not in t.get("ticker", "")]
         _last20 = _all_closed[-20:] if len(_all_closed) >= 20 else []
         if len(_last20) >= 10:
             _r20_wins = sum(1 for t in _last20 if (t.get("pnl_pct") or 0) > 0)
