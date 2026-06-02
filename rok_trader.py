@@ -6629,8 +6629,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n359 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n359_field = _buy_n359.get("catalyst_recency_perf", "no_catalyst") if _buy_n359 else "no_catalyst"
-            _n359_perf = tlog.setdefault("catalyst_recency_perf", {})
+            _n359_field = _buy_n359.get("catalyst_age_quality_perf", "no_catalyst") if _buy_n359 else "no_catalyst"
+            _n359_perf = tlog.setdefault("catalyst_age_quality_perf", {})
             _n359p = _n359_perf.setdefault(_n359_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n359_field})
             _n359p["total"] += 1; _n359p["total_pnl"] = round(_n359p["total_pnl"] + pnl, 2)
             if pnl > 0: _n359p["wins"] += 1
@@ -6749,8 +6749,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n367 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n367_field = _buy_n367.get("vwap_reclaim_perf", "at_vwap") if _buy_n367 else "at_vwap"
-            _n367_perf = tlog.setdefault("vwap_reclaim_perf", {})
+            _n367_field = _buy_n367.get("vwap_reclaim_v1_perf", "at_vwap") if _buy_n367 else "at_vwap"
+            _n367_perf = tlog.setdefault("vwap_reclaim_v1_perf", {})
             _n367p = _n367_perf.setdefault(_n367_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n367_field})
             _n367p["total"] += 1; _n367p["total_pnl"] = round(_n367p["total_pnl"] + pnl, 2)
             if pnl > 0: _n367p["wins"] += 1
@@ -7199,8 +7199,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n397 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n397_field = _buy_n397.get("ema_stack_quality_perf", "partial_stack") if _buy_n397 else "partial_stack"
-            _n397_perf = tlog.setdefault("ema_stack_quality_perf", {})
+            _n397_field = _buy_n397.get("ema_stack_v1_perf", "partial_stack") if _buy_n397 else "partial_stack"
+            _n397_perf = tlog.setdefault("ema_stack_v1_perf", {})
             _n397p = _n397_perf.setdefault(_n397_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n397_field})
             _n397p["total"] += 1; _n397p["total_pnl"] = round(_n397p["total_pnl"] + pnl, 2)
             if pnl > 0: _n397p["wins"] += 1
@@ -7394,8 +7394,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n410 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n410_field = _buy_n410.get("conviction_score_tier_perf", "medium_conviction") if _buy_n410 else "medium_conviction"
-            _n410_perf = tlog.setdefault("conviction_score_tier_perf", {})
+            _n410_field = _buy_n410.get("conviction_tier_v1_perf", "medium_conviction") if _buy_n410 else "medium_conviction"
+            _n410_perf = tlog.setdefault("conviction_tier_v1_perf", {})
             _n410p = _n410_perf.setdefault(_n410_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n410_field})
             _n410p["total"] += 1; _n410p["total_pnl"] = round(_n410p["total_pnl"] + pnl, 2)
             if pnl > 0: _n410p["wins"] += 1
@@ -7754,8 +7754,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n434 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n434_field = _buy_n434.get("news_sentiment_score_perf", "neutral") if _buy_n434 else "neutral"
-            _n434_perf = tlog.setdefault("news_sentiment_score_perf", {})
+            _n434_field = _buy_n434.get("news_sent_score_v1_perf", "neutral") if _buy_n434 else "neutral"
+            _n434_perf = tlog.setdefault("news_sent_score_v1_perf", {})
             _n434p = _n434_perf.setdefault(_n434_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n434_field})
             _n434p["total"] += 1; _n434p["total_pnl"] = round(_n434p["total_pnl"] + pnl, 2)
             if pnl > 0: _n434p["wins"] += 1
@@ -7769,8 +7769,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n435 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n435_field = _buy_n435.get("short_interest_ratio_perf", "mid_si") if _buy_n435 else "mid_si"
-            _n435_perf = tlog.setdefault("short_interest_ratio_perf", {})
+            _n435_field = _buy_n435.get("short_int_ratio_v1_perf", "mid_si") if _buy_n435 else "mid_si"
+            _n435_perf = tlog.setdefault("short_int_ratio_v1_perf", {})
             _n435p = _n435_perf.setdefault(_n435_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n435_field})
             _n435p["total"] += 1; _n435p["total_pnl"] = round(_n435p["total_pnl"] + pnl, 2)
             if pnl > 0: _n435p["wins"] += 1
@@ -7994,8 +7994,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n450 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n450_field = _buy_n450.get("sector_relative_strength_perf", "sector_neutral") if _buy_n450 else "sector_neutral"
-            _n450_perf = tlog.setdefault("sector_relative_strength_perf", {})
+            _n450_field = _buy_n450.get("sector_rs_quality_perf", "sector_neutral") if _buy_n450 else "sector_neutral"
+            _n450_perf = tlog.setdefault("sector_rs_quality_perf", {})
             _n450p = _n450_perf.setdefault(_n450_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n450_field})
             _n450p["total"] += 1; _n450p["total_pnl"] = round(_n450p["total_pnl"] + pnl, 2)
             if pnl > 0: _n450p["wins"] += 1
@@ -8309,8 +8309,8 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None:
         try:
             _buy_n471 = next((t for t in tlog.get("trades", []) if t.get("action") == "BUY" and t.get("ticker") == sym), None)
-            _n471_field = _buy_n471.get("premarket_gap_size_perf", "flat_open") if _buy_n471 else "flat_open"
-            _n471_perf = tlog.setdefault("premarket_gap_size_perf", {})
+            _n471_field = _buy_n471.get("premarket_gap_v1_perf", "flat_open") if _buy_n471 else "flat_open"
+            _n471_perf = tlog.setdefault("premarket_gap_v1_perf", {})
             _n471p = _n471_perf.setdefault(_n471_field, {"wins":0,"losses":0,"total":0,"total_pnl":0.0,"state":_n471_field})
             _n471p["total"] += 1; _n471p["total_pnl"] = round(_n471p["total_pnl"] + pnl, 2)
             if pnl > 0: _n471p["wins"] += 1
@@ -23000,6 +23000,79 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _fb_opt_bkt = ("confirmed" if _fb_opt_sc >= 2 else "slight" if _fb_opt_sc >= 1 else "neutral")
             _nsl_adj += _nde("options_flow_perf", _fb_opt_bkt)
 
+            # N359: Catalyst age quality (fresh_catalyst/aging_catalyst/no_catalyst)
+            _n359_cat_s = d.get("catalyst", "") or ""
+            _n359_pc_v  = int(d.get("persist_count", 0) or 0)
+            if _n359_cat_s and _n359_pc_v <= 1:   _n359_cat_q = "fresh_catalyst"
+            elif _n359_cat_s:                      _n359_cat_q = "aging_catalyst"
+            else:                                  _n359_cat_q = "no_catalyst"
+            _nsl_adj += _nde("catalyst_age_quality_perf", _n359_cat_q)
+
+            # N367: VWAP reclaim quality (vwap_reclaimed/at_vwap/below_vwap)
+            _n367_price_v = float(d.get("price", 0) or 0)
+            _n367_vwap_v  = float(d.get("vwap", 1) or 1)
+            _n367_chg_v   = float(d.get("chg_pct", d.get("change_pct", 0)) or 0)
+            if _n367_vwap_v > 0 and _n367_price_v > _n367_vwap_v and _n367_chg_v > 0.5:
+                _n367_vwap_q = "vwap_reclaimed"
+            elif _n367_vwap_v > 0 and _n367_price_v < _n367_vwap_v * 0.995:
+                _n367_vwap_q = "below_vwap"
+            else:
+                _n367_vwap_q = "at_vwap"
+            _nsl_adj += _nde("vwap_reclaim_v1_perf", _n367_vwap_q)
+
+            # N397: EMA stack quality (full_ema_stack/ema_stack_broken/partial_stack)
+            _n397_ema21  = float(d.get("ema21", 0) or 0)
+            _n397_ema50  = float(d.get("ema50", 0) or 0)
+            _n397_ema200 = float(d.get("ema200", 0) or 0)
+            if d.get("ema_stack", False) or (_n397_ema21 > _n397_ema50 > _n397_ema200 > 0):
+                _n397_ema_q = "full_ema_stack"
+            elif _n397_ema200 > 0 and _n397_ema50 > 0 and _n397_ema200 > _n397_ema50:
+                _n397_ema_q = "ema_stack_broken"
+            else:
+                _n397_ema_q = "partial_stack"
+            _nsl_adj += _nde("ema_stack_v1_perf", _n397_ema_q)
+
+            # N410: Conviction tier (high_conviction/medium_conviction/low_conviction)
+            _n410_score_v = float(d.get("score", 0) or 0)
+            _n410_rvol_v  = float(d.get("rvol", 1.0) or 1.0)
+            _n410_rs1_v   = float(d.get("rs1", 0) or 0)
+            if _n410_score_v >= 80 and _n410_rvol_v > 1.5 and _n410_rs1_v > 1:
+                _n410_conv_q = "high_conviction"
+            elif _n410_score_v < 60:
+                _n410_conv_q = "low_conviction"
+            else:
+                _n410_conv_q = "medium_conviction"
+            _nsl_adj += _nde("conviction_tier_v1_perf", _n410_conv_q)
+
+            # N434: News sentiment score (bullish/neutral/bearish)
+            _n434_sent_v = float(d.get("news_sentiment", d.get("sentiment_score", 0)) or 0)
+            if   _n434_sent_v > 0.3:  _n434_sent_q = "bullish"
+            elif _n434_sent_v < -0.3: _n434_sent_q = "bearish"
+            else:                     _n434_sent_q = "neutral"
+            _nsl_adj += _nde("news_sent_score_v1_perf", _n434_sent_q)
+
+            # N435: Short interest ratio (high_si/mid_si/low_si)
+            _n435_si_v = float(d.get("short_float", d.get("short_interest", 0)) or 0)
+            if   _n435_si_v > 15: _n435_si_q = "high_si"
+            elif _n435_si_v < 5:  _n435_si_q = "low_si"
+            else:                 _n435_si_q = "mid_si"
+            _nsl_adj += _nde("short_int_ratio_v1_perf", _n435_si_q)
+
+            # N450: Sector RS quality (sector_strong/sector_neutral/sector_weak)
+            _n450_rs63_v = float(d.get("rs63", 0) or 0)
+            if   _n450_rs63_v > 5:  _n450_sec_q = "sector_strong"
+            elif _n450_rs63_v < -5: _n450_sec_q = "sector_weak"
+            else:                   _n450_sec_q = "sector_neutral"
+            _nsl_adj += _nde("sector_rs_quality_perf", _n450_sec_q)
+
+            # N471: Pre-market gap size (large_gap_up/small_gap_up/flat_open/gap_down)
+            _n471_gap_v = float(d.get("chg1d", d.get("change_pct", 0)) or 0)
+            if   _n471_gap_v > 3.0:   _n471_gap_q = "large_gap_up"
+            elif _n471_gap_v >= 0.5:  _n471_gap_q = "small_gap_up"
+            elif _n471_gap_v >= -0.5: _n471_gap_q = "flat_open"
+            else:                     _n471_gap_q = "gap_down"
+            _nsl_adj += _nde("premarket_gap_v1_perf", _n471_gap_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -30426,9 +30499,9 @@ def run():
                             _n359_s = "aging_catalyst"
                         else:
                             _n359_s = "no_catalyst"
-                        _buy_signals_merged["catalyst_recency_perf"] = _n359_s
+                        _buy_signals_merged["catalyst_age_quality_perf"] = _n359_s
                     except Exception:
-                        _buy_signals_merged["catalyst_recency_perf"] = "no_catalyst"
+                        _buy_signals_merged["catalyst_age_quality_perf"] = "no_catalyst"
                     # N360: Sector momentum quality at entry
                     try:
                         _n360_rs_sec = float(d.get("rs_sector", 0) or 0)
@@ -30523,9 +30596,9 @@ def run():
                             _n367_s = "below_vwap"
                         else:
                             _n367_s = "at_vwap"
-                        _buy_signals_merged["vwap_reclaim_perf"] = _n367_s
+                        _buy_signals_merged["vwap_reclaim_v1_perf"] = _n367_s
                     except Exception:
-                        _buy_signals_merged["vwap_reclaim_perf"] = "at_vwap"
+                        _buy_signals_merged["vwap_reclaim_v1_perf"] = "at_vwap"
                     # N368: Institutional size entry at entry
                     try:
                         _n368_notional = float(notional or 0)
@@ -30909,7 +30982,7 @@ def run():
                             _n397_s = "partial_stack"
                     except Exception:
                         _n397_s = "partial_stack"
-                    _buy_signals_merged["ema_stack_quality_perf"] = _n397_s
+                    _buy_signals_merged["ema_stack_v1_perf"] = _n397_s
                     # N398: Vol expansion at entry
                     try:
                         if d.get("vol_expanding", False) or d.get("rvol", 1.0) > 2.0:
@@ -31074,7 +31147,7 @@ def run():
                             _n410_s = "medium_conviction"
                     except Exception:
                         _n410_s = "medium_conviction"
-                    _buy_signals_merged["conviction_score_tier_perf"] = _n410_s
+                    _buy_signals_merged["conviction_tier_v1_perf"] = _n410_s
                     # N411: Sector concentration risk at entry
                     try:
                         _n411_conc = tlog.get("sector_concentration", d.get("sector_concentration", 0))
@@ -31365,7 +31438,7 @@ def run():
                             _n434_s = "neutral"
                     except Exception:
                         _n434_s = "neutral"
-                    _buy_signals_merged["news_sentiment_score_perf"] = _n434_s
+                    _buy_signals_merged["news_sent_score_v1_perf"] = _n434_s
                     # N435: short interest ratio at entry
                     try:
                         _n435_si = float(live.get(tk, {}).get("short_interest") or live.get(tk, {}).get("short_ratio") or 0)
@@ -31377,7 +31450,7 @@ def run():
                             _n435_s = "mid_si"
                     except Exception:
                         _n435_s = "mid_si"
-                    _buy_signals_merged["short_interest_ratio_perf"] = _n435_s
+                    _buy_signals_merged["short_int_ratio_v1_perf"] = _n435_s
                     # N436: analyst revision trend at entry
                     try:
                         _n436_rev = float(live.get(tk, {}).get("analyst_revisions") or live.get(tk, {}).get("estimate_revisions") or 0)
@@ -31564,7 +31637,7 @@ def run():
                             _n450_s = "sector_neutral"
                     except Exception:
                         _n450_s = "sector_neutral"
-                    _buy_signals_merged["sector_relative_strength_perf"] = _n450_s
+                    _buy_signals_merged["sector_rs_quality_perf"] = _n450_s
                     # N451: gap fill tendency at entry
                     try:
                         _n451_gfr = float(live.get(tk, {}).get('gap_fill_rate', 0) or 0)
@@ -31790,7 +31863,7 @@ def run():
                             _n471_s = "gap_down"
                     except Exception:
                         _n471_s = "flat_open"
-                    _buy_signals_merged["premarket_gap_size_perf"] = _n471_s
+                    _buy_signals_merged["premarket_gap_v1_perf"] = _n471_s
                     # N472: stock put/call ratio at entry
                     try:
                         _n472_pcr = float(live.get(tk, {}).get('options_pcr', 1.0) or 1.0)
@@ -39153,7 +39226,7 @@ def run():
         _n356_insights = _prev_learned.get("multi_timeframe_trend_perf", [])
         _n357_insights = _prev_learned.get("smart_money_indicator_perf", [])
         _n358_insights = _prev_learned.get("entry_price_vs_vwap_perf", [])
-        _n359_insights = _prev_learned.get("catalyst_recency_perf", [])
+        _n359_insights = _prev_learned.get("catalyst_age_quality_perf", [])
         _n360_insights = _prev_learned.get("sector_momentum_quality_perf", [])
         _n361_insights = _prev_learned.get("liquidity_tier_perf", [])
         _n362_insights = _prev_learned.get("trend_reversal_signal_perf", [])
@@ -39161,7 +39234,7 @@ def run():
         _n364_insights = _prev_learned.get("sector_etf_vs_spy_today_perf", [])
         _n365_insights = _prev_learned.get("price_acceleration_perf", [])
         _n366_insights = _prev_learned.get("opening_strength_perf", [])
-        _n367_insights = _prev_learned.get("vwap_reclaim_perf", [])
+        _n367_insights = _prev_learned.get("vwap_reclaim_v1_perf", [])
         _n368_insights = _prev_learned.get("institutional_size_entry_perf", [])
         _n369_insights = _prev_learned.get("earnings_drift_perf", [])
         _n370_insights = _prev_learned.get("regime_momentum_sync_perf", [])
@@ -39295,7 +39368,7 @@ def run():
         _n394_list = _prev_learned.get("prior_day_range_perf", [])
         _n395_list = _prev_learned.get("entry_vs_sector_beta_perf", [])
         _n396_list = _prev_learned.get("market_internals_quality_perf", [])
-        _n397_list = _prev_learned.get("ema_stack_quality_perf", [])
+        _n397_list = _prev_learned.get("ema_stack_v1_perf", [])
         _n398_list = _prev_learned.get("vol_expansion_at_entry_perf", [])
         _n399_list = _prev_learned.get("news_age_quality_perf", [])
         _n400_list = _prev_learned.get("technical_score_quality_perf", [])
@@ -39308,7 +39381,7 @@ def run():
         _n407_list = _prev_learned.get("support_confluence_quality_perf", [])
         _n408_list = _prev_learned.get("catalyst_quality_tier_perf", [])
         _n409_list = _prev_learned.get("pre_market_volume_quality_perf", [])
-        _n410_list = _prev_learned.get("conviction_score_tier_perf", [])
+        _n410_list = _prev_learned.get("conviction_tier_v1_perf", [])
         _n411_list = _prev_learned.get("sector_concentration_risk_perf", [])
         _n412_list = _prev_learned.get("entry_rsi_context_perf", [])
         _n413_list = _prev_learned.get("spy_5d_momentum_perf", [])
@@ -39332,8 +39405,8 @@ def run():
         _n431_list = _prev_learned.get("overnight_gap_entry_perf", [])
         _n432_list = _prev_learned.get("iv_percentile_entry_perf", [])
         _n433_list = _prev_learned.get("price_momentum_5d_perf", [])
-        _n434_list = _prev_learned.get("news_sentiment_score_perf", [])
-        _n435_list = _prev_learned.get("short_interest_ratio_perf", [])
+        _n434_list = _prev_learned.get("news_sent_score_v1_perf", [])
+        _n435_list = _prev_learned.get("short_int_ratio_v1_perf", [])
         _n436_list = _prev_learned.get("analyst_revision_trend_perf", [])
         _n437_list = _prev_learned.get("beta_regime_fit_perf", [])
         _n438_list = _prev_learned.get("days_since_earnings_perf", [])
@@ -39348,7 +39421,7 @@ def run():
         _n447_list = _prev_learned.get("fund_ownership_change_perf", [])
         _n448_list = _prev_learned.get("price_range_position_perf", [])
         _n449_list = _prev_learned.get("momentum_quality_score_perf", [])
-        _n450_list = _prev_learned.get("sector_relative_strength_perf", [])
+        _n450_list = _prev_learned.get("sector_rs_quality_perf", [])
         _n451_list = _prev_learned.get("gap_fill_tendency_perf", [])
         _n452_list = _prev_learned.get("volume_trend_3d_perf", [])
         _n453_list = _prev_learned.get("institutional_activity_perf", [])
@@ -39369,7 +39442,7 @@ def run():
         _n468_list = _prev_learned.get("multi_day_breakout_perf", [])
         _n469_list = _prev_learned.get("inside_bar_resolution_perf", [])
         _n470_list = _prev_learned.get("earnings_drift_days_perf", [])
-        _n471_list = _prev_learned.get("premarket_gap_size_perf", [])
+        _n471_list = _prev_learned.get("premarket_gap_v1_perf", [])
         _n472_list = _prev_learned.get("stock_pcr_entry_perf", [])
         _n473_list = _prev_learned.get("monthly_momentum_perf", [])
         _n474_list = _prev_learned.get("breakout_52w_entry_perf", [])
@@ -43597,7 +43670,7 @@ def run():
                 _learn_log.append(f"N358 entry vs VWAP: below={_bv_n358['win_rate']:.0f}% above={_av_n358['win_rate']:.0f}%WR")
 
         # ── N359: Catalyst Recency tuner ────────────────────────────────────────────────
-        _n359_raw = tlog.get("catalyst_recency_perf", {})
+        _n359_raw = tlog.get("catalyst_age_quality_perf", {})
         _n359_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n359_raw.items() if v.get("total", 0) >= 2]
@@ -43685,7 +43758,7 @@ def run():
                 _learn_log.append(f"N366 open strength: strong={_so_n366['win_rate']:.0f}% weak={_wo_n366['win_rate']:.0f}%WR")
 
         # ── N367: VWAP Reclaim tuner ─────────────────────────────────────────────────────
-        _n367_raw = tlog.get("vwap_reclaim_perf", {})
+        _n367_raw = tlog.get("vwap_reclaim_v1_perf", {})
         _n367_insights = [{"state": k, "win_rate": v.get("win_rate", 50),
                            "avg_pnl": v.get("avg_pnl", 0), "total": v.get("total", 0)}
                           for k, v in _n367_raw.items() if v.get("total", 0) >= 2]
@@ -43997,7 +44070,7 @@ def run():
             _learn_log.append(f"N396 internals: strong={_si_n396['win_rate']:.0f}% neutral={_ni_n396['win_rate']:.0f}%WR")
 
         # ── N397: EMA stack quality tuner ─────────────────────────────────────────────
-        _n397_raw = tlog.get("ema_stack_quality_perf", {})
+        _n397_raw = tlog.get("ema_stack_v1_perf", {})
         _n397_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n397_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _fe_n397 = next((s for s in _n397_list if s.get("state")=="full_ema_stack"), _n397_list[0] if _n397_list else {"win_rate":50})
         _ps_n397 = next((s for s in _n397_list if s.get("state")=="partial_stack"), _n397_list[-1] if _n397_list else {"win_rate":50})
@@ -44101,7 +44174,7 @@ def run():
             _learn_log.append(f"N409 PM volume: high={_hp_n409['win_rate']:.0f}% moderate={_mp_n409['win_rate']:.0f}%WR")
 
         # ── N410: Conviction score tier tuner ─────────────────────────────────────────
-        _n410_raw = tlog.get("conviction_score_tier_perf", {})
+        _n410_raw = tlog.get("conviction_tier_v1_perf", {})
         _n410_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n410_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _hc_n410 = next((s for s in _n410_list if s.get("state")=="high_conviction"), _n410_list[0] if _n410_list else {"win_rate":50})
         _mc_n410 = next((s for s in _n410_list if s.get("state")=="medium_conviction"), _n410_list[-1] if _n410_list else {"win_rate":50})
@@ -44293,7 +44366,7 @@ def run():
             _learn_log.append(f"N433 price momentum 5D: strong_up={_a_n433['win_rate']:.0f}% flat_neg={_b_n433['win_rate']:.0f}%WR")
 
         # ── N434: news sentiment score tuner ────────────────────
-        _n434_raw = tlog.get("news_sentiment_score_perf", {})
+        _n434_raw = tlog.get("news_sent_score_v1_perf", {})
         _n434_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n434_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n434 = next((s for s in _n434_list if s.get("state")=="bullish"), _n434_list[0] if _n434_list else {"win_rate":50})
         _b_n434 = next((s for s in _n434_list if s.get("state")=="bearish"), _n434_list[-1] if _n434_list else {"win_rate":50})
@@ -44301,7 +44374,7 @@ def run():
             _learn_log.append(f"N434 news sentiment: bullish={_a_n434['win_rate']:.0f}% bearish={_b_n434['win_rate']:.0f}%WR")
 
         # ── N435: short interest ratio tuner ────────────────────
-        _n435_raw = tlog.get("short_interest_ratio_perf", {})
+        _n435_raw = tlog.get("short_int_ratio_v1_perf", {})
         _n435_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n435_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n435 = next((s for s in _n435_list if s.get("state")=="high_si"), _n435_list[0] if _n435_list else {"win_rate":50})
         _b_n435 = next((s for s in _n435_list if s.get("state")=="low_si"), _n435_list[-1] if _n435_list else {"win_rate":50})
@@ -44421,7 +44494,7 @@ def run():
             _learn_log.append(f"N449 Momentum Quality Score: high_quality={_a_n449['win_rate']:.0f}% low_quality={_b_n449['win_rate']:.0f}%WR")
 
         # ── N450: sector relative strength tuner ────────────────────
-        _n450_raw = tlog.get("sector_relative_strength_perf", {})
+        _n450_raw = tlog.get("sector_rs_quality_perf", {})
         _n450_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n450_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n450 = next((s for s in _n450_list if s.get("state")=="sector_strong"), _n450_list[0] if _n450_list else {"win_rate":50})
         _b_n450 = next((s for s in _n450_list if s.get("state")=="sector_weak"), _n450_list[-1] if _n450_list else {"win_rate":50})
@@ -44589,7 +44662,7 @@ def run():
             _learn_log.append(f"N470 Earnings Drift: early_drift={_a_n470['win_rate']:.0f}% stale_no_drift={_b_n470['win_rate']:.0f}%WR")
 
         # ── N471: pre-market gap size tuner ────────────────────
-        _n471_raw = tlog.get("premarket_gap_size_perf", {})
+        _n471_raw = tlog.get("premarket_gap_v1_perf", {})
         _n471_list = sorted([{"state":k,"wins":v.get("wins",0),"losses":v.get("losses",0),"total":v.get("total",0),"total_pnl":v.get("total_pnl",0.0),"win_rate":v.get("win_rate",50.0),"avg_pnl":v.get("avg_pnl",0.0)} for k,v in _n471_raw.items() if isinstance(v,dict)], key=lambda x:x.get("win_rate",0), reverse=True)
         _a_n471 = next((s for s in _n471_list if s.get("state")=="large_gap_up"), _n471_list[0] if _n471_list else {"win_rate":50})
         _b_n471 = next((s for s in _n471_list if s.get("state")=="flat_open"), _n471_list[-1] if _n471_list else {"win_rate":50})
@@ -46709,6 +46782,7 @@ def run():
             ("pm_gap_size_v2_perf",    "pm_gap_size_v2"),
             ("opening_range_perf",     "opening_range"),
             ("vwap_reclaim_perf",      "vwap_reclaim"),
+            ("vwap_reclaim_v1_perf",   "vwap_reclaim_v1"),
             ("intraday_momentum_perf", "intraday_momentum"),
             ("closing_strength_perf",  "closing_strength"),
             ("multi_day_pattern_perf", "multi_day_pattern"),
@@ -46803,6 +46877,7 @@ def run():
             ("relative_volume_tier_perf",       "relative_volume_tier"),
             ("price_structure_quality_perf",    "price_structure_quality"),
             ("catalyst_recency_perf",           "catalyst_recency"),
+            ("catalyst_age_quality_perf",       "catalyst_age_quality"),
             ("sector_leadership_perf",          "sector_leadership"),
             ("options_iv_environment_perf",     "options_iv_environment"),
             ("breadth_alignment_perf",          "breadth_alignment"),
@@ -46815,6 +46890,13 @@ def run():
             ("vwap_deviation_perf",             "vwap_deviation"),
             ("pattern_signal_count_perf",       "pattern_signal_count"),
             ("conviction_score_tier_perf",      "conviction_score_tier"),
+            ("conviction_tier_v1_perf",         "conviction_tier_v1"),
+            ("vwap_reclaim_v1_perf",            "vwap_reclaim_v1"),
+            ("ema_stack_v1_perf",               "ema_stack_v1"),
+            ("news_sent_score_v1_perf",         "news_sent_score_v1"),
+            ("short_int_ratio_v1_perf",         "short_int_ratio_v1"),
+            ("sector_rs_quality_perf",          "sector_rs_quality"),
+            ("premarket_gap_v1_perf",           "premarket_gap_v1"),
             ("volume_trend_perf",               "volume_trend"),
             ("market_internals_perf",           "market_internals"),
             ("fundamental_quality_perf",        "fundamental_quality"),
@@ -47527,7 +47609,7 @@ def run():
             "multi_timeframe_trend_perf":       _n356_insights,   # N356: multi-timeframe trend alignment vs outcome
             "smart_money_indicator_perf":       _n357_insights,   # N357: smart money / institutional flow vs outcome
             "entry_price_vs_vwap_perf":         _n358_insights,   # N358: entry price vs VWAP at entry vs outcome
-            "catalyst_recency_perf":            _n359_insights,   # N359: catalyst recency at entry vs outcome
+            "catalyst_age_quality_perf":         _n359_insights,   # N359: catalyst age quality at entry vs outcome
             "sector_momentum_quality_perf":     _n360_insights,   # N360: sector momentum quality vs outcome
             "liquidity_tier_perf":              _n361_insights,   # N361: liquidity tier at entry vs outcome
             "trend_reversal_signal_perf":       _n362_insights,   # N362: trend reversal signal at entry vs outcome
@@ -47535,7 +47617,7 @@ def run():
             "sector_etf_vs_spy_today_perf":     _n364_insights,   # N364: sector ETF vs SPY today vs outcome
             "price_acceleration_perf":          _n365_insights,   # N365: price acceleration at entry vs outcome
             "opening_strength_perf":            _n366_insights,   # N366: opening strength at entry vs outcome
-            "vwap_reclaim_perf":                _n367_insights,   # N367: VWAP reclaim at entry vs outcome
+            "vwap_reclaim_v1_perf":             _n367_insights,   # N367: VWAP reclaim quality at entry vs outcome
             "institutional_size_entry_perf":    _n368_insights,   # N368: institutional size entry vs outcome
             "earnings_drift_perf":              _n369_insights,   # N369: earnings drift at entry vs outcome
             "regime_momentum_sync_perf":        _n370_insights,   # N370: regime momentum sync vs outcome
@@ -47565,7 +47647,7 @@ def run():
             "prior_day_range_perf":             _n394_list,       # N394: prior day range vs outcome
             "entry_vs_sector_beta_perf":        _n395_list,       # N395: entry vs sector beta vs outcome
             "market_internals_quality_perf":    _n396_list,       # N396: market internals quality vs outcome
-            "ema_stack_quality_perf":           _n397_list,       # N397: EMA stack quality vs outcome
+            "ema_stack_v1_perf":                _n397_list,       # N397: EMA stack quality v1 vs outcome
             "vol_expansion_at_entry_perf":      _n398_list,       # N398: vol expansion at entry vs outcome
             "news_age_quality_perf":            _n399_list,       # N399: news age quality vs outcome
             "technical_score_quality_perf":     _n400_list,       # N400: technical score quality vs outcome
@@ -47578,7 +47660,7 @@ def run():
             "support_confluence_quality_perf":  _n407_list,  # N407: support confluence quality vs outcome
             "catalyst_quality_tier_perf":       _n408_list,  # N408: catalyst quality tier vs outcome
             "pre_market_volume_quality_perf":   _n409_list,  # N409: pre-market volume quality vs outcome
-            "conviction_score_tier_perf":       _n410_list,  # N410: conviction score tier vs outcome
+            "conviction_tier_v1_perf":          _n410_list,  # N410: conviction tier v1 vs outcome
             "sector_concentration_risk_perf":  _n411_list,  # N411: sector concentration risk vs outcome
             "entry_rsi_context_perf":          _n412_list,  # N412: entry RSI context vs outcome
             "spy_5d_momentum_perf":            _n413_list,  # N413: SPY 5-day momentum vs outcome
@@ -47602,8 +47684,8 @@ def run():
             "overnight_gap_entry_perf": _n431_list,  # N431: overnight gap entry at entry vs outcome
             "iv_percentile_entry_perf": _n432_list,  # N432: IV percentile entry at entry vs outcome
             "price_momentum_5d_perf": _n433_list,  # N433: price momentum 5D at entry vs outcome
-            "news_sentiment_score_perf": _n434_list,  # N434: news sentiment score at entry vs outcome
-            "short_interest_ratio_perf": _n435_list,  # N435: short interest ratio at entry vs outcome
+            "news_sent_score_v1_perf":   _n434_list,  # N434: news sentiment score v1 at entry vs outcome
+            "short_int_ratio_v1_perf":   _n435_list,  # N435: short interest ratio v1 at entry vs outcome
             "analyst_revision_trend_perf": _n436_list,  # N436: analyst revision trend at entry vs outcome
             "beta_regime_fit_perf": _n437_list,  # N437: beta regime fit at entry vs outcome
             "days_since_earnings_perf": _n438_list,  # N438: days since earnings at entry vs outcome
@@ -47618,7 +47700,7 @@ def run():
             "fund_ownership_change_perf": _n447_list,  # N447: fund ownership change at entry vs outcome
             "price_range_position_perf": _n448_list,  # N448: price range position at entry vs outcome
             "momentum_quality_score_perf": _n449_list,  # N449: momentum quality score at entry vs outcome
-            "sector_relative_strength_perf": _n450_list,  # N450: sector relative strength at entry vs outcome
+            "sector_rs_quality_perf":        _n450_list,  # N450: sector RS quality at entry vs outcome
             "gap_fill_tendency_perf": _n451_list,  # N451: gap fill tendency at entry vs outcome
             "volume_trend_3d_perf": _n452_list,  # N452: 3-day volume trend at entry vs outcome
             "institutional_activity_perf": _n453_list,  # N453: institutional/dark pool activity at entry vs outcome
@@ -47639,7 +47721,7 @@ def run():
             "multi_day_breakout_perf": _n468_list,  # N468: multi-day breakout at entry vs outcome
             "inside_bar_resolution_perf": _n469_list,  # N469: inside bar resolution at entry vs outcome
             "earnings_drift_days_perf": _n470_list,  # N470: earnings drift days at entry vs outcome
-            "premarket_gap_size_perf": _n471_list,  # N471: pre-market gap size at entry vs outcome
+            "premarket_gap_v1_perf":   _n471_list,  # N471: pre-market gap size v1 at entry vs outcome
             "stock_pcr_entry_perf": _n472_list,  # N472: stock put/call ratio at entry vs outcome
             "monthly_momentum_perf": _n473_list,  # N473: monthly price momentum at entry vs outcome
             "breakout_52w_entry_perf": _n474_list,  # N474: 52-week breakout entry vs outcome
@@ -47932,6 +48014,14 @@ def run():
             "pm_gap_size_v2_perf":    [],
             "opening_range_perf":     [],
             "vwap_reclaim_perf":      [],
+            "vwap_reclaim_v1_perf":   [],
+            "ema_stack_v1_perf":      [],
+            "conviction_tier_v1_perf": [],
+            "news_sent_score_v1_perf": [],
+            "short_int_ratio_v1_perf": [],
+            "sector_rs_quality_perf":  [],
+            "premarket_gap_v1_perf":   [],
+            "catalyst_age_quality_perf": [],
             "closing_strength_perf":  [],
             "multi_day_pattern_perf": [],
             "base_breakout_perf":     [],
@@ -48008,6 +48098,14 @@ def run():
             "relative_volume_tier_perf":       [],
             "price_structure_quality_perf":    [],
             "catalyst_recency_perf":           [],
+            "catalyst_age_quality_perf":       [],
+            "vwap_reclaim_v1_perf":            [],
+            "ema_stack_v1_perf":               [],
+            "conviction_tier_v1_perf":         [],
+            "news_sent_score_v1_perf":         [],
+            "short_int_ratio_v1_perf":         [],
+            "sector_rs_quality_perf":          [],
+            "premarket_gap_v1_perf":           [],
             "sector_leadership_perf":          [],
             "options_iv_environment_perf":     [],
             "breadth_alignment_perf":          [],
@@ -48020,6 +48118,14 @@ def run():
             "vwap_deviation_perf":             [],
             "pattern_signal_count_perf":       [],
             "conviction_score_tier_perf":      [],
+            "conviction_tier_v1_perf":         [],
+            "vwap_reclaim_v1_perf":            [],
+            "ema_stack_v1_perf":               [],
+            "news_sent_score_v1_perf":         [],
+            "short_int_ratio_v1_perf":         [],
+            "sector_rs_quality_perf":          [],
+            "premarket_gap_v1_perf":           [],
+            "catalyst_age_quality_perf":       [],
             "volume_trend_perf":               [],
             "market_internals_perf":           [],
             "fundamental_quality_perf":        [],
