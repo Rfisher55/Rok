@@ -28391,6 +28391,13 @@ def run():
                     _learned_bonus += _nbns("double_bottom_perf", "double_bottom", 65, 2)
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _nbns("obv_trend_perf", "rising", 62, 1)
+                if bool(_tk_sig_sc.get("higher_lows", False)):
+                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 62, 2)
+                if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                    # gap_and_hold historically weak — penalize unless learned WR is good
+                    _gap_hold_wr = (_ALL_NEURON_PERFS.get("gap_hold_perf", {}).get("holding", {}).get("win_rate", 50))
+                    if _gap_hold_wr < 55:
+                        _learned_bonus += _npen("gap_hold_perf", "holding", 55, -1)
                 if bool(_tk_sig_sc.get("supertrend_bull", False)):
                     _learned_bonus += _nbns("supertrend_perf", "bull", 62, 1)
                 if bool(_tk_sig_sc.get("ttm_squeeze_fired", False)):
