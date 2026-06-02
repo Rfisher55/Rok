@@ -29303,8 +29303,14 @@ def run():
                     _learned_bonus += _nbns("donchian_perf", "breakout", 62, 1)    # price near top: bullish
                 elif _dc_zone_lb == "weakness":
                     _learned_bonus += _npen("donchian_perf", "weakness", 38, -1)   # price near bottom: avoid
-                # Score trend: rising scores = improving setup momentum
-                _sc_trend_lb = str(_tk_sig_sc.get("score_trend", "flat") or "flat")
+                # Score trend: compute directly from peaks history (injection runs after this block)
+                try:
+                    _sc_hist_lb = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                    _sc_trend_lb = ("rising" if len(_sc_hist_lb) >= 2 and _sc_hist_lb[-1] - _sc_hist_lb[0] >= 5
+                                    else "falling" if len(_sc_hist_lb) >= 2 and _sc_hist_lb[-1] - _sc_hist_lb[0] <= -5
+                                    else "flat")
+                except Exception:
+                    _sc_trend_lb = "flat"
                 if _sc_trend_lb == "rising":
                     _learned_bonus += _nbns("score_trend_perf", "rising", 60, 1)   # improving conviction
                 elif _sc_trend_lb == "falling":
@@ -29376,8 +29382,10 @@ def run():
                     _learned_bonus += _nbns("score_persistence_v1_perf", "rising", 56, 1)   # building momentum
                 elif _sp_type_lb == "declining":
                     _learned_bonus += _npen("score_persistence_v1_perf", "declining", 44, -2)  # fading signal, thesis weakening
-                # VWAP dist entry: at_vwap=22.6% WR n=31 — hugging VWAP = indecision, not breakout
-                _vwap_de_lb = str(_tk_sig_sc.get("vwap_dist_entry_perf", "") or "")
+                # VWAP dist entry: at_vwap=22.6% WR n=31 — compute directly (injection runs after this block)
+                _vwap_pos_de = float(_tk_sig_sc.get("vwap_pos", _tk_sig_sc.get("vwap_pct", 0)) or 0)
+                _vwap_de_lb = ("far_above_vwap" if _vwap_pos_de > 2 else "above_vwap" if _vwap_pos_de > 0.3
+                               else "at_vwap" if _vwap_pos_de >= -0.3 else "below_vwap" if _vwap_pos_de >= -2 else "far_below_vwap")
                 if _vwap_de_lb == "at_vwap":
                     _learned_bonus += _npen("vwap_dist_entry_perf", "at_vwap", 28, -5)  # 22.6% WR n=31
                 elif _vwap_de_lb == "below_vwap":
@@ -29437,8 +29445,15 @@ def run():
                         _learned_bonus += _npen("rsi_at_entry_perf", "overbought", 30, -3)  # 20% WR n=10 daily overbought
                     elif _drsi_lb < 30:
                         _learned_bonus += _npen("rsi_at_entry_perf", "oversold_daily", 35, -2)  # daily downtrend confirmed
-                # Trade momentum: losing=4.4% WR n=45; neutral=15.6% WR n=32 — both catastrophic
-                _tm_wstrk = int(_tk_sig_sc.get("win_streak_now", 0) or 0)
+                # Trade momentum: compute directly from last trade (injection runs after this block)
+                try:
+                    _tm_last = next((t for t in reversed(list(tlog.get("trades", [])))
+                                     if t.get("action") in ("SELL","SELL_HALF","COVER")
+                                     and t.get("pnl_pct") is not None), None)
+                    _tm_wstrk = (1 if _tm_last and float(_tm_last.get("pnl_pct", 0) or 0) > 0
+                                 else -1 if _tm_last else 0)
+                except Exception:
+                    _tm_wstrk = 0
                 if _tm_wstrk == -1:
                     _learned_bonus += _npen("trade_momentum_perf", "losing_1", 7, -7)   # 4.4% WR n=45 → escalated
                 elif _tm_wstrk == 0:
@@ -29452,8 +29467,9 @@ def run():
                     _learned_bonus += _npen("position_count_perf", "4-7", 15, -5)  # 14.7% WR n=34
                 elif _pos_bkt_lb == "8-12":
                     _learned_bonus += _nbns("position_count_perf", "medium_book", 61, 1)  # 60.9% WR n=46
-                # Sector breadth: single=5.4% WR n=37; healthy_4-5=16.1% WR n=31; sector_middle=60.9% n=46
-                _sec_adv_lb = int(_tk_sig_sc.get("sectors_advancing_now", 5) or 5)
+                # Sector breadth: compute directly (injection runs after this block)
+                _sec_adv_lb = sum(1 for sv in tlog.get("sector_etf_trends", {}).values()
+                                  if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
                 if _sec_adv_lb < 2:
                     _learned_bonus += _npen("sector_breadth_perf", "single_sector", 6, -8)  # 5.4% WR n=37 — near-block
                 elif 4 <= _sec_adv_lb <= 5:
