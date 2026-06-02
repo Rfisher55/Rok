@@ -19202,8 +19202,22 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         _fk_macd = float(sig.get("macd", 0) or 0)
         _fk_mslp = float(sig.get("macd_slope", 0) or 0)
         _fk_rsi  = float(sig.get("rsi", 50) or 50)
+        _fk_ema_c = float(sig.get("ema_cross", 0) or 0)
+        _fk_vr   = float(sig.get("vol_ratio", 1) or 1)
         if _fk_chg <= -2.0 and _fk_roc5 <= -3.0 and _fk_macd < 0 and _fk_mslp < 0:
             sc = max(0, sc - 12)  # strong falling knife: hard penalty — need much better signal
+
+        # Multi-signal garbage gate: 3+ of these 4 bad signals together = confirmed loser entry
+        # Based on: LINK/ETH/UNI/AVAX/DOT/UNI patterns all had macd<0+ema_c~0+vol_dry+roc5<=0
+        _bad_signals = sum([
+            1 if _fk_macd < -0.1 else 0,       # MACD bearish
+            1 if _fk_ema_c < 0.1 else 0,        # EMA cross flat/bearish
+            1 if _fk_vr < 0.8 else 0,           # volume dry
+            1 if _fk_roc5 <= -1.0 else 0,       # momentum falling
+            1 if _fk_mslp < 0 else 0,           # MACD slope declining
+        ])
+        if _bad_signals >= 4:
+            sc = max(0, sc - 20)  # 4+ bad signals: near-guaranteed loser, effective veto
 
         # Bounce confirmation bonus: oversold coin with rising MACD = ideal reversal entry
         if _fk_rsi < 32 and _fk_mslp > 0 and _fk_macd > -0.5:
@@ -26487,6 +26501,12 @@ def run():
                     _scalp_pthr = max(0.8, _scalp_pthr - 0.2)
             except Exception:
                 pass
+            # Hard circuit breaker: never let a single equity position lose more than -2.0%
+            # Prevents gap-down or fast-move losses from becoming -3%+ disasters (CMPS/SAIC pattern)
+            _hard_stop_pct = -2.0
+            if pnl_pct <= _hard_stop_pct and age_minutes >= 5:
+                _scalp_exit_reason = f"hard stop ({pnl_pct:+.1f}% circuit breaker)"
+
             # Time-adaptive stop tightening: longer the position has been losing, sooner we exit
             # 20-45min: use normal scalp_sthr; 45-90min: tighten by 0.3%; 90+min: tighten by 0.5%
             _time_adj_sthr = _scalp_sthr
@@ -26494,7 +26514,7 @@ def run():
                 _time_adj_sthr = min(_scalp_sthr + 0.5, -0.8)  # tightest: exit if down > 0.8% at 90min+
             elif age_minutes >= 45:
                 _time_adj_sthr = min(_scalp_sthr + 0.3, -1.0)  # moderate: exit if down > 1.0% at 45-90min
-            if 20 <= age_minutes:
+            if 20 <= age_minutes and not _scalp_exit_reason:
                 if pnl_pct >= _scalp_pthr and age_minutes <= 90 and not half_out:
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= _time_adj_sthr and age_minutes >= 20:
