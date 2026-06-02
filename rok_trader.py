@@ -23671,6 +23671,176 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                    _n841_s5d_q = "neutral"
             _nsl_adj += _nde("sector_etf_strength_perf", _n841_s5d_q)
 
+            # N842a: Analyst sentiment (labels: strong_buy_consensus/buy_consensus/hold_consensus/sell_consensus)
+            _n842a_as_v = float(d.get("analyst_score", d.get("analyst_rec_score", 50)) or 50)
+            if   _n842a_as_v > 75:  _n842a_as_q = "strong_buy_consensus"
+            elif _n842a_as_v >= 60: _n842a_as_q = "buy_consensus"
+            elif _n842a_as_v >= 45: _n842a_as_q = "hold_consensus"
+            else:                    _n842a_as_q = "sell_consensus"
+            _nsl_adj += _nde("analyst_sentiment_perf", _n842a_as_q)
+            # N843a: Breakout quality (labels: confirmed_52w_breakout/high_vol_breakout/quiet_breakout/no_breakout)
+            _n843a_52w = bool(d.get("breakout_52w", d.get("near_52w_high", 0) and (d.get("near_52w_high", 0) or 0) >= 0.97))
+            _n843a_vsrg = bool(d.get("vol_surge", d.get("rvol_surge", d.get("rvol", 1))) and (d.get("rvol", 1) or 1) >= 2)
+            _n843a_atbo = bool(d.get("at_breakout", False))
+            if   _n843a_52w and _n843a_vsrg:      _n843a_bq_q = "confirmed_52w_breakout"
+            elif _n843a_atbo and _n843a_vsrg:      _n843a_bq_q = "high_vol_breakout"
+            elif _n843a_atbo and not _n843a_vsrg:  _n843a_bq_q = "quiet_breakout"
+            else:                                   _n843a_bq_q = "no_breakout"
+            _nsl_adj += _nde("breakout_quality_perf", _n843a_bq_q)
+            # N844a: ORB status (labels: orb_gap_hold/orb_only/gap_hold_only/no_orb)
+            _n844a_orb_v = bool(d.get("orb_breakout", d.get("orb_up", False)))
+            _n844a_gah_v = bool(d.get("gap_and_hold", False))
+            if   _n844a_orb_v and _n844a_gah_v: _n844a_orb_q = "orb_gap_hold"
+            elif _n844a_orb_v:                   _n844a_orb_q = "orb_only"
+            elif _n844a_gah_v:                   _n844a_orb_q = "gap_hold_only"
+            else:                                _n844a_orb_q = "no_orb"
+            _nsl_adj += _nde("orb_status_perf", _n844a_orb_q)
+            # N845a: Squeeze status (labels: squeeze_nr7/squeeze_only/nr7_only/no_squeeze)
+            _n845a_ttm_v = bool(d.get("ttm_squeeze", d.get("ttm_squeeze_fired", d.get("in_squeeze", False))))
+            _n845a_nr7_v = bool(d.get("nr7_signal", d.get("nr7", False)))
+            if   _n845a_ttm_v and _n845a_nr7_v: _n845a_sq_q = "squeeze_nr7"
+            elif _n845a_ttm_v:                   _n845a_sq_q = "squeeze_only"
+            elif _n845a_nr7_v:                   _n845a_sq_q = "nr7_only"
+            else:                                _n845a_sq_q = "no_squeeze"
+            _nsl_adj += _nde("squeeze_status_perf", _n845a_sq_q)
+            # N846a: Price level tier (labels: penny_stock/low_price/mid_price/high_price/elite_price)
+            _n846a_px_v = float(d.get("price", 0) or 0)
+            if   _n846a_px_v < 5:    _n846a_pl_q = "penny_stock"
+            elif _n846a_px_v < 20:   _n846a_pl_q = "low_price"
+            elif _n846a_px_v < 100:  _n846a_pl_q = "mid_price"
+            elif _n846a_px_v <= 500: _n846a_pl_q = "high_price"
+            else:                     _n846a_pl_q = "elite_price"
+            _nsl_adj += _nde("price_level_perf", _n846a_pl_q)
+            # N847a: Entry RSI zone (labels: overbought/strong_momentum/neutral_rsi/oversold_bounce/extreme_oversold)
+            _n847a_rsi_v = float(d.get("rsi", 50) or 50)
+            if   _n847a_rsi_v > 75:  _n847a_rz_q = "overbought"
+            elif _n847a_rsi_v >= 60: _n847a_rz_q = "strong_momentum"
+            elif _n847a_rsi_v >= 45: _n847a_rz_q = "neutral_rsi"
+            elif _n847a_rsi_v >= 30: _n847a_rz_q = "oversold_bounce"
+            else:                     _n847a_rz_q = "extreme_oversold"
+            _nsl_adj += _nde("entry_rsi_zone_perf", _n847a_rz_q)
+            # N848a: MACD signal (labels: macd_bull_positive/macd_bull_crossover/macd_histogram_pos/macd_bearish)
+            _n848a_mbull = bool(d.get("macd_bull", d.get("macd_cross", False)))
+            _n848a_mhist = bool(d.get("macd_hist_pos", d.get("macd_positive", (d.get("macd", 0) or 0) > 0)))
+            if   _n848a_mbull and _n848a_mhist: _n848a_ms_q = "macd_bull_positive"
+            elif _n848a_mbull:                   _n848a_ms_q = "macd_bull_crossover"
+            elif _n848a_mhist:                   _n848a_ms_q = "macd_histogram_pos"
+            else:                                _n848a_ms_q = "macd_bearish"
+            _nsl_adj += _nde("macd_signal_perf", _n848a_ms_q)
+            # N849a: Inside bar context (labels: inside_nr7/inside_bar_only/nr7_base/normal_bar)
+            _n849a_ib_v  = bool(d.get("inside_bar", False))
+            _n849a_nr7_v = bool(d.get("nr7_signal", d.get("nr7", False)))
+            if   _n849a_ib_v and _n849a_nr7_v: _n849a_ib_q = "inside_nr7"
+            elif _n849a_ib_v:                   _n849a_ib_q = "inside_bar_only"
+            elif _n849a_nr7_v:                   _n849a_ib_q = "nr7_base"
+            else:                                _n849a_ib_q = "normal_bar"
+            _nsl_adj += _nde("inside_bar_context_perf", _n849a_ib_q)
+            # N851: SPY trend strength (labels: strong_bull_trend/mild_bull_trend/flat_trend/mild_bear_trend/strong_bear_trend)
+            _n851_spy5_v = float(d.get("spy_5d", d.get("spy_chg5d", 0)) or 0)
+            if   _n851_spy5_v > 2:   _n851_st_q = "strong_bull_trend"
+            elif _n851_spy5_v >= 0.5: _n851_st_q = "mild_bull_trend"
+            elif _n851_spy5_v >= -0.5: _n851_st_q = "flat_trend"
+            elif _n851_spy5_v >= -2:  _n851_st_q = "mild_bear_trend"
+            else:                      _n851_st_q = "strong_bear_trend"
+            _nsl_adj += _nde("spy_trend_strength_perf", _n851_st_q)
+            # N852: Sector rotation phase (labels: sector_accelerating/sector_strong/sector_neutral/sector_weak)
+            _n852_srs_v  = float(d.get("sector_rs", d.get("rs_sector", 50)) or 50)
+            _n852_schg_v = float(d.get("sector_chg5d", d.get("sector_momentum", 0)) or 0)
+            if   _n852_srs_v > 65 and _n852_schg_v > 2: _n852_sr_q = "sector_accelerating"
+            elif _n852_srs_v > 55:                        _n852_sr_q = "sector_strong"
+            elif _n852_srs_v >= 45:                       _n852_sr_q = "sector_neutral"
+            else:                                          _n852_sr_q = "sector_weak"
+            _nsl_adj += _nde("sector_rotation_perf", _n852_sr_q)
+            # N853: Pre-market gap size (labels: large_pm_gap/moderate_pm_gap/small_pm_gap/flat_pm/pm_gapdown)
+            _n853_pm_v = float(d.get("premarket_gap_pct", d.get("pm_gap_pct", d.get("gap_pct", 0))) or 0)
+            if   _n853_pm_v > 5:    _n853_pm_q = "large_pm_gap"
+            elif _n853_pm_v >= 2:   _n853_pm_q = "moderate_pm_gap"
+            elif _n853_pm_v >= 0.5: _n853_pm_q = "small_pm_gap"
+            elif _n853_pm_v >= -0.5: _n853_pm_q = "flat_pm"
+            else:                    _n853_pm_q = "pm_gapdown"
+            _nsl_adj += _nde("pre_market_gap_perf", _n853_pm_q)
+            # N854: Relative strength tier (labels: elite_rs/strong_rs/above_avg_rs/avg_rs/weak_rs)
+            _n854_rs_v = float(d.get("rs_rating", d.get("rs5", 0)) or 0)
+            if   _n854_rs_v > 90:  _n854_rs_q = "elite_rs"
+            elif _n854_rs_v >= 75: _n854_rs_q = "strong_rs"
+            elif _n854_rs_v >= 60: _n854_rs_q = "above_avg_rs"
+            elif _n854_rs_v >= 40: _n854_rs_q = "avg_rs"
+            else:                   _n854_rs_q = "weak_rs"
+            _nsl_adj += _nde("relative_strength_tier_perf", _n854_rs_q)
+            # N856: Catalyst strength (labels: strong_catalyst/moderate_catalyst/weak_catalyst/no_catalyst)
+            _n856_sent_v = float(d.get("sent", d.get("sentiment_score", d.get("ai_score", 5))) or 5)
+            _n856_cat_v  = bool(d.get("catalyst", "") or d.get("news_catalyst", False))
+            if   _n856_sent_v > 7.5 and _n856_cat_v: _n856_cs_q = "strong_catalyst"
+            elif _n856_sent_v > 5.5 and _n856_cat_v: _n856_cs_q = "moderate_catalyst"
+            elif _n856_sent_v > 3 and _n856_cat_v:   _n856_cs_q = "weak_catalyst"
+            else:                                       _n856_cs_q = "no_catalyst"
+            _nsl_adj += _nde("catalyst_strength_perf", _n856_cs_q)
+            # N859: Trend template score tier (labels: perfect_trend/strong_trend/decent_trend/weak_trend/no_trend)
+            _n859_tt_v = int(d.get("trend_template", 0) or 0)
+            if   _n859_tt_v >= 8: _n859_tt_q = "perfect_trend"
+            elif _n859_tt_v >= 6: _n859_tt_q = "strong_trend"
+            elif _n859_tt_v >= 4: _n859_tt_q = "decent_trend"
+            elif _n859_tt_v >= 2: _n859_tt_q = "weak_trend"
+            else:                  _n859_tt_q = "no_trend"
+            _nsl_adj += _nde("trend_template_score_perf", _n859_tt_q)
+            # N860: Score momentum/persistence (labels: persistent_strength/building_strength/new_signal/fading_signal)
+            _n860_pc_v = int(d.get("persist_count", d.get("consecutive_strong_scans", 0)) or 0)
+            if   _n860_pc_v >= 4: _n860_sm_q = "persistent_strength"
+            elif _n860_pc_v >= 2: _n860_sm_q = "building_strength"
+            elif _n860_pc_v == 1: _n860_sm_q = "new_signal"
+            else:                  _n860_sm_q = "fading_signal"
+            _nsl_adj += _nde("score_momentum_perf", _n860_sm_q)
+            # N862: Price action quality (labels: strong_move_high_vol/breakout_move/fade_move/low_vol_drift/normal_action)
+            _n862_chg_v = float(d.get("change_pct", d.get("chg1d", 0)) or 0)
+            _n862_vol_v = float(d.get("vol_ratio", d.get("rvol", 1)) or 1)
+            if   abs(_n862_chg_v) > 3 and _n862_vol_v > 1.5:  _n862_pa_q = "strong_move_high_vol"
+            elif _n862_chg_v > 1.5 and _n862_vol_v > 1.2:     _n862_pa_q = "breakout_move"
+            elif _n862_chg_v < -1.5 and _n862_vol_v > 1.2:    _n862_pa_q = "fade_move"
+            elif _n862_vol_v < 0.8:                             _n862_pa_q = "low_vol_drift"
+            else:                                               _n862_pa_q = "normal_action"
+            _nsl_adj += _nde("price_action_quality_perf", _n862_pa_q)
+            # N864: VCP quality (labels: perfect_vcp/vcp_squeeze/vcp_only/no_vcp)
+            _n864_vcp_v = bool(d.get("vcp", False))
+            _n864_ib_v  = bool(d.get("inside_bar", False))
+            _n864_nr7_v = bool(d.get("nr7_signal", d.get("nr7", False)))
+            if   _n864_vcp_v and _n864_ib_v and _n864_nr7_v: _n864_vq_q = "perfect_vcp"
+            elif _n864_vcp_v and (_n864_ib_v or _n864_nr7_v): _n864_vq_q = "vcp_squeeze"
+            elif _n864_vcp_v:                                   _n864_vq_q = "vcp_only"
+            else:                                               _n864_vq_q = "no_vcp"
+            _nsl_adj += _nde("vcp_quality_perf", _n864_vq_q)
+            # N865: Sector ETF alignment (labels: sector_surging/sector_advancing/sector_flat/sector_declining/sector_crashing)
+            _n865_secs_v = float(d.get("sector_chg5d", d.get("sector_momentum", 0)) or 0)
+            if   _n865_secs_v > 3:   _n865_sea_q = "sector_surging"
+            elif _n865_secs_v > 1:   _n865_sea_q = "sector_advancing"
+            elif _n865_secs_v >= -1: _n865_sea_q = "sector_flat"
+            elif _n865_secs_v >= -3: _n865_sea_q = "sector_declining"
+            else:                     _n865_sea_q = "sector_crashing"
+            _nsl_adj += _nde("sector_etf_alignment_perf", _n865_sea_q)
+            # N867: News coverage volume (labels: heavy_coverage/moderate_coverage/light_coverage/no_news)
+            _n867_nc_v = int(d.get("news_count_24h", d.get("news_count", d.get("news_items", 0))) or 0)
+            if   _n867_nc_v >= 5: _n867_nv_q = "heavy_coverage"
+            elif _n867_nc_v >= 3: _n867_nv_q = "moderate_coverage"
+            elif _n867_nc_v >= 1: _n867_nv_q = "light_coverage"
+            else:                  _n867_nv_q = "no_news"
+            _nsl_adj += _nde("news_volume_perf", _n867_nv_q)
+            # N868: Technical setup combo (labels: elite_setup/strong_setup/decent_setup/weak_setup/no_setup)
+            _n868_flags = ("at_breakout", "vwap_reclaim", "ema21_pullback", "ttm_squeeze_fired", "pocket_pivot")
+            _n868_cnt_v = sum(1 for _k in _n868_flags if d.get(_k))
+            if   _n868_cnt_v >= 4: _n868_ts_q = "elite_setup"
+            elif _n868_cnt_v >= 3: _n868_ts_q = "strong_setup"
+            elif _n868_cnt_v >= 2: _n868_ts_q = "decent_setup"
+            elif _n868_cnt_v >= 1: _n868_ts_q = "weak_setup"
+            else:                   _n868_ts_q = "no_setup"
+            _nsl_adj += _nde("technical_setup_combo_perf", _n868_ts_q)
+            # N869: Risk/reward at entry (labels: excellent_rr/good_rr/acceptable_rr/poor_rr/bad_rr)
+            _n869_rr_v = float(d.get("rr", d.get("risk_reward", d.get("rr_ratio", 0))) or 0)
+            if   _n869_rr_v >= 3.0: _n869_rr_q = "excellent_rr"
+            elif _n869_rr_v >= 2.0: _n869_rr_q = "good_rr"
+            elif _n869_rr_v >= 1.5: _n869_rr_q = "acceptable_rr"
+            elif _n869_rr_v >= 1.0: _n869_rr_q = "poor_rr"
+            else:                    _n869_rr_q = "bad_rr"
+            _nsl_adj += _nde("risk_reward_at_entry_perf", _n869_rr_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
