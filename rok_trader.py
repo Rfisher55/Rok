@@ -29254,8 +29254,10 @@ def run():
                 # KC zone breakout: 64% WR n=22
                 _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — dead bonus removed (penalty already above)
-                # Consec green entry "no_streak": 21.4% WR n=28 — no prior green days = very bad
-                _cge_state_lb = str(_tk_sig_sc.get("consec_green_entry_perf", "") or "")
+                # Consec green entry "no_streak": 21.4% WR n=28 — compute directly (injection after this block)
+                _cg_for_entry = int(_tk_sig_sc.get("consec_green", _tk_sig_sc.get("consecutive_green_days", 0)) or 0)
+                _cge_state_lb = ("4plus_green" if _cg_for_entry >= 4 else "3_green" if _cg_for_entry == 3
+                                 else "2_green" if _cg_for_entry == 2 else "1_green" if _cg_for_entry == 1 else "no_streak")
                 if _cge_state_lb == "no_streak":
                     _learned_bonus += _npen("consec_green_entry_perf", "no_streak", 25, -6)  # 21.4% WR n=28
                 # Consecutive green days: 0d=43.6% WR n=39 penalty; 4d+=60% WR n=5 bonus
@@ -29321,8 +29323,18 @@ def run():
                     _learned_bonus += _npen("breakout_age_perf", "day4_7", 47, -1)  # 45.8% WR n=72
                 elif _bkage_dsb_lb > 7:
                     _learned_bonus += _npen("breakout_age_perf", "extended", 47, -1)  # stale breakout
-                # Sector ETF momentum: sector in uptrend vs lagging
-                _sec_etf_lb = str(_tk_sig_sc.get("sector_etf_momentum_perf", "sector_inline") or "sector_inline")
+                # Sector ETF momentum: compute directly (injection runs after this block)
+                try:
+                    _sec_etf_sec = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other")
+                    _sec_etf_data = tlog.get("sector_etf_trends", {}).get(_sec_etf_sec, {})
+                    _sec_etf_1d = float(_sec_etf_data.get("chg1d", 0) or 0)
+                    _sec_etf_5d = float(_sec_etf_data.get("chg5d", 0) or 0)
+                    _sec_etf_lb = ("sector_leading" if _sec_etf_1d > 0.5 and _sec_etf_5d > 1.0
+                                   else "sector_lagging" if _sec_etf_1d < -0.3 and _sec_etf_5d < 0
+                                   else "sector_flat" if abs(_sec_etf_1d) < 0.1
+                                   else "sector_inline")
+                except Exception:
+                    _sec_etf_lb = "sector_inline"
                 if _sec_etf_lb == "sector_leading":
                     _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_leading", 60, 1)
                 elif _sec_etf_lb == "sector_flat":
