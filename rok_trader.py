@@ -26899,6 +26899,10 @@ def run():
                         _n41_thresh = max(10.0, min(25.0, _n41_thresh))
                         if _n41_decay >= _n41_thresh and pnl_pct > 1.0:
                             reason = f"score decay exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
+                        # Early loss protection: thesis broken (score fell hard) + position losing
+                        elif (_n41_decay >= 25 and pnl_pct <= -0.5 and age_minutes >= 10
+                              and not reason):
+                            reason = f"thesis broken exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
                 except Exception:
                     pass
             # ── Volume decay exit: setup failed if rvol has collapsed for 2+ consecutive scans ──
@@ -28587,6 +28591,10 @@ def run():
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 83% WR
+                elif _intra_mom_bkt_lb == "runner":
+                    _learned_bonus += _nbns("intraday_mom_perf", "runner", 62, 1)   # ~65% WR
+                elif _intra_mom_bkt_lb == "early":
+                    _learned_bonus += _npen("intraday_mom_perf", "early", 38, -1)   # flat momentum
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
                 _grade_lb = momentum_grade(_tk_sig_sc, tech_sc)
                 if _grade_lb == "F":
@@ -28771,6 +28779,72 @@ def run():
                     _learned_bonus += _npen("consec_green_perf", "0d", 25, -1)
                 elif _cg_lb >= 3:
                     _learned_bonus += _nbns("consec_green_perf", "3d+", 60, 1)
+                # Vol dry-up (Wyckoff compression): dry_up state = tight range before breakout
+                if bool(_tk_sig_sc.get("vol_dry_up", False)):
+                    _learned_bonus += _nbns("vol_dry_perf", "dry_up", 62, 2)  # clean compression
+                # Stochastic zone: overbought continuation vs oversold caution
+                _sk_lb = float(_tk_sig_sc.get("stoch_k", 50) or 50)
+                _sk_zone_lb = ("overbought" if _sk_lb > 80 else "oversold" if _sk_lb < 20 else "neutral")
+                if _sk_zone_lb == "overbought":
+                    _learned_bonus += _nbns("stoch_zone_perf", "overbought", 62, 1)  # momentum continuation
+                elif _sk_zone_lb == "oversold":
+                    _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)   # reversal risk in trend sys
+                # LR quality (R²): strong trend fit vs choppy
+                _lr2_lb = float(_tk_sig_sc.get("lr_r2", 0) or 0)
+                _lr_q_lb = ("strong" if _lr2_lb >= 0.85 else "moderate" if _lr2_lb >= 0.6 else "weak")
+                if _lr_q_lb == "strong":
+                    _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # clean trend = high WR
+                elif _lr_q_lb == "weak":
+                    _learned_bonus += _npen("lr_quality_perf", "weak", 38, -1)     # choppy = lower WR
+                # Donchian zone: near top of range (breakout) vs weakness
+                _dc_lb = float(_tk_sig_sc.get("donchian_pct", 50) or 50)
+                _dc_zone_lb = ("breakout" if _dc_lb >= 75 else "weakness" if _dc_lb < 25 else "middle")
+                if _dc_zone_lb == "breakout":
+                    _learned_bonus += _nbns("donchian_perf", "breakout", 62, 1)    # price near top: bullish
+                elif _dc_zone_lb == "weakness":
+                    _learned_bonus += _npen("donchian_perf", "weakness", 38, -1)   # price near bottom: avoid
+                # Score trend: rising scores = improving setup momentum
+                _sc_trend_lb = str(_tk_sig_sc.get("score_trend", "flat") or "flat")
+                if _sc_trend_lb == "rising":
+                    _learned_bonus += _nbns("score_trend_perf", "rising", 60, 1)   # improving conviction
+                elif _sc_trend_lb == "falling":
+                    _learned_bonus += _npen("score_trend_perf", "falling", 40, -1) # weakening setup
+                # Sector ETF momentum: sector in uptrend vs lagging
+                _sec_etf_lb = str(_tk_sig_sc.get("sector_etf_momentum_perf", "sector_inline") or "sector_inline")
+                if _sec_etf_lb == "sector_leading":
+                    _learned_bonus += _nbns("sector_etf_momentum_perf", "sector_leading", 60, 1)
+                elif _sec_etf_lb == "sector_lagging":
+                    _learned_bonus += _npen("sector_etf_momentum_perf", "sector_lagging", 40, -2)
+                # ROC acceleration: both roc5 and roc20 positive AND roc5 > roc20 = momentum build
+                _roc5_acc = float(_tk_sig_sc.get("roc5", 0) or 0)
+                _roc20_acc = float(_tk_sig_sc.get("roc20", 0) or 0)
+                if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
+                    _learned_bonus += _nbns("roc_perf", "accelerating", 62, 1)  # momentum building
+                elif _roc5_acc <= 0 and _roc20_acc <= 0:
+                    _learned_bonus += _npen("roc_perf", "negative", 35, -1)     # both negative: avoid
+                # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
+                _rs5_acc = float(_tk_sig_sc.get("rs5", 0) or 0)
+                _rs63_acc = float(_tk_sig_sc.get("rs63", 0) or 0)
+                if _rs5_acc > 1.0 and _rs63_acc > 1.0:
+                    _learned_bonus += _nbns("rs_mom_perf", "leading", 62, 1)    # both outperforming
+                elif _rs5_acc <= 0 and _rs63_acc <= 0:
+                    _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -1)   # both lagging
+                # Signal freshness: just appeared on scanner = early entry advantage
+                _persist_lb = int(_tk_sig_sc.get("persist_count", _tk_sig_sc.get("consecutive_strong_scans", 0)) or 0)
+                _fresh_lb = ("fresh_signal" if _persist_lb <= 1 else "building_signal" if _persist_lb <= 3
+                             else "stale_signal" if _persist_lb <= 6 else "very_stale_signal")
+                if _fresh_lb == "fresh_signal":
+                    _learned_bonus += _nbns("signal_freshness_perf", "fresh_signal", 62, 1)
+                elif _fresh_lb in ("stale_signal", "very_stale_signal"):
+                    _learned_bonus += _npen("signal_freshness_perf", _fresh_lb, 38, -1)
+                # Pre-market gap: small gap-up = bullish setup; gap down = caution
+                _pmgap_lb = float(_tk_sig_sc.get("pm_gap_pct", 0) or 0)
+                _pmgap_bkt_lb = ("big_up" if _pmgap_lb > 3 else "small_up" if _pmgap_lb > 0.5
+                                 else "big_down" if _pmgap_lb < -3 else "small_down" if _pmgap_lb < -0.5 else "flat")
+                if _pmgap_bkt_lb == "small_up":
+                    _learned_bonus += _nbns("pm_gap_perf", "small_up", 60, 1)   # mild gap up: bullish
+                elif _pmgap_bkt_lb in ("small_down", "big_down"):
+                    _learned_bonus += _npen("pm_gap_perf", _pmgap_bkt_lb, 40, -1)  # gap down: caution
                 _learned_bonus = max(-10, min(18, _learned_bonus))
             except Exception:
                 _learned_bonus = 0
