@@ -20,11 +20,12 @@ on:
 
 permissions:
   contents: write
+  actions: write   # needed for self-dispatch (workflow_dispatch)
 
 jobs:
   trade:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 12
 
     steps:
       - name: Checkout main
@@ -100,3 +101,13 @@ jobs:
             done
             git diff --staged --quiet || git commit --amend --no-edit
           done || echo "WARNING: push failed after 6 attempts"
+
+      - name: Trigger next run (self-sustain — keeps bot running continuously)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Dispatch next run immediately after this one completes.
+          # Natural GitHub queue delay (~30-60s) + bot run time (~2 min) = ~3-5 min intervals.
+          # This replaces broken cron schedule: keeps bot alive market hours + crypto 24/7.
+          gh workflow run auto_trade.yml --ref main || echo "Self-dispatch queued or already running"
