@@ -23537,6 +23537,30 @@ def score(tk, d, sentiment=0, regime_adj=0):
             else:                    _n818_brd_q = "poor_breadth"
             _nsl_adj += _nde("breadth_alignment_perf", _n818_brd_q)
 
+            # N556: Revenue growth rate (labels: strong_revenue_growth/moderate_revenue/weak_revenue)
+            _n556_rev_v = float(d.get("revenue_growth_pct", d.get("rev_growth", 0)) or 0)
+            if   _n556_rev_v > 20.0: _n556_rg_q = "strong_revenue_growth"
+            elif _n556_rev_v >= 5.0: _n556_rg_q = "moderate_revenue"
+            else:                     _n556_rg_q = "weak_revenue"
+            _nsl_adj += _nde("revenue_growth_rate_perf", _n556_rg_q)
+
+            # N819: Entry vs EMA50 (labels: extended_above_ema/above_ema/near_ema/below_ema)
+            _n819_pve_v = float(d.get("price_vs_ema50", 0) or 0)
+            if   _n819_pve_v > 15:  _n819_ema_q = "extended_above_ema"
+            elif _n819_pve_v >= 3:  _n819_ema_q = "above_ema"
+            elif _n819_pve_v >= -3: _n819_ema_q = "near_ema"
+            else:                    _n819_ema_q = "below_ema"
+            _nsl_adj += _nde("entry_vs_ema_perf", _n819_ema_q)
+
+            # N820: Daily PnL context (labels: hot_day/mixed_day/losing_day/neutral_day)
+            _n820_wins_v   = int(d.get("intraday_wins", 0) or 0)
+            _n820_losses_v = int(d.get("intraday_losses", 0) or 0)
+            if   _n820_wins_v >= 2 and _n820_losses_v == 0: _n820_dpnl_q = "hot_day"
+            elif _n820_wins_v > 0 and _n820_losses_v > 0:   _n820_dpnl_q = "mixed_day"
+            elif _n820_losses_v >= 2 and _n820_wins_v == 0: _n820_dpnl_q = "losing_day"
+            else:                                             _n820_dpnl_q = "neutral_day"
+            _nsl_adj += _nde("daily_pnl_context_perf", _n820_dpnl_q)
+
             # Cap the full neural layer at ±25 (raised from 20 to match expanded neuron set)
             s += max(-25, min(25, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
             _nsl_adj = 0.0  # reset so old cap below is a no-op
@@ -27452,7 +27476,11 @@ def run():
                 live[tk]["vwap"]   = live[tk].get("vwap_price", 0)       # vwap price level
                 live[tk]["week_chg"] = live[tk].get("roc5", 0)           # week change proxy
                 live[tk]["vix"]    = float((tlog.get("regime") or {}).get("vix", 20) or 20)
-                live[tk]["vcp_breakout"] = bool(live[tk].get("vcp", False))  # alias of vcp
+                live[tk]["vcp_breakout"]     = bool(live[tk].get("vcp", False))  # alias of vcp
+                try: live[tk]["intraday_wins"]   = int(_today_wins_run)
+                except Exception: live[tk]["intraday_wins"]   = int(tlog.get("intraday_wins", 0))
+                try: live[tk]["intraday_losses"] = int(_today_losses_run)
+                except Exception: live[tk]["intraday_losses"] = int(tlog.get("intraday_losses", 0))
                 # sector_etf_1d and sector_day_pct from sector trends
                 live[tk]["sector_etf_1d"]  = live[tk].get("sector_chg1d", 0)
                 live[tk]["sector_day_pct"] = live[tk].get("sector_chg1d", 0)
