@@ -28706,31 +28706,42 @@ def run():
                 elif _sig_cnt_lb >= 2:
                     _learned_bonus += _nbns("signal_density_perf", "good", 58, 1)    # estimate good WR
                 # ── CRITICAL PROVEN-LOSER PENALTIES (data-driven hard guards) ─────────
-                # These states have 11-22% WR in actual trade data — must penalize heavily
-                _accum_sc_lb = int(_tk_sig_sc.get("accum_score", 0) or 0)
-                _accum_bkt_lb = ("heavy" if _accum_sc_lb >= 8 else "moderate" if _accum_sc_lb >= 5 else "light" if _accum_sc_lb >= 2 else "none")
+                # IMPORTANT: only penalize when signal is PRESENT and CONFIRMED bad.
+                # Missing/absent signals (accum_score=None, adx=None) must NOT trigger penalty.
+                _accum_sc_raw = _tk_sig_sc.get("accum_score")  # None = absent
+                _accum_sc_lb = int(_accum_sc_raw or 0) if _accum_sc_raw is not None else None
+                _accum_bkt_lb = ("heavy" if _accum_sc_lb and _accum_sc_lb >= 8
+                                  else "moderate" if _accum_sc_lb and _accum_sc_lb >= 5
+                                  else "light" if _accum_sc_lb and _accum_sc_lb >= 2
+                                  else "none" if _accum_sc_lb is not None  # explicitly 0
+                                  else "unknown")  # signal absent → neutral
                 if _accum_bkt_lb == "none":
-                    _learned_bonus += _npen("accum_perf", "none", 20, -8)  # 11% WR: severe penalty
+                    _learned_bonus += _npen("accum_perf", "none", 20, -8)  # 11% WR: severe (explicitly 0)
                 elif _accum_bkt_lb == "light":
-                    _learned_bonus += _nbns("accum_perf", "light", 60, 2)  # 69.7% WR n=33 — common + reliable
+                    _learned_bonus += _nbns("accum_perf", "light", 60, 2)  # 69.7% WR n=33 — reliable
                 elif _accum_bkt_lb in ("moderate", "heavy"):
-                    _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # moderate=100% WR, heavy=strong
-                    _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)     # separate heavy bonus
-                # Combo trap: light accum + falling OBV = distribution into retail strength
+                    _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # moderate=100% WR
+                    _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
+                # Combo trap: light accum + falling OBV = distribution
                 _obv_now_lb = str(_tk_sig_sc.get("obv_trend", _tk_sig_sc.get("obv_direction", "")) or "")
                 if _accum_bkt_lb == "light" and _obv_now_lb == "falling":
-                    _learned_bonus += -2  # institutions selling while price still rising
-                _adx_lb = float(_tk_sig_sc.get("adx", 20) or 20)
-                _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb > 20 else "weak")
-                if _adx_bkt_lb == "weak":
-                    _learned_bonus += _npen("adx_perf", "weak", 20, -8)    # 12% WR: block-level penalty
-                elif _adx_bkt_lb == "developing":
-                    _learned_bonus += _nbns("adx_perf", "developing", 60, 3)  # 80% WR: solid bonus
-                elif _adx_bkt_lb == "strong":
-                    _learned_bonus += _nbns("adx_perf", "strong", 60, 2)   # 65% WR n=23: solid bonus
-                _cat_type_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
-                if not _cat_type_lb or "none" in _cat_type_lb:
-                    _learned_bonus += _npen("catalyst_type_perf", "none", 20, -6)  # 12% WR: harsh penalty
+                    _learned_bonus += -2
+                _adx_raw = _tk_sig_sc.get("adx")  # None = absent
+                _adx_lb = float(_adx_raw) if _adx_raw is not None else None
+                if _adx_lb is not None:
+                    _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb >= 20 else "weak")
+                    if _adx_bkt_lb == "weak":
+                        _learned_bonus += _npen("adx_perf", "weak", 20, -8)    # 12% WR: block-level
+                    elif _adx_bkt_lb == "developing":
+                        _learned_bonus += _nbns("adx_perf", "developing", 60, 3)  # 80% WR
+                    elif _adx_bkt_lb == "strong":
+                        _learned_bonus += _nbns("adx_perf", "strong", 60, 2)   # 65% WR n=23
+                # else: adx absent → no bonus/penalty (neutral)
+                _cat_type_raw = _tk_sig_sc.get("catalyst_type")
+                _cat_type_lb = str(_cat_type_raw or "")
+                if _cat_type_raw is not None and ("none" in _cat_type_lb or _cat_type_lb == ""):
+                    # Only penalize when catalyst_type is explicitly "none" (not merely absent from signals)
+                    _learned_bonus += _npen("catalyst_type_perf", "none", 20, -6)  # 12% WR: harsh
                 _bb_pos_lb = float(_tk_sig_sc.get("bb_pctb", _tk_sig_sc.get("bb_percent_b", 0.5)) or 0.5)
                 if _bb_pos_lb > 0.85:
                     _learned_bonus += _nbns("bb_zone_perf", "upper", 60, 2)   # 83% WR at upper band
