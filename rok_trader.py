@@ -21508,12 +21508,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif rs_sector < -10: s -= 6   # laggard even vs weak sector — avoid
     elif rs_sector <  -5: s -= 3
 
-    # IBD RS Rating (1-99): 12-month composite rank vs market (+12/-8)
-    # Stocks with RS≥90 have historically led the market; RS<40 = chronic underperformers
-    if   rs_rating >= 90: s += 12   # IBD elite: top 10% RS stocks produce the biggest winners
-    elif rs_rating >= 80: s +=  8   # strong leader — institutional focus
-    elif rs_rating >= 70: s +=  4   # above average — worth watching
-    elif rs_rating >= 60: s +=  2   # mild edge
+    # IBD RS Rating (1-99): 12-month composite rank vs market
+    # Wave 86 calibration: live data shows RS 60-79 = 23%WR (bad) — removed stale bonuses
+    if   rs_rating >= 90: s += 12   # IBD elite: top 10% RS stocks — 65%WR confirmed ✓
+    elif rs_rating >= 80: s +=  4   # was +8; 40%WR live (Wave 86: reduced — high_rs still weak)
+    # RS 60-79: 23%WR live → was +4/+2 but those were wrong; now no bonus (Wave 86)
     elif rs_rating <= 30: s -=  8   # chronic underperformer — avoid longs
     elif rs_rating <= 40: s -=  4   # below-average RS — weak relative performance
 
