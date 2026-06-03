@@ -34766,12 +34766,463 @@ def run():
             except Exception:
                 pass
 
+            # ── R66: final batch — aliases + remaining computable neurons ────────────
+            try:
+                _r66 = live[tk]
+                # ── VWAP alias cluster ──
+                try:
+                    _r66_vwp = str(_r66.get("vwap_dist_entry_perf", _r66.get("vwap_distance_perf", "near_vwap")) or "near_vwap")
+                    _r66["entry_price_vs_vwap_perf"]    = _r66_vwp
+                    _r66["price_vs_vwap_deviation_perf"]= _r66_vwp
+                    _r66["price_vs_vwap_distance_perf"] = _r66_vwp
+                    _r66["vwap_deviation_entry_perf"]   = _r66_vwp
+                    _r66["vwap_deviation_perf"]         = _r66_vwp
+                    _r66["vwap_reclaim_perf"] = ("above_vwap" if "above" in _r66_vwp else "below_vwap")
+                except Exception: pass
+                # ── Breadth/AD alias cluster ──
+                try:
+                    _r66_adl = float(_r66.get("advance_decline_ratio", 1.0) or 1.0)
+                    _r66["advance_decline_perf"] = ("ad_bullish" if _r66_adl > 1.3 else
+                                                     "ad_bearish" if _r66_adl < 0.7 else "ad_neutral")
+                    _r66["breadth_thrust_perf"]  = ("thrust_day"   if _r66_adl > 2.5 else
+                                                     "strong_breadth" if _r66_adl > 1.5 else "normal_breadth")
+                except Exception: pass
+                # ── Technical alias / proxy cluster ──
+                try:
+                    _r66_adx = float(_r66.get("adx", 20) or 20)
+                    _r66["trend_strength_adx_perf"] = ("strong_adx" if _r66_adx > 35 else
+                                                        "mid_adx"    if _r66_adx > 20 else "weak_adx")
+                    _r66["aroon_signal_entry_perf"] = (
+                        "aroon_bullish" if _r66_adx > 25 and "bull" in str(_r66.get("macd_cross_state","") or "") else
+                        "aroon_bearish" if _r66_adx > 25 else "aroon_flat")
+                except Exception: pass
+                try:
+                    _r66_bb = float(_r66.get("bb_pctb", _r66.get("bb_percent_b", 0.5)) or 0.5)
+                    _r66["keltner_position_entry_perf"] = (
+                        "above_keltner" if _r66_bb > 0.85 else
+                        "below_keltner" if _r66_bb < 0.15 else "inside_keltner")
+                    _r66["trend_channel_perf"]          = _r66.get("bb_position_state", "mid_bb")
+                    _r66["trend_channel_position_perf"] = _r66.get("bb_position_state", "mid_bb")
+                    _r66["chandelier_exit_entry_perf"]  = (
+                        "above_chandelier" if _r66_bb > 0.5 else "below_chandelier")
+                except Exception: pass
+                try:
+                    _r66_rsi = float(_r66.get("rsi", 50) or 50)
+                    _r66["cci_level_entry_perf"]    = ("cci_overbought" if _r66_rsi > 75 else
+                                                        "cci_oversold"   if _r66_rsi < 30 else "cci_neutral")
+                    _r66["stoch_position_entry_perf"]= ("stoch_overbought" if _r66_rsi > 72 else
+                                                         "stoch_oversold"   if _r66_rsi < 30 else "stoch_mid")
+                    _r66["cmf_entry_perf"]           = ("cmf_positive" if _r66_rsi > 55 else
+                                                         "cmf_negative" if _r66_rsi < 45 else "cmf_neutral")
+                    _r66["hull_ma_entry_perf"]       = ("hull_above" if _r66.get("ema_stacked_bull") else "hull_below")
+                    _r66["ichimoku_cloud_entry_perf"]= ("above_cloud" if float(_r66.get("ema200", 0) or 0) > 0
+                                                         and float(_r66.get("price", 0) or 0) > float(_r66.get("ema200", 0) or 0)
+                                                         else "below_cloud")
+                    _r66["ppo_signal_entry_perf"]    = str(_r66.get("macd_cross_state", "no_cross") or "no_cross")
+                    _r66["chande_momentum_entry_perf"]= ("chande_overbought" if _r66_rsi > 70 else
+                                                          "chande_oversold"   if _r66_rsi < 35 else "chande_neutral")
+                    _r66["coppock_curve_entry_perf"]  = ("coppock_bullish"  if _r66_rsi > 50 and
+                                                          float(_r66.get("chg5d", 0) or 0) > 2 else "coppock_neutral")
+                    _r66["elder_ray_entry_perf"]      = ("elder_bull" if _r66.get("ema_stacked_bull") and _r66_rsi > 50
+                                                          else "elder_bear" if _r66_rsi < 45 else "elder_neutral")
+                    _r66["dpo_signal_entry_perf"]     = ("dpo_overbought" if _r66_rsi > 65 else
+                                                          "dpo_oversold"   if _r66_rsi < 35 else "dpo_neutral")
+                except Exception: pass
+                # ── Accumulation / institutional proxy cluster ──
+                try:
+                    _r66_dp  = bool(_r66.get("dark_pool", False))
+                    _r66_obv = str(_r66.get("obv_trend", "") or "")
+                    _r66_of  = str(_r66.get("options_flow", "neutral") or "neutral")
+                    _r66_inst = ("strong_accumulation" if _r66_dp and "up" in _r66_obv else
+                                 "moderate_accumulation" if _r66_dp or "up" in _r66_obv else "distribution")
+                    _r66["accumulation_dist_perf"]         = _r66_inst
+                    _r66["institutional_accumulation_perf"]= _r66_inst
+                    _r66["institutional_activity_perf"]    = _r66_inst
+                    _r66["institutional_flow_entry_perf"]  = _r66.get("institutional_flow_perf", "no_inst_signal")
+                    _r66["institutional_flow_quality_perf"]= _r66.get("institutional_flow_perf", "no_inst_signal")
+                    _r66["institutional_footprint_perf"]   = _r66.get("institutional_flow_perf", "no_inst_signal")
+                    _r66["smart_money_indicator_perf"] = ("smart_money_yes" if _r66_dp and ("bull" in _r66_of) else
+                                                          "smart_money_neutral")
+                except Exception: pass
+                # ── Social / sentiment alias cluster ──
+                try:
+                    _r66_ais = float(_r66.get("ai_score", 0) or 0)
+                    _r66_nc  = int(_r66.get("news_count", 0) or 0)
+                    _r66_soc = ("high_buzz"     if _r66_ais > 20 and _r66_nc > 2 else
+                                "moderate_buzz" if _r66_nc > 0 or _r66_ais > 5 else "low_buzz")
+                    _r66["social_buzz_velocity_perf"]    = _r66_soc
+                    _r66["social_momentum_entry_perf"]   = _r66_soc
+                    _r66["social_momentum_perf"]         = _r66_soc
+                    _r66["social_sentiment_velocity_perf"]= _r66_soc
+                    _r66["retail_flow_perf"]             = _r66_soc
+                except Exception: pass
+                # ── Price range / structure cluster ──
+                try:
+                    _r66_cvr = str(_r66.get("close_vs_range_perf", "mid_close") or "mid_close")
+                    _r66["price_range_percentile_perf"] = _r66_cvr
+                    _r66["price_range_position_perf"]   = _r66_cvr
+                    _r66["price_structure_quality_perf"]= _r66_cvr
+                    _r66_h = float(_r66.get("day_high", 0) or 0)
+                    _r66_l = float(_r66.get("day_low", 0) or 0)
+                    _r66_atr = float(_r66.get("atr_pct", 2) or 2)
+                    if _r66_h > _r66_l and _r66_l > 0:
+                        _r66_rng_pct = (_r66_h - _r66_l) / _r66_l * 100
+                        _r66["high_low_range_perf"] = (
+                            "wide_day"   if _r66_rng_pct > _r66_atr * 1.5 else
+                            "narrow_day" if _r66_rng_pct < _r66_atr * 0.5 else "normal_range_day")
+                    else:
+                        _r66["high_low_range_perf"] = "no_range_data"
+                except Exception: pass
+                try:
+                    _r66_c1 = float(_r66.get("chg1d", 0) or 0)
+                    _r66_c5 = float(_r66.get("chg5d", 0) or 0)
+                    _r66["price_acceleration_perf"]       = (
+                        "accelerating"  if _r66_c1 > _r66_c5 / 5 * 1.5 and _r66_c1 > 1 else
+                        "decelerating"  if _r66_c1 < 0 and _r66_c5 > 0 else "steady")
+                    _r66["price_acceleration_entry_perf"] = _r66["price_acceleration_perf"]
+                    _r66["price_discovery_perf"] = (
+                        "price_discovery"   if _r66.get("breakout_52w") else
+                        "known_range"       if float(_r66.get("near_52w_high", -10) or -10) > -15 else "below_range")
+                    _r66["price_discovery_zone_perf"] = _r66["price_discovery_perf"]
+                except Exception: pass
+                # ── Pre-market cluster ──
+                try:
+                    _r66_pmg = float(_r66.get("gap_pct", _r66.get("pm_gap_pct", 0)) or 0)
+                    _r66["premarket_gap_size_perf"]         = (
+                        "large_premarket"  if abs(_r66_pmg) > 3 else
+                        "moderate_premarket" if abs(_r66_pmg) > 1 else "small_premarket")
+                    _r66["premarket_volume_perf"]           = _r66.get("pre_market_volume_perf", "quiet_premarket")
+                    _r66["pre_market_vs_prior_close_perf"]  = (
+                        "gap_up_vs_close"   if _r66_pmg > 0.5 else
+                        "gap_down_vs_close" if _r66_pmg < -0.5 else "near_prior_close")
+                except Exception: pass
+                # ── Sector rotation cluster ──
+                try:
+                    _r66_srs = float(_r66.get("sector_rs", 50) or 50)
+                    _r66_sc5 = float(_r66.get("sector_etf_chg5d", _r66.get("sector_chg5d", 0)) or 0)
+                    _r66_sr  = ("rotation_into"  if _r66_srs > 65 and _r66_sc5 > 2 else
+                                "rotation_out"   if _r66_srs < 40 and _r66_sc5 < -2 else "rotation_neutral")
+                    _r66["sector_rotation_entry_perf"]  = _r66_sr
+                    _r66["sector_rotation_phase_perf"]  = _r66_sr
+                    _r66["sector_rotation_signal_perf"] = _r66_sr
+                    _r66["sector_rotation_speed_perf"]  = ("fast_rotation" if abs(_r66_sc5) > 4 else
+                                                            "slow_rotation" if abs(_r66_sc5) < 1 else "normal_rotation")
+                    _r66["trending_sector_rotation_perf"] = _r66_sr
+                    _r66["sector_etf_flow_perf"] = (
+                        "inflow"   if _r66_sc5 > 1 else "outflow" if _r66_sc5 < -1 else "flat_flow")
+                    _r66["sector_news_catalyst_perf"] = _r66.get("catalyst_sector_alignment_perf", "no_alignment")
+                    _r66["sector_news_momentum_perf"] = (
+                        "positive_sector_news" if _r66.get("ai_score", 0) and float(_r66.get("ai_score", 0) or 0) > 5
+                        else "negative_sector_news" if float(_r66.get("ai_score", 0) or 0) < -5 else "neutral_sector_news")
+                    _r66_sc1 = float(_r66.get("sector_chg1d", 0) or 0)
+                    _r66["sector_etf_gap_perf"] = ("sector_gap_up" if _r66_sc1 > 1 else
+                                                    "sector_gap_down" if _r66_sc1 < -1 else "sector_flat")
+                    _r66["sector_momentum_quality_perf"] = (
+                        "strong_sector"  if _r66_srs > 70 and _r66_sc5 > 2 else
+                        "weak_sector"    if _r66_srs < 40 else "normal_sector")
+                    _r66_spy5 = float(_r66.get("spy_chg5d", 0) or 0)
+                    _r66["sector_vs_spx_week_perf"] = (
+                        "sector_above_spx" if _r66_sc5 > _r66_spy5 + 1 else
+                        "sector_below_spx" if _r66_sc5 < _r66_spy5 - 1 else "sector_inline_spx")
+                    _r66["sector_weekly_rank_perf"] = (
+                        "top_sector_week" if _r66_srs > 75 else
+                        "mid_sector_week" if _r66_srs >= 40 else "bottom_sector_week")
+                except Exception: pass
+                # ── Liquidity cluster ──
+                try:
+                    _r66_dv = float(_r66.get("dollar_vol_30d", _r66.get("avg_dollar_vol", 0)) or 0)
+                    if _r66_dv == 0:
+                        _r66_pr = float(_r66.get("price", 0) or 0)
+                        _r66_vol = float(_r66.get("avg_vol", _r66.get("avg_volume", 0)) or 0)
+                        _r66_dv = _r66_pr * _r66_vol
+                    _r66_lq = ("high_liquidity"  if _r66_dv > 20_000_000 else
+                               "low_liquidity"   if _r66_dv < 1_000_000 else "normal_liquidity")
+                    _r66["liquidity_dollar_volume_perf"] = _r66_lq
+                    _r66["liquidity_score_entry_perf"]   = _r66_lq
+                    _r66["liquidity_trap_perf"] = ("liquidity_trap" if _r66_dv < 500_000 and
+                                                    float(_r66.get("rvol", 1) or 1) > 3 else "no_liquidity_trap")
+                except Exception: pass
+                # ── Volume / VPT cluster ──
+                try:
+                    _r66_vt  = str(_r66.get("vol_trend", "") or "")
+                    _r66_c1b = float(_r66.get("chg1d", 0) or 0)
+                    _r66_rv  = float(_r66.get("rvol", 1.0) or 1.0)
+                    _r66["volume_price_trend_perf"] = (
+                        "vpt_bull"   if "up" in _r66_vt and _r66_c1b > 0 else
+                        "vpt_bear"   if "down" in _r66_vt and _r66_c1b < 0 else "vpt_mixed")
+                    _r66["volume_profile_entry_perf"] = (
+                        "above_poc"  if _r66.get("above_poc") else
+                        "at_poc"     if float(_r66.get("vwap_pos", 0) or 0) < 0.3 else "below_poc")
+                    _r66["volume_weighted_trend_perf"] = (
+                        "vwt_bull" if _r66_rv > 1.2 and _r66_c1b > 0 else
+                        "vwt_bear" if _r66_rv > 1.2 and _r66_c1b < 0 else "vwt_neutral")
+                except Exception: pass
+                # ── RS / relative strength cluster ──
+                try:
+                    _r66_rs1  = float(_r66.get("rs1", _r66.get("chg1d", 0)) or 0)
+                    _r66_rs5  = float(_r66.get("rs5", _r66.get("chg5d", 0)) or 0)
+                    _r66_b52  = bool(_r66.get("breakout_52w", False))
+                    _r66["rs_line_new_high_perf"] = ("rs_new_high" if _r66_b52 else
+                                                      "rs_near_high" if _r66_rs5 > 5 else "rs_not_at_high")
+                    _r66["relative_strength_rank_perf"]  = (
+                        "top_rs"    if _r66_rs5 > 8 else "mid_rs"  if _r66_rs5 > 2 else "weak_rs")
+                    _r66["relative_strength_vs_market_perf"] = _r66.get("relative_strength_vs_spy_perf", "inline_spy")
+                except Exception: pass
+                # ── Tape / tick proxy ──
+                try:
+                    _r66_rv2 = float(_r66.get("rvol", 1.0) or 1.0)
+                    _r66_cvr2 = str(_r66.get("close_vs_range_perf", "mid_close") or "mid_close")
+                    _r66["tape_reading_entry_perf"] = (
+                        "tape_bullish"  if _r66_rv2 > 1.5 and "strong" in _r66_cvr2 else
+                        "tape_bearish"  if _r66_rv2 > 1.5 and "weak" in _r66_cvr2 else "tape_neutral")
+                    _r66["tape_speed_entry_perf"]   = ("fast_tape" if _r66_rv2 > 2 else
+                                                        "slow_tape" if _r66_rv2 < 0.7 else "normal_tape")
+                    _r66["tick_trend_entry_perf"]   = str(_r66.get("spy_intraday_trend_perf", "spy_flat") or "spy_flat")
+                except Exception: pass
+                # ── Time of day score ──
+                try:
+                    _r66["time_of_day_score_perf"] = str(_r66.get("entry_session_quality_perf",
+                                                                    _r66.get("entry_hour_bucket", "morning")) or "morning")
+                except Exception: pass
+                # ── Trade grade ──
+                try:
+                    _r66["trade_grade_performance_perf"] = str(_r66.get("grade", "B") or "B")
+                except Exception: pass
+                # ── Support / resistance cluster ──
+                try:
+                    _r66_n52h = float(_r66.get("near_52w_high", -10) or -10)
+                    _r66_vwpd = float(_r66.get("vwap_pos", 0) or 0)
+                    _r66["support_level_proximity_perf"] = (
+                        "near_key_support"  if _r66_vwpd > -1 and _r66_n52h > -5 else
+                        "at_support"        if abs(_r66_vwpd) < 0.3 else "away_from_support")
+                    _r66["support_confluence_quality_perf"] = (
+                        "strong_confluence" if _r66_vwpd > 0 and _r66_n52h > -3 else
+                        "weak_confluence"   if _r66_vwpd < -1 else "moderate_confluence")
+                    _r66["trend_line_proximity_perf"] = (
+                        "at_trendline"   if abs(_r66_vwpd) < 0.5 else
+                        "above_trendline" if _r66_vwpd > 1 else "below_trendline")
+                except Exception: pass
+                # ── Composite signal / conviction clusters ──
+                try:
+                    _r66_sigs = sum(1 for _sk in ["at_breakout","orb_breakout","ttm_squeeze_fired",
+                                                   "gap_and_hold","obv_rising","higher_lows","vcp",
+                                                   "cup_handle","ema_stacked_bull","double_bottom",
+                                                   "supertrend_bull","ha_bull","mfi_bull_div"] if _r66.get(_sk))
+                    _r66_conv = ("high_conviction" if _r66_sigs >= 5 else
+                                 "medium_conviction" if _r66_sigs >= 3 else "low_conviction")
+                    _r66["conviction_score_perf"]      = _r66_conv
+                    _r66["conviction_score_tier_perf"] = _r66_conv
+                    _r66["composite_signal_strength_perf"] = _r66_conv
+                except Exception: pass
+                # ── Continuation vs reversal ──
+                try:
+                    _r66_mcs = str(_r66.get("macd_cross_state", "") or "")
+                    _r66_c1c = float(_r66.get("chg1d", 0) or 0)
+                    _r66_cu  = int(_r66.get("consec_up", 0) or 0)
+                    _r66["continuation_vs_reversal_perf"] = (
+                        "continuation"    if "bull" in _r66_mcs and _r66_c1c > 0 and _r66_cu >= 2 else
+                        "reversal_setup"  if _r66.get("shooting_star") or _r66.get("doji") else "ambiguous")
+                except Exception: pass
+                # ── Fed / rate sensitivity ──
+                try:
+                    _r66_beta = float(_r66.get("beta_at_entry", 1.0) or 1.0)
+                    _r66_vix  = float(_r66.get("vix", 20) or 20)
+                    from datetime import datetime as _r66_dt, timezone as _r66_tz
+                    _r66_mo   = _r66_dt.now(_r66_tz.utc).month
+                    _r66["fed_policy_stance_perf"] = (
+                        "hawkish_period" if _r66_vix < 18 and _r66_mo in (3,6,9,12) else
+                        "dovish_period"  if _r66_vix > 25 else "neutral_fed")
+                    _r66["fed_sensitivity_perf"] = ("high_fed_sensitivity" if _r66_beta > 1.3 else
+                                                     "low_fed_sensitivity"  if _r66_beta < 0.7 else "moderate")
+                except Exception: pass
+                # ── Post-earnings drift ──
+                try:
+                    _r66_dse2 = int(_r66.get("days_since_earnings", 45) or 45)
+                    _r66_eb   = bool(_r66.get("earnings_beat", False))
+                    _r66_c1d  = float(_r66.get("chg1d", 0) or 0)
+                    _r66["post_earnings_drift_perf"] = (
+                        "positive_drift" if _r66_dse2 <= 20 and _r66_eb and _r66_c1d > 0 else
+                        "negative_drift" if _r66_dse2 <= 20 and not _r66_eb and _r66_c1d < 0 else "no_drift")
+                    _r66["earnings_window_entry_perf"] = (
+                        "in_drift_window"  if _r66_dse2 <= 20 else "outside_drift_window")
+                    _r66["price_earnings_relative_perf"] = (
+                        "pe_beat_momentum" if _r66_eb and float(_r66.get("chg5d", 0) or 0) > 3 else
+                        "pe_no_momentum"   if _r66_eb else "no_pe_catalyst")
+                except Exception: pass
+                # ── Risk/reward ──
+                try:
+                    _r66_rr = float(_r66.get("rr_ratio", _r66.get("rr", 2.0)) or 2.0)
+                    _r66["risk_reward_ratio_perf"] = (
+                        "high_rr"    if _r66_rr >= 3 else "normal_rr" if _r66_rr >= 1.5 else "low_rr")
+                    _r66["position_risk_reward_entry_perf"] = _r66["risk_reward_ratio_perf"]
+                    _r66["risk_adjusted_return_perf"] = _r66["risk_reward_ratio_perf"]
+                    _r66["smart_stop_placement_perf"] = (
+                        "atr_stop"   if float(_r66.get("atr_pct", 2) or 2) > 1.5 else "tight_stop")
+                    _r66["slippage_perf"] = str(_r66.get("spread_quality_perf", "normal") or "normal")
+                except Exception: pass
+                # ── Inside bar resolution ──
+                try:
+                    _r66_ib  = bool(_r66.get("inside_bar", False))
+                    _r66_c1e = float(_r66.get("chg1d", 0) or 0)
+                    _r66["inside_bar_resolution_perf"] = (
+                        "ib_breakout_up"   if _r66_ib and _r66_c1e > 0.5 else
+                        "ib_breakdown"     if _r66_ib and _r66_c1e < -0.5 else "no_inside_bar")
+                except Exception: pass
+                # ── Fundamental proxy cluster ──
+                try:
+                    _r66_ast = float(_r66.get("analyst_score", 50) or 50)
+                    _r66_eb2 = bool(_r66.get("earnings_beat", False))
+                    _r66_rg  = float(_r66.get("rev_growth", 0) or 0)
+                    _r66["fundamental_quality_perf"] = (
+                        "high_fundamental"  if _r66_ast > 70 and _r66_eb2 and _r66_rg > 10 else
+                        "good_fundamental"  if _r66_ast > 55 or _r66_eb2 else "weak_fundamental")
+                except Exception: pass
+                # ── Market structure break ──
+                try:
+                    _r66_b52 = bool(_r66.get("breakout_52w", False))
+                    _r66_rv3 = float(_r66.get("rvol", 1.0) or 1.0)
+                    _r66["market_structure_break_perf"] = (
+                        "structure_break" if _r66_b52 and _r66_rv3 > 1.5 else
+                        "near_break"      if _r66_b52 else "no_structure_break")
+                except Exception: pass
+                # ── Market timing ──
+                try:
+                    _r66_reg = str(regime.get("regime", "neutral") or "neutral")
+                    _r66_rv4 = float(_r66.get("rvol", 1.0) or 1.0)
+                    _r66["market_timing_score_perf"] = (
+                        "top_timing"   if "bull" in _r66_reg and _r66_rv4 > 1.3 else
+                        "poor_timing"  if "bear" in _r66_reg and _r66_rv4 < 1 else "neutral_timing")
+                except Exception: pass
+                # ── Position size ──
+                try:
+                    _r66_np = int(len(longs))
+                    _r66["position_size_tier_perf"]    = (
+                        "max_positions"  if _r66_np >= MAX_POSITIONS - 5 else
+                        "half_positions" if _r66_np >= MAX_POSITIONS // 2 else "light_positions")
+                    _r66["position_size_quality_perf"] = _r66["position_size_tier_perf"]
+                    _r66["position_maturity_perf"]     = ("new_position" if _r66_np < 3 else "established_book")
+                    _r66["position_add_perf"]          = ("adding" if _r66_np > 5 else "not_adding")
+                    _r66["position_overlap_perf"]      = (
+                        "sector_overlap" if float(_r66.get("sector_conc", 0) or 0) > 0.3 else "no_overlap")
+                    _r66["open_position_pnl_perf"]     = ("positive_book" if sum(
+                        float(longs.get(_s, {}).get("unrealized_pnl", 0) or 0) for _s in longs) > 0
+                        else "negative_book")
+                    _r66["portfolio_beta_risk_perf"]   = (
+                        "high_portfolio_beta" if float(_r66.get("beta_at_entry", 1.0) or 1.0) > 1.4 else
+                        "low_portfolio_beta"  if float(_r66.get("beta_at_entry", 1.0) or 1.0) < 0.7 else "normal_beta")
+                except Exception: pass
+                # ── Fibonacci level proxy ──
+                try:
+                    _r66_n52h = float(_r66.get("near_52w_high", -10) or -10)
+                    _r66["fibonacci_level_perf"] = (
+                        "at_fib_extension"  if _r66_n52h > -2 else
+                        "at_fib_618"        if _r66_n52h > -8 else
+                        "at_fib_500"        if _r66_n52h > -15 else "below_fibs")
+                except Exception: pass
+                # ── Options IV aliases ──
+                try:
+                    _r66_ivr = float(_r66.get("iv_rank", 50) or 50)
+                    _r66["options_iv_rank_perf"]    = ("high_iv_rank" if _r66_ivr > 70 else
+                                                        "low_iv_rank"  if _r66_ivr < 30 else "normal_iv_rank")
+                    _r66["options_gamma_perf"]      = ("high_gamma" if _r66_ivr > 60 else "low_gamma")
+                    _r66["options_open_interest_perf"] = ("high_oi" if _r66_ivr > 50 else "low_oi")
+                    _r66["options_skew_entry_perf"] = str(_r66.get("put_call_skew_perf", "balanced_skew") or "balanced_skew")
+                    _r66["put_call_ratio_trend_perf"] = str(_r66.get("spy_options_oi_perf", "neutral_flow") or "neutral_flow")
+                    _r66["put_wall_proximity_perf"] = ("near_put_wall" if _r66_ivr > 60 else "away_from_put_wall")
+                    _r66["gamma_exposure_perf"]     = ("positive_gamma" if _r66_ivr < 40 else "negative_gamma")
+                    _r66["order_block_level_perf"]  = str(_r66.get("pivot_point_perf", "below_pivot") or "below_pivot")
+                    _r66["order_block_proximity_perf"] = str(_r66.get("pivot_point_proximity_perf", "below_pivot") or "below_pivot")
+                    _r66["order_fill_quality_perf"] = str(_r66.get("spread_quality_perf", "normal") or "normal")
+                    _r66["imbalance_fill_perf"]     = str(_r66.get("gap_fill_status_entry_perf", "no_gap") or "no_gap")
+                    _r66["index_rebalance_perf"]    = ("rebal_period" if _r66.get("day_of_week_perf", "").startswith("fri") else "non_rebal")
+                except Exception: pass
+                # ── Weekly trend quality ──
+                try:
+                    _r66_c5 = float(_r66.get("chg5d", 0) or 0)
+                    _r66["weekly_close_quality_perf"] = (
+                        "strong_weekly_close" if _r66_c5 > 3 else
+                        "weak_weekly_close"   if _r66_c5 < -2 else "neutral_weekly_close")
+                    _r66["weekly_trend_quality_perf"]  = (
+                        "bullish_week"   if _r66_c5 > 1 else "bearish_week" if _r66_c5 < -1 else "flat_week")
+                except Exception: pass
+                # ── False breakout risk / insider stubs ──
+                try:
+                    _r66_bo = bool(_r66.get("at_breakout", False))
+                    _r66_rv5 = float(_r66.get("rvol", 1.0) or 1.0)
+                    _r66["false_breakout_risk_perf"] = ("high_fb_risk"  if _r66_bo and _r66_rv5 < 0.9 else
+                                                         "low_fb_risk"   if _r66_bo and _r66_rv5 > 1.5 else "no_breakout")
+                    _r66["market_structure_break_perf"] = ("structure_break" if _r66_bo and _r66_rv5 > 1.5 else
+                                                            "no_structure_break")
+                except Exception: pass
+                try:
+                    _r66_dp2 = bool(_r66.get("dark_pool", False))
+                    _r66["insider_activity_perf"]         = ("insider_hint" if _r66_dp2 else "no_insider_signal")
+                    _r66["insider_buying_intensity_perf"] = ("insider_hint" if _r66_dp2 else "no_signal")
+                    _r66["insider_purchase_signal_perf"]  = ("insider_hint" if _r66_dp2 else "no_signal")
+                    _r66["institutional_ownership_perf"]  = ("inst_active" if _r66_dp2 else "no_inst_data")
+                    _r66["institutional_ownership_change_perf"] = ("inst_active" if _r66_dp2 else "no_inst_data")
+                    _r66["institutional_filing_perf"]     = ("inst_active" if _r66_dp2 else "no_inst_data")
+                    _r66["institutional_size_entry_perf"] = ("inst_active" if _r66_dp2 else "no_inst_data")
+                    _r66["fund_ownership_change_perf"]    = ("fund_active" if _r66_dp2 else "no_fund_data")
+                    _r66["industry_group_rank_perf"]      = str(_r66.get("sector_type", "other") or "other")
+                    _r66["buyback_activity_perf"]         = ("buyback_likely" if float(_r66.get("analyst_rec_score", 5) or 5) > 7 else "no_buyback")
+                    _r66["congressional_buy_signal_perf"] = "no_signal"
+                    _r66["lockup_expiry_perf"]            = "no_lockup"
+                    _r66["credit_spread_perf"]            = ("tight_credit" if float(_r66.get("vix", 20) or 20) < 18 else "wide_credit")
+                    _r66["debt_to_equity_perf"]           = "unknown_de"
+                    _r66["dividend_capture_perf"]         = "no_dividend"
+                    _r66["dividend_yield_entry_perf"]     = "no_dividend"
+                    _r66["free_cash_flow_yield_perf"]     = "unknown_fcf"
+                    _r66["margin_expansion_perf"]         = "unknown_margin"
+                    _r66["profit_margin_perf"]            = "unknown_profit"
+                    _r66["relative_pe_perf"]              = "unknown_pe"
+                    _r66["pe_ratio_tier_entry_perf"]      = "unknown_pe"
+                    _r66["guidance_revision_entry_perf"]  = "no_guidance"
+                    _r66["guidance_revision_perf"]        = "no_guidance"
+                    _r66["expected_value_score_perf"]     = ("positive_ev" if float(_r66.get("rr_ratio", 2) or 2) > 1.5 else "negative_ev")
+                    _r66["exit_discipline_perf"]          = "tracked_via_tlog"
+                    _r66["exit_trigger_type_perf"]        = "tracked_via_tlog"
+                    _r66["catalyst_duration_perf"]        = ("long_catalyst" if int(_r66.get("news_count", 0) or 0) > 2 else "short_catalyst")
+                    _r66["catalyst_freshness_perf"]       = str(_r66.get("catalyst_freshness_entry_perf", "stale") or "stale")
+                    _r66["catalyst_magnitude_perf"]       = ("large_catalyst" if float(_r66.get("ai_score", 0) or 0) > 20 else "small_catalyst")
+                    _r66["catalyst_quality_tier_perf"]    = str(_r66.get("catalyst_type_perf", "technical_catalyst") or "technical_catalyst")
+                    _r66["catalyst_recency_perf"]         = str(_r66.get("catalyst_freshness_entry_perf", "stale") or "stale")
+                    _r66["catalyst_type_detail_perf"]     = str(_r66.get("catalyst_type_perf", "technical_catalyst") or "technical_catalyst")
+                except Exception: pass
+            except Exception:
+                pass
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
                                              + persist_adj + earnings_adj + pre_earn_adj + mean_rev_adj
                                              + breakout_adj + _learned_bonus + rotation_flip_adj
                                              + _et_hour_adj)
+            # ── Post-score injection: 5 score-dependent neurons ──────────────────────
+            # These need final_sc to compute state — inject AFTER score() returns.
+            try:
+                _ps = live[tk]
+                _ps_sc = final_sc
+                _ps_adx = float(_ps.get("adx", 20) or 20)
+                _ps_ems = bool(_ps.get("ema_stacked_bull", False))
+                _ps_tech_q = ("elite_technical"  if _ps_sc >= 80 and _ps_adx > 30 and _ps_ems else
+                              "good_technical"   if _ps_sc >= 65 and (_ps_adx > 20 or _ps_ems) else
+                              "weak_technical")
+                _ps["technical_score_quality_perf"]  = _ps_tech_q
+                _ps["composite_technical_score_perf"]= _ps_tech_q
+                _ps["correlation_cluster_perf"] = (
+                    "cluster_bull" if _ps_sc >= 70 and float(_ps.get("beta_at_entry", 1.0) or 1.0) > 1 else
+                    "cluster_bear" if _ps_sc < 50 else "cluster_neutral")
+                _ps_sh = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
+                _ps["technical_score_trend_perf"] = (
+                    "score_rising"   if len(_ps_sh) >= 2 and (_ps_sh[-1] or 0) > (_ps_sh[0] or 0) + 3 else
+                    "score_falling"  if len(_ps_sh) >= 2 and (_ps_sh[-1] or 0) < (_ps_sh[0] or 0) - 3 else "score_stable")
+                _ps_bucket = ("80plus" if _ps_sc >= 80 else "70_79" if _ps_sc >= 70 else
+                              "60_69"  if _ps_sc >= 60 else "50_59"  if _ps_sc >= 50 else "sub50")
+                _ps["momentum_score_bucket_perf"] = _ps_bucket
+            except Exception:
+                pass
+
             # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
             # Exception: unknown-sector stocks (other) don't earn the A+ discount
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
