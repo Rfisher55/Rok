@@ -65,9 +65,9 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 35      # max open long positions — high volume for 100+ trades/day
-MAX_SHORTS         = 8       # max open short positions — more shorts = more data
-MAX_POSITION_PCT   = 0.05    # max 5% of portfolio per position (smaller = more positions)
+MAX_POSITIONS      = 50      # max open long positions — raised from 35 for 500 trades/day target
+MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
+MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
 STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cycling)
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
@@ -27635,9 +27635,11 @@ def run():
     _recent_trades.sort(key=lambda t: t.get("time", ""), reverse=True)
     _last3_pnl = [t["pnl_pct"] for t in _recent_trades[:3]]
     _last5_pnl = [t["pnl_pct"] for t in _recent_trades[:5]]
-    _consecutive_losses = len(_last3_pnl) >= 3 and all(p < 0 for p in _last3_pnl)
+    _consecutive_losses = (len(_last3_pnl) >= 3 and all(p < 0 for p in _last3_pnl)
+                           and all(p < -0.5 for p in _last3_pnl))  # only block if losses are meaningful (>0.5%)
     if _consecutive_losses:
-        logger.info(f"Consecutive loss guard: last 3 trades lost ({[round(p,1) for p in _last3_pnl]}) — skipping new buys this cycle")
+        logger.info(f"Consecutive loss guard: last 3 trades all lost >0.5% ({[round(p,1) for p in _last3_pnl]}) — raising threshold +8 this cycle")
+        _eff_min_score = min(_eff_min_score + 8, 90)  # raise threshold instead of hard block
 
     # Win streak detection: 5+ consecutive wins → bot is in sync with market rhythm
     _win_streak_5 = len(_last5_pnl) >= 5 and all(p > 0 for p in _last5_pnl)
@@ -28003,11 +28005,11 @@ def run():
     # ── Portfolio Risk Limit Guard ─────────────────────────────────────────────
     # If total stop-loss exposure > 25% of portfolio, halt new buys.
     _total_risk_pct_now = float(tlog.get("total_risk_pct", 0) or 0)
-    _risk_limit_halt = _total_risk_pct_now > 25.0  # raised: 9% too tight for 35 active positions
+    _risk_limit_halt = _total_risk_pct_now > 40.0  # raised: 40% for 50 active positions (50×0.8%)
     if _risk_limit_halt:
-        logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 25% — no new buys")
+        logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 40% — no new buys")
 
-    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _consecutive_losses and not _drawdown_halt and not _risk_limit_halt:
+    if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _drawdown_halt and not _risk_limit_halt:
         # Sector counts for diversification
         sector_counts = {}
         for sym in longs:
