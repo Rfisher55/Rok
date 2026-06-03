@@ -29140,7 +29140,7 @@ def run():
                 elif bool(_tk_sig_sc.get("orb_active", False)) and not bool(_tk_sig_sc.get("orb_breakout", False)):
                     _learned_bonus += _npen("orb_quality_perf", "consolidating", 41, -2)  # 40.0% WR n=40
                 elif bool(_tk_sig_sc.get("orb_breakout", False)):
-                    _learned_bonus += _npen("orb_quality_perf", "breakout", 41, -3)  # 40.0% WR n=5 — threshold 25→41
+                    _learned_bonus += _nbns("orb_quality_perf", "breakout", 65, 3)   # 78%WR n=9 — strong ORB breakout
                     _learned_bonus += _npen("signal_performance", "orb_breakout", 25, -3)  # direct signal WR also 14%
                 # chart_pattern single (1 pattern): WR=38.5% n=13 — weak single-trigger, real moves need multi-pattern
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
@@ -29210,7 +29210,7 @@ def run():
                 # Consecutive green days 0d: 43.6% WR n=39 — no streak at entry = mild negative
                 _cg_streak_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_streak_lb == 0:
-                    _learned_bonus += _npen("consec_green_perf", "0d", 45, -1)  # 43.6% WR n=39
+                    _learned_bonus += _npen("consec_green_perf", "0d", 45, -5)  # 12%WR n=8 recent — raised from -1
                 # SPY alignment bonus: reuse _spy_intra_lb computed above from tlog
                 _spy_it_lb = _spy_intra_lb  # "up"/"down"/"flat" from tlog.spy_intraday_pct
                 if "up" in _spy_it_lb:
@@ -29355,6 +29355,8 @@ def run():
                     _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
                 elif _ha_consec_lb >= 3:
                     _learned_bonus += _nbns("ha_consec_perf", "building", 58, 1) # 58.3% WR n=12 — threshold 62→58
+                elif _ha_consec_lb < 3:
+                    _learned_bonus += _npen("ha_consec_perf", "early", 35, -4)   # 29%WR n=17 — no HA momentum
                 # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
@@ -29372,16 +29374,16 @@ def run():
                     except Exception:
                         _reentry_lb = "no_reentry"
                     if _reentry_lb == "winner":
-                        _learned_bonus += _nbns("reentry_perf", "winner", 60, 2)   # 80% WR
+                        _learned_bonus += _nbns("reentry_perf", "winner", 60, 4)   # 81%WR n=26 — raised from +2
                     elif _reentry_lb == "loser":
-                        _learned_bonus += _npen("reentry_perf", "loser", 40, -3)   # 33% WR n=3
+                        _learned_bonus += _npen("reentry_perf", "loser", 40, -8)   # 11%WR n=18 — near-block, raised from -3
                 # Candle pattern present: 65% WR n=17 vs no pattern 59% WR
                 if bool(_tk_sig_sc.get("candle_pattern", False)) or bool(_tk_sig_sc.get("three_white_soldiers", False)) or bool(_tk_sig_sc.get("hammer", False)):
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 62, 1)  # 65% WR n=17
                 # MFI: distribution=66.7% WR n=9; neutral=42.6% WR n=68
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
                 if _mfi_lb >= 60:
-                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 1)  # 66.7% WR n=9
+                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 3)  # 75%WR n=16 — raised from +1
                 elif 40 <= _mfi_lb < 60:
                     _learned_bonus += _npen("mfi_zone_perf", "neutral", 43, -2)      # 42.6% WR n=68 — large sample
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
@@ -29464,12 +29466,16 @@ def run():
                 # signal_performance["price_accel_pos"] = 47.2% WR n=36 — below 50%
                 if bool(_tk_sig_sc.get("price_accel_pos", False)):
                     _learned_bonus += _npen("signal_performance", "price_accel_pos", 50, -1)  # 47.2% WR n=36 → fires <=50%
+                elif not bool(_tk_sig_sc.get("price_accel_pos", False)):
+                    _learned_bonus += _npen("price_accel_perf", "decelerating", 30, -4)  # 22%WR n=9 — decelerating price
                 # Trend confirmation (ST+PSAR combo): both=62% WR n=21; neither=58% WR n=24 (mild diff)
                 _tc_st_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _tc_ps_lb = bool(_tk_sig_sc.get("psar_bull"))
                 if _tc_st_lb and _tc_ps_lb:
                     # trend_conf_perf["both"] = 48.4% WR n=31 — bonus never fires at thr=60
                     pass  # ST+PSAR combo is coin flip, no bonus warranted
+                elif not _tc_st_lb and not _tc_ps_lb:
+                    _learned_bonus += _npen("trend_conf_perf", "neither", 30, -5)  # 20%WR n=10 — no trend confirmation
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — bonus dead (threshold 60% never fires)
                 # signal_performance penalty already added above in kc_breakout block
                 _kc_pos_lb = float(_tk_sig_sc.get("kc_pos", 50) or 50)
@@ -29480,9 +29486,9 @@ def run():
                     _learned_bonus += _npen("vol_ratio_mom_perf", "confirmed", 40, -2)  # 36.4% WR n=11
                 elif _vratio_lb2 >= 1.2 or _macc_lb2:
                     pass  # partial=52% — coin flip, no bonus
-                # weak vol_ratio: 45.7% WR n=35 — mild penalty
+                # weak vol_ratio: 20% WR n=10 — raised penalty
                 elif _vratio_lb2 < 0.8:
-                    _learned_bonus += _npen("vol_ratio_mom_perf", "weak", 46, -1)
+                    _learned_bonus += _npen("vol_ratio_mom_perf", "weak", 46, -4)  # 20%WR n=10 — raised from -1
                 # MTF aligned: signal_performance["mtf_aligned"] = 44.8% WR n=29 — penalize
                 _mtf_sc_lb = (int(bool(_tk_sig_sc.get("mtf_aligned")))
                               + int(bool(_tk_sig_sc.get("ema_stacked_bull")))
@@ -29567,6 +29573,13 @@ def run():
                 _poc_ctrl_st = str(_tk_sig_sc.get("poc_control_state", "") or "")
                 if _poc_ctrl_st == "below":
                     _learned_bonus += _npen("poc_control_perf", "below", 30, -4)  # 25%WR n=12 — below POC = weak
+                # POC distance bucket: at_poc=25%WR n=12 — stalled at POC = unresolved
+                _poc_dist_bkt_lb = ("breakout" if bool(_tk_sig_sc.get("poc_breakout", False))
+                                    else "above" if bool(_tk_sig_sc.get("above_poc", False))
+                                    else "at_poc" if bool(_tk_sig_sc.get("at_poc", False))
+                                    else "unknown")
+                if _poc_dist_bkt_lb == "at_poc":
+                    _learned_bonus += _npen("poc_dist_perf", "at_poc", 30, -4)   # 25%WR n=12 — stalled at POC
                 # KC zone breakout: 64% WR n=22
                 _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — dead bonus removed (penalty already above)
@@ -29670,7 +29683,7 @@ def run():
                     if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
                         _learned_bonus += _npen("roc_perf", "accelerating", 40, -1)  # 37.5% WR n=8 — chasing extended move
                     elif _roc5_acc <= 0 and _roc20_acc <= 0:
-                        _learned_bonus += _npen("roc_perf", "negative", 48, -1)  # 47.2% WR n=36 — threshold 35→48
+                        _learned_bonus += _npen("roc_perf", "negative", 48, -5)  # 12%WR n=8 recent — raised from -1
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
                 _rs5_acc = _tk_sig_sc.get("rs5")
                 _rs63_acc = _tk_sig_sc.get("rs63")
@@ -29680,7 +29693,7 @@ def run():
                     # rs_mom_perf["leading"] = 44.1% WR n=34 — wrong bonus removed; coin flip or worse
                     _learned_bonus += _npen("rs_mom_perf", "leading", 46, -1)  # 44.1% WR n=34
                 elif _rs5_acc is not None and _rs63_acc is not None and float(_rs5_acc) <= 0 and float(_rs63_acc) <= 0:
-                    _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -1)   # both lagging
+                    _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -5)   # 12%WR n=8 — raised from -1
                 # Signal freshness: building_signal=45.5% WR n=77 — compute directly (persist_count/consecutive_strong_scans injected after this block)
                 _persist_lb = int(_curr_persist.get(tk, 0) or 0)  # direct from persist counter
                 _fresh_lb = ("fresh_signal" if _persist_lb <= 1 else "building_signal" if _persist_lb <= 3
