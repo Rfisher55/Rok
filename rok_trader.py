@@ -29350,6 +29350,8 @@ def run():
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec_bull", _tk_sig_sc.get("ha_consec", 0)) or 0)
                 if _ha_consec_lb >= 5:
                     _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
+                    if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+gap_hold", 30, -2)  # 28.6%WR n=14 — extended+holding trap
                 elif _ha_consec_lb >= 3:
                     _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — raised +1→+2
                 elif _ha_consec_lb < 3:
@@ -29662,6 +29664,8 @@ def run():
                     _learned_bonus += _npen("stoch_zone_perf", "overbought", 45, -2)  # 42.9% WR n=21 — chasing!
                     if _mfi_lb < 80:
                         _learned_bonus += _npen("signal_synergy", "stoch_ob+mfi_neutral", 40, -2)  # 38.9%WR n=18 — double momentum trap
+                    if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                        _learned_bonus += _npen("signal_synergy", "gap_hold+stoch_ob", 32, -2)  # 29.4%WR n=17 — gap+overbought = exhausted
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
