@@ -27629,8 +27629,8 @@ def run():
                 if not live_sig:
                     continue
 
-                # Scenario A: Small loss pullback DCA (-5% to -1.5%)
-                is_pullback_dca = -5.0 <= pnl_pct <= -1.5 and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.8
+                # Scenario A: Small loss pullback DCA (-3% to -1.5%) — Wave 83: tightened -5%→-3% (36%WR averaging down)
+                is_pullback_dca = -3.0 <= pnl_pct <= -1.5 and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.8
 
                 # Scenario B: Winner pyramid — VWAP reclaim on a profitable position (+1% to +8%)
                 # When a winner dips below VWAP then reclaims it, that's institutions adding on the dip
@@ -27645,7 +27645,7 @@ def run():
                 vwap_b2d_val = live_sig.get("vwap_b2d", 0) or 0
                 is_vwap_oversold = (
                     vwap_b2d_val > 0 and current <= vwap_b2d_val * 1.005
-                    and pnl_pct >= -8.0 and pnl_pct <= 3.0
+                    and pnl_pct >= -5.0 and pnl_pct <= 3.0   # Wave 83: tightened -8%→-5%
                     and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
                 )
 
@@ -27655,7 +27655,7 @@ def run():
                 at_pivot_support = (
                     ((pivot_s1_val > 0 and abs(current - pivot_s1_val) / current < 0.015) or
                      (pivot_s2_val > 0 and abs(current - pivot_s2_val) / current < 0.015))
-                    and pnl_pct >= -6.0 and pnl_pct <= 2.0
+                    and pnl_pct >= -4.0 and pnl_pct <= 2.0   # Wave 83: tightened -6%→-4%
                     and mkt_val < portfolio_val * MAX_POSITION_PCT * 0.85
                 )
 
@@ -27728,17 +27728,21 @@ def run():
                     if is_pullback_dca and current >= cost * 1.01:
                         logger.debug(f"DCA SKIP {sym} — price above cost")
                         continue
+                    # Wave 83: hard gate — never average down >3% losses (only winner/breakout pyramids allowed when losing >3%)
+                    if pnl_pct <= -3.0 and not is_winner_pyramid and not is_breakout_pyramid:
+                        logger.debug(f"DCA SKIP {sym} — position down {pnl_pct:.1f}%, no averaging down beyond -3%")
+                        continue
 
                     dca_sc = score(sym, live_sig, regime_adj=regime_adj)
-                    # Score requirements: pivot/VWAP oversold need less score (mean reversion)
-                    if is_vwap_oversold or at_pivot_support:
-                        min_score = 22   # oversold at key level = lower bar
+                    # Wave 83: raised min_score (22-30→50-60) — 36%WR DCA proves low-bar averaging hurts profits
+                    if is_breakout_pyramid:
+                        min_score = 60   # buying at new highs: needs strongest confirmation
                     elif is_winner_pyramid:
-                        min_score = 25
-                    elif is_breakout_pyramid:
-                        min_score = 30   # breakout pyramid: high bar to confirm institutional move
+                        min_score = 55   # pyramiding winners: high bar
+                    elif is_vwap_oversold or at_pivot_support:
+                        min_score = 50   # mean reversion: still need real signal strength
                     else:
-                        min_score = 28
+                        min_score = 50   # pullback DCA: no more sub-30 averaging down
 
                     if dca_sc >= min_score:
                         # Boost from MFI oversold: strong accumulation signal
