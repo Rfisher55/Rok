@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 85      # raised 70→85 (Wave 76): live trades score 100-150, so 70 was no-op; 85 removes weakest entries
+MIN_BUY_SCORE      = 90      # raised 85→90 (Wave 79): ADX-weak & rs_avg+early score 86-92; need 90 to block these combos
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 12      # raised from 6 — 12 per sector for high-volume trading; "other" uncapped below
@@ -29278,7 +29278,7 @@ def run():
                 if _accum_bkt_lb == "none":
                     _learned_bonus += _npen("accum_perf", "none", 15, -8)  # 10% WR n=10: severe (explicitly 0)
                 elif _accum_bkt_lb == "light":
-                    _learned_bonus += _nbns("accum_perf", "light", 58, 3)  # 60%WR n=25 live — lowered thr 65→58 (drift fix Wave 74)
+                    _learned_bonus += _nbns("accum_perf", "light", 54, 3)  # 56%WR n=27 live — lowered thr 58→54 (Wave 79: drift fix, wins have accum_light 71%)
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
                     _learned_bonus += _npen("accum_perf", "moderate", 65, -6)  # 27%WR n=11 live — raised thr 55→65, pts -4→-6 (Wave 74)
@@ -29318,6 +29318,7 @@ def run():
                     _adx_bkt_lb = ("strong" if _adx_lb > 35 else "developing" if _adx_lb >= 20 else "weak")
                     if _adx_bkt_lb == "weak":
                         _learned_bonus += _npen("adx_perf", "weak", 20, -8)    # 12.5% WR: block-level
+                        _learned_bonus -= 6  # direct supplement: 12%WR n=8 confirmed → total -14 (Wave 79: forces below MIN=90)
                     elif _adx_bkt_lb == "developing":
                         _learned_bonus += _nbns("adx_perf", "developing", 55, 2)  # 55.6% WR n=27 — threshold lowered
                     elif _adx_bkt_lb == "strong":
@@ -29358,7 +29359,7 @@ def run():
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _nbns("signal_synergy", "accum_light+intra_extended", 68, 2)  # 73%WR n=11 — light accumulation + strong momentum
                     if str(_tk_sig_sc.get("sector","")).lower() == "tech":
-                        _learned_bonus += _nbns("signal_synergy", "tech_sector+intra_extended", 75, 2)  # 80%WR n=10 — tech breakout + full momentum
+                        _learned_bonus += _nbns("signal_synergy", "tech_sector+intra_extended", 70, 2)  # 80%WR n=10 — lowered thr 75→70 (Wave 79: fires more reliably)
                         _ha_bull_inline_ext = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
                         if _ha_bull_inline_ext:
                             _learned_bonus += _nbns("signal_synergy", "tech+ha_bull+extended", 83, 2)  # 88%WR n=8 — triple winner profile
