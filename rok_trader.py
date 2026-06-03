@@ -27350,7 +27350,7 @@ def run():
                         _n41_live_sig = live.get(sym, {})
                         _n41_live_sc = score(sym, _n41_live_sig, regime_adj=regime_adj) if _n41_live_sig else _n41_entry_sc
                         _n41_decay = _n41_entry_sc - _n41_live_sc
-                        if _n41_decay >= 25:
+                        if _n41_decay >= 20:  # lowered 25→20 (Wave 87: faster clearing of deteriorating losing positions)
                             reason = f"thesis broken exit (entry={_n41_entry_sc}→live={_n41_live_sc}, -{_n41_decay:.0f}pts, {pnl_pct:+.1f}%)"
                 except Exception:
                     pass
