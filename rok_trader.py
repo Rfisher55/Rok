@@ -29348,7 +29348,7 @@ def run():
                 _bb_pos_raw = float(_tk_sig_sc.get("bb_pos", 50) or 50)
                 _bb_pos_lb = _bb_pos_raw / 100.0
                 if _bb_pos_lb > 0.85:
-                    _learned_bonus += _npen("bb_zone_perf", "upper", 58, -3)  # 38.5%WR n=13 — was bonus, now confirmed trap
+                    _learned_bonus += _npen("bb_zone_perf", "upper", 58, -6)  # 38.5%WR n=13 — pts -3→-6 (Wave 84: still too weak)
                 _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_lb < 0:
@@ -29378,7 +29378,8 @@ def run():
                         if _ha_bull_inline_ext:
                             _learned_bonus += _nbns("signal_synergy", "tech+ha_bull+extended", 83, 2)  # 88%WR n=8 — triple winner profile
                 elif _intra_mom_bkt_lb == "runner":
-                    _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
+                    _learned_bonus += _npen("intraday_mom_perf", "runner", 45, -7)  # 38%WR n=13 — thr 40→45, pts -3→-7 (Wave 84)
+                    _learned_bonus -= 4  # direct supplement: runner momentum = chasing; total -11 blocks sub-MIN entries (Wave 84)
                 elif _intra_mom_bkt_lb == "early":
                     _learned_bonus += _npen("intraday_mom_perf", "early", 65, -8)  # 17%WR n=12 live — pts -4→-8 (Wave 77)
                     if not _obv_rising_lb:  # OBV falling + early momentum = double weakness
@@ -29406,7 +29407,7 @@ def run():
                 if _ptier_lb == "micro":
                     _learned_bonus += _npen("price_tier_perf", "micro", 10, -8)  # 0%WR n=8 — near-block (raised from -2)
                 elif _ptier_lb == "small":
-                    _learned_bonus += _npen("price_tier_perf", "small", 40, -2)  # 36.4% WR n=11 — wrong bonus→penalty
+                    _learned_bonus += _npen("price_tier_perf", "small", 42, -5)  # 36.4% WR n=11 — pts -2→-5, thr 40→42 (Wave 84)
                 # Ichimoku: derive position from flags (ichimoku_state/pos not in fetch_batch)
                 _ich_above_flag = bool(_tk_sig_sc.get("ichimoku_above", False))
                 _ich_cloud_flag = bool(_tk_sig_sc.get("ichimoku_bull_cloud", False))
@@ -29707,10 +29708,12 @@ def run():
                 elif 60 <= _rsr3_lb < 80:
                     _learned_bonus += _npen("rs_rating_perf", "mid_rs", 30, -7)  # 23%WR n=22 live — raised thr 35→30, pts -5→-7 (Wave 77)
                 elif 80 <= _rsr3_lb < 90:
-                    _learned_bonus += _npen("rs_rating_perf", "high_rs", 42, -3) # 40%WR n=5 — still bad: below threshold
+                    _learned_bonus += _npen("rs_rating_perf", "high_rs", 42, -6) # 40%WR n=5 — pts -3→-6 (Wave 84: stronger penalty)
                 elif 40 <= _rsr3_lb < 60:
                     _learned_bonus += _npen("rs_rating_perf", "low_rs", 35, -4)  # 23%WR avg bucket includes 40-59 — add penalty (Wave 77)
-                # rs_rating < 40: historically checked separately (weak_rs in relative_strength_tier_perf)
+                elif _rsr3_lb < 40:
+                    _learned_bonus += _npen("rs_rating_perf", "weak_rs", 20, -8)  # RS<40 = worst relative strength; near-block (Wave 84)
+                    _learned_bonus -= 4  # direct supplement: RS<40 is extreme underperformer total -12 (Wave 84)
                 # Premium signal tier: use only signals with verified positive WR (>50%)
                 # Removed: orb_breakout(40%), supertrend_bull(47%), obv_rising(36%) — negative signals
                 # Kept: vcp, cup_handle, at_breakout(45% but pattern quality), mtf_triple, ttm_squeeze, rvol_surge, higher_lows
