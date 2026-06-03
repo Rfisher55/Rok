@@ -29477,6 +29477,8 @@ def run():
                     _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
                 elif _ha_bull_flag and _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+intra_extended", 68, 2)  # 73.3%WR n=15 — best entry
+                if _ha_bull_flag and _candle_present and not _obv_rising_lb:
+                    _learned_bonus += _nbns("signal_synergy", "ha_bull+candle+obv_fall", 68, 1)  # 72.7%WR n=22 — triple confirmation
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
