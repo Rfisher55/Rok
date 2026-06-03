@@ -29428,6 +29428,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+gap_hold", 20, -2)  # 0%WR n=9 — holding gap + no MFI pressure
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+accum_light", 20, -2)  # 0%WR n=9 — weak accumulation + no buy pressure
+                    if bool(_tk_sig_sc.get("roc_accelerating", False)):
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+roc_accel", 20, -2)  # 0%WR n=7 — acceleration without buy pressure = divergence
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
@@ -29726,6 +29728,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+mfi_neutral", 20, -2)  # 0%WR n=7 — double neutral zone, no momentum
                     if not bool(_tk_sig_sc.get("htf", False)):
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+htf_not_aligned", 20, -2)  # 0%WR n=8 — stoch neutral + no HTF confirmation
+                    if _macd_lb < 0:
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+macd_negative", 20, -2)  # 0%WR n=8 — stoch clean but MACD diverging bearish
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
