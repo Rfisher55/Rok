@@ -21763,8 +21763,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # One of the highest-conviction intraday signals; stops triggered below VWAP then buyers return
     if d.get("vwap_reclaim", False): s += 14
 
-    # Opening Range Breakout: cleared the first-hour high on volume — algo algos and funds chase (+13)
-    if d.get("orb_breakout", False): s += 13
+    # Opening Range Breakout: cleared the first-hour high on volume
+    # Wave 88: was +13; live data shows 40%WR overall — buy block handles quality filtering separately
+    if d.get("orb_breakout", False): s += 5
 
     # Gap and hold: data shows 36.4%WR n=22 overall — consistent loser, removed bonus
     if d.get("gap_and_hold", False): s -= 2
@@ -21821,9 +21822,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("rvol_surge", False): s += 8
     elif (d.get("rvol", 1) or 1) >= 1.8: s += 4  # moderate relative volume boost
 
-    # On-Balance Volume: rising OBV = institutional accumulation (smart money buying) (+9)
-    # Data shows 80% WR (n=5) — one of the strongest confirmed signals; boosted from +7
-    if d.get("obv_rising", False): s += 9
+    # On-Balance Volume: rising OBV = institutional accumulation
+    # Wave 88: was +9 based on stale 80%WR n=5; updated to 35.7%WR n=14 = reduced to +2
+    # buy-block adds -3 penalty, so net = -1 for OBV rising (confirmed chasing signal)
+    if d.get("obv_rising", False): s += 2
 
     # Volume Divergence: distribution vs accumulation based on price-volume relationship
     # Bearish: new high + shrinking volume = institutions distributing into retail strength (-6)
@@ -21841,9 +21843,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif d.get("mfi_overbought", False): s -= 4
 
     # Supertrend: ATR-based dynamic trend confirmation
-    # Price above Supertrend line = bullish trend confirmed (+7)
-    # Price below Supertrend = bearish trend active (-5)
-    if d.get("supertrend_bull", False):         s += 7
+    # Wave 88: was +7; live data shows 47%WR (coin flip) — reduced to +3
+    if d.get("supertrend_bull", False):         s += 3
     elif d.get("supertrend_dir", 1) == -1:      s -= 5
 
     # Elder's Force Index: institutional buying pressure detector
