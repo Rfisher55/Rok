@@ -29856,7 +29856,7 @@ def run():
                     _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 17, -5)  # 16.1% WR n=31
                 elif 6 <= _sec_adv_lb <= 7:
                     _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
-                _learned_bonus = max(-20, min(18, _learned_bonus))  # expanded penalty floor: -10→-20
+                _learned_bonus = max(-24, min(18, _learned_bonus))  # expanded penalty floor: -20→-24
             except Exception:
                 _learned_bonus = 0
 
@@ -35455,13 +35455,10 @@ def run():
             except Exception:
                 pass
 
-            # Grade-based threshold: A+ setups get -5 to threshold (elite quality)
-            # Exception: unknown-sector stocks (other) don't earn the A+ discount
+            # Grade threshold: A+ no longer earns discount (46.4%WR n=28 — worse than average)
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
             _is_other_sector = (SECTOR_MAP.get(tk, "other") == "other")
-            _grade_thresh = (_eff_min_score if _is_other_sector
-                             else _eff_min_score - 5 if _grade_now == "A+"
-                             else _eff_min_score)
+            _grade_thresh = _eff_min_score  # all grades use same threshold now
             # Score trend guard: if history shows falling-score entries fail, require +4 for them
             if _LEARNED_FALLING_SCORE_PENALTY:
                 _sh_now = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
