@@ -34388,6 +34388,384 @@ def run():
             except Exception:
                 pass
 
+            # ── R65: 55 more batch-loop neurons ──────────────────────────────────────
+            try:
+                _r65 = live[tk]
+                # ── Gap quality cluster ──
+                try:
+                    _r65_gp = float(_r65.get("gap_pct", 0) or 0)
+                    _r65_rv = float(_r65.get("rvol", 1.0) or 1.0)
+                    _r65_gq = ("gap_and_go"    if _r65_gp > 1.5 and _r65_rv > 1.5 else
+                               "small_gap_vol" if abs(_r65_gp) > 0.3 and _r65_rv > 1.3 else
+                               "no_gap_vol"    if abs(_r65_gp) < 0.3 else "gap_low_vol")
+                    _r65["gap_and_go_quality_perf"]   = _r65_gq
+                    _r65["gap_quality_context_perf"]  = _r65_gq
+                    _r65["gap_type_quality_perf"]     = _r65_gq
+                    _r65_gp_abs = abs(_r65_gp)
+                    _r65["gap_size_perf"] = (
+                        "large_gap" if _r65_gp_abs > 5 else "medium_gap" if _r65_gp_abs > 2
+                        else "small_gap" if _r65_gp_abs > 0.3 else "no_gap")
+                    _r65["gap_fill_risk_perf"] = (
+                        "fill_risk_low"  if _r65_gp > 0 and _r65_rv > 1.5 else
+                        "fill_risk_high" if _r65_gp > 0 and _r65_rv < 1.0 else
+                        "downside_gap"   if _r65_gp < -1 else "gap_fill_neutral")
+                    _r65["gap_fill_status_entry_perf"] = (
+                        "unfilled_gap_up"   if _r65_gp > 1 else
+                        "unfilled_gap_down" if _r65_gp < -1 else "filled_or_no_gap")
+                    _r65_c1 = float(_r65.get("chg1d", 0) or 0)
+                    _r65["gap_fill_proximity_perf"] = (
+                        "gap_filling"  if _r65_gp > 0.5 and _r65_c1 < 0 else
+                        "gap_holding"  if _r65_gp > 0.5 and _r65_c1 >= 0 else "no_gap_to_fill")
+                    _r65["overnight_gap_entry_perf"] = (
+                        "large_gap_up"  if _r65_gp > 3 else
+                        "small_gap_up"  if _r65_gp > 0.5 else
+                        "large_gap_dn"  if _r65_gp < -3 else
+                        "small_gap_dn"  if _r65_gp < -0.5 else "flat_open")
+                    _r65["gap_to_close_performance_perf"] = (
+                        "gap_above_prior" if _r65_gp > 1 else
+                        "gap_below_prior" if _r65_gp < -1 else "inside_prior_day")
+                except Exception: pass
+                # ── Dark pool cluster ──
+                try:
+                    _r65_dp = bool(_r65.get("dark_pool", False))
+                    _r65["dark_pool_activity_perf"] = ("dark_pool_active" if _r65_dp else "no_dark_pool")
+                    _r65["dark_pool_flow_perf"]     = ("dp_flow"         if _r65_dp else "no_dp_flow")
+                    _r65["dark_pool_perf"]          = ("dark_pool"       if _r65_dp else "no_dark_pool")
+                except Exception: pass
+                # ── News cluster ──
+                try:
+                    _r65_nh  = float(_r65.get("news_age_hours", 48) or 48)
+                    _r65_ais = float(_r65.get("ai_score", 0) or 0)
+                    _r65_cat = str(_r65.get("catalyst", "") or "")
+                    _r65_nc  = int(_r65.get("news_count", 0) or 0)
+                    _r65_nrq = ("fresh_news" if _r65_nh <= 4 else "recent_news" if _r65_nh <= 24 else "old_news")
+                    _r65["news_age_quality_perf"]       = _r65_nrq
+                    _r65["news_recency_perf"]           = _r65_nrq
+                    _r65["fear_greed_index_perf"] = (
+                        "greed_zone" if _r65_ais > 15 and _r65_nc > 0 else
+                        "fear_zone"  if _r65_ais < -10 else "neutral_zone")
+                    _r65["news_catalyst_sentiment_perf"] = (
+                        "catalyst_bullish" if _r65_cat and _r65_ais > 10 else
+                        "catalyst_neutral" if _r65_cat else "no_catalyst")
+                    _r65["news_impact_direction_perf"] = (
+                        "positive_news" if _r65_ais > 5 else "negative_news" if _r65_ais < -5 else "neutral_news")
+                except Exception: pass
+                # ── Options cluster ──
+                try:
+                    _r65_uo  = bool(_r65.get("unusual_options", _r65.get("unusual_calls", False)))
+                    _r65_of  = str(_r65.get("options_flow", "neutral") or "neutral")
+                    _r65_ivr = float(_r65.get("iv_rank", 50) or 50)
+                    _r65["options_unusualness_perf"]  = ("unusual_options" if _r65_uo else "no_unusual")
+                    _r65["options_flow_signal_perf"]  = ("bullish_options" if "bull" in _r65_of else
+                                                          "bearish_options" if "bear" in _r65_of else "neutral_options")
+                    _r65["option_flow_imbalance_perf"]= ("call_heavy" if _r65_uo and "bull" in _r65_of else
+                                                          "put_heavy"  if "bear" in _r65_of else "balanced")
+                    _r65["iv_percentile_entry_perf"]  = ("high_iv_entry"  if _r65_ivr > 70 else
+                                                          "low_iv_entry"   if _r65_ivr < 30 else "normal_iv_entry")
+                    _r65_pcr = float(_r65.get("put_call_ratio", 1.0) or 1.0)
+                    _r65["stock_pcr_entry_perf"]  = ("bullish_pcr" if _r65_pcr < 0.5 else
+                                                      "bearish_pcr" if _r65_pcr > 1.5 else "neutral_pcr")
+                    _r65["put_call_skew_perf"]    = ("call_skew" if _r65_pcr < 0.6 else
+                                                      "put_skew"  if _r65_pcr > 1.3 else "balanced_skew")
+                    _r65["put_call_skew_entry_perf"] = _r65["put_call_skew_perf"]
+                    _r65["implied_move_perf"] = (
+                        "high_implied_move" if _r65_ivr > 60 else "low_implied_move" if _r65_ivr < 25 else "normal_implied")
+                except Exception: pass
+                # ── Squeeze cluster ──
+                try:
+                    _r65_ttm = bool(_r65.get("ttm_squeeze_fired", _r65.get("ttm_squeeze", False)))
+                    _r65_vcs = str(_r65.get("vol_contraction_state", "") or "")
+                    _r65_mcs = str(_r65.get("macd_cross_state", "") or "")
+                    _r65_sq  = ("fired_squeeze"  if _r65_ttm else
+                                "coiling"        if "contract" in _r65_vcs or "tight" in _r65_vcs else "no_squeeze")
+                    _r65["squeeze_coil_perf"]           = _r65_sq
+                    _r65["squeeze_setup_perf"]          = _r65_sq
+                    _r65["squeeze_momentum_state_perf"] = (
+                        "squeeze_bull_momentum" if _r65_ttm and "bull" in _r65_mcs else
+                        "squeeze_bear_momentum" if _r65_ttm and "bear" in _r65_mcs else _r65_sq)
+                    _r65["pre_breakout_compression_perf"] = (
+                        "compressed"      if "contract" in _r65_vcs or _r65_ttm else "not_compressed")
+                except Exception: pass
+                # ── Technical quality cluster ──
+                try:
+                    _r65_ems  = bool(_r65.get("ema_stacked_bull", False))
+                    _r65_adx  = float(_r65.get("adx", 20) or 20)
+                    _r65_mcs2 = str(_r65.get("macd_cross_state", "") or "")
+                    _r65_tfq  = ("top_quality"   if _r65_ems and _r65_adx > 30 and "bull" in _r65_mcs2 else
+                                 "good_quality"  if _r65_ems or (_r65_adx > 25 and "bull" in _r65_mcs2) else
+                                 "weak_quality")
+                    _r65["trend_following_score_perf"]  = _r65_tfq
+                    _r65["trend_quality_score_perf"]    = _r65_tfq
+                    _r65["technical_pattern_quality_perf"] = _r65_tfq
+                    _r65["momentum_quality_score_perf"] = _r65_tfq
+                except Exception: pass
+                try:
+                    _r65_hl   = bool(_r65.get("higher_lows", False))
+                    _r65_c1b  = float(_r65.get("chg1d", 0) or 0)
+                    _r65_c5   = float(_r65.get("chg5d", 0) or 0)
+                    _r65["trend_day_type_perf"] = (
+                        "strong_trend_day"   if _r65_c1b > 1.5 and _r65_c5 > 3 else
+                        "weak_trend_day"     if _r65_c1b < -1 else
+                        "reversal_signal"    if not _r65_hl and _r65_c1b > 0 and _r65_c5 < -2 else "normal_day")
+                    _r65["trend_reversal_signal_perf"] = (
+                        "reversal_up"   if not _r65_hl and _r65_c1b > 1 else
+                        "reversal_down" if _r65_hl and _r65_c1b < -1 else "no_reversal")
+                    _r65["trend_age_perf"] = str(_r65.get("trend_age_bucket", "mature") or "mature")
+                except Exception: pass
+                try:
+                    _r65_rsi = float(_r65.get("rsi", 50) or 50)
+                    _r65_cu  = int(_r65.get("consec_up", _r65.get("consec_green", 0)) or 0)
+                    _r65["trend_exhaustion_perf"] = (
+                        "exhausted"    if _r65_rsi > 78 and _r65_cu >= 5 else
+                        "overbought"   if _r65_rsi > 70 else
+                        "oversold"     if _r65_rsi < 30 else "healthy")
+                    _r65["parabolic_extension_perf"] = (
+                        "parabolic"    if _r65_rsi > 80 and _r65_cu >= 4 else
+                        "extended"     if _r65_rsi > 72 else "normal")
+                    _r65["consecutive_up_days_perf"] = (
+                        "5plus_up" if _r65_cu >= 5 else "3_4_up" if _r65_cu >= 3 else
+                        "1_2_up"   if _r65_cu >= 1 else "no_streak")
+                except Exception: pass
+                try:
+                    _r65_rv2  = float(_r65.get("rvol", 1.0) or 1.0)
+                    _r65["pre_entry_rvol_quality_perf"] = (
+                        "high_entry_rvol"    if _r65_rv2 > 2 else
+                        "normal_entry_rvol"  if _r65_rv2 >= 1 else "low_entry_rvol")
+                    _r65["vol_expansion_at_entry_perf"] = (
+                        "expanding_vol" if _r65_rv2 > 1.5 else "flat_vol" if _r65_rv2 >= 0.8 else "contracting_vol")
+                except Exception: pass
+                try:
+                    _r65_rs1  = float(_r65.get("rs1", _r65.get("chg1d", 0)) or 0)
+                    _r65_rs5  = float(_r65.get("rs5", _r65.get("chg5d", 0)) or 0)
+                    _r65["rs_line_trending_perf"] = (
+                        "rs_new_high"     if _r65_rs1 > 3 and _r65_rs5 > 5 else
+                        "rs_trending_up"  if _r65_rs1 > 1 or _r65_rs5 > 2 else
+                        "rs_declining"    if _r65_rs1 < -1 and _r65_rs5 < -2 else "rs_neutral")
+                    _r65["roc_momentum_entry_perf"] = (
+                        "strong_roc" if _r65_rs1 > 2 else "mild_roc" if _r65_rs1 > 0.5 else
+                        "negative_roc" if _r65_rs1 < -0.5 else "flat_roc")
+                    _r65["mfi_level_entry_perf"] = (
+                        "mfi_bullish"  if _r65.get("mfi", 50) and float(_r65.get("mfi", 50) or 50) > 60 else
+                        "mfi_oversold" if float(_r65.get("mfi", 50) or 50) < 40 else "mfi_neutral")
+                except Exception: pass
+                # ── Multi-day pattern cluster ──
+                try:
+                    _r65_bo   = bool(_r65.get("at_breakout", False))
+                    _r65_b52  = bool(_r65.get("breakout_52w", False))
+                    _r65_cu2  = int(_r65.get("consec_up", 0) or 0)
+                    _r65["multi_day_breakout_perf"] = (
+                        "confirmed_multi_day" if _r65_b52 and _r65_cu2 >= 2 else
+                        "single_day_break"    if _r65_bo else "no_breakout")
+                    _r65["multi_day_pattern_perf"] = (
+                        "multi_day_bull"   if _r65_cu2 >= 3 else
+                        "two_day_bull"     if _r65_cu2 >= 2 else "no_multi_day")
+                except Exception: pass
+                # ── Pattern signals count ──
+                try:
+                    _r65_sigs = 0
+                    for _sk in ["at_breakout","orb_breakout","ttm_squeeze_fired","gap_and_hold",
+                                "obv_rising","higher_lows","vcp","cup_handle","ema_stacked_bull",
+                                "double_bottom","supertrend_bull","ha_bull"]:
+                        if _r65.get(_sk): _r65_sigs += 1
+                    _r65["pattern_signal_count_perf"] = (
+                        "dense_signals"    if _r65_sigs >= 5 else
+                        "moderate_signals" if _r65_sigs >= 3 else
+                        "sparse_signals"   if _r65_sigs >= 1 else "no_signals")
+                    _r65["pattern_completion_perf"] = (
+                        "complete_pattern"  if _r65_sigs >= 3 else
+                        "partial_pattern"   if _r65_sigs >= 1 else "no_pattern")
+                except Exception: pass
+                # ── 52W / new highs ──
+                try:
+                    _r65_b52b = bool(_r65.get("breakout_52w", False))
+                    _r65_n52h = float(_r65.get("near_52w_high", -10) or -10)
+                    _r65["new_highs_lows_perf"] = (
+                        "new_52w_high"  if _r65_b52b else
+                        "near_52w_high" if _r65_n52h > -5 else "mid_range_52w")
+                except Exception: pass
+                # ── Spread / cost cluster ──
+                try:
+                    _r65_spr = float(_r65.get("bid_ask_spread_pct", 0) or 0)
+                    _r65_spq = ("tight" if _r65_spr < 0.08 else "normal" if _r65_spr < 0.25 else "wide")
+                    _r65["spread_cost_perf"]        = _r65_spq
+                    _r65["spread_quality_entry_perf"]= _r65_spq
+                    _r65["spread_quality_perf"]     = _r65_spq
+                except Exception: pass
+                # ── Short interest cluster ──
+                try:
+                    _r65_sf = float(_r65.get("short_float", _r65.get("short_interest", 0)) or 0)
+                    _r65_st = str(_r65.get("short_int_tier", "low_short") or "low_short")
+                    _r65_sit = ("very_high_short" if _r65_sf > 25 else
+                                "high_short"      if _r65_sf > 12 else
+                                "moderate_short"  if _r65_sf > 5 else "low_short")
+                    _r65["short_interest_perf"]       = _r65_sit
+                    _r65["short_interest_ratio_perf"] = _r65_sit
+                    _r65["short_interest_trend_perf"] = _r65_sit
+                    _r65["short_float_quality_perf"]  = _r65_sit
+                except Exception: pass
+                # ── Float / market cap cluster ──
+                try:
+                    _r65_fl = float(_r65.get("float_shares_m", 200) or 200)
+                    _r65_ft = ("micro_float" if _r65_fl < 10 else "small_float" if _r65_fl < 50
+                               else "medium_float" if _r65_fl < 200 else "large_float")
+                    _r65["float_size_perf"]          = _r65_ft
+                    _r65["float_rotation_perf"]       = _r65_ft
+                    _r65["float_rotation_entry_perf"] = _r65_ft
+                    _r65["float_rotation_speed_perf"] = (
+                        "fast_rotation" if _r65_fl < 30 and float(_r65.get("rvol", 1) or 1) > 2
+                        else "slow_rotation")
+                except Exception: pass
+                # ── Portfolio / position context ──
+                try:
+                    _r65_np = int(len(longs))
+                    _r65_mxp = MAX_POSITIONS
+                    _r65_util = _r65_np / max(_r65_mxp, 1)
+                    _r65["portfolio_heat_perf"] = (
+                        "full_portfolio"   if _r65_util > 0.8 else
+                        "half_portfolio"   if _r65_util > 0.4 else "light_portfolio")
+                    _r65["position_concentration_perf"] = (
+                        "concentrated" if _r65_np <= 5 else
+                        "diversified"  if _r65_np >= 15 else "moderate_concentration")
+                    _r65["trade_count_context_perf"] = (
+                        "heavy_traffic"  if _r65_np >= 20 else
+                        "moderate"       if _r65_np >= 10 else "light")
+                except Exception: pass
+                try:
+                    _r65_tslth = float(_r65.get("time_since_last_trade_h", 24) or 24)
+                    _r65["time_since_last_trade_perf"] = (
+                        "rapid_reentry" if _r65_tslth < 0.5 else
+                        "same_day"      if _r65_tslth < 4 else
+                        "next_day"      if _r65_tslth < 24 else "multi_day")
+                except Exception: pass
+                # ── Intraday structure ──
+                try:
+                    _r65_cvr = str(_r65.get("close_vs_range_perf", "") or "")
+                    _r65_c1c = float(_r65.get("chg1d", 0) or 0)
+                    _r65["intraday_range_position_perf"] = (
+                        "upper_range" if "strong" in _r65_cvr else
+                        "lower_range" if "weak" in _r65_cvr else "mid_range")
+                    _r65["intraday_reversal_perf"] = (
+                        "reversal_up"   if bool(_r65.get("bullish_engulfing")) or bool(_r65.get("hammer")) else
+                        "reversal_down" if bool(_r65.get("shooting_star")) else "no_reversal_signal")
+                    _r65["intraday_structure_perf"] = (
+                        "trending_up"   if _r65_c1c > 1.5 and "strong" in _r65_cvr else
+                        "trending_down" if _r65_c1c < -1 and "weak" in _r65_cvr else "choppy")
+                    _r65["closing_strength_perf"] = _r65_cvr if _r65_cvr else "mid_close"
+                    _r65["daily_range_quality_perf"] = (
+                        "wide_quality_range"   if _r65_cvr and float(_r65.get("atr_pct", 2) or 2) > 2.5 else
+                        "tight_range"          if float(_r65.get("atr_pct", 2) or 2) < 1 else "normal_range")
+                    _r65["prior_day_range_perf"] = _r65["daily_range_quality_perf"]
+                except Exception: pass
+                # ── Regime/macro context ──
+                try:
+                    _r65_reg = str(regime.get("regime", "neutral") or "neutral")
+                    _r65_sp4 = float(_r65.get("score_persistence", 0) or 0)
+                    _r65["regime_momentum_sync_perf"] = (
+                        "aligned_momentum" if "bull" in _r65_reg and _r65_sp4 >= 2 else
+                        "counter_momentum" if "bear" in _r65_reg and _r65_sp4 >= 2 else "neutral_sync")
+                    _r65["regime_volatility_entry_perf"] = (
+                        "low_vol_regime"  if float(_r65.get("vix", 20) or 20) < 15 else
+                        "high_vol_regime" if float(_r65.get("vix", 20) or 20) > 25 else "normal_vol_regime")
+                    _r65["vix_term_structure_perf"] = (
+                        "low_vix"     if float(_r65.get("vix", 20) or 20) < 15 else
+                        "normal_vix"  if float(_r65.get("vix", 20) or 20) < 22 else
+                        "high_vix"    if float(_r65.get("vix", 20) or 20) < 30 else "extreme_vix")
+                    _r65["macro_backdrop_perf"]  = _r65.get("macro_regime_perf", "macro_neutral")
+                    _r65["macro_catalyst_perf"]  = _r65.get("macro_regime_perf", "macro_neutral")
+                    _r65["macro_tailwind_perf"]  = _r65.get("macro_regime_perf", "macro_neutral")
+                except Exception: pass
+                # ── Revenue / fundamental ──
+                try:
+                    _r65_rg = float(_r65.get("rev_growth", _r65.get("revenue_growth_pct", 0)) or 0)
+                    _r65["revenue_growth_perf"] = (
+                        "strong_growth" if _r65_rg > 20 else "moderate_growth" if _r65_rg > 5 else
+                        "flat_growth"   if _r65_rg >= 0 else "declining_revenue")
+                except Exception: pass
+                # ── williams_r proxy via RSI ──
+                try:
+                    _r65_rsi2 = float(_r65.get("rsi", 50) or 50)
+                    _r65["williams_r_entry_perf"] = (
+                        "wr_overbought"  if _r65_rsi2 > 75 else
+                        "wr_oversold"    if _r65_rsi2 < 30 else "wr_neutral")
+                except Exception: pass
+                # ── Entry day of month ──
+                try:
+                    from datetime import datetime as _r65_dt, timezone as _r65_tz
+                    _r65_dom = _r65_dt.now(_r65_tz.utc).day
+                    _r65["entry_day_of_month_perf"] = (
+                        "month_open"  if _r65_dom <= 5 else
+                        "mid_month"   if _r65_dom <= 20 else "month_close")
+                except Exception: pass
+                # ── weekly options expiry ──
+                try:
+                    from datetime import datetime as _r65_dt2, timezone as _r65_tz2
+                    _r65_dow2 = _r65_dt2.now(_r65_tz2.utc).weekday()  # 4 = Friday
+                    _r65["weekly_options_expiry_perf"] = ("opex_friday" if _r65_dow2 == 4 else "non_opex")
+                except Exception: pass
+                # ── Pivot point proximity ──
+                try:
+                    _r65_h  = float(_r65.get("day_high", 0) or 0)
+                    _r65_l  = float(_r65.get("day_low", 0) or 0)
+                    _r65_px = float(_r65.get("price", 0) or 0)
+                    if _r65_h > _r65_l > 0 and _r65_px > 0:
+                        _r65_pivot = (_r65_h + _r65_l + _r65_px) / 3
+                        _r65_dist  = abs(_r65_px - _r65_pivot) / _r65_px * 100
+                        _r65_pv    = ("at_pivot"    if _r65_dist < 0.3 else
+                                      "above_pivot" if _r65_px > _r65_pivot else "below_pivot")
+                    else:
+                        _r65_pv = "no_pivot_data"
+                    _r65["pivot_point_perf"]           = _r65_pv
+                    _r65["pivot_point_entry_perf"]     = _r65_pv
+                    _r65["pivot_point_proximity_perf"] = _r65_pv
+                except Exception: pass
+                # ── market_cap_tier_entry ──
+                try:
+                    _r65_mc = float(_r65.get("market_cap_b", _r65.get("market_cap", 0)) or 0)
+                    _r65["market_cap_tier_entry_perf"] = (
+                        "mega_cap" if _r65_mc > 200 else "large_cap" if _r65_mc >= 10 else
+                        "mid_cap"  if _r65_mc >= 2 else "small_cap")
+                except Exception: pass
+                # ── market regime duration ──
+                try:
+                    _r65_rd = float(tlog.get("days_in_regime", 10) or 10)
+                    _r65["market_regime_duration_perf"] = (
+                        "new_regime"         if _r65_rd < 5 else
+                        "established_regime" if _r65_rd <= 20 else "mature_regime")
+                except Exception: pass
+                # ── Relative SPY / sector ──
+                try:
+                    _r65_c5b  = float(_r65.get("chg5d", 0) or 0)
+                    _r65_spy5 = float(_r65.get("spy_chg5d", 0) or 0)
+                    _r65_diff = _r65_c5b - _r65_spy5
+                    _r65["relative_strength_vs_spy_perf"] = (
+                        "outperforming_spy"   if _r65_diff > 5 else
+                        "inline_spy"          if abs(_r65_diff) <= 2 else "underperforming_spy")
+                    _r65["spy_vs_sector_entry_perf"] = (
+                        "spy_above_sector"   if _r65_spy5 > float(_r65.get("sector_etf_chg5d", 0) or 0) + 1.5
+                        else "spy_below_sector" if float(_r65.get("sector_etf_chg5d", 0) or 0) > _r65_spy5 + 1.5
+                        else "spy_sector_neutral")
+                except Exception: pass
+                try:
+                    _r65_srs = float(_r65.get("sector_rs", 50) or 50)
+                    _r65_c1d = float(_r65.get("chg1d", 0) or 0)
+                    _r65["sector_alpha_entry_perf"] = (
+                        "alpha_entry"  if _r65_c1d > float(_r65.get("spy_chg1d", 0) or 0) + 1.5 else
+                        "beta_entry"   if abs(_r65_c1d - float(_r65.get("spy_chg1d", 0) or 0)) <= 0.5 else "lag_entry")
+                    _r65["sector_cycle_phase_perf"] = (
+                        "sector_leading"   if _r65_srs > 70 else
+                        "sector_mid"       if _r65_srs >= 45 else "sector_lagging")
+                    _r65["rsi_vs_sector_rsi_perf"] = (
+                        "stock_stronger_sector" if float(_r65.get("rsi", 50) or 50) > _r65_srs * 0.75 else "stock_weaker_sector")
+                except Exception: pass
+                try:
+                    _r65_scon = float(_r65.get("sector_conc", 0.2) or 0.2)
+                    _r65["sector_concentration_risk_perf"] = (
+                        "high_sector_conc"  if _r65_scon > 0.4 else
+                        "low_sector_conc"   if _r65_scon < 0.15 else "moderate_sector_conc")
+                except Exception: pass
+            except Exception:
+                pass
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
