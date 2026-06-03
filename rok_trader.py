@@ -92,8 +92,8 @@ PRICES_FILE  = Path("docs/prices.json")
 
 # ── Crypto config ─────────────────────────────────────────────────────────────
 ENABLE_CRYPTO    = True
-MAX_CRYPTO_POS   = 10       # max concurrent crypto positions — expanded universe (14 coins)
-CRYPTO_MAX_PCT   = 0.06     # max 6% portfolio per crypto position
+MAX_CRYPTO_POS   = 4        # reduced 10→4 (Wave 80): 6 alts simultaneously = over-correlated mass loss
+CRYPTO_MAX_PCT   = 0.05     # reduced 6%→5% (Wave 80): smaller positions to limit total exposure
 # Alpaca crypto symbols → yfinance equivalents
 CRYPTO_UNIVERSE  = {
     "BTC/USD":  "BTC-USD",
@@ -111,10 +111,10 @@ CRYPTO_UNIVERSE  = {
     "MKR/USD":  "MKR-USD",
     "AAVE/USD": "AAVE-USD",
 }
-CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
+CRYPTO_STOP_PCT  = 0.04     # tightened 5%→4% (Wave 80): alts all breached 5% stop — need tighter gate
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
-CRYPTO_MIN_SCORE = 65       # raised 50→65: alts 12%WR n=7 in live data — need much stronger conviction
+CRYPTO_MIN_SCORE = 80       # raised 65→80 (Wave 80): all 6 open crypto positions losing 5-10%, need stricter gate
 CRYPTO_MIN_COMBINED = 25    # require tech+AI combined >= 25 (raised from 20)
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
@@ -19210,6 +19210,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         logger.warning("CRYPTO: no market data — skipping new buys, sells already processed above")
         return buying_power
     if open_slots <= 0:
+        return buying_power
+
+    # Wave 80: hard circuit breaker — if 3+ crypto positions are down >4%, stop all new crypto buys
+    _deep_loss_count = sum(1 for p in held_crypto.values()
+                           if float(p.get("pnl_pct", 0) or 0) <= -4.0)
+    if _deep_loss_count >= 3:
+        logger.warning(f"CRYPTO HALT: {_deep_loss_count} positions down >4% — no new crypto buys until losses clear")
         return buying_power
 
     # BTC dominance: high dom (>60%) = risk-off in crypto, prefer BTC; low dom (<50%) = altcoin season
