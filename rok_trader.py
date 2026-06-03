@@ -29379,6 +29379,8 @@ def run():
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
                 if _mfi_lb >= 60:
                     _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 3)  # 75%WR n=16 — raised from +1
+                    if bool(_tk_sig_sc.get("higher_lows", False)):
+                        _learned_bonus += _nbns("signal_synergy", "mfi_dist+higher_lows", 65, 2)  # 88%WR n=8 combo
                 elif 40 <= _mfi_lb < 60:
                     _learned_bonus += _npen("mfi_zone_perf", "neutral", 43, -2)      # 42.6% WR n=68 — large sample
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
@@ -29770,6 +29772,8 @@ def run():
                 _sec_perf_lb = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other")
                 if _sec_perf_lb == "tech":
                     _learned_bonus += _nbns("sector_performance", "tech", 62, 1)   # 63% WR n=27 — threshold 65→62
+                    if _reentry_lb == "winner":
+                        _learned_bonus += _nbns("signal_synergy", "reentry_winner+tech", 70, 2)  # 93%WR n=14 combo
                 elif _sec_perf_lb == "other":
                     _learned_bonus += _npen("sector_performance", "other", 40, -5) # 26%WR n=19 recent — raised to -5
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
@@ -29807,6 +29811,8 @@ def run():
                     _learned_bonus += _npen("trade_momentum_perf", "losing_1", 7, -7)   # 4.4% WR n=45 → escalated
                 elif _tm_wstrk == 0:
                     _learned_bonus += _npen("trade_momentum_perf", "neutral", 18, -5)   # 15.6% WR n=32 → escalated
+                elif _tm_wstrk == 1:
+                    _learned_bonus += _npen("trade_momentum_perf", "win_1", 41, -3)     # 39%WR n=23 — after one win, next often loses
                 # Position count: 4-7=14.7% WR n=34; 13+=4.7% WR n=43; 8-12=60.9% n=46
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
