@@ -29479,6 +29479,8 @@ def run():
                     _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
                 elif _ha_bull_flag and _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+intra_extended", 68, 2)  # 73.3%WR n=15 — best entry
+                    if not _obv_rising_lb:
+                        _learned_bonus += _nbns("signal_synergy", "ha_bull+intra_ext+obv_fall", 72, 1)  # 77.8%WR n=9 — triple best entry
                 if _ha_bull_flag and _candle_present and not _obv_rising_lb:
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+candle+obv_fall", 68, 1)  # 72.7%WR n=22 — triple confirmation
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
@@ -29937,7 +29939,7 @@ def run():
                     _et_hour_adj = 0
                 # Hard-coded late session penalty when tlog data sparse (31.2%WR n=16 for hour 15)
                 if _et_hour_adj == 0 and _et_ctx.hour >= 15:
-                    _et_hour_adj = -3  # late session = power hour trap
+                    _et_hour_adj = -5  # 35.7%WR n=14 — late session = power hour trap (raised -3→-5)
                 # N721: ad_trend — market A/D trend using score()-compatible string values
                 _n721_adv_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
                 if   _n721_adv_ctx > 70: live[tk]["ad_trend"] = "rising_fast"
