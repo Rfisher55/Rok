@@ -29297,8 +29297,7 @@ def run():
                 if _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 61.1% WR n=18 — FIRES ✓
                 elif _intra_mom_bkt_lb == "runner":
-                    # intraday_mom_perf["runner"] = 42.9% WR n=14 — penalize (removed stale 65% bonus)
-                    _learned_bonus += _npen("intraday_mom_perf", "runner", 44, -1)
+                    _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
                     _learned_bonus += _npen("intraday_mom_perf", "early", 38, -4)  # 25%WR n=12 recent — raised from -1
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
@@ -29367,9 +29366,15 @@ def run():
                         _learned_bonus += _nbns("reentry_perf", "winner", 60, 4)   # 81%WR n=26 — raised from +2
                     elif _reentry_lb == "loser":
                         _learned_bonus += _npen("reentry_perf", "loser", 40, -8)   # 11%WR n=18 — near-block, raised from -3
-                # Candle pattern present: 65% WR n=17 vs no pattern 59% WR
-                if bool(_tk_sig_sc.get("candle_pattern", False)) or bool(_tk_sig_sc.get("three_white_soldiers", False)) or bool(_tk_sig_sc.get("hammer", False)):
-                    _learned_bonus += _nbns("candle_pattern_perf", "present", 62, 1)  # 65% WR n=17
+                # Candle pattern: present=60%WR n=30, absent=32%WR n=25 — penalize no pattern
+                _candle_present = (bool(_tk_sig_sc.get("candle_pattern", False))
+                                   or bool(_tk_sig_sc.get("three_white_soldiers", False))
+                                   or bool(_tk_sig_sc.get("hammer", False))
+                                   or bool(_tk_sig_sc.get("candle_score", 0)))
+                if _candle_present:
+                    _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 1)   # 60%WR n=30 — threshold 62→58
+                else:
+                    _learned_bonus += _npen("candle_pattern_perf", "absent", 35, -3)   # 32%WR n=25 — no pattern = weak
                 # MFI: distribution=66.7% WR n=9; neutral=42.6% WR n=68
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
                 if _mfi_lb >= 60:
@@ -29381,9 +29386,11 @@ def run():
                 _px_raw_lb  = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 1)) or 1)
                 _atr_pct_lb = (_atr_raw_lb / max(_px_raw_lb, 0.01) * 100) if _atr_raw_lb > 0 else 0.0
                 if _atr_pct_lb >= 4.0:
-                    _learned_bonus += _nbns("atr_perf", "4%+", 51, 1)           # 51.7% WR n=29 — threshold lowered
+                    _learned_bonus += _nbns("atr_perf", "4%+", 51, 1)           # 62%WR n=34 — good
                 elif 2.0 <= _atr_pct_lb < 4.0:
-                    _learned_bonus += _npen("atr_perf", "2-4%", 26, -2)         # 25% WR n=8
+                    _learned_bonus += _npen("atr_perf", "2-4%", 35, -3)         # 31%WR n=13 — raised thr 26→35, pts -2→-3
+                elif 0 < _atr_pct_lb < 2.0:
+                    _learned_bonus += _npen("atr_perf", "1-2%", 15, -5)         # 12%WR n=8 — low ATR = no momentum
                 # ROC: positive = 48.3% WR n=29 (dead bonus removed; coin flip)
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
@@ -29439,13 +29446,15 @@ def run():
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16
                 elif not _ha_bull_flag:
                     _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
-                # RVOL tier: normal=54.3% WR n=46 (updated); weak=33.3% WR n=21
+                # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
-                    _learned_bonus += _npen("rvol_tier_perf", "weak", 35, -2)   # 33.3% WR n=21
+                    _learned_bonus += _npen("rvol_tier_perf", "weak", 35, -3)   # 32%WR n=22 — raised from -2
                 elif 0.8 <= _rvol_t_lb < 1.5:
-                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 51, 1)  # 52.1% WR n=48 — threshold 54→51
+                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 60, 2)  # 64%WR n=25 — raised bonus
                     _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
+                elif _rvol_t_lb >= 1.5:
+                    _learned_bonus += _npen("rvol_tier_perf", "strong", 35, -2) # 33%WR n=6 — high rvol = chasing
                 # ST gap: no_st=55.6% WR n=27 (updated); normal=18.2% WR n=11 — penalize "normal" gap
                 _st_bul_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 # supertrend_bear not in _extract; derive from supertrend_dir (1=bull,-1=bear; default=1 exception case)
@@ -29456,12 +29465,14 @@ def run():
                 else:
                     # "normal" ST state: 25% WR n=12 — penalty threshold 22→26
                     _learned_bonus += _npen("st_gap_perf", "normal", 26, -4)  # 25% WR n=12
-                # Price acceleration: price_accel_perf["accelerating"] = 44.1% WR n=34 (updated — was stale 64%)
-                # signal_performance["price_accel_pos"] = 47.2% WR n=36 — below 50%
-                if bool(_tk_sig_sc.get("price_accel_pos", False)):
-                    _learned_bonus += _npen("signal_performance", "price_accel_pos", 50, -1)  # 47.2% WR n=36 → fires <=50%
-                elif not bool(_tk_sig_sc.get("price_accel_pos", False)):
-                    _learned_bonus += _npen("price_accel_perf", "decelerating", 30, -4)  # 22%WR n=9 — decelerating price
+                # Price acceleration: 52%WR when accelerating, 22%WR n=9 when decelerating
+                # Only score when signal is explicitly present (absent = neutral, not decelerating)
+                _pa_pos_raw = _tk_sig_sc.get("price_accel_pos")
+                if _pa_pos_raw is not None:
+                    if bool(_pa_pos_raw):
+                        _learned_bonus += _npen("signal_performance", "price_accel_pos", 50, -1)  # 52%WR → fires if WR drops <=50%
+                    else:
+                        _learned_bonus += _npen("price_accel_perf", "decelerating", 30, -4)  # 22%WR n=9
                 # Trend confirmation (ST+PSAR combo): both=62% WR n=21; neither=58% WR n=24 (mild diff)
                 _tc_st_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _tc_ps_lb = bool(_tk_sig_sc.get("psar_bull"))
@@ -29499,7 +29510,7 @@ def run():
                 if _rsr3_lb >= 90:
                     _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 2)   # 65%WR n=20 — raised from +1
                 elif 50 <= _rsr3_lb < 90:
-                    _learned_bonus += _npen("rs_rating_perf", "average", 44, -2)  # 43.8% WR n=48
+                    _learned_bonus += _npen("rs_rating_perf", "average", 35, -4) # 31%WR n=26 — raised thr 44→35, pts -2→-4
                 # Premium signal tier: use only signals with verified positive WR (>50%)
                 # Removed: orb_breakout(40%), supertrend_bull(47%), obv_rising(36%) — negative signals
                 # Kept: vcp, cup_handle, at_breakout(45% but pattern quality), mtf_triple, ttm_squeeze, rvol_surge, higher_lows
