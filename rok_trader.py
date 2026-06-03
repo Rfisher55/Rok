@@ -29171,8 +29171,10 @@ def run():
                 _vwap_above_flag = bool(_tk_sig_sc.get("above_vwap", False)) or _vwp_lb > 0
                 _vwap_barely_above_flag = (1.0 <= _vwp_lb < 3.0)
                 if _vwap_above_flag:
-                    # VWAP distance buckets: 1-3% above=35.7%WR n=14; 3-6% above=66.7%WR n=18
-                    if 1.0 <= _vwp_lb < 3.0:
+                    # VWAP distance buckets: 1-3% above=35.7%WR n=14; 3-6% above=66.7%WR n=18; 6%+ = 33%WR n=6
+                    if _vwp_lb >= 6.0:
+                        _learned_bonus += _npen("vwap_pos_perf", "parabolic_above", 38, -3)  # 33%WR n=6 — too far above VWAP = extended, mean reversion risk
+                    elif 1.0 <= _vwp_lb < 3.0:
                         _learned_bonus += _npen("vwap_pos_perf", "barely_above", 55, -2)  # 35.7%WR n=14 — barely reclaimed, may fall back
                     elif 3.0 <= _vwp_lb < 6.0:
                         _learned_bonus += _nbns("vwap_pos_perf", "healthy_above", 64, 1)  # 66.7%WR n=18 — healthy momentum gap above VWAP
@@ -29469,8 +29471,10 @@ def run():
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
                 _px_raw_lb  = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 1)) or 1)
                 _atr_pct_lb = (_atr_raw_lb / max(_px_raw_lb, 0.01) * 100) if _atr_raw_lb > 0 else 0.0
-                if _atr_pct_lb >= 4.0:
-                    _learned_bonus += _nbns("atr_perf", "4%+", 51, 1)           # 62%WR n=34 — good
+                if _atr_pct_lb >= 6.0:
+                    _learned_bonus += _npen("atr_perf", "6%+", 20, -5)          # 12%WR n=8 — extreme volatility trap; raised from "4%+" bucket
+                elif _atr_pct_lb >= 4.0:
+                    _learned_bonus += _nbns("atr_perf", "4-6%", 68, 2)          # 74%WR n=19 — optimal volatility; split from "4%+" bucket
                 elif 2.0 <= _atr_pct_lb < 4.0:
                     _learned_bonus += _npen("atr_perf", "2-4%", 35, -3)         # 31%WR n=13 — raised thr 26→35, pts -2→-3
                 elif 0 < _atr_pct_lb < 2.0:
