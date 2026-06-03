@@ -21935,12 +21935,13 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("double_top", False): s -= 8
 
     # Smart Accumulation Score: composite of OBV + Force Index + MFI smart-money signals
+    # Wave 90: CRITICAL FIX — accum score interpretation was inverted for 2-7 range vs live data
+    # Live data: light(2-4)=56%WR, moderate(5-7)=27%WR, heavy(8+)=good, none(0-1)=10%WR
     _accum = d.get("accum_score", 0) or 0
-    if _accum >= 8:   s += 7   # very strong accumulation — rare, high conviction
-    elif _accum >= 6: s += 4   # solid institutional buying pattern
-    elif _accum >= 4: s += 2   # moderate accumulation
-    elif _accum == 2: s -= 3   # light accumulation = weak institutional support
-    elif _accum <= 1: s -= 5   # no/minimal accumulation = no smart money confirmation
+    if _accum >= 8:           s += 7   # heavy accumulation: strong institutional buying
+    elif 2 <= _accum <= 4:    s += 4   # light (56%WR live): was -3, now +4 (Wave 90 fix)
+    elif 5 <= _accum <= 7:    s -= 3   # moderate (27%WR live): was +2/+4, now -3 (Wave 90 fix)
+    elif _accum <= 1:         s -= 5   # none: 10%WR — no smart money confirmation
 
     # News Velocity: accelerating news flow = catalyst building = institutional awareness
     if d.get("news_accelerating", False):   s += 5   # 3+ articles in 24h, accelerating
