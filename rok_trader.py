@@ -29679,6 +29679,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "vwap_barely+stoch_ob", 25, -2)  # 22.2%WR n=9 — weak VWAP reclaim + overbought
                     if _obv_rising_lb:
                         _learned_bonus += _npen("signal_synergy", "stoch_ob+obv_rising", 35, -2)  # 33.3%WR n=9 — chasing extended move with overbought momentum
+                    if _bb_pos_lb > 0.85:
+                        _learned_bonus += _npen("signal_synergy", "bb_upper+stoch_ob", 27, -2)  # 25%WR n=8 — extended BB + overbought = double exhaustion
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
