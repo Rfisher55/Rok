@@ -29420,6 +29420,8 @@ def run():
                     _learned_bonus += _npen("mfi_zone_perf", "neutral", 32, -3)      # 30%WR n=10 — raised from -2
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "bb_upper+mfi_neutral", 27, -2)  # 25%WR n=8 — upper band + no dist pressure
+                    elif 0.4 < _bb_pos_lb <= 0.85:
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+bb_mid", 20, -2)  # 0%WR n=10 — neutral MFI + mid BB = no momentum
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
@@ -29472,6 +29474,8 @@ def run():
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
                     if not bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _nbns("signal_synergy", "obv_fall+gap_normal", 95, 2)  # 100%WR n=6 — clean setup: no gap trap, OBV not chasing
+                    if 50 <= _mfi_lb < 60:
+                        _learned_bonus += _npen("signal_synergy", "obv_fall+mfi_neutral", 20, -3)  # 0%WR n=13 — OBV falling + MFI neutral = no buy pressure
                 # Higher lows confirmed: 75% WR n=8; not_confirmed: 38.9%WR n=36 (large sample!)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 75% WR n=8
@@ -29708,6 +29712,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "candle_present+stoch_neutral", 80, 2)  # 83.3%WR n=6 — bullish candle in clean zone
                     if bool(_tk_sig_sc.get("force_index_rising", False)):
                         _learned_bonus += _nbns("signal_synergy", "stoch_neutral+force_rising", 78, 2)  # 83.3%WR n=6 — clean momentum + building force
+                    if 50 <= _mfi_lb < 60:
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+mfi_neutral", 20, -2)  # 0%WR n=7 — double neutral zone, no momentum
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
