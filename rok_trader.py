@@ -29191,10 +29191,14 @@ def run():
                     _sec_5d_lb = 99
                 if -1.5 < _sec_5d_lb < 1.5:
                     _learned_bonus += _npen("sector_leadership_v1_perf", "mid", 25, -5)  # 18.5% WR n=27
-                # Consecutive green days 0d: 43.6% WR n=39 — no streak at entry = mild negative
+                # Consecutive green days: 0d=12%WR n=8, 1d=42%WR n=12, 2d=20%WR n=5, 3d+=62%WR
                 _cg_streak_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_streak_lb == 0:
-                    _learned_bonus += _npen("consec_green_perf", "0d", 45, -5)  # 12%WR n=8 recent — raised from -1
+                    _learned_bonus += _npen("consec_green_perf", "0d", 45, -5)  # 12%WR n=8 — strong penalty
+                elif _cg_streak_lb == 1:
+                    _learned_bonus += _npen("consec_green_perf", "1d", 44, -2)  # 42%WR n=12 — mild penalty
+                elif _cg_streak_lb == 2:
+                    _learned_bonus += _npen("consec_green_perf", "2d", 25, -5)  # 20%WR n=5 — stalling momentum
                 # SPY alignment bonus: reuse _spy_intra_lb computed above from tlog
                 _spy_it_lb = _spy_intra_lb  # "up"/"down"/"flat" from tlog.spy_intraday_pct
                 if "up" in _spy_it_lb:
@@ -29222,7 +29226,9 @@ def run():
                 # Fix key mismatch: was "dense_signals"/"moderate_signals" — N112 uses "strong"/"good"
                 _sig_cnt_lb = sum(1 for _sk2 in ["at_breakout","orb_breakout","ttm_squeeze_fired",
                     "obv_rising","higher_lows","vcp","cup_handle","ema_stacked_bull","double_bottom"] if _tk_sig_sc.get(_sk2))
-                if _sig_cnt_lb >= 4:
+                if _sig_cnt_lb >= 6:
+                    _learned_bonus += _nbns("signal_density_perf", "very_strong", 65, 3)  # 86%WR n=7 at high counts
+                elif _sig_cnt_lb >= 4:
                     _learned_bonus += _nbns("signal_density_perf", "strong", 62, 2)  # 65.2% WR n=23
                 elif _sig_cnt_lb >= 2:
                     _learned_bonus += _nbns("signal_density_perf", "good", 58, 1)    # estimate good WR
@@ -29426,9 +29432,13 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "at_breakout+higher_lows", 64, 2)  # 85.7% WR n=7
                     elif bool(_tk_sig_sc.get("ema_stacked_bull", False)):
                         _learned_bonus += _nbns("signal_synergy", "ema_stacked_bull+higher_lows", 64, 2)  # 75% WR n=8
-                # HA trend: bear=31.2% WR n=16 — strengthened penalty
-                if bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear":
-                    _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16 — strong bear signal
+                # HA trend: bear=31.2% WR n=16; not_bull=30%WR n=20 — penalize both bearish and neutral HA
+                _ha_bear_flag = bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"
+                _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
+                if _ha_bear_flag:
+                    _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16
+                elif not _ha_bull_flag:
+                    _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
                 # RVOL tier: normal=54.3% WR n=46 (updated); weak=33.3% WR n=21
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
@@ -29484,10 +29494,10 @@ def run():
                                or "force_index" in _tk_sig_sc)
                 if _fi_present and not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
                     _learned_bonus += _npen("force_index_perf", "weak", 55, -4)  # 17%WR n=12 recent — raised from -1
-                # RS rating tier: elite>=90 = 69% WR n=13 (bonus); average 50-89 = 43.8% WR n=48 → penalty
+                # RS rating tier: elite>=90 = 65% WR n=20 (raised from n=13); average 50-89 = bad
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if _rsr3_lb >= 90:
-                    _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 1)
+                    _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 2)   # 65%WR n=20 — raised from +1
                 elif 50 <= _rsr3_lb < 90:
                     _learned_bonus += _npen("rs_rating_perf", "average", 44, -2)  # 43.8% WR n=48
                 # Premium signal tier: use only signals with verified positive WR (>50%)
