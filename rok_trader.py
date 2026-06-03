@@ -28991,6 +28991,7 @@ def run():
                 _ema_stack_bear_lb = bool(_tk_sig_sc.get("ema_stacked_bear", False))
                 if _ema_stack_bull_lb:
                     _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 2)
+                    _learned_bonus += _npen("ema_stack_quality_perf", "full_ema_stack", 55, -2)  # 40%WR live — fires until tlog WR improves (Wave 75)
                 elif _ema_stack_bear_lb:
                     _learned_bonus += _npen("ema_stack_quality_perf", "ema_stack_broken", 42, -2)
                 _rs1_lb = float(_tk_sig_sc.get("rs1", 0) or 0)
@@ -29074,9 +29075,8 @@ def run():
                     if bool(_tk_sig_sc.get("obv_rising", False)):
                         _learned_bonus += _npen("signal_synergy", "mom_accel+obv_rising", 34, -2)  # 33.3% WR n=12
                 if bool(_tk_sig_sc.get("ichimoku_above", False)):
-                    # ichimoku_cloud_entry_perf has "in_cloud" (46.5%) not "above_cloud" — dead bonus removed
-                    # signal_performance["ichimoku_above"] = 45.7% WR n=35 — penalize
-                    _learned_bonus += _npen("signal_performance", "ichimoku_above", 47, -1)
+                    # ichimoku_above: 40%WR live — raised thr 47→55, pts -1→-2 (Wave 75)
+                    _learned_bonus += _npen("signal_performance", "ichimoku_above", 55, -2)
                     if bool(_tk_sig_sc.get("mom_accel", False)):
                         # ichimoku_above+mom_accel = 50% WR n=16 — coin flip, penalize at 51%
                         _learned_bonus += _npen("signal_synergy", "ichimoku_above+mom_accel", 51, -1)
@@ -29127,9 +29127,8 @@ def run():
                             _learned_bonus += _npen("signal_synergy", f"above_poc+{_apoc_sig}", _apoc_thr, -3)
                             break  # one penalty per position
                 if bool(_tk_sig_sc.get("supertrend_bull", False)):
-                    # supertrend_perf MISSING from tlog — dead bonus removed
-                    # signal_performance["supertrend_bull"] = 46.9% WR n=32 — penalize mildly
-                    _learned_bonus += _npen("signal_performance", "supertrend_bull", 47, -1)
+                    # supertrend_bull: 33%WR n=3 live — raised thr 47→58, pts -1→-2 (Wave 75)
+                    _learned_bonus += _npen("signal_performance", "supertrend_bull", 58, -2)
                 if bool(_tk_sig_sc.get("ttm_squeeze_fired", False)):
                     _learned_bonus += _nbns("squeeze_momentum_perf", "squeeze_fired", 65, 2)
                 if bool(_tk_sig_sc.get("donchian_up", False)):
@@ -29281,7 +29280,7 @@ def run():
                     if _accum_sec_tech:
                         _learned_bonus += _nbns("signal_synergy", "accum_light+tech", 68, 2)  # 77%WR n=22 — institutional buying in best sector
                     else:
-                        _learned_bonus += _npen("signal_synergy", "accum_light+non_tech", 47, -2)  # 45%WR n=11 — light accum outside tech = low conviction
+                        _learned_bonus += _npen("signal_synergy", "accum_light+non_tech", 57, -4)  # 20%WR n=5 live — raised thr 47→57, pts -2→-4 (Wave 75)
                 # Accum moderate + HA synergies: both bull and bear are bad (40-42%WR)
                 _obv_rising_lb = bool(_tk_sig_sc.get("obv_rising", False))
                 if _accum_bkt_lb == "moderate":
@@ -29664,7 +29663,7 @@ def run():
                               + int(bool(_tk_sig_sc.get("ema_stacked_bull")))
                               + int(float(_tk_sig_sc.get("roc20", 0) or 0) > 0))
                 if bool(_tk_sig_sc.get("mtf_aligned", False)):
-                    _learned_bonus += _npen("signal_performance", "mtf_aligned", 47, -1)
+                    _learned_bonus += _npen("signal_performance", "mtf_aligned", 55, -2)  # 40%WR live — raised thr 47→55, pts -1→-2 (Wave 75)
                 else:
                     _learned_bonus += _npen("mtf_align_perf", "none", 35, -2)  # 33%WR n=12 — no MTF alignment
                 # Force index weak: 54% WR n=24 — only penalize when force_index IS computed but weak
