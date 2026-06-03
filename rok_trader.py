@@ -29782,9 +29782,9 @@ def run():
                 _pos_now_lb = int(_tk_sig_sc.get("positions_open_now", len(held)) or len(held))
                 _pos_bkt_lb = ("13+" if _pos_now_lb >= 13 else "8-12" if _pos_now_lb >= 8 else "4-7" if _pos_now_lb >= 4 else "1-3")
                 if _pos_bkt_lb == "13+":
-                    _learned_bonus += _npen("position_count_perf", "13+", 5, -8)  # 4.7% WR n=43 — near-block
+                    _learned_bonus += _npen("position_count_perf", "13+", 20, -12)  # 7% WR n=44 — strong penalty
                 elif _pos_bkt_lb == "4-7":
-                    _learned_bonus += _npen("position_count_perf", "4-7", 15, -5)  # 14.7% WR n=34
+                    _learned_bonus += _npen("position_count_perf", "4-7", 20, -5)  # 15% WR n=34
                 elif _pos_bkt_lb == "8-12":
                     _learned_bonus += _nbns("position_count_perf", "medium_book", 61, 1)  # 60.9% WR n=46
                 # Sector breadth: compute directly (injection runs after this block)
