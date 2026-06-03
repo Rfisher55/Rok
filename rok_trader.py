@@ -21559,9 +21559,11 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif chg < -2:  s -= 14
     elif chg < -1:  s -= 8
 
-    # Intraday 4h momentum (+18/-14)
-    if   intra >  1.5: s += 18
-    elif intra >  0.8: s += 11
+    # Intraday 4h momentum — Wave 87: reduced bonuses for extended/runner zones (confirmed bad WR)
+    # extended (>5%): 10%WR live; runner (2-5%): 38%WR live — score inflation cause
+    if   intra >  5.0: s +=  4   # extended zone: was +18; 10%WR confirmed trap (Wave 87)
+    elif intra >  2.0: s +=  7   # runner zone: was +18; 38%WR (Wave 87)
+    elif intra >  0.8: s += 11   # healthy moderate momentum: keep
     elif intra >  0.2: s +=  5
     elif intra < -1.5: s -= 14
     elif intra < -0.8: s -=  8
@@ -21592,8 +21594,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif macd < -0.08: s -= 5
 
     # Bollinger position (+10/-8)
-    if   40 < bb < 75: s += 10
-    elif bb >= 75:     s +=  4
+    # Wave 87: removed +4 for bb>=75 (upper band 38.5%WR — partial counteracting of buy-block penalty)
+    if   40 < bb < 75: s += 10   # sweet spot: healthy momentum without overextension
+    elif bb >= 85:     s -=  2   # upper extreme zone: 38.5%WR trap (Wave 87)
     elif bb < 20:      s -= 8
 
     # VWAP position: above VWAP = bullish (+8/-8)
