@@ -29313,9 +29313,11 @@ def run():
                     if _mfi_lb >= 80:
                         _learned_bonus += _nbns("signal_synergy", "pullback+mfi_dist", 55, 2)  # pullback + distribution buying = smart money accumulation
                 elif _intra_mom_bkt_lb == "extended":
-                    _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 61.1% WR n=18 — FIRES ✓
+                    _learned_bonus += _nbns("intraday_mom_perf", "extended", 70, 2)  # threshold raised 60→70 (10%WR n=10 recent; tlog must recover to 70%+ to bonus)
                     if _candle_present:
                         _learned_bonus += _nbns("signal_synergy", "intraday_extended+candle", 70, 1)  # 75%WR n=8 — momentum + confirmation
+                    if _bb_pos_lb > 0.85:
+                        _learned_bonus += _npen("signal_synergy", "intraday_extended+bb_upper", 20, -2)  # 10%WR n=10 — double extension trap
                 elif _intra_mom_bkt_lb == "runner":
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
@@ -29442,6 +29444,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+tech_sector", 20, -2)  # 0%WR n=8 — tech + neutral MFI = no institutional buying in best sector
                     if bool(_tk_sig_sc.get("mtf_aligned", False)):
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+mtf_full", 20, -2)  # 0%WR n=6 — full MTF alignment but MFI neutral = late-cycle trap
+                    if _candle_present:
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+candle_present", 20, -2)  # 10%WR n=10 — candle on neutral MFI = false confirmation
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
