@@ -29322,6 +29322,10 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "intraday_extended+candle", 70, 1)  # 75%WR n=8 — momentum + confirmation
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "intraday_extended+bb_upper", 20, -2)  # 10%WR n=10 — double extension trap
+                    if _accum_bkt_lb == "light":
+                        _learned_bonus += _nbns("signal_synergy", "accum_light+intra_extended", 68, 2)  # 73%WR n=11 — light accumulation + strong momentum
+                    if str(_tk_sig_sc.get("sector","")).lower() == "tech":
+                        _learned_bonus += _nbns("signal_synergy", "tech_sector+intra_extended", 75, 2)  # 80%WR n=10 — tech breakout + full momentum
                 elif _intra_mom_bkt_lb == "runner":
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
@@ -29534,6 +29538,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+ha_bear", 30, -2)  # 27.8%WR n=18 — double trap
                     if _intra_mom_bkt_lb == "early":
                         _learned_bonus += _npen("signal_synergy", "ha_bear+intra_early", 15, -3)  # 11.1%WR n=9 — near-block
+                    if _accum_bkt_lb == "none":
+                        _learned_bonus += _npen("signal_synergy", "accum_none+ha_bear", 20, -3)  # 14%WR n=7 — zero accumulation + bearish HA = double weakness
                 elif not _ha_bull_flag:
                     _learned_bonus += _npen("ha_trend_perf", "neutral", 55, -5) # 30%WR n=20 — raised thr 35→55, pts -3→-5 (HA not bullish = weak)
                 elif _ha_bull_flag and _intra_mom_bkt_lb == "extended":
@@ -29546,6 +29552,8 @@ def run():
                     _learned_bonus += _npen("signal_synergy", "ha_bull+gap_hold", 35, -1)  # 33.3%WR n=18 — HA bullish but trapped in gap
                 if _ha_bull_flag and 3 <= _ha_consec_lb < 5:
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+ha_consec_building", 70, 1)  # 75%WR n=8 — early HA streak, bullish confirmation
+                if _ha_bull_flag and bool(_tk_sig_sc.get("higher_lows", False)):
+                    _learned_bonus += _nbns("signal_synergy", "higher_lows+ha_bull", 70, 2)  # 75%WR n=8 — confirmed ascending support + HA bullish
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
@@ -29770,6 +29778,11 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+pm_gap_flat", 20, -2)  # 0%WR n=8 — stoch neutral + no premarket catalyst
                     if not bool(_tk_sig_sc.get("at_demand_zone", False)):
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+no_demand_zone", 20, -2)  # 0%WR n=7 — stoch neutral + no demand structure
+                    if _vwp_lb > 0.5:
+                        _learned_bonus += _nbns("signal_synergy", "vwap_above+stoch_neutral", 65, 2)  # 70%WR n=10 — above VWAP + stoch clean zone = momentum confirmed
+                    _roc5_sn_chk = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
+                    if _roc5_sn_chk > 0:
+                        _learned_bonus += _nbns("signal_synergy", "roc_positive+stoch_neutral", 65, 2)  # 70%WR n=10 — positive ROC + stoch not chasing
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
@@ -29848,6 +29861,8 @@ def run():
                             _learned_bonus += _npen("signal_synergy", "gap_hold+roc_accel", 18, -3)  # 16.7%WR n=6 — gap trap + ROC accelerating = exhausted chase
                     elif _roc5_acc <= 0 and _roc20_acc <= 0:
                         _learned_bonus += _npen("roc_perf", "negative", 48, -5)  # 12%WR n=8 recent — raised from -1
+                        if _ha_bear_flag:
+                            _learned_bonus += _npen("signal_synergy", "roc_negative+ha_bear", 20, -3)  # 14%WR n=7 — negative ROC + HA bearish = double trend failure
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
                 _rs5_acc = _tk_sig_sc.get("rs5")
                 _rs63_acc = _tk_sig_sc.get("rs63")
@@ -29858,6 +29873,8 @@ def run():
                     _learned_bonus += _npen("rs_mom_perf", "leading", 46, -1)  # 44.1% WR n=34
                 elif _rs5_acc is not None and _rs63_acc is not None and float(_rs5_acc) <= 0 and float(_rs63_acc) <= 0:
                     _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -5)   # 12%WR n=8 — raised from -1
+                    if _ha_bear_flag:
+                        _learned_bonus += _npen("signal_synergy", "rs_lagging+ha_bear", 20, -3)  # 14%WR n=7 — lagging RS + HA bearish = double weakness
                 # Signal freshness: building_signal=45.5% WR n=77 — compute directly (persist_count/consecutive_strong_scans injected after this block)
                 _persist_lb = int(_curr_persist.get(tk, 0) or 0)  # direct from persist counter
                 _fresh_lb = ("fresh_signal" if _persist_lb <= 1 else "building_signal" if _persist_lb <= 3
