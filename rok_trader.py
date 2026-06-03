@@ -26029,6 +26029,14 @@ def run():
     for _gk in _ghost_peaks:
         peaks.pop(_gk, None)
         logger.info(f"Removed ghost crypto peak entry: {_gk}")
+    # Prune stale peaks: remove entries for positions no longer in held
+    # Prevents ghost entries from 33h+ ago causing incorrect age calculations
+    _all_open_syms = set(held.keys())
+    _stale_peaks = [k for k in list(peaks.keys()) if k not in _all_open_syms and "/" not in k]
+    for _sk in _stale_peaks:
+        peaks.pop(_sk, None)
+    if _stale_peaks:
+        logger.info(f"Pruned {len(_stale_peaks)} stale peak entries for closed positions")
     logger.info(f"Longs ({len(longs)}): {', '.join(longs) or 'none'}")
     logger.info(f"Shorts ({len(shorts)}): {', '.join(shorts) or 'none'}")
 
