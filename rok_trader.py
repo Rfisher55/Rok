@@ -19091,9 +19091,11 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             elif _crypto_age_min >= 240:
                 # 4h absolute timeout — exit regardless of PnL to free capital
                 reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 45 and pnl_pct >= 2.5:
-                # Early big-win exit: lock in a strong gain if we hit 2.5%+ within 45min
-                # MOVED before cycle exit so winners aren't mis-labeled as "cycle_exit"
+            elif _crypto_age_min >= 20 and pnl_pct >= 3.0:
+                # Flash crypto win: up 3%+ after 20min — lock it in, free slot for next move
+                reason = f"crypto flash win ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 45 and pnl_pct >= 2.0:
+                # Early big-win exit: lock in a strong gain if we hit 2.0%+ within 45min (was 2.5%)
                 reason = f"crypto early win exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= 60 and pnl_pct >= 1.0:
                 # 1h profit exit: only trigger at 1%+ — winners ride, not cycle-exited
@@ -26781,7 +26783,7 @@ def run():
             _scalp_exit_reason = None
             # Adaptive thresholds: self-tune calibrates these from actual trade distribution.
             # Defaults of ±1.5% apply until enough scalp trades are accumulated (≥10).
-            _scalp_pthr = min(1.0, float(tlog.get("bot_learned_params", {}).get("learned_scalp_profit_pct", 1.0)))  # cap at 1.0%
+            _scalp_pthr = min(0.8, float(tlog.get("bot_learned_params", {}).get("learned_scalp_profit_pct", 0.8)))  # cap at 0.8% for faster recycling
             _scalp_sthr = float(tlog.get("bot_learned_params", {}).get("learned_scalp_stop_pct", -1.5))
             # Hold time learning: if 0-2d trades win more than 3-7d holds, be more aggressive taking profits
             try:
