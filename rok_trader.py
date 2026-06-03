@@ -29322,6 +29322,9 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "intraday_extended+candle", 70, 1)  # 75%WR n=8 — momentum + confirmation
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "intraday_extended+bb_upper", 20, -2)  # 10%WR n=10 — double extension trap
+                    _rvol_ext_chk = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
+                    if 0.8 <= _rvol_ext_chk < 1.5:
+                        _learned_bonus += _nbns("signal_synergy", "extended+rvol_normal", 62, 2)  # 67%WR n=12 — momentum without chasing
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _nbns("signal_synergy", "accum_light+intra_extended", 68, 2)  # 73%WR n=11 — light accumulation + strong momentum
                     if str(_tk_sig_sc.get("sector","")).lower() == "tech":
@@ -29333,6 +29336,8 @@ def run():
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
                     _learned_bonus += _npen("intraday_mom_perf", "early", 55, -4)  # 25%WR n=12 recent — raised from -1
+                    if not _obv_rising_lb:  # OBV falling + early momentum = double weakness
+                        _learned_bonus += _npen("signal_synergy", "early_mom+obv_falling", 22, -2)  # 18%WR n=11
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
                 _grade_lb = momentum_grade(_tk_sig_sc, tech_sc)
                 if _grade_lb == "F":
@@ -29563,9 +29568,13 @@ def run():
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
                     _learned_bonus += _npen("rvol_tier_perf", "weak", 55, -3)   # 32%WR n=22 — raised from -2
+                    if _accum_bkt_lb == "light":
+                        _learned_bonus += _nbns("signal_synergy", "rvol_weak+accum_light", 66, 2)  # 71%WR n=7 — stealth accumulation on quiet volume
                 elif 0.8 <= _rvol_t_lb < 1.5:
                     _learned_bonus += _nbns("rvol_tier_perf", "normal", 75, 2)  # threshold raised 60→75 (7%WR n=14 recent; only bonus if tlog genuinely recovers)
                     _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 55, -5)  # threshold raised 25→55 (7%WR n=14 recent — near-unconditional)
+                    if _mfi_lb >= 80:
+                        _learned_bonus += _nbns("signal_synergy", "rvol_normal+mfi_dist", 66, 2)  # 71%WR n=7 — controlled volume + distribution pressure
                     if _candle_present:
                         _learned_bonus += _npen("signal_synergy", "candle+rvol_normal", 20, -2)  # 0%WR n=12 — candle on normal volume = false signal
                     if _reentry_lb == "winner":
@@ -29798,6 +29807,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "accum_none+stoch_neutral", 20, -4)  # 11%WR n=9 — no accumulation + neutral stoch = deep trap
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _nbns("signal_synergy", "accum_light+stoch_neutral", 95, 3)  # 100%WR n=5 — small but perfect; only fires when tlog confirms
+                    if _ha_bull_flag:
+                        _learned_bonus += _nbns("signal_synergy", "ha_bull+stoch_neutral", 62, 2)  # 67%WR n=6 — HA bull in clean momentum zone = quality entry
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
@@ -29972,6 +29983,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "sector_other+no_higher_lows", 20, -3)  # 17%WR n=12 — unknown sector + no structure
                     if bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull":
                         _learned_bonus += _npen("signal_synergy", "sector_other+ha_bull", 10, -3)  # 0%WR n=4 — HA bullish in unproven sector
+                    if float(_tk_sig_sc.get("stoch_k", 50) or 50) > 80:
+                        _learned_bonus += _npen("signal_synergy", "sector_other+stoch_ob", 10, -4)  # 0%WR n=5 — overbought in unknown sector = exhaustion
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
                 _pve50_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 if _pve50_lb > 20:
