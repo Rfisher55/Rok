@@ -29422,6 +29422,10 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "bb_upper+mfi_neutral", 27, -2)  # 25%WR n=8 — upper band + no dist pressure
                     elif 0.4 < _bb_pos_lb <= 0.85:
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+bb_mid", 20, -2)  # 0%WR n=10 — neutral MFI + mid BB = no momentum
+                    if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+gap_hold", 20, -2)  # 0%WR n=9 — holding gap + no MFI pressure
+                    if _accum_bkt_lb == "light":
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+accum_light", 20, -2)  # 0%WR n=9 — weak accumulation + no buy pressure
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
@@ -29551,6 +29555,8 @@ def run():
                 if _tc_st_lb and _tc_ps_lb:
                     if _obv_rising_lb:
                         _learned_bonus += _npen("signal_synergy", "trend_conf_both+obv_rising", 30, -1)  # 28.6%WR n=7 — lagging indicators + OBV chasing = late entry
+                    if bool(_tk_sig_sc.get("roc_accelerating", False)):
+                        _learned_bonus += _npen("signal_synergy", "roc_accel+trend_conf_both", 20, -2)  # 0%WR n=8 — fully extended: trend confirmed + ROC still accelerating
                 elif not _tc_st_lb and not _tc_ps_lb:
                     _learned_bonus += _npen("trend_conf_perf", "neither", 30, -5)  # 20%WR n=10 — no trend confirmation
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — bonus dead (threshold 60% never fires)
