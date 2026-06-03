@@ -32982,6 +32982,404 @@ def run():
                     except Exception: pass
                 except Exception:
                     pass
+                # ── R59: 66 high-impact dead neurons with _nde scoring calls ──────────
+                try:
+                    _r59 = live[tk]
+                    # earnings_proximity_perf / earnings_risk_zone_perf: from days_to_earnings
+                    try:
+                        _r59_earn = int(_r59.get("days_to_earnings", _r59.get("earnings_days", 99)) or 99)
+                        _r59["earnings_proximity_perf"] = ("earnings_imminent" if _r59_earn < 5 else
+                                                            "earnings_near" if _r59_earn <= 30 else "earnings_far")
+                        _r59["earnings_risk_zone_perf"] = ("danger_zone" if _r59_earn < 7 else
+                                                            "caution_window" if _r59_earn < 14 else
+                                                            "aware_window" if _r59_earn < 30 else "safe_zone")
+                        _r59["earnings_days"] = _r59_earn  # alias for scoring uses d.get("earnings_days")
+                    except Exception: pass
+                    # float_size_perf / float_micro_perf: from float_shares
+                    try:
+                        _r59_fl = float(_r59.get("float_shares", _r59.get("float", 50e6)) or 50e6)
+                        _r59_flm = _r59_fl / 1e6 if _r59_fl > 1000 else _r59_fl
+                        _r59["float_micro_perf"] = ("micro_float" if _r59_fl < 10e6 else
+                                                     "small_float" if _r59_fl <= 50e6 else "large_float")
+                        _r59["float_size_perf"] = ("low_float" if _r59_flm < 10 else "small_float" if _r59_flm < 50 else
+                                                    "medium_float" if _r59_flm < 200 else "large_float")
+                    except Exception: pass
+                    # liquidity_tier_perf / liquidity_dollar_vol_perf / liquidity_score_perf
+                    try:
+                        _r59_av = float(_r59.get("avg_volume", _r59.get("avg_vol_14", 0)) or 0)
+                        _r59_dv = float(_r59.get("avg_dollar_vol", _r59.get("dollar_vol_30d", 0)) or 0)
+                        _r59_liq = ("high_liquidity" if _r59_av >= 5e6 else
+                                    "medium_liquidity" if _r59_av >= 1e6 else "low_liquidity")
+                        _r59["liquidity_tier_perf"] = _r59_liq
+                        _r59["liquidity_tier_v1_perf"] = _r59_liq
+                        _r59["liquidity_dollar_vol_perf"] = ("high_liquidity" if _r59_dv >= 10e6 else
+                                                              "medium_liquidity" if _r59_dv >= 1e6 else "low_liquidity")
+                        _r59["liquidity_score_perf"] = ("highly_liquid" if _r59_av > 5e6 else
+                                                         "liquid" if _r59_av > 1e6 else
+                                                         "adequate_liquidity" if _r59_av > 200e3 else "illiquid")
+                        _r59["liquidity_tier_entry_perf"] = _r59_liq
+                    except Exception: pass
+                    # inst_flow_quality_perf: from large_lot_ratio
+                    try:
+                        _r59_llr = float(_r59.get("large_lot_ratio", 1.0) or 1.0)
+                        _r59["inst_flow_quality_perf"] = ("strong_inst_buying" if _r59_llr > 1.8 else
+                                                           "light_inst_buying" if _r59_llr > 1.2 else
+                                                           "inst_neutral" if _r59_llr >= 0.8 else "inst_selling")
+                    except Exception: pass
+                    # inst_own_quality_perf / inst_ownership_perf: from institutional_ownership
+                    try:
+                        _r59_io = float(_r59.get("institutional_ownership", _r59.get("inst_own", 0.5)) or 0.5)
+                        _r59_io_s = ("high_inst_own" if _r59_io > 0.7 else
+                                     "medium_inst_own" if _r59_io > 0.3 else "low_inst_own")
+                        _r59["inst_own_quality_perf"] = _r59_io_s
+                        _r59["inst_ownership_perf"] = _r59_io_s if _r59_io > 0.3 else "retail_dominated"
+                    except Exception: pass
+                    # institutional_buying_pressure_perf: from options_flow + dark_pool
+                    try:
+                        _r59_iof = bool(_r59.get("options_flow") or _r59.get("unusual_calls"))
+                        _r59_dp = bool(_r59.get("dark_pool"))
+                        _r59["institutional_buying_pressure_perf"] = (
+                            "strong_institutional_signal" if _r59_iof and _r59_dp else
+                            "options_institutional" if _r59_iof else
+                            "dark_pool_signal" if _r59_dp else "no_institutional_signal")
+                    except Exception: pass
+                    # put_call_ratio_perf / pcr_level_perf: from put_call_ratio
+                    try:
+                        _r59_pcr = float(_r59.get("put_call_ratio", _r59.get("pcr", 1.0)) or 1.0)
+                        _r59_pcr_s = ("bullish_pcr" if _r59_pcr < 0.7 else
+                                      "bearish_pcr" if _r59_pcr > 1.2 else "neutral_pcr")
+                        _r59["put_call_ratio_perf"] = _r59_pcr_s
+                        _r59["pcr_level_perf"] = ("low_pcr" if _r59_pcr < 0.7 else
+                                                   "high_pcr" if _r59_pcr > 1.2 else "mid_pcr")
+                        _r59["stock_pcr_entry_perf"] = _r59_pcr_s
+                    except Exception: pass
+                    # rsi_divergence_perf / momentum_divergence_perf: from divergence signals
+                    try:
+                        _r59_rbd = bool(_r59.get("rsi_bull_divergence"))
+                        _r59_rbd2 = bool(_r59.get("rsi_bear_divergence"))
+                        _r59["rsi_divergence_perf"] = ("bullish_divergence" if _r59_rbd else
+                                                        "bearish_divergence" if _r59_rbd2 else "no_divergence")
+                        _r59_md = str(_r59.get("macd_divergence", "none") or "none").lower()
+                        _r59["momentum_divergence_perf"] = ("bullish_macd_divergence" if _r59_md == "bullish_divergence" else
+                                                             "bearish_macd_divergence" if _r59_md == "bearish_divergence" else
+                                                             "no_divergence")
+                    except Exception: pass
+                    # volatility_regime_entry_perf: from vix
+                    try:
+                        _r59_vix = float(_r59.get("vix_at_entry", _r59.get("vix", 20)) or 20)
+                        _r59["volatility_regime_entry_perf"] = ("low_vix_calm" if _r59_vix < 14 else
+                                                                 "normal_vix" if _r59_vix < 20 else
+                                                                 "elevated_vix" if _r59_vix < 25 else
+                                                                 "high_vix" if _r59_vix < 30 else "extreme_vix_fearful")
+                    except Exception: pass
+                    # entry_vs_ema_perf: from price vs ema
+                    try:
+                        _r59_pr = float(_r59.get("price", _r59.get("last", 0)) or 0)
+                        _r59_ema = float(_r59.get("ema20", _r59.get("ema21", _r59_pr)) or _r59_pr)
+                        if _r59_pr > 0 and _r59_ema > 0:
+                            _r59_pve = (_r59_pr - _r59_ema) / _r59_ema * 100
+                        else: _r59_pve = 0
+                        _r59["entry_vs_ema_perf"] = ("extended_above_ema" if _r59_pve > 15 else
+                                                      "above_ema" if _r59_pve >= 3 else
+                                                      "near_ema" if _r59_pve >= -3 else "below_ema")
+                    except Exception: pass
+                    # news_timing_entry_perf / news_velocity_perf / news_volume_perf / news_count_quality_perf
+                    try:
+                        _r59_nah = float(_r59.get("news_age_hours", _r59.get("catalyst_age_h", 24)) or 24)
+                        _r59_nc = int(_r59.get("news_count", _r59.get("news_count_24h", 0)) or 0)
+                        _r59["news_timing_entry_perf"] = ("very_fresh_news" if _r59_nah <= 1 else
+                                                           "fresh_news" if _r59_nah <= 4 else
+                                                           "cooling_news" if _r59_nah <= 12 else "no_fresh_news")
+                        _r59["news_velocity_perf"] = ("breaking_news" if _r59_nah <= 2 else
+                                                       "news_cooling" if _r59_nah < 24 else "stale_news")
+                        _r59["news_count_quality_perf"] = ("hot_news" if _r59_nc >= 5 else
+                                                            "some_news" if _r59_nc >= 2 else "no_news")
+                        _r59["news_volume_perf"] = ("heavy_coverage" if _r59_nc >= 10 else
+                                                     "moderate_coverage" if _r59_nc >= 4 else "light_coverage")
+                    except Exception: pass
+                    # earnings_beat_entry_perf: from eps_surprise_pct + has_earnings_beat
+                    try:
+                        _r59_surp = float(_r59.get("eps_surprise_pct", 0) or 0)
+                        _r59_beat = bool(_r59.get("has_earnings_beat") or _r59_surp > 0)
+                        if _r59_surp > 20:    _r59_eb = "massive_earnings_beat"
+                        elif _r59_surp > 10:  _r59_eb = "strong_earnings_beat"
+                        elif _r59_surp > 5:   _r59_eb = "moderate_beat"
+                        elif _r59_beat:       _r59_eb = "earnings_beat_entry"
+                        else:                 _r59_eb = "no_earnings_catalyst"
+                        _r59["earnings_beat_entry_perf"] = _r59_eb
+                    except Exception: pass
+                    # earnings_drift_entry_perf: from post-earnings drift pattern
+                    try:
+                        _r59_ebv = bool(_r59.get("earnings_beat"))
+                        _r59_edd = int(_r59.get("days_since_earnings", 99) or 99)
+                        _r59_edf = int(_r59.get("days_to_earnings", 99) or 99)
+                        if _r59_ebv and 2 <= _r59_edd <= 5:  _r59_edq = "post_earnings_drift"
+                        elif 5 <= _r59_edf <= 10:            _r59_edq = "pre_earnings_drift"
+                        else:                                 _r59_edq = "no_earnings_catalyst"
+                        _r59["earnings_drift_entry_perf"] = _r59_edq
+                    except Exception: pass
+                    # earnings_growth_rate_perf: from eps_growth / earnings_growth
+                    try:
+                        _r59_eg = float(_r59.get("earnings_growth", _r59.get("eps_growth_3y", 0)) or 0)
+                        _r59["earnings_growth_rate_perf"] = ("high_earnings_growth" if _r59_eg > 25 else
+                                                              "moderate_growth" if _r59_eg >= 5 else "low_growth")
+                    except Exception: pass
+                    # market_cap_size_perf: from market_cap
+                    try:
+                        _r59_mc = float(_r59.get("market_cap", _r59.get("market_cap_b", 0)) or 0)
+                        _r59_mc_b = _r59_mc if _r59_mc < 10000 else _r59_mc / 1e9
+                        _r59["market_cap_size_perf"] = ("mega_cap" if _r59_mc_b > 200 else
+                                                         "large_cap" if _r59_mc_b > 50 else
+                                                         "mid_cap" if _r59_mc_b > 5 else
+                                                         "small_cap" if _r59_mc_b > 0.5 else "micro_cap")
+                    except Exception: pass
+                    # market_breadth_perf / mkt_breadth_entry_perf: from advance_decline
+                    try:
+                        _r59_adr = float(_r59.get("advance_decline_ratio", _r59.get("adl", 1.0)) or 1.0)
+                        _r59_br = ("strong_breadth" if _r59_adr > 2.0 else "broad_advance" if _r59_adr > 1.5 else
+                                   "broad_decline" if _r59_adr < 0.5 else "neutral_breadth")
+                        _r59["market_breadth_perf"] = _r59_br
+                        _r59["mkt_breadth_entry_perf"] = ("strong_broad" if _r59_adr > 2.0 else
+                                                           "moderate_broad" if _r59_adr > 1.3 else
+                                                           "narrow_weak" if _r59_adr < 0.7 else "mixed_breadth")
+                        _r59["market_internal_alignment_perf"] = ("internals_aligned" if _r59_adr > 1.5 else
+                                                                    "internals_weak" if _r59_adr < 0.7 else "internals_mixed")
+                    except Exception: pass
+                    # sector_breadth_perf / sector_rs_quality_perf / sector_etf_alignment_perf
+                    try:
+                        _r59_srs = float(_r59.get("sector_rs_rank", 5) or 5)
+                        _r59_s1d = float(_r59.get("sector_etf_1d", _r59.get("sector_day_pct", 0)) or 0)
+                        _r59["sector_breadth_perf"] = ("leading_sector" if _r59_srs <= 2 else
+                                                        "top_sector" if _r59_srs <= 4 else
+                                                        "sector_middle" if _r59_srs <= 7 else "lagging_sector")
+                        _r59["sector_rs_quality_perf"] = ("top_sector_rs" if _r59_srs <= 3 else
+                                                           "sector_neutral" if _r59_srs <= 6 else "weak_sector_rs")
+                        _r59["sector_etf_alignment_perf"] = ("sector_leading" if _r59_s1d > 0.5 else
+                                                               "sector_lagging" if _r59_s1d < -0.5 else "sector_flat")
+                    except Exception: pass
+                    # obv_smart_money_perf / smart_money_flow_perf / smart_money_index_perf
+                    try:
+                        _r59_obv = _r59.get("obv_rising")
+                        _r59_dp2 = bool(_r59.get("dark_pool"))
+                        _r59_of2 = bool(_r59.get("options_flow") or _r59.get("unusual_calls"))
+                        _r59_rv3 = float(_r59.get("rvol", 1.0) or 1.0)
+                        _r59["obv_smart_money_perf"] = ("smart_accumulation" if _r59_obv is True else
+                                                         "smart_distribution" if _r59_obv is False else "smart_neutral")
+                        _r59["smart_money_flow_perf"] = ("dark_pool_accumulation" if _r59_dp2 else
+                                                          "options_flow_active" if _r59_of2 else "smart_neutral")
+                        _r59["smart_money_index_perf"] = ("strong_smart_money" if _r59_dp2 and _r59_of2 else
+                                                           "moderate_smart_money" if (_r59_dp2 or _r59_of2) or _r59_rv3 > 2 else
+                                                           "neutral_smart_money")
+                    except Exception: pass
+                    # order_flow_pressure_perf: from volume + rvol
+                    try:
+                        _r59_rv4 = float(_r59.get("rvol", 1.0) or 1.0)
+                        _r59_rs1 = float(_r59.get("rs1", 0) or 0)
+                        _r59["order_flow_pressure_perf"] = ("buying_pressure" if _r59_rv4 > 1.5 and _r59_rs1 > 0 else
+                                                             "selling_pressure" if _r59_rv4 > 1.5 and _r59_rs1 < 0 else
+                                                             "balanced_flow")
+                    except Exception: pass
+                    # price_momentum_quality_perf: from roc5
+                    try:
+                        _r59_roc = float(_r59.get("roc5", 0) or 0)
+                        _r59["price_momentum_quality_perf"] = ("strong_momentum" if _r59_roc > 5 else
+                                                                "moderate_momentum" if _r59_roc > 1 else
+                                                                "flat_momentum" if _r59_roc >= -1 else "declining_momentum")
+                    except Exception: pass
+                    # intraday_trend_quality_perf: from vwap_pos + rvol
+                    try:
+                        _r59_vwp = float(_r59.get("vwap_pos", _r59.get("vwap_distance", 0)) or 0)
+                        _r59_rv5 = float(_r59.get("rvol", 1.0) or 1.0)
+                        _r59["intraday_trend_quality_perf"] = ("strong_intraday_bull" if _r59_vwp > 0.5 and _r59_rv5 > 1.5 else
+                                                                "weak_intraday_bull" if _r59_vwp > 0.2 else
+                                                                "intraday_bear" if _r59_vwp < -0.5 else "intraday_flat")
+                    except Exception: pass
+                    # conviction_persistence_perf / score_momentum_perf: from score history in peaks
+                    try:
+                        _r59_sh = [h.get("s") for h in peaks.get(tk, {}).get("score_history", [])
+                                    if isinstance(h.get("s"), (int, float))]
+                        if len(_r59_sh) >= 2:
+                            _r59_trend = _r59_sh[-1] - _r59_sh[0]
+                            _r59["conviction_persistence_perf"] = ("persistent_conviction" if _r59_trend >= 5 else
+                                                                     "building_conviction" if _r59_trend >= 0 else
+                                                                     "fading_conviction" if _r59_trend > -10 else "no_persistence")
+                            _r59["score_momentum_perf"] = ("rising_score" if _r59_trend >= 3 else
+                                                            "new_signal" if len(_r59_sh) <= 2 else "declining_score")
+                        else:
+                            _r59["conviction_persistence_perf"] = "no_persistence"
+                            _r59["score_momentum_perf"] = "new_signal"
+                    except Exception: pass
+                    # market_hour_context_perf / daily_pnl_context_perf: from ET hour
+                    try:
+                        from datetime import datetime as _r59_dt, timezone as _r59_tz
+                        _r59_eth = (_r59_dt.now(_r59_tz.utc).hour - 4) % 24
+                        _r59["market_hour_context_perf"] = ("open_power" if _r59_eth == 9 else
+                                                             "morning" if _r59_eth < 12 else
+                                                             "midday" if _r59_eth < 14 else "close")
+                        _r59_dpnl = float(tlog.get("day_pnl_pct", 0) or 0)
+                        _r59["daily_pnl_context_perf"] = ("winning_day" if _r59_dpnl > 0.5 else
+                                                            "losing_day" if _r59_dpnl < -0.5 else "neutral_day")
+                    except Exception: pass
+                    # option_implied_move_perf / options_iv_environment_perf: from iv_percentile
+                    try:
+                        _r59_ivp = float(_r59.get("iv_percentile", _r59.get("iv_rank", 50)) or 50)
+                        _r59["option_implied_move_perf"] = ("high_iv" if _r59_ivp > 75 else
+                                                             "fair_iv" if _r59_ivp > 25 else "low_iv")
+                        _r59["options_iv_environment_perf"] = ("elevated_iv" if _r59_ivp > 60 else
+                                                                "normal_iv" if _r59_ivp > 30 else "low_iv_env")
+                    except Exception: pass
+                    # vcp_quality_perf: from vcp + volume
+                    try:
+                        _r59_vcp = bool(_r59.get("vcp"))
+                        _r59_atr_vc = float(_r59.get("atr", 1) or 1)
+                        _r59_atr_avg_vc = float(_r59.get("atr_avg", _r59_atr_vc * 1.1) or _r59_atr_vc)
+                        _r59_vc_ratio = _r59_atr_vc / _r59_atr_avg_vc if _r59_atr_avg_vc > 0 else 1.0
+                        _r59["vcp_quality_perf"] = ("tight_vcp" if _r59_vcp and _r59_vc_ratio < 0.7 else
+                                                     "loose_vcp" if _r59_vcp else "no_vcp")
+                    except Exception: pass
+                    # trend_template_score_perf: from RS + ema alignment
+                    try:
+                        _r59_rs63 = float(_r59.get("rs63", 0) or 0)
+                        _r59_rs252 = float(_r59.get("rs252", 0) or 0)
+                        _r59_ema50 = float(_r59.get("ema50", 0) or 0)
+                        _r59_ema200 = float(_r59.get("ema200", 0) or 0)
+                        _r59_prtt = float(_r59.get("price", 0) or 0)
+                        _r59_tt = 0
+                        if _r59_rs63 > 5: _r59_tt += 1
+                        if _r59_rs252 > 10: _r59_tt += 1
+                        if _r59_prtt > _r59_ema50 > 0: _r59_tt += 1
+                        if _r59_prtt > _r59_ema200 > 0: _r59_tt += 1
+                        _r59["trend_template_score_perf"] = ("perfect_trend_template" if _r59_tt >= 4 else
+                                                              "strong_trend_template" if _r59_tt >= 3 else
+                                                              "decent_trend" if _r59_tt >= 2 else "weak_template")
+                    except Exception: pass
+                    # technical_setup_combo_perf: from signal count
+                    try:
+                        _r59_sigs = sum(1 for _sk3 in ["at_breakout","orb_breakout","ttm_squeeze_fired",
+                                                        "gap_and_hold","obv_rising","higher_lows","vcp",
+                                                        "cup_handle","ema_stacked_bull","double_bottom",
+                                                        "supertrend_bull","ha_bull","mfi_bull_div"]
+                                        if _r59.get(_sk3))
+                        _r59["technical_setup_combo_perf"] = ("perfect_setup" if _r59_sigs >= 6 else
+                                                               "strong_setup" if _r59_sigs >= 4 else
+                                                               "decent_setup" if _r59_sigs >= 2 else "weak_setup")
+                    except Exception: pass
+                    # relative_volume_quality_perf: from rvol
+                    try:
+                        _r59_rvq = float(_r59.get("rvol", 1.0) or 1.0)
+                        _r59["relative_volume_quality_perf"] = ("exceptional_volume" if _r59_rvq >= 5 else
+                                                                  "strong_volume" if _r59_rvq >= 2.5 else
+                                                                  "moderate_volume" if _r59_rvq >= 1.5 else "normal_volume")
+                    except Exception: pass
+                    # risk_per_trade_perf / risk_reward_at_entry_perf: from ATR
+                    try:
+                        _r59_atrr = float(_r59.get("atr_pct", _r59.get("atr", 2)) or 2)
+                        _r59["risk_per_trade_perf"] = ("low_risk" if _r59_atrr < 1 else
+                                                        "normal_risk" if _r59_atrr < 3 else "high_risk")
+                        _r59_chg = abs(float(_r59.get("chg1d", 0) or 0))
+                        _r59["risk_reward_at_entry_perf"] = ("excellent_rr" if _r59_chg / max(_r59_atrr, 0.01) > 2 else
+                                                              "acceptable_rr" if _r59_chg / max(_r59_atrr, 0.01) > 1 else "poor_rr")
+                    except Exception: pass
+                    # revenue_growth_rate_perf: from revenue_growth
+                    try:
+                        _r59_rg = float(_r59.get("revenue_growth", _r59.get("rev_growth_3y", 0)) or 0)
+                        _r59["revenue_growth_rate_perf"] = ("strong_revenue_growth" if _r59_rg > 20 else
+                                                             "moderate_revenue" if _r59_rg >= 5 else "weak_revenue")
+                    except Exception: pass
+                    # gap_fill_tendency_perf: from gap_pct + fill probability proxy
+                    try:
+                        _r59_gp = float(_r59.get("gap_pct", 0) or 0)
+                        _r59["gap_fill_tendency_perf"] = ("fills_quickly" if abs(_r59_gp) < 1 else
+                                                           "sometimes" if abs(_r59_gp) < 3 else "rarely_fills")
+                    except Exception: pass
+                    # sector_momentum_rank_perf / lr_trend_quality_entry_perf
+                    try:
+                        _r59_srs2 = float(_r59.get("sector_rs_rank", 5) or 5)
+                        _r59["sector_momentum_rank_perf"] = ("top_sector_momentum" if _r59_srs2 <= 2 else
+                                                              "above_avg_sector" if _r59_srs2 <= 4 else
+                                                              "below_avg_sector" if _r59_srs2 >= 7 else "mid_sector_momentum")
+                        _r59_lrq = float(_r59.get("linear_regression_quality", _r59.get("r_squared", 0)) or 0)
+                        _r59["lr_trend_quality_entry_perf"] = ("high_quality" if _r59_lrq > 0.7 else
+                                                                "medium_quality" if _r59_lrq > 0.4 else "low_quality")
+                    except Exception: pass
+                    # price_action_pattern_perf / price_action_quality_perf / entry_candle_quality_perf
+                    try:
+                        _r59_cp = str(_r59.get("candle_pattern", _r59.get("pattern", "")) or "").lower()
+                        if "hammer" in _r59_cp or "doji_bull" in _r59_cp:  _r59_cps = "bullish_reversal_candle"
+                        elif "engulf" in _r59_cp:                           _r59_cps = "engulfing_candle"
+                        elif "marubozu" in _r59_cp:                         _r59_cps = "strong_momentum_candle"
+                        elif "doji" in _r59_cp:                             _r59_cps = "indecision_candle"
+                        else:                                                _r59_cps = "neutral_candle"
+                        _r59["entry_candle_quality_perf"] = _r59_cps
+                        _r59["price_action_pattern_perf"] = ("clear_pattern" if _r59_cp else "no_clear_pattern")
+                        _r59_pa_q = ("strong_action" if float(_r59.get("rvol", 1.0) or 1.0) > 2 and float(_r59.get("rs1", 0) or 0) > 1
+                                     else "normal_action")
+                        _r59["price_action_quality_perf"] = _r59_pa_q
+                    except Exception: pass
+                    # price_disc_activity_perf / price_phase_wycoff_perf: from volume + accumulation
+                    try:
+                        _r59_dp3 = bool(_r59.get("dark_pool"))
+                        _r59_rv6 = float(_r59.get("rvol", 1.0) or 1.0)
+                        _r59["price_disc_activity_perf"] = ("heavy_activity" if _r59_dp3 and _r59_rv6 > 2 else
+                                                             "elevated_activity" if _r59_rv6 > 1.5 else "normal_trading")
+                        _r59_ob = _r59.get("obv_rising")
+                        _r59_vwpp = float(_r59.get("vwap_pos", 0) or 0)
+                        _r59["price_phase_wycoff_perf"] = ("markup_phase" if _r59_ob is True and _r59_vwpp > 0 else
+                                                            "distribution_phase" if _r59_ob is False and _r59_vwpp > 0 else
+                                                            "accumulation_phase")
+                    except Exception: pass
+                    # reversal_confirmation_perf: from divergence signals
+                    try:
+                        _r59_bd2 = bool(_r59.get("bearish_divergence") or _r59.get("macd_bear_div"))
+                        _r59_rbd3 = bool(_r59.get("rsi_bull_divergence"))
+                        _r59["reversal_confirmation_perf"] = ("bullish_reversal_confirmed" if _r59_rbd3 else
+                                                               "bearish_reversal_signal" if _r59_bd2 else
+                                                               "no_reversal_signal")
+                    except Exception: pass
+                    # multi_timeframe_bias_perf: from mtf_triple + weekly_trend
+                    try:
+                        _r59_mtf = bool(_r59.get("mtf_triple"))
+                        _r59_wt = float(_r59.get("weekly_trend", 0) or 0)
+                        _r59_dt2 = float(_r59.get("daily_trend", 0) or 0)
+                        _r59["multi_timeframe_bias_perf"] = ("all_tf_aligned" if _r59_mtf else
+                                                              "two_tf_aligned" if _r59_wt > 0 and _r59_dt2 > 0 else
+                                                              "single_tf_only")
+                    except Exception: pass
+                    # setup_timing_quality_perf / signal_freshness_perf / position_sizing_outcome_perf
+                    try:
+                        _r59_eth2 = (datetime.now(timezone.utc).hour - 4) % 24
+                        _r59_vix2 = float(_r59.get("vix", 20) or 20)
+                        _r59["setup_timing_quality_perf"] = ("ideal_timing" if 9 <= _r59_eth2 <= 11 and _r59_vix2 < 25 else
+                                                              "decent_timing" if 9 <= _r59_eth2 <= 15 else "caution_timing")
+                        _r59_sh2 = [h.get("s") for h in peaks.get(tk, {}).get("score_history", [])
+                                     if isinstance(h.get("s"), (int, float))]
+                        _r59["signal_freshness_perf"] = ("fresh_breakout" if len(_r59_sh2) <= 1 else
+                                                          "building_signal" if len(_r59_sh2) <= 3 else "mature_signal")
+                        _r59["position_sizing_outcome_perf"] = "normal_size_b"  # default
+                    except Exception: pass
+                    # price_target_achievability_perf: from ATR-based target
+                    try:
+                        _r59_atr5 = float(_r59.get("atr_pct", 2) or 2)
+                        _r59_roc5 = float(_r59.get("roc5", 0) or 0)
+                        _r59["price_target_achievability_perf"] = (
+                            "high_probability_target" if _r59_roc5 > _r59_atr5 else
+                            "moderate_probability_target" if _r59_roc5 > 0 else "low_probability_target")
+                    except Exception: pass
+                    # support_resistance_quality_perf: from technical patterns
+                    try:
+                        _r59_bo3 = bool(_r59.get("at_breakout") or _r59.get("near_support"))
+                        _r59_hhl = bool(_r59.get("higher_lows") or _r59.get("higher_highs"))
+                        _r59["support_resistance_quality_perf"] = ("clear_sr_levels" if _r59_bo3 and _r59_hhl else
+                                                                     "some_sr_context" if _r59_bo3 or _r59_hhl else
+                                                                     "no_clear_sr")
+                    except Exception: pass
+                    # market_breadth_perf / market_hour_context_perf duplicate check
+                    try:
+                        _r59_dpnl2 = float(tlog.get("day_pnl_pct", 0) or 0)
+                        _r59["price_disc_activity_perf"] = _r59.get("price_disc_activity_perf", "normal_trading")
+                    except Exception: pass
+                except Exception:
+                    pass
             except Exception:
                 pass
 
