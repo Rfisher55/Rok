@@ -29309,8 +29309,10 @@ def run():
                     _learned_bonus += _npen("grade_perf", "F", 20, -10)   # 12% WR: block-level penalty
                 elif _grade_lb == "D":
                     _learned_bonus += _npen("grade_perf", "D", 35, -4)    # ~30% WR: hard penalty
-                elif _grade_lb in ("A+", "A"):
-                    _learned_bonus += _nbns("grade_perf", "A+", 65, 2)    # A+ bonus when data shows good WR
+                elif _grade_lb == "A+":
+                    _learned_bonus += _npen("grade_perf", "A+", 48, -2)   # 46.4%WR n=28 — A+ is actually a trap (chasing)
+                elif _grade_lb == "A":
+                    _learned_bonus += _nbns("grade_perf", "A", 58, 1)     # 60%WR n=5 — genuine quality (small n)
                 # EG tier: negative earnings growth = 65% WR n=34; positive = 50% WR n=12
                 # Turnaround/recovery plays outperform in momentum system
                 _eg_lb = float(_tk_sig_sc.get("earnings_growth", 0) or 0)
