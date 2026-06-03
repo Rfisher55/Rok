@@ -29377,12 +29377,17 @@ def run():
                     _learned_bonus += _npen("candle_pattern_perf", "absent", 35, -3)   # 32%WR n=25 — no pattern = weak
                 # MFI: distribution=66.7% WR n=9; neutral=42.6% WR n=68
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
-                if _mfi_lb >= 60:
-                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 3)  # 75%WR n=16 — raised from +1
+                if _mfi_lb >= 80:
+                    _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 3)  # 63.6%WR n=11 — extreme momentum
                     if bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _nbns("signal_synergy", "mfi_dist+higher_lows", 65, 2)  # 88%WR n=8 combo
-                elif 40 <= _mfi_lb < 60:
-                    _learned_bonus += _npen("mfi_zone_perf", "neutral", 43, -2)      # 42.6% WR n=68 — large sample
+                elif 70 <= _mfi_lb < 80:
+                    _learned_bonus += _npen("mfi_zone_perf", "high_mfi", 30, -3)     # 27.3%WR n=11 — surprising trap zone
+                elif 60 <= _mfi_lb < 70:
+                    _learned_bonus += _nbns("mfi_zone_perf", "moderate_dist", 58, 1) # 60%WR n=5 — small bonus
+                elif 50 <= _mfi_lb < 60:
+                    _learned_bonus += _npen("mfi_zone_perf", "neutral", 32, -3)      # 30%WR n=10 — raised from -2
+                # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
                 _px_raw_lb  = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 1)) or 1)
@@ -29402,8 +29407,10 @@ def run():
                 _rsi_raw_lb = _tk_sig_sc.get("rsi")
                 _rsi_lb = float(_rsi_raw_lb) if _rsi_raw_lb is not None else None
                 if _rsi_lb is not None:
-                    if _rsi_lb >= 70:
-                        pass  # rsi_entry_perf["overbought"] = 46.4% WR n=28 — dead bonus removed
+                    if _rsi_lb >= 80:
+                        _learned_bonus += _nbns("rsi_entry_perf", "extreme_ob", 58, 1)  # 60%WR n=15 — extreme OB = momentum
+                    elif _rsi_lb >= 70:
+                        _learned_bonus += _npen("rsi_entry_perf", "overbought", 33, -3)  # 30.8%WR n=13 — fake OB zone
                     elif 40 <= _rsi_lb < 55:
                         _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
                 # ST gap: st_gap/supertrend_gap not in fetch_batch → removed stale fallback
@@ -29524,10 +29531,10 @@ def run():
                 _prem_ct_lb = sum(bool(_tk_sig_sc.get(k)) for k in [
                     "vcp","cup_handle","ttm_squeeze_fired","higher_lows",
                     "rvol_surge","at_breakout"])  # removed orb_breakout, supertrend_bull, obv_rising
-                if _prem_ct_lb < 2:
-                    _learned_bonus += _npen("premium_tier_perf", "weak", 35, -1)
-                elif _prem_ct_lb >= 3:
-                    _learned_bonus += _nbns("premium_tier_perf", "strong", 60, 1)
+                if _prem_ct_lb == 0:
+                    _learned_bonus += _npen("premium_tier_perf", "none", 27, -4)  # 25%WR n=8 — no premium signals
+                elif _prem_ct_lb <= 2:
+                    _learned_bonus += _nbns("premium_tier_perf", "sweet_spot", 64, 2)  # 66-71%WR n=7-10 — 1-2 signals
                 # Price tier: large=60% WR n=35 fires at 60% ✓; mid=43.8% n=16 → penalty; micro already penalized
                 _pr_tier_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 if _pr_tier_lb >= 100:
