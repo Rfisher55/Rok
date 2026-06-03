@@ -28946,12 +28946,12 @@ def run():
                 if bool(_tk_sig_sc.get("nr7_signal", False)):
                     _learned_bonus += _nbns("nr7_perf", "compressed", 65, 2)
                 if bool(_tk_sig_sc.get("at_demand_zone", False)):
-                    _learned_bonus += _npen("demand_zone_perf", "at_zone", 21, -2)  # 20% WR n=5 — dead bonus → penalty
+                    _learned_bonus += _npen("demand_zone_perf", "at_zone", 38, -3)  # 33%WR n=9 — raised thr 21→38
                 _rs63_val_lb = float(_tk_sig_sc.get("rs63", 0) or 0)
                 if _rs63_val_lb >= 1.5:
-                    _learned_bonus += _npen("rs63_q_tier_perf", "elite", 44, -1)  # 43.8% WR n=32 — dead bonus → penalty
-                elif _rs63_val_lb < 0:  # rs63 lagging: 46.3% WR n=41 — coin flip
-                    pass  # no longer penalizing, WR improved to near 50%
+                    _learned_bonus += _npen("rs63_q_tier_perf", "elite", 44, -1)  # 43.8% WR n=32 — penalty (was dead bonus)
+                elif _rs63_val_lb < 0:
+                    _learned_bonus += _npen("rs63_q_tier_perf", "lagging", 35, -3)  # 33%WR n=12 — lagging RS63
                 if bool(_tk_sig_sc.get("at_breakout", False)):
                     # at_breakout_perf["breakout"] state doesn't exist in dict (uses at_level/not_at_level) — removed dead bonus
                     _learned_bonus += _npen("signal_performance", "at_breakout", 51, -2)  # 44.1% WR n=34
@@ -29081,7 +29081,7 @@ def run():
                     if bool(_tk_sig_sc.get("mtf_aligned", False)) and not bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _npen("signal_synergy", "kc_breakout+mtf_aligned", 47, -1)  # 46.2% WR n=26
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
-                    pass  # entry_candle_pattern_perf["three_white"] state doesn't exist in dict — dead bonus removed
+                    _learned_bonus += _nbns("tws_perf", "three_soldiers", 58, 2)  # 61%WR n=28 — strong candle momentum
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
                     # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
                     _learned_bonus += _npen("gap_hold_perf", "holding", 45, -4)   # 37% WR threshold tightened
