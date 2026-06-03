@@ -29255,7 +29255,8 @@ def run():
                 if _accum_bkt_lb == "none":
                     _learned_bonus += _npen("accum_perf", "none", 15, -8)  # 10% WR n=10: severe (explicitly 0)
                 elif _accum_bkt_lb == "light":
-                    _learned_bonus += _nbns("accum_perf", "light", 55, 2)  # 55.8% WR n=52 — threshold lowered 60→55
+                    _learned_bonus += _nbns("accum_perf", "light", 70, 2)  # threshold raised 55→70 (12%WR n=17 recent; tlog must recover to 70%+ to bonus)
+                    _learned_bonus += _npen("accum_perf", "light_weak", 15, -2)  # 12%WR n=17 — fires when tlog confirms persistent underperformance
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
@@ -30037,9 +30038,13 @@ def run():
                         _et_hour_adj = +2   # great hour: lean in
                 except Exception:
                     _et_hour_adj = 0
-                # Hard-coded late session penalty when tlog data sparse (31.2%WR n=16 for hour 15)
+                # Hard-coded fallbacks when tlog data sparse for specific hours
                 if _et_hour_adj == 0 and _et_ctx.hour >= 15:
-                    _et_hour_adj = -5  # 35.7%WR n=14 — late session = power hour trap (raised -3→-5)
+                    _et_hour_adj = -5  # 35.7%WR n=14 — late session penalty fallback
+                elif _et_hour_adj == 0 and _et_ctx.hour in (10, 11):
+                    _et_hour_adj = -4  # 0%WR n=3 opening hour (tlog fallback)
+                elif _et_hour_adj == 0 and _et_ctx.hour in (12, 13, 14):
+                    _et_hour_adj = -4  # 0%WR n=6 midday lull (tlog fallback)
                 # N721: ad_trend — market A/D trend using score()-compatible string values
                 _n721_adv_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
                 if   _n721_adv_ctx > 70: live[tk]["ad_trend"] = "rising_fast"
