@@ -29056,6 +29056,8 @@ def run():
                 if bool(_tk_sig_sc.get("force_index_rising", False)):
                     # force_index_perf["rising"] = 48.4% WR n=31 — dead bonus removed (coin flip)
                     _learned_bonus += _npen("signal_performance", "force_index_rising", 46, -1)  # 45.7% WR n=35
+                    if bool(_tk_sig_sc.get("obv_rising", False)):
+                        _learned_bonus += _npen("signal_synergy", "obv_rising+force_rising", 25, -2)  # 22.2%WR n=9 — double chasing signal
                 if bool(_tk_sig_sc.get("mom_accel", False)):
                     # signal_performance["mom_accel"] = 47.1% WR n=34 — coin flip, no bonus warranted
                     _learned_bonus += _nbns("momentum_persistence_perf", "multi_day_momentum", 60, 1)
@@ -29462,6 +29464,8 @@ def run():
                     _learned_bonus += _npen("obv_trend_perf", "rising", 60, -3)  # 35.7%WR n=14 — OBV rising = chasing extended move
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
+                    if not bool(_tk_sig_sc.get("gap_and_hold", False)):
+                        _learned_bonus += _nbns("signal_synergy", "obv_fall+gap_normal", 95, 2)  # 100%WR n=6 — clean setup: no gap trap, OBV not chasing
                 # Higher lows confirmed: 75% WR n=8; not_confirmed: 38.9%WR n=36 (large sample!)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 75% WR n=8
@@ -29694,6 +29698,8 @@ def run():
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
                     if _candle_present:
                         _learned_bonus += _nbns("signal_synergy", "candle_present+stoch_neutral", 80, 2)  # 83.3%WR n=6 — bullish candle in clean zone
+                    if bool(_tk_sig_sc.get("force_index_rising", False)):
+                        _learned_bonus += _nbns("signal_synergy", "stoch_neutral+force_rising", 78, 2)  # 83.3%WR n=6 — clean momentum + building force
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
