@@ -29383,6 +29383,8 @@ def run():
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 1)   # 60%WR n=30 — threshold 62→58
                 else:
                     _learned_bonus += _npen("candle_pattern_perf", "absent", 35, -3)   # 32%WR n=25 — no pattern = weak
+                    if _ha_bull_flag:
+                        _learned_bonus += _npen("signal_synergy", "ha_bull+candle_none", 20, -3)  # 16.7%WR n=6 — HA says bull but no candle confirmation
                 # MFI: distribution=66.7% WR n=9; neutral=42.6% WR n=68
                 _mfi_lb = float(_tk_sig_sc.get("mfi", _tk_sig_sc.get("money_flow_index", 50)) or 50)
                 if _mfi_lb >= 80:
@@ -29656,6 +29658,8 @@ def run():
                 _sk_zone_lb = ("overbought" if _sk_lb > 80 else "oversold" if _sk_lb < 20 else "neutral")
                 if _sk_zone_lb == "overbought":
                     _learned_bonus += _npen("stoch_zone_perf", "overbought", 45, -2)  # 42.9% WR n=21 — chasing!
+                    if _mfi_lb < 80:
+                        _learned_bonus += _npen("signal_synergy", "stoch_ob+mfi_neutral", 40, -2)  # 38.9%WR n=18 — double momentum trap
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
