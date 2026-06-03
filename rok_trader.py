@@ -29260,7 +29260,7 @@ def run():
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
-                    _learned_bonus += _npen("accum_perf", "moderate", 47, -4)  # 40%WR n=10 — raised -2→-4
+                    _learned_bonus += _npen("accum_perf", "moderate", 55, -4)  # 25%WR n=4 recent — raised thr 47→55
                 # Combo trap: light accum + OBV not rising = distribution pressure (obv_trend not in fetch_batch, use obv_rising flag)
                 _obv_rising_lb = bool(_tk_sig_sc.get("obv_rising", False))
                 if _accum_bkt_lb == "light" and not _obv_rising_lb:
@@ -29435,6 +29435,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "mfi_dist+higher_lows", 65, 2)  # 88%WR n=8 combo
                     if not _obv_rising_lb:
                         _learned_bonus += _nbns("signal_synergy", "mfi_dist+obv_falling", 75, 2)  # 81.8%WR n=11 — dist+volume confirmation
+                    if _accum_bkt_lb == "light":
+                        _learned_bonus += _nbns("signal_synergy", "accum_light+mfi_dist", 70, 2)  # 75%WR n=8 — light accum + distribution = institutional buying
                 elif 70 <= _mfi_lb < 80:
                     _learned_bonus += _npen("mfi_zone_perf", "high_mfi", 30, -3)     # 27.3%WR n=11 — surprising trap zone
                 elif 60 <= _mfi_lb < 70:
@@ -29956,7 +29958,8 @@ def run():
                 elif _sec_lb == "other":
                     _learned_bonus += _npen("ticker_beta_bucket_perf", "high_beta", 40, -1)  # unknown = less confidence
                 # Sector performance: tech=67.9% WR n=28 (strong alpha); other=40.6% WR n=32 (avoid)
-                _sec_perf_lb = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other")
+                _sec_perf_lb = str(_tk_sig_sc.get("sector", SECTOR_MAP.get(tk, "other")) or "other").lower()
+                _sec_perf_lb = ("tech" if _sec_perf_lb in ("tech","consumer_tech","technology") else _sec_perf_lb)
                 if _sec_perf_lb == "tech":
                     _learned_bonus += _nbns("sector_performance", "tech", 62, 1)   # 63% WR n=27 — threshold 65→62
                     if _reentry_lb == "winner":
