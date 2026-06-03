@@ -29762,6 +29762,8 @@ def run():
                     _roc5_acc = float(_roc5_acc or 0); _roc20_acc = float(_roc20_acc or 0)
                     if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
                         _learned_bonus += _npen("roc_perf", "accelerating", 40, -3)  # 33.3%WR n=9 — raised from -1
+                        if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                            _learned_bonus += _npen("signal_synergy", "gap_hold+roc_accel", 18, -3)  # 16.7%WR n=6 — gap trap + ROC accelerating = exhausted chase
                     elif _roc5_acc <= 0 and _roc20_acc <= 0:
                         _learned_bonus += _npen("roc_perf", "negative", 48, -5)  # 12%WR n=8 recent — raised from -1
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
