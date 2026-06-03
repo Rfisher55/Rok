@@ -30009,14 +30009,19 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "tech+intraday_extended", 75, 1)  # 80%WR n=10 — tech momentum = strongest setup
                     if _ha_bull_flag and bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _nbns("signal_synergy", "tech+ha_bull+higher_lows", 80, 2)  # 86%WR n=7 — triple winner profile: tech + HA bull + structure confirmed
+                    if _ha_bear_flag:
+                        _learned_bonus += _npen("signal_synergy", "tech+ha_bear", 45, -2)  # 43%WR n=7 — tech bearish HA = losing setup
                 elif _sec_perf_lb == "other":
-                    _learned_bonus += _npen("sector_performance", "other", 40, -5) # 26%WR n=19 recent — raised to -5
+                    _learned_bonus += _npen("sector_performance", "other", 47, -5) # 44%WR n=16 stocks — raised thr 40→47
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _npen("signal_synergy", "sector_other+no_higher_lows", 20, -3)  # 17%WR n=12 — unknown sector + no structure
                     if bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull":
-                        _learned_bonus += _npen("signal_synergy", "sector_other+ha_bull", 10, -3)  # 0%WR n=4 — HA bullish in unproven sector
+                        _learned_bonus += _npen("signal_synergy", "sector_other+ha_bull", 40, -3)  # 38%WR n=8 — raised thr 10→40 (drift fix)
                     if float(_tk_sig_sc.get("stoch_k", 50) or 50) > 80:
-                        _learned_bonus += _npen("signal_synergy", "sector_other+stoch_ob", 10, -4)  # 0%WR n=5 — overbought in unknown sector = exhaustion
+                        _learned_bonus += _npen("signal_synergy", "sector_other+stoch_ob", 20, -4)  # 0%WR n=5 — raised thr 10→20
+                    _atr_sec_other = (_atr_raw_lb / max(_px_raw_lb, 0.01) * 100) if _atr_raw_lb > 0 else 0.0
+                    if _atr_sec_other > 6.0:
+                        _learned_bonus += _npen("signal_synergy", "sector_other+high_atr", 10, -4)  # 0%WR n=3 — all 3 big losses: sector_other+ATR>6%
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
                 _pve50_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 if _pve50_lb > 20:
