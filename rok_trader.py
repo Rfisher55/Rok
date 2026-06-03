@@ -65,7 +65,7 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 50      # max open long positions — raised from 35 for 500 trades/day target
+MAX_POSITIONS      = 20      # reduced 50→20 (Wave 78): 32 open positions caused over-leveraging ($132k on $86k equity)
 MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
 MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
@@ -29408,6 +29408,9 @@ def run():
                     _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)    # 48.5% WR n=33 — coin flip or worse
                 elif "below" in _ich_lb:
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
+                    _ich_rs_now = float(_tk_sig_sc.get("rs_rating", 50) or 50)
+                    if 40 <= _ich_rs_now < 80:  # rs_average (40-79) + ichimoku_below = 12%WR n=8 (Wave 78)
+                        _learned_bonus -= 5  # rs_average+ichimoku_below: direct hard penalty
                 # HA consecutive candles: zero=12%WR n=8, early(1-2)=47%WR n=17, building(3-4)=77%WR n=13, strong(5+)=54%WR n=28
                 # Use ha_consec_at_entry (78 non-null) before ha_consec_bull (27 non-null) for better coverage
                 _ha_consec_raw = (_tk_sig_sc.get("ha_consec_at_entry")
@@ -29862,7 +29865,7 @@ def run():
                     if _roc5_sn_chk > 0:
                         _learned_bonus += _nbns("signal_synergy", "roc_positive+stoch_neutral", 65, 2)  # 70%WR n=10 — positive ROC + stoch not chasing
                     if _accum_bkt_lb == "none":
-                        _learned_bonus += _npen("signal_synergy", "accum_none+stoch_neutral", 20, -4)  # 11%WR n=9 — no accumulation + neutral stoch = deep trap
+                        _learned_bonus -= 8  # accum_none+stoch_neutral: 10%WR n=10 confirmed — direct hard penalty (Wave 78)
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _nbns("signal_synergy", "accum_light+stoch_neutral", 95, 3)  # 100%WR n=5 — small but perfect; only fires when tlog confirms
                     if _ha_bull_flag:
