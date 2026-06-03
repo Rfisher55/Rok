@@ -29434,10 +29434,10 @@ def run():
                         _learned_bonus += _nbns("tt_perf", "fair", 57, 1)  # 57.1% WR n=28 — threshold lowered 60→57
                     elif _tt_bkt_lb == "weak":
                         _learned_bonus += _npen("tt_perf", "weak", 44, -2)  # 43.2% WR n=44 — threshold updated
-                # OBV trend: obv_trend_perf["rising"] = 50% WR n=38 (updated — was stale 80%)
-                # signal_performance["obv_rising"] = 45.5% WR n=11 — below 50%
+                # OBV trend: rising=35.7%WR n=14 — chasing; falling=51.4%WR n=37 — distributing then turning
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
+                    _learned_bonus += _npen("obv_trend_perf", "rising", 40, -3)  # 35.7%WR n=14 — OBV rising = chasing extended move
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
                 # Higher lows confirmed: 75% WR n=8; not_confirmed: 38.9%WR n=36 (large sample!)
@@ -29643,6 +29643,7 @@ def run():
                     _learned_bonus += _npen("stoch_zone_perf", "overbought", 45, -2)  # 42.9% WR n=21 — chasing!
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
+                    _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
@@ -29663,6 +29664,8 @@ def run():
                     _learned_bonus += _nbns("donchian_perf", "breakout", 62, 1)    # price near top: bullish
                 elif _dc_zone_lb == "weakness":
                     _learned_bonus += _npen("donchian_perf", "weakness", 38, -1)   # price near bottom: avoid
+                elif _dc_zone_lb == "middle":
+                    _learned_bonus += _npen("donchian_perf", "middle", 33, -2)     # 30.8%WR n=13 — stuck mid-range
                 # Score trend: compute directly from peaks history (injection runs after this block)
                 try:
                     _sc_hist_lb = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
