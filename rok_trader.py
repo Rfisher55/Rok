@@ -25956,9 +25956,13 @@ def run():
     _hist_values = [h["v"] for h in _perf_hist if isinstance(h.get("v"), (int, float)) and h["v"] > 0]
     _peak_port   = max(_hist_values) if _hist_values else portfolio_val
     drawdown_pct = max(0.0, (_peak_port - portfolio_val) / _peak_port * 100) if _peak_port > 0 else 0.0
-    _drawdown_halt = drawdown_pct >= 5.0  # hard halt: no new buys until portfolio recovers
+    # Drawdown halt: 5-8% = recovery mode (limited high-conviction buys only), 8%+ = hard halt
+    _drawdown_halt = drawdown_pct >= 8.0   # hard halt at -8% (was -5%)
+    _drawdown_recovery_mode = 5.0 <= drawdown_pct < 8.0  # allow only score>=75 buys
     if _drawdown_halt:
-        logger.warning(f"DRAWDOWN HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys until recovery")
+        logger.warning(f"DRAWDOWN HARD HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys")
+    elif _drawdown_recovery_mode:
+        logger.warning(f"DRAWDOWN RECOVERY MODE: -{drawdown_pct:.1f}% — only score>=75 buys, max 3/run")
     elif drawdown_pct > 2:
         logger.info(f"Portfolio drawdown: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — risk reduced")
 
@@ -28175,6 +28179,9 @@ def run():
     if _risk_limit_halt:
         logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 40% — no new buys")
 
+    # In recovery mode: raise score threshold for high-conviction-only entries
+    if _drawdown_recovery_mode and not _drawdown_halt:
+        _eff_min_score = max(_eff_min_score, 75)   # only high-conviction buys in recovery
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _drawdown_halt and not _risk_limit_halt:
         # Sector counts for diversification
         sector_counts = {}
@@ -35758,6 +35765,8 @@ def run():
             # Per-run buy cap: up to 20 new positions per scan — 300-ticker universe supports this
             # Target 500 trades/day: 50 max_pos × 5 cycles × 2 (buy+sell) = 500 trades
             _per_run_cap = min(20, open_long_slots)
+            if _drawdown_recovery_mode:
+                _per_run_cap = min(_per_run_cap, 3)  # max 3 buys/run while recovering
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
