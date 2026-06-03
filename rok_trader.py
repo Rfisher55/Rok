@@ -19634,7 +19634,7 @@ def get_full_universe(held_symbols: set) -> tuple[list, set]:
 
     # Layer 4: fill up to MAX_SCAN_TICKERS using Alpaca snapshot activity scoring
     # Pre-filter to quality exchanges, then rank by volume*|change| to pick the most active names
-    MAX_SCAN_TICKERS = 220
+    MAX_SCAN_TICKERS = 300
     if len(universe) < MAX_SCAN_TICKERS:
         quality_candidates = [
             s for s in fractionable
@@ -34210,9 +34210,9 @@ def run():
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
-            # Per-run buy cap: max 10 new positions per scan to maximize daily trade count
-            # Target 500 trades/day: 35 max_pos × 7 cycles × 2 (buy+sell) = 490 trades
-            _per_run_cap = min(10, open_long_slots)
+            # Per-run buy cap: up to 15 new positions per scan (was 10) — 300-ticker universe supports this
+            # Target 500 trades/day: 50 max_pos × 5 cycles × 2 (buy+sell) = 500 trades
+            _per_run_cap = min(15, open_long_slots)
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
@@ -45315,8 +45315,10 @@ def run():
                 _score_buckets[_bk]["wins"] += 1
         for _bv in _score_buckets.values():
             if _bv["trades"] > 0:
-                _bv["wr"]      = round(_bv["wins"] / _bv["trades"] * 100, 1)
-                _bv["avg_pnl"] = round(_bv["pnl"] / _bv["trades"], 2)
+                _bv["wr"]       = round(_bv["wins"] / _bv["trades"] * 100, 1)
+                _bv["avg_pnl"]  = round(_bv["pnl"] / _bv["trades"], 2)
+                _bv["win_rate"] = _bv["wr"]    # _nde compat alias
+                _bv["total"]    = _bv["trades"] # _nde compat alias
         tlog["score_bucket_perf"] = _score_buckets
     except Exception:
         tlog.setdefault("score_bucket_perf", {})
