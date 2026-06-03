@@ -29900,12 +29900,15 @@ def run():
                     _et_wr_now = _et_rec_now.get("wins", 0) / _et_wl * 100 if _et_wl >= 4 else 50.0
                     if _et_wr_now <= 15 and _et_wl >= 4:
                         _et_hour_adj = -7   # 0% WR: 1:30 PM ET window = near-block
-                    elif _et_wr_now <= 30 and _et_wl >= 4:
+                    elif _et_wr_now <= 35 and _et_wl >= 4:
                         _et_hour_adj = -4
                     elif _et_wr_now >= 70 and _et_wl >= 4:
                         _et_hour_adj = +2   # great hour: lean in
                 except Exception:
                     _et_hour_adj = 0
+                # Hard-coded late session penalty when tlog data sparse (31.2%WR n=16 for hour 15)
+                if _et_hour_adj == 0 and _et_ctx.hour >= 15:
+                    _et_hour_adj = -3  # late session = power hour trap
                 # N721: ad_trend — market A/D trend using score()-compatible string values
                 _n721_adv_ctx = float(breadth.get("adv_pct", 50) or 50) if isinstance(breadth, dict) else 50.0
                 if   _n721_adv_ctx > 70: live[tk]["ad_trend"] = "rising_fast"
