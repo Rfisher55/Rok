@@ -21745,8 +21745,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # Opening Range Breakout: cleared the first-hour high on volume — algo algos and funds chase (+13)
     if d.get("orb_breakout", False): s += 13
 
-    # Gap and hold: data shows 50% WR solo but 16-33% WR in all combos — reduced from +10 to +2
-    if d.get("gap_and_hold", False): s += 2
+    # Gap and hold: data shows 36.4%WR n=22 overall — consistent loser, removed bonus
+    if d.get("gap_and_hold", False): s -= 2
 
     # ADX trend strength: high ADX confirms momentum signals, low ADX = choppy market
     adx = d.get("adx", 0) or 0
@@ -21841,8 +21841,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
     # 5+ consecutive = extremely strong trend (+10); bearish HA = -4
     ha_c = d.get("ha_consec_bull", 0) or 0
     if d.get("ha_bull", False):
-        if ha_c >= 5:   s += 10
-        elif ha_c >= 3: s += 7
+        if ha_c >= 5:   s -=  3  # 36.8%WR n=19 — overextended HA streak = mean reversion risk (was +10)
+        elif ha_c >= 3: s +=  7  # 63.6%WR n=11 — building momentum sweet spot
     elif d.get("ha_bear", False): s -= 4
 
     # Donchian Channel breakout: 20-day high breakout = turtle-trading momentum signal (+8)
