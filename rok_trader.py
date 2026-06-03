@@ -29400,6 +29400,8 @@ def run():
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 1)   # 60%WR n=30 — threshold 62→58
                     if not bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _nbns("signal_synergy", "candle_present+gap_normal", 68, 1)  # 72.7%WR n=11 — candle confirmation without gap trap
+                    else:
+                        _learned_bonus += _npen("signal_synergy", "candle+gap_hold", 20, -2)  # 0%WR n=8 — candle in gap trap = false signal
                 else:
                     _learned_bonus += _npen("candle_pattern_perf", "absent", 55, -3)   # 32%WR n=25 — no pattern = weak
                     if _ha_bull_flag:
@@ -29529,6 +29531,8 @@ def run():
                 elif 0.8 <= _rvol_t_lb < 1.5:
                     _learned_bonus += _nbns("rvol_tier_perf", "normal", 60, 2)  # 64%WR n=25 — raised bonus
                     _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
+                    if _candle_present:
+                        _learned_bonus += _npen("signal_synergy", "candle+rvol_normal", 20, -2)  # 0%WR n=12 — candle on normal volume = false signal
                 elif _rvol_t_lb >= 1.5:
                     _learned_bonus += _npen("rvol_tier_perf", "strong", 35, -2) # 33%WR n=6 — high rvol = chasing
                 # ST gap: no_st=55.6% WR n=27 (updated); normal=18.2% WR n=11 — penalize "normal" gap
@@ -29720,6 +29724,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "stoch_neutral+force_rising", 78, 2)  # 83.3%WR n=6 — clean momentum + building force
                     if 50 <= _mfi_lb < 60:
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+mfi_neutral", 20, -2)  # 0%WR n=7 — double neutral zone, no momentum
+                    if not bool(_tk_sig_sc.get("htf", False)):
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+htf_not_aligned", 20, -2)  # 0%WR n=8 — stoch neutral + no HTF confirmation
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
