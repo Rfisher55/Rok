@@ -29169,7 +29169,7 @@ def run():
                 elif abs(_vwp_lb) <= 0.5:
                     # vwap_perf["at_vwap"] = 44.7% WR n=38 — penalize both dicts
                     _learned_bonus += _npen("vwap_distance_perf", "above_vwap", 47, -1)
-                    _learned_bonus += _npen("vwap_perf", "at_vwap", 45, -1)  # 44.7% WR n=38
+                    _learned_bonus += _npen("vwap_perf", "at_vwap", 20, -5)  # 12.5%WR n=8 recent — raised -1→-5
                 elif _vwp_lb < -0.5:
                     _learned_bonus += _npen("vwap_distance_perf", "below_vwap", 48, -1)
                 # SPY alignment v1: spy_intraday_pct never set in tlog — use breadth adv_pct as SPY proxy
@@ -29441,6 +29441,9 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "at_breakout+higher_lows", 64, 2)  # 85.7% WR n=7
                     elif bool(_tk_sig_sc.get("ema_stacked_bull", False)):
                         _learned_bonus += _nbns("signal_synergy", "ema_stacked_bull+higher_lows", 64, 2)  # 75% WR n=8
+                # at_breakout_state[not_at_level]: 27.3%WR n=11 — no breakout = weak entry
+                if not bool(_tk_sig_sc.get("at_breakout", False)):
+                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 30, -3)  # 27.3%WR n=11
                 # HA trend: bear=31.2% WR n=16; not_bull=30%WR n=20 — penalize both bearish and neutral HA
                 _ha_bear_flag = bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"
                 _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
@@ -29502,6 +29505,8 @@ def run():
                               + int(float(_tk_sig_sc.get("roc20", 0) or 0) > 0))
                 if bool(_tk_sig_sc.get("mtf_aligned", False)):
                     _learned_bonus += _npen("signal_performance", "mtf_aligned", 47, -1)
+                else:
+                    _learned_bonus += _npen("mtf_align_perf", "none", 35, -2)  # 33%WR n=12 — no MTF alignment
                 # Force index weak: 54% WR n=24 — only penalize when force_index IS computed but weak
                 _fi_present = ("force_index_rising" in _tk_sig_sc or "force_index_div" in _tk_sig_sc
                                or "force_index" in _tk_sig_sc)
