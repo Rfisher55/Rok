@@ -29168,8 +29168,11 @@ def run():
                 _vwp_lb = float(_tk_sig_sc.get("vwap_pos", _tk_sig_sc.get("vwap_distance", 0)) or 0)
                 _vwap_above_flag = bool(_tk_sig_sc.get("above_vwap", False)) or _vwp_lb > 0
                 if _vwap_above_flag:
-                    # vwap_perf["above"] = 50% WR n=36 — dead bonus at 62% threshold; vwap_distance also 46.5% WR
-                    pass  # both above-VWAP signals are coin flip or worse, no bonus
+                    # VWAP distance buckets: 1-3% above=35.7%WR n=14; 3-6% above=66.7%WR n=18
+                    if 1.0 <= _vwp_lb < 3.0:
+                        _learned_bonus += _npen("vwap_pos_perf", "barely_above", 38, -2)  # 35.7%WR n=14 — barely reclaimed, may fall back
+                    elif 3.0 <= _vwp_lb < 6.0:
+                        _learned_bonus += _nbns("vwap_pos_perf", "healthy_above", 64, 1)  # 66.7%WR n=18 — healthy momentum gap above VWAP
                 elif abs(_vwp_lb) <= 0.5:
                     # vwap_perf["at_vwap"] = 44.7% WR n=38 — penalize both dicts
                     _learned_bonus += _npen("vwap_distance_perf", "above_vwap", 47, -1)
