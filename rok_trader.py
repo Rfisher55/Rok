@@ -26296,6 +26296,17 @@ def run():
             # For shorts: profit when price drops
             pnl_pct = (cost - current) / cost * 100
 
+            # Short hold age
+            _sh_entry_ts = (held.get(sym, {}).get("entry_time") or
+                            held.get(sym, {}).get("time") or "")
+            _sh_age_min = 0.0
+            try:
+                if _sh_entry_ts:
+                    _sh_et = datetime.fromisoformat(_sh_entry_ts.replace("Z", "+00:00"))
+                    _sh_age_min = (now_utc - _sh_et).total_seconds() / 60
+            except Exception:
+                pass
+
             reason = None
             if pnl_pct <= -(STOP_LOSS_PCT * 100):      # short went against us
                 reason = f"short stop loss ({pnl_pct:+.1f}%)"
@@ -26303,6 +26314,15 @@ def run():
                 reason = f"short profit target ({pnl_pct:+.1f}%)"
             elif regime["regime"] == "bull":
                 reason = "regime flip to bull — cover short"
+            elif _sh_age_min >= 45:
+                # Hard 45-min cycle for shorts — free capital for fresh setups
+                reason = f"short 45min cycle exit ({pnl_pct:+.1f}% after {_sh_age_min:.0f}min)"
+            elif _sh_age_min >= 20 and pnl_pct >= 1.0:
+                # Take early profit: short down 1%+ after 20min — lock in the gain
+                reason = f"short early profit ({pnl_pct:+.1f}% after {_sh_age_min:.0f}min)"
+            elif _sh_age_min >= 25 and -0.3 <= pnl_pct <= 0.3:
+                # Short going nowhere after 25min — flat thesis, cover and move on
+                reason = f"short 25min flat ({pnl_pct:+.1f}% — not working)"
 
             if reason:
                 logger.info(f"COVER {sym} — {reason}")
