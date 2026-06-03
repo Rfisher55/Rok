@@ -26388,18 +26388,25 @@ def run():
             # today != entry date from any tlog BUY trade, the position is stale overnight.
             # Also catches the case where peaks.json was lost and order history didn't reach far enough.
             _cross_day_force = False
+            _entry_time_is_fallback = (  # True = we have no real entry time
+                _fast_entry_time == now_utc.isoformat() or
+                (peaks.get(sym, {}).get("time") is None if isinstance(peaks.get(sym), dict) else True)
+            )
             try:
                 _today_str = now_utc.strftime("%Y-%m-%d")
                 _entry_date_str = _fast_et.strftime("%Y-%m-%d") if _fast_age_min > 0 else _today_str
                 # If entry was on a prior calendar day, always force exit.
-                # No age restriction — any cross-day hold must be cleared immediately.
                 if _entry_date_str < _today_str:
                     _cross_day_force = True
                     logger.warning(f"CROSS-DAY FORCE {sym}: entry={_entry_date_str} today={_today_str} age={_fast_age_min:.0f}min — forcing exit")
-                # Also force-exit if age > 4h regardless (belt + suspenders) — reduced from 8h
+                # Force-exit if age > 4h and not a big winner
                 elif _fast_age_min >= 240 and pnl_pct < 5.0:
                     _cross_day_force = True
                     logger.warning(f"STALE POSITION {sym}: {_fast_age_min:.0f}min old ({pnl_pct:+.1f}%) — forcing exit")
+                # Unknown-age positions: can't verify hold time — force exit to prevent invisible stale holds
+                elif _entry_time_is_fallback and pnl_pct < 3.0:
+                    _cross_day_force = True
+                    logger.warning(f"UNKNOWN-AGE POSITION {sym}: no entry time in peaks/orders ({pnl_pct:+.1f}%) — forcing exit")
                 # CATASTROPHIC LOSS emergency exit: never hold past -8% regardless of age
                 elif pnl_pct <= -8.0:
                     _cross_day_force = True
