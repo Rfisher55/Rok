@@ -29430,6 +29430,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+accum_light", 20, -2)  # 0%WR n=9 — weak accumulation + no buy pressure
                     if bool(_tk_sig_sc.get("roc_accelerating", False)):
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+roc_accel", 20, -2)  # 0%WR n=7 — acceleration without buy pressure = divergence
+                    if str(_tk_sig_sc.get("sector", "")).lower() == "tech":
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+tech_sector", 20, -2)  # 0%WR n=8 — tech + neutral MFI = no institutional buying in best sector
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
@@ -29565,6 +29567,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "roc_accel+trend_conf_both", 20, -2)  # 0%WR n=8 — fully extended: trend confirmed + ROC still accelerating
                 elif not _tc_st_lb and not _tc_ps_lb:
                     _learned_bonus += _npen("trend_conf_perf", "neither", 30, -5)  # 20%WR n=10 — no trend confirmation
+                if bool(_tk_sig_sc.get("roc_accelerating", False)) and not bool(_tk_sig_sc.get("nr7_signal", False)):
+                    _learned_bonus += _npen("signal_synergy", "roc_accel+nr7_normal", 20, -2)  # 0%WR n=8 — ROC chase without prior compression
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — bonus dead (threshold 60% never fires)
                 # signal_performance penalty already added above in kc_breakout block
                 _kc_pos_lb = float(_tk_sig_sc.get("kc_pos", 50) or 50)
