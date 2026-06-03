@@ -92,7 +92,7 @@ PRICES_FILE  = Path("docs/prices.json")
 
 # ── Crypto config ─────────────────────────────────────────────────────────────
 ENABLE_CRYPTO    = True
-MAX_CRYPTO_POS   = 8        # max concurrent crypto positions — expanded for learning
+MAX_CRYPTO_POS   = 10       # max concurrent crypto positions — expanded universe (14 coins)
 CRYPTO_MAX_PCT   = 0.06     # max 6% portfolio per crypto position
 # Alpaca crypto symbols → yfinance equivalents
 CRYPTO_UNIVERSE  = {
@@ -106,6 +106,10 @@ CRYPTO_UNIVERSE  = {
     "LINK/USD": "LINK-USD",
     "DOT/USD":  "DOT-USD",
     "UNI/USD":  "UNI-USD",
+    "BCH/USD":  "BCH-USD",
+    "ADA/USD":  "ADA-USD",
+    "MKR/USD":  "MKR-USD",
+    "AAVE/USD": "AAVE-USD",
 }
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
@@ -26529,6 +26533,22 @@ def run():
                         del longs[sym]; del held[sym]; peaks.pop(sym, None)
                     except Exception as _fe:
                         logger.warning(f"25min moderate loser sell failed {sym}: {_fe}")
+                    continue
+            elif _fast_age_min >= 30 and _fast_age_min < 45 and not _fast_half_out and 0.5 <= pnl_pct < 1.5:
+                # 30-45min fading winner: profitable but momentum gone → lock in gain, free slot
+                _fast_d_30w = live.get(sym, {}) or {}
+                _fast_sc_30w = score(sym, _fast_d_30w) if _fast_d_30w else 0
+                if _fast_sc_30w < 55:
+                    _fast_reason = f"30min fading profit ({pnl_pct:+.1f}%, score={_fast_sc_30w} — take it)"
+                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                    try:
+                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                    except Exception as _fe:
+                        logger.warning(f"30min fading profit sell failed {sym}: {_fe}")
                     continue
             elif _fast_age_min >= 45 and _fast_age_min < 60 and not _fast_half_out and 0 < pnl_pct < 0.5:
                 # 45min stalling-winner check: small profit but losing steam → free slot for better setup
