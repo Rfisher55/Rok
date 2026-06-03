@@ -21691,20 +21691,20 @@ def score(tk, d, sentiment=0, regime_adj=0):
     rsi_bull = d.get("rsi_bull_divergence", False)
     if rsi_bull: s += 10
 
-    # Multi-timeframe confirmation: both hourly AND daily RSI aligned (+12/-10)
-    # When both timeframes agree, signal reliability increases dramatically
+    # Multi-timeframe confirmation: both hourly AND daily RSI aligned
+    # Wave 91: reduced +12→+8 — all-bullish fires heavily for runner/extended traps
     if rsi > 50 and daily_rsi > 50 and ema_c > 0 and daily_tr > 0:
-        s += 12   # all four timeframe signals bullish = very high confidence
+        s +=  8   # was +12; all four bullish often = overextended (Wave 91)
     elif rsi > 50 and daily_rsi > 50:
-        s +=  6   # both RSIs bullish
+        s +=  5   # both RSIs bullish — slight reduction
     elif rsi < 40 and daily_rsi < 40 and ema_c < 0 and daily_tr < 0:
         s -= 10   # both timeframes bearish = strong avoid signal
 
-    # Consecutive green candles: institutional accumulation signature (+12/-8)
-    # 3+ green days in a row = sustained buying pressure, not just a one-day pop
+    # Consecutive green candles: institutional accumulation signature
+    # Wave 91: reduced top bonus — 4+ green days often = extended, not ideal entry
     consec = d.get("consec_green", 0) or 0
-    if   consec >= 4: s += 12
-    elif consec >= 3: s +=  8
+    if   consec >= 4: s +=  6   # was +12; 4+ days straight often = overextended entry (Wave 91)
+    elif consec >= 3: s +=  8   # 3 green days = sweet spot (unchanged)
     elif consec >= 2: s +=  4
 
     # Volume dry-up on pullback: selling exhaustion signal (+9)
