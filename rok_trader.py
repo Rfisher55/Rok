@@ -29039,6 +29039,8 @@ def run():
                     _learned_bonus += _nbns("trend_quality_score_perf", "strong_trend", 65, 2)
                 elif _rs1_lb < 0 or _adx_lb < 20:
                     _learned_bonus += _npen("trend_quality_score_perf", "weak_trend", 42, -1)
+                if _adx_lb < 20:
+                    _learned_bonus += _npen("adx_strength_entry_perf", "weak_trend", 20, -6)  # 14%WR n=7 — no trend direction = catastrophic (Wave 94)
                 _spy200_lb = tlog.get("spy_above_200ma", True)
                 if _spy200_lb and _vix_now_lb < 20:
                     _learned_bonus += _nbns("macro_backdrop_perf", "favorable_macro", 65, 1)
@@ -29097,6 +29099,8 @@ def run():
                 if bool(_tk_sig_sc.get("ha_bull", False)):
                     # ha_trend_perf["bull"]: paired data 63%WR n=35 — lowered thr 60→55 (stored WR 50.9% was stale, old penalty removed)
                     _learned_bonus += _nbns("ha_trend_perf", "bull", 55, 1)
+                elif (_tk_sig_sc.get("ha_bull") is False or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"):
+                    _learned_bonus += _npen("ha_trend_perf", "bear", 40, -4)  # 35%WR n=17 — buying into bear HA trend (Wave 94)
                 # Expanded learned bonus checks — more signal/state combinations
                 if bool(_tk_sig_sc.get("cup_handle", False)):
                     _learned_bonus += _nbns("cup_handle_perf", "cup", 65, 2)
@@ -29934,7 +29938,7 @@ def run():
                     if _lr_q_lb == "strong":
                         _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3 (small but perfect)
                     elif _lr_q_lb == "moderate":
-                        _learned_bonus += _npen("lr_quality_perf", "moderate", 40, -2)  # 38.5%WR n=13 — degraded from coin flip
+                        _learned_bonus += _npen("lr_quality_perf", "moderate", 40, -4)  # 36%WR n=14 avg=-0.39% — raised -2→-4 (Wave 94)
                     elif _lr_q_lb == "weak":
                         _learned_bonus += _npen("lr_quality_perf", "weak", 43, -2)     # 42.9% WR n=28 — threshold raised 42→43
                         if not _candle_present:
