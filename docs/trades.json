@@ -48050,15 +48050,15 @@
       "ticker": "ARM",
       "qty": 3.1434e-05,
       "cost": 393.326511,
-      "price": 393.0,
-      "market_val": 0.012354,
-      "pnl_usd": -0.0,
-      "pnl_pct": -0.081,
+      "price": 393.43,
+      "market_val": 0.012367,
+      "pnl_usd": 0.0,
+      "pnl_pct": 0.024,
       "side": "long",
       "entry_date": "2026-06-03",
       "entry_ts": "2026-06-03T20:03:17.998361+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "wait for market open",
+      "rec_reason": "position healthy (+0.0%)",
       "stop_price": 369.73,
       "target_price": 440.53,
       "peak_price": 411.47,
@@ -49157,10 +49157,10 @@
       "ticker": "BTCUSD",
       "qty": 0.068394508,
       "cost": 70884.656303212,
-      "price": 64143.9,
-      "market_val": 4387.090482,
-      "pnl_usd": -461.03,
-      "pnl_pct": -9.509,
+      "price": 64133.464,
+      "market_val": 4386.376717,
+      "pnl_usd": -461.74,
+      "pnl_pct": -9.524,
       "side": "long",
       "entry_date": "2026-06-03",
       "entry_ts": "2026-06-03T20:03:17.998361+00:00",
@@ -53871,8 +53871,8 @@
       "pos_health": 6
     }
   ],
-  "last_updated": "2026-06-03T23:52:35.427672+00:00",
-  "portfolio_value": 82578.53,
+  "last_updated": "2026-06-03T23:52:42.556353+00:00",
+  "portfolio_value": 82577.82,
   "buying_power": 2759.47,
   "status": "crypto-only",
   "neurons_active": 894,
@@ -53926,10 +53926,10 @@
   },
   "bot_activity_log": [
     {
-      "ts": "2026-06-03T23:52:32.286144+00:00",
+      "ts": "2026-06-03T23:52:36.887447+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 31 positions | P&L $-5,553 | portfolio $82,579"
+      "msg": "Crypto-only run \u2014 31 positions | P&L $-5,554 | portfolio $82,578"
     },
     {
       "ts": "2026-06-03T23:51:00.773741+00:00",
@@ -54116,56 +54116,56 @@
       "priority": "low",
       "title": "\u2705 AUTO TRADING ACTIVE",
       "body": "Bot running 24/7 \u2014 31 positions via Alpaca paper account. Crypto runs every 15 min. Stocks resume Mon 9:30 AM ET.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 AMKR DOWN 5.8%",
       "body": "AMKR down 5.8% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ASYS DOWN 7.0%",
       "body": "ASYS down 7.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 BTCUSD DOWN 9.5%",
       "body": "BTCUSD down 9.5% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CMPS DOWN 13.1%",
       "body": "CMPS down 13.1% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CRM DOWN 6.0%",
       "body": "CRM down 6.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 DOGEUSD DOWN 8.7%",
       "body": "DOGEUSD down 8.7% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ETHUSD DOWN 9.1%",
       "body": "ETHUSD down 9.1% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-03T23:52:35.427805+00:00"
+      "ts": "2026-06-03T23:52:42.556490+00:00"
     }
   ],
   "market_open": true,
@@ -55640,7 +55640,7 @@
     {
       "ticker": "ARM",
       "cost": 393.326511,
-      "pnl_pct": -0.08,
+      "pnl_pct": 0.02,
       "stop_price": 369.73,
       "target_price": 440.53
     },
@@ -55675,7 +55675,7 @@
     {
       "ticker": "BTCUSD",
       "cost": 70884.656303212,
-      "pnl_pct": -9.51,
+      "pnl_pct": -9.52,
       "stop_price": 66631.58,
       "target_price": 79390.82
     },
@@ -84479,61 +84479,61 @@
   ],
   "crypto_errors": [
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "AVAX/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "BTC/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "DOGE/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "DOT/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "ETH/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "LINK/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "LTC/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "SOL/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "UNI/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-03T23:52:32.766571+00:00",
+      "ts": "2026-06-03T23:52:38.675729+00:00",
       "sym": "XRP/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19051, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
