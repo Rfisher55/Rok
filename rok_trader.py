@@ -29734,6 +29734,11 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+htf_not_aligned", 20, -2)  # 0%WR n=8 — stoch neutral + no HTF confirmation
                     if _macd_lb < 0:
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+macd_negative", 20, -2)  # 0%WR n=8 — stoch clean but MACD diverging bearish
+                    _tt_num_stoch = int(_tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw", 3)) or 3)
+                    if _tt_num_stoch < 3:
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+tt_weak", 20, -2)  # 0%WR n=8 — stoch neutral + weak trend template = no structure
+                    if _open_pos_lb >= 8:
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+crowded", 20, -2)  # 0%WR n=8 — stoch neutral entry when already 8+ positions
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
