@@ -29525,8 +29525,8 @@ def run():
                 _tc_st_lb = bool(_tk_sig_sc.get("supertrend_bull"))
                 _tc_ps_lb = bool(_tk_sig_sc.get("psar_bull"))
                 if _tc_st_lb and _tc_ps_lb:
-                    # trend_conf_perf["both"] = 48.4% WR n=31 — bonus never fires at thr=60
-                    pass  # ST+PSAR combo is coin flip, no bonus warranted
+                    if _obv_rising_lb:
+                        _learned_bonus += _npen("signal_synergy", "trend_conf_both+obv_rising", 30, -1)  # 28.6%WR n=7 — lagging indicators + OBV chasing = late entry
                 elif not _tc_st_lb and not _tc_ps_lb:
                     _learned_bonus += _npen("trend_conf_perf", "neither", 30, -5)  # 20%WR n=10 — no trend confirmation
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — bonus dead (threshold 60% never fires)
@@ -29699,6 +29699,8 @@ def run():
                         _learned_bonus += _npen("lr_quality_perf", "moderate", 40, -2)  # 38.5%WR n=13 — degraded from coin flip
                     elif _lr_q_lb == "weak":
                         _learned_bonus += _npen("lr_quality_perf", "weak", 43, -2)     # 42.9% WR n=28 — threshold raised 42→43
+                        if not _candle_present:
+                            _learned_bonus += _npen("signal_synergy", "lr_weak+candle_none", 30, -2)  # 28.6%WR n=14 — no structure + no candle pattern
                 # Donchian zone: near top of range (breakout) vs weakness
                 _dc_lb = float(_tk_sig_sc.get("donchian_pct", 50) or 50)
                 _dc_zone_lb = ("breakout" if _dc_lb >= 75 else "weakness" if _dc_lb < 25 else "middle")
