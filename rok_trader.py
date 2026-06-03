@@ -29307,6 +29307,8 @@ def run():
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 61.1% WR n=18 — FIRES ✓
+                    if _candle_present:
+                        _learned_bonus += _nbns("signal_synergy", "intraday_extended+candle", 70, 1)  # 75%WR n=8 — momentum + confirmation
                 elif _intra_mom_bkt_lb == "runner":
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
@@ -29467,6 +29469,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "at_breakout+higher_lows", 64, 2)  # 85.7% WR n=7
                     elif bool(_tk_sig_sc.get("ema_stacked_bull", False)):
                         _learned_bonus += _nbns("signal_synergy", "ema_stacked_bull+higher_lows", 64, 2)  # 75% WR n=8
+                    if not _obv_rising_lb:
+                        _learned_bonus += _nbns("signal_synergy", "higher_lows+obv_fall", 70, 1)  # 75%WR n=8 — structure confirmed, no OBV chase
                 # at_breakout_state[not_at_level]: 27.3%WR n=11 — no breakout = weak entry
                 if not bool(_tk_sig_sc.get("at_breakout", False)):
                     _learned_bonus += _npen("at_breakout_perf", "not_at_level", 30, -3)  # 27.3%WR n=11
