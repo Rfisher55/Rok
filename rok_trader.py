@@ -29024,9 +29024,16 @@ def run():
                 if _ema_stack_bull_lb:
                     _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 2)
                     _learned_bonus += _npen("ema_stack_quality_perf", "full_ema_stack", 55, -2)  # 40%WR live — fires until tlog WR improves (Wave 75)
+                    _learned_bonus += _npen("ema_stack_quality_perf", "perfect_stack", 25, -5)  # 20%WR n=5 — perfect stack = overextended chase (Wave 93)
                 elif _ema_stack_bear_lb:
                     _learned_bonus += _npen("ema_stack_quality_perf", "ema_stack_broken", 42, -2)
-                _rs1_lb = float(_tk_sig_sc.get("rs1", 0) or 0)
+                _rs1_lb  = float(_tk_sig_sc.get("rs1",  0) or 0)
+                _rs5_lb  = float(_tk_sig_sc.get("rs5",  0) or 0)
+                _rs63_lb = float(_tk_sig_sc.get("rs63", 0) or 0)
+                if _rs1_lb > 0 and _rs5_lb > 0 and _rs63_lb > 0:
+                    _learned_bonus += _npen("multi_timeframe_trend_perf", "aligned_bull", 25, -5)  # 20%WR n=5 — all TF up = overextended chase (Wave 93)
+                if _rs63_lb > 1.2:
+                    _learned_bonus += _npen("weekly_trend_quality_perf", "weekly_strong", 25, -4)  # 20%WR n=5 — weekly strong momentum = extended (Wave 93)
                 _adx_lb = float(_tk_sig_sc.get("adx", _tk_sig_sc.get("adx_14", 20)) or 20)
                 if _rs1_lb > 3 and _adx_lb > 25:
                     _learned_bonus += _nbns("trend_quality_score_perf", "strong_trend", 65, 2)
@@ -29229,6 +29236,9 @@ def run():
                         _learned_bonus += _npen("vwap_pos_perf", "barely_above", 55, -2)  # 35.7%WR n=14 — barely reclaimed, may fall back
                     elif 3.0 <= _vwp_lb < 6.0:
                         _learned_bonus += _nbns("vwap_pos_perf", "healthy_above", 64, 1)  # 66.7%WR n=18 — healthy momentum gap above VWAP
+                # vwap_position_entry_perf.above_vwap (0.3-2%) = 20%WR n=5 — slight reclaim is chasing trap (Wave 93)
+                if 0.3 < _vwp_lb <= 2.0:
+                    _learned_bonus += _npen("vwap_position_entry_perf", "above_vwap", 25, -5)
                 elif abs(_vwp_lb) <= 0.5:
                     # vwap_perf["at_vwap"] = 44.7% WR n=38 — penalize both dicts
                     _learned_bonus += _npen("vwap_distance_perf", "above_vwap", 47, -1)
@@ -29842,6 +29852,9 @@ def run():
                     _learned_bonus += _nbns("consec_green_perf", "3d+", 60, 1)
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _nbns("signal_synergy", "accum_light+green_3d", 62, 1)  # 65.4%WR n=26 — best combo
+                # consecutive_up_days_perf.fresh_momentum (1-2 green days) = 20%WR n=5 (Wave 93)
+                if 1 <= _cg_lb <= 2:
+                    _learned_bonus += _npen("consecutive_up_days_perf", "fresh_momentum", 25, -4)
                 # Vol dry-up (Wyckoff compression): dry_up state = tight range before breakout
                 if bool(_tk_sig_sc.get("vol_dry_up", False)):
                     _learned_bonus += _nbns("vol_dry_perf", "dry_up", 62, 2)  # clean compression
@@ -30102,6 +30115,13 @@ def run():
                     _learned_bonus += _npen("parabolic_extension_perf", "moderate_extension", 40, -1)
                 elif 2 <= _pve50_lb <= 10:
                     _learned_bonus += _nbns("parabolic_extension_perf", "not_extended", 62, 1)  # healthy extension
+                # 52-week range position: top_quartile/near_high/upper_range all = 20%WR n=5 (Wave 93)
+                _w52rp_lb = float(_tk_sig_sc.get("w52_range_pos", _tk_sig_sc.get("price_vs_52w", 50)) or 50)
+                if _w52rp_lb > 75:
+                    _learned_bonus += _npen("w52_range_position_perf", "top_quartile_52w", 25, -5)  # 20%WR n=5
+                    _learned_bonus += _npen("price_range_percentile_perf", "upper_range", 25, -5)   # 20%WR n=5
+                if _w52rp_lb > 80:
+                    _learned_bonus += _npen("price_range_position_perf", "near_high", 25, -5)  # 20%WR n=5
                 # Volume climax: blow-off top volume = exhaustion signal
                 _rvol_vc_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_vc_lb > 5:
