@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 70      # raised from 60: data shows <70 entries = 12%WR avg -0.44% — filter these out
+MIN_BUY_SCORE      = 85      # raised 70→85 (Wave 76): live trades score 100-150, so 70 was no-op; 85 removes weakest entries
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 12      # raised from 6 — 12 per sector for high-volume trading; "other" uncapped below
@@ -21532,10 +21532,10 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif ema200_pos < -10:  s -= 12   # bear territory — very cautious
     elif ema200_pos < -3:   s -=  6
 
-    # Multi-timeframe confluence: bonus when daily+hourly both confirm direction (+12/-10)
-    # Triple alignment (weekly+daily+hourly) is the highest-conviction setup in technical trading
-    if d.get("mtf_triple", False):    s += 18   # all 3 TFs aligned = rare, high-conviction
-    elif d.get("mtf_aligned", False): s += 12   # daily+hourly = high conviction
+    # Multi-timeframe confluence: bonus when daily+hourly both confirm direction (+10/-10)
+    # Wave 76: reduced from +18/+12 — live data shows mtf_aligned 44.8%WR, mtf_triple also unreliable when stacked with other signals
+    if d.get("mtf_triple", False):    s += 10   # reduced from +18 (Wave 76: score inversion fix)
+    elif d.get("mtf_aligned", False): s +=  6   # reduced from +12 (Wave 76: score inversion fix)
     if d.get("mtf_conflict", False):  s -= 10   # fighting the daily trend = high failure rate
 
     # Daily RSI confirmation (+8/-8)
@@ -29080,6 +29080,15 @@ def run():
                     if bool(_tk_sig_sc.get("mom_accel", False)):
                         # ichimoku_above+mom_accel = 50% WR n=16 — coin flip, penalize at 51%
                         _learned_bonus += _npen("signal_synergy", "ichimoku_above+mom_accel", 51, -1)
+                # Wave 76: triple-tech-trap — ema_stacked+ichimoku+mtf_aligned all True = maximum overextension
+                # June 2-3 live data: losses_med=135 vs wins_med=120 — this triple IS the inversion cause
+                # Direct hard penalty (bypasses minsamp requirement) — confirmed by live data analysis
+                if (bool(_tk_sig_sc.get("ema_stacked_bull", False))
+                        and bool(_tk_sig_sc.get("ichimoku_above", False))
+                        and bool(_tk_sig_sc.get("mtf_aligned", False))):
+                    _learned_bonus -= 12  # triple overextension trap — fires immediately (Wave 76)
+                    if bool(_tk_sig_sc.get("supertrend_bull", False)):
+                        _learned_bonus -= 4  # quad overextension: +supertrend_bull = even worse (Wave 76)
                 if bool(_tk_sig_sc.get("psar_bull", False)):
                     # psar_bull_entry_perf["psar_bullish_entry"] = 33.3% WR n=3 (small sample)
                     # signal_performance["psar_bull"] = 45.7% WR n=35 — penalize
