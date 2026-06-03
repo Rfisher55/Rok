@@ -24645,7 +24645,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 for _bk, _bv in d.items():
                     if (_bk.endswith("_perf") and isinstance(_bv, str) and _bv
                             and _bk in _ALL_NEURON_PERFS):
-                        _nsl_adj += _nde(_bk, _bv) * 0.5
+                        _nsl_adj += _nde(_bk, _bv, minsamp=2) * 0.5
             except Exception:
                 pass
 
