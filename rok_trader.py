@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 60      # raised from 40: 77% of entries score 100+ (compression) — 60 filters weak setups
+MIN_BUY_SCORE      = 70      # raised from 60: data shows <70 entries = 12%WR avg -0.44% — filter these out
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 12      # raised from 6 — 12 per sector for high-volume trading; "other" uncapped below
@@ -115,7 +115,7 @@ CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
 CRYPTO_MIN_SCORE = 40       # data: 0% WR at scores 30-39 — raised bar to require stronger signals
-CRYPTO_MIN_COMBINED = 0     # AI score gate — require neutral-to-positive AI for crypto
+CRYPTO_MIN_COMBINED = 20    # require tech+AI combined >= 20 (was 0 — allowed score=2 buys)
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
@@ -19101,6 +19101,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 # 1h profit exit: only trigger at 1%+ — winners ride, not cycle-exited
                 # MOVED before cycle exit so profitable exits get correct category
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 60 and pnl_pct <= 0.3:
+                # 60min hard exit for losers/flat: data shows >120min crypto holds = 11%WR avg -0.38%
+                # Only let winners (>0.3%) ride toward 90min
+                reason = f"crypto 60min flat/loss exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 90 and pnl_pct <= 0.7:
+                # 90min hard exit for small winners/flat: take 0.3-0.7% and free slot
+                reason = f"crypto 90min exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= _learned_cycle_min and -1.5 <= pnl_pct < 1.0:
                 # Brain-adaptive cycle exit — only for flat/slightly-negative positions.
                 # Winners (pnl >= 1%) are handled above; don't preempt them with a "cycle exit"
@@ -29535,9 +29542,9 @@ def run():
                 # EMA structure: both=47.2% WR n=36 (updated — was 65%) — no bonus
                 _e50_pct_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 _e200_pct_lb = float(_tk_sig_sc.get("price_vs_ema200", 0) or 0)
-                # ema_struct_perf["both"] = 47.2% WR n=36 — bonus dead; below_both=45.7% → mild penalty
+                # ema_struct_perf["both"] = 47.2% WR n=36 — bonus dead; below_both=12%WR n=8 recent → strong penalty
                 if not (_e50_pct_lb > 0 and _e200_pct_lb > 0):
-                    _learned_bonus += _npen("ema_struct_perf", "below_both", 46, -1)
+                    _learned_bonus += _npen("ema_struct_perf", "below_both", 50, -4)  # raised from -1 thr=46
                 # EMA50 "below" = 19.2% WR n=26 — catastrophic, much worse than _nde alone covers
                 if _e50_pct_lb < -2:
                     _learned_bonus += _npen("ema50_position_perf", "below", 25, -5)  # 19.2% WR n=26
@@ -29742,7 +29749,7 @@ def run():
                 if _sec_perf_lb == "tech":
                     _learned_bonus += _nbns("sector_performance", "tech", 62, 1)   # 63% WR n=27 — threshold 65→62
                 elif _sec_perf_lb == "other":
-                    _learned_bonus += _npen("sector_performance", "other", 39, -1) # 38.7% WR n=31 — threshold updated
+                    _learned_bonus += _npen("sector_performance", "other", 40, -5) # 26%WR n=19 recent — raised to -5
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
                 _pve50_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 if _pve50_lb > 20:
