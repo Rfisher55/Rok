@@ -29432,6 +29432,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+roc_accel", 20, -2)  # 0%WR n=7 — acceleration without buy pressure = divergence
                     if str(_tk_sig_sc.get("sector", "")).lower() == "tech":
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+tech_sector", 20, -2)  # 0%WR n=8 — tech + neutral MFI = no institutional buying in best sector
+                    if bool(_tk_sig_sc.get("mtf_aligned", False)):
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+mtf_full", 20, -2)  # 0%WR n=6 — full MTF alignment but MFI neutral = late-cycle trap
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
@@ -29739,6 +29741,11 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+tt_weak", 20, -2)  # 0%WR n=8 — stoch neutral + weak trend template = no structure
                     if _open_pos_lb >= 8:
                         _learned_bonus += _npen("signal_synergy", "stoch_neutral+crowded", 20, -2)  # 0%WR n=8 — stoch neutral entry when already 8+ positions
+                    _pm_gp_stoch = float(_tk_sig_sc.get("pm_gap_pct", _tk_sig_sc.get("pm_price", 0)) or 0)
+                    if abs(_pm_gp_stoch) < 0.5:
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+pm_gap_flat", 20, -2)  # 0%WR n=8 — stoch neutral + no premarket catalyst
+                    if not bool(_tk_sig_sc.get("at_demand_zone", False)):
+                        _learned_bonus += _npen("signal_synergy", "stoch_neutral+no_demand_zone", 20, -2)  # 0%WR n=7 — stoch neutral + no demand structure
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
