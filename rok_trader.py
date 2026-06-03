@@ -33832,6 +33832,353 @@ def run():
             except Exception:
                 pass
 
+            # ── R63: inject *_perf states for 60 batch-loop neurons ──────────────────
+            # Group: market breadth, macro, SPY, technical, price/vol, sector, fundamental.
+            # All computed from data already in live[tk] at this point.
+            try:
+                _r63 = live[tk]
+                _r63_spy = live.get("SPY", {})
+                # ── Market breadth / macro ──
+                try:
+                    _r63_bd = str(_r63.get("breadth_direction", "breadth_neutral") or "breadth_neutral")
+                    _r63["market_breadth_entry_perf"] = (
+                        "strong_breadth" if "strong" in _r63_bd else
+                        "weak_breadth"   if "down" in _r63_bd else "neutral_breadth")
+                except Exception: pass
+                try:
+                    _r63_bpct = float(_r63.get("breadth_pct", _r63.get("adv_pct", 50)) or 50)
+                    _r63["market_breadth_score_perf"] = (
+                        "breadth_thrust"  if _r63_bpct >= 80 else
+                        "breadth_healthy" if _r63_bpct >= 55 else
+                        "breadth_weak"    if _r63_bpct < 40 else "breadth_neutral")
+                except Exception: pass
+                try:
+                    _r63_adl = float(_r63.get("advance_decline_ratio", 1.0) or 1.0)
+                    _r63_mi = ("internals_bullish" if _r63_adl > 1.5 else
+                               "internals_bearish" if _r63_adl < 0.7 else "internals_mixed")
+                    _r63["market_internals_perf"]         = _r63_mi
+                    _r63["market_internals_entry_perf"]   = _r63_mi
+                    _r63["market_internals_quality_perf"] = _r63_mi
+                except Exception: pass
+                try:
+                    _r63_reg = str(regime.get("regime", "neutral") or "neutral")
+                    _r63_mr = ("macro_bull" if "bull" in _r63_reg else
+                               "macro_bear" if "bear" in _r63_reg else "macro_neutral")
+                    _r63["macro_regime_perf"]       = _r63_mr
+                    _r63["macro_regime_entry_perf"] = _r63_mr
+                except Exception: pass
+                try:
+                    _r63_reg2 = str(regime.get("regime", "neutral") or "neutral")
+                    _r63_vix2  = float(_r63.get("vix", 20) or 20)
+                    _r63["market_phase_entry_perf"] = (
+                        "early_bull" if _r63_reg2 in ("bull","strong_bull") and _r63_vix2 < 20 else
+                        "late_bull"  if _r63_reg2 in ("bull","strong_bull") else
+                        "bear_phase" if "bear" in _r63_reg2 else "neutral_phase")
+                except Exception: pass
+                try:
+                    _r63_sgap = float(_r63.get("spy_chg1d", 0) or 0)
+                    _r63_bd2  = str(_r63.get("breadth_direction", "") or "")
+                    _r63["market_open_strength_perf"] = (
+                        "strong_open" if _r63_sgap > 0.5 and "up" in _r63_bd2 else
+                        "weak_open"   if _r63_sgap < -0.5 or "down" in _r63_bd2 else "neutral_open")
+                except Exception: pass
+                try:
+                    _r63_reg3  = str(regime.get("regime", "neutral") or "neutral")
+                    _r63_spy1d = float(_r63.get("spy_chg1d", 0) or 0)
+                    _r63["regime_spy_alignment_perf"] = (
+                        "aligned_bull" if "bull" in _r63_reg3 and _r63_spy1d > 0 else
+                        "aligned_bear" if "bear" in _r63_reg3 and _r63_spy1d < 0 else
+                        "misaligned"   if (("bull" in _r63_reg3 and _r63_spy1d < -0.5)
+                                          or ("bear" in _r63_reg3 and _r63_spy1d > 0.5)) else "neutral_align")
+                except Exception: pass
+                # ── SPY indicators ──
+                try:
+                    _r63_sp1 = float(_r63.get("spy_chg1d", 0) or 0)
+                    _r63_bd3 = str(_r63.get("breadth_direction", "") or "")
+                    _r63["spy_alignment_perf"] = (
+                        "spy_breadth_bullish" if _r63_sp1 > 0.3 and "up" in _r63_bd3 else
+                        "spy_breadth_bearish" if _r63_sp1 < -0.3 and "down" in _r63_bd3 else "spy_breadth_mixed")
+                except Exception: pass
+                try:
+                    _r63_sp2 = float(_r63.get("spy_chg1d", 0) or 0)
+                    _r63["spy_momentum_entry_perf"] = (
+                        "spy_strong_up" if _r63_sp2 > 0.7 else "spy_mild_up" if _r63_sp2 > 0.2 else
+                        "spy_flat"      if abs(_r63_sp2) <= 0.2 else
+                        "spy_mild_down" if _r63_sp2 >= -0.7 else "spy_strong_down")
+                except Exception: pass
+                try:
+                    _r63_spdir = str(_r63.get("spy_intraday_dir", "flat") or "flat")
+                    _r63["spy_morning_action_perf"] = (
+                        "spy_morning_bull" if "up" in _r63_spdir else
+                        "spy_morning_bear" if "down" in _r63_spdir else "spy_morning_flat")
+                except Exception: pass
+                try:
+                    _r63_soc = str(_r63.get("spy_close_vs_open_state", "spy_flat_day") or "spy_flat_day")
+                    _r63["spy_open_vs_close_perf"] = _r63_soc if _r63_soc else "spy_flat_day"
+                except Exception: pass
+                # ── Technical indicators ──
+                try:
+                    _r63_atr = float(_r63.get("atr_pct", 2.0) or 2.0)
+                    _r63_rv  = float(_r63.get("rvol", _r63.get("vol_ratio", 1.0)) or 1.0)
+                    _r63["atr_vol_expansion_perf"] = (
+                        "extreme_expansion" if _r63_atr > 4 and _r63_rv > 2 else
+                        "vol_confirmed"     if _r63_rv > 1.5 and _r63_atr > 2 else
+                        "quiet_expansion"   if _r63_atr > 3 else "normal_activity")
+                except Exception: pass
+                try:
+                    _r63_atr2 = float(_r63.get("atr_pct", 2.0) or 2.0)
+                    _r63["hist_vol_level_perf"] = (
+                        "very_high_vol" if _r63_atr2 > 5 else "high_vol" if _r63_atr2 > 3 else
+                        "low_vol"       if _r63_atr2 < 1.5 else "normal_vol")
+                except Exception: pass
+                try:
+                    _r63_vcs = str(_r63.get("vol_contraction_state", "") or "")
+                    _r63["volatility_contraction_perf"] = (
+                        "strong_contraction" if _r63_vcs in ("tight", "contracting") else
+                        "expanding"          if _r63_vcs in ("expanding", "breakout") else "normal_vol")
+                except Exception: pass
+                try:
+                    _r63_obv = str(_r63.get("obv_trend", "") or "")
+                    _r63["obv_slope_entry_perf"] = (
+                        "obv_rising"  if "up" in _r63_obv or "rising" in _r63_obv else
+                        "obv_falling" if "down" in _r63_obv or "falling" in _r63_obv else "obv_flat")
+                except Exception: pass
+                try:
+                    _r63_mcs = str(_r63.get("macd_cross_state", "no_cross") or "no_cross")
+                    _r63["macd_slope_entry_perf"] = (
+                        "macd_accelerating" if "bull_cross" in _r63_mcs or "bullish_cross" in _r63_mcs else
+                        "macd_decelerating" if "bear" in _r63_mcs else
+                        "macd_flat"         if "no_cross" in _r63_mcs else "macd_bullish")
+                except Exception: pass
+                try:
+                    _r63_ems  = bool(_r63.get("ema_stacked_bull", _r63.get("ema_stack", False)))
+                    _r63_e21  = float(_r63.get("ema21", 0) or 0)
+                    _r63_e50  = float(_r63.get("ema50", 0) or 0)
+                    _r63["ema_stack_quality_perf"] = (
+                        "full_stack"    if _r63_ems else
+                        "partial_stack" if _r63_e21 > 0 and _r63_e50 > 0 and _r63_e21 > _r63_e50 else "no_stack")
+                except Exception: pass
+                try:
+                    _r63["higher_lows_entry_perf"] = ("higher_lows_yes" if _r63.get("higher_lows") else "higher_lows_no")
+                except Exception: pass
+                try:
+                    _r63_tab = str(_r63.get("trend_age_bucket", "") or "")
+                    _r63["consolidation_length_perf"] = (
+                        "fresh_breakout" if "young" in _r63_tab or "new" in _r63_tab else
+                        "long_base"      if "aging" in _r63_tab or "mature" in _r63_tab else "mid_base")
+                except Exception: pass
+                try:
+                    _r63_rsi  = float(_r63.get("rsi", 50) or 50)
+                    _r63_mcs2 = str(_r63.get("macd_cross_state", "") or "")
+                    _r63["rsi_trend_alignment_perf"] = (
+                        "rsi_trend_aligned" if _r63_rsi > 55 and "bull" in _r63_mcs2 else
+                        "rsi_trend_opposed" if _r63_rsi < 45 and "bull" in _r63_mcs2 else
+                        "rsi_overbought"    if _r63_rsi > 75 else
+                        "rsi_oversold"      if _r63_rsi < 30 else "rsi_neutral")
+                except Exception: pass
+                try:
+                    _r63_rsi2 = float(_r63.get("rsi", 50) or 50)
+                    _r63_bb   = float(_r63.get("bb_pctb", _r63.get("bb_percent_b", 0.5)) or 0.5)
+                    _r63_mr2  = ("extreme_oversold_bounce" if _r63_rsi2 < 30 and _r63_bb < 0.1 else
+                                 "oversold_bounce"          if _r63_rsi2 < 40 and _r63_bb < 0.2 else
+                                 "overbought_risk"          if _r63_rsi2 > 75 and _r63_bb > 0.9 else "no_reversion_setup")
+                    _r63["mean_reversion_setup_perf"]  = _r63_mr2
+                    _r63["mean_reversion_signal_perf"] = _r63_mr2
+                except Exception: pass
+                try:
+                    _r63_sp4 = float(_r63.get("score_persistence", 0) or 0)
+                    _r63_cu  = int(_r63.get("consec_up", _r63.get("consec_green", 0)) or 0)
+                    _r63_mp  = ("strong_persistence"   if _r63_sp4 >= 3 and _r63_cu >= 3 else
+                                "building_persistence" if _r63_sp4 >= 2 or _r63_cu >= 2 else
+                                "fading"               if _r63_sp4 <= 0 and _r63_cu <= 0 else "normal")
+                    _r63["momentum_persistence_perf"]       = _r63_mp
+                    _r63["momentum_persistence_entry_perf"] = _r63_mp
+                except Exception: pass
+                try:
+                    _r63_c1 = float(_r63.get("chg1d", 0) or 0)
+                    _r63_c5 = float(_r63.get("chg5d", 0) or 0)
+                    _r63["multi_timeframe_trend_perf"] = (
+                        "all_timeframes_up"   if _r63_c1 > 0 and _r63_c5 > 0 else
+                        "all_timeframes_down" if _r63_c1 < 0 and _r63_c5 < 0 else
+                        "short_term_reversal" if _r63_c1 < 0 and _r63_c5 > 2 else "mixed_timeframes")
+                except Exception: pass
+                try:
+                    _r63_rsi3 = float(_r63.get("rsi", 50) or 50)
+                    _r63_c5b  = float(_r63.get("chg5d", 0) or 0)
+                    _r63["multi_timeframe_rsi_perf"] = (
+                        "rsi_mtf_strong" if _r63_rsi3 > 60 and _r63_c5b > 2 else
+                        "rsi_mtf_weak"   if _r63_rsi3 < 40 and _r63_c5b < -2 else "rsi_mtf_neutral")
+                except Exception: pass
+                # ── Price / Volume indicators ──
+                try:
+                    _r63_c1b  = abs(float(_r63.get("chg1d", 0) or 0))
+                    _r63_atr3 = float(_r63.get("atr_pct", 2.0) or 2.0)
+                    if _r63_atr3 > 0:
+                        _r63["daily_atr_move_perf"] = (
+                            "large_atr_move"  if _r63_c1b / _r63_atr3 > 1.5 else
+                            "normal_atr_move" if _r63_c1b / _r63_atr3 > 0.5 else "small_atr_move")
+                except Exception: pass
+                try:
+                    _r63_c1c = float(_r63.get("chg1d", 0) or 0)
+                    _r63["price_above_open_perf"] = (
+                        "strong_above_open" if _r63_c1c > 1.0 else "above_open" if _r63_c1c > 0.2 else
+                        "at_open"           if abs(_r63_c1c) <= 0.2 else "below_open")
+                except Exception: pass
+                try:
+                    _r63_rv2 = float(_r63.get("rvol", _r63.get("vol_ratio", 1.0)) or 1.0)
+                    _r63["volume_climax_perf"] = (
+                        "climax_volume"   if _r63_rv2 > 5 else "elevated_volume" if _r63_rv2 > 2 else
+                        "avg_volume"      if _r63_rv2 >= 0.8 else "low_volume")
+                except Exception: pass
+                try:
+                    _r63_vt  = str(_r63.get("vol_trend", "") or "")
+                    _r63_vst = ("volume_expanding"   if "up" in _r63_vt or "rising" in _r63_vt or "surge" in _r63_vt else
+                                "volume_contracting" if "down" in _r63_vt or "falling" in _r63_vt else "volume_flat")
+                    _r63["volume_consistency_perf"] = _r63_vst
+                    _r63["volume_trend_perf"]       = _r63_vst
+                except Exception: pass
+                try:
+                    _r63_pmv = float(_r63.get("premarket_vol", _r63.get("pm_volume", 0)) or 0)
+                    _r63_pmg = abs(float(_r63.get("gap_pct", _r63.get("pm_gap_pct", 0)) or 0))
+                    _r63_pmvq = ("strong_premarket" if _r63_pmv > 500000 and _r63_pmg > 1 else
+                                 "active_premarket" if _r63_pmv > 100000 else "quiet_premarket")
+                    _r63["pre_market_volume_perf"]         = _r63_pmvq
+                    _r63["pre_market_volume_quality_perf"] = _r63_pmvq
+                except Exception: pass
+                try:
+                    _r63_ss  = bool(_r63.get("shooting_star", False))
+                    _r63_be  = bool(_r63.get("bullish_engulfing", False))
+                    _r63_ham = bool(_r63.get("hammer", False))
+                    _r63["reversal_candle_perf"] = (
+                        "bullish_reversal" if _r63_be or _r63_ham else
+                        "bearish_reversal" if _r63_ss else "no_reversal")
+                except Exception: pass
+                try:
+                    _r63_cp = str(_r63.get("candle_pattern", "") or "")
+                    _r63["entry_candle_pattern_perf"] = _r63_cp if _r63_cp else "no_pattern"
+                except Exception: pass
+                try:
+                    _r63_c1d2 = float(_r63.get("chg1d", 0) or 0)
+                    _r63_rv3  = float(_r63.get("rvol", 1.0) or 1.0)
+                    _r63_im   = ("strong_intraday"   if _r63_c1d2 > 1.5 and _r63_rv3 > 1.5 else
+                                 "moderate_intraday" if _r63_c1d2 > 0.5 else
+                                 "weak_intraday"     if _r63_c1d2 < -0.5 else "flat_intraday")
+                    _r63["intraday_momentum_perf"]       = _r63_im
+                    _r63["intraday_momentum_shift_perf"] = _r63_im
+                except Exception: pass
+                try:
+                    _r63_cvr = str(_r63.get("close_vs_range_perf", "") or "")
+                    _r63_ihq = ("at_intraday_high"   if "strong" in _r63_cvr else
+                                "near_intraday_high" if "mid" in _r63_cvr else "away_from_high")
+                    _r63["intraday_high_proximity_perf"] = _r63_ihq
+                    _r63["intraday_high_quality_perf"]   = _r63_ihq
+                except Exception: pass
+                try:
+                    from datetime import datetime as _r63_dt, timezone as _r63_tz
+                    _r63_hr  = _r63_dt.now(_r63_tz.utc).hour - 5
+                    if _r63_hr < 0: _r63_hr += 24
+                    _r63_c1e = float(_r63.get("chg1d", 0) or 0)
+                    _r63["morning_momentum_quality_perf"] = (
+                        "strong_morning"  if _r63_c1e > 1.0 and _r63_hr <= 11 else
+                        "weak_morning"    if _r63_c1e < -0.5 and _r63_hr <= 11 else
+                        "afternoon_trade" if _r63_hr >= 13 else "neutral_morning")
+                except Exception: pass
+                # ── Sector indicators ──
+                try:
+                    _r63_srs = float(_r63.get("sector_rs", _r63.get("rs_sector", 50)) or 50)
+                    _r63_sl  = ("sector_leader"   if _r63_srs > 70 else
+                                "sector_follower" if _r63_srs >= 45 else "sector_laggard")
+                    _r63["sector_leadership_perf"]          = _r63_sl
+                    _r63["sector_leadership_position_perf"] = _r63_sl
+                    _r63["sector_leadership_quality_perf"]  = _r63_sl
+                except Exception: pass
+                try:
+                    _r63_sc1 = float(_r63.get("sector_chg1d", _r63.get("sector_day_pct", 0)) or 0)
+                    _r63["sector_momentum_entry_perf"] = (
+                        "sector_hot"    if _r63_sc1 > 1.0 else "sector_up"   if _r63_sc1 > 0.2 else
+                        "sector_flat"   if abs(_r63_sc1) <= 0.2 else "sector_lagging")
+                except Exception: pass
+                try:
+                    _r63_sc2  = float(_r63.get("sector_chg1d", _r63.get("sector_day_pct", 0)) or 0)
+                    _r63_sp3  = float(_r63.get("spy_chg1d", 0) or 0)
+                    _r63_diff = _r63_sc2 - _r63_sp3
+                    _r63["sector_etf_vs_spy_today_perf"] = (
+                        "sector_leading_spy" if _r63_diff > 0.5 else
+                        "sector_lagging_spy" if _r63_diff < -0.5 else "sector_inline_spy")
+                except Exception: pass
+                try:
+                    _r63_srs2 = float(_r63.get("sector_rs", 50) or 50)
+                    _r63["sector_relative_strength_perf"] = (
+                        "top_sector" if _r63_srs2 > 75 else "mid_sector" if _r63_srs2 >= 40 else "weak_sector")
+                except Exception: pass
+                try:
+                    _r63_sa = int(_r63.get("sectors_advancing_now", 5) or 5)
+                    _r63["sector_breadth_quality_perf"] = (
+                        "most_sectors_up" if _r63_sa >= 7 else
+                        "half_sectors_up" if _r63_sa >= 4 else "most_sectors_down")
+                except Exception: pass
+                # ── Fundamental / sentiment indicators ──
+                try:
+                    _r63_bet = float(_r63.get("beta_at_entry", _r63.get("beta", 1.0)) or 1.0)
+                    _r63["beta_bucket_entry_perf"] = (
+                        "high_beta_entry" if _r63_bet > 1.5 else
+                        "low_beta_entry"  if _r63_bet < 0.7 else "normal_beta_entry")
+                except Exception: pass
+                try:
+                    _r63_spr = float(_r63.get("bid_ask_spread_pct", 0) or 0)
+                    _r63["bid_ask_spread_perf"] = (
+                        "tight_spread" if _r63_spr < 0.1 else
+                        "normal_spread" if _r63_spr < 0.3 else "wide_spread")
+                except Exception: pass
+                try:
+                    _r63_vix3 = float(_r63.get("vix", 20) or 20)
+                    _r63_fg   = ("greed"    if _r63_vix3 < 16 else "neutral" if _r63_vix3 < 22 else
+                                 "fear"     if _r63_vix3 < 28 else "extreme_fear")
+                    _r63["fear_greed_perf"]       = _r63_fg
+                    _r63["fear_greed_entry_perf"] = _r63_fg
+                except Exception: pass
+                try:
+                    _r63_dse = int(_r63.get("days_since_earnings", _r63.get("earnings_days_ago", 45)) or 45)
+                    _r63["days_since_earnings_perf"] = (
+                        "fresh_earnings" if _r63_dse <= 7 else "post_earnings" if _r63_dse <= 30 else
+                        "mid_cycle"      if _r63_dse <= 60 else "pre_earnings_window")
+                except Exception: pass
+                try:
+                    _r63_dte = int(_r63.get("days_to_earnings", _r63.get("earnings_days", 999)) or 999)
+                    _r63["earnings_proximity_entry_perf"] = (
+                        "earnings_this_week"  if _r63_dte <= 5 else
+                        "pre_earnings_window" if _r63_dte <= 21 else
+                        "mid_quarter"         if _r63_dte <= 45 else "far_from_earnings")
+                except Exception: pass
+                try:
+                    _r63_sf  = float(_r63.get("short_float", _r63.get("short_interest", 0)) or 0)
+                    _r63_rv4 = float(_r63.get("rvol", 1.0) or 1.0)
+                    _r63_ssb = ("squeeze_prime"    if _r63_sf > 20 and _r63_rv4 > 2 else
+                                "squeeze_possible" if _r63_sf > 12 and _r63_rv4 > 1.5 else
+                                "squeeze_unlikely" if _r63_sf < 5 else "squeeze_neutral")
+                    _r63["short_squeeze_perf"]           = _r63_ssb
+                    _r63["short_squeeze_entry_perf"]     = _r63_ssb
+                    _r63["short_squeeze_potential_perf"] = _r63_ssb
+                    _r63["short_squeeze_risk_perf"]      = _r63_ssb
+                    _r63["short_squeeze_velocity_perf"]  = _r63_ssb
+                except Exception: pass
+                try:
+                    _r63_ais = float(_r63.get("ai_score", _r63.get("sent_score", 0)) or 0)
+                    _r63["news_sentiment_score_perf"] = (
+                        "strong_positive_sent" if _r63_ais > 30 else "mild_positive_sent" if _r63_ais > 5 else
+                        "neutral_sent"         if abs(_r63_ais) <= 5 else
+                        "negative_sent"        if _r63_ais >= -15 else "strong_negative_sent")
+                except Exception: pass
+                try:
+                    _r63_ais2 = float(_r63.get("ai_score", 0) or 0)
+                    _r63_nc   = int(_r63.get("news_count", 0) or 0)
+                    _r63["news_sentiment_shift_perf"] = (
+                        "sentiment_improving" if _r63_ais2 > 10 and _r63_nc > 0 else
+                        "sentiment_declining" if _r63_ais2 < -5 else "sentiment_neutral")
+                except Exception: pass
+            except Exception:
+                pass
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
