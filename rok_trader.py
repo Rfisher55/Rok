@@ -19572,17 +19572,19 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _emace = sig.get("ema_cross", 0) or 0
             _sc_tier = ("high" if sc >= 40 else "medium" if sc >= 25 else "low" if sc >= 15 else "speculative")
             _crypto_entry_signals = {
-                "crypto_momentum_tier":  ("explosive" if _roc5e > 10 else "strong" if _roc5e > 4
-                                          else "moderate" if _roc5e > 1 else "flat" if _roc5e > -1 else "falling"),
-                "crypto_rsi_zone":       ("oversold" if _rsie < 30 else "neutral" if _rsie < 60 else "overbought"),
-                "crypto_vol_surge":      ("surge" if _vre > 3 else "elevated" if _vre > 1.5 else "normal" if _vre > 0.7 else "dry"),
-                "crypto_ema_cross":      ("bull" if _emace > 0.5 else "bear" if _emace < -0.5 else "flat"),
-                "crypto_dow":            ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][now_utc.weekday()],
-                "crypto_asset_class":    ("BTC" if "BTC" in alpaca_sym else "ETH" if "ETH" in alpaca_sym else "ALT"),
-                "crypto_score_tier":     _sc_tier,
-                "crypto_ai_score":       round(float(ai_score), 1),
-                "crypto_btc_dom":        round(float(btc_dom), 1),
-                "crypto_hour_utc":       now_utc.hour,
+                # _perf-suffixed keys feed the universal SELL update → brain learns crypto entry conditions
+                "crypto_momentum_tier_perf": ("explosive" if _roc5e > 10 else "strong" if _roc5e > 4
+                                              else "moderate" if _roc5e > 1 else "flat" if _roc5e > -1 else "falling"),
+                "crypto_rsi_zone_perf":       ("oversold" if _rsie < 30 else "neutral" if _rsie < 60 else "overbought"),
+                "crypto_vol_surge_perf":      ("surge" if _vre > 3 else "elevated" if _vre > 1.5 else "normal" if _vre > 0.7 else "dry"),
+                "crypto_ema_cross_perf":      ("bull" if _emace > 0.5 else "bear" if _emace < -0.5 else "flat"),
+                "crypto_dow_perf":            ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][now_utc.weekday()],
+                "crypto_asset_class_perf":    ("BTC" if "BTC" in alpaca_sym else "ETH" if "ETH" in alpaca_sym else "ALT"),
+                "crypto_score_tier_perf":     _sc_tier,
+                "crypto_hour_utc_perf":       f"h{now_utc.hour:02d}",
+                # Non-perf fields for compatibility / display
+                "crypto_ai_score":            round(float(ai_score), 1),
+                "crypto_btc_dom":             round(float(btc_dom), 1),
             }
             logger.info(f"BUY {alpaca_sym} — ${notional:.0f} @ ~${price:,.2f} | score {sc} | ai {ai_score:+.0f}")
             alpaca_post("/v2/orders", {
