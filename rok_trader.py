@@ -114,8 +114,8 @@ CRYPTO_UNIVERSE  = {
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
-CRYPTO_MIN_SCORE = 40       # data: 0% WR at scores 30-39 — raised bar to require stronger signals
-CRYPTO_MIN_COMBINED = 20    # require tech+AI combined >= 20 (was 0 — allowed score=2 buys)
+CRYPTO_MIN_SCORE = 50       # raised 40→50: alts at 21-34 had 14.3%WR — require stronger conviction
+CRYPTO_MIN_COMBINED = 25    # require tech+AI combined >= 25 (raised from 20)
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
 _EARNINGS_CACHE: dict  = {}   # sym -> bool
@@ -19513,12 +19513,13 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             _buy_list = _fallback[:_n_fallback]
             logger.info(f"Crypto force-buy (floor={_fallback_floor}, majors-only): {open_slots} open slots, buying top {len(_buy_list)}")
         else:
-            # Secondary fallback: any coin but at 80% of regular min (was 50% floor/2 ≈ 25%)
-            _alt_floor = max(22, int(CRYPTO_MIN_SCORE * 0.80))
+            # Secondary fallback: BTC/ETH only at 90% of min (disabled for alts — 14.3%WR on alts below threshold)
+            _alt_floor = max(30, int(CRYPTO_MIN_SCORE * 0.90))  # raised: alts at 80% had 14.3%WR
             _fallback_any = [(sym, _adj_scores.get(sym, 0), sig) for sym, sig in crypto_data.items()
                              if sym not in held_crypto
                              and _eligible(sym)
                              and _adj_scores.get(sym, 0) >= _alt_floor
+                             and ("BTC" in sym or "ETH" in sym)  # majors only — alts excluded from secondary fallback
                              and (sym.split("/")[0] if "/" in sym else sym.replace("USD","")) not in _fb_coin_reduce]
             _fallback_any.sort(key=lambda x: -x[1])
             if _fallback_any:
