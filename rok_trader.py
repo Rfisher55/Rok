@@ -29042,8 +29042,8 @@ def run():
                 elif _dow_now_lb == 0:
                     _learned_bonus += _npen("day_of_week_perf", "monday_entry", 47, -1)  # 45.8% WR n=72
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
-                    _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 65, 2)   # fixed: was "pp" (wrong state)
-                    _learned_bonus += _npen("pocket_pivot_perf", "pivot", 40, -2)  # 36% WR n=14 — more miss than hit
+                    _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 59, 2)   # 61%WR n=23 — lowered thr 65→59 (drift fix)
+                    _learned_bonus += _npen("pocket_pivot_perf", "pivot", 35, -2)  # penalty only fires when stored WR <= 35% (tightened)
                 if bool(_tk_sig_sc.get("ha_bull", False)):
                     # signal_performance["ha_bull"] = 44.4% WR n=27 — penalize when present
                     _learned_bonus += _npen("signal_performance", "ha_bull", 47, -1)
@@ -29556,7 +29556,7 @@ def run():
                     _learned_bonus += _npen("at_breakout_perf", "not_at_level", 50, -3)  # 27.3%WR n=11
                 # higher_lows_not_confirmed: 38.9%WR n=36 — independent from at_breakout signal
                 if not bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _npen("higher_lows_perf", "not_confirmed", 58, -2)  # 38.9%WR n=36
+                    _learned_bonus += _npen("higher_lows_perf", "not_confirmed", 50, -1)  # soften: 44/56 entries miss field (daily bar gap)
                 # HA trend: bear=31.2% WR n=16; not_bull=30%WR n=20 — penalize both bearish and neutral HA
                 _ha_bear_flag = bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"
                 _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
