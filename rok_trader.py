@@ -29260,16 +29260,13 @@ def run():
                 if _accum_bkt_lb == "none":
                     _learned_bonus += _npen("accum_perf", "none", 15, -8)  # 10% WR n=10: severe (explicitly 0)
                 elif _accum_bkt_lb == "light":
-                    _learned_bonus += _nbns("accum_perf", "light", 70, 2)  # threshold raised 55→70 (12%WR n=17 recent; tlog must recover to 70%+ to bonus)
-                    _learned_bonus += _npen("accum_perf", "light_weak", 15, -2)  # 12%WR n=17 — fires when tlog confirms persistent underperformance
+                    _learned_bonus += _nbns("accum_perf", "light", 65, 3)  # 69%WR n=36 — lowered thr 70→65, raised pts 2→3
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
-                    _learned_bonus += _npen("accum_perf", "moderate", 55, -4)  # 25%WR n=4 recent — raised thr 47→55
-                # Combo trap: light accum + OBV not rising = distribution pressure (obv_trend not in fetch_batch, use obv_rising flag)
+                    _learned_bonus += _npen("accum_perf", "moderate", 55, -4)  # 36%WR n=14 — confirmed bad
+                # Combo trap: light accum + OBV not rising = 69%WR n=32 (GOOD, not bad) → removed wrong penalty
                 _obv_rising_lb = bool(_tk_sig_sc.get("obv_rising", False))
-                if _accum_bkt_lb == "light" and not _obv_rising_lb:
-                    _learned_bonus += -2
                 # Synergy trap: moderate accum + OBV rising = chasing extended institutional move (33.3%WR n=12)
                 if _accum_bkt_lb == "moderate" and _obv_rising_lb:
                     _learned_bonus += _npen("signal_synergy", "accum_moderate+obv_rising", 35, -2)
@@ -29661,8 +29658,12 @@ def run():
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if _rsr3_lb >= 90:
                     _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 2)   # 65%WR n=20 — raised from +1
-                elif 50 <= _rsr3_lb < 90:
-                    _learned_bonus += _npen("rs_rating_perf", "average", 35, -4) # 31%WR n=26 — raised thr 44→35, pts -2→-4
+                elif 60 <= _rsr3_lb < 80:
+                    _learned_bonus += _npen("rs_rating_perf", "mid_rs", 35, -5)  # 33%WR n=9 — worst RS zone (mid = semi-popular chasing)
+                elif 80 <= _rsr3_lb < 90:
+                    _learned_bonus += _npen("rs_rating_perf", "high_rs", 42, -3) # 40%WR n=5 — still bad: below threshold
+                elif _rsr3_lb < 60:
+                    pass  # RS 0-60 = 58%WR (slightly above avg) — no penalty warranted
                 # Premium signal tier: use only signals with verified positive WR (>50%)
                 # Removed: orb_breakout(40%), supertrend_bull(47%), obv_rising(36%) — negative signals
                 # Kept: vcp, cup_handle, at_breakout(45% but pattern quality), mtf_triple, ttm_squeeze, rvol_surge, higher_lows
