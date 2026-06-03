@@ -16465,8 +16465,13 @@ def _adx(high, low, close, period=14):
         pdi = np.where(atr14 > 0, 100 * pdm14 / atr14, 0.0)
         ndi = np.where(atr14 > 0, 100 * ndm14 / atr14, 0.0)
         dx  = np.where((pdi + ndi) > 0, 100 * np.abs(pdi - ndi) / (pdi + ndi), 0.0)
-        adx = _wilder(dx, period)
-        return round(float(adx[-1]), 1)
+        # ADX uses mean-seeded Wilder's (not sum-seeded like TR/DM steps)
+        adx_out = np.zeros(len(dx))
+        if len(dx) >= period:
+            adx_out[period - 1] = dx[:period].mean()
+            for i in range(period, len(dx)):
+                adx_out[i] = adx_out[i-1] - adx_out[i-1] / period + dx[i]
+        return round(float(adx_out[-1]), 1)
     except Exception:
         return 0.0
 
@@ -30022,7 +30027,7 @@ def run():
                     if _ha_bear_flag:
                         _learned_bonus += _npen("signal_synergy", "tech+ha_bear", 45, -2)  # 43%WR n=7 — tech bearish HA = losing setup
                 elif _sec_perf_lb == "other":
-                    _learned_bonus += _npen("sector_performance", "other", 47, -5) # 44%WR n=16 stocks — raised thr 40→47
+                    _learned_bonus += _npen("sector_performance", "other", 60, -5)  # 17%WR recent — thr 47→60 (Wave 72: live data confirms catastrophic)
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _npen("signal_synergy", "sector_other+no_higher_lows", 20, -3)  # 17%WR n=12 — unknown sector + no structure
                     if bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull":
