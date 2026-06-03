@@ -33823,6 +33823,12 @@ def run():
                                                "orb_breakdown"   if _r62_orb == "orb_break" and _r62_c1d < -0.5
                                                else "no_orb")
                 except Exception: pass
+                # spy_rsi_5d_change_perf: SPY 5-day return as proxy for RSI momentum direction
+                try:
+                    _r62_sc5d = float(_r62_spy.get("chg5d", _r62.get("spy_chg5d", 0)) or 0)
+                    _r62["spy_rsi_5d_change_perf"] = ("rsi_rising"  if _r62_sc5d > 1.5 else
+                                                       "rsi_falling" if _r62_sc5d < -1.5 else "rsi_flat")
+                except Exception: pass
             except Exception:
                 pass
 
