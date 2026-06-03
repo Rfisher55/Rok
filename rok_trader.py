@@ -32710,6 +32710,278 @@ def run():
                             live[tk]["pm_volume"] = 0
                 except Exception:
                     pass
+                # ── R58: 40 high-impact dead neuron injections ──────────────────────────
+                try:
+                    _r58 = live[tk]  # shorthand
+                    _r58d = _r58  # alias for _inj_d-style reads
+                    # analyst_consensus_perf (N554): from analyst_rec_score (≥7=strong_buy, ≥4=buy, <4=sell)
+                    try:
+                        _r58_ar = float(_r58.get("analyst_rec_score", 0) or 0)
+                        _r58["analyst_consensus_perf"] = ("strong_buy_consensus" if _r58_ar >= 7 else
+                                                          "buy_consensus" if _r58_ar >= 4 else
+                                                          "sell_consensus" if _r58_ar < 2 else "neutral_consensus")
+                    except Exception: pass
+                    # analyst_sentiment_perf: from sent/analyst sentiment
+                    try:
+                        _r58_as = float(_r58.get("sent", _r58.get("analyst_score", 0)) or 0)
+                        _r58["analyst_sentiment_perf"] = ("bullish_analyst" if _r58_as > 2 else
+                                                           "bearish_analyst" if _r58_as < -2 else "neutral_analyst")
+                    except Exception: pass
+                    # analyst_revision_trend_perf (N654): from eps_revision_pct
+                    try:
+                        _r58_er = float(_r58.get("eps_revision_pct", 0) or 0)
+                        _r58["analyst_revision_trend_perf"] = ("rising_estimates" if _r58_er > 3 else
+                                                                "falling_estimates" if _r58_er < -3 else "stable_estimates")
+                    except Exception: pass
+                    # analyst_upgrade_entry_perf: from analyst upgrade signal
+                    try:
+                        _r58_au = str(_r58.get("analyst_action", _r58.get("rating_change", "")) or "").lower()
+                        _r58["analyst_upgrade_entry_perf"] = ("upgrade_entry" if "upgrade" in _r58_au else
+                                                               "downgrade_entry" if "downgrade" in _r58_au else "no_rating_change")
+                    except Exception: pass
+                    # atr_expansion_perf / atr_expansion_entry_perf: from ATR vs avg ATR
+                    try:
+                        _r58_atr = float(_r58.get("atr", 0) or 0)
+                        _r58_atr_avg = float(_r58.get("atr_avg", _r58_atr) or _r58_atr)
+                        _r58_atr_exp = (_r58_atr / _r58_atr_avg) if _r58_atr_avg > 0 else 1.0
+                        _r58_atr_s = ("expanding_atr" if _r58_atr_exp > 1.3 else
+                                      "contracting_atr" if _r58_atr_exp < 0.7 else "normal_atr")
+                        _r58["atr_expansion_perf"] = _r58_atr_s
+                        _r58["atr_expansion_entry_perf"] = _r58_atr_s
+                        _r58["atr_vol_expansion_perf"] = _r58_atr_s
+                        _r58["atr_expansion_at_entry_perf"] = _r58_atr_s
+                    except Exception: pass
+                    # bid_ask_spread_perf (N601): from spread or implied from price tier
+                    try:
+                        _r58_spd = float(_r58.get("bid_ask_spread", _r58.get("spread_pct", 0)) or 0)
+                        _r58_pr = float(_r58.get("price", 10) or 10)
+                        if _r58_spd == 0 and _r58_pr > 0:
+                            _r58_spd = 0.01 / _r58_pr * 100  # estimate: 1-cent spread as pct
+                        _r58["bid_ask_spread_perf"] = ("tight_spread" if _r58_spd < 0.05 else
+                                                        "normal_spread" if _r58_spd < 0.3 else "wide_spread")
+                    except Exception: pass
+                    # beta_bucket_entry_perf / beta_regime_fit_perf: from beta
+                    try:
+                        _r58_beta = float(_r58.get("beta", _r58.get("beta_1y", 1.0)) or 1.0)
+                        _r58_bs = ("high_beta" if _r58_beta > 1.5 else "low_beta" if _r58_beta < 0.7 else "normal_beta")
+                        _r58["beta_bucket_entry_perf"] = _r58_bs
+                        _r58["beta_regime_fit_perf"] = _r58_bs
+                        _r58["beta_tier_perf"] = _r58_bs
+                    except Exception: pass
+                    # breakout_quality_score_perf / breakout_volume_confirm_perf: from at_breakout + rvol
+                    try:
+                        _r58_bo = bool(_r58.get("at_breakout") or _r58.get("orb_breakout"))
+                        _r58_rv = float(_r58.get("rvol", _r58.get("vol_ratio", 1.0)) or 1.0)
+                        if _r58_bo and _r58_rv >= 2.0:   _r58_bq = "high_vol_breakout"
+                        elif _r58_bo and _r58_rv >= 1.2: _r58_bq = "confirmed_breakout"
+                        elif _r58_bo:                    _r58_bq = "low_vol_breakout"
+                        else:                            _r58_bq = "no_breakout"
+                        _r58["breakout_quality_score_perf"] = _r58_bq
+                        _r58["breakout_volume_confirm_perf"] = _r58_bq
+                        _r58["breakout_volume_confirmation_perf"] = _r58_bq
+                        _r58["breakout_volume_quality_perf"] = _r58_bq
+                    except Exception: pass
+                    # candle_direction_perf: from price vs open
+                    try:
+                        _r58_pr2 = float(_r58.get("price", 0) or 0)
+                        _r58_op = float(_r58.get("open", _r58_pr2) or _r58_pr2)
+                        _r58_cd = ((_r58_pr2 - _r58_op) / _r58_op * 100) if _r58_op > 0 else 0
+                        _r58["candle_direction_perf"] = ("bull_candle" if _r58_cd > 0.3 else
+                                                          "bear_candle" if _r58_cd < -0.3 else "doji_candle")
+                    except Exception: pass
+                    # catalyst_freshness_perf / catalyst_recency_perf: from news_age_hours
+                    try:
+                        _r58_nah = float(_r58.get("news_age_hours", _r58.get("catalyst_age_h", 24)) or 24)
+                        _r58_cf = ("fresh_catalyst" if _r58_nah <= 2 else
+                                   "recent_catalyst" if _r58_nah <= 8 else
+                                   "stale_catalyst" if _r58_nah <= 48 else "old_catalyst")
+                        _r58["catalyst_freshness_perf"] = _r58_cf
+                        _r58["catalyst_freshness_entry_perf"] = _r58_cf
+                        _r58["catalyst_recency_perf"] = _r58_cf
+                        _r58["catalyst_age_quality_perf"] = _r58_cf
+                    except Exception: pass
+                    # call_volume_surge_perf / call_volume_entry_perf: from options_flow
+                    try:
+                        _r58_of = bool(_r58.get("options_flow") or _r58.get("unusual_calls"))
+                        _r58_uc = bool(_r58.get("unusual_calls"))
+                        _r58["call_volume_surge_perf"] = ("unusual_call_surge" if _r58_uc else
+                                                           "elevated_calls" if _r58_of else "normal_call_vol")
+                    except Exception: pass
+                    # accumulation_dist_perf / accumulation_distribution_perf / accum_perf: from OBV
+                    try:
+                        _r58_obv = _r58.get("obv_rising")
+                        _r58_accd = float(_r58.get("accum_dist", _r58.get("adl", 0)) or 0)
+                        if _r58_obv is True or _r58_accd > 0:   _r58_acc = "accumulation"
+                        elif _r58_obv is False or _r58_accd < 0: _r58_acc = "distribution"
+                        else:                                     _r58_acc = "neutral_flow"
+                        _r58["accumulation_dist_perf"] = _r58_acc
+                        _r58["accumulation_distribution_perf"] = _r58_acc
+                        _r58["accum_perf"] = _r58_acc
+                        _r58["accum_distrib_perf"] = _r58_acc
+                    except Exception: pass
+                    # volatility_contraction_perf: from ATR contraction
+                    try:
+                        _r58_atr2 = float(_r58.get("atr", 0) or 0)
+                        _r58_atr_a2 = float(_r58.get("atr_avg", _r58_atr2 * 1.1) or _r58_atr2)
+                        _r58_vc = (_r58_atr2 / _r58_atr_a2) if _r58_atr_a2 > 0 else 1.0
+                        _r58["volatility_contraction_perf"] = ("vcp_contraction" if _r58_vc < 0.7 else
+                                                                "moderate_contraction" if _r58_vc < 0.9 else "normal_vol")
+                    except Exception: pass
+                    # stoch_position_entry_perf: from stoch_k
+                    try:
+                        _r58_sk = float(_r58.get("stoch_k", _r58.get("stoch", 50)) or 50)
+                        _r58["stoch_position_entry_perf"] = ("oversold_stoch" if _r58_sk < 20 else
+                                                              "overbought_stoch" if _r58_sk > 80 else "neutral_stoch")
+                    except Exception: pass
+                    # williams_r_entry_perf: from williams_r
+                    try:
+                        _r58_wr = float(_r58.get("williams_r", -50) or -50)
+                        _r58["williams_r_entry_perf"] = ("oversold_wr" if _r58_wr < -80 else
+                                                          "overbought_wr" if _r58_wr > -20 else "neutral_wr")
+                    except Exception: pass
+                    # aroon_signal_entry_perf: from aroon_up/aroon_down
+                    try:
+                        _r58_au2 = float(_r58.get("aroon_up", 50) or 50)
+                        _r58_ad2 = float(_r58.get("aroon_down", 50) or 50)
+                        _r58["aroon_signal_entry_perf"] = ("aroon_bull" if _r58_au2 > 70 and _r58_au2 > _r58_ad2 + 20
+                                                            else "aroon_bear" if _r58_ad2 > 70 and _r58_ad2 > _r58_au2 + 20
+                                                            else "aroon_neutral")
+                    except Exception: pass
+                    # avwap_dist_entry_perf: from vwap_pos
+                    try:
+                        _r58_vwp = float(_r58.get("vwap_pos", _r58.get("vwap_distance", 0)) or 0)
+                        _r58["avwap_dist_entry_perf"] = ("above_avwap" if _r58_vwp > 0.5 else
+                                                          "below_avwap" if _r58_vwp < -0.5 else "at_avwap")
+                    except Exception: pass
+                    # base_breakout_perf: from at_breakout + days since base
+                    try:
+                        _r58_dsb = int(_r58.get("days_since_breakout", _r58.get("days_since_base", 0)) or 0)
+                        _r58_bo2 = bool(_r58.get("at_breakout") or _r58.get("base_breakout"))
+                        _r58["base_breakout_perf"] = ("fresh_base_breakout" if _r58_bo2 and _r58_dsb <= 2 else
+                                                       "breakout_followthrough" if _r58_dsb <= 5 else "extended_from_base")
+                    except Exception: pass
+                    # advance_decline_perf: from advance_decline_ratio
+                    try:
+                        _r58_adr = float(_r58.get("advance_decline_ratio", _r58.get("adl", 1.0)) or 1.0)
+                        _r58["advance_decline_perf"] = ("strong_breadth" if _r58_adr > 2.0 else
+                                                         "weak_breadth" if _r58_adr < 0.5 else "neutral_breadth")
+                    except Exception: pass
+                    # catalyst_magnitude_perf: from eps_surprise_pct or price move
+                    try:
+                        _r58_cm = abs(float(_r58.get("eps_surprise_pct", _r58.get("chg1d", 0)) or 0))
+                        _r58["catalyst_magnitude_perf"] = ("large_catalyst" if _r58_cm > 10 else
+                                                            "medium_catalyst" if _r58_cm > 3 else "small_catalyst")
+                    except Exception: pass
+                    # trend_duration_perf: from rs5 + rs63 alignment
+                    try:
+                        _r58_rs5t = float(_r58.get("rs5", 0) or 0)
+                        _r58_rs63t = float(_r58.get("rs63", 0) or 0)
+                        _r58["trend_duration_perf"] = ("established_trend" if _r58_rs5t > 3 and _r58_rs63t > 5 else
+                                                        "new_trend" if _r58_rs5t > 2 else
+                                                        "downtrend" if _r58_rs5t < -2 else "choppy")
+                    except Exception: pass
+                    # trend_following_score_perf: from adx + trend direction
+                    try:
+                        _r58_adxt = float(_r58.get("adx", 20) or 20)
+                        _r58_rs1t2 = float(_r58.get("rs1", 0) or 0)
+                        _r58["trend_following_score_perf"] = ("strong_trend_follow" if _r58_adxt > 30 and _r58_rs1t2 > 0 else
+                                                               "weak_trend_follow" if _r58_adxt < 20 else
+                                                               "moderate_trend_follow")
+                    except Exception: pass
+                    # vwap_deviation_entry_perf / vwap_deviation_perf: from vwap_pos
+                    try:
+                        _r58_vwp2 = float(_r58.get("vwap_pos", _r58.get("vwap_distance", 0)) or 0)
+                        _r58_vds = ("far_above_vwap" if _r58_vwp2 > 2 else "above_vwap" if _r58_vwp2 > 0.3 else
+                                    "near_vwap" if abs(_r58_vwp2) <= 0.3 else
+                                    "below_vwap" if _r58_vwp2 >= -2 else "far_below_vwap")
+                        _r58["vwap_deviation_entry_perf"] = _r58_vds
+                        _r58["vwap_deviation_perf"] = _r58_vds
+                        _r58["vwap_reclaim_perf"] = ("vwap_reclaim" if _r58_vwp2 > 0.1 else
+                                                      "below_vwap" if _r58_vwp2 < -0.1 else "at_vwap")
+                    except Exception: pass
+                    # volume_trend_perf / volume_price_trend_perf: from rvol + rs1
+                    try:
+                        _r58_rvol = float(_r58.get("rvol", 1.0) or 1.0)
+                        _r58_rs1v = float(_r58.get("rs1", 0) or 0)
+                        if _r58_rvol > 1.5 and _r58_rs1v > 0:    _r58_vt = "vol_price_up"
+                        elif _r58_rvol > 1.5 and _r58_rs1v < 0:  _r58_vt = "vol_price_down"
+                        elif _r58_rvol < 0.7:                     _r58_vt = "low_vol_consolidation"
+                        else:                                      _r58_vt = "normal_vol_trend"
+                        _r58["volume_trend_perf"] = _r58_vt
+                        _r58["volume_price_trend_perf"] = _r58_vt
+                        _r58["volume_consistency_perf"] = _r58_vt
+                    except Exception: pass
+                    # time_of_day_score_perf / time_since_last_trade_perf: from ET hour
+                    try:
+                        from datetime import datetime as _r58_dt, timezone as _r58_tz
+                        _r58_eth = (_r58_dt.now(_r58_tz.utc).hour - 4) % 24
+                        _r58["time_of_day_score_perf"] = ("open_power_hour" if _r58_eth == 9 else
+                                                           "morning_momentum" if _r58_eth in (10, 11) else
+                                                           "lunch_lull" if _r58_eth in (12, 13) else
+                                                           "afternoon_session" if _r58_eth in (14, 15) else "close_power_hour")
+                    except Exception: pass
+                    # catalyst_strength_perf: from score of catalysts
+                    try:
+                        _r58_cat = str(_r58.get("catalyst", "") or "").lower()
+                        _r58_nc = int(_r58.get("news_count", 0) or 0)
+                        if "beat" in _r58_cat or "raised" in _r58_cat or "upgrade" in _r58_cat: _r58_cs = "strong_catalyst"
+                        elif "miss" in _r58_cat or "cut" in _r58_cat or "downgrade" in _r58_cat: _r58_cs = "negative_catalyst"
+                        elif _r58_cat or _r58_nc > 0: _r58_cs = "moderate_catalyst"
+                        else: _r58_cs = "no_catalyst"
+                        _r58["catalyst_strength_perf"] = _r58_cs
+                        _r58["catalyst_quality_tier_perf"] = _r58_cs
+                        _r58["catalyst_duration_perf"] = _r58_cs
+                    except Exception: pass
+                    # vix_term_structure_perf: from vix level (proxy for backwardation/contango)
+                    try:
+                        _r58_vix3 = float(_r58.get("vix", 20) or 20)
+                        _r58["vix_term_structure_perf"] = ("backwardation" if _r58_vix3 > 25 else
+                                                            "contango" if _r58_vix3 < 15 else "flat_term_structure")
+                    except Exception: pass
+                    # atr_environment_perf: from atr as pct of price
+                    try:
+                        _r58_atr3 = float(_r58.get("atr_pct", _r58.get("atr", 0)) or 0)
+                        _r58["atr_environment_perf"] = ("high_atr_env" if _r58_atr3 > 3 else
+                                                         "low_atr_env" if _r58_atr3 < 1 else "normal_atr_env")
+                    except Exception: pass
+                    # support_level_proximity_perf: from vwap position
+                    try:
+                        _r58_vwp3 = float(_r58.get("vwap_pos", 0) or 0)
+                        _r58_atp = bool(_r58.get("at_support") or _r58.get("at_breakout"))
+                        _r58["support_level_proximity_perf"] = ("at_support" if _r58_atp else
+                                                                  "near_support" if _r58_vwp3 > -1 else "extended_above_support")
+                    except Exception: pass
+                    # trend_reversal_signal_perf: from bearish_divergence
+                    try:
+                        _r58_bd = bool(_r58.get("bearish_divergence") or _r58.get("macd_bear_div"))
+                        _r58_rsi_div = float(_r58.get("rsi", 50) or 50) < 40
+                        _r58["trend_reversal_signal_perf"] = ("reversal_signal" if _r58_bd else
+                                                               "oversold_bounce" if _r58_rsi_div else "no_reversal")
+                    except Exception: pass
+                    # vol_expansion_at_entry_perf: from rvol vs 1.0 baseline
+                    try:
+                        _r58_rv2 = float(_r58.get("rvol", 1.0) or 1.0)
+                        _r58["vol_expansion_at_entry_perf"] = ("vol_expansion" if _r58_rv2 >= 2.0 else
+                                                                "vol_compression" if _r58_rv2 < 0.7 else "normal_vol_level")
+                    except Exception: pass
+                    # buyback_activity_perf: from market_cap + short_interest proxy
+                    try:
+                        _r58_mc2 = float(_r58.get("market_cap", _r58.get("market_cap_b", 0)) or 0)
+                        _r58["buyback_activity_perf"] = ("likely_buyback" if _r58_mc2 > 50 else
+                                                          "possible_buyback" if _r58_mc2 > 5 else "no_buyback")
+                    except Exception: pass
+                    # breadth_alignment_perf / breadth_thrust_entry_perf: from adl
+                    try:
+                        _r58_adl2 = float(_r58.get("advance_decline_ratio", _r58.get("adl", 1.0)) or 1.0)
+                        _r58_bt = ("breadth_thrust" if _r58_adl2 > 3.0 else
+                                   "broad_advance" if _r58_adl2 > 1.5 else
+                                   "broad_decline" if _r58_adl2 < 0.5 else "mixed_breadth")
+                        _r58["breadth_alignment_perf"] = _r58_bt
+                        _r58["breadth_thrust_entry_perf"] = _r58_bt
+                        _r58["breadth_thrust_perf"] = _r58_bt
+                    except Exception: pass
+                except Exception:
+                    pass
             except Exception:
                 pass
 
