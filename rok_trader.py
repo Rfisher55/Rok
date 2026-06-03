@@ -29045,10 +29045,8 @@ def run():
                     _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 59, 2)   # 61%WR n=23 — lowered thr 65→59 (drift fix)
                     _learned_bonus += _npen("pocket_pivot_perf", "pivot", 35, -2)  # penalty only fires when stored WR <= 35% (tightened)
                 if bool(_tk_sig_sc.get("ha_bull", False)):
-                    # signal_performance["ha_bull"] = 44.4% WR n=27 — penalize when present
-                    _learned_bonus += _npen("signal_performance", "ha_bull", 47, -1)
-                    # ha_trend_perf["bull"] = 50.9% WR n=53 — threshold 60 means no fire until proven
-                    _learned_bonus += _nbns("ha_trend_perf", "bull", 60, 1)
+                    # ha_trend_perf["bull"]: paired data 63%WR n=35 — lowered thr 60→55 (stored WR 50.9% was stale, old penalty removed)
+                    _learned_bonus += _nbns("ha_trend_perf", "bull", 55, 1)
                 # Expanded learned bonus checks — more signal/state combinations
                 if bool(_tk_sig_sc.get("cup_handle", False)):
                     _learned_bonus += _nbns("cup_handle_perf", "cup", 65, 2)
@@ -29088,6 +29086,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "kc_breakout+mtf_aligned", 47, -1)  # 46.2% WR n=26
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
                     _learned_bonus += _nbns("tws_perf", "three_soldiers", 58, 2)  # 61%WR n=28 — strong candle momentum
+                    if bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull":
+                        _learned_bonus += _nbns("signal_synergy", "tws+ha_bull", 68, 1)  # tws+ha_bull synergy — Wave 71
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
                     # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
                     _learned_bonus += _npen("gap_hold_perf", "holding", 62, -4)   # 37% WR threshold tightened
@@ -29304,8 +29304,7 @@ def run():
                     elif _adx_bkt_lb == "developing":
                         _learned_bonus += _nbns("adx_perf", "developing", 55, 2)  # 55.6% WR n=27 — threshold lowered
                     elif _adx_bkt_lb == "strong":
-                        # adx_perf["strong"] = 51.3% WR n=39 — slightly above coin flip, no action
-                        pass
+                        _learned_bonus += _nbns("adx_strength_entry_perf", "strong_trend", 62, 1)  # 64%WR n=11 — Wave 71
                 # else: adx absent → no bonus/penalty (neutral)
                 _cat_type_raw = _tk_sig_sc.get("catalyst_type")
                 _cat_type_lb = str(_cat_type_raw or "")
@@ -29444,7 +29443,7 @@ def run():
                                    or bool(_tk_sig_sc.get("hammer", False))
                                    or bool(_tk_sig_sc.get("candle_score", 0)))
                 if _candle_present:
-                    _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 1)   # 60%WR n=30 — threshold 62→58
+                    _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 2)   # 64%WR n=31 — pts 1→2, Wave 71
                     if not bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _nbns("signal_synergy", "candle_present+gap_normal", 68, 1)  # 72.7%WR n=11 — candle confirmation without gap trap
                     else:
@@ -29499,7 +29498,7 @@ def run():
                 elif _atr_pct_lb >= 4.0:
                     _learned_bonus += _nbns("atr_perf", "4-6%", 68, 2)          # 74%WR n=19 — optimal volatility; split from "4%+" bucket
                 elif 2.0 <= _atr_pct_lb < 4.0:
-                    _learned_bonus += _npen("atr_perf", "2-4%", 35, -3)         # 31%WR n=13 — raised thr 26→35, pts -2→-3
+                    _learned_bonus += _npen("atr_perf", "2-4%", 42, -3)         # 38%WR n=13 — raised thr 35→42 for drift, Wave 71
                 elif 0 < _atr_pct_lb < 2.0:
                     _learned_bonus += _npen("atr_perf", "1-2%", 15, -5)         # 12%WR n=8 — low ATR = no momentum
                 # ROC: positive = 48.3% WR n=29 (dead bonus removed; coin flip)
