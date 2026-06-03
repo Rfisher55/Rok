@@ -29745,6 +29745,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "stoch_ob+obv_rising", 35, -2)  # 33.3%WR n=9 — chasing extended move with overbought momentum
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "bb_upper+stoch_ob", 27, -2)  # 25%WR n=8 — extended BB + overbought = double exhaustion
+                    if _ha_bull_flag and _mfi_lb >= 80:
+                        _learned_bonus += _nbns("signal_synergy", "ha_bull+stoch_ob+mfi_dist", 55, 2)  # winner profile: all 3 momentum signals aligned
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 72, 1)      # threshold raised 60→72 (0%WR recent; only bonus if tlog genuinely recovers)
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 65, -2)     # threshold raised 41→65 (0%WR n=8 current data — near-unconditional penalty)
