@@ -14608,7 +14608,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c881_entry = _cached_buy_rec
-            _c881_state = _c881_entry.get("crypto_momentum_tier", "unknown") if _c881_entry else "unknown"
+            _c881_state = (_c881_entry.get("crypto_momentum_tier_perf") or _c881_entry.get("crypto_momentum_tier", "unknown")) if _c881_entry else "unknown"
             if _c881_state and _c881_state != "unknown":
                 _c881_perf = tlog.setdefault("crypto_momentum_perf", {})
                 _c881_rec  = _c881_perf.setdefault(_c881_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
@@ -14679,7 +14679,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c884_entry = _cached_buy_rec
-            _c884_state = _c884_entry.get("crypto_score_tier", "low") if _c884_entry else "low"
+            _c884_state = (_c884_entry.get("crypto_score_tier_perf") or _c884_entry.get("crypto_score_tier", "low")) if _c884_entry else "low"
             _c884_perf  = tlog.setdefault("crypto_score_tier_perf", {})
             _c884_rec   = _c884_perf.setdefault(_c884_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c884_rec["total"] += 1
@@ -14719,7 +14719,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c886_entry = _cached_buy_rec
-            _c886_state = _c886_entry.get("crypto_rsi_zone", "neutral") if _c886_entry else "neutral"
+            _c886_state = (_c886_entry.get("crypto_rsi_zone_perf") or _c886_entry.get("crypto_rsi_zone", "neutral")) if _c886_entry else "neutral"
             _c886_perf  = tlog.setdefault("crypto_rsi_zone_perf", {})
             _c886_rec   = _c886_perf.setdefault(_c886_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c886_rec["total"] += 1
@@ -14736,7 +14736,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c887_entry = _cached_buy_rec
-            _c887_state = _c887_entry.get("crypto_vol_surge", "normal") if _c887_entry else "normal"
+            _c887_state = (_c887_entry.get("crypto_vol_surge_perf") or _c887_entry.get("crypto_vol_surge", "normal")) if _c887_entry else "normal"
             _c887_perf  = tlog.setdefault("crypto_vol_surge_perf", {})
             _c887_rec   = _c887_perf.setdefault(_c887_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c887_rec["total"] += 1
@@ -14753,7 +14753,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c888_entry = _cached_buy_rec
-            _c888_state = _c888_entry.get("crypto_ema_cross", "flat") if _c888_entry else "flat"
+            _c888_state = (_c888_entry.get("crypto_ema_cross_perf") or _c888_entry.get("crypto_ema_cross", "flat")) if _c888_entry else "flat"
             _c888_perf  = tlog.setdefault("crypto_ema_cross_perf", {})
             _c888_rec   = _c888_perf.setdefault(_c888_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c888_rec["total"] += 1
@@ -14770,7 +14770,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c889_entry = _cached_buy_rec
-            _c889_state = _c889_entry.get("crypto_dow", "Mon") if _c889_entry else "Mon"
+            _c889_state = (_c889_entry.get("crypto_dow_perf") or _c889_entry.get("crypto_dow", "Mon")) if _c889_entry else "Mon"
             _c889_perf  = tlog.setdefault("crypto_dow_perf", {})
             _c889_rec   = _c889_perf.setdefault(_c889_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c889_rec["total"] += 1
@@ -14787,7 +14787,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
     if action in ("SELL", "SELL_HALF") and pnl is not None and "/" in sym:
         try:
             _c890_entry = _cached_buy_rec
-            _c890_state = _c890_entry.get("crypto_asset_class", "ALT") if _c890_entry else "ALT"
+            _c890_state = (_c890_entry.get("crypto_asset_class_perf") or _c890_entry.get("crypto_asset_class", "ALT")) if _c890_entry else "ALT"
             _c890_perf  = tlog.setdefault("crypto_asset_perf", {})
             _c890_rec   = _c890_perf.setdefault(_c890_state, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0, "win_rate": 50.0})
             _c890_rec["total"] += 1
@@ -29310,7 +29310,7 @@ def run():
                     # intraday_mom_perf["runner"] = 42.9% WR n=14 — penalize (removed stale 65% bonus)
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 44, -1)
                 elif _intra_mom_bkt_lb == "early":
-                    _learned_bonus += _npen("intraday_mom_perf", "early", 38, -1)   # flat momentum
+                    _learned_bonus += _npen("intraday_mom_perf", "early", 38, -4)  # 25%WR n=12 recent — raised from -1
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
                 _grade_lb = momentum_grade(_tk_sig_sc, tech_sc)
                 if _grade_lb == "F":
@@ -29330,7 +29330,7 @@ def run():
                 _pr_lb2 = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 _ptier_lb = "micro" if _pr_lb2 < 10 else "small" if _pr_lb2 < 30 else "mid" if _pr_lb2 < 100 else "large"
                 if _ptier_lb == "micro":
-                    _learned_bonus += _npen("price_tier_perf", "micro", 30, -2)  # 14% WR
+                    _learned_bonus += _npen("price_tier_perf", "micro", 10, -8)  # 0%WR n=8 — near-block (raised from -2)
                 elif _ptier_lb == "small":
                     _learned_bonus += _npen("price_tier_perf", "small", 40, -2)  # 36.4% WR n=11 — wrong bonus→penalty
                 # Ichimoku: derive position from flags (ichimoku_state/pos not in fetch_batch)
@@ -29493,7 +29493,7 @@ def run():
                 _fi_present = ("force_index_rising" in _tk_sig_sc or "force_index_div" in _tk_sig_sc
                                or "force_index" in _tk_sig_sc)
                 if _fi_present and not bool(_tk_sig_sc.get("force_index_rising")) and not bool(_tk_sig_sc.get("force_index_div")):
-                    _learned_bonus += _npen("force_index_perf", "weak", 55, -1)
+                    _learned_bonus += _npen("force_index_perf", "weak", 55, -4)  # 17%WR n=12 recent — raised from -1
                 # RS rating tier: elite>=90 = 69% WR n=13 (bonus); average 50-89 = 43.8% WR n=48 → penalty
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if _rsr3_lb >= 90:
@@ -29522,8 +29522,8 @@ def run():
                 if _wr_lb > -20:
                     _learned_bonus += _nbns("wr_zone_perf", "overbought", 52, 1)  # 52.9% WR n=34 — threshold 60→52
                 elif -50 <= _wr_lb <= -20:
-                    # trending zone = 44.7% WR n=38 — penalize
-                    _learned_bonus += _npen("wr_zone_perf", "trending", 46, -1)
+                    # trending zone = 21%WR n=14 recent — raised penalty from -1 to -4
+                    _learned_bonus += _npen("wr_zone_perf", "trending", 46, -4)
                 # Options flow: unusual_calls = 47.1% WR n=34 (updated); options_bull = 45.7% WR n=35
                 _uc_lb2 = bool(_tk_sig_sc.get("unusual_calls", False))
                 _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
@@ -29559,10 +29559,14 @@ def run():
                 _mq_val_lb = int(tlog.get("market_quality", 50) or 50)
                 if 50 <= _mq_val_lb < 75:
                     _learned_bonus += _npen("mkt_quality_perf", "good", 42, -2)  # 40.9% WR n=44
-                # AVWAP: above=47.2% WR n=36 (updated — was 65%) — no bonus warranted
-                # avwap_perf["above"] = 47.2% WR n=36 — bonus dead (threshold 60%)
-                # POC control: above=48.5% WR n=33 (updated — was 64%) — no bonus
-                # poc_control_perf["above"] = 48.5% WR n=33 — bonus dead (threshold 60%)
+                # AVWAP: below=22%WR n=9 → add penalty; above=47%WR → neutral
+                _avwap_st_lb = str(_tk_sig_sc.get("avwap_state", "") or "")
+                if _avwap_st_lb == "below":
+                    _learned_bonus += _npen("avwap_perf", "below", 30, -5)  # 22%WR n=9 — below AVWAP is bearish
+                # POC control: below=25%WR n=12 → penalty
+                _poc_ctrl_st = str(_tk_sig_sc.get("poc_control_state", "") or "")
+                if _poc_ctrl_st == "below":
+                    _learned_bonus += _npen("poc_control_perf", "below", 30, -4)  # 25%WR n=12 — below POC = weak
                 # KC zone breakout: 64% WR n=22
                 _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
                 # kc_zone_perf["breakout"] = 47.1% WR n=34 — dead bonus removed (penalty already above)
@@ -29717,10 +29721,10 @@ def run():
                     _learned_bonus += _npen("vwap_dist_entry_perf", "at_vwap", 28, -5)  # 22.6% WR n=31
                 elif _vwap_de_lb == "below_vwap":
                     _learned_bonus += _npen("vwap_dist_entry_perf", "below_vwap", 40, -2)  # below VWAP = bearish
-                # Options flow neutral: 43.2% WR n=44 — no unusual flow = weak catalyst
+                # Options flow neutral: 23%WR n=13 recent — raised from -1 to -4
                 _opt_fl_lb = str(_tk_sig_sc.get("options_flow_state", _tk_sig_sc.get("options_flow", "")) or "")
                 if _opt_fl_lb == "neutral" or (not _uc_lb2 and not _ob_lb2):
-                    _learned_bonus += _npen("options_flow_perf", "neutral", 44, -1)  # 43.2% WR n=44
+                    _learned_bonus += _npen("options_flow_perf", "neutral", 44, -4)  # 23%WR n=13 recent
                 # BB zone mid (pctB 0.3-0.7): 44.1% WR n=68 — use bb_pos/100 (bb_pctb not in fetch_batch)
                 _bb_pctb_lb = _bb_pos_lb  # reuse bb_pos/100 computed above
                 if 0.3 <= _bb_pctb_lb <= 0.7:
