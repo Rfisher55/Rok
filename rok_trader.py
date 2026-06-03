@@ -26469,6 +26469,19 @@ def run():
                         except Exception as _ge:
                             logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
                         continue
+            elif _fast_age_min >= 5 and _fast_age_min < 10 and not _fast_half_out and pnl_pct <= -1.5:
+                # 5-10min rapid loser: down -1.5%+ in first 5-10 min = entry thesis immediately broken
+                _fast_reason = f"5min rapid loser ({pnl_pct:+.1f}%)"
+                logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                try:
+                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                    made_trades = True
+                    del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                except Exception as _fe:
+                    logger.warning(f"5min rapid loser sell failed {sym}: {_fe}")
+                continue
             elif _fast_age_min >= 10 and _fast_age_min < 20 and not _fast_half_out and pnl_pct <= -1.0:
                 # 10-20min early loser: down >1% in first 10-20 min with failed score → cut it
                 _fast_d_10 = live.get(sym, {}) or {}
@@ -35666,9 +35679,9 @@ def run():
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
-            # Per-run buy cap: up to 15 new positions per scan (was 10) — 300-ticker universe supports this
+            # Per-run buy cap: up to 20 new positions per scan — 300-ticker universe supports this
             # Target 500 trades/day: 50 max_pos × 5 cycles × 2 (buy+sell) = 500 trades
-            _per_run_cap = min(15, open_long_slots)
+            _per_run_cap = min(20, open_long_slots)
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
