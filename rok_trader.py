@@ -29594,16 +29594,14 @@ def run():
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
-                    _learned_bonus += _npen("rvol_tier_perf", "weak", 55, -3)   # 32%WR n=22 — raised from -2
+                    _learned_bonus += _npen("rvol_tier_perf", "weak", 53, -1)   # 52%WR n=21 — soften -3→-1 (only slightly below avg 56%)
                     if _accum_bkt_lb == "light":
                         _learned_bonus += _nbns("signal_synergy", "rvol_weak+accum_light", 66, 2)  # 71%WR n=7 — stealth accumulation on quiet volume
                 elif 0.8 <= _rvol_t_lb < 1.5:
-                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 75, 2)  # threshold raised 60→75 (7%WR n=14 recent; only bonus if tlog genuinely recovers)
-                    _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 55, -5)  # threshold raised 25→55 (7%WR n=14 recent — near-unconditional)
+                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 65, 2)  # 67%WR n=24 — lowered thr 75→65 (was never firing)
+                    # removed relative_volume_burst_perf["normal_vol"] -5 penalty (was temp near-unconditional; 67%WR now)
                     if _mfi_lb >= 80:
                         _learned_bonus += _nbns("signal_synergy", "rvol_normal+mfi_dist", 66, 2)  # 71%WR n=7 — controlled volume + distribution pressure
-                    if _candle_present:
-                        _learned_bonus += _npen("signal_synergy", "candle+rvol_normal", 20, -2)  # 0%WR n=12 — candle on normal volume = false signal
                     if _reentry_lb == "winner":
                         _learned_bonus += _npen("signal_synergy", "reentry_winner+rvol_normal", 20, -3)  # 0%WR n=10 — chasing old winner without volume surge
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
