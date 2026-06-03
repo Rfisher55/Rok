@@ -26899,9 +26899,26 @@ def run():
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= _time_adj_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
+                elif age_minutes >= 180:
+                    # 180min absolute timeout — hard cap, exit regardless
+                    _scalp_exit_reason = f"180min timeout exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 120:
+                    # 120min exit — data shows 120min exits = 11%WR avg -0.21%: close now
+                    _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 90:
+                    # 90min hard exit: data shows 90min exits = 62%WR avg +0.62% — exit now
+                    # No extension to 120min: 120min exits are 11%WR, never extend
+                    _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
+                elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
+                    # 60min flat/loss exit: if slightly negative and score still strong, extend to 90min
+                    _live_d_now = live.get(sym, {}) or {}
+                    _now_sc = score(sym, _live_d_now) if _live_d_now else 0
+                    if pnl_pct >= -0.5 and _now_sc >= 55:
+                        pass  # extend to 90min — signal still valid, give it time
+                    else:
+                        _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
                 else:
                     # Score-decay exit: entry score was strong but current score collapsed
-                    # Means the setup that triggered the buy is now completely gone
                     try:
                         _sd_entry_sc = float(peaks.get(sym, {}).get("entry_score", 0) or 0) if isinstance(peaks.get(sym), dict) else 0
                         if _sd_entry_sc >= 65 and age_minutes >= 15:
@@ -26911,39 +26928,6 @@ def run():
                                 _scalp_exit_reason = f"score collapse exit (entry={_sd_entry_sc:.0f}→now={_sd_now_sc}, {pnl_pct:+.1f}%)"
                     except Exception:
                         pass
-                elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
-                    # Smart 60min exit: if position is just slightly negative (-0.5% to 0%)
-                    # and current live score is still strong (≥55), extend to 90min.
-                    # Only hard-exit if truly losing (< -0.5%) or score has deteriorated.
-                    _live_d_now = live.get(sym, {}) or {}
-                    _now_sc = score(sym, _live_d_now) if _live_d_now else 0
-                    if pnl_pct >= -0.5 and _now_sc >= 55:
-                        pass  # extend to 90min — signal still valid, give it time
-                    else:
-                        _scalp_exit_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
-                elif age_minutes >= 90 and age_minutes < 120:
-                    # Smart 90min exit: if position is profitable AND signal still strong,
-                    # let it run to 120min — don't cap winners at 90min.
-                    _live_d_90 = live.get(sym, {}) or {}
-                    _sc_90    = score(sym, _live_d_90) if _live_d_90 else 0
-                    _rvol_90  = float(_live_d_90.get("rvol", 1.0) or 1.0)
-                    if pnl_pct >= 0.5 and _sc_90 >= 62 and _rvol_90 >= 1.3 and pnl_pct < _scalp_pthr:
-                        pass  # still hot + profitable — let it run to 120min
-                    else:
-                        _scalp_exit_reason = f"90min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
-                elif age_minutes >= 120:
-                    # Smart 120min exit: if up 1.5%+ and score still strong, let winners run to 180min
-                    _live_d_120 = live.get(sym, {}) or {}
-                    _sc_120 = score(sym, _live_d_120) if _live_d_120 else 0
-                    _rvol_120 = float(_live_d_120.get("rvol", 1.0) or 1.0)
-                    if (pnl_pct >= 1.5 and _sc_120 >= 65 and _rvol_120 >= 1.2
-                            and pnl_pct < _scalp_pthr and age_minutes < 180):
-                        pass  # strong winner still hot — extend to 180min cap
-                    else:
-                        _scalp_exit_reason = f"120min cycle exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
-                elif age_minutes >= 180:
-                    # 180min absolute timeout — hard cap, exit regardless
-                    _scalp_exit_reason = f"180min timeout exit ({pnl_pct:+.1f}% after {age_minutes:.0f}min)"
 
             # ── Adaptive partial exit (ATR-calibrated, regime-aware) ──
             # Standard: sell half at +10%. But high-ATR stocks in bull markets run farther,
