@@ -29343,7 +29343,7 @@ def run():
                 if _ha_consec_lb >= 5:
                     _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
                 elif _ha_consec_lb >= 3:
-                    _learned_bonus += _nbns("ha_consec_perf", "building", 58, 1) # 58.3% WR n=12 — threshold 62→58
+                    _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — raised +1→+2
                 elif _ha_consec_lb < 3:
                     _learned_bonus += _npen("ha_consec_perf", "early", 35, -4)   # 29%WR n=17 — no HA momentum
                 # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
@@ -29601,7 +29601,10 @@ def run():
                     _learned_bonus += _npen("poc_dist_perf", "at_poc", 30, -4)   # 25%WR n=12 — stalled at POC
                 # KC zone breakout: 64% WR n=22
                 _kc_pos_lb2 = float(_tk_sig_sc.get("kc_pos", 50) or 50)
-                # kc_zone_perf["breakout"] = 47.1% WR n=34 — dead bonus removed (penalty already above)
+                # kc_zone[inside]: 33.3%WR n=12 — price inside Keltner channel = trapped, weak momentum
+                _kc_inside_lb = bool(not bool(_tk_sig_sc.get("kc_breakout", False)) and 20 < _kc_pos_lb2 < 80)
+                if _kc_inside_lb:
+                    _learned_bonus += _npen("kc_zone_perf", "inside", 35, -2)  # 33.3%WR n=12
                 # Consec green entry "no_streak": 21.4% WR n=28 — compute directly (injection after this block)
                 _cg_for_entry = int(_tk_sig_sc.get("consec_green", _tk_sig_sc.get("consecutive_green_days", 0)) or 0)
                 _cge_state_lb = ("4plus_green" if _cg_for_entry >= 4 else "3_green" if _cg_for_entry == 3
@@ -29700,7 +29703,7 @@ def run():
                 if _roc5_acc is not None and _roc20_acc is not None:
                     _roc5_acc = float(_roc5_acc or 0); _roc20_acc = float(_roc20_acc or 0)
                     if _roc5_acc > 0 and _roc20_acc > 0 and _roc5_acc > _roc20_acc:
-                        _learned_bonus += _npen("roc_perf", "accelerating", 40, -1)  # 37.5% WR n=8 — chasing extended move
+                        _learned_bonus += _npen("roc_perf", "accelerating", 40, -3)  # 33.3%WR n=9 — raised from -1
                     elif _roc5_acc <= 0 and _roc20_acc <= 0:
                         _learned_bonus += _npen("roc_perf", "negative", 48, -5)  # 12%WR n=8 recent — raised from -1
                 # RS momentum: leading (both rs5 and rs63 > 1) = strongest setups
