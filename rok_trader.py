@@ -29244,6 +29244,8 @@ def run():
                     _learned_bonus += _nbns("signal_density_perf", "strong", 62, 2)  # 65.2% WR n=23
                 elif _sig_cnt_lb >= 2:
                     _learned_bonus += _nbns("signal_density_perf", "good", 58, 1)    # estimate good WR
+                elif _sig_cnt_lb == 0:
+                    _learned_bonus += _npen("signal_density_perf", "zero", 27, -3)   # 25%WR n=8 — no active setup signals
                 # ── CRITICAL PROVEN-LOSER PENALTIES (data-driven hard guards) ─────────
                 # IMPORTANT: only penalize when signal is PRESENT and CONFIRMED bad.
                 # Missing/absent signals (accum_score=None, adx=None) must NOT trigger penalty.
@@ -29380,10 +29382,10 @@ def run():
                     _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)    # 48.5% WR n=33 — coin flip or worse
                 elif "below" in _ich_lb:
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
-                # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=35.3% WR n=17 — field is ha_consec_bull in _extract
+                # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=38% WR n=16, zero=25% WR n=8
                 _ha_consec_lb = int(_tk_sig_sc.get("ha_consec_bull", _tk_sig_sc.get("ha_consec", 0)) or 0)
                 if _ha_consec_lb >= 5:
-                    _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
+                    _learned_bonus += _npen("ha_consec_perf", "strong", 45, -2)  # 38%WR n=16 — raised thr 40→45 (drift fix)
                     if bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _npen("signal_synergy", "ha_consec_strong+gap_hold", 30, -2)  # 28.6%WR n=14 — extended+holding trap
                     if not _candle_present:
@@ -29393,9 +29395,11 @@ def run():
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "ha_consec_strong+bb_upper", 30, -1)  # 28.6%WR n=7 — extended streak at Bollinger upper
                 elif _ha_consec_lb >= 3:
-                    _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — raised +1→+2
-                elif _ha_consec_lb < 3:
-                    _learned_bonus += _npen("ha_consec_perf", "early", 35, -4)   # 29%WR n=17 — no HA momentum
+                    _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — sweet spot
+                elif _ha_consec_lb == 0:
+                    _learned_bonus += _npen("ha_consec_perf", "zero", 25, -5)    # 25%WR n=8 — no HA streak at entry
+                else:
+                    _learned_bonus += _npen("ha_consec_perf", "early", 35, -4)   # 29%WR n=17 — 1-2 candles only
                 # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
@@ -29660,7 +29664,7 @@ def run():
                     "vcp","cup_handle","ttm_squeeze_fired","higher_lows",
                     "rvol_surge","at_breakout"])  # removed orb_breakout, supertrend_bull, obv_rising
                 if _prem_ct_lb == 0:
-                    _learned_bonus += _npen("premium_tier_perf", "none", 27, -4)  # 25%WR n=8 — no premium signals
+                    _learned_bonus += _npen("premium_tier_perf", "none", 35, -4)  # 25%WR n=8 — raised thr 27→35 (drift fix)
                 elif _prem_ct_lb <= 2:
                     _learned_bonus += _nbns("premium_tier_perf", "sweet_spot", 64, 2)  # 66-71%WR n=7-10 — 1-2 signals
                 # Price tier: large=60% WR n=35 fires at 60% ✓; mid=43.8% n=16 → penalty; micro already penalized
