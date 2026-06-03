@@ -29312,8 +29312,12 @@ def run():
                     _learned_bonus += _nbns("intraday_mom_perf", "pullback", 45, 1)  # 50%WR n=4 — dip-buying; fires once tlog confirms (minsamp=3)
                     if _mfi_lb >= 80:
                         _learned_bonus += _nbns("signal_synergy", "pullback+mfi_dist", 55, 2)  # pullback + distribution buying = smart money accumulation
+                    _rvol_pb_chk = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
+                    if _rvol_pb_chk >= 1.5:
+                        _learned_bonus += _nbns("signal_synergy", "pullback+strong_rvol", 50, 2)  # dip on strong volume = institutional accumulation
                 elif _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("intraday_mom_perf", "extended", 70, 2)  # threshold raised 60→70 (10%WR n=10 recent; tlog must recover to 70%+ to bonus)
+                    _learned_bonus += _npen("intraday_ext_recent", "extended", 15, -2)  # unconditional until tlog proves > 15%WR (10%WR n=10 recent)
                     if _candle_present:
                         _learned_bonus += _nbns("signal_synergy", "intraday_extended+candle", 70, 1)  # 75%WR n=8 — momentum + confirmation
                     if _bb_pos_lb > 0.85:
@@ -29729,7 +29733,9 @@ def run():
                 _sk_zone_lb = ("overbought" if _sk_lb > 80 else "oversold" if _sk_lb < 20 else "neutral")
                 if _sk_zone_lb == "overbought":
                     _learned_bonus += _npen("stoch_zone_perf", "overbought", 62, -3)  # 42.9% WR n=21 — chasing!
-                    if _mfi_lb < 80:
+                    if _mfi_lb >= 80:
+                        _learned_bonus += _nbns("signal_synergy", "mfi_dist+stoch_ob", 55, 1)  # winner profile: distribution momentum + overbought momentum = valid uptrend
+                    elif _mfi_lb < 80:
                         _learned_bonus += _npen("signal_synergy", "stoch_ob+mfi_neutral", 40, -2)  # 38.9%WR n=18 — double momentum trap
                     if bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _npen("signal_synergy", "gap_hold+stoch_ob", 32, -2)  # 29.4%WR n=17 — gap+overbought = exhausted
