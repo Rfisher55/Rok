@@ -29382,24 +29382,29 @@ def run():
                     _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)    # 48.5% WR n=33 — coin flip or worse
                 elif "below" in _ich_lb:
                     _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
-                # HA consecutive candles: building(3)=63.6% WR n=11, strong(5+)=38% WR n=16, zero=25% WR n=8
-                _ha_consec_lb = int(_tk_sig_sc.get("ha_consec_bull", _tk_sig_sc.get("ha_consec", 0)) or 0)
-                if _ha_consec_lb >= 5:
-                    _learned_bonus += _npen("ha_consec_perf", "strong", 45, -2)  # 38%WR n=16 — raised thr 40→45 (drift fix)
-                    if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+gap_hold", 30, -2)  # 28.6%WR n=14 — extended+holding trap
-                    if not _candle_present:
-                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+candle_none", 20, -3)  # 16.7%WR n=6 — overextended HA, no candle confirmation
-                    if _intra_mom_bkt_lb == "runner":
-                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+intra_runner", 27, -2)  # 25%WR n=8 — streak near peak + early momentum loss
-                    if _bb_pos_lb > 0.85:
-                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+bb_upper", 30, -1)  # 28.6%WR n=7 — extended streak at Bollinger upper
-                elif _ha_consec_lb >= 3:
-                    _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — sweet spot
-                elif _ha_consec_lb == 0:
-                    _learned_bonus += _npen("ha_consec_perf", "zero", 25, -5)    # 25%WR n=8 — no HA streak at entry
-                else:
-                    _learned_bonus += _npen("ha_consec_perf", "early", 35, -4)   # 29%WR n=17 — 1-2 candles only
+                # HA consecutive candles: zero=12%WR n=8, early(1-2)=47%WR n=17, building(3-4)=77%WR n=13, strong(5+)=54%WR n=28
+                # Use ha_consec_at_entry (78 non-null) before ha_consec_bull (27 non-null) for better coverage
+                _ha_consec_raw = (_tk_sig_sc.get("ha_consec_at_entry")
+                                   or _tk_sig_sc.get("ha_consec_bull")
+                                   or _tk_sig_sc.get("ha_consec"))
+                _ha_consec_lb = int(_ha_consec_raw or 0) if _ha_consec_raw is not None else None
+                if _ha_consec_lb is not None:
+                    if _ha_consec_lb >= 5:
+                        _learned_bonus += _nbns("ha_consec_perf", "strong", 52, 1)  # 54%WR n=28 — flip penalty→bonus (was wrong)
+                        if bool(_tk_sig_sc.get("gap_and_hold", False)):
+                            _learned_bonus += _npen("signal_synergy", "ha_consec_strong+gap_hold", 30, -2)  # 28.6%WR n=14 — extended+holding trap
+                        if not _candle_present:
+                            _learned_bonus += _npen("signal_synergy", "ha_consec_strong+candle_none", 20, -3)  # 16.7%WR n=6 — overextended HA, no candle confirmation
+                        if _intra_mom_bkt_lb == "runner":
+                            _learned_bonus += _npen("signal_synergy", "ha_consec_strong+intra_runner", 27, -2)  # 25%WR n=8 — streak near peak + early momentum loss
+                        if _bb_pos_lb > 0.85:
+                            _learned_bonus += _npen("signal_synergy", "ha_consec_strong+bb_upper", 30, -1)  # 28.6%WR n=7 — extended streak at Bollinger upper
+                    elif _ha_consec_lb >= 3:
+                        _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 77%WR n=13 — sweet spot confirmed
+                    elif _ha_consec_lb == 0:
+                        _learned_bonus += _npen("ha_consec_perf", "zero", 25, -5)    # 12%WR n=8 — no HA streak at entry
+                    else:
+                        _learned_bonus += _npen("ha_consec_perf", "early", 35, -3)   # 47%WR n=17 — soften: only slightly below avg
                 # Concentration: 3-4 positions = 80% WR n=15 (selective!); 8+ = 53% WR n=30
                 _open_pos_lb = len(held) if "held" in dir() else 0
                 if 3 <= _open_pos_lb <= 4:
@@ -29480,7 +29485,7 @@ def run():
                 _px_raw_lb  = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 1)) or 1)
                 _atr_pct_lb = (_atr_raw_lb / max(_px_raw_lb, 0.01) * 100) if _atr_raw_lb > 0 else 0.0
                 if _atr_pct_lb >= 6.0:
-                    _learned_bonus += _npen("atr_perf", "6%+", 20, -5)          # 12%WR n=8 — extreme volatility trap; raised from "4%+" bucket
+                    _learned_bonus += _npen("atr_perf", "6%+", 40, -2)          # 38%WR n=8 (6-10%), soften: thr 20→40 pts -5→-2
                 elif _atr_pct_lb >= 4.0:
                     _learned_bonus += _nbns("atr_perf", "4-6%", 68, 2)          # 74%WR n=19 — optimal volatility; split from "4%+" bucket
                 elif 2.0 <= _atr_pct_lb < 4.0:
