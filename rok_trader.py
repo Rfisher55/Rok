@@ -33380,6 +33380,240 @@ def run():
                     except Exception: pass
                 except Exception:
                     pass
+                # ── R60: 29 dead neurons with _nde scoring calls (v1/v2 tables) ──────
+                try:
+                    _r60 = live[tk]
+                    # vwap_reclaim_v1_perf: above/below/at VWAP with momentum
+                    try:
+                        _r60_px = float(_r60.get("price", 0) or 0)
+                        _r60_vw = float(_r60.get("vwap", 1) or 1)
+                        _r60_chg = float(_r60.get("chg1d", _r60.get("change_pct", 0)) or 0)
+                        _r60["vwap_reclaim_v1_perf"] = (
+                            "vwap_reclaimed" if _r60_vw > 0 and _r60_px > _r60_vw and _r60_chg > 0.5 else
+                            "below_vwap" if _r60_vw > 0 and _r60_px < _r60_vw * 0.995 else "at_vwap")
+                    except Exception: pass
+                    # ema_stack_v1_perf: full/broken/partial EMA stack
+                    try:
+                        _r60_e21 = float(_r60.get("ema21", 0) or 0)
+                        _r60_e50 = float(_r60.get("ema50", 0) or 0)
+                        _r60_e200 = float(_r60.get("ema200", 0) or 0)
+                        _r60["ema_stack_v1_perf"] = (
+                            "full_ema_stack" if _r60.get("ema_stack") or (_r60_e21 > _r60_e50 > _r60_e200 > 0) else
+                            "ema_stack_broken" if _r60_e200 > 0 and _r60_e50 > 0 and _r60_e200 > _r60_e50 else
+                            "partial_stack")
+                    except Exception: pass
+                    # conviction_tier_v1_perf: high/medium/low conviction
+                    try:
+                        _r60_sc = float(_r60.get("score", 0) or 0)
+                        _r60_rv = float(_r60.get("rvol", 1.0) or 1.0)
+                        _r60_r1 = float(_r60.get("rs1", 0) or 0)
+                        _r60["conviction_tier_v1_perf"] = (
+                            "high_conviction" if _r60_sc >= 80 and _r60_rv > 1.5 and _r60_r1 > 1 else
+                            "low_conviction" if _r60_sc < 60 else "medium_conviction")
+                    except Exception: pass
+                    # news_sent_score_v1_perf: bullish/neutral/bearish sentiment
+                    try:
+                        _r60_ns = float(_r60.get("news_sentiment", _r60.get("sentiment_score", 0)) or 0)
+                        _r60["news_sent_score_v1_perf"] = (
+                            "bullish" if _r60_ns > 0.3 else "bearish" if _r60_ns < -0.3 else "neutral")
+                    except Exception: pass
+                    # short_int_ratio_v1_perf: high/mid/low short interest
+                    try:
+                        _r60_si = float(_r60.get("short_float", _r60.get("short_interest", 0)) or 0)
+                        _r60["short_int_ratio_v1_perf"] = (
+                            "high_si" if _r60_si > 15 else "low_si" if _r60_si < 5 else "mid_si")
+                    except Exception: pass
+                    # premarket_gap_v1_perf: large/small gap up, flat, or gap down
+                    try:
+                        _r60_gp = float(_r60.get("chg1d", _r60.get("change_pct", 0)) or 0)
+                        _r60["premarket_gap_v1_perf"] = (
+                            "large_gap_up" if _r60_gp > 3.0 else
+                            "small_gap_up" if _r60_gp >= 0.5 else
+                            "flat_open" if _r60_gp >= -0.5 else "gap_down")
+                    except Exception: pass
+                    # risk_reward_v1_perf: excellent/good/poor R:R from ATR
+                    try:
+                        _r60_atr = float(_r60.get("atr_pct", 1.5) or 1.5)
+                        _r60["risk_reward_v1_perf"] = (
+                            "excellent_rr" if _r60_atr >= 2.0 else "poor_rr" if _r60_atr < 1.0 else "good_rr")
+                    except Exception: pass
+                    # float_rotation_v1_perf: high/normal/low rotation via RVOL
+                    try:
+                        _r60_frvol = float(_r60.get("rvol", 1.0) or 1.0)
+                        _r60["float_rotation_v1_perf"] = (
+                            "high_rotation" if _r60_frvol > 3.0 else
+                            "low_rotation" if _r60_frvol < 0.7 else "normal_rotation")
+                    except Exception: pass
+                    # orb_quality_v1_perf: orb_breakout/inside_orb/orb_breakdown
+                    try:
+                        _r60_orb = bool(_r60.get("orb_breakout") or _r60.get("orb_up"))
+                        _r60_ib = bool(_r60.get("inside_bar"))
+                        _r60["orb_quality_v1_perf"] = (
+                            "orb_breakout" if _r60_orb else "inside_orb" if _r60_ib else "orb_breakdown")
+                    except Exception: pass
+                    # mean_rev_v1_perf: strong/moderate/no mean reversion setup
+                    try:
+                        _r60_rsi = float(_r60.get("rsi", 50) or 50)
+                        _r60_bb = float(_r60.get("bb_pct", 0.5) or 0.5)
+                        _r60["mean_rev_v1_perf"] = (
+                            "strong_mean_rev" if (_r60_rsi < 30 or _r60_rsi > 70) and (_r60_bb <= 0.1 or _r60_bb >= 0.9) else
+                            "moderate_mean_rev" if _r60_rsi < 35 or _r60_rsi > 65 else "no_mean_rev")
+                    except Exception: pass
+                    # sector_rotation_v1_perf: hot/neutral/cold sector
+                    try:
+                        _r60_etf = float(_r60.get("sector_etf_1d", _r60.get("sector_day_pct", _r60.get("rs_sector", 0))) or 0)
+                        _r60["sector_rotation_v1_perf"] = (
+                            "hot_sector" if _r60_etf >= 1.0 else "cold_sector" if _r60_etf <= -1.0 else "neutral_sector")
+                    except Exception: pass
+                    # options_flow_v1_perf: bullish_sweep/call_buying/put_buying/neutral_flow
+                    try:
+                        _r60_of = str(_r60.get("options_flow", _r60.get("unusual_options", "")) or "").lower()
+                        _r60["options_flow_v1_perf"] = (
+                            "bullish_sweep" if any(x in _r60_of for x in ("sweep", "bullish_sweep")) else
+                            "call_buying" if any(x in _r60_of for x in ("call_buy", "call buying")) else
+                            "put_buying" if any(x in _r60_of for x in ("put_buy", "put buying")) else "neutral_flow")
+                    except Exception: pass
+                    # insider_activity_v1_perf: insider_buying/selling/no_activity
+                    try:
+                        _r60_ins = float(_r60.get("insider_net_shares", _r60.get("insider_shares", _r60.get("insider_buying", 0))) or 0)
+                        _r60["insider_activity_v1_perf"] = (
+                            "insider_buying" if _r60_ins > 0 else
+                            "insider_selling" if _r60_ins < 0 else "no_insider_activity")
+                    except Exception: pass
+                    # price_mom_5d_v1_perf: strong_up/mild_up/flat_neg
+                    try:
+                        _r60_chg5 = float(_r60.get("rs5", _r60.get("change_5d", 0)) or 0)
+                        _r60["price_mom_5d_v1_perf"] = (
+                            "strong_up" if _r60_chg5 > 5 else "flat_neg" if _r60_chg5 < 0 else "mild_up")
+                    except Exception: pass
+                    # catalyst_fresh_v1_perf: fresh_catalyst/recent/stale
+                    try:
+                        _r60_cat = _r60.get("catalyst", "") or ""
+                        _r60_pc = int(_r60.get("persist_count", 0) or 0)
+                        _r60["catalyst_fresh_v1_perf"] = (
+                            "fresh_catalyst" if _r60_cat and _r60_pc == 0 else
+                            "recent" if _r60_cat and _r60_pc <= 7 else "stale")
+                    except Exception: pass
+                    # debt_equity_v1_perf: low/moderate/high debt
+                    try:
+                        _r60_de = float(_r60.get("debt_equity_ratio", _r60.get("debt_equity", 1.0)) or 1.0)
+                        _r60["debt_equity_v1_perf"] = (
+                            "low_debt" if _r60_de <= 1.0 else "high_debt" if _r60_de > 2.0 else "moderate_debt")
+                    except Exception: pass
+                    # tech_pattern_v1_perf: high/medium/low quality pattern
+                    try:
+                        _r60_cp = (int(bool(_r60.get("cup_handle"))) + int(bool(_r60.get("double_bottom")))
+                                   + int(bool(_r60.get("bull_flag"))) + int(bool(_r60.get("vcp"))))
+                        _r60["tech_pattern_v1_perf"] = (
+                            "high_quality_pattern" if _r60_cp >= 2 else
+                            "medium_quality_pattern" if _r60_cp == 1 else "low_quality_pattern")
+                    except Exception: pass
+                    # price_action_v1_perf: smooth_uptrend/recovering_action/choppy_action
+                    try:
+                        _r60_paqv = _r60.get("price_action_quality", _r60.get("hh_hl_score", 0))
+                        if isinstance(_r60_paqv, str):
+                            _r60_paqs = _r60_paqv.lower()
+                            _r60_pa = ("smooth_uptrend" if any(x in _r60_paqs for x in ("smooth","uptrend","clean")) else
+                                       "recovering_action" if any(x in _r60_paqs for x in ("recover","bounce")) else
+                                       "choppy_action")
+                        else:
+                            _r60_paqf = float(_r60_paqv or 0)
+                            _r60_pa = ("smooth_uptrend" if _r60_paqf >= 2 else
+                                       "recovering_action" if _r60_paqf >= 1 else "choppy_action")
+                        _r60["price_action_v1_perf"] = _r60_pa
+                    except Exception: pass
+                    # earnings_qual_v1_perf: strong_beat/modest_beat/inline_earnings/miss_earnings
+                    try:
+                        _r60_eps = float(_r60.get("eps_surprise", _r60.get("earnings_surprise", 0)) or 0)
+                        _r60["earnings_qual_v1_perf"] = (
+                            "strong_beat" if _r60_eps > 10 else "modest_beat" if _r60_eps > 2 else
+                            "inline_earnings" if _r60_eps >= -2 else "miss_earnings")
+                    except Exception: pass
+                    # breakout_qual_v1_perf: strong_volume_breakout/.../no_breakout
+                    try:
+                        _r60_brvol = float(_r60.get("rvol", 1.0) or 1.0)
+                        _r60_bbo = bool(_r60.get("at_breakout") or _r60.get("at_breakout_level"))
+                        _r60_bgap = bool(_r60.get("gap_and_go") or _r60.get("gapper"))
+                        _r60["breakout_qual_v1_perf"] = (
+                            "strong_volume_breakout" if _r60_brvol > 3.0 and _r60_bbo else
+                            "breakout_moderate_vol" if _r60_brvol > 2.0 and _r60_bbo else
+                            "gap_and_hold" if _r60_bgap else
+                            "pattern_breakout" if _r60_bbo else "no_breakout")
+                    except Exception: pass
+                    # analyst_revision_v1_perf: estimates rising/stable/falling/no_data
+                    try:
+                        _r60_rev = float(_r60.get("estimate_revision", _r60.get("analyst_revision_pct", 0)) or 0)
+                        _r60["analyst_revision_v1_perf"] = (
+                            "estimates_rising" if _r60_rev > 2.0 else
+                            "estimates_falling" if _r60_rev < -2.0 else
+                            "estimates_stable" if _r60_rev >= -2.0 else "no_estimate_data")
+                    except Exception: pass
+                    # rs_quality_v2_perf: strong/neutral/weak RS vs SPY
+                    try:
+                        _r60_rs = float(_r60.get("rs_vs_spy", _r60.get("rs1", 0)) or 0)
+                        _r60["rs_quality_v2_perf"] = (
+                            "strong_rs" if _r60_rs > 5 else "weak_rs" if _r60_rs < -5 else "neutral_rs")
+                    except Exception: pass
+                    # trend_exhaustion_v1_perf: extreme/high/moderate/healthy/fresh trend
+                    try:
+                        _r60_trsi = float(_r60.get("rsi", 50) or 50)
+                        _r60_tpve = float(_r60.get("price_vs_ema200", _r60.get("pct_vs_ema200", 0)) or 0)
+                        _r60["trend_exhaustion_v1_perf"] = (
+                            "extreme_trend_exhaustion" if _r60_trsi > 80 and _r60_tpve > 40 else
+                            "high_exhaustion_risk" if _r60_trsi > 75 else
+                            "moderate_exhaustion" if _r60_trsi > 65 else
+                            "trend_healthy" if _r60_trsi > 50 else "fresh_trend")
+                    except Exception: pass
+                    # market_breadth_v2_perf: strong/positive/negative/neutral via A/D ratio
+                    try:
+                        _r60_ad = float(_r60.get("advance_decline_ratio", _r60.get("adv_dec", -1)) or -1)
+                        _r60["market_breadth_v2_perf"] = (
+                            "strong_breadth" if _r60_ad > 3.0 else
+                            "positive_breadth" if _r60_ad > 1.5 else
+                            "negative_breadth" if 0 < _r60_ad < 0.67 else "neutral_breadth")
+                    except Exception: pass
+                    # market_cap_tier_v1_perf: mega/large/mid/small cap
+                    try:
+                        _r60_mc = float(_r60.get("market_cap", _r60.get("mktcap", 0)) or 0)
+                        _r60_mc_bln = _r60_mc / 1e9 if _r60_mc > 0 else 0
+                        _r60["market_cap_tier_v1_perf"] = (
+                            "mega_cap" if _r60_mc_bln > 200 else "large_cap" if _r60_mc_bln > 10 else
+                            "mid_cap" if _r60_mc_bln > 2 else "small_cap")
+                    except Exception: pass
+                    # market_cap_momentum_v1_perf: mega_defensive/large_leading/mid_breakout/small_momentum
+                    try:
+                        _r60_mcc = float(_r60.get("market_cap", _r60.get("mktcap", 0)) or 0)
+                        _r60_mchg = float(_r60.get("chg_pct", _r60.get("chg1d", 0)) or 0)
+                        _r60["market_cap_momentum_v1_perf"] = (
+                            "mega_cap_defensive" if _r60_mcc > 200e9 else
+                            "large_cap_leading" if _r60_mcc > 50e9 and _r60_mchg > 0 else
+                            "small_cap_momentum" if _r60_mcc < 2e9 else "mid_cap_breakout")
+                    except Exception: pass
+                    # pm_gap_size_v2_perf: strong/small pm gap up, flat, or down
+                    try:
+                        _r60_pmg = float(_r60.get("premarket_gap_pct", _r60.get("pm_gap_pct", _r60.get("gap_pct", 0))) or 0)
+                        _r60["pm_gap_size_v2_perf"] = (
+                            "strong_pm_gap_up" if _r60_pmg > 2 else
+                            "small_pm_gap_up" if _r60_pmg >= 0.5 else
+                            "flat_pm" if _r60_pmg > -0.5 else "pm_gap_down")
+                    except Exception: pass
+                    # breakout_52w_entry_perf: at_52w_break/near_52w_high/mid_range_52w
+                    try:
+                        _r60_52w = float(_r60.get("near_52w_high", 1.0) or 1.0)
+                        _r60_52wb = float(_r60.get("at_breakout_level", 0) or _r60.get("vcp_breakout", 0) or 0)
+                        _r60["breakout_52w_entry_perf"] = (
+                            "at_52w_break" if _r60_52w >= 0.97 and _r60_52wb else
+                            "near_52w_high" if _r60_52w >= 0.92 else "mid_range_52w")
+                    except Exception: pass
+                    # momentum_score_bucket_perf: elite/strong/moderate/weak momentum
+                    try:
+                        _r60_ms = float(_r60.get("score", 0) or 0)
+                        _r60["momentum_score_bucket_perf"] = (
+                            "elite_momentum" if _r60_ms >= 85 else "strong_momentum" if _r60_ms >= 70 else
+                            "moderate_momentum" if _r60_ms >= 50 else "weak_momentum")
+                    except Exception: pass
+                except Exception:
+                    pass
             except Exception:
                 pass
 
