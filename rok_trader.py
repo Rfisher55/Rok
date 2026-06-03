@@ -29167,6 +29167,7 @@ def run():
                 # VWAP position: above=50% WR n=36 (updated); at_vwap=47.2% WR n=36 — penalize at_vwap
                 _vwp_lb = float(_tk_sig_sc.get("vwap_pos", _tk_sig_sc.get("vwap_distance", 0)) or 0)
                 _vwap_above_flag = bool(_tk_sig_sc.get("above_vwap", False)) or _vwp_lb > 0
+                _vwap_barely_above_flag = (1.0 <= _vwp_lb < 3.0)
                 if _vwap_above_flag:
                     # VWAP distance buckets: 1-3% above=35.7%WR n=14; 3-6% above=66.7%WR n=18
                     if 1.0 <= _vwp_lb < 3.0:
@@ -29670,6 +29671,8 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "stoch_ob+mfi_neutral", 40, -2)  # 38.9%WR n=18 — double momentum trap
                     if bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _npen("signal_synergy", "gap_hold+stoch_ob", 32, -2)  # 29.4%WR n=17 — gap+overbought = exhausted
+                    if _vwap_barely_above_flag:
+                        _learned_bonus += _npen("signal_synergy", "vwap_barely+stoch_ob", 25, -2)  # 22.2%WR n=9 — weak VWAP reclaim + overbought
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
