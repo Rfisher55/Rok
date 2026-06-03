@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 90      # raised 85→90 (Wave 79): ADX-weak & rs_avg+early score 86-92; need 90 to block these combos
+MIN_BUY_SCORE      = 95      # raised 90→95 (Wave 81): recent 30 trades 27%WR; accum_mod(0%)/rs_avg(12%) score 92-94, need 95
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 12      # raised from 6 — 12 per sector for high-volume trading; "other" uncapped below
@@ -29289,6 +29289,7 @@ def run():
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
                     _learned_bonus += _npen("accum_perf", "moderate", 65, -6)  # 27%WR n=11 live — raised thr 55→65, pts -4→-6 (Wave 74)
+                    _learned_bonus -= 4  # direct supplement: 0%WR n=8 in recent 30 — total -10 ensures below MIN=95 (Wave 81)
                 # Accum light synergies: tech=77%WR n=22 (strong), other=45%WR n=11 (below avg)
                 _accum_sec_inline = str(_tk_sig_sc.get("sector", "") or "").lower()
                 _accum_sec_tech = _accum_sec_inline in ("tech","consumer_tech","technology")
@@ -35723,9 +35724,9 @@ def run():
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
             _is_other_sector = (SECTOR_MAP.get(tk, "other") == "other")
             _grade_thresh = _eff_min_score  # all grades use same threshold now
-            # sector=other hard gate: 17%WR live (1W/5L) — require +40 above min to trade unknown sectors
+            # sector=other hard gate: 7%WR live (1W/13L) recent — require +50 above min (raised 40→50, Wave 81)
             if _is_other_sector:
-                _grade_thresh += 40
+                _grade_thresh += 50
             # Score trend guard: if history shows falling-score entries fail, require +4 for them
             if _LEARNED_FALLING_SCORE_PENALTY:
                 _sh_now = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
