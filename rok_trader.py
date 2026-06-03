@@ -29361,6 +29361,10 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "ha_consec_strong+gap_hold", 30, -2)  # 28.6%WR n=14 — extended+holding trap
                     if not _candle_present:
                         _learned_bonus += _npen("signal_synergy", "ha_consec_strong+candle_none", 20, -3)  # 16.7%WR n=6 — overextended HA, no candle confirmation
+                    if _intra_mom_bkt_lb == "runner":
+                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+intra_runner", 27, -2)  # 25%WR n=8 — streak near peak + early momentum loss
+                    if _bb_pos_lb > 0.85:
+                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+bb_upper", 30, -1)  # 28.6%WR n=7 — extended streak at Bollinger upper
                 elif _ha_consec_lb >= 3:
                     _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — raised +1→+2
                 elif _ha_consec_lb < 3:
@@ -29496,6 +29500,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "ha_bull+intra_ext+obv_fall", 72, 1)  # 77.8%WR n=9 — triple best entry
                 if _ha_bull_flag and _candle_present and not _obv_rising_lb:
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+candle+obv_fall", 68, 1)  # 72.7%WR n=22 — triple confirmation
+                if _ha_bull_flag and bool(_tk_sig_sc.get("gap_and_hold", False)):
+                    _learned_bonus += _npen("signal_synergy", "ha_bull+gap_hold", 35, -1)  # 33.3%WR n=18 — HA bullish but trapped in gap
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
