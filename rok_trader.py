@@ -29265,8 +29265,20 @@ def run():
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
                     _learned_bonus += _npen("accum_perf", "moderate", 55, -4)  # 36%WR n=14 — confirmed bad
-                # Combo trap: light accum + OBV not rising = 69%WR n=32 (GOOD, not bad) → removed wrong penalty
+                # Accum light synergies: tech=77%WR n=22 (strong), other=45%WR n=11 (below avg)
+                _accum_sec_inline = str(_tk_sig_sc.get("sector", "") or "").lower()
+                _accum_sec_tech = _accum_sec_inline in ("tech","consumer_tech","technology")
+                if _accum_bkt_lb == "light":
+                    if _accum_sec_tech:
+                        _learned_bonus += _nbns("signal_synergy", "accum_light+tech", 68, 2)  # 77%WR n=22 — institutional buying in best sector
+                    else:
+                        _learned_bonus += _npen("signal_synergy", "accum_light+non_tech", 47, -2)  # 45%WR n=11 — light accum outside tech = low conviction
+                # Accum moderate + HA synergies: both bull and bear are bad (40-42%WR)
                 _obv_rising_lb = bool(_tk_sig_sc.get("obv_rising", False))
+                if _accum_bkt_lb == "moderate":
+                    _ha_mod_inline = str(_tk_sig_sc.get("ha_trend","") or "").lower()
+                    if _ha_mod_inline in ("bull","bear"):
+                        _learned_bonus += _npen("signal_synergy", "accum_moderate+ha_any", 43, -2)  # 41%WR n=17 — moderate accum regardless of HA direction
                 # Synergy trap: moderate accum + OBV rising = chasing extended institutional move (33.3%WR n=12)
                 if _accum_bkt_lb == "moderate" and _obv_rising_lb:
                     _learned_bonus += _npen("signal_synergy", "accum_moderate+obv_rising", 35, -2)
