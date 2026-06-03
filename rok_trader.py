@@ -33662,6 +33662,40 @@ def run():
                     _sv = _r61.get(_sk, _def)
                     if _sv:
                         _r61[_pk] = _sv
+                # Direct aliases: state already computed in live[tk] under a different key
+                # ai_sentiment_tier_perf: ai_sentiment is stored as categorical ("very_pos" etc.)
+                if _r61.get("ai_sentiment") and not _r61.get("ai_sentiment_tier_perf"):
+                    _r61["ai_sentiment_tier_perf"] = str(_r61["ai_sentiment"])
+                # day_of_week_perf: day_name is in live[tk]
+                if _r61.get("day_name") and not _r61.get("day_of_week_perf"):
+                    _r61["day_of_week_perf"] = str(_r61["day_name"])
+                # weekly_momentum_perf: use weekly_trend direction
+                try:
+                    _r61_wt = float(_r61.get("weekly_trend", _r61.get("wk_trend", 0)) or 0)
+                    _r61["weekly_momentum_perf"] = ("bull_week" if _r61_wt > 0.5 else
+                                                    "bear_week" if _r61_wt < -0.5 else "flat_week")
+                except Exception: pass
+                # short_float_perf: short interest level (high short = squeeze candidate or warning)
+                try:
+                    _r61_sf = float(_r61.get("short_float", 0) or 0)
+                    _r61["short_float_perf"] = ("high_short" if _r61_sf > 20 else
+                                                "elevated_short" if _r61_sf > 10 else
+                                                "low_short" if _r61_sf < 3 else "normal_short")
+                except Exception: pass
+                # float_size_bucket_perf: small float vs large (key for explosive moves)
+                try:
+                    _r61_fl = float(_r61.get("float_shares_m", 200) or 200)
+                    _r61["float_size_bucket_perf"] = ("micro_float" if _r61_fl < 10 else
+                                                      "small_float" if _r61_fl < 50 else
+                                                      "mid_float" if _r61_fl < 200 else "large_float")
+                except Exception: pass
+                # consecutive_wins_perf: how many recent wins the bot has (from bot_learned_params)
+                try:
+                    _r61_cw = int(tlog.get("bot_learned_params", {}).get("consecutive_wins", 0) or 0)
+                    _r61["consecutive_wins_perf"] = ("hot_streak" if _r61_cw >= 4 else
+                                                     "winning_streak" if _r61_cw >= 2 else
+                                                     "neutral_streak" if _r61_cw == 0 else "mild_streak")
+                except Exception: pass
             except Exception:
                 pass
 
