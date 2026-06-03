@@ -21890,12 +21890,14 @@ def score(tk, d, sentiment=0, regime_adj=0):
     if d.get("shooting_star", False):         s -= 4
 
     # Parabolic SAR: trend-following trailing stop alignment
-    if d.get("psar_bull", True):   s += 5   # SAR below price = uptrend intact
-    else:                           s -= 4   # SAR above price = downtrend signal
+    # Wave 89: was default True (absent = free +5 bonus). Fixed: False default, no bonus for missing data.
+    if d.get("psar_bull", False):   s += 5   # SAR below price = uptrend intact
+    elif d.get("psar_bull") is False: s -= 4  # explicit False = downtrend signal (not absent)
 
-    # Options flow proxy: unusual call buying = institutional bullish positioning (+7/-5)
-    if d.get("unusual_calls", False):    s += 7   # big money buying calls = strong directional bet
-    elif d.get("options_bull", False):   s += 4   # low PCR = call skew, bullish sentiment
+    # Options flow proxy — Wave 89: live data shows unusual_calls=44.4%WR n=36, options_bull=45.7%WR n=35
+    # Both signals show below-average WR; reduced bonuses to avoid score inflation
+    if d.get("unusual_calls", False):    s += 2   # was +7; 44.4%WR → neutral at best (Wave 89)
+    elif d.get("options_bull", False):   s += 1   # was +4; 45.7%WR → slight acknowledgment only (Wave 89)
     if d.get("unusual_puts", False):     s -= 5   # unusual put buying = hedge or bearish bet
     elif d.get("options_bear", False):   s -= 3   # high PCR = put skew, bearish sentiment
 
