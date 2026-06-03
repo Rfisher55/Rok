@@ -29675,6 +29675,8 @@ def run():
                 if _opt_sc_lb >= 2:
                     # options_flow_perf["confirmed"] = 48.5% WR n=33 — bonus dead (threshold 60%)
                     pass  # combo is coin flip
+                elif _opt_sc_lb == 0:
+                    _learned_bonus += _npen("options_flow_perf", "neutral", 25, -3)  # 20%WR n=10 — no options activity = weak conviction
                 # EMA structure: both=47.2% WR n=36 (updated — was 65%) — no bonus
                 _e50_pct_lb = float(_tk_sig_sc.get("price_vs_ema50", 0) or 0)
                 _e200_pct_lb = float(_tk_sig_sc.get("price_vs_ema200", 0) or 0)
@@ -29722,6 +29724,8 @@ def run():
                                  else "2_green" if _cg_for_entry == 2 else "1_green" if _cg_for_entry == 1 else "no_streak")
                 if _cge_state_lb == "no_streak":
                     _learned_bonus += _npen("consec_green_entry_perf", "no_streak", 25, -6)  # 21.4% WR n=28
+                elif _cge_state_lb == "2_green":
+                    _learned_bonus += _npen("consec_green_entry_perf", "2_green", 25, -3)  # 17%WR n=6 — stalled streak: 2 green but not yet breakout
                 # Consecutive green days: 0d=43.6% WR n=39 penalty; 4d+=60% WR n=5 bonus
                 _cg_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_lb >= 3:
