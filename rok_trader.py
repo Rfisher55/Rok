@@ -29257,6 +29257,9 @@ def run():
                 _obv_rising_lb = bool(_tk_sig_sc.get("obv_rising", False))
                 if _accum_bkt_lb == "light" and not _obv_rising_lb:
                     _learned_bonus += -2
+                # Synergy trap: moderate accum + OBV rising = chasing extended institutional move (33.3%WR n=12)
+                if _accum_bkt_lb == "moderate" and _obv_rising_lb:
+                    _learned_bonus += _npen("signal_synergy", "accum_moderate+obv_rising", 35, -2)
                 # Active distribution phase: compute from signals (accum_distrib never set in live[tk])
                 _vpc_chg_ad = float(_tk_sig_sc.get("change_pct", _tk_sig_sc.get("chg1d", 0)) or 0)
                 _vpc_rvol_ad = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
@@ -29386,6 +29389,8 @@ def run():
                     _learned_bonus += _nbns("mfi_zone_perf", "distribution", 60, 3)  # 63.6%WR n=11 — extreme momentum
                     if bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _nbns("signal_synergy", "mfi_dist+higher_lows", 65, 2)  # 88%WR n=8 combo
+                    if not _obv_rising_lb:
+                        _learned_bonus += _nbns("signal_synergy", "mfi_dist+obv_falling", 75, 2)  # 81.8%WR n=11 — dist+volume confirmation
                 elif 70 <= _mfi_lb < 80:
                     _learned_bonus += _npen("mfi_zone_perf", "high_mfi", 30, -3)     # 27.3%WR n=11 — surprising trap zone
                 elif 60 <= _mfi_lb < 70:
