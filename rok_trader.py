@@ -29270,11 +29270,10 @@ def run():
                 if _accum_bkt_lb == "none":
                     _learned_bonus += _npen("accum_perf", "none", 15, -8)  # 10% WR n=10: severe (explicitly 0)
                 elif _accum_bkt_lb == "light":
-                    _learned_bonus += _nbns("accum_perf", "light", 65, 3)  # 69%WR n=36 — lowered thr 70→65, raised pts 2→3
+                    _learned_bonus += _nbns("accum_perf", "light", 58, 3)  # 60%WR n=25 live — lowered thr 65→58 (drift fix Wave 74)
                 elif _accum_bkt_lb in ("moderate", "heavy"):
-                    _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
-                    _learned_bonus += _npen("accum_perf", "moderate", 55, -4)  # 36%WR n=14 — confirmed bad
+                    _learned_bonus += _npen("accum_perf", "moderate", 65, -6)  # 27%WR n=11 live — raised thr 55→65, pts -4→-6 (Wave 74)
                 # Accum light synergies: tech=77%WR n=22 (strong), other=45%WR n=11 (below avg)
                 _accum_sec_inline = str(_tk_sig_sc.get("sector", "") or "").lower()
                 _accum_sec_tech = _accum_sec_inline in ("tech","consumer_tech","technology")
@@ -29288,10 +29287,10 @@ def run():
                 if _accum_bkt_lb == "moderate":
                     _ha_mod_inline = str(_tk_sig_sc.get("ha_trend","") or "").lower()
                     if _ha_mod_inline in ("bull","bear"):
-                        _learned_bonus += _npen("signal_synergy", "accum_moderate+ha_any", 43, -2)  # 41%WR n=17 — moderate accum regardless of HA direction
+                        _learned_bonus += _npen("signal_synergy", "accum_moderate+ha_any", 55, -3)  # 41%WR n=17 — raised thr 43→55, pts -2→-3 (Wave 74)
                 # Synergy trap: moderate accum + OBV rising = chasing extended institutional move (33.3%WR n=12)
                 if _accum_bkt_lb == "moderate" and _obv_rising_lb:
-                    _learned_bonus += _npen("signal_synergy", "accum_moderate+obv_rising", 35, -2)
+                    _learned_bonus += _npen("signal_synergy", "accum_moderate+obv_rising", 45, -2)  # raised thr 35→45 (Wave 74)
                 # Active distribution phase: compute from signals (accum_distrib never set in live[tk])
                 _vpc_chg_ad = float(_tk_sig_sc.get("change_pct", _tk_sig_sc.get("chg1d", 0)) or 0)
                 _vpc_rvol_ad = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
