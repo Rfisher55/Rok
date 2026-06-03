@@ -29378,6 +29378,7 @@ def run():
                 elif _open_pos_lb >= 8:
                     _learned_bonus += _npen("concentration_perf", "8+", 55, -2)  # 53% WR n=30 — stronger penalty
                 # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3 — compute directly
+                _reentry_lb = "no_reentry"
                 if tk in recent_sells:
                     try:
                         _re_trades = [t for t in tlog.get("trades", [])
@@ -29389,6 +29390,8 @@ def run():
                         _reentry_lb = "no_reentry"
                     if _reentry_lb == "winner":
                         _learned_bonus += _nbns("reentry_perf", "winner", 60, 4)   # 81%WR n=26 — raised from +2
+                        if _intra_mom_bkt_lb == "extended":
+                            _learned_bonus += _npen("signal_synergy", "reentry_winner+intra_extended", 20, -3)  # 0%WR n=8 — chasing old winner at intraday peak
                     elif _reentry_lb == "loser":
                         _learned_bonus += _npen("reentry_perf", "loser", 40, -8)   # 11%WR n=18 — near-block, raised from -3
                 # Candle pattern: present=60%WR n=30, absent=32%WR n=25 — penalize no pattern
@@ -29539,6 +29542,10 @@ def run():
                     _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
                     if _candle_present:
                         _learned_bonus += _npen("signal_synergy", "candle+rvol_normal", 20, -2)  # 0%WR n=12 — candle on normal volume = false signal
+                    if _reentry_lb == "winner":
+                        _learned_bonus += _npen("signal_synergy", "reentry_winner+rvol_normal", 20, -3)  # 0%WR n=10 — chasing old winner without volume surge
+                    if not bool(_tk_sig_sc.get("higher_lows", False)):
+                        _learned_bonus += _npen("signal_synergy", "higher_lows_none+rvol_normal", 20, -2)  # 0%WR n=9 — no structure + tepid volume
                 elif _rvol_t_lb >= 1.5:
                     _learned_bonus += _npen("rvol_tier_perf", "strong", 35, -2) # 33%WR n=6 — high rvol = chasing
                 # ST gap: no_st=55.6% WR n=27 (updated); normal=18.2% WR n=11 — penalize "normal" gap
