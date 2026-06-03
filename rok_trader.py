@@ -29398,6 +29398,8 @@ def run():
                                    or bool(_tk_sig_sc.get("candle_score", 0)))
                 if _candle_present:
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 1)   # 60%WR n=30 — threshold 62→58
+                    if not bool(_tk_sig_sc.get("gap_and_hold", False)):
+                        _learned_bonus += _nbns("signal_synergy", "candle_present+gap_normal", 68, 1)  # 72.7%WR n=11 — candle confirmation without gap trap
                 else:
                     _learned_bonus += _npen("candle_pattern_perf", "absent", 55, -3)   # 32%WR n=25 — no pattern = weak
                     if _ha_bull_flag:
@@ -29416,6 +29418,8 @@ def run():
                     _learned_bonus += _nbns("mfi_zone_perf", "moderate_dist", 58, 1) # 60%WR n=5 — small bonus
                 elif 50 <= _mfi_lb < 60:
                     _learned_bonus += _npen("mfi_zone_perf", "neutral", 32, -3)      # 30%WR n=10 — raised from -2
+                    if _bb_pos_lb > 0.85:
+                        _learned_bonus += _npen("signal_synergy", "bb_upper+mfi_neutral", 27, -2)  # 25%WR n=8 — upper band + no dist pressure
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
@@ -29462,6 +29466,8 @@ def run():
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
                     _learned_bonus += _npen("obv_trend_perf", "rising", 60, -3)  # 35.7%WR n=14 — OBV rising = chasing extended move
+                    if bool(_tk_sig_sc.get("kc_breakout", False)):
+                        _learned_bonus += _npen("signal_synergy", "obv_rising+kc_breakout", 27, -2)  # 25%WR n=8 — chasing OBV into KC breakout
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
                     if not bool(_tk_sig_sc.get("gap_and_hold", False)):
@@ -29506,6 +29512,8 @@ def run():
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+candle+obv_fall", 68, 1)  # 72.7%WR n=22 — triple confirmation
                 if _ha_bull_flag and bool(_tk_sig_sc.get("gap_and_hold", False)):
                     _learned_bonus += _npen("signal_synergy", "ha_bull+gap_hold", 35, -1)  # 33.3%WR n=18 — HA bullish but trapped in gap
+                if _ha_bull_flag and 3 <= _ha_consec_lb < 5:
+                    _learned_bonus += _nbns("signal_synergy", "ha_bull+ha_consec_building", 70, 1)  # 75%WR n=8 — early HA streak, bullish confirmation
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
