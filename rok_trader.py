@@ -29087,7 +29087,7 @@ def run():
                     _learned_bonus += _nbns("tws_perf", "three_soldiers", 58, 2)  # 61%WR n=28 — strong candle momentum
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
                     # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
-                    _learned_bonus += _npen("gap_hold_perf", "holding", 45, -4)   # 37% WR threshold tightened
+                    _learned_bonus += _npen("gap_hold_perf", "holding", 62, -4)   # 37% WR threshold tightened
                     _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 31.8% WR n=22
                     # gap_and_hold synergy penalties: all combos catastrophic (8-21% WR)
                     # Use sorted key order to match signal_synergy dict (alphabetical)
@@ -29302,7 +29302,7 @@ def run():
                 _bb_pos_raw = float(_tk_sig_sc.get("bb_pos", 50) or 50)
                 _bb_pos_lb = _bb_pos_raw / 100.0
                 if _bb_pos_lb > 0.85:
-                    _learned_bonus += _npen("bb_zone_perf", "upper", 40, -3)  # 38.5%WR n=13 — was bonus, now confirmed trap
+                    _learned_bonus += _npen("bb_zone_perf", "upper", 58, -3)  # 38.5%WR n=13 — was bonus, now confirmed trap
                 _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_bkt_lb == "extended":
@@ -29312,7 +29312,7 @@ def run():
                 elif _intra_mom_bkt_lb == "runner":
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
-                    _learned_bonus += _npen("intraday_mom_perf", "early", 38, -4)  # 25%WR n=12 recent — raised from -1
+                    _learned_bonus += _npen("intraday_mom_perf", "early", 55, -4)  # 25%WR n=12 recent — raised from -1
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
                 _grade_lb = momentum_grade(_tk_sig_sc, tech_sc)
                 if _grade_lb == "F":
@@ -29397,7 +29397,7 @@ def run():
                 if _candle_present:
                     _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 1)   # 60%WR n=30 — threshold 62→58
                 else:
-                    _learned_bonus += _npen("candle_pattern_perf", "absent", 35, -3)   # 32%WR n=25 — no pattern = weak
+                    _learned_bonus += _npen("candle_pattern_perf", "absent", 55, -3)   # 32%WR n=25 — no pattern = weak
                     if _ha_bull_flag:
                         _learned_bonus += _npen("signal_synergy", "ha_bull+candle_none", 20, -3)  # 16.7%WR n=6 — HA says bull but no candle confirmation
                 # MFI: distribution=66.7% WR n=9; neutral=42.6% WR n=68
@@ -29459,7 +29459,7 @@ def run():
                 # OBV trend: rising=35.7%WR n=14 — chasing; falling=51.4%WR n=37 — distributing then turning
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
-                    _learned_bonus += _npen("obv_trend_perf", "rising", 40, -3)  # 35.7%WR n=14 — OBV rising = chasing extended move
+                    _learned_bonus += _npen("obv_trend_perf", "rising", 60, -3)  # 35.7%WR n=14 — OBV rising = chasing extended move
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
                 # Higher lows confirmed: 75% WR n=8; not_confirmed: 38.9%WR n=36 (large sample!)
@@ -29479,10 +29479,10 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "higher_lows+obv_fall", 70, 1)  # 75%WR n=8 — structure confirmed, no OBV chase
                 # at_breakout_state[not_at_level]: 27.3%WR n=11 — no breakout = weak entry
                 if not bool(_tk_sig_sc.get("at_breakout", False)):
-                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 30, -3)  # 27.3%WR n=11
+                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 50, -3)  # 27.3%WR n=11
                 # higher_lows_not_confirmed: 38.9%WR n=36 — independent from at_breakout signal
                 if not bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _npen("higher_lows_perf", "not_confirmed", 40, -2)  # 38.9%WR n=36
+                    _learned_bonus += _npen("higher_lows_perf", "not_confirmed", 58, -2)  # 38.9%WR n=36
                 # HA trend: bear=31.2% WR n=16; not_bull=30%WR n=20 — penalize both bearish and neutral HA
                 _ha_bear_flag = bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"
                 _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
@@ -29505,7 +29505,7 @@ def run():
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
-                    _learned_bonus += _npen("rvol_tier_perf", "weak", 35, -3)   # 32%WR n=22 — raised from -2
+                    _learned_bonus += _npen("rvol_tier_perf", "weak", 55, -3)   # 32%WR n=22 — raised from -2
                 elif 0.8 <= _rvol_t_lb < 1.5:
                     _learned_bonus += _nbns("rvol_tier_perf", "normal", 60, 2)  # 64%WR n=25 — raised bonus
                     _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
@@ -29678,7 +29678,7 @@ def run():
                 _sk_lb = float(_tk_sig_sc.get("stoch_k", 50) or 50)
                 _sk_zone_lb = ("overbought" if _sk_lb > 80 else "oversold" if _sk_lb < 20 else "neutral")
                 if _sk_zone_lb == "overbought":
-                    _learned_bonus += _npen("stoch_zone_perf", "overbought", 45, -2)  # 42.9% WR n=21 — chasing!
+                    _learned_bonus += _npen("stoch_zone_perf", "overbought", 62, -3)  # 42.9% WR n=21 — chasing!
                     if _mfi_lb < 80:
                         _learned_bonus += _npen("signal_synergy", "stoch_ob+mfi_neutral", 40, -2)  # 38.9%WR n=18 — double momentum trap
                     if bool(_tk_sig_sc.get("gap_and_hold", False)):
