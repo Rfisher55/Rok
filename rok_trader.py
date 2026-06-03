@@ -29855,6 +29855,8 @@ def run():
                     _learned_bonus += _nbns("sector_performance", "tech", 62, 1)   # 63% WR n=27 — threshold 65→62
                     if _reentry_lb == "winner":
                         _learned_bonus += _nbns("signal_synergy", "reentry_winner+tech", 70, 2)  # 93%WR n=14 combo
+                    if _intra_mom_bkt_lb == "extended":
+                        _learned_bonus += _nbns("signal_synergy", "tech+intraday_extended", 75, 1)  # 80%WR n=10 — tech momentum = strongest setup
                 elif _sec_perf_lb == "other":
                     _learned_bonus += _npen("sector_performance", "other", 40, -5) # 26%WR n=19 recent — raised to -5
                 # Parabolic extension: price far above EMA50 = overextended, mean reversion risk
