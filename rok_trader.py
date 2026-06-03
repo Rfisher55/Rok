@@ -19295,9 +19295,9 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             if _vol_wr > 60: sc = min(150, sc + 3)
             elif _vol_wr < 40: sc = max(0, sc - 3)
 
-            # N888: EMA cross state at entry (bull_cross / bear_cross / none)
+            # N888: EMA cross state at entry — keys match what's stored at buy time: bull/bear/flat
             _ema_c_val = float(sig.get("ema_cross", 0) or 0)
-            _ema_cross_state = ("bull_cross" if _ema_c_val > 0.5 else "bear_cross" if _ema_c_val < -0.5 else "none")
+            _ema_cross_state = ("bull" if _ema_c_val > 0.5 else "bear" if _ema_c_val < -0.5 else "flat")
             _ema_wr = _cn888.get(_ema_cross_state, {}).get("win_rate", 50.0)
             if _ema_wr > 60: sc = min(150, sc + 3)
             elif _ema_wr < 40: sc = max(0, sc - 3)
@@ -22225,12 +22225,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_vix_s = ("extreme_vix_regime" if _nsl_vix >= 35 else
                           "high_vix_regime" if _nsl_vix >= 25 else
                           "low_vix_regime" if _nsl_vix < 15 else "normal_vix_regime")
-            _nsl_adj += _nsl_edge("market_regime_vix_perf", _nsl_vix_s)
+            _nsl_adj += _nde("market_regime_vix_perf", _nsl_vix_s)  # fixed: was _nsl_edge (dead)
 
             # N564: Volume vs 50d average (institutional participation)
             _nsl_vol_s = ("extreme_vol" if vr >= 3.0 else "above_avg_vol" if vr >= 1.5 else
                           "low_vol" if vr < 0.75 else "normal_vol")
-            _nsl_adj += _nsl_edge("volume_vs_50d_avg_perf", _nsl_vol_s)
+            _nsl_adj += _nde("volume_vs_50d_avg_perf", _nsl_vol_s)  # fixed: was _nsl_edge (dead)
 
             # N294: RSI at entry — matches buy-loop labels: oversold/neutral/overbought
             _nsl_rsi_s = ("oversold" if rsi < 30 else "overbought" if rsi >= 70 else "neutral")
@@ -22238,12 +22238,12 @@ def score(tk, d, sentiment=0, regime_adj=0):
 
             # N258/ADX: trend strength quality (directional conviction)
             _nsl_adx_s = ("strong_trend" if adx >= 30 else "weak_trend" if adx < 20 else "moderate_trend")
-            _nsl_adj += _nsl_edge("adx_strength_entry_perf", _nsl_adx_s)
+            _nsl_adj += _nde("adx_strength_entry_perf", _nsl_adx_s)  # fixed: was _nsl_edge (dead)
 
             # N576: TTM Squeeze state (coiled spring or trending)
             _nsl_sqz_s = ("squeeze_fired" if d.get("ttm_squeeze_fired") else
                           "in_squeeze" if d.get("in_squeeze") else "no_squeeze")
-            _nsl_adj += _nsl_edge("squeeze_momentum_perf", _nsl_sqz_s)
+            _nsl_adj += _nde("squeeze_momentum_perf", _nsl_sqz_s)  # fixed: was _nsl_edge (dead)
 
             # N591: Entry session quality (time-of-day in ET, not UTC)
             # Use d.get("et_hour") when injected by buy loop, else approximate from UTC
@@ -22253,7 +22253,7 @@ def score(tk, d, sentiment=0, regime_adj=0):
                 _nsl_et_hr  = (_nsl_utc_hr - 4) % 24
             _nsl_sess_s = ("morning_session" if 9 <= _nsl_et_hr < 11 else
                            "afternoon_session" if 14 <= _nsl_et_hr <= 16 else "midday_session")
-            _nsl_adj += _nsl_edge("entry_session_quality_perf", _nsl_sess_s)
+            _nsl_adj += _nde("entry_session_quality_perf", _nsl_sess_s)  # fixed: was _nsl_edge (dead)
 
             # N599: Weekly trend alignment — matches buy-loop: weekly_daily_aligned/conflict/neutral
             _nsl_wt = float(d.get("weekly_trend", d.get("wk_trend", 0)) or 0)
@@ -22261,18 +22261,18 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_wtrend_s = ("weekly_daily_aligned" if _nsl_wt > 0 and _nsl_dt > 0 else
                              "weekly_daily_conflict" if (_nsl_wt > 0 and _nsl_dt < 0) or (_nsl_wt < 0 and _nsl_dt > 0) else
                              "neutral_alignment")
-            _nsl_adj += _nsl_edge("weekly_trend_alignment_perf", _nsl_wtrend_s)
+            _nsl_adj += _nde("weekly_trend_alignment_perf", _nsl_wtrend_s)  # fixed: was _nsl_edge (dead)
 
             # N600: Composite momentum score bucket (overall signal density)
             _nsl_mom_s = ("elite_momentum" if s >= 85 else "strong_momentum" if s >= 70 else
                           "moderate_momentum" if s >= 50 else "weak_momentum")
-            _nsl_adj += _nsl_edge("momentum_score_bucket_perf", _nsl_mom_s)
+            _nsl_adj += _nde("momentum_score_bucket_perf", _nsl_mom_s)  # fixed: was _nsl_edge (dead)
 
             # N593: Prior day close relation (overnight drift context)
             _nsl_chg1d = d.get("change_pct", d.get("chg1d", 0)) or 0
             _nsl_priorday_s = ("above_prior_close" if _nsl_chg1d >= 0.5 else
                                "below_prior_close" if _nsl_chg1d <= -0.5 else "near_prior_close")
-            _nsl_adj += _nsl_edge("prior_day_close_relation_perf", _nsl_priorday_s)
+            _nsl_adj += _nde("prior_day_close_relation_perf", _nsl_priorday_s)  # fixed: was _nsl_edge (dead)
 
             # N603: Sector rotation (hot vs cold sector at entry)
             _nsl_sec_pct = float(d.get("sector_etf_1d", d.get("sector_day_pct", 0)) or 0)
@@ -23229,12 +23229,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
             _nsl_adj += _nde("smart_money_divergence_perf", _n879_s)
 
             # N86/N87: News count and acceleration — high news activity with acceleration is bullish
-            _n86_count = int(d.get("news_count_24h", 0) or 0)
-            _n86_tier  = ("hot" if _n86_count >= 5 else "quiet")
-            _nsl_adj += _nsl_edge("news_count_perf", _n86_tier)
-            _n87_accel = bool(d.get("news_accelerating", False))
-            _n87_state = ("accelerating" if _n87_accel else "steady")
-            _nsl_adj += _nsl_edge("news_accel_perf", _n87_state)
+            _nsl_adj += _nde("news_count_perf", str(d.get("news_count_tier", "quiet") or "quiet"))
+            _nsl_adj += _nde("news_accel_perf", str(d.get("news_accel_state", "steady") or "steady"))
 
             # NR7: Narrowing range — coiled spring compression before breakout
             _fb_nr7_bkt = ("compressed" if d.get("nr7") else "normal_range")
@@ -26227,7 +26223,7 @@ def run():
     _LEARNED_NEURON_PARAMS = tlog.get("bot_learned_params", {})
     # Load ALL *_perf dicts + signal_performance from tlog into global for full 850-neuron feedback loop
     _ALL_NEURON_PERFS = {k: v for k, v in tlog.items()
-                         if isinstance(k, str) and (k.endswith("_perf") or k == "signal_performance") and isinstance(v, dict)}
+                         if isinstance(k, str) and (k.endswith("_perf") or k in ("signal_performance", "ticker_memory")) and isinstance(v, dict)}
     _SIGNAL_SYNERGY_MAP   = {k: v for k, v in tlog.get("signal_synergy", {}).items()
                               if isinstance(v, dict) and v.get("total", 0) >= 3}
     _SIGNAL_TRIPLETS_MAP  = {k: v for k, v in tlog.get("signal_triplets", {}).items()
@@ -32548,6 +32544,48 @@ def run():
                         "high_pm_vol" if _inj_pmvol > 500_000 else
                         "mid_pm_vol" if _inj_pmvol > 100_000 else "low_pm_vol")
                 except Exception: pass
+                try:  # N580: market_regime_vix_perf — VIX regime at entry
+                    _inj_vix_mr = float(_inj_d.get("vix", 20) or 20)
+                    live[tk]["market_regime_vix_perf"] = (
+                        "extreme_vix_regime" if _inj_vix_mr >= 35 else
+                        "high_vix_regime" if _inj_vix_mr >= 25 else
+                        "low_vix_regime" if _inj_vix_mr < 15 else "normal_vix_regime")
+                except Exception: pass
+                try:  # N564: volume_vs_50d_avg_perf — volume tier at entry
+                    _inj_rv_v50 = float(_inj_d.get("rvol", _inj_d.get("vol_ratio", 1.0)) or 1.0)
+                    live[tk]["volume_vs_50d_avg_perf"] = (
+                        "extreme_vol" if _inj_rv_v50 >= 3.0 else
+                        "above_avg_vol" if _inj_rv_v50 >= 1.5 else
+                        "low_vol" if _inj_rv_v50 < 0.75 else "normal_vol")
+                except Exception: pass
+                try:  # N576: squeeze_momentum_perf — TTM squeeze state at entry
+                    _inj_sqf = bool(_inj_d.get("ttm_squeeze_fired") or _inj_d.get("squeeze_fired"))
+                    _inj_insq = bool(_inj_d.get("in_squeeze"))
+                    live[tk]["squeeze_momentum_perf"] = (
+                        "squeeze_fired" if _inj_sqf else
+                        "in_squeeze" if _inj_insq else "no_squeeze")
+                except Exception: pass
+                try:  # N591: entry_session_quality_perf — time-of-day session at entry (ET)
+                    from datetime import datetime as _inj_dtse, timezone as _inj_tzse
+                    _inj_et_hr = (_inj_dtse.now(_inj_tzse.utc).hour - 4) % 24
+                    live[tk]["entry_session_quality_perf"] = (
+                        "morning_session" if 9 <= _inj_et_hr < 11 else
+                        "afternoon_session" if 14 <= _inj_et_hr <= 16 else "midday_session")
+                except Exception: pass
+                try:  # N599: weekly_trend_alignment_perf — weekly vs daily trend alignment
+                    _inj_wt2 = float(_inj_d.get("weekly_trend", _inj_d.get("wk_trend", 0)) or 0)
+                    _inj_dt2 = float(_inj_d.get("daily_trend", 0) or 0)
+                    live[tk]["weekly_trend_alignment_perf"] = (
+                        "weekly_daily_aligned" if _inj_wt2 > 0 and _inj_dt2 > 0 else
+                        "weekly_daily_conflict" if (_inj_wt2 > 0 and _inj_dt2 < 0) or (_inj_wt2 < 0 and _inj_dt2 > 0) else
+                        "neutral_alignment")
+                except Exception: pass
+                try:  # N593: prior_day_close_relation_perf — prior close vs today
+                    _inj_c1d2 = float(_inj_d.get("change_pct", _inj_d.get("chg1d", 0)) or 0)
+                    live[tk]["prior_day_close_relation_perf"] = (
+                        "above_prior_close" if _inj_c1d2 >= 0.5 else
+                        "below_prior_close" if _inj_c1d2 <= -0.5 else "near_prior_close")
+                except Exception: pass
                 # ── R57: Final 7 dead score() fields — all previously unreachable ──
                 # dark_pool (N767 smart_money_flow_perf — was always False → only "no_inst_signal")
                 try:
@@ -33427,6 +33465,10 @@ def run():
                         _full_notional = notional
                     # Inject extra context into signals for learning neurons
                     _buy_signals_merged = dict(live.get(tk, {}))
+                    # N600: momentum_score_bucket_perf — score tier at entry (score available here)
+                    _buy_signals_merged["momentum_score_bucket_perf"] = (
+                        "elite_momentum" if final_sc >= 85 else "strong_momentum" if final_sc >= 70 else
+                        "moderate_momentum" if final_sc >= 50 else "weak_momentum")
                     # N101: tag whether this entry was triggered during a sector rotation flip
                     _buy_signals_merged["rotation_flip_entry"] = sec in _rotation_flip_sectors
                     # N103: VIX at entry (already saved as vix_at_entry via log_trade)
