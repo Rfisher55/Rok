@@ -29307,7 +29307,11 @@ def run():
                     _learned_bonus += _npen("bb_zone_perf", "upper", 58, -3)  # 38.5%WR n=13 — was bonus, now confirmed trap
                 _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
-                if _intra_mom_bkt_lb == "extended":
+                if _intra_mom_lb < 0:
+                    _learned_bonus += _nbns("intraday_mom_perf", "pullback", 45, 1)  # 50%WR n=4 — dip-buying; fires once tlog confirms (minsamp=3)
+                    if _mfi_lb >= 80:
+                        _learned_bonus += _nbns("signal_synergy", "pullback+mfi_dist", 55, 2)  # pullback + distribution buying = smart money accumulation
+                elif _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("intraday_mom_perf", "extended", 60, 2)  # 61.1% WR n=18 — FIRES ✓
                     if _candle_present:
                         _learned_bonus += _nbns("signal_synergy", "intraday_extended+candle", 70, 1)  # 75%WR n=8 — momentum + confirmation
@@ -29538,8 +29542,8 @@ def run():
                 if _rvol_t_lb < 0.8:
                     _learned_bonus += _npen("rvol_tier_perf", "weak", 55, -3)   # 32%WR n=22 — raised from -2
                 elif 0.8 <= _rvol_t_lb < 1.5:
-                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 60, 2)  # 64%WR n=25 — raised bonus
-                    _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 25, -5)  # 20.7% WR n=29
+                    _learned_bonus += _nbns("rvol_tier_perf", "normal", 75, 2)  # threshold raised 60→75 (7%WR n=14 recent; only bonus if tlog genuinely recovers)
+                    _learned_bonus += _npen("relative_volume_burst_perf", "normal_vol", 55, -5)  # threshold raised 25→55 (7%WR n=14 recent — near-unconditional)
                     if _candle_present:
                         _learned_bonus += _npen("signal_synergy", "candle+rvol_normal", 20, -2)  # 0%WR n=12 — candle on normal volume = false signal
                     if _reentry_lb == "winner":
