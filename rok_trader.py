@@ -29487,13 +29487,13 @@ def run():
                 _ha_bear_flag = bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"
                 _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
                 if _ha_bear_flag:
-                    _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16
+                    _learned_bonus += _npen("ha_trend_perf", "bear", 70, -6)    # 31.2% WR n=16 — raised thr 45→70, pts -3→-6 (unconditional block)
                     if _mfi_lb < 80:
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+ha_bear", 30, -2)  # 27.8%WR n=18 — double trap
                     if _intra_mom_bkt_lb == "early":
                         _learned_bonus += _npen("signal_synergy", "ha_bear+intra_early", 15, -3)  # 11.1%WR n=9 — near-block
                 elif not _ha_bull_flag:
-                    _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
+                    _learned_bonus += _npen("ha_trend_perf", "neutral", 55, -5) # 30%WR n=20 — raised thr 35→55, pts -3→-5 (HA not bullish = weak)
                 elif _ha_bull_flag and _intra_mom_bkt_lb == "extended":
                     _learned_bonus += _nbns("signal_synergy", "ha_bull+intra_extended", 68, 2)  # 73.3%WR n=15 — best entry
                     if not _obv_rising_lb:
