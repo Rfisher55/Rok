@@ -26493,6 +26493,19 @@ def run():
                         except Exception as _ge:
                             logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
                         continue
+            elif _fast_age_min >= 5 and _fast_age_min < 15 and pnl_pct >= 2.0:
+                # Flash winner: up 2%+ in first 5-15 min — clean scalp, take it and free slot
+                _fast_reason = f"flash winner ({pnl_pct:+.1f}% in {_fast_age_min:.0f}min)"
+                logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                try:
+                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
+                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                    made_trades = True
+                    del longs[sym]; del held[sym]; peaks.pop(sym, None)
+                except Exception as _fe:
+                    logger.warning(f"Flash winner sell failed {sym}: {_fe}")
+                continue
             elif _fast_age_min >= 5 and _fast_age_min < 10 and not _fast_half_out and pnl_pct <= -1.5:
                 # 5-10min rapid loser: down -1.5%+ in first 5-10 min = entry thesis immediately broken
                 _fast_reason = f"5min rapid loser ({pnl_pct:+.1f}%)"
