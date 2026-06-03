@@ -29359,6 +29359,8 @@ def run():
                     _learned_bonus += _npen("ha_consec_perf", "strong", 40, -2)  # 35.3% WR n=17 — threshold updated
                     if bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _npen("signal_synergy", "ha_consec_strong+gap_hold", 30, -2)  # 28.6%WR n=14 — extended+holding trap
+                    if not _candle_present:
+                        _learned_bonus += _npen("signal_synergy", "ha_consec_strong+candle_none", 20, -3)  # 16.7%WR n=6 — overextended HA, no candle confirmation
                 elif _ha_consec_lb >= 3:
                     _learned_bonus += _nbns("ha_consec_perf", "building", 58, 2) # 63.6%WR n=11 — raised +1→+2
                 elif _ha_consec_lb < 3:
@@ -29701,6 +29703,8 @@ def run():
                         _learned_bonus += _npen("lr_quality_perf", "weak", 43, -2)     # 42.9% WR n=28 — threshold raised 42→43
                         if not _candle_present:
                             _learned_bonus += _npen("signal_synergy", "lr_weak+candle_none", 30, -2)  # 28.6%WR n=14 — no structure + no candle pattern
+                        if _ha_consec_lb >= 5:
+                            _learned_bonus += _npen("signal_synergy", "ha_consec_strong+lr_weak", 30, -2)  # 28.6%WR n=7 — extended HA streak + weak LR structure
                 # Donchian zone: near top of range (breakout) vs weakness
                 _dc_lb = float(_tk_sig_sc.get("donchian_pct", 50) or 50)
                 _dc_zone_lb = ("breakout" if _dc_lb >= 75 else "weakness" if _dc_lb < 25 else "middle")
