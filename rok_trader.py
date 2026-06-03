@@ -33631,6 +33631,40 @@ def run():
             except Exception:
                 pass
 
+            # ── R61: alias *_state → *_perf so batch feed-forward loop picks up N76-N99 ──
+            # _track() stores results under xxx_state keys; batch loop reads xxx_perf keys.
+            # These mappings close 20 feedback loops (at_breakout, avwap, vcp, patterns, etc.)
+            try:
+                _r61 = live[tk]
+                _r61_map = [
+                    ("at_breakout_perf",    "at_breakout_state",    "not_at_level"),
+                    ("avwap_perf",          "avwap_state",          "below"),
+                    ("poc_control_perf",    "poc_control_state",    "below"),
+                    ("htf_perf",            "htf_state",            "not_aligned"),
+                    ("ema21_pb_perf",       "ema21_pb_state",       "extended"),
+                    ("mtf_triple_perf",     "mtf_triple_state",     "partial_or_none"),
+                    ("rs63_q_tier_perf",    "rs63_q_tier",          "lagging"),
+                    ("sq_potential_perf",   "sq_potential_state",   "not_coiled"),
+                    ("true_alpha_perf",     "true_alpha_tier",      "negative"),
+                    ("pivot_support_perf",  "pivot_state",          "between"),
+                    ("vcp_perf",            "vcp_state",            "no_vcp"),
+                    ("pocket_pivot_perf",   "pocket_pivot_state",   "no_pivot"),
+                    ("morning_star_perf",   "morning_star_state",   "none"),
+                    ("tws_perf",            "tws_state",            "none"),
+                    ("beng_perf",           "beng_state",           "none"),
+                    ("hammer_perf",         "hammer_state",         "none"),
+                    ("cup_handle_perf",     "ch_pivot_proximity",   "none"),
+                    ("dbn_perf",            "dbn_state",            "below_neck"),
+                    ("eg_tier_perf",        "eg_tier",              "negative"),
+                    ("st_gap_perf",         "st_gap_tier",          "no_st"),
+                ]
+                for _pk, _sk, _def in _r61_map:
+                    _sv = _r61.get(_sk, _def)
+                    if _sv:
+                        _r61[_pk] = _sv
+            except Exception:
+                pass
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
