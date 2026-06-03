@@ -27597,10 +27597,23 @@ def run():
                 except Exception:
                     pass
                 logger.info(f"SELL {sym} — {reason}")
-                alpaca_post("/v2/orders", {
-                    "symbol": sym, "qty": str(qty),
-                    "side": "sell", "type": "market", "time_in_force": "day",
-                })
+                # Wave 85: catastrophic loss (>20%) — try limit order first, fallback to market
+                # Avoids OTC/illiquid market order rejections for deeply stuck positions
+                _sell_order_payload = {"symbol": sym, "qty": str(qty), "side": "sell", "time_in_force": "day"}
+                if pnl_pct <= -20.0 and current > 0:
+                    _limit_px = round(current * 0.97, 2)  # 3% below current — aggressive limit to ensure fill
+                    _sell_order_payload["type"] = "limit"
+                    _sell_order_payload["limit_price"] = str(_limit_px)
+                    logger.warning(f"CATASTROPHIC SELL {sym} {pnl_pct:+.1f}% — using limit ${_limit_px:.2f} (market may fail for illiquid/OTC)")
+                else:
+                    _sell_order_payload["type"] = "market"
+                _sell_result = alpaca_post("/v2/orders", _sell_order_payload)
+                if not _sell_result and pnl_pct <= -20.0:
+                    # Limit failed — try market as last resort
+                    _sell_order_payload["type"] = "market"
+                    _sell_order_payload.pop("limit_price", None)
+                    logger.warning(f"LIMIT SELL failed for {sym} — retrying market order")
+                    _sell_result = alpaca_post("/v2/orders", _sell_order_payload)
                 log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
                 made_trades = True
                 del longs[sym]
