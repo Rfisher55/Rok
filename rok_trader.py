@@ -15361,6 +15361,31 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         except Exception:
             pass
 
+    # ── Universal batch-neuron SELL update ───────────────────────────────────────
+    # Every *_perf state stored in the BUY record feeds the corresponding tlog
+    # perf table. This covers all R62-R66 batch neurons that have no explicit
+    # N-block. For neurons that DO have an explicit N-block, total is doubled but
+    # win_rate/avg_pnl are unchanged — _nde() output is unaffected.
+    if action in ("SELL", "SELL_HALF", "COVER") and pnl is not None and _cached_buy_rec:
+        try:
+            for _ubk, _ubv in _cached_buy_rec.items():
+                if not _ubk.endswith("_perf"):
+                    continue
+                if not isinstance(_ubv, str) or not _ubv:
+                    continue
+                _ub_tbl = tlog.setdefault(_ubk, {})
+                _ub_e = _ub_tbl.setdefault(_ubv, {"wins": 0, "losses": 0, "total": 0, "total_pnl": 0.0})
+                _ub_e["total"] += 1
+                _ub_e["total_pnl"] = round(_ub_e["total_pnl"] + pnl, 2)
+                if pnl > 0:
+                    _ub_e["wins"] += 1
+                else:
+                    _ub_e["losses"] += 1
+                _ub_e["win_rate"] = round(_ub_e["wins"] / _ub_e["total"] * 100, 1)
+                _ub_e["avg_pnl"]  = round(_ub_e["total_pnl"] / _ub_e["total"], 2)
+        except Exception:
+            pass
+
     # Persist every trade immediately — prevents data loss if final save crashes
     try:
         _save(TRADES_FILE, tlog)
