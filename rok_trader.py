@@ -29469,6 +29469,8 @@ def run():
                 _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
                 if _ha_bear_flag:
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16
+                    if _mfi_lb < 80:
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+ha_bear", 30, -2)  # 27.8%WR n=18 — double trap
                 elif not _ha_bull_flag:
                     _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
@@ -29628,6 +29630,8 @@ def run():
                 _cg_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_lb >= 3:
                     _learned_bonus += _nbns("consec_green_perf", "3d+", 60, 1)
+                    if _accum_bkt_lb == "light":
+                        _learned_bonus += _nbns("signal_synergy", "accum_light+green_3d", 62, 1)  # 65.4%WR n=26 — best combo
                 # Vol dry-up (Wyckoff compression): dry_up state = tight range before breakout
                 if bool(_tk_sig_sc.get("vol_dry_up", False)):
                     _learned_bonus += _nbns("vol_dry_perf", "dry_up", 62, 2)  # clean compression
