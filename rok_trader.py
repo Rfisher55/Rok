@@ -19115,8 +19115,9 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 # 60min hard exit for losers/flat: data shows >120min crypto holds = 11%WR avg -0.38%
                 # Only let winners (>0.3%) ride toward 90min
                 reason = f"crypto 60min flat/loss exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 90 and pnl_pct <= 0.7:
-                # 90min hard exit for small winners/flat: take 0.3-0.7% and free slot
+            elif _crypto_age_min >= 90 and pnl_pct <= 0.9:
+                # 90min hard exit for small winners/flat: take 0.3-0.9% and free slot
+                # Wave 92: raised threshold 0.7→0.9% to capture more reversals before they go negative
                 reason = f"crypto 90min exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= _learned_cycle_min and -1.5 <= pnl_pct < 1.0:
                 # Brain-adaptive cycle exit — only for flat/slightly-negative positions.
@@ -19248,11 +19249,12 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     _now_et_min = now_utc.minute
     _cur_et_bkt = f"{_now_et_hr:02d}:{'30' if _now_et_min >= 30 else '00'}"
     # Adjust crypto cycle exit threshold based on learned best hold duration
-    _learned_cycle_min = 120  # default 2h
+    # Wave 92: lowered default 120→90min (2h cycle exit = 22%WR avg -0.38% — too long)
+    _learned_cycle_min = 90  # default 90min (was 120; live data shows 2h crypto holds fail)
     if _best_hold_bkt == "scalp_<4h":
-        _learned_cycle_min = 90   # brain learned: shorter holds win → tighten to 90min
+        _learned_cycle_min = 75   # brain confirmed scalp → tighten further to 75min
     elif _best_hold_bkt in ("intraday_4-24h", "swing_1-3d"):
-        _learned_cycle_min = 150  # brain learned: longer holds win → extend to 2.5h
+        _learned_cycle_min = 120  # brain learned: longer holds work → keep 2h cap
     logger.info(f"Crypto cycle threshold: {_learned_cycle_min}min (hold_pref={_best_hold_bkt}) | ET={_cur_et_bkt} best={_best_et_hour} worst={_worst_et_hour}")
 
     # Correlation guard: count how many ALT positions already held (non BTC/ETH)
