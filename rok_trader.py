@@ -215,14 +215,19 @@ SECTOR_MAP = {
     "XLC":"etf","XLY":"etf","XLI":"etf",
     # Semiconductors / Photonics (frequently traded)
     "HIMX":"tech","MRVL":"tech","STM":"tech","LITE":"tech","COHR":"tech",
-    "CAMT":"tech","CRNT":"tech","KEEL":"tech",
+    "CAMT":"tech","CRNT":"tech","KEEL":"tech","AMKR":"tech","NVTS":"tech",
     # Energy / Materials (frequently traded)
     "FLNC":"energy","UEC":"energy","LAC":"materials","MX":"materials",
     # Biotech / Healthcare (frequently traded)
-    "LEGN":"biotech","RLAY":"biotech","CMPS":"biotech",
+    "LEGN":"biotech","RLAY":"biotech","CMPS":"biotech","PRAX":"biotech","ABVX":"biotech",
+    "ACHC":"health","RMD":"health",
     # Financials / Other (frequently traded)
-    "CIB":"finance","HPE":"tech","CLS":"industrial","MGM":"consumer",
+    "CIB":"finance","HPE":"tech","CLS":"industrial","MGM":"consumer","CBOE":"finance",
     "TMHC":"consumer_tech",
+    # Major tech missing (Wave 73 fix)
+    "INTC":"tech","QCOM":"tech","KLAC":"tech","LRCX":"tech","NXPI":"tech",
+    "MPWR":"tech","ENPH":"tech","TER":"tech","WOLF":"tech","ON":"tech",
+    "JBGS":"real_estate",
 }
 
 # ── Base universe ─────────────────────────────────────────────────────────────
@@ -35699,6 +35704,9 @@ def run():
             _grade_now = momentum_grade(live.get(tk, {}), final_sc)
             _is_other_sector = (SECTOR_MAP.get(tk, "other") == "other")
             _grade_thresh = _eff_min_score  # all grades use same threshold now
+            # sector=other hard gate: 17%WR live (1W/5L) — require +40 above min to trade unknown sectors
+            if _is_other_sector:
+                _grade_thresh += 40
             # Score trend guard: if history shows falling-score entries fail, require +4 for them
             if _LEARNED_FALLING_SCORE_PENALTY:
                 _sh_now = [h.get("s") for h in peaks.get(tk, {}).get("score_history", []) if isinstance(h.get("s"), (int, float))]
