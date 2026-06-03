@@ -114,7 +114,7 @@ CRYPTO_UNIVERSE  = {
 CRYPTO_STOP_PCT  = 0.05     # 5% stop — tight for fast cycling (crypto is 24/7)
 CRYPTO_TARGET_PCT= 0.08     # 8% target — faster turnover = more crypto trades/day
 # Raised from 5 → 15 after session data showed 22% WR on low-score crypto entries
-CRYPTO_MIN_SCORE = 50       # raised 40→50: alts at 21-34 had 14.3%WR — require stronger conviction
+CRYPTO_MIN_SCORE = 65       # raised 50→65: alts 12%WR n=7 in live data — need much stronger conviction
 CRYPTO_MIN_COMBINED = 25    # require tech+AI combined >= 25 (raised from 20)
 
 # ── Runtime caches (live only — not persisted) ────────────────────────────────
@@ -19320,6 +19320,7 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         # Correlation penalty: reduce alt scores when portfolio already saturated with alts
         if not is_btc and not is_eth:
             sc = max(0, sc - _corr_alt_penalty)
+            sc = max(0, sc - 10)  # alt baseline penalty: alts 12%WR in live data vs ETH 100%WR
         elif is_btc or is_eth:
             sc = min(150, sc + (_corr_alt_penalty // 2))  # boost majors when alts overcrowded
 
@@ -29669,9 +29670,18 @@ def run():
                     "vcp","cup_handle","ttm_squeeze_fired","higher_lows",
                     "rvol_surge","at_breakout"])  # removed orb_breakout, supertrend_bull, obv_rising
                 if _prem_ct_lb == 0:
-                    _learned_bonus += _npen("premium_tier_perf", "none", 35, -4)  # 25%WR n=8 — raised thr 27→35 (drift fix)
-                elif _prem_ct_lb <= 2:
-                    _learned_bonus += _nbns("premium_tier_perf", "sweet_spot", 64, 2)  # 66-71%WR n=7-10 — 1-2 signals
+                    _learned_bonus += _npen("premium_tier_perf", "none", 35, -4)  # 12%WR n=8 (updated) — no premium signals
+                elif 1 <= _prem_ct_lb <= 2:
+                    _learned_bonus += _nbns("premium_tier_perf", "sweet_spot", 62, 3)  # 85%WR n=13 — raised pts 2→3, thr 64→62
+                elif _prem_ct_lb >= 5:
+                    _learned_bonus += _npen("premium_tier_perf", "overdone", 30, -2)   # 25%WR n=4 — too many signals = chasing
+                # LR channel position: above=75%WR n=8, below/at=47%WR n=55 — strong 28% spread
+                if bool(_tk_sig_sc.get("lr_above_channel", False)):
+                    _learned_bonus += _nbns("lr_channel_perf", "above", 62, 2)  # 75%WR n=8 — trending above regression channel
+                # HTF consecutive: htf=True = 71%WR n=7 vs 48%WR n=56 — higher timeframe confirmation
+                _htf_c_lb = int(_tk_sig_sc.get("htf_consec", 0) or 0)
+                if _htf_c_lb >= 3:
+                    _learned_bonus += _nbns("htf_consec_perf", "confirmed", 60, 2)  # 71%WR n=7 — HTF trend aligned 3+ days
                 # Price tier: large=60% WR n=35 fires at 60% ✓; mid=43.8% n=16 → penalty; micro already penalized
                 _pr_tier_lb = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 if _pr_tier_lb >= 100:
