@@ -29337,7 +29337,7 @@ def run():
                 elif _intra_mom_bkt_lb == "runner":
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
-                    _learned_bonus += _npen("intraday_mom_perf", "early", 55, -4)  # 25%WR n=12 recent — raised from -1
+                    _learned_bonus += _npen("intraday_mom_perf", "early", 65, -4)  # 18%WR n=11 recent — raised threshold 55→65
                     if not _obv_rising_lb:  # OBV falling + early momentum = double weakness
                         _learned_bonus += _npen("signal_synergy", "early_mom+obv_falling", 22, -2)  # 18%WR n=11
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
@@ -29466,6 +29466,10 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+mtf_full", 20, -2)  # 0%WR n=6 — full MTF alignment but MFI neutral = late-cycle trap
                     if _candle_present:
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+candle_present", 20, -2)  # 10%WR n=10 — candle on neutral MFI = false confirmation
+                    if _accum_bkt_lb == "none":
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+accum_none", 20, -3)  # 11%WR n=9 — zero accumulation + neutral MFI = deep trap
+                    if str(_tk_sig_sc.get("sector","")).lower() not in ("tech","consumer_tech","technology"):
+                        _learned_bonus += _npen("signal_synergy", "mfi_neutral+non_tech", 20, -2)  # 17%WR n=12 — neutral MFI in non-tech sector
                 # 40-50 range: 60%WR n=5 — oversold recovery zone, exempt from penalty
                 # ATR pct: 4%+ = 51.7% WR n=29; 2-4% = 25% WR n=8 (bad) — compute as % of price (atr_pct injected after LB)
                 _atr_raw_lb = float(_tk_sig_sc.get("atr", 0) or 0)
