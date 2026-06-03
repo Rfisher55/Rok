@@ -28943,7 +28943,7 @@ def run():
                 if bool(_tk_sig_sc.get("vcp", False)):
                     _learned_bonus += _nbns("vcp_perf", "vcp", 68, 3)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    _learned_bonus += _npen("gap_hold_perf", "holding", 34, -3)  # 33.3% WR n=21 — dead bonus removed
+                    _learned_bonus += _npen("gap_hold_perf", "holding", 55, -3)  # 33.3% WR n=21 — dead bonus removed
                 if bool(_tk_sig_sc.get("nr7_signal", False)):
                     _learned_bonus += _nbns("nr7_perf", "compressed", 65, 2)
                 if bool(_tk_sig_sc.get("at_demand_zone", False)):
@@ -29074,7 +29074,7 @@ def run():
                     # signal_performance["psar_bull"] = 45.7% WR n=35 — penalize
                     _learned_bonus += _npen("signal_performance", "psar_bull", 47, -1)
                 else:
-                    _learned_bonus += _npen("psar_state_perf", "bearish", 32, -3)  # 30%WR n=10 — PSAR not bullish
+                    _learned_bonus += _npen("psar_state_perf", "bearish", 55, -3)  # 30%WR n=10 — PSAR not bullish
                 if bool(_tk_sig_sc.get("kc_breakout", False)):
                     # signal_performance["kc_breakout"] = 46.9% WR n=32 — below 50% coin flip
                     _learned_bonus += _npen("signal_performance", "kc_breakout", 50, -1)  # fires at <=50%
@@ -29088,7 +29088,7 @@ def run():
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
                     # gap_and_hold: 31.8% WR in signal_perf — consistent loser; all combos < 25% WR
                     _learned_bonus += _npen("gap_hold_perf", "holding", 62, -4)   # 37% WR threshold tightened
-                    _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 31.8% WR n=22
+                    _learned_bonus += _npen("signal_performance", "gap_and_hold", 58, -2)  # 31.8% WR n=22
                     # gap_and_hold synergy penalties: all combos catastrophic (8-21% WR)
                     # Use sorted key order to match signal_synergy dict (alphabetical)
                     for _gap_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ichimoku_above",
@@ -29171,7 +29171,7 @@ def run():
                 if _vwap_above_flag:
                     # VWAP distance buckets: 1-3% above=35.7%WR n=14; 3-6% above=66.7%WR n=18
                     if 1.0 <= _vwp_lb < 3.0:
-                        _learned_bonus += _npen("vwap_pos_perf", "barely_above", 38, -2)  # 35.7%WR n=14 — barely reclaimed, may fall back
+                        _learned_bonus += _npen("vwap_pos_perf", "barely_above", 55, -2)  # 35.7%WR n=14 — barely reclaimed, may fall back
                     elif 3.0 <= _vwp_lb < 6.0:
                         _learned_bonus += _nbns("vwap_pos_perf", "healthy_above", 64, 1)  # 66.7%WR n=18 — healthy momentum gap above VWAP
                 elif abs(_vwp_lb) <= 0.5:
@@ -29202,7 +29202,7 @@ def run():
                 # Consecutive green days: 0d=12%WR n=8, 1d=42%WR n=12, 2d=20%WR n=5, 3d+=62%WR
                 _cg_streak_lb = int(_tk_sig_sc.get("consec_green", 0) or 0)
                 if _cg_streak_lb == 0:
-                    _learned_bonus += _npen("consec_green_perf", "0d", 45, -5)  # 12%WR n=8 — strong penalty
+                    _learned_bonus += _npen("consec_green_perf", "0d", 62, -5)  # 12%WR n=8 — strong penalty
                 elif _cg_streak_lb == 1:
                     _learned_bonus += _npen("consec_green_perf", "1d", 44, -2)  # 42%WR n=12 — mild penalty
                 elif _cg_streak_lb == 2:
