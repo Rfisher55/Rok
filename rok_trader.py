@@ -29365,9 +29365,11 @@ def run():
                     if 0.8 <= _rvol_ext_chk < 1.5:
                         _learned_bonus += _nbns("signal_synergy", "extended+rvol_normal", 62, 2)  # 67%WR n=12 — momentum without chasing
                     if _accum_bkt_lb == "light":
-                        _learned_bonus += _nbns("signal_synergy", "accum_light+intra_extended", 68, 2)  # 73%WR n=11 — light accumulation + strong momentum
+                        _learned_bonus += _nbns("signal_synergy", "accum_light+intra_extended", 63, 2)  # 73%WR n=11 — lowered thr 68→63 (Wave 82: captures 67%WR live)
                     if str(_tk_sig_sc.get("sector","")).lower() == "tech":
                         _learned_bonus += _nbns("signal_synergy", "tech_sector+intra_extended", 70, 2)  # 80%WR n=10 — lowered thr 75→70 (Wave 79: fires more reliably)
+                        if _accum_bkt_lb == "light":
+                            _learned_bonus += _nbns("signal_synergy", "tech+accum_light+extended", 65, 2)  # tech+light+extended = top tier triple (Wave 82)
                         _ha_bull_inline_ext = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
                         if _ha_bull_inline_ext:
                             _learned_bonus += _nbns("signal_synergy", "tech+ha_bull+extended", 83, 2)  # 88%WR n=8 — triple winner profile
@@ -29696,6 +29698,8 @@ def run():
                 _rsr3_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if _rsr3_lb >= 90:
                     _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 2)   # 65%WR n=20 — raised from +1
+                    if _accum_bkt_lb == "light":
+                        _learned_bonus += _nbns("signal_synergy", "elite_rs+accum_light", 58, 2)  # 62%WR n=16 confirmed (Wave 82)
                 elif 60 <= _rsr3_lb < 80:
                     _learned_bonus += _npen("rs_rating_perf", "mid_rs", 30, -7)  # 23%WR n=22 live — raised thr 35→30, pts -5→-7 (Wave 77)
                 elif 80 <= _rsr3_lb < 90:
