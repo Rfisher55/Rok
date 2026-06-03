@@ -26633,8 +26633,8 @@ def run():
                     except Exception as _fe:
                         logger.warning(f"40min moderate loss sell failed {sym}: {_fe}")
                     continue
-            elif _fast_age_min >= 20 and not _fast_half_out and -0.5 <= pnl_pct <= 0.25:
-                # 20min flat/drifting exit (reduced from 30min): faster capital recycling for 500 trades/day
+            elif _fast_age_min >= 20 and not _fast_half_out and -0.5 <= pnl_pct <= 0.5:
+                # 20min flat/drifting exit: -0.5% to +0.5% after 20min = not breaking out, free the slot
                 _fast_reason = f"20min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
@@ -26871,6 +26871,18 @@ def run():
                     _scalp_exit_reason = f"scalp profit ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
                 elif pnl_pct <= _time_adj_sthr and age_minutes >= 20:
                     _scalp_exit_reason = f"scalp stop ({pnl_pct:+.1f}% in {age_minutes:.0f}min)"
+                else:
+                    # Score-decay exit: entry score was strong but current score collapsed
+                    # Means the setup that triggered the buy is now completely gone
+                    try:
+                        _sd_entry_sc = float(peaks.get(sym, {}).get("entry_score", 0) or 0) if isinstance(peaks.get(sym), dict) else 0
+                        if _sd_entry_sc >= 65 and age_minutes >= 15:
+                            _sd_live = live.get(sym, {}) or {}
+                            _sd_now_sc = score(sym, _sd_live) if _sd_live else 0
+                            if _sd_now_sc < 42 and pnl_pct <= 0.3:
+                                _scalp_exit_reason = f"score collapse exit (entry={_sd_entry_sc:.0f}→now={_sd_now_sc}, {pnl_pct:+.1f}%)"
+                    except Exception:
+                        pass
                 elif age_minutes >= 60 and not half_out and pnl_pct <= 0.3:
                     # Smart 60min exit: if position is just slightly negative (-0.5% to 0%)
                     # and current live score is still strong (≥55), extend to 90min.
