@@ -29673,9 +29673,13 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "gap_hold+stoch_ob", 32, -2)  # 29.4%WR n=17 — gap+overbought = exhausted
                     if _vwap_barely_above_flag:
                         _learned_bonus += _npen("signal_synergy", "vwap_barely+stoch_ob", 25, -2)  # 22.2%WR n=9 — weak VWAP reclaim + overbought
+                    if _obv_rising_lb:
+                        _learned_bonus += _npen("signal_synergy", "stoch_ob+obv_rising", 35, -2)  # 33.3%WR n=9 — chasing extended move with overbought momentum
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
+                    if _candle_present:
+                        _learned_bonus += _nbns("signal_synergy", "candle_present+stoch_neutral", 80, 2)  # 83.3%WR n=6 — bullish candle in clean zone
                 elif _sk_zone_lb == "oversold":
                     _learned_bonus += _npen("stoch_zone_perf", "oversold", 35, -1)    # reversal risk in trend sys
                 # LR quality (R²): only score when explicitly computed (absent → neutral, not "weak")
