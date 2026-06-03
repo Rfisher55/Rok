@@ -19056,6 +19056,11 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
             elif _crypto_age_min >= 90 and pnl_pct <= -1.0:
                 # Time-progressive stop: 90+ min at -1% is a confirmed loser — cut before it worsens
                 reason = f"crypto time-stop ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif (_crypto_age_min >= 30 and _crypto_age_min < 60
+                  and -0.3 <= pnl_pct <= 0.2
+                  and _sig_mslp < 0 and _sig_rsi < 48 and _sig_roc5 < 0):
+                # 30min flat-stuck: no gain after 30min AND momentum turning bearish → free capital
+                reason = f"crypto 30min flat-stuck ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif (_crypto_age_min >= 30 and _crypto_age_min < 75
                   and pnl_pct <= -0.3
                   and _sig_rsi < 45 and _sig_mslp < 0):
