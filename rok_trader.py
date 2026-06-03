@@ -26454,7 +26454,7 @@ def run():
                 _fast_sc_90 = score(sym, _fast_d_90) if _fast_d_90 else 0
                 _fast_rvol_90 = float(_fast_d_90.get("rvol", 1.0) or 1.0)
                 # Super-momentum extension: pnl>1.5% AND score>=70 AND rvol>2.0 = still running strong
-                if pnl_pct >= 1.5 and _fast_sc_90 >= 70 and _fast_rvol_90 >= 2.0 and not _close_guard:
+                if pnl_pct >= 2.0 and _fast_sc_90 >= 72 and _fast_rvol_90 >= 2.5 and not _close_guard:
                     logger.info(f"HOLD {sym} 45min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 60min)")
                 else:
                     _fast_reason = f"45min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
@@ -26669,8 +26669,8 @@ def run():
                     except Exception as _fe:
                         logger.warning(f"75min stalling sell failed {sym}: {_fe}")
                     continue
-            elif _fast_age_min >= 60 and not _fast_half_out and pnl_pct <= 0.3:
-                # 60min exit for losers/flat — winners (>0.3%) ride to 90min
+            elif _fast_age_min >= 60 and not _fast_half_out and pnl_pct <= 0.7:
+                # 60min exit for losers/flat/small winners — big winners (>0.7%) ride to 90min
                 # Smart extension: if near-flat (-0.5% to 0%) and live score still strong, ride to 90min
                 _fast_d_now = live.get(sym, {}) or {}
                 _fast_sc_now = score(sym, _fast_d_now) if (_fast_d_now and -0.5 <= pnl_pct) else 0
