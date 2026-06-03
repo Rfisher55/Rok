@@ -26782,9 +26782,12 @@ def run():
                     _scalp_pthr = max(0.8, _scalp_pthr - 0.2)
             except Exception:
                 pass
-            # Hard circuit breaker: never let a single equity position lose more than -2.0%
-            # Prevents gap-down or fast-move losses from becoming -3%+ disasters (CMPS/SAIC pattern)
-            _hard_stop_pct = -2.0
+            # Hard circuit breaker: adaptive by entry score
+            # High-conviction entries (score>=75) get more room; borderline (60-64) cut tighter
+            _entry_sc_stop = float(peaks.get(sym, {}).get("entry_score", 0) or 0) if isinstance(peaks.get(sym), dict) else 0
+            _hard_stop_pct = (-2.5 if _entry_sc_stop >= 75 else
+                              -1.5  if 60 <= _entry_sc_stop < 65 else
+                              -2.0)
             if pnl_pct <= _hard_stop_pct and age_minutes >= 5:
                 _scalp_exit_reason = f"hard stop ({pnl_pct:+.1f}% circuit breaker)"
 
