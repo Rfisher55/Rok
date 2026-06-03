@@ -29072,6 +29072,8 @@ def run():
                     # psar_bull_entry_perf["psar_bullish_entry"] = 33.3% WR n=3 (small sample)
                     # signal_performance["psar_bull"] = 45.7% WR n=35 — penalize
                     _learned_bonus += _npen("signal_performance", "psar_bull", 47, -1)
+                else:
+                    _learned_bonus += _npen("psar_state_perf", "bearish", 32, -3)  # 30%WR n=10 — PSAR not bullish
                 if bool(_tk_sig_sc.get("kc_breakout", False)):
                     # signal_performance["kc_breakout"] = 46.9% WR n=32 — below 50% coin flip
                     _learned_bonus += _npen("signal_performance", "kc_breakout", 50, -1)  # fires at <=50%
@@ -29088,10 +29090,11 @@ def run():
                     _learned_bonus += _npen("signal_performance", "gap_and_hold", 40, -2)  # 31.8% WR n=22
                     # gap_and_hold synergy penalties: all combos catastrophic (8-21% WR)
                     # Use sorted key order to match signal_synergy dict (alphabetical)
-                    for _gap_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ichimoku_above","ema_stacked_bull"):
+                    for _gap_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ichimoku_above",
+                                             "ema_stacked_bull","ha_bull","supertrend_bull"):
                         if bool(_tk_sig_sc.get(_gap_synergy_sig, False)):
                             _gap_pair = "+".join(sorted(["gap_and_hold", _gap_synergy_sig]))
-                            _learned_bonus += _npen("signal_synergy", _gap_pair, 22, -3)  # 8-21% WR
+                            _learned_bonus += _npen("signal_synergy", _gap_pair, 35, -3)  # 31-34%WR — gap trap
                             break  # one extra penalty per position
                 # above_poc: 45.7% WR n=35 — direct penalty + synergy combos all sub-50%
                 _above_poc_lb = bool(_tk_sig_sc.get("above_poc", False))
