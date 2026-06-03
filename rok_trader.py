@@ -29471,8 +29471,12 @@ def run():
                     _learned_bonus += _npen("ha_trend_perf", "bear", 45, -3)    # 31.2% WR n=16
                     if _mfi_lb < 80:
                         _learned_bonus += _npen("signal_synergy", "mfi_neutral+ha_bear", 30, -2)  # 27.8%WR n=18 — double trap
+                    if _intra_mom_bkt_lb == "early":
+                        _learned_bonus += _npen("signal_synergy", "ha_bear+intra_early", 15, -3)  # 11.1%WR n=9 — near-block
                 elif not _ha_bull_flag:
                     _learned_bonus += _npen("ha_trend_perf", "neutral", 35, -3) # 30%WR n=20 — HA not bullish = weak
+                elif _ha_bull_flag and _intra_mom_bkt_lb == "extended":
+                    _learned_bonus += _nbns("signal_synergy", "ha_bull+intra_extended", 68, 2)  # 73.3%WR n=15 — best entry
                 # RVOL tier: normal(0.8-1.5)=64%WR n=25; weak(<0.8)=32%WR n=22; strong(>1.5)=33%WR n=6
                 _rvol_t_lb = float(_tk_sig_sc.get("rvol", _tk_sig_sc.get("vol_ratio", 1.0)) or 1.0)
                 if _rvol_t_lb < 0.8:
