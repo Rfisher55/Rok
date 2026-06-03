@@ -29422,7 +29422,7 @@ def run():
                 elif 60 <= _mfi_lb < 70:
                     _learned_bonus += _nbns("mfi_zone_perf", "moderate_dist", 58, 1) # 60%WR n=5 — small bonus
                 elif 50 <= _mfi_lb < 60:
-                    _learned_bonus += _npen("mfi_zone_perf", "neutral", 32, -3)      # 30%WR n=10 — raised from -2
+                    _learned_bonus += _npen("mfi_zone_perf", "neutral", 55, -3)      # 6%WR n=18 recent — threshold raised 32→55 (near-unconditional)
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "bb_upper+mfi_neutral", 27, -2)  # 25%WR n=8 — upper band + no dist pressure
                     elif 0.4 < _bb_pos_lb <= 0.85:
@@ -29731,8 +29731,8 @@ def run():
                     if _bb_pos_lb > 0.85:
                         _learned_bonus += _npen("signal_synergy", "bb_upper+stoch_ob", 27, -2)  # 25%WR n=8 — extended BB + overbought = double exhaustion
                 elif _sk_zone_lb == "neutral":
-                    _learned_bonus += _nbns("stoch_zone_perf", "neutral", 60, 1)      # 62.5% WR n=32 — clean trend zone
-                    _learned_bonus += _npen("stoch_zone_perf", "neutral", 41, -2)     # 38.9%WR n=18 recent — fires if degraded
+                    _learned_bonus += _nbns("stoch_zone_perf", "neutral", 72, 1)      # threshold raised 60→72 (0%WR recent; only bonus if tlog genuinely recovers)
+                    _learned_bonus += _npen("stoch_zone_perf", "neutral", 65, -2)     # threshold raised 41→65 (0%WR n=8 current data — near-unconditional penalty)
                     if _candle_present:
                         _learned_bonus += _nbns("signal_synergy", "candle_present+stoch_neutral", 80, 2)  # 83.3%WR n=6 — bullish candle in clean zone
                     if bool(_tk_sig_sc.get("force_index_rising", False)):
