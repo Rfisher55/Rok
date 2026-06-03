@@ -24606,10 +24606,21 @@ def score(tk, d, sentiment=0, regime_adj=0):
                     _veto_adj -= 10  # two anti-patterns together = high-probability loser
             except Exception:
                 pass
+
+            # ── Batch feed-forward: close feedback for all remaining injected neurons ──
+            # Any live[tk]["xxx_perf"] = state in _ALL_NEURON_PERFS feeds back at 0.5x weight.
+            # This catches 81+ neurons that have states injected but no explicit _nde() call.
+            # 0.5x weight avoids 2x amplification on neurons already handled explicitly above.
+            try:
+                for _bk, _bv in d.items():
+                    if (_bk.endswith("_perf") and isinstance(_bv, str) and _bv
+                            and _bk in _ALL_NEURON_PERFS):
+                        _nsl_adj += _nde(_bk, _bv) * 0.5
+            except Exception:
+                pass
+
             # Cap the full neural layer at ±40 (raised from 30 to allow elite differentiation)
             s += max(-35, min(40, round(_nsl_adj * 1.15)))  # 15% amplifier as brain matures
-            _nsl_adj = 0.0  # reset so old cap below is a no-op
-            s += max(-12, min(12, round(_nsl_adj)))
             # ── VETO applied AFTER neural cap: ensures high-confidence signals
             # can't be swamped by uniform positive bias from 0-spread neurons ──
             s += max(-25, min(15, round(_veto_adj)))
