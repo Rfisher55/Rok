@@ -34179,6 +34179,215 @@ def run():
             except Exception:
                 pass
 
+            # ── R64: 44 more batch-loop neurons with computable proxies ──────────────
+            try:
+                _r64 = live[tk]
+                # ── ATR expansion ──
+                try:
+                    _r64_atr = float(_r64.get("atr_pct", 2.0) or 2.0)
+                    _r64_ae  = ("atr_expanding" if _r64_atr > 3.5 else
+                                "atr_normal"    if _r64_atr >= 1.5 else "atr_contracting")
+                    _r64["atr_expansion_perf"]       = _r64_ae
+                    _r64["atr_expansion_entry_perf"] = _r64_ae
+                except Exception: pass
+                # ── AVWAP distance ──
+                try:
+                    _r64_avs = str(_r64.get("avwap_state", "below") or "below")
+                    _r64["avwap_dist_entry_perf"] = ("above_avwap" if "above" in _r64_avs else "below_avwap")
+                except Exception: pass
+                # ── Breakout quality ──
+                try:
+                    _r64_bo  = bool(_r64.get("at_breakout", False))
+                    _r64_b52 = bool(_r64.get("breakout_52w", False))
+                    _r64_rv  = float(_r64.get("rvol", _r64.get("vol_ratio", 1.0)) or 1.0)
+                    _r64_bqs = ("elite_breakout"  if _r64_b52 and _r64_rv > 2 else
+                                "good_breakout"   if _r64_bo and _r64_rv > 1.5 else
+                                "weak_breakout"   if _r64_bo else "no_breakout")
+                    _r64["base_breakout_perf"]                = _r64_bqs
+                    _r64["breakout_quality_score_perf"]       = _r64_bqs
+                    _r64["breakout_volume_confirmation_perf"] = _r64_bqs
+                    _r64["breakout_volume_quality_perf"]      = _r64_bqs
+                    _r64["breakout_false_signal_perf"]        = ("false_signal" if _r64_bo and _r64_rv < 0.8
+                                                                 else "confirmed" if _r64_bo else "not_applicable")
+                    _r64["breakout_retest_perf"] = ("retest_zone" if _r64_bo and 0.9 <= _r64_rv <= 1.2
+                                                    else "clean_breakout" if _r64_bo else "no_retest")
+                except Exception: pass
+                # ── Breadth thrust ──
+                try:
+                    _r64_adl = float(_r64.get("advance_decline_ratio", 1.0) or 1.0)
+                    _r64["breadth_thrust_entry_perf"] = ("thrust_day" if _r64_adl > 2.5 else
+                                                          "strong_day" if _r64_adl > 1.5 else "normal_day")
+                except Exception: pass
+                # ── Options / dark pool ──
+                try:
+                    _r64_uc = bool(_r64.get("unusual_calls", False) or _r64.get("unusual_options", False))
+                    _r64["call_volume_surge_perf"] = ("call_surge" if _r64_uc else "no_call_surge")
+                except Exception: pass
+                try:
+                    _r64_dp = bool(_r64.get("dark_pool", False))
+                    _r64["dark_pool_entry_perf"] = ("dark_pool_active" if _r64_dp else "no_dark_pool")
+                except Exception: pass
+                # ── Catalyst freshness ──
+                try:
+                    _r64_nh = float(_r64.get("news_age_hours", 48) or 48)
+                    _r64["catalyst_freshness_entry_perf"] = (
+                        "breaking"  if _r64_nh <= 2 else "fresh"  if _r64_nh <= 12 else
+                        "day_old"   if _r64_nh <= 36 else "stale")
+                except Exception: pass
+                try:
+                    _r64_cat = str(_r64.get("catalyst", "") or "")
+                    _r64_sec = float(_r64.get("sector_rs", 50) or 50)
+                    _r64["catalyst_sector_alignment_perf"] = (
+                        "catalyst_aligned"   if _r64_cat and _r64_sec > 60 else
+                        "catalyst_only"      if _r64_cat else
+                        "sector_only"        if _r64_sec > 65 else "no_alignment")
+                except Exception: pass
+                # ── Correlation / Beta ──
+                try:
+                    _r64_bet = float(_r64.get("beta_at_entry", _r64.get("beta", 1.0)) or 1.0)
+                    _r64_reg = str(regime.get("regime", "neutral") or "neutral")
+                    _r64["beta_regime_fit_perf"] = (
+                        "high_beta_bull" if _r64_bet > 1.4 and "bull" in _r64_reg else
+                        "low_beta_bear"  if _r64_bet < 0.7 and "bear" in _r64_reg else
+                        "high_beta_bear" if _r64_bet > 1.4 and "bear" in _r64_reg else "neutral_fit")
+                    _r64["correlation_spy_entry_perf"] = (
+                        "high_corr"  if _r64_bet > 1.3 else
+                        "low_corr"   if _r64_bet < 0.5 else "normal_corr")
+                except Exception: pass
+                # ── DMI / Donchian / aroon proxy ──
+                try:
+                    _r64_adx = float(_r64.get("adx", 20) or 20)
+                    _r64_mcs = str(_r64.get("macd_cross_state", "") or "")
+                    _r64["dmi_cross_entry_perf"] = (
+                        "dmi_bullish" if _r64_adx > 25 and "bull" in _r64_mcs else
+                        "dmi_bearish" if _r64_adx > 25 and "bear" in _r64_mcs else "dmi_weak")
+                except Exception: pass
+                try:
+                    _r64_don = bool(_r64.get("donchian_up", False))
+                    _r64["donchian_breakout_entry_perf"] = ("donchian_up" if _r64_don else "no_don_breakout")
+                except Exception: pass
+                # ── Earnings detailed ──
+                try:
+                    _r64_eb  = bool(_r64.get("earnings_beat", False))
+                    _r64_esp = float(_r64.get("earnings_surprise_pct", _r64.get("earnings_surprise", 0)) or 0)
+                    _r64_ebq = ("strong_beat" if _r64_eb and _r64_esp > 10 else
+                                "beat"        if _r64_eb else "miss_or_met")
+                    _r64["earnings_beat_quality_perf"]  = _r64_ebq
+                    _r64["earnings_quality_perf"]       = _r64_ebq
+                    _r64["earnings_surprise_entry_perf"] = _r64_ebq
+                    _r64["earnings_surprise_hist_perf"]  = _r64_ebq
+                except Exception: pass
+                try:
+                    _r64_ebs = str(_r64.get("ticker_earnings_beat_streak_state", "no_beat_streak") or "no_beat_streak")
+                    _r64["earnings_beat_streak_perf"] = _r64_ebs
+                except Exception: pass
+                try:
+                    _r64_dse = int(_r64.get("days_since_earnings", 45) or 45)
+                    _r64_c1  = float(_r64.get("chg1d", 0) or 0)
+                    _r64_edp = ("drift_window"     if _r64_dse <= 10 else
+                                "post_drift"       if _r64_dse <= 30 else "no_drift")
+                    _r64["earnings_drift_days_perf"] = _r64_edp
+                    _r64["earnings_drift_perf"] = (
+                        "positive_drift" if _r64_dse <= 10 and _r64_c1 > 0 else
+                        "negative_drift" if _r64_dse <= 10 and _r64_c1 < 0 else _r64_edp)
+                except Exception: pass
+                try:
+                    _r64_epr = float(_r64.get("eps_revision_pct", 0) or 0)
+                    _r64_erd = ("revised_higher" if _r64_epr > 5 else "revised_lower" if _r64_epr < -5 else "no_revision")
+                    _r64["earnings_estimate_revision_perf"]  = _r64_erd
+                    _r64["earnings_revision_direction_perf"] = _r64_erd
+                except Exception: pass
+                try:
+                    _r64_eb2 = bool(_r64.get("earnings_beat", False))
+                    _r64_c5  = float(_r64.get("chg5d", _r64.get("rs5", 0)) or 0)
+                    _r64["earnings_momentum_perf"] = (
+                        "earnings_momentum_bull" if _r64_eb2 and _r64_c5 > 3 else
+                        "earnings_beat_flat"     if _r64_eb2 else "no_earnings_catalyst")
+                except Exception: pass
+                try:
+                    _r64_esp2 = str(_r64.get("earnings_season_phase", "off_season") or "off_season")
+                    _r64["earnings_season_phase_perf"] = _r64_esp2
+                except Exception: pass
+                # ── Analyst signals ──
+                try:
+                    _r64_arm = str(_r64.get("analyst_rating_momentum", "unchanged") or "unchanged")
+                    _r64_ars = float(_r64.get("analyst_rec_score", 5.0) or 5.0)
+                    _r64_at  = ("upgraded"   if "upgrad" in _r64_arm or _r64_ars > 7 else
+                                "downgraded" if "downgrad" in _r64_arm or _r64_ars < 3 else "unchanged")
+                    _r64["analyst_revision_trend_perf"]  = _r64_at
+                    _r64["analyst_upgrade_entry_perf"]   = _r64_at
+                    _r64["analyst_upgrade_momentum_perf"]= _r64_at
+                except Exception: pass
+                # ── Monthly momentum ──
+                try:
+                    _r64_rs21 = float(_r64.get("rs21", _r64.get("chg5d", 0)) or 0)
+                    _r64["monthly_momentum_perf"] = (
+                        "strong_monthly_up"   if _r64_rs21 > 8 else
+                        "mild_monthly_up"     if _r64_rs21 > 2 else
+                        "monthly_downtrend"   if _r64_rs21 < -5 else "flat_monthly")
+                except Exception: pass
+                # ── Entry timing ──
+                try:
+                    from datetime import datetime as _r64_dt, timezone as _r64_tz
+                    _r64_hr = _r64_dt.now(_r64_tz.utc).hour - 5
+                    if _r64_hr < 0: _r64_hr += 24
+                    _r64_sess = ("power_open" if _r64_hr == 9 else "morning"    if _r64_hr <= 11 else
+                                 "midday"     if _r64_hr <= 13 else "afternoon" if _r64_hr <= 15 else "closing")
+                    _r64["entry_session_quality_perf"] = _r64_sess
+                    _r64["entry_time_quality_perf"]    = _r64_sess
+                    _r64["entry_timing_session_perf"]  = _r64_sess
+                    _r64["entry_timing_precision_perf"]= _r64_sess
+                except Exception: pass
+                try:
+                    _r64_rsi = float(_r64.get("rsi", 50) or 50)
+                    _r64["entry_rsi_context_perf"] = (
+                        "overbought_entry"    if _r64_rsi > 75 else
+                        "momentum_entry"      if _r64_rsi >= 60 else
+                        "neutral_entry"       if _r64_rsi >= 45 else
+                        "oversold_entry"      if _r64_rsi >= 30 else "extreme_oversold_entry")
+                except Exception: pass
+                try:
+                    _r64_spr = float(_r64.get("bid_ask_spread_pct", 0) or 0)
+                    _r64["entry_spread_quality_perf"] = (
+                        "tight_spread_entry" if _r64_spr < 0.1 else
+                        "normal_spread_entry"if _r64_spr < 0.35 else "wide_spread_entry")
+                except Exception: pass
+                try:
+                    _r64_bet2 = float(_r64.get("beta_at_entry", 1.0) or 1.0)
+                    _r64_srs  = float(_r64.get("sector_rs", 50) or 50)
+                    _r64["entry_vs_sector_beta_perf"] = (
+                        "high_beta_hot_sector" if _r64_bet2 > 1.3 and _r64_srs > 65 else
+                        "low_beta_cool_sector" if _r64_bet2 < 0.8 and _r64_srs < 45 else "aligned_beta")
+                except Exception: pass
+                # ── Opening range / ORB ──
+                try:
+                    _r64_orb = bool(_r64.get("orb_breakout", _r64.get("orb_up", False)))
+                    _r64_gah = bool(_r64.get("gap_and_hold", False))
+                    _r64_orq = ("orb_with_gap" if _r64_orb and _r64_gah else
+                                "orb_breakout" if _r64_orb else "no_orb")
+                    _r64["opening_range_breakout_perf"] = _r64_orq
+                    _r64["opening_range_perf"]          = _r64_orq
+                except Exception: pass
+                try:
+                    _r64_c1b = float(_r64.get("chg1d", 0) or 0)
+                    _r64["opening_range_position_perf"] = (
+                        "above_range" if _r64_c1b > 0.5 else
+                        "below_range" if _r64_c1b < -0.5 else "in_range")
+                except Exception: pass
+                try:
+                    _r64_gap = float(_r64.get("gap_pct", 0) or 0)
+                    _r64_rv2 = float(_r64.get("rvol", 1.0) or 1.0)
+                    _r64["opening_drive_quality_perf"] = (
+                        "strong_drive"   if _r64_gap > 1 and _r64_rv2 > 1.5 else
+                        "moderate_drive" if _r64_gap > 0.3 or _r64_rv2 > 1.3 else "weak_drive")
+                    _r64["opening_strength_perf"] = (
+                        "gap_and_vol"    if _r64_gap > 1 and _r64_rv2 > 1.5 else
+                        "vol_only"       if _r64_rv2 > 1.5 else
+                        "gap_only"       if _r64_gap > 1 else "no_open_strength")
+                except Exception: pass
+            except Exception:
+                pass
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
