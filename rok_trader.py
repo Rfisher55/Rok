@@ -29252,7 +29252,7 @@ def run():
                 elif _accum_bkt_lb in ("moderate", "heavy"):
                     _learned_bonus += _nbns("accum_perf", "moderate", 60, 3)  # fires if moderate WR improves above 60%
                     _learned_bonus += _nbns("accum_perf", "heavy", 60, 2)
-                    _learned_bonus += _npen("accum_perf", "moderate", 47, -2)  # 44.4% WR n=9 — moderate accum underperforms
+                    _learned_bonus += _npen("accum_perf", "moderate", 47, -4)  # 40%WR n=10 — raised -2→-4
                 # Combo trap: light accum + OBV not rising = distribution pressure (obv_trend not in fetch_batch, use obv_rising flag)
                 _obv_rising_lb = bool(_tk_sig_sc.get("obv_rising", False))
                 if _accum_bkt_lb == "light" and not _obv_rising_lb:
