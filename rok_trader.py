@@ -29775,6 +29775,9 @@ def run():
                         _learned_bonus += _npen("signal_synergy", "bb_upper+stoch_ob", 27, -2)  # 25%WR n=8 — extended BB + overbought = double exhaustion
                     if _ha_bull_flag and _mfi_lb >= 80:
                         _learned_bonus += _nbns("signal_synergy", "ha_bull+stoch_ob+mfi_dist", 55, 2)  # winner profile: all 3 momentum signals aligned
+                    _sec_tech_stob = str(_tk_sig_sc.get("sector","")).lower() in ("tech","consumer_tech","technology")
+                    if _intra_mom_bkt_lb == "extended" and _sec_tech_stob:
+                        _learned_bonus += _nbns("signal_synergy", "tech+extended+stoch_ob", 73, 2)  # 78%WR n=9 — tech breakout + full momentum + overbought zone
                 elif _sk_zone_lb == "neutral":
                     _learned_bonus += _nbns("stoch_zone_perf", "neutral", 72, 1)      # threshold raised 60→72 (0%WR recent; only bonus if tlog genuinely recovers)
                     _learned_bonus += _npen("stoch_zone_perf", "neutral", 65, -2)     # threshold raised 41→65 (0%WR n=8 current data — near-unconditional penalty)
@@ -29977,6 +29980,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "reentry_winner+tech", 70, 2)  # 93%WR n=14 combo
                     if _intra_mom_bkt_lb == "extended":
                         _learned_bonus += _nbns("signal_synergy", "tech+intraday_extended", 75, 1)  # 80%WR n=10 — tech momentum = strongest setup
+                    if _ha_bull_flag and bool(_tk_sig_sc.get("higher_lows", False)):
+                        _learned_bonus += _nbns("signal_synergy", "tech+ha_bull+higher_lows", 80, 2)  # 86%WR n=7 — triple winner profile: tech + HA bull + structure confirmed
                 elif _sec_perf_lb == "other":
                     _learned_bonus += _npen("sector_performance", "other", 40, -5) # 26%WR n=19 recent — raised to -5
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
