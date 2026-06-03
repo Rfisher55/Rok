@@ -33699,6 +33699,133 @@ def run():
             except Exception:
                 pass
 
+            # ── R62: inject *_perf states for 15 remaining orphan neurons ──────────────
+            # These neurons have tlog perf tables (from log_trade) but no _nde() in score().
+            # All state values computed from data already present in live[tk] at this point.
+            try:
+                _r62 = live[tk]
+                _r62_spy = live.get("SPY", {})
+                # volume_vs_avg30_perf: relative volume vs 30-day avg
+                try:
+                    _r62_vr = float(_r62.get("vol_ratio", _r62.get("rvol", 1)) or 1)
+                    _r62["volume_vs_avg30_perf"] = ("surge_volume" if _r62_vr > 2 else
+                                                    "above_avg" if _r62_vr >= 1 else "below_avg")
+                except Exception: pass
+                # mfi_zone_N314_perf: Money Flow Index zone at entry
+                try:
+                    _r62_mfi = float(_r62.get("mfi", 50) or 50)
+                    _r62["mfi_zone_N314_perf"] = ("mfi_bullish" if _r62_mfi > 60 else
+                                                   "mfi_neutral" if _r62_mfi >= 40 else "mfi_oversold")
+                except Exception: pass
+                # spy_5d_trend_perf: SPY weekly direction (from regime data)
+                try:
+                    _r62_s5d = float(_r62.get("spy_5d", 0) or 0)
+                    _r62["spy_5d_trend_perf"] = ("spy_up_week"   if _r62_s5d > 1.5 else
+                                                  "spy_down_week" if _r62_s5d < -1.5 else "spy_flat_week")
+                except Exception: pass
+                # spy_50d_vs_200d_perf: golden/death cross zone
+                try:
+                    _r62_s50  = bool(_r62_spy.get("above_50d", True))
+                    _r62_s200 = bool(_r62_spy.get("above_200d", True))
+                    _r62["spy_50d_vs_200d_perf"] = ("golden_zone" if _r62_s50 and _r62_s200 else
+                                                     "recovering"  if _r62_s50 else
+                                                     "pullback"    if _r62_s200 else "death_zone")
+                except Exception: pass
+                # spy_200d_position_perf: SPY above or below 200d MA
+                try:
+                    _r62["spy_200d_position_perf"] = ("spy_above_200d" if _r62_spy.get("above_200d", True)
+                                                       else "spy_below_200d")
+                except Exception: pass
+                # price_above_200ma_perf: stock price vs its own 200d MA
+                try:
+                    _r62_sma200 = float(_r62.get("sma200", 0) or 0)
+                    _r62_px     = float(_r62.get("price", 0) or 0)
+                    if _r62_sma200 > 0 and _r62_px > 0:
+                        _r62["price_above_200ma_perf"] = ("above_200ma" if _r62_px > _r62_sma200 * 1.03 else
+                                                           "near_200ma"  if _r62_px >= _r62_sma200 * 0.97
+                                                           else "below_200ma")
+                except Exception: pass
+                # sma50_slope_perf: price vs 50d MA as slope proxy
+                try:
+                    _r62_sma50 = float(_r62.get("sma50", 0) or 0)
+                    _r62_px2   = float(_r62.get("price", 0) or 0)
+                    if _r62_sma50 > 0 and _r62_px2 > 0:
+                        _r62["sma50_slope_perf"] = ("sma50_rising"  if _r62_px2 > _r62_sma50 * 1.02 else
+                                                     "sma50_falling" if _r62_px2 < _r62_sma50 * 0.98
+                                                     else "sma50_flat")
+                except Exception: pass
+                # relative_perf_1w_perf: stock 5d return vs SPY 5d return
+                try:
+                    _r62_tk5  = float(_r62.get("chg5d", 0) or 0)
+                    _r62_spy5 = float(_r62.get("spy_chg5d", _r62_spy.get("chg5d", 0)) or 0)
+                    _r62_rel  = _r62_tk5 - _r62_spy5
+                    _r62["relative_perf_1w_perf"] = ("outperforming"   if _r62_rel > 3 else
+                                                      "underperforming" if _r62_rel < -3 else "in_line")
+                except Exception: pass
+                # dist_52wk_high_perf: stock % distance from 52-week high
+                try:
+                    _r62_d52 = float(_r62.get("dist_52wh_pct",
+                                     (1 - float(_r62.get("near_52w_high", 0.85) or 0.85)) * 100) or 15)
+                    _r62["dist_52wk_high_perf"] = ("new_high_zone" if _r62_d52 < 2 else
+                                                    "near_high"     if _r62_d52 < 10 else
+                                                    "middle"        if _r62_d52 < 25 else "extended")
+                except Exception: pass
+                # fed_meeting_week_N280_perf: calendar-based Fed meeting detection
+                try:
+                    _r62["fed_meeting_week_N280_perf"] = (
+                        "fed_week" if now_utc.month in {1, 3, 5, 7, 9, 11} and now_utc.day <= 14
+                        else "non_fed_week")
+                except Exception: pass
+                # regime_duration_N275_perf: days elapsed in current market regime
+                try:
+                    _r62_rd = float(tlog.get("days_in_regime", 10) or 10)
+                    _r62["regime_duration_N275_perf"] = ("new_regime"         if _r62_rd < 5 else
+                                                          "established_regime" if _r62_rd <= 20
+                                                          else "long_regime")
+                except Exception: pass
+                # spy_distance_from_52w_high_perf: SPY distance from 52w high via YTD proxy
+                try:
+                    _r62_ytd = float(_r62_spy.get("chg_ytd", 0) or 0)
+                    _r62_sd  = abs(min(_r62_ytd, 0))
+                    _r62["spy_distance_from_52w_high_perf"] = ("near_high"     if _r62_sd < 3 else
+                                                                "mid_range"     if _r62_sd <= 15
+                                                                else "far_from_high")
+                except Exception: pass
+                # spy_52wh_zone_perf: SPY 52w high zone (5-bin granularity)
+                try:
+                    _r62_ytd2 = float(_r62_spy.get("chg_ytd", 0) or 0)
+                    _r62_sz   = abs(min(_r62_ytd2, 0))
+                    _r62["spy_52wh_zone_perf"] = ("new_high_zone" if _r62_sz < 2 else
+                                                   "near_high"     if _r62_sz < 5 else
+                                                   "middle"        if _r62_sz < 15 else
+                                                   "near_low"      if _r62_sz < 25 else "low_zone")
+                except Exception: pass
+                # earnings_proximity_N238_perf: days until next earnings at entry
+                try:
+                    _r62_dte = int(_r62.get("days_to_earnings", _r62.get("earnings_days", 999)) or 999)
+                    _r62["earnings_proximity_N238_perf"] = ("earnings_today"   if _r62_dte <= 1 else
+                                                             "earnings_soon"    if _r62_dte <= 7 else
+                                                             "earnings_distant" if _r62_dte <= 30
+                                                             else "no_earnings")
+                except Exception: pass
+                # sector_50d_trend_perf: sector ETF 5d return as 50d trend proxy
+                try:
+                    _r62_sec5 = float(_r62.get("sector_etf_5d", 0) or 0)
+                    _r62["sector_50d_trend_perf"] = ("sec_above_50d" if _r62_sec5 >= 1.5 else
+                                                      "sec_below_50d" if _r62_sec5 <= -1.5
+                                                      else "sec_at_50d")
+                except Exception: pass
+                # orb_15min_perf: opening range breakout direction at entry
+                try:
+                    _r62_orb = _r62.get("orb_state", "no_orb")
+                    _r62_c1d = float(_r62.get("chg1d", 0) or 0)
+                    _r62["orb_15min_perf"] = ("orb_breakout_up" if _r62_orb == "orb_break" and _r62_c1d > 0.5 else
+                                               "orb_breakdown"   if _r62_orb == "orb_break" and _r62_c1d < -0.5
+                                               else "no_orb")
+                except Exception: pass
+            except Exception:
+                pass
+
             final_sc       = score(tk, live[tk], sentiment=sent,
                                    regime_adj=regime_adj + sec_adj + gap_adj + squeeze_adj
                                              + vol_surge_adj + options_adj + reentry_adj
