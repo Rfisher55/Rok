@@ -29294,7 +29294,7 @@ def run():
                 _bb_pos_raw = float(_tk_sig_sc.get("bb_pos", 50) or 50)
                 _bb_pos_lb = _bb_pos_raw / 100.0
                 if _bb_pos_lb > 0.85:
-                    _learned_bonus += _nbns("bb_zone_perf", "upper", 55, 1)   # 55.6% WR n=9 — threshold lowered (was stale 83%)
+                    _learned_bonus += _npen("bb_zone_perf", "upper", 40, -3)  # 38.5%WR n=13 — was bonus, now confirmed trap
                 _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_bkt_lb == "extended":
@@ -29438,7 +29438,7 @@ def run():
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
                     _learned_bonus += _npen("obv_trend_perf", "falling", 45, -1)  # 42.4% WR n=33
-                # Higher lows confirmed: 75% WR n=8 (updated); synergy combos 75-86% WR
+                # Higher lows confirmed: 75% WR n=8; not_confirmed: 38.9%WR n=36 (large sample!)
                 if bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 75% WR n=8
                     _learned_bonus += _nbns("signal_performance", "higher_lows", 64, 1)  # 75% WR n=8
@@ -29454,6 +29454,9 @@ def run():
                 # at_breakout_state[not_at_level]: 27.3%WR n=11 — no breakout = weak entry
                 if not bool(_tk_sig_sc.get("at_breakout", False)):
                     _learned_bonus += _npen("at_breakout_perf", "not_at_level", 30, -3)  # 27.3%WR n=11
+                # higher_lows_not_confirmed: 38.9%WR n=36 — independent from at_breakout signal
+                if not bool(_tk_sig_sc.get("higher_lows", False)):
+                    _learned_bonus += _npen("higher_lows_perf", "not_confirmed", 40, -2)  # 38.9%WR n=36
                 # HA trend: bear=31.2% WR n=16; not_bull=30%WR n=20 — penalize both bearish and neutral HA
                 _ha_bear_flag = bool(_tk_sig_sc.get("ha_bear", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bear"
                 _ha_bull_flag = bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull"
@@ -29648,8 +29651,7 @@ def run():
                     if _lr_q_lb == "strong":
                         _learned_bonus += _nbns("lr_quality_perf", "strong", 62, 1)    # 100% WR n=3 (small but perfect)
                     elif _lr_q_lb == "moderate":
-                        # lr_quality_perf["moderate"] = 51.2% WR n=41 — coin flip, no bonus at 62%
-                        pass
+                        _learned_bonus += _npen("lr_quality_perf", "moderate", 40, -2)  # 38.5%WR n=13 — degraded from coin flip
                     elif _lr_q_lb == "weak":
                         _learned_bonus += _npen("lr_quality_perf", "weak", 43, -2)     # 42.9% WR n=28 — threshold raised 42→43
                 # Donchian zone: near top of range (breakout) vs weakness
