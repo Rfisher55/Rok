@@ -29914,7 +29914,7 @@ def run():
                     _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 17, -5)  # 16.1% WR n=31
                 elif 6 <= _sec_adv_lb <= 7:
                     _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
-                _learned_bonus = max(-24, min(18, _learned_bonus))  # expanded penalty floor: -20→-24
+                _learned_bonus = max(-35, min(18, _learned_bonus))  # expanded penalty floor: -24→-35 (more stacking room)
             except Exception:
                 _learned_bonus = 0
 
