@@ -29365,7 +29365,7 @@ def run():
                 elif _intra_mom_bkt_lb == "runner":
                     _learned_bonus += _npen("intraday_mom_perf", "runner", 40, -3)  # 38%WR n=13 — raised thr 44→40, pts -1→-3
                 elif _intra_mom_bkt_lb == "early":
-                    _learned_bonus += _npen("intraday_mom_perf", "early", 65, -4)  # 18%WR n=11 recent — raised threshold 55→65
+                    _learned_bonus += _npen("intraday_mom_perf", "early", 65, -8)  # 17%WR n=12 live — pts -4→-8 (Wave 77)
                     if not _obv_rising_lb:  # OBV falling + early momentum = double weakness
                         _learned_bonus += _npen("signal_synergy", "early_mom+obv_falling", 22, -2)  # 18%WR n=11
                 # Grade quality: F-grade entries (criteria<2) have 12% WR — penalize hard
@@ -29685,11 +29685,12 @@ def run():
                 if _rsr3_lb >= 90:
                     _learned_bonus += _nbns("rs_rating_perf", "elite", 60, 2)   # 65%WR n=20 — raised from +1
                 elif 60 <= _rsr3_lb < 80:
-                    _learned_bonus += _npen("rs_rating_perf", "mid_rs", 35, -5)  # 33%WR n=9 — worst RS zone (mid = semi-popular chasing)
+                    _learned_bonus += _npen("rs_rating_perf", "mid_rs", 30, -7)  # 23%WR n=22 live — raised thr 35→30, pts -5→-7 (Wave 77)
                 elif 80 <= _rsr3_lb < 90:
                     _learned_bonus += _npen("rs_rating_perf", "high_rs", 42, -3) # 40%WR n=5 — still bad: below threshold
-                elif _rsr3_lb < 60:
-                    pass  # RS 0-60 = 58%WR (slightly above avg) — no penalty warranted
+                elif 40 <= _rsr3_lb < 60:
+                    _learned_bonus += _npen("rs_rating_perf", "low_rs", 35, -4)  # 23%WR avg bucket includes 40-59 — add penalty (Wave 77)
+                # rs_rating < 40: historically checked separately (weak_rs in relative_strength_tier_perf)
                 # Premium signal tier: use only signals with verified positive WR (>50%)
                 # Removed: orb_breakout(40%), supertrend_bull(47%), obv_rising(36%) — negative signals
                 # Kept: vcp, cup_handle, at_breakout(45% but pattern quality), mtf_triple, ttm_squeeze, rvol_surge, higher_lows
@@ -29723,8 +29724,8 @@ def run():
                     if _ha_bull_flag and _intra_mom_bkt_lb == "extended":
                         _learned_bonus += _nbns("signal_synergy", "ha_bull+extended+wr_ob", 73, 2)  # 78%WR n=9 — full momentum triple
                 elif -50 <= _wr_lb <= -20:
-                    # trending zone = 21%WR n=14 recent — raised penalty from -1 to -4
-                    _learned_bonus += _npen("wr_zone_perf", "trending", 46, -4)
+                    # trending zone = 15%WR n=13 live — raised thr 46→55, pts -4→-8 (Wave 77)
+                    _learned_bonus += _npen("wr_zone_perf", "trending", 55, -8)
                 # Options flow: unusual_calls = 47.1% WR n=34 (updated); options_bull = 45.7% WR n=35
                 _uc_lb2 = bool(_tk_sig_sc.get("unusual_calls", False))
                 _ob_lb2 = bool(_tk_sig_sc.get("options_bull", False))
