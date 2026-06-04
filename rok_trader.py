@@ -29057,11 +29057,8 @@ def run():
                 _ema_stack_bull_lb = bool(_tk_sig_sc.get("ema_stacked_bull", _tk_sig_sc.get("ema_stack", False)))
                 _ema_stack_bear_lb = bool(_tk_sig_sc.get("ema_stacked_bear", False))
                 if _ema_stack_bull_lb:
-                    _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 2)
-                    _learned_bonus += _npen("ema_stack_quality_perf", "full_ema_stack", 55, -2)  # 40%WR live — fires until tlog WR improves (Wave 75)
+                    _learned_bonus += _nbns("ema_stack_quality_perf", "partial_stack", 44, 1)   # 46.0%WR n=174 tlog — fix dead "full_ema_stack"; partial_stack above baseline (Wave 111)
                     _learned_bonus += _npen("ema_stack_quality_perf", "perfect_stack", 25, -5)  # 20%WR n=5 — perfect stack = overextended chase (Wave 93)
-                elif _ema_stack_bear_lb:
-                    _learned_bonus += _npen("ema_stack_quality_perf", "ema_stack_broken", 42, -2)
                 _rs1_lb  = float(_tk_sig_sc.get("rs1",  0) or 0)
                 _rs5_lb  = float(_tk_sig_sc.get("rs5",  0) or 0)
                 _rs63_lb = float(_tk_sig_sc.get("rs63", 0) or 0)
@@ -29203,7 +29200,7 @@ def run():
                     # gap_and_hold synergy penalties: all combos catastrophic (8-21% WR)
                     # Use sorted key order to match signal_synergy dict (alphabetical)
                     for _gap_synergy_sig in ("mom_accel","at_breakout","kc_breakout","mtf_aligned","ichimoku_above",
-                                             "ema_stacked_bull","ha_bull","supertrend_bull"):
+                                             "ema_stacked_bull","ha_bull","supertrend_bull","above_poc"):
                         if bool(_tk_sig_sc.get(_gap_synergy_sig, False)):
                             _gap_pair = "+".join(sorted(["gap_and_hold", _gap_synergy_sig]))
                             _learned_bonus += _npen("signal_synergy", _gap_pair, 35, -3)  # 31-34%WR — gap trap
@@ -29502,9 +29499,9 @@ def run():
                 if "inside" in _ich_lb:
                     _learned_bonus += _nbns("ichimoku_perf", "inside", 54, 1)    # 55.2% WR — threshold lowered (was stale 80%)
                 elif "above" in _ich_lb:
-                    _learned_bonus += _npen("ichimoku_perf", "above", 49, -1)    # 48.5% WR n=33 — coin flip or worse
+                    _learned_bonus += _npen("ichimoku_perf", "above", 44, -1)    # 45.9%WR n=37 tlog — above baseline; threshold lowered 49→44 to stop penalizing (Wave 111)
                 elif "below" in _ich_lb:
-                    _learned_bonus += _npen("ichimoku_perf", "below", 25, -6)    # 20% WR n=10 — strong penalty
+                    _learned_bonus += _npen("ichimoku_perf", "below", 29, -6)    # 27.3%WR n=11 tlog — threshold raised 25→29 (Wave 111)
                     _ich_rs_now = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                     if 40 <= _ich_rs_now < 80:  # rs_average (40-79) + ichimoku_below = 12%WR n=8 (Wave 78)
                         _learned_bonus -= 5  # rs_average+ichimoku_below: direct hard penalty
@@ -29551,7 +29548,7 @@ def run():
                     except Exception:
                         _reentry_lb = "no_reentry"
                     if _reentry_lb == "winner":
-                        _learned_bonus += _nbns("reentry_perf", "winner", 65, 3)   # 80%WR n=4 big wins — raised thr 60→65, pts 4→3 (Wave 103)
+                        _learned_bonus += _nbns("reentry_perf", "winner", 55, 3)   # 57.1%WR n=7 tlog — threshold lowered 65→55 (Wave 111)
                     elif _reentry_lb == "tiny_win":
                         _learned_bonus += _npen("reentry_perf", "tiny_win", 10, -7)  # 0%WR n=6 — micro-profit reentry = trap (Wave 103)
                         if _intra_mom_bkt_lb == "extended":
@@ -29662,7 +29659,7 @@ def run():
                 # OBV trend: rising=35.7%WR n=14 — chasing; falling=51.4%WR n=37 — distributing then turning
                 if bool(_tk_sig_sc.get("obv_rising", False)):
                     _learned_bonus += _npen("signal_performance", "obv_rising", 50, -1)  # fires at <=50%
-                    _learned_bonus += _npen("obv_trend_perf", "rising", 60, -3)  # 35.7%WR n=14 — OBV rising = chasing extended move
+                    _learned_bonus += _npen("obv_trend_perf", "rising", 38, -2)  # 40.0%WR n=100 tlog — WR at baseline; threshold lowered 60→38, pts -3→-2 (Wave 111)
                     if bool(_tk_sig_sc.get("kc_breakout", False)):
                         _learned_bonus += _npen("signal_synergy", "obv_rising+kc_breakout", 27, -2)  # 25%WR n=8 — chasing OBV into KC breakout
                 elif not _tk_sig_sc.get("obv_rising") and float(_tk_sig_sc.get("obv_slope_pct", _tk_sig_sc.get("obv_slope", 0)) or 0) < 0:
@@ -29812,11 +29809,11 @@ def run():
                     "vcp","cup_handle","ttm_squeeze_fired","higher_lows",
                     "rvol_surge","at_breakout"])  # removed orb_breakout, supertrend_bull, obv_rising
                 if _prem_ct_lb == 0:
-                    _learned_bonus += _npen("premium_tier_perf", "none", 35, -4)  # 12%WR n=8 (updated) — no premium signals
+                    _learned_bonus += _npen("premium_tier_perf", "weak", 38, -2)  # 38.5%WR n=96 tlog — fix dead "none" state (Wave 111)
                 elif 1 <= _prem_ct_lb <= 2:
-                    _learned_bonus += _nbns("premium_tier_perf", "sweet_spot", 62, 3)  # 85%WR n=13 — raised pts 2→3, thr 64→62
-                elif _prem_ct_lb >= 5:
-                    _learned_bonus += _npen("premium_tier_perf", "overdone", 30, -2)   # 25%WR n=4 — too many signals = chasing
+                    _learned_bonus += _nbns("premium_tier_perf", "normal", 48, 2)  # 50.0%WR n=32 tlog — fix dead "sweet_spot" state (Wave 111)
+                elif _prem_ct_lb >= 4:
+                    _learned_bonus += _npen("premium_tier_perf", "strong", 26, -3)  # 25%WR n=4 tlog — fix dead "overdone" state (Wave 111)
                 # LR channel position: above=75%WR n=8, below/at=47%WR n=55 — strong 28% spread
                 if bool(_tk_sig_sc.get("lr_above_channel", False)):
                     _learned_bonus += _nbns("lr_channel_perf", "above", 62, 2)  # 75%WR n=8 — trending above regression channel
