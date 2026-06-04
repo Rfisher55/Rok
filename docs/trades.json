@@ -47826,14 +47826,15 @@
       "overextended": false,
       "exit_urgency": 1,
       "pos_health": 6,
-      "ai_commentary": "Hold position; -4.8% drawdown modest with neutral technicals (RSI 50, ADX 0) lacking directional conviction for action."
+      "ai_comment": "Exit position; -4.8% loss with zero holding time indicates entry timing failure, no thesis clarity to justify continuati",
+      "ai_commentary": "**HOLD.** Position down 4.8% with neutral technicals (RSI 50, ADX 0); await clearer directional signal before adjusting."
     },
     {
       "ticker": "AMKR",
       "side": "long",
       "qty": 1.7461e-05,
       "cost": 75.161006,
-      "price": 75.4775,
+      "price": 75.47,
       "pnl_pct": 0.457,
       "pnl_usd": 6e-06,
       "market_val": 0.001318,
@@ -47995,13 +47996,13 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": 0.37,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": 0.0,
@@ -48027,55 +48028,56 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 72.42,
-      "dist_from_trail": 4.05,
+      "dist_from_trail": 4.04,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
       "score_delta": 150,
-      "live_rr": 2.85,
+      "live_rr": 2.86,
       "pivot_pct": -3.9,
       "extended": false,
       "overextended": false,
       "exit_urgency": 1,
-      "pos_health": 7
+      "pos_health": 7,
+      "ai_commentary": "HOLD. Position slightly profitable with neutral momentum (RSI 56, ADX 199 suggests choppy trend); maintain until clearer directional conviction emerges."
     },
     {
       "ticker": "ARM",
       "side": "long",
       "qty": 3.1434e-05,
       "cost": 393.326511,
-      "price": 391.9,
-      "pnl_pct": -0.364,
-      "pnl_usd": -4.5e-05,
-      "market_val": 0.012319,
+      "price": 391.7799,
+      "pnl_pct": -0.396,
+      "pnl_usd": -4.9e-05,
+      "market_val": 0.012315,
       "stop_price": 369.73,
       "target_price": 440.53,
-      "peak_price": 391.92,
+      "peak_price": 392.79,
       "earnings_days": null,
-      "r_multiple": -0.06,
+      "r_multiple": -0.07,
       "days_held": 0,
       "hours_held": 0.0,
-      "intraday_chg_pct": -4.83,
+      "intraday_chg_pct": -4.62,
       "vol_pace": 0.68,
       "thesis_status": "DEGRADING",
       "thesis_intact": 4,
       "thesis_gone": 4,
       "thesis_total": 8,
       "live_signals": {
-        "rsi": 78.1,
-        "vwap_pos": 0.34,
-        "vwap_price": 390.61,
-        "roc5": 16.9,
+        "rsi": 78.3,
+        "vwap_pos": 0.49,
+        "vwap_price": 390.62,
+        "roc5": 17.16,
         "macd_slope": 0.0,
         "vol_ratio": 0.93,
         "vwap_reclaim": true,
         "adx": 734.8,
         "adx_trend": "strong",
-        "rs5": 10.94,
-        "rs63": 242.65,
+        "rs5": 11.18,
+        "rs63": 243.41,
         "rs_line_new_high": false,
         "rs_line_trending": false,
-        "chandelier_stop": 346.88,
+        "chandelier_stop": 347.0,
         "ichimoku": 4,
         "macd_bull_div": false,
         "mtf_aligned": true,
@@ -48085,7 +48087,7 @@
         "weekly_bull": true,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 122.28,
+        "price_vs_ema200": 122.76,
         "mfi": 74.9,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -48113,9 +48115,9 @@
         "vwap_b2u": 407.63,
         "vwap_b1d": 382.11,
         "vwap_b2d": 373.6,
-        "price_accel": 1.099,
+        "price_accel": 1.437,
         "price_accel_pos": true,
-        "lr_slope": 760.2,
+        "lr_slope": 760.7,
         "lr_r2": 0.888,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -48141,8 +48143,8 @@
         "trend_quality_score": 6.4,
         "consec_green": 0,
         "consec_red": 1,
-        "hv20": 119.1,
-        "hv5": 125.2,
+        "hv20": 119.0,
+        "hv5": 124.4,
         "hv_expanding": false,
         "hv_contracting": false,
         "key_support_1": 203.01,
@@ -48160,9 +48162,9 @@
         "short_float": 0.133,
         "short_ratio": 1.7,
         "high_short": false,
-        "atm_iv": 90.3,
+        "atm_iv": 90.9,
         "rs_sector": 0.0,
-        "rs252": 145.59,
+        "rs252": 146.05,
         "rs_rating": 99,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -48172,7 +48174,7 @@
         "fund_quality": 2,
         "earnings_growth": 0.479,
         "revenue_growth": 0.201,
-        "forward_pe": 128.1656,
+        "forward_pe": 128.09698,
         "profit_margin": 0.18374,
         "roe": 0.119540006,
         "pocket_pivot": false,
@@ -48182,13 +48184,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 203.77,
-        "avwap_dist_pct": 92.34,
+        "avwap_dist_pct": 92.76,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 89.0,
-        "expected_move_wk": 49.85,
-        "expected_move_mo": 102.16,
-        "expected_move_pct_wk": 12.72,
+        "w52_range_pos": 89.3,
+        "expected_move_wk": 50.16,
+        "expected_move_mo": 102.81,
+        "expected_move_pct_wk": 12.8,
         "analyst_upgrade": false,
         "analyst_rev_score": 0,
         "analyst_buy_pct": 0.718,
@@ -48199,23 +48201,23 @@
         "catalyst_type": "none",
         "catalyst_urg": 0,
         "catalyst_dir": "none",
-        "day_high": 392.3,
+        "day_high": 392.87,
         "day_low": 367.52,
         "day_open": 380.58
       },
       "score_history": [
         {
           "s": 144,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
-          "p": -0.36,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -0.14,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
-      "mae": -0.36,
+      "mae": -0.14,
       "mfe": 0.0,
       "atr_at_entry": 0.0,
       "scale_in_pending": false,
@@ -48226,7 +48228,7 @@
       "entry_premium_signals": [],
       "grade": "A+",
       "rs_rating": 99,
-      "rs252": 145.59,
+      "rs252": 146.05,
       "sector": "tech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -48237,18 +48239,19 @@
       "spy_since_entry": 0.0,
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
-      "trail_stop_price": 376.24,
-      "dist_from_trail": 4.0,
+      "trail_stop_price": 377.08,
+      "dist_from_trail": 3.75,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 144,
       "score_delta": 144,
-      "live_rr": 3.11,
+      "live_rr": 3.32,
       "pivot_pct": -8.5,
       "extended": false,
       "overextended": false,
-      "exit_urgency": 1,
-      "pos_health": 7
+      "exit_urgency": 2,
+      "pos_health": 6,
+      "ai_commentary": "HOLD. RSI 78 signals overbought; maintain position despite minor loss while monitoring for pullback opportunity."
     },
     {
       "ticker": "ASYS",
@@ -48417,13 +48420,13 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": -4.24,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -4.24,
@@ -48519,8 +48522,7 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
-      "pos_health": 5,
-      "ai_commentary": "**HOLD.** Position underwater 14.4%; neutral technicals (RSI 50, ADX 0) lack conviction to exit or add; await clearer directional bias."
+      "pos_health": 5
     },
     {
       "ticker": "AXON",
@@ -48689,13 +48691,13 @@
       "score_history": [
         {
           "s": 138,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": 5.92,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": 0.0,
@@ -48731,46 +48733,45 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
-      "pos_health": 6,
-      "ai_comment": "Exit; thesis collapse overrides strong technicals\u2014secure +5.7% gain before momentum reverses."
+      "pos_health": 6
     },
     {
       "ticker": "BBY",
       "side": "long",
       "qty": 144.274382489,
       "cost": 74.616266,
-      "price": 71.295,
-      "pnl_pct": -4.4510000000000005,
-      "pnl_usd": -479.173601,
-      "market_val": 10286.0421,
+      "price": 71.34,
+      "pnl_pct": -4.391,
+      "pnl_usd": -472.681254,
+      "market_val": 10292.534447,
       "stop_price": 70.14,
       "target_price": 83.57,
       "peak_price": 74.68,
       "earnings_days": null,
-      "r_multiple": -0.74,
+      "r_multiple": -0.73,
       "days_held": 2,
       "hours_held": 51.3,
-      "intraday_chg_pct": -0.59,
+      "intraday_chg_pct": -0.64,
       "vol_pace": 0.38,
       "thesis_status": "unknown",
       "thesis_intact": 0,
       "thesis_gone": 0,
       "thesis_total": 0,
       "live_signals": {
-        "rsi": 75.5,
-        "vwap_pos": -0.23,
+        "rsi": 75.4,
+        "vwap_pos": -0.28,
         "vwap_price": 71.47,
-        "roc5": -4.59,
+        "roc5": -4.64,
         "macd_slope": 0.0,
         "vol_ratio": 0.38,
         "vwap_reclaim": false,
         "adx": 433.8,
         "adx_trend": "strong",
-        "rs5": -8.52,
-        "rs63": 8.57,
+        "rs5": -8.57,
+        "rs63": 8.51,
         "rs_line_new_high": false,
         "rs_line_trending": false,
-        "chandelier_stop": 71.61,
+        "chandelier_stop": 71.6,
         "ichimoku": 4,
         "macd_bull_div": false,
         "mtf_aligned": false,
@@ -48780,7 +48781,7 @@
         "weekly_bull": false,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 12.55,
+        "price_vs_ema200": 12.49,
         "mfi": 71.1,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -48808,9 +48809,9 @@
         "vwap_b2u": 72.03,
         "vwap_b1d": 71.19,
         "vwap_b2d": 70.91,
-        "price_accel": -17.678,
+        "price_accel": -17.744,
         "price_accel_pos": false,
-        "lr_slope": 362.7,
+        "lr_slope": 362.5,
         "lr_r2": 0.731,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -48855,10 +48856,10 @@
         "short_float": 0.102,
         "short_ratio": 5.9,
         "high_short": false,
-        "atm_iv": 41.6,
+        "atm_iv": 41.5,
         "rs_sector": 0.0,
-        "rs252": 5.14,
-        "rs_rating": 57,
+        "rs252": 5.11,
+        "rs_rating": 56,
         "ema21_pullback": false,
         "ema21_touch": false,
         "macd_bear_div": false,
@@ -48867,7 +48868,7 @@
         "fund_quality": 1,
         "earnings_growth": 0.379,
         "revenue_growth": 0.019,
-        "forward_pe": 10.079439,
+        "forward_pe": 10.082268,
         "profit_margin": 0.027309999,
         "roe": 0.39104,
         "pocket_pivot": false,
@@ -48877,13 +48878,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 66.89,
-        "avwap_dist_pct": 6.6,
+        "avwap_dist_pct": 6.55,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 70.2,
-        "expected_move_wk": 4.18,
-        "expected_move_mo": 8.56,
-        "expected_move_pct_wk": 5.86,
+        "w52_range_pos": 70.0,
+        "expected_move_wk": 4.17,
+        "expected_move_mo": 8.55,
+        "expected_move_pct_wk": 5.85,
         "analyst_upgrade": false,
         "analyst_rev_score": 0,
         "analyst_buy_pct": 0.308,
@@ -48993,7 +48994,7 @@
         },
         {
           "s": 35,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
@@ -49090,8 +49091,8 @@
           "t": "2026-06-04T17:28:07.423349+00:00"
         },
         {
-          "p": -4.43,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -4.48,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -5.1,
@@ -49104,8 +49105,8 @@
       "entry_premium_count": 0,
       "entry_premium_signals": [],
       "grade": "B+",
-      "rs_rating": 57,
-      "rs252": 5.14,
+      "rs_rating": 56,
+      "rs252": 5.11,
       "sector": "other",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -49117,13 +49118,13 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 71.69,
-      "dist_from_trail": -0.55,
+      "dist_from_trail": -0.49,
       "recommendation": "TIGHTEN",
-      "rec_reason": "near trail stop (-0.6%)",
+      "rec_reason": "near trail stop (-0.5%)",
       "live_score": 35,
       "score_delta": 35,
       "live_rr": 0.0,
-      "pivot_pct": -2.1,
+      "pivot_pct": -2.0,
       "extended": false,
       "overextended": false,
       "exit_urgency": 5,
@@ -49187,42 +49188,43 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 1,
-      "pos_health": 6
+      "pos_health": 6,
+      "ai_commentary": "HOLD. Position underwater 11.1%; RSI at midpoint (50) and ADX near zero indicate weak directional momentum\u2014await clearer trend confirmation before action."
     },
     {
       "ticker": "CMPS",
       "side": "long",
       "qty": 3.298e-05,
       "cost": 14.128339,
-      "price": 13.245,
-      "pnl_pct": -6.223,
-      "pnl_usd": -2.9e-05,
-      "market_val": 0.000437,
+      "price": 13.22,
+      "pnl_pct": -6.438000000000001,
+      "pnl_usd": -3e-05,
+      "market_val": 0.000436,
       "stop_price": 13.28,
       "target_price": 15.82,
-      "peak_price": 13.27,
+      "peak_price": 13.28,
       "earnings_days": null,
-      "r_multiple": -1.04,
+      "r_multiple": -1.07,
       "days_held": 0,
       "hours_held": 0.0,
-      "intraday_chg_pct": 4.53,
+      "intraday_chg_pct": 4.65,
       "vol_pace": 0.67,
       "thesis_status": "COLLAPSED",
       "thesis_intact": 3,
       "thesis_gone": 5,
       "thesis_total": 8,
       "live_signals": {
-        "rsi": 66.8,
-        "vwap_pos": -0.13,
+        "rsi": 66.9,
+        "vwap_pos": -0.02,
         "vwap_price": 13.27,
-        "roc5": 11.28,
+        "roc5": 11.41,
         "macd_slope": 0.0,
         "vol_ratio": 0.62,
         "vwap_reclaim": false,
         "adx": 646.3,
         "adx_trend": "strong",
-        "rs5": 1.57,
-        "rs63": 101.6,
+        "rs5": 1.68,
+        "rs63": 101.82,
         "rs_line_new_high": false,
         "rs_line_trending": false,
         "chandelier_stop": 11.93,
@@ -49235,7 +49237,7 @@
         "weekly_bull": true,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 67.71,
+        "price_vs_ema200": 67.9,
         "mfi": 66.3,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -49263,9 +49265,9 @@
         "vwap_b2u": 13.63,
         "vwap_b1d": 13.09,
         "vwap_b2d": 12.9,
-        "price_accel": 13.274,
+        "price_accel": 13.412,
         "price_accel_pos": true,
-        "lr_slope": 418.0,
+        "lr_slope": 418.3,
         "lr_r2": 0.861,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -49292,7 +49294,7 @@
         "consec_green": 1,
         "consec_red": 0,
         "hv20": 97.0,
-        "hv5": 117.3,
+        "hv5": 117.4,
         "hv_expanding": false,
         "hv_contracting": false,
         "key_support_1": 11.39,
@@ -49312,7 +49314,7 @@
         "high_short": false,
         "atm_iv": 92.6,
         "rs_sector": 0.0,
-        "rs252": 60.96,
+        "rs252": 61.09,
         "rs_rating": 99,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -49332,13 +49334,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 9.57,
-        "avwap_dist_pct": 38.57,
+        "avwap_dist_pct": 38.73,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 84.9,
-        "expected_move_wk": 1.73,
-        "expected_move_mo": 3.54,
-        "expected_move_pct_wk": 13.06,
+        "w52_range_pos": 85.0,
+        "expected_move_wk": 1.72,
+        "expected_move_mo": 3.53,
+        "expected_move_pct_wk": 13.01,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
         "analyst_buy_pct": 0.917,
@@ -49355,17 +49357,17 @@
       },
       "score_history": [
         {
-          "s": 107,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "s": 111,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
-          "p": -6.08,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -6.0,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
-      "mae": -6.08,
+      "mae": -6.0,
       "mfe": 0.0,
       "atr_at_entry": 0.0,
       "scale_in_pending": false,
@@ -49376,7 +49378,7 @@
       "entry_premium_signals": [],
       "grade": "A+",
       "rs_rating": 99,
-      "rs252": 60.96,
+      "rs252": 61.09,
       "sector": "biotech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -49387,53 +49389,54 @@
       "spy_since_entry": 0.0,
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
-      "trail_stop_price": 12.74,
-      "dist_from_trail": 3.81,
+      "trail_stop_price": 12.75,
+      "dist_from_trail": 3.56,
       "recommendation": "HOLD",
       "rec_reason": "",
-      "live_score": 107,
-      "score_delta": 107,
-      "live_rr": 5.1,
-      "pivot_pct": 0.3,
+      "live_score": 111,
+      "score_delta": 111,
+      "live_rr": 5.53,
+      "pivot_pct": 0.2,
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
-      "pos_health": 6
+      "pos_health": 6,
+      "ai_commentary": "**HOLD.** Position underwater on pullback; RSI overbought (67) suggests consolidation before reversal; trailing stop protects downside."
     },
     {
       "ticker": "CRM",
       "side": "long",
       "qty": 40.814899006,
       "cost": 198.968599,
-      "price": 189.92,
-      "pnl_pct": -4.548,
-      "pnl_usd": -369.317655,
-      "market_val": 7751.565619,
+      "price": 189.8,
+      "pnl_pct": -4.6080000000000005,
+      "pnl_usd": -374.215443,
+      "market_val": 7746.667831,
       "stop_price": 187.03,
       "target_price": 222.84,
       "peak_price": 201.29,
       "earnings_days": null,
-      "r_multiple": -0.76,
+      "r_multiple": -0.77,
       "days_held": 2,
       "hours_held": 51.8,
-      "intraday_chg_pct": -0.38,
+      "intraday_chg_pct": -0.36,
       "vol_pace": 0.56,
       "thesis_status": "COLLAPSED",
       "thesis_intact": 2,
       "thesis_gone": 4,
       "thesis_total": 6,
       "live_signals": {
-        "rsi": 64.4,
-        "vwap_pos": -0.8,
+        "rsi": 64.5,
+        "vwap_pos": -0.79,
         "vwap_price": 191.42,
-        "roc5": 7.78,
+        "roc5": 7.81,
         "macd_slope": 0.0,
         "vol_ratio": 0.54,
         "vwap_reclaim": false,
         "adx": 211.2,
         "adx_trend": "strong",
-        "rs5": -0.64,
-        "rs63": -5.82,
+        "rs5": -0.61,
+        "rs63": -5.79,
         "rs_line_new_high": false,
         "rs_line_trending": false,
         "chandelier_stop": 188.22,
@@ -49446,7 +49449,7 @@
         "weekly_bull": false,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 1.29,
+        "price_vs_ema200": 1.32,
         "mfi": 49.9,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -49474,9 +49477,9 @@
         "vwap_b2u": 194.16,
         "vwap_b1d": 190.04,
         "vwap_b2d": 188.67,
-        "price_accel": -0.799,
+        "price_accel": -0.771,
         "price_accel_pos": false,
-        "lr_slope": 142.5,
+        "lr_slope": 142.6,
         "lr_r2": 0.366,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -49523,7 +49526,7 @@
         "high_short": false,
         "atm_iv": 45.7,
         "rs_sector": 0.0,
-        "rs252": -3.49,
+        "rs252": -3.47,
         "rs_rating": 46,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -49533,7 +49536,7 @@
         "fund_quality": 1,
         "earnings_growth": 0.522,
         "revenue_growth": 0.133,
-        "forward_pe": 12.220249,
+        "forward_pe": 12.220571,
         "profit_margin": 0.18733,
         "roe": 0.16908,
         "pocket_pivot": false,
@@ -49543,12 +49546,12 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 181.84,
-        "avwap_dist_pct": 4.42,
+        "avwap_dist_pct": 4.45,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 36.8,
-        "expected_move_wk": 12.23,
-        "expected_move_mo": 25.06,
+        "w52_range_pos": 36.9,
+        "expected_move_wk": 12.22,
+        "expected_move_mo": 25.04,
         "expected_move_pct_wk": 6.44,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
@@ -49659,7 +49662,7 @@
         },
         {
           "s": 97,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
@@ -49756,8 +49759,8 @@
           "t": "2026-06-04T17:28:07.423349+00:00"
         },
         {
-          "p": -4.57,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -4.54,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -5.42,
@@ -49771,7 +49774,7 @@
       "entry_premium_signals": [],
       "grade": "B+",
       "rs_rating": 46,
-      "rs252": -3.49,
+      "rs252": -3.47,
       "sector": "tech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -49783,35 +49786,36 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 193.24,
-      "dist_from_trail": -1.75,
+      "dist_from_trail": -1.81,
       "recommendation": "TIGHTEN",
       "rec_reason": "near trail stop (-1.8%)",
       "live_score": 97,
       "score_delta": 97,
       "live_rr": 0.0,
-      "pivot_pct": -2.9,
+      "pivot_pct": -3.0,
       "extended": false,
       "overextended": false,
       "exit_urgency": 8,
-      "pos_health": 3
+      "pos_health": 3,
+      "ai_commentary": "**TIGHTEN stop-loss:** RSI 64 (overbought) + ADX 211 (strong downtrend) signal heightened reversal risk despite high conviction score."
     },
     {
       "ticker": "DKNG",
       "side": "long",
       "qty": 490.344785155,
       "cost": 25.395175,
-      "price": 25.275,
-      "pnl_pct": -0.473,
-      "pnl_usd": -58.927184,
-      "market_val": 12393.464445,
+      "price": 25.285,
+      "pnl_pct": -0.434,
+      "pnl_usd": -54.023736,
+      "market_val": 12398.367893,
       "stop_price": 23.87,
       "target_price": 28.44,
       "peak_price": 25.68,
       "earnings_days": null,
-      "r_multiple": -0.08,
+      "r_multiple": -0.07,
       "days_held": 2,
       "hours_held": 50.9,
-      "intraday_chg_pct": 0.66,
+      "intraday_chg_pct": 0.62,
       "vol_pace": 0.39,
       "thesis_status": "DEGRADING",
       "thesis_intact": 4,
@@ -49821,14 +49825,14 @@
         "rsi": 50.7,
         "vwap_pos": -0.42,
         "vwap_price": 25.37,
-        "roc5": 3.04,
+        "roc5": 3.0,
         "macd_slope": 0.0,
         "vol_ratio": 0.33,
         "vwap_reclaim": false,
         "adx": 232.9,
         "adx_trend": "strong",
-        "rs5": 3.21,
-        "rs63": 0.5,
+        "rs5": 3.16,
+        "rs63": 0.46,
         "rs_line_new_high": false,
         "rs_line_trending": false,
         "chandelier_stop": 23.35,
@@ -49841,7 +49845,7 @@
         "weekly_bull": true,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 3.8,
+        "price_vs_ema200": 3.76,
         "mfi": 58.3,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -49869,9 +49873,9 @@
         "vwap_b2u": 25.92,
         "vwap_b1d": 25.1,
         "vwap_b2d": 24.82,
-        "price_accel": 3.057,
+        "price_accel": 3.017,
         "price_accel_pos": true,
-        "lr_slope": 4.9,
+        "lr_slope": 4.8,
         "lr_r2": 0.003,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -49916,9 +49920,9 @@
         "short_float": 0.081,
         "short_ratio": 3.1,
         "high_short": false,
-        "atm_iv": 56.4,
+        "atm_iv": 56.3,
         "rs_sector": 0.0,
-        "rs252": 0.3,
+        "rs252": 0.28,
         "rs_rating": 50,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -49928,7 +49932,7 @@
         "fund_quality": 0,
         "earnings_growth": null,
         "revenue_growth": 0.168,
-        "forward_pe": 14.753801,
+        "forward_pe": 14.759641,
         "profit_margin": 0.00932,
         "roe": 0.07936,
         "pocket_pivot": false,
@@ -49938,12 +49942,12 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 23.89,
-        "avwap_dist_pct": 5.78,
+        "avwap_dist_pct": 5.73,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 45.3,
+        "w52_range_pos": 45.2,
         "expected_move_wk": 2.01,
-        "expected_move_mo": 4.12,
+        "expected_move_mo": 4.11,
         "expected_move_pct_wk": 7.95,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
@@ -50054,7 +50058,7 @@
         },
         {
           "s": 98,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
@@ -50151,8 +50155,8 @@
           "t": "2026-06-04T17:28:07.423349+00:00"
         },
         {
-          "p": -0.49,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -0.53,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -2.62,
@@ -50166,7 +50170,7 @@
       "entry_premium_signals": [],
       "grade": "A+",
       "rs_rating": 50,
-      "rs252": 0.3,
+      "rs252": 0.28,
       "sector": "consumer_tech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -50178,17 +50182,18 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 24.65,
-      "dist_from_trail": 2.47,
+      "dist_from_trail": 2.51,
       "recommendation": "REVIEW",
       "rec_reason": "score degrading",
       "live_score": 98,
       "score_delta": 98,
-      "live_rr": 5.06,
-      "pivot_pct": -0.1,
+      "live_rr": 4.97,
+      "pivot_pct": -0.0,
       "extended": false,
       "overextended": false,
-      "exit_urgency": 6,
-      "pos_health": 4
+      "exit_urgency": 5,
+      "pos_health": 5,
+      "ai_commentary": "REVIEW position; slight loss offset by strong score (98) and neutral momentum (RSI 51). Hold pending breakout confirmation above trailing stop."
     },
     {
       "ticker": "DOGEUSD",
@@ -50248,7 +50253,8 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 4,
-      "pos_health": 4
+      "pos_health": 4,
+      "ai_commentary": "**TIGHTEN stops to breakeven.** Position underwater with no directional momentum (RSI 50, ADX 0); reduce loss exposure on weak technicals."
     },
     {
       "ticker": "DOTUSD",
@@ -50308,8 +50314,7 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
-      "pos_health": 5,
-      "ai_commentary": "**HOLD.** Position underwater 9.4%; RSI neutral, ADX flat signals no directional conviction. Await breakout confirmation before adding or exiting."
+      "pos_health": 5
     },
     {
       "ticker": "ETHUSD",
@@ -50630,7 +50635,7 @@
         },
         {
           "s": 148,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
@@ -50728,7 +50733,7 @@
         },
         {
           "p": 5.92,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -3.86,
@@ -50771,15 +50776,15 @@
       "side": "long",
       "qty": 2.4136e-05,
       "cost": 24.182242,
-      "price": 24.135,
-      "pnl_pct": -0.17099999999999999,
-      "pnl_usd": -1e-06,
-      "market_val": 0.000583,
+      "price": 24.13,
+      "pnl_pct": -0.34199999999999997,
+      "pnl_usd": -2e-06,
+      "market_val": 0.000582,
       "stop_price": 22.73,
       "target_price": 27.08,
       "peak_price": 24.16,
       "earnings_days": null,
-      "r_multiple": -0.03,
+      "r_multiple": -0.06,
       "days_held": 0,
       "hours_held": 0.0,
       "intraday_chg_pct": -0.14,
@@ -50790,7 +50795,7 @@
       "thesis_total": 8,
       "live_signals": {
         "rsi": 64.6,
-        "vwap_pos": 2.29,
+        "vwap_pos": 2.31,
         "vwap_price": 23.61,
         "roc5": 16.02,
         "macd_slope": 0.0,
@@ -50887,7 +50892,7 @@
         "short_float": 0.057,
         "short_ratio": 0.9,
         "high_short": false,
-        "atm_iv": 100.1,
+        "atm_iv": 100.6,
         "rs_sector": 0.0,
         "rs252": 135.85,
         "rs_rating": 99,
@@ -50899,7 +50904,7 @@
         "fund_quality": -3,
         "earnings_growth": -0.598,
         "revenue_growth": -0.075,
-        "forward_pe": 24.155,
+        "forward_pe": 24.14,
         "profit_margin": 0.03914,
         "roe": 0.03647,
         "pocket_pivot": false,
@@ -50913,9 +50918,9 @@
         "vol_bearish_div": true,
         "vol_bullish_div": false,
         "w52_range_pos": 94.8,
-        "expected_move_wk": 3.4,
-        "expected_move_mo": 6.97,
-        "expected_move_pct_wk": 14.09,
+        "expected_move_wk": 3.42,
+        "expected_move_mo": 7.01,
+        "expected_move_pct_wk": 14.17,
         "analyst_upgrade": false,
         "analyst_rev_score": 0,
         "analyst_buy_pct": 0.667,
@@ -50933,13 +50938,13 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": -0.09,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -0.09,
@@ -50965,12 +50970,12 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 23.19,
-      "dist_from_trail": 3.92,
+      "dist_from_trail": 3.9,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
       "score_delta": 150,
-      "live_rr": 3.12,
+      "live_rr": 3.14,
       "pivot_pct": -2.7,
       "extended": false,
       "overextended": false,
@@ -51042,7 +51047,7 @@
         "pivot_s2": 12.07,
         "psar": 11.951,
         "psar_bull": true,
-        "options_pcr": 1.065,
+        "options_pcr": 1.061,
         "options_bull": false,
         "options_bear": false,
         "unusual_calls": false,
@@ -51144,13 +51149,13 @@
       "score_history": [
         {
           "s": 84,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": -1.91,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -1.91,
@@ -51246,8 +51251,7 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
-      "pos_health": 5,
-      "ai_commentary": "**HOLD.** Position down 11.2% with no directional momentum (RSI 50, ADX 0); neutral technicals offer no clear exit signal yet."
+      "pos_health": 5
     },
     {
       "ticker": "LTCUSD",
@@ -51314,18 +51318,18 @@
       "side": "long",
       "qty": 9.99e-07,
       "cost": 444.03,
-      "price": 427.1,
+      "price": 426.96,
       "pnl_pct": -3.8289999999999997,
       "pnl_usd": -1.7e-05,
       "market_val": 0.000427,
       "stop_price": 417.39,
       "target_price": 497.31,
-      "peak_price": 426.81,
+      "peak_price": 426.86,
       "earnings_days": null,
       "r_multiple": -0.64,
       "days_held": 0,
       "hours_held": 0.0,
-      "intraday_chg_pct": -0.12,
+      "intraday_chg_pct": -0.11,
       "vol_pace": 0.45,
       "thesis_status": "unknown",
       "thesis_intact": 0,
@@ -51333,19 +51337,19 @@
       "thesis_total": 0,
       "live_signals": {
         "rsi": 58.1,
-        "vwap_pos": -0.58,
+        "vwap_pos": -0.55,
         "vwap_price": 429.22,
-        "roc5": -0.04,
+        "roc5": -0.03,
         "macd_slope": 0.0,
         "vol_ratio": 0.39,
         "vwap_reclaim": false,
         "adx": 278.8,
         "adx_trend": "strong",
-        "rs5": -5.2,
-        "rs63": 4.59,
+        "rs5": -5.19,
+        "rs63": 4.6,
         "rs_line_new_high": false,
         "rs_line_trending": false,
-        "chandelier_stop": 431.59,
+        "chandelier_stop": 431.6,
         "ichimoku": 3,
         "macd_bull_div": false,
         "mtf_aligned": false,
@@ -51355,7 +51359,7 @@
         "weekly_bull": false,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 5.2,
+        "price_vs_ema200": 5.22,
         "mfi": 62.6,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -51383,10 +51387,10 @@
         "vwap_b2u": 432.06,
         "vwap_b1d": 427.81,
         "vwap_b2d": 426.39,
-        "price_accel": -4.018,
+        "price_accel": -4.006,
         "price_accel_pos": false,
         "lr_slope": 90.2,
-        "lr_r2": 0.428,
+        "lr_r2": 0.429,
         "lr_below_channel": false,
         "lr_above_channel": false,
         "ha_bull": false,
@@ -51430,9 +51434,9 @@
         "short_float": 0.01,
         "short_ratio": 2.1,
         "high_short": false,
-        "atm_iv": 30.4,
+        "atm_iv": 30.2,
         "rs_sector": 0.0,
-        "rs252": 2.75,
+        "rs252": 2.76,
         "rs_rating": 53,
         "ema21_pullback": false,
         "ema21_touch": true,
@@ -51442,7 +51446,7 @@
         "fund_quality": 2,
         "earnings_growth": 0.234,
         "revenue_growth": 0.183,
-        "forward_pe": 22.073809,
+        "forward_pe": 22.081047,
         "profit_margin": 0.39341998,
         "roe": 0.34013999,
         "pocket_pivot": false,
@@ -51452,13 +51456,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 411.09,
-        "avwap_dist_pct": 3.82,
+        "avwap_dist_pct": 3.84,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 56.5,
-        "expected_move_wk": 18.29,
-        "expected_move_mo": 37.48,
-        "expected_move_pct_wk": 4.28,
+        "w52_range_pos": 56.6,
+        "expected_move_wk": 18.16,
+        "expected_move_mo": 37.22,
+        "expected_move_pct_wk": 4.25,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
         "analyst_buy_pct": 0.948,
@@ -51476,16 +51480,16 @@
       "score_history": [
         {
           "s": 20,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
-          "p": -3.88,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -3.87,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
-      "mae": -3.88,
+      "mae": -3.87,
       "mfe": 0.0,
       "atr_at_entry": 0.0,
       "scale_in_pending": false,
@@ -51496,7 +51500,7 @@
       "entry_premium_signals": [],
       "grade": "C",
       "rs_rating": 53,
-      "rs252": 2.75,
+      "rs252": 2.76,
       "sector": "tech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -51507,13 +51511,13 @@
       "spy_since_entry": 0.0,
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
-      "trail_stop_price": 409.74,
-      "dist_from_trail": 4.06,
+      "trail_stop_price": 409.79,
+      "dist_from_trail": 4.02,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 20,
       "score_delta": 20,
-      "live_rr": 4.04,
+      "live_rr": 4.1,
       "pivot_pct": -2.3,
       "extended": false,
       "overextended": false,
@@ -51525,18 +51529,18 @@
       "side": "long",
       "qty": 1.2846e-05,
       "cost": 31.616623,
-      "price": 30.395,
-      "pnl_pct": -3.941,
-      "pnl_usd": -1.6e-05,
-      "market_val": 0.00039,
+      "price": 30.295,
+      "pnl_pct": -4.186999999999999,
+      "pnl_usd": -1.7e-05,
+      "market_val": 0.000389,
       "stop_price": 29.72,
       "target_price": 35.41,
-      "peak_price": 30.56,
+      "peak_price": 30.55,
       "earnings_days": null,
-      "r_multiple": -0.66,
+      "r_multiple": -0.7,
       "days_held": 0,
       "hours_held": 0.0,
-      "intraday_chg_pct": -0.91,
+      "intraday_chg_pct": -0.94,
       "vol_pace": 0.84,
       "thesis_status": "COLLAPSED",
       "thesis_intact": 3,
@@ -51544,16 +51548,16 @@
       "thesis_total": 7,
       "live_signals": {
         "rsi": 64.5,
-        "vwap_pos": 0.35,
+        "vwap_pos": 0.29,
         "vwap_price": 30.47,
-        "roc5": 7.19,
+        "roc5": 7.16,
         "macd_slope": 0.0,
         "vol_ratio": 1.05,
         "vwap_reclaim": true,
         "adx": 612.8,
         "adx_trend": "strong",
-        "rs5": 14.89,
-        "rs63": 272.68,
+        "rs5": 14.85,
+        "rs63": 272.56,
         "rs_line_new_high": false,
         "rs_line_trending": false,
         "chandelier_stop": 23.69,
@@ -51566,7 +51570,7 @@
         "weekly_bull": true,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 125.37,
+        "price_vs_ema200": 125.3,
         "mfi": 61.8,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -51594,9 +51598,9 @@
         "vwap_b2u": 31.69,
         "vwap_b1d": 29.86,
         "vwap_b2d": 29.25,
-        "price_accel": -1.744,
+        "price_accel": -1.788,
         "price_accel_pos": false,
-        "lr_slope": 544.9,
+        "lr_slope": 544.8,
         "lr_r2": 0.693,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -51622,8 +51626,8 @@
         "trend_quality_score": 4.6,
         "consec_green": 0,
         "consec_red": 1,
-        "hv20": 179.7,
-        "hv5": 170.0,
+        "hv20": 179.8,
+        "hv5": 170.1,
         "hv_expanding": false,
         "hv_contracting": false,
         "key_support_1": 23.59,
@@ -51643,7 +51647,7 @@
         "high_short": true,
         "atm_iv": 140.7,
         "rs_sector": 0.0,
-        "rs252": 163.61,
+        "rs252": 163.54,
         "rs_rating": 99,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -51663,12 +51667,12 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 16.2,
-        "avwap_dist_pct": 88.6,
+        "avwap_dist_pct": 88.54,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
         "w52_range_pos": 86.5,
-        "expected_move_wk": 6.02,
-        "expected_move_mo": 12.35,
+        "expected_move_wk": 6.0,
+        "expected_move_mo": 12.3,
         "expected_move_pct_wk": 19.81,
         "analyst_upgrade": false,
         "analyst_rev_score": 0,
@@ -51687,16 +51691,16 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
-          "p": -3.34,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -3.37,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
-      "mae": -3.34,
+      "mae": -3.37,
       "mfe": 0.0,
       "atr_at_entry": 0.0,
       "scale_in_pending": false,
@@ -51707,7 +51711,7 @@
       "entry_premium_signals": [],
       "grade": "A+",
       "rs_rating": 99,
-      "rs252": 163.61,
+      "rs252": 163.54,
       "sector": "tech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -51718,14 +51722,14 @@
       "spy_since_entry": 0.0,
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
-      "trail_stop_price": 29.34,
-      "dist_from_trail": 3.47,
+      "trail_stop_price": 29.33,
+      "dist_from_trail": 3.19,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
       "score_delta": 150,
-      "live_rr": 4.75,
-      "pivot_pct": -9.1,
+      "live_rr": 5.3,
+      "pivot_pct": -9.4,
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
@@ -51736,10 +51740,10 @@
       "side": "long",
       "qty": 2.6184e-05,
       "cost": 245.279999,
-      "price": 234.29,
-      "pnl_pct": -4.469,
-      "pnl_usd": -0.000287,
-      "market_val": 0.006135,
+      "price": 234.42,
+      "pnl_pct": -4.422000000000001,
+      "pnl_usd": -0.000284,
+      "market_val": 0.006138,
       "stop_price": 230.56,
       "target_price": 274.71,
       "peak_price": 234.2,
@@ -51755,7 +51759,7 @@
       "thesis_total": 8,
       "live_signals": {
         "rsi": 68.1,
-        "vwap_pos": 0.95,
+        "vwap_pos": 0.92,
         "vwap_price": 232.04,
         "roc5": 14.97,
         "macd_slope": 0.0,
@@ -51796,7 +51800,7 @@
         "pivot_s2": 219.92,
         "psar": 192.9,
         "psar_bull": true,
-        "options_pcr": 0.377,
+        "options_pcr": 0.378,
         "options_bull": true,
         "options_bear": true,
         "unusual_calls": true,
@@ -51852,7 +51856,7 @@
         "short_float": 0.021,
         "short_ratio": 1.3,
         "high_short": false,
-        "atm_iv": 78.8,
+        "atm_iv": 78.7,
         "rs_sector": 0.0,
         "rs252": 32.19,
         "rs_rating": 91,
@@ -51864,7 +51868,7 @@
         "fund_quality": 2,
         "earnings_growth": 0.245,
         "revenue_growth": 0.217,
-        "forward_pe": 29.081093,
+        "forward_pe": 29.085438,
         "profit_margin": 0.25298,
         "roe": 0.57572,
         "pocket_pivot": false,
@@ -51878,9 +51882,9 @@
         "vol_bearish_div": false,
         "vol_bullish_div": false,
         "w52_range_pos": 86.1,
-        "expected_move_wk": 26.01,
-        "expected_move_mo": 53.3,
-        "expected_move_pct_wk": 11.1,
+        "expected_move_wk": 25.99,
+        "expected_move_mo": 53.26,
+        "expected_move_pct_wk": 11.09,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
         "analyst_buy_pct": 0.795,
@@ -51898,13 +51902,13 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": -4.52,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -4.52,
@@ -51930,32 +51934,33 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 224.83,
-      "dist_from_trail": 4.04,
+      "dist_from_trail": 4.09,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
       "score_delta": 150,
-      "live_rr": 4.27,
-      "pivot_pct": -1.6,
+      "live_rr": 4.2,
+      "pivot_pct": -1.5,
       "extended": false,
       "overextended": false,
       "exit_urgency": 1,
-      "pos_health": 7
+      "pos_health": 7,
+      "ai_commentary": "**HOLD.** Position down 4.4% with overbought RSI (68) and weakening momentum; await pullback or ADX confirmation before adding."
     },
     {
       "ticker": "PENG",
       "side": "long",
       "qty": 2.5773e-05,
       "cost": 71.1042,
-      "price": 71.35,
-      "pnl_pct": 0.327,
-      "pnl_usd": 6e-06,
-      "market_val": 0.001839,
+      "price": 71.375,
+      "pnl_pct": 0.382,
+      "pnl_usd": 7e-06,
+      "market_val": 0.00184,
       "stop_price": 66.84,
       "target_price": 79.64,
       "peak_price": 71.39,
       "earnings_days": null,
-      "r_multiple": 0.05,
+      "r_multiple": 0.06,
       "days_held": 0,
       "hours_held": 0.0,
       "intraday_chg_pct": -0.03,
@@ -52090,8 +52095,8 @@
         "vol_bullish_div": false,
         "w52_range_pos": 96.8,
         "expected_move_wk": 12.03,
-        "expected_move_mo": 24.65,
-        "expected_move_pct_wk": 16.86,
+        "expected_move_mo": 24.66,
+        "expected_move_pct_wk": 16.85,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
         "analyst_buy_pct": 0.875,
@@ -52109,13 +52114,13 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": 0.4,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": 0.0,
@@ -52141,13 +52146,13 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 68.53,
-      "dist_from_trail": 3.95,
+      "dist_from_trail": 3.99,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
       "score_delta": 150,
-      "live_rr": 2.94,
-      "pivot_pct": -3.4,
+      "live_rr": 2.91,
+      "pivot_pct": -3.3,
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
@@ -52158,15 +52163,15 @@
       "side": "long",
       "qty": 57.680979543,
       "cost": 153.246267,
-      "price": 141.36,
-      "pnl_pct": -7.756,
-      "pnl_usd": -685.611524,
-      "market_val": 8153.783268,
+      "price": 141.1906,
+      "pnl_pct": -7.867,
+      "pnl_usd": -695.382682,
+      "market_val": 8144.01211,
       "stop_price": 144.05,
       "target_price": 171.64,
       "peak_price": 153.94,
       "earnings_days": null,
-      "r_multiple": -1.29,
+      "r_multiple": -1.31,
       "days_held": 2,
       "hours_held": 51.8,
       "intraday_chg_pct": -0.58,
@@ -52177,7 +52182,7 @@
       "thesis_total": 7,
       "live_signals": {
         "rsi": 56.8,
-        "vwap_pos": -0.64,
+        "vwap_pos": -0.65,
         "vwap_price": 142.3,
         "roc5": -1.37,
         "macd_slope": 0.0,
@@ -52185,8 +52190,8 @@
         "vwap_reclaim": false,
         "adx": 208.7,
         "adx_trend": "strong",
-        "rs5": -9.69,
-        "rs63": -10.05,
+        "rs5": -9.68,
+        "rs63": -10.04,
         "rs_line_new_high": false,
         "rs_line_trending": false,
         "chandelier_stop": 145.74,
@@ -52227,7 +52232,7 @@
         "vwap_b2u": 143.24,
         "vwap_b1d": 141.82,
         "vwap_b2d": 141.35,
-        "price_accel": -7.142,
+        "price_accel": -7.135,
         "price_accel_pos": false,
         "lr_slope": 139.7,
         "lr_r2": 0.365,
@@ -52274,9 +52279,9 @@
         "short_float": 0.033,
         "short_ratio": 1.6,
         "high_short": false,
-        "atm_iv": 50.1,
+        "atm_iv": 49.8,
         "rs_sector": 0.0,
-        "rs252": -6.03,
+        "rs252": -6.02,
         "rs_rating": 42,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -52286,7 +52291,7 @@
         "fund_quality": 3,
         "earnings_growth": 3.25,
         "revenue_growth": 0.847,
-        "forward_pe": 68.14413,
+        "forward_pe": 68.187515,
         "profit_margin": 0.43673,
         "roe": 0.32587,
         "pocket_pivot": false,
@@ -52296,13 +52301,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 140.13,
-        "avwap_dist_pct": 0.88,
+        "avwap_dist_pct": 0.89,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
         "w52_range_pos": 40.0,
-        "expected_move_wk": 9.98,
-        "expected_move_mo": 20.44,
-        "expected_move_pct_wk": 7.06,
+        "expected_move_wk": 9.9,
+        "expected_move_mo": 20.3,
+        "expected_move_pct_wk": 7.01,
         "analyst_upgrade": false,
         "analyst_rev_score": 0,
         "analyst_buy_pct": 0.586,
@@ -52412,7 +52417,7 @@
         },
         {
           "s": 32,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
@@ -52509,8 +52514,8 @@
           "t": "2026-06-04T17:28:07.423349+00:00"
         },
         {
-          "p": -7.75,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -7.74,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -8.36,
@@ -52524,7 +52529,7 @@
       "entry_premium_signals": [],
       "grade": "D",
       "rs_rating": 42,
-      "rs252": -6.03,
+      "rs252": -6.02,
       "sector": "tech",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -52536,13 +52541,13 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 147.78,
-      "dist_from_trail": -4.54,
+      "dist_from_trail": -4.67,
       "recommendation": "TIGHTEN",
-      "rec_reason": "near trail stop (-4.5%)",
+      "rec_reason": "near trail stop (-4.7%)",
       "live_score": 32,
       "score_delta": 32,
       "live_rr": 0.0,
-      "pivot_pct": -5.0,
+      "pivot_pct": -5.1,
       "extended": false,
       "overextended": false,
       "exit_urgency": 5,
@@ -52613,18 +52618,18 @@
       "side": "long",
       "qty": 0.0001,
       "cost": 7.11,
-      "price": 4.95,
-      "pnl_pct": -30.380000000000003,
-      "pnl_usd": -0.000216,
-      "market_val": 0.000495,
+      "price": 4.9449,
+      "pnl_pct": -30.520000000000003,
+      "pnl_usd": -0.000217,
+      "market_val": 0.000494,
       "stop_price": 6.68,
       "target_price": 7.96,
       "peak_price": 4.96,
       "earnings_days": null,
-      "r_multiple": -5.02,
+      "r_multiple": -5.05,
       "days_held": 0,
       "hours_held": 0.0,
-      "intraday_chg_pct": 15.55,
+      "intraday_chg_pct": 15.62,
       "vol_pace": 1.45,
       "thesis_status": "unknown",
       "thesis_intact": 0,
@@ -52632,16 +52637,16 @@
       "thesis_total": 0,
       "live_signals": {
         "rsi": 61.1,
-        "vwap_pos": 4.57,
+        "vwap_pos": 4.47,
         "vwap_price": 4.74,
-        "roc5": 9.43,
+        "roc5": 9.49,
         "macd_slope": 0.0,
         "vol_ratio": 3.91,
         "vwap_reclaim": false,
         "adx": 525.1,
         "adx_trend": "strong",
-        "rs5": -19.78,
-        "rs63": 96.72,
+        "rs5": -19.74,
+        "rs63": 96.82,
         "rs_line_new_high": false,
         "rs_line_trending": false,
         "chandelier_stop": 5.52,
@@ -52654,7 +52659,7 @@
         "weekly_bull": false,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 73.97,
+        "price_vs_ema200": 74.06,
         "mfi": 80.2,
         "mfi_overbought": true,
         "mfi_bull_div": false,
@@ -52682,10 +52687,10 @@
         "vwap_b2u": 5.05,
         "vwap_b1d": 4.58,
         "vwap_b2d": 4.43,
-        "price_accel": 43.409,
+        "price_accel": 43.514,
         "price_accel_pos": true,
-        "lr_slope": 804.0,
-        "lr_r2": 0.525,
+        "lr_slope": 804.1,
+        "lr_r2": 0.526,
         "lr_below_channel": false,
         "lr_above_channel": false,
         "ha_bull": false,
@@ -52711,7 +52716,7 @@
         "consec_green": 1,
         "consec_red": 0,
         "hv20": 247.4,
-        "hv5": 465.6,
+        "hv5": 465.7,
         "hv_expanding": true,
         "hv_contracting": false,
         "key_support_1": 2.72,
@@ -52729,9 +52734,9 @@
         "short_float": 0.226,
         "short_ratio": 2.6,
         "high_short": true,
-        "atm_iv": 205.1,
+        "atm_iv": 205.9,
         "rs_sector": 0.0,
-        "rs252": 58.03,
+        "rs252": 58.09,
         "rs_rating": 99,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -52741,7 +52746,7 @@
         "fund_quality": -2,
         "earnings_growth": null,
         "revenue_growth": -0.508,
-        "forward_pe": -10.2592745,
+        "forward_pe": -10.238342,
         "profit_margin": 0.0,
         "roe": -1.04511,
         "pocket_pivot": false,
@@ -52751,13 +52756,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 4.82,
-        "avwap_dist_pct": 2.75,
+        "avwap_dist_pct": 2.8,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
         "w52_range_pos": 41.8,
         "expected_move_wk": 1.43,
-        "expected_move_mo": 2.93,
-        "expected_move_pct_wk": 28.89,
+        "expected_move_mo": 2.94,
+        "expected_move_pct_wk": 28.92,
         "analyst_upgrade": false,
         "analyst_rev_score": 0,
         "analyst_buy_pct": 0.286,
@@ -52775,13 +52780,13 @@
       "score_history": [
         {
           "s": 120,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
           "p": -30.24,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -30.24,
@@ -52795,7 +52800,7 @@
       "entry_premium_signals": [],
       "grade": "B+",
       "rs_rating": 99,
-      "rs252": 58.03,
+      "rs252": 58.09,
       "sector": "speculative",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -52807,13 +52812,13 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 4.76,
-      "dist_from_trail": 3.84,
+      "dist_from_trail": 3.74,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 120,
       "score_delta": 120,
-      "live_rr": 15.84,
-      "pivot_pct": 1.9,
+      "live_rr": 16.31,
+      "pivot_pct": 1.7,
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
@@ -52824,38 +52829,38 @@
       "side": "long",
       "qty": 3.0788e-05,
       "cost": 939.739451,
-      "price": 936.8,
-      "pnl_pct": -0.315,
-      "pnl_usd": -9.1e-05,
-      "market_val": 0.028842,
+      "price": 936.685,
+      "pnl_pct": -0.325,
+      "pnl_usd": -9.4e-05,
+      "market_val": 0.028839,
       "stop_price": 883.36,
       "target_price": 1052.51,
-      "peak_price": 936.34,
+      "peak_price": 936.82,
       "earnings_days": null,
       "r_multiple": -0.05,
       "days_held": 0,
       "hours_held": 0.0,
-      "intraday_chg_pct": -0.46,
+      "intraday_chg_pct": -0.41,
       "vol_pace": 0.47,
       "thesis_status": "unknown",
       "thesis_intact": 0,
       "thesis_gone": 0,
       "thesis_total": 0,
       "live_signals": {
-        "rsi": 73.1,
-        "vwap_pos": 1.05,
-        "vwap_price": 926.65,
-        "roc5": 6.32,
+        "rsi": 73.2,
+        "vwap_pos": 1.15,
+        "vwap_price": 926.66,
+        "roc5": 6.37,
         "macd_slope": 0.0,
         "vol_ratio": 0.36,
         "vwap_reclaim": true,
         "adx": 662.2,
         "adx_trend": "strong",
-        "rs5": 6.43,
-        "rs63": 165.87,
+        "rs5": 6.48,
+        "rs63": 166.0,
         "rs_line_new_high": false,
         "rs_line_trending": false,
-        "chandelier_stop": 838.7,
+        "chandelier_stop": 838.76,
         "ichimoku": 4,
         "macd_bull_div": false,
         "mtf_aligned": true,
@@ -52865,7 +52870,7 @@
         "weekly_bull": true,
         "daily_up": true,
         "hourly_up": false,
-        "price_vs_ema200": 71.73,
+        "price_vs_ema200": 71.82,
         "mfi": 62.5,
         "mfi_overbought": false,
         "mfi_bull_div": false,
@@ -52884,18 +52889,18 @@
         "pivot_s2": 894.36,
         "psar": 812.121,
         "psar_bull": true,
-        "options_pcr": 2.585,
+        "options_pcr": 2.586,
         "options_bull": true,
         "options_bear": true,
         "unusual_calls": true,
         "unusual_puts": true,
-        "vwap_b1u": 935.71,
-        "vwap_b2u": 944.76,
-        "vwap_b1d": 917.6,
-        "vwap_b2d": 908.55,
-        "price_accel": 16.914,
+        "vwap_b1u": 935.72,
+        "vwap_b2u": 944.77,
+        "vwap_b1d": 917.61,
+        "vwap_b2d": 908.56,
+        "price_accel": 16.978,
         "price_accel_pos": true,
-        "lr_slope": 237.8,
+        "lr_slope": 238.0,
         "lr_r2": 0.613,
         "lr_below_channel": false,
         "lr_above_channel": false,
@@ -52922,7 +52927,7 @@
         "consec_green": 0,
         "consec_red": 1,
         "hv20": 53.9,
-        "hv5": 33.0,
+        "hv5": 32.8,
         "hv_expanding": false,
         "hv_contracting": true,
         "key_support_1": 766.97,
@@ -52940,9 +52945,9 @@
         "short_float": 0.048,
         "short_ratio": 2.0,
         "high_short": false,
-        "atm_iv": 81.8,
+        "atm_iv": 81.7,
         "rs_sector": 0.0,
-        "rs252": 99.52,
+        "rs252": 99.6,
         "rs_rating": 99,
         "ema21_pullback": false,
         "ema21_touch": false,
@@ -52952,7 +52957,7 @@
         "fund_quality": 3,
         "earnings_growth": 1.083,
         "revenue_growth": 0.441,
-        "forward_pe": 35.26157,
+        "forward_pe": 35.27004,
         "profit_margin": 0.21599,
         "roe": 17.8797,
         "pocket_pivot": false,
@@ -52962,13 +52967,13 @@
         "tt_full": false,
         "above_avwap_52wl": true,
         "avwap_52wl": 609.33,
-        "avwap_dist_pct": 53.67,
+        "avwap_dist_pct": 53.75,
         "vol_bearish_div": false,
         "vol_bullish_div": false,
-        "w52_range_pos": 95.1,
-        "expected_move_wk": 107.94,
-        "expected_move_mo": 221.21,
-        "expected_move_pct_wk": 11.52,
+        "w52_range_pos": 95.2,
+        "expected_move_wk": 107.8,
+        "expected_move_mo": 220.91,
+        "expected_move_pct_wk": 11.51,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
         "analyst_buy_pct": 0.76,
@@ -52986,16 +52991,16 @@
       "score_history": [
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
         {
-          "p": -0.36,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "p": -0.31,
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
-      "mae": -0.36,
+      "mae": -0.31,
       "mfe": 0.0,
       "atr_at_entry": 0.0,
       "scale_in_pending": false,
@@ -53006,7 +53011,7 @@
       "entry_premium_signals": [],
       "grade": "A+",
       "rs_rating": 99,
-      "rs252": 99.52,
+      "rs252": 99.6,
       "sector": "other",
       "rs_sector": 0.0,
       "kelly_size_pct": 2.0,
@@ -53017,28 +53022,28 @@
       "spy_since_entry": 0.0,
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
-      "trail_stop_price": 898.89,
-      "dist_from_trail": 4.05,
+      "trail_stop_price": 899.35,
+      "dist_from_trail": 3.99,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
       "score_delta": 150,
-      "live_rr": 3.05,
+      "live_rr": 3.1,
       "pivot_pct": -3.0,
       "extended": false,
       "overextended": false,
-      "exit_urgency": 1,
-      "pos_health": 7
+      "exit_urgency": 2,
+      "pos_health": 6
     },
     {
       "ticker": "TMHC",
       "side": "long",
       "qty": 101.355464795,
       "cost": 71.516703,
-      "price": 71.575,
-      "pnl_pct": 0.082,
-      "pnl_usd": 5.90872,
-      "market_val": 7254.517393,
+      "price": 71.58,
+      "pnl_pct": 0.089,
+      "pnl_usd": 6.415497,
+      "market_val": 7255.02417,
       "stop_price": 67.23,
       "target_price": 80.1,
       "peak_price": 71.53,
@@ -53151,7 +53156,7 @@
         "short_float": 0.082,
         "short_ratio": 4.4,
         "high_short": false,
-        "atm_iv": 13.5,
+        "atm_iv": 13.4,
         "rs_sector": 0.0,
         "rs252": 10.12,
         "rs_rating": 63,
@@ -53163,7 +53168,7 @@
         "fund_quality": -3,
         "earnings_growth": -0.512,
         "revenue_growth": -0.268,
-        "forward_pe": 11.15098,
+        "forward_pe": 11.151758,
         "profit_margin": 0.08771,
         "roe": 0.111090004,
         "pocket_pivot": false,
@@ -53177,9 +53182,9 @@
         "vol_bearish_div": false,
         "vol_bullish_div": false,
         "w52_range_pos": 98.7,
-        "expected_move_wk": 1.36,
-        "expected_move_mo": 2.79,
-        "expected_move_pct_wk": 1.9,
+        "expected_move_wk": 1.35,
+        "expected_move_mo": 2.77,
+        "expected_move_pct_wk": 1.89,
         "analyst_upgrade": false,
         "analyst_rev_score": 1,
         "analyst_buy_pct": 0.889,
@@ -53289,7 +53294,7 @@
         },
         {
           "s": 150,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "pnl_history": [
@@ -53387,7 +53392,7 @@
         },
         {
           "p": 0.07,
-          "t": "2026-06-04T17:35:36.596037+00:00"
+          "t": "2026-06-04T17:35:59.086463+00:00"
         }
       ],
       "mae": -0.09,
@@ -53413,7 +53418,7 @@
       "rs_alpha": 0.0,
       "dyn_trail_pct": 4.0,
       "trail_stop_price": 68.67,
-      "dist_from_trail": 4.06,
+      "dist_from_trail": 4.07,
       "recommendation": "HOLD",
       "rec_reason": "",
       "live_score": 150,
@@ -53423,8 +53428,7 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 1,
-      "pos_health": 7,
-      "ai_commentary": "**HOLD.** Position near entry with overbought RSI (83) and extended trailing stop distance (4.1%); lock gains on weakness."
+      "pos_health": 7
     },
     {
       "ticker": "UNIUSD",
@@ -53484,8 +53488,7 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 1,
-      "pos_health": 6,
-      "ai_commentary": "**HOLD.** Position down 10.5% with neutral technicals (RSI 50, ADX 0); insufficient conviction to exit; await directional catalyst."
+      "pos_health": 6
     },
     {
       "ticker": "XRPUSD",
@@ -53545,12 +53548,11 @@
       "extended": false,
       "overextended": false,
       "exit_urgency": 2,
-      "pos_health": 5,
-      "ai_commentary": "**HOLD.** Position underwater -4.8%; RSI neutral at 50, ADX shows no trend, lacks directional conviction to add or exit."
+      "pos_health": 5
     }
   ],
-  "last_updated": "2026-06-04T17:35:36.596037+00:00",
-  "portfolio_value": 80341.38,
+  "last_updated": "2026-06-04T17:35:59.086463+00:00",
+  "portfolio_value": 80336.33,
   "buying_power": 0.0,
   "status": "ok",
   "neurons_active": 894,
@@ -53604,7 +53606,7 @@
   },
   "bot_activity_log": [
     {
-      "ts": "2026-06-04T17:30:56.983650+00:00",
+      "ts": "2026-06-04T17:30:52.292078+00:00",
       "type": "SCAN",
       "icon": "\ud83d\udd0d",
       "msg": "Scanned 300 stocks | 8 top picks | 8 qualified | regime neutral"
@@ -53794,14 +53796,14 @@
       "priority": "critical",
       "title": "\u26d4 DEEP DRAWDOWN",
       "body": "Portfolio down 19.0% from peak. Bot in max-defensive mode. No new buys until recovery.",
-      "ts": "2026-06-04T17:36:23.110384+00:00"
+      "ts": "2026-06-04T17:36:42.506953+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\ud83d\udee1 RECOVERY MODE ACTIVE",
       "body": "Win rate dropped below 40% + portfolio in drawdown. Bot reduced sizes 40% and raised entry bar until conditions improve.",
-      "ts": "2026-06-04T17:36:23.110384+00:00"
+      "ts": "2026-06-04T17:36:42.506953+00:00"
     },
     {
       "type": "performance",
@@ -54085,7 +54087,7 @@
     "reason": "",
     "score": 70
   },
-  "next_run_utc": "2026-06-04T17:40:36.596037+00:00",
+  "next_run_utc": "2026-06-04T17:40:59.086463+00:00",
   "last_scan_top": [
     {
       "ticker": "AMKR",
@@ -55539,8 +55541,8 @@
   "daily_trade_pace": 307,
   "cross_asset_risk_off": false,
   "risk_off_score": 0,
-  "total_risk_usd": 3375.15,
-  "total_risk_pct": 4.2,
+  "total_risk_usd": 3380.56,
+  "total_risk_pct": 4.21,
   "rolling_wr_20": 15.0,
   "rolling_avg_20": -0.09,
   "sector_concentration": {
@@ -56762,7 +56764,7 @@
         "distribution_days": 0,
         "distribution_day_label": "healthy"
       },
-      "t": "2026-06-04T17:35:36.596037+00:00"
+      "t": "2026-06-04T17:35:59.086463+00:00"
     }
   ],
   "regime_run_count": 17,
@@ -56844,7 +56846,7 @@
     },
     {
       "adv_pct": 50.0,
-      "t": "2026-06-04T17:35:36.596037+00:00"
+      "t": "2026-06-04T17:35:59.086463+00:00"
     }
   ],
   "spy_d1": 0.0,
@@ -56858,8 +56860,8 @@
     "energy": 5
   },
   "options_flow_agg": {
-    "unusual_calls": 67,
-    "unusual_puts": 63,
+    "unusual_calls": 68,
+    "unusual_puts": 64,
     "net_bull": 4,
     "bullish": true
   },
@@ -57105,7 +57107,7 @@
       "wr20": 15.0
     },
     {
-      "t": "2026-06-04T17:35:36.596037+00:00",
+      "t": "2026-06-04T17:35:59.086463+00:00",
       "wr10": 10.0,
       "wr20": 15.0
     }
@@ -57113,7 +57115,7 @@
   "profit_factor": 1.51,
   "avg_win_pct": 0.78,
   "avg_loss_pct": -0.48,
-  "portfolio_heat": -8.15,
+  "portfolio_heat": -8.16,
   "sector_rotation": {
     "tech": 0,
     "finance": 0,
@@ -66856,7 +66858,7 @@
     "recent_wr": 0.15,
     "recent_avg_pnl": -0.086,
     "trades_analyzed": 124,
-    "last_tuned": "2026-06-04T17:35:36.596037+00:00",
+    "last_tuned": "2026-06-04T17:35:59.086463+00:00",
     "learn_log": [
       {
         "neuron": "N740",
@@ -67079,7 +67081,7 @@
     },
     {
       "q": 71,
-      "t": "2026-06-04T17:35:36.596037+00:00"
+      "t": "2026-06-04T17:35:59.086463+00:00"
     }
   ],
   "portfolio_health_score": 4.6,
@@ -67111,48 +67113,39 @@
     },
     {
       "ticker": "CRM",
-      "day_chg_pct": -3.99,
-      "day_chg_usd": -322.03,
+      "day_chg_pct": -4.05,
+      "day_chg_usd": -326.93,
       "open_price": 197.81,
-      "cur_price": 189.92,
-      "pnl_pct": -4.55,
-      "mval": 7751.57
+      "cur_price": 189.8,
+      "pnl_pct": -4.61,
+      "mval": 7746.67
     },
     {
       "ticker": "PLTR",
-      "day_chg_pct": -2.93,
-      "day_chg_usd": -246.3,
+      "day_chg_pct": -3.05,
+      "day_chg_usd": -256.07,
       "open_price": 145.63,
-      "cur_price": 141.36,
-      "pnl_pct": -7.76,
-      "mval": 8153.78
+      "cur_price": 141.19,
+      "pnl_pct": -7.87,
+      "mval": 8144.01
     },
     {
       "ticker": "BBY",
-      "day_chg_pct": -1.87,
-      "day_chg_usd": -195.49,
+      "day_chg_pct": -1.8,
+      "day_chg_usd": -189.0,
       "open_price": 72.65,
-      "cur_price": 71.3,
-      "pnl_pct": -4.45,
-      "mval": 10286.04
+      "cur_price": 71.34,
+      "pnl_pct": -4.39,
+      "mval": 10292.53
     },
     {
       "ticker": "DKNG",
-      "day_chg_pct": -0.77,
-      "day_chg_usd": -95.62,
+      "day_chg_pct": -0.73,
+      "day_chg_usd": -90.71,
       "open_price": 25.47,
-      "cur_price": 25.27,
-      "pnl_pct": -0.47,
-      "mval": 12393.46
-    },
-    {
-      "ticker": "TMHC",
-      "day_chg_pct": -0.01,
-      "day_chg_usd": -0.51,
-      "open_price": 71.58,
-      "cur_price": 71.58,
-      "pnl_pct": 0.08,
-      "mval": 7254.52
+      "cur_price": 25.29,
+      "pnl_pct": -0.43,
+      "mval": 12398.37
     },
     {
       "ticker": "AAVEUSD",
@@ -67165,20 +67158,20 @@
     },
     {
       "ticker": "AMKR",
-      "day_chg_pct": 5.73,
+      "day_chg_pct": 5.72,
       "day_chg_usd": 0.0,
       "open_price": 71.39,
-      "cur_price": 75.48,
+      "cur_price": 75.47,
       "pnl_pct": 0.46,
       "mval": 0.0
     },
     {
       "ticker": "ARM",
-      "day_chg_pct": 2.97,
+      "day_chg_pct": 2.94,
       "day_chg_usd": 0.0,
       "open_price": 380.58,
-      "cur_price": 391.9,
-      "pnl_pct": -0.36,
+      "cur_price": 391.78,
+      "pnl_pct": -0.4,
       "mval": 0.01
     },
     {
@@ -67219,11 +67212,11 @@
     },
     {
       "ticker": "CMPS",
-      "day_chg_pct": 5.12,
+      "day_chg_pct": 4.92,
       "day_chg_usd": 0.0,
       "open_price": 12.6,
-      "cur_price": 13.24,
-      "pnl_pct": -6.22,
+      "cur_price": 13.22,
+      "pnl_pct": -6.44,
       "mval": 0.0
     },
     {
@@ -67255,11 +67248,11 @@
     },
     {
       "ticker": "HIMX",
-      "day_chg_pct": 7.36,
+      "day_chg_pct": 7.34,
       "day_chg_usd": 0.0,
       "open_price": 22.48,
-      "cur_price": 24.14,
-      "pnl_pct": -0.17,
+      "cur_price": 24.13,
+      "pnl_pct": -0.34,
       "mval": 0.0
     },
     {
@@ -67291,38 +67284,38 @@
     },
     {
       "ticker": "MSFT",
-      "day_chg_pct": -2.04,
+      "day_chg_pct": -2.07,
       "day_chg_usd": -0.0,
       "open_price": 435.99,
-      "cur_price": 427.1,
+      "cur_price": 426.96,
       "pnl_pct": -3.83,
       "mval": 0.0
     },
     {
       "ticker": "NVTS",
-      "day_chg_pct": 5.68,
+      "day_chg_pct": 5.34,
       "day_chg_usd": 0.0,
       "open_price": 28.76,
-      "cur_price": 30.39,
-      "pnl_pct": -3.94,
+      "cur_price": 30.3,
+      "pnl_pct": -4.19,
       "mval": 0.0
     },
     {
       "ticker": "ORCL",
-      "day_chg_pct": 3.21,
+      "day_chg_pct": 3.27,
       "day_chg_usd": 0.0,
       "open_price": 227.0,
-      "cur_price": 234.29,
-      "pnl_pct": -4.47,
+      "cur_price": 234.42,
+      "pnl_pct": -4.42,
       "mval": 0.01
     },
     {
       "ticker": "PENG",
-      "day_chg_pct": 8.98,
+      "day_chg_pct": 9.02,
       "day_chg_usd": 0.0,
       "open_price": 65.47,
-      "cur_price": 71.35,
-      "pnl_pct": 0.33,
+      "cur_price": 71.38,
+      "pnl_pct": 0.38,
       "mval": 0.0
     },
     {
@@ -67336,21 +67329,30 @@
     },
     {
       "ticker": "SPCE",
-      "day_chg_pct": 17.86,
+      "day_chg_pct": 17.74,
       "day_chg_usd": 0.0,
       "open_price": 4.2,
-      "cur_price": 4.95,
-      "pnl_pct": -30.38,
+      "cur_price": 4.94,
+      "pnl_pct": -30.52,
       "mval": 0.0
     },
     {
       "ticker": "STX",
-      "day_chg_pct": 5.08,
+      "day_chg_pct": 5.06,
       "day_chg_usd": 0.0,
       "open_price": 891.54,
-      "cur_price": 936.8,
-      "pnl_pct": -0.32,
+      "cur_price": 936.68,
+      "pnl_pct": -0.33,
       "mval": 0.03
+    },
+    {
+      "ticker": "TMHC",
+      "day_chg_pct": 0.0,
+      "day_chg_usd": 0.0,
+      "open_price": 71.58,
+      "cur_price": 71.58,
+      "pnl_pct": 0.09,
+      "mval": 7255.02
     },
     {
       "ticker": "UNIUSD",
@@ -67371,7 +67373,7 @@
       "mval": 10374.93
     }
   ],
-  "today_unrealized_gain_usd": -528.58,
+  "today_unrealized_gain_usd": -531.34,
   "today_unrealized_gain_pct": -0.66,
   "daily_protection_mode": null,
   "daily_protection_tighten_pct": 0,
@@ -68373,8 +68375,8 @@
       "p": 30
     },
     {
-      "t": "2026-06-04T17:35:36.596037+00:00",
-      "v": 80341.38,
+      "t": "2026-06-04T17:35:59.086463+00:00",
+      "v": 80336.33,
       "c": 0.0,
       "p": 30
     }
@@ -68404,8 +68406,8 @@
     {
       "date": "2026-06-04",
       "open": 80659.42,
-      "close": 80341.38,
-      "ret_pct": -0.394,
+      "close": 80336.33,
+      "ret_pct": -0.401,
       "positions": 30
     }
   ],
@@ -68444,6 +68446,16 @@
         "src": "Yahoo Finance"
       },
       {
+        "title": "SoftBank Shares Plunge 10% Amid Global AI Sector Selloff",
+        "pub": "2026-06-04T16:51:03Z",
+        "src": "GuruFocus.com"
+      },
+      {
+        "title": "Broadcom's Stock Sinks Despite Solid Earnings. Other Chip Stocks Are Sliding Too.",
+        "pub": "2026-06-04T14:57:38Z",
+        "src": "Investopedia"
+      },
+      {
         "title": "US Equity Futures Mixed Pre-Bell as Broadcom Falls, Clashes Continue in Middle East",
         "pub": "2026-06-04T12:58:16Z",
         "src": "MT Newswires"
@@ -68452,16 +68464,6 @@
         "title": "SoftBank just got a reminder of AI's biggest risk",
         "pub": "2026-06-04T12:32:03Z",
         "src": "GuruFocus.com"
-      },
-      {
-        "title": "Broadcom Q2 earnings miss drags Nasdaq futures lower",
-        "pub": "2026-06-04T11:36:26Z",
-        "src": "Quartz"
-      },
-      {
-        "title": "NVIDIA's Jensen Huang Wants To Reinvent PC That Has Not Changed In 40 Years",
-        "pub": "2026-06-04T09:45:29Z",
-        "src": "Benzinga"
       }
     ],
     "ASYS": [
@@ -68520,6 +68522,11 @@
     ],
     "BBY": [
       {
+        "title": "Best Buy\u2019s Q1 Earnings Call: Our Top 5 Analyst Questions",
+        "pub": "2026-06-04T16:05:30Z",
+        "src": "StockStory"
+      },
+      {
         "title": "Is It Time To Reconsider Best Buy (BBY) After Recent Share Price Strength",
         "pub": "2026-06-04T08:14:36Z",
         "src": "Simply Wall St."
@@ -68538,11 +68545,6 @@
         "title": "Best Buy (BBY) is a Top-Ranked Momentum Stock: Should You Buy?",
         "pub": "2026-06-03T13:50:02Z",
         "src": "Zacks"
-      },
-      {
-        "title": "Jim Cramer Discusses Best Buy (BBY) & TVs",
-        "pub": "2026-06-02T04:22:14Z",
-        "src": "Insider Monkey"
       }
     ],
     "BTCUSD": [
@@ -68573,7 +68575,7 @@
       }
     ]
   },
-  "position_news_ts": "2026-06-04T15:36:34.504697+00:00",
+  "position_news_ts": "2026-06-04T17:36:41.318134+00:00",
   "sector_performance": {
     "other": {
       "wins": 21,
@@ -84248,61 +84250,61 @@
   ],
   "crypto_errors": [
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "AVAX/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "BTC/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "DOGE/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "DOT/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "ETH/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "LINK/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "LTC/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "SOL/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "UNI/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-04T17:35:38.343037+00:00",
+      "ts": "2026-06-04T17:36:02.375161+00:00",
       "sym": "XRP/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
@@ -85897,6 +85899,6 @@
   "crypto_force_remove_bl": {
     "SOL/USD": "2026-06-04T13:52:42.235819+00:00"
   },
-  "var_95_usd": 3108.41,
-  "cvar_95_usd": 5192.42
+  "var_95_usd": 3108.21,
+  "cvar_95_usd": 5192.09
 }
