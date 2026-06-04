@@ -46372,6 +46372,14 @@ def run():
                 try:
                     if has_earnings_soon(tk):
                         continue
+                    # Wave 97: cooldown — skip re-short on ticker recently covered at a loss
+                    # Prevents PRAX/PG type whipsawing (8x covers in one day = chronic loser)
+                    _recent_tlog = tlog.get("trades", [])[-50:]
+                    if any(t.get("ticker") == tk and t.get("action") == "COVER"
+                           and float(t.get("pnl_pct", 0) or 0) < -0.05
+                           for t in _recent_tlog):
+                        logger.debug(f"SKIP SHORT {tk} — recent cover at loss, cooldown (Wave 97)")
+                        continue
                     d        = live[tk]
                     price    = d["price"]
                     if price <= 0:
