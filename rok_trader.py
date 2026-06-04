@@ -26368,7 +26368,11 @@ def run():
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
                 reason = f"short profit target ({pnl_pct:+.1f}%)"
             elif regime["regime"] == "bull":
-                reason = "regime flip to bull — cover short"
+                # Wave 96: require confirmed bull (2x consecutive) OR 20min+ hold to avoid whipsaw
+                _rh_cover = [r.get("r") for r in tlog.get("regime_history", [])[-2:] if r.get("r")]
+                _bull_conf = len(_rh_cover) >= 2 and all(r == "bull" for r in _rh_cover)
+                if _bull_conf or _sh_age_min >= 20:
+                    reason = f"regime bull {'confirmed 2x' if _bull_conf else '20min+'} — cover short"
             elif _sh_age_min >= 45:
                 # Hard 45-min cycle for shorts — free capital for fresh setups
                 reason = f"short 45min cycle exit ({pnl_pct:+.1f}% after {_sh_age_min:.0f}min)"
@@ -46350,7 +46354,7 @@ def run():
                     logger.warning(f"BUY failed {tk}: {e}")
 
     # ── SHORT: bearish positions in bear/neutral regime ───────────────────
-    if ENABLE_SHORTS and regime["regime"] in ("bear", "neutral") and not _open_guard and not _close_guard:
+    if ENABLE_SHORTS and regime["regime"] == "bear" and not _open_guard and not _close_guard:  # Wave 96: bear only (not neutral) to reduce whipsaw
         open_short_slots = MAX_SHORTS - len(shorts)
         if open_short_slots > 0:
             short_scores = {
