@@ -22050,8 +22050,8 @@ def score(tk, d, sentiment=0, regime_adj=0):
         elif _rg <= -0.05: s -= 3  # shrinking revenue
 
     # Pocket Pivot (O'Neil/Kacher-Morales): up day volume > every down-day volume in prior 10 sessions
-    # Identifies institutional buying pressure before the big move begins (+12)
-    if d.get("pocket_pivot", False): s += 12
+    # Wave 103: score bonus removed — 38%WR n=16 empirical (was +12, inflating scores for a loser signal)
+    if d.get("pocket_pivot", False): s += 0
 
     # High-Tight Flag (Minervini): 3+ consecutive closes near 52W high on volume → explosive setup (+14)
     _htf_c = d.get("htf_consec", 0) or 0
@@ -29118,8 +29118,8 @@ def run():
                 elif _dow_now_lb == 0:
                     _learned_bonus += _npen("day_of_week_perf", "monday_entry", 47, -1)  # 45.8% WR n=72
                 if bool(_tk_sig_sc.get("pocket_pivot", False)):
-                    _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 59, 2)   # 61%WR n=23 — lowered thr 65→59 (drift fix)
-                    _learned_bonus += _npen("pocket_pivot_perf", "pivot", 35, -2)  # penalty only fires when stored WR <= 35% (tightened)
+                    _learned_bonus += _nbns("pocket_pivot_perf", "pivot", 59, 1)   # bonus reduced: empirical WR 38%, only fires if tlog recovers
+                    _learned_bonus += _npen("pocket_pivot_perf", "pivot", 45, -5)  # 38%WR n=16 empirical — raised thr 35→45, pts -2→-5 (Wave 103)
                 if bool(_tk_sig_sc.get("ha_bull", False)):
                     # ha_trend_perf["bull"]: paired data 63%WR n=35 — lowered thr 60→55 (stored WR 50.9% was stale, old penalty removed)
                     _learned_bonus += _nbns("ha_trend_perf", "bull", 55, 1)
@@ -29515,7 +29515,7 @@ def run():
                     _learned_bonus += _nbns("concentration_perf", "3-4", 57, 2)  # 57.1% WR n=28 — threshold 60→57
                 elif _open_pos_lb >= 8:
                     _learned_bonus += _npen("concentration_perf", "8+", 55, -2)  # 53% WR n=30 — stronger penalty
-                # Reentry type: winner reentry = 80% WR n=5; loser reentry = 33% WR n=3 — compute directly
+                # Reentry type: big-winner reentry (>0.5%) = 80%WR n=4; tiny-win (<0.5%) = 0%WR n=6 (Wave 103)
                 _reentry_lb = "no_reentry"
                 if tk in recent_sells:
                     try:
@@ -29523,11 +29523,15 @@ def run():
                                       if t.get("ticker") == tk and t.get("action") in ("SELL","COVER")
                                       and t.get("pnl_pct") is not None]
                         _re_last = sorted(_re_trades, key=lambda x: x.get("time",""))[-1] if _re_trades else None
-                        _reentry_lb = ("winner" if _re_last and float(_re_last.get("pnl_pct",0) or 0) > 0 else "loser")
+                        _re_pnl = float(_re_last.get("pnl_pct",0) or 0) if _re_last else 0
+                        # Wave 103: require >0.5% prior profit to classify as "winner" — tiny wins (0-0.5%) = 0%WR n=6
+                        _reentry_lb = ("winner" if _re_pnl > 0.5 else "loser" if _re_pnl < 0 else "tiny_win")
                     except Exception:
                         _reentry_lb = "no_reentry"
                     if _reentry_lb == "winner":
-                        _learned_bonus += _nbns("reentry_perf", "winner", 60, 4)   # 81%WR n=26 — raised from +2
+                        _learned_bonus += _nbns("reentry_perf", "winner", 65, 3)   # 80%WR n=4 big wins — raised thr 60→65, pts 4→3 (Wave 103)
+                    elif _reentry_lb == "tiny_win":
+                        _learned_bonus += _npen("reentry_perf", "tiny_win", 10, -7)  # 0%WR n=6 — micro-profit reentry = trap (Wave 103)
                         if _intra_mom_bkt_lb == "extended":
                             _learned_bonus += _npen("signal_synergy", "reentry_winner+intra_extended", 20, -3)  # 0%WR n=8 — chasing old winner at intraday peak
                     elif _reentry_lb == "loser":
