@@ -29072,7 +29072,7 @@ def run():
                 # Wave 98: RS rating "average" (50-74) = 33%WR n=12 — middling RS underperforms
                 _rs_rating_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
                 if 50 <= _rs_rating_lb < 75:
-                    _learned_bonus += _npen("rs_rating_perf", "average", 35, -5)  # 33%WR n=12 (Wave 98)
+                    _learned_bonus += _npen("rs_rating_perf", "average", 40, -5)  # 36.8%WR n=106 tlog — threshold raised 35→40 (Wave 108)
                 # Wave 98: intraday_mom = early (0-2% above open) = 20%WR n=5 — buying fresh opens fails
                 _day_open_lb = float(_tk_sig_sc.get("day_open", 0) or 0)
                 _price_now_lb = float(_tk_sig_sc.get("price", 0) or 0)
@@ -29564,7 +29564,7 @@ def run():
                                    or bool(_tk_sig_sc.get("hammer", False))
                                    or bool(_tk_sig_sc.get("candle_score", 0)))
                 if _candle_present:
-                    _learned_bonus += _nbns("candle_pattern_perf", "present", 58, 2)   # 64%WR n=31 — pts 1→2, Wave 71
+                    _learned_bonus += _nbns("candle_pattern_perf", "present", 55, 2)   # 56%WR n=25 tlog — threshold lowered 58→55 (Wave 108)
                     if not bool(_tk_sig_sc.get("gap_and_hold", False)):
                         _learned_bonus += _nbns("signal_synergy", "candle_present+gap_normal", 68, 1)  # 72.7%WR n=11 — candle confirmation without gap trap
                     else:
@@ -29621,7 +29621,7 @@ def run():
                 elif 2.0 <= _atr_pct_lb < 4.0:
                     _learned_bonus += _npen("atr_perf", "2-4%", 42, -3)         # 38%WR n=13 — raised thr 35→42 for drift, Wave 71
                 elif 0 < _atr_pct_lb < 2.0:
-                    _learned_bonus += _npen("atr_perf", "1-2%", 15, -5)         # 12%WR n=8 — low ATR = no momentum
+                    _learned_bonus += _npen("atr_perf", "1-2%", 40, -5)         # 37.6%WR n=93 tlog — threshold raised 15→40 (Wave 108)
                 # ROC: positive = 48.3% WR n=29 (dead bonus removed; coin flip)
                 _roc_lb = float(_tk_sig_sc.get("roc", _tk_sig_sc.get("roc5", 0)) or 0)
                 if _roc_lb > 0:
@@ -29645,6 +29645,8 @@ def run():
                     _learned_bonus += _nbns("catalyst_type_perf", "other", 68, 3)  # 71.1% WR n=38 — threshold raised
                 elif _cat_other_lb in ("none", ""):
                     _learned_bonus += _npen("catalyst_type_perf", "none", 30, -4)  # 25%WR n=8 — no catalyst = weak entry (Wave 104)
+                elif _cat_other_lb == "technical_catalyst":
+                    _learned_bonus += _npen("catalyst_type_perf", "technical_catalyst", 42, -4)  # 40.3%WR n=134 tlog — technical only = weak entry (Wave 108)
                 # TT (trend template): fair=57.1% WR n=28; weak=43.2% WR n=44
                 _tt_raw_lb = _tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw"))
                 if _tt_raw_lb is not None:
