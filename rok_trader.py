@@ -18985,6 +18985,9 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                     "ts": now_utc.isoformat(), "sym": _stuck_sym, "reason": "force_removed",
                     "http_err": f"stuck {_stuck_n} errors", "body": f"age={_stuck_age:.0f}min",
                 })
+                # Wave 106: blacklist force-removed symbols for 8h to prevent immediate re-buy
+                _bl = tlog.setdefault("crypto_force_remove_bl", {})
+                _bl[_stuck_sym] = now_utc.isoformat()
 
     # ── Sell / manage open crypto positions ──────────────────────────────
     _sold_this_call = set()  # re-entry cooldown: coins sold this call can't be immediately re-bought
@@ -19225,6 +19228,20 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
         logger.warning(f"CRYPTO HALT: {_deep_loss_count} positions down >4% — no new crypto buys until losses clear")
         return buying_power
 
+    # Wave 106: portfolio-level crypto loss circuit breaker
+    # If total crypto unrealized loss > 3% of portfolio, halt all new crypto buys
+    _total_crypto_pnl_usd = sum(
+        float(p.get("unrealized_pl", 0) or p.get("pnl_usd", 0) or 0)
+        for p in held_crypto.values()
+    )
+    if portfolio_val > 0 and _total_crypto_pnl_usd <= -(portfolio_val * 0.03):
+        logger.warning(f"CRYPTO HALT (Wave 106): total crypto loss ${_total_crypto_pnl_usd:.0f} = {_total_crypto_pnl_usd/portfolio_val*100:.1f}% — no new buys until recovery")
+        return buying_power
+
+    # Wave 106: skip re-buying force-removed (stuck/un-closeable) symbols for 8 hours
+    _force_bl = tlog.get("crypto_force_remove_bl", {})
+    _bl_cutoff = (now_utc - __import__('datetime').timedelta(hours=8)).isoformat()
+
     # BTC dominance: high dom (>60%) = risk-off in crypto, prefer BTC; low dom (<50%) = altcoin season
     btc_dom = get_btc_dominance()
     logger.info(f"BTC dominance: {btc_dom:.1f}% — {'risk-off: prefer BTC' if btc_dom > 60 else 'altcoin season' if btc_dom < 50 else 'neutral'}")
@@ -19302,6 +19319,11 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
     _adj_scores = {}  # adjusted score for every eligible coin (used in fallback paths)
     for alpaca_sym, sig in crypto_data.items():
         if alpaca_sym in held_crypto:
+            continue
+        # Wave 106: skip symbols that are force-removed (stuck, un-closeable) for 8 hours
+        _bl_ts = _force_bl.get(alpaca_sym, "")
+        if _bl_ts and _bl_ts >= _bl_cutoff:
+            logger.info(f"CRYPTO SKIP {alpaca_sym}: force-remove blacklist until {_bl_ts}")
             continue
         sc = crypto_score(sig)
 
@@ -30210,6 +30232,10 @@ def run():
                         _learned_bonus -= 3   # tech last hour: ~50%WR n=8 — mild caution (Wave 102)
                     else:
                         _learned_bonus -= 7   # non-tech last hour: 0-17%WR — strong block (Wave 102)
+                # Wave 106: "other" sector stocks = 22%WR n=9 — strong penalty vs tech/industrial
+                _w106_sec = str(_tk_sig_sc.get("sector","")).lower()
+                if _w106_sec == "other":
+                    _learned_bonus += _npen("sector_type_perf", "other", 40, -8)  # 22%WR n=9 — non-standard sector = weak entry (Wave 106)
                 _learned_bonus = max(-35, min(18, _learned_bonus))  # expanded penalty floor: -24→-35 (more stacking room)
             except Exception:
                 _learned_bonus = 0
