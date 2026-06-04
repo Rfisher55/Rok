@@ -24838,9 +24838,10 @@ def calc_notional(portfolio_val, buying_power, price, atr, vix=20.0, macro_day=F
         vix_scale *= 0.5
 
     # Drawdown guard: shrink risk when portfolio is in significant drawdown
-    if drawdown_pct > 10:    vix_scale *= 0.4   # -10%+ drawdown: very conservative
-    elif drawdown_pct > 5:   vix_scale *= 0.65  # -5%+ drawdown: defensive
-    elif drawdown_pct > 2:   vix_scale *= 0.85  # -2%+ drawdown: slightly cautious
+    if drawdown_pct > 15:    vix_scale *= 0.40   # >15%: extreme caution (unchanged)
+    elif drawdown_pct > 10:  vix_scale *= 0.55   # 10-15%: moderate caution (Wave 98: was 0.4×, allow recovery)
+    elif drawdown_pct > 5:   vix_scale *= 0.65   # -5%+ drawdown: defensive
+    elif drawdown_pct > 2:   vix_scale *= 0.85   # -2%+ drawdown: slightly cautious
 
     # HV regime adjustment: use individual stock's short-term vs medium-term volatility
     # hv_ratio = hv5 / hv20: >1.5 = vol surging (risky/choppy), <0.65 = vol compressed (coil)
@@ -29044,6 +29045,17 @@ def run():
                     _learned_bonus += _npen("multi_timeframe_trend_perf", "aligned_bull", 25, -5)  # 20%WR n=5 — all TF up = overextended chase (Wave 93)
                 if _rs63_lb > 1.2:
                     _learned_bonus += _npen("weekly_trend_quality_perf", "weekly_strong", 25, -4)  # 20%WR n=5 — weekly strong momentum = extended (Wave 93)
+                # Wave 98: RS rating "average" (50-74) = 33%WR n=12 — middling RS underperforms
+                _rs_rating_lb = float(_tk_sig_sc.get("rs_rating", 50) or 50)
+                if 50 <= _rs_rating_lb < 75:
+                    _learned_bonus += _npen("rs_rating_perf", "average", 35, -5)  # 33%WR n=12 (Wave 98)
+                # Wave 98: intraday_mom = early (0-2% above open) = 20%WR n=5 — buying fresh opens fails
+                _day_open_lb = float(_tk_sig_sc.get("day_open", 0) or 0)
+                _price_now_lb = float(_tk_sig_sc.get("price", 0) or 0)
+                if _day_open_lb > 0 and _price_now_lb > 0:
+                    _id_mom_lb = (_price_now_lb - _day_open_lb) / _day_open_lb * 100
+                    if 0.0 <= _id_mom_lb < 2.0:
+                        _learned_bonus += _npen("intraday_mom_perf", "early", 25, -4)  # 20%WR n=5 (Wave 98)
                 _adx_lb = float(_tk_sig_sc.get("adx", _tk_sig_sc.get("adx_14", 20)) or 20)
                 if _rs1_lb > 3 and _adx_lb > 25:
                     _learned_bonus += _nbns("trend_quality_score_perf", "strong_trend", 65, 2)
