@@ -29107,16 +29107,16 @@ def run():
                     _learned_bonus += _nbns("vix_entry_perf", "low", 62, 1)
                 elif _vix_br == "elevated":
                     _learned_bonus += _npen("vix_entry_perf", "elevated", 47, -2)  # 46.6% WR n=73 — threshold 42→47
-                # capital_util: high_cash=3.1% WR n=32, moderate=12.9% WR n=31 — both catastrophic
+                # capital_util: high_cash=6.1%WR n=33, moderate=26.4%WR n=87 — both terrible
                 _cap_pv_lb = float(tlog.get("portfolio_value", 100000) or 100000)
                 _cap_bp_lb = float(tlog.get("buying_power", _cap_pv_lb) or _cap_pv_lb)
                 _cap_util_pct_lb = (1 - _cap_bp_lb / max(_cap_pv_lb, 1)) * 100
                 if _cap_util_pct_lb < 30:
-                    _learned_bonus += _npen("capital_util_perf", "high_cash", 4, -8)    # 3.1% WR n=32 — near-block
+                    _learned_bonus += _npen("capital_util_perf", "high_cash", 8, -8)    # 6.1%WR n=33 tlog — threshold raised 4→8 (Wave 109)
                 elif _cap_util_pct_lb < 60:
-                    _learned_bonus += _npen("capital_util_perf", "moderate", 13, -5)    # 12.9% WR n=31
+                    _learned_bonus += _npen("capital_util_perf", "moderate", 28, -5)    # 26.4%WR n=87 tlog — threshold raised 13→28 (Wave 109)
                 elif _cap_util_pct_lb >= 60:
-                    _learned_bonus += _npen("capital_util_perf", "deployed", 5, -8)     # 0.0% WR n=8 — fully deployed = worst state
+                    _learned_bonus += _npen("capital_util_perf", "deployed", 5, -8)     # 0.0%WR n=8 — fully deployed = worst state
                 # breadth_perf: mixed=41.3% WR n=46; strong=65%+ with market tailwind; weak<40%=avoid
                 _brd_adv_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
                 _brd_bkt_lb = ("strong" if _brd_adv_lb >= 70 else "broad" if _brd_adv_lb >= 55
@@ -29655,6 +29655,8 @@ def run():
                                   else "fair" if _tt_num_lb >= 3 else "weak")
                     if _tt_bkt_lb in ("fair", "good", "elite"):
                         _learned_bonus += _nbns("tt_perf", "fair", 57, 1)  # 57.1% WR n=28 — threshold lowered 60→57
+                        if _tt_bkt_lb == "fair":  # TT 3-6 only: 40.0%WR n=85 in tlog — add direct penalty (Wave 109)
+                            _learned_bonus += _npen("tt_perf", "fair_only", 43, -2)  # 40%WR n=85 tlog
                     elif _tt_bkt_lb == "weak":
                         _learned_bonus += _npen("tt_perf", "weak", 44, -2)  # 43.2% WR n=44 — threshold updated
                 # OBV trend: rising=35.7%WR n=14 — chasing; falling=51.4%WR n=37 — distributing then turning
@@ -30222,9 +30224,9 @@ def run():
                 _sec_adv_lb = sum(1 for sv in tlog.get("sector_etf_trends", {}).values()
                                   if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
                 if _sec_adv_lb < 2:
-                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 6, -8)  # 5.4% WR n=37 — near-block
+                    _learned_bonus += _npen("sector_breadth_perf", "single_sector", 12, -8)  # 10.0%WR n=40 tlog — threshold raised 6→12 (Wave 109)
                 elif 4 <= _sec_adv_lb <= 5:
-                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 17, -5)  # 16.1% WR n=31
+                    _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 28, -5)  # 26.2%WR n=84 tlog — threshold raised 17→28 (Wave 109)
                 elif 6 <= _sec_adv_lb <= 7:
                     _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
                 # Power-hour (3PM-3:35PM ET): last-hour entries often become overnight holds → 31%WR n=16 (Wave 102)
