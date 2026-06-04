@@ -29112,8 +29112,10 @@ def run():
                     _learned_bonus += _npen("capital_util_perf", "high_cash", 8, -8)    # 6.1%WR n=33 tlog — threshold raised 4→8 (Wave 109)
                 elif _cap_util_pct_lb < 60:
                     _learned_bonus += _npen("capital_util_perf", "moderate", 28, -5)    # 26.4%WR n=87 tlog — threshold raised 13→28 (Wave 109)
-                elif _cap_util_pct_lb >= 60:
+                elif 60 <= _cap_util_pct_lb < 85:
                     _learned_bonus += _npen("capital_util_perf", "deployed", 5, -8)     # 0.0%WR n=8 — fully deployed = worst state
+                elif _cap_util_pct_lb >= 85:
+                    _learned_bonus += _npen("capital_util_perf", "max_deployed", 22, -8)  # 20.0%WR n=5 tlog — fix missing bucket (Wave 112)
                 # breadth_perf: mixed=41.3% WR n=46; strong=65%+ with market tailwind; weak<40%=avoid
                 _brd_adv_lb = float((tlog.get("market_breadth") or {}).get("adv_pct", 50) or 50)
                 _brd_bkt_lb = ("strong" if _brd_adv_lb >= 70 else "broad" if _brd_adv_lb >= 55
@@ -29216,6 +29218,7 @@ def run():
                         "kc_breakout": 38,      # 36.4% WR n=11
                         "ema_stacked_bull": 46, # 44.4% WR n=9
                         "mtf_aligned": 41,      # 40.0% WR n=10
+                        "obv_rising": 18,       # 16.7% WR n=6 — add above_poc+obv_rising (Wave 112)
                     }
                     for _apoc_sig, _apoc_thr in _apoc_penalties.items():
                         if bool(_tk_sig_sc.get(_apoc_sig, False)):
