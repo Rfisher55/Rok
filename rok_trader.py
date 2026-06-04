@@ -28430,10 +28430,10 @@ def run():
                         _ng_strikes += 1; _ng_reasons.append(f"score falling({_ng_sh[-1]-_ng_sh[0]:.0f}pts)")
                 # ── Extended neural gate using learned neuron patterns ──────────
                 _lp_ng = tlog.get("bot_learned_params", {})
-                # Strike: overbought stoch at entry has historically failed
+                # Strike: overbought stoch at entry has historically failed — Wave 101: threshold 40→50 (44%WR n=27)
                 _sk_wr = {s.get("zone", s.get("state","")): s.get("win_rate", 50)
                           for s in _lp_ng.get("stoch_zone_perf", [])}
-                if _sk_wr.get("overbought", 50) < 40 and len(_sk_wr) >= 2:
+                if _sk_wr.get("overbought", 50) < 50 and len(_sk_wr) >= 2:
                     _stk_now = float(_tk_sig.get("stoch_k", 50) or 50)
                     if _stk_now > 80:
                         _ng_strikes += 1; _ng_reasons.append(f"overbought stoch({_stk_now:.0f}) learned fail({_sk_wr.get('overbought',50):.0f}%WR)")
@@ -29900,7 +29900,7 @@ def run():
                 _sk_lb = float(_tk_sig_sc.get("stoch_k", 50) or 50)
                 _sk_zone_lb = ("overbought" if _sk_lb > 80 else "oversold" if _sk_lb < 20 else "neutral")
                 if _sk_zone_lb == "overbought":
-                    _learned_bonus += _npen("stoch_zone_perf", "overbought", 62, -3)  # 42.9% WR n=21 — chasing!
+                    _learned_bonus += _npen("stoch_zone_perf", "overbought", 70, -5)  # 44%WR n=27 — raised threshold 62→70, penalty -3→-5 (Wave 101)
                     if _mfi_lb >= 80:
                         _learned_bonus += _nbns("signal_synergy", "mfi_dist+stoch_ob", 55, 1)  # winner profile: distribution momentum + overbought momentum = valid uptrend
                     elif _mfi_lb < 80:
