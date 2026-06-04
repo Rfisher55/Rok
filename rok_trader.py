@@ -29171,7 +29171,7 @@ def run():
                     if bool(_tk_sig_sc.get("mtf_aligned", False)) and not bool(_tk_sig_sc.get("higher_lows", False)):
                         _learned_bonus += _npen("signal_synergy", "kc_breakout+mtf_aligned", 47, -1)  # 46.2% WR n=26
                 if bool(_tk_sig_sc.get("three_white_soldiers", False)):
-                    _learned_bonus += _nbns("tws_perf", "three_soldiers", 58, 2)  # 61%WR n=28 — strong candle momentum
+                    _learned_bonus += _nbns("tws_perf", "three_soldiers", 52, 2)  # 55%WR n=22 — threshold lowered 58→52 so bonus fires (Wave 105)
                     if bool(_tk_sig_sc.get("ha_bull", False)) or str(_tk_sig_sc.get("ha_trend","")).lower() == "bull":
                         _learned_bonus += _nbns("signal_synergy", "tws+ha_bull", 68, 1)  # tws+ha_bull synergy — Wave 71
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
@@ -29660,9 +29660,9 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "ema_stacked_bull+higher_lows", 64, 2)  # 75% WR n=8
                     if not _obv_rising_lb:
                         _learned_bonus += _nbns("signal_synergy", "higher_lows+obv_fall", 70, 1)  # 75%WR n=8 — structure confirmed, no OBV chase
-                # at_breakout_state[not_at_level]: 27.3%WR n=11 — no breakout = weak entry
+                # at_breakout_state[not_at_level]: 31%WR n=13 (paired data) — no breakout = weak entry
                 if not bool(_tk_sig_sc.get("at_breakout", False)):
-                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 50, -3)  # 27.3%WR n=11
+                    _learned_bonus += _npen("at_breakout_perf", "not_at_level", 50, -7)  # 31%WR n=13 — raised pts -3→-7 (Wave 105)
                 # higher_lows_not_confirmed: 38.9%WR n=36 — independent from at_breakout signal
                 if not bool(_tk_sig_sc.get("higher_lows", False)):
                     _learned_bonus += _npen("higher_lows_perf", "not_confirmed", 50, -1)  # soften: 44/56 entries miss field (daily bar gap)
