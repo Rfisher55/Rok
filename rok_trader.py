@@ -1108,7 +1108,7 @@ def log_trade(tlog, action, sym, price, amount, score=None, pnl=None, reason=Non
         _premium_sigs = [
             bool(signals.get("vcp", False)), bool(signals.get("cup_handle", False)),
             bool(signals.get("at_breakout", False)), bool(signals.get("mtf_triple", False)),
-            bool(signals.get("ttm_squeeze_fired", False)), bool(signals.get("gap_and_hold", False)),
+            bool(signals.get("ttm_squeeze_fired", False)),  # gap_and_hold removed: 35%WR n=23 (Wave 99)
             bool(signals.get("orb_breakout", False)), bool(signals.get("rvol_surge", False)),
             bool(signals.get("supertrend_bull", False)), bool(signals.get("obv_rising", False)),
         ]
@@ -28868,18 +28868,20 @@ def run():
                       and _n999_accum == 0):
                     _ng_strikes += 1; _ng_reasons.append(f"zero accum historically fails({_n999_acperf.get('win_rate',50):.0f}%WR n={_n999_acperf.get('total',0)})")
                 # N997: other sector requires premium-tier signal confirmation (high-beta unknowns need strong setup)
+                # gap_and_hold removed from premium list (35%WR n=23 = loser signal, Wave 99)
                 if _n999_sec == "other":
                     _n997_prem = sum(bool(_tk_sig.get(k)) for k in (
                         "vcp", "cup_handle", "at_breakout", "mtf_triple", "ttm_squeeze_fired",
-                        "gap_and_hold", "orb_breakout", "rvol_surge", "supertrend_bull", "obv_rising"
+                        "orb_breakout", "rvol_surge", "supertrend_bull", "obv_rising"
                     ))
                     if _n997_prem < 2:
                         _ng_strikes += 1; _ng_reasons.append(f"other sector + only {_n997_prem} premium sigs (needs 2+)")
                 # N996: zero accum in any sector + insufficient premium confirmation (MU-type: no institutional buying)
+                # gap_and_hold removed from premium list (35%WR n=23 = loser, Wave 99)
                 if _n999_accum == 0 and _n999_sec != "other":  # other-sector already covered by N999
                     _n996_prem = sum(bool(_tk_sig.get(k)) for k in (
                         "vcp", "cup_handle", "at_breakout", "mtf_triple", "ttm_squeeze_fired",
-                        "gap_and_hold", "orb_breakout", "rvol_surge", "supertrend_bull", "obv_rising"
+                        "orb_breakout", "rvol_surge", "supertrend_bull", "obv_rising"
                     ))
                     if _n996_prem < 2:
                         _ng_strikes += 1; _ng_reasons.append(f"zero accum (any sector) + only {_n996_prem} premium sigs (needs 2+)")
@@ -28997,7 +28999,7 @@ def run():
                 if bool(_tk_sig_sc.get("vcp", False)):
                     _learned_bonus += _nbns("vcp_perf", "vcp", 68, 3)
                 if bool(_tk_sig_sc.get("gap_and_hold", False)):
-                    _learned_bonus += _npen("gap_hold_perf", "holding", 55, -3)  # 33.3% WR n=21 — dead bonus removed
+                    _learned_bonus += _npen("gap_hold_perf", "holding", 37, -8)  # 35%WR n=23 — confirmed loser (Wave 99: raised from -3)
                 if bool(_tk_sig_sc.get("nr7_signal", False)):
                     _learned_bonus += _nbns("nr7_perf", "compressed", 65, 2)
                 if bool(_tk_sig_sc.get("at_demand_zone", False)):
