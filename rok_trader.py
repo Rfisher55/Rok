@@ -21551,9 +21551,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif d.get("mtf_aligned", False): s +=  6   # reduced from +12 (Wave 76: score inversion fix)
     if d.get("mtf_conflict", False):  s -= 10   # fighting the daily trend = high failure rate
 
-    # Daily RSI confirmation (+8/-8)
+    # Daily RSI confirmation (+8/-8)  Wave 100: daily_rsi>=70 changed from +2 to 0 (same overbought logic)
     if   50 < daily_rsi < 70: s += 8
-    elif daily_rsi >= 70:     s += 2
+    elif daily_rsi >= 70:     s += 0   # was +2; overbought daily RSI = no bonus (Wave 100)
     elif daily_rsi < 30:      s -= 8
     elif daily_rsi < 40:      s -= 3
 
@@ -21582,9 +21582,9 @@ def score(tk, d, sentiment=0, regime_adj=0):
     elif vr > 1.2:  s +=  5
     elif vr < 0.4:  s -=  8
 
-    # RSI (+14/-10)
+    # RSI (+14/-10)  Wave 100: RSI>=70 changed from +4 to 0 (46%WR n=28 — not a positive signal)
     if   50 < rsi < 70: s += 14
-    elif rsi >= 70:     s +=  4
+    elif rsi >= 70:     s +=  0   # was +4; 46%WR n=28 empirical — overbought entry fails
     elif rsi >  45:     s +=  7
     elif rsi <  25:     s -= 10
 
@@ -29608,7 +29608,7 @@ def run():
                     if _rsi_lb >= 80:
                         _learned_bonus += _nbns("rsi_entry_perf", "extreme_ob", 58, 1)  # 60%WR n=15 — extreme OB = momentum
                     elif _rsi_lb >= 70:
-                        _learned_bonus += _npen("rsi_entry_perf", "overbought", 33, -3)  # 30.8%WR n=13 — fake OB zone
+                        _learned_bonus += _npen("rsi_entry_perf", "overbought", 48, -6)  # 46%WR n=28 empirical — raised threshold 33→48, penalty -3→-6 (Wave 100)
                     elif 40 <= _rsi_lb < 55:
                         _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
                 # ST gap: st_gap/supertrend_gap not in fetch_batch → removed stale fallback
