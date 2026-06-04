@@ -29621,6 +29621,8 @@ def run():
                 _cat_other_lb = str(_tk_sig_sc.get("catalyst_type", "") or "")
                 if _cat_other_lb and _cat_other_lb not in ("", "none", "technical_catalyst", "unknown"):
                     _learned_bonus += _nbns("catalyst_type_perf", "other", 68, 3)  # 71.1% WR n=38 — threshold raised
+                elif _cat_other_lb in ("none", ""):
+                    _learned_bonus += _npen("catalyst_type_perf", "none", 30, -4)  # 25%WR n=8 — no catalyst = weak entry (Wave 104)
                 # TT (trend template): fair=57.1% WR n=28; weak=43.2% WR n=44
                 _tt_raw_lb = _tk_sig_sc.get("trend_template", _tk_sig_sc.get("tt_score_raw"))
                 if _tt_raw_lb is not None:
