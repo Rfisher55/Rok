@@ -29593,7 +29593,7 @@ def run():
                 _px_raw_lb  = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 1)) or 1)
                 _atr_pct_lb = (_atr_raw_lb / max(_px_raw_lb, 0.01) * 100) if _atr_raw_lb > 0 else 0.0
                 if _atr_pct_lb >= 6.0:
-                    _learned_bonus += _npen("atr_perf", "6%+", 40, -2)          # 38%WR n=8 (6-10%), soften: thr 20→40 pts -5→-2
+                    _learned_bonus += _npen("atr_perf", "6%+", 20, -8)          # 0%WR n=5 (6-8%), 33%WR n=3 (8%+) — raised from -2; too volatile (Wave 104)
                 elif _atr_pct_lb >= 4.0:
                     _learned_bonus += _nbns("atr_perf", "4-6%", 68, 2)          # 74%WR n=19 — optimal volatility; split from "4%+" bucket
                 elif 2.0 <= _atr_pct_lb < 4.0:
