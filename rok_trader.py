@@ -228,6 +228,11 @@ SECTOR_MAP = {
     "INTC":"tech","QCOM":"tech","KLAC":"tech","LRCX":"tech","NXPI":"tech",
     "MPWR":"tech","ENPH":"tech","TER":"tech","WOLF":"tech","ON":"tech",
     "JBGS":"real_estate",
+    # Real Estate / Finance / Consumer (Wave 95 — frequently bought as "other")
+    "HST":"real_estate","EGP":"real_estate","KIM":"real_estate","UDR":"real_estate",
+    "UCB":"finance","WSFS":"finance","CSWC":"finance","HBAN":"finance","RF":"finance",
+    "GCO":"consumer","BOOT":"consumer","CATO":"consumer","EXPR":"consumer",
+    "MODV":"health","IMRX":"biotech","SRTX":"biotech","GRPH":"biotech",
 }
 
 # ── Base universe ─────────────────────────────────────────────────────────────
@@ -28846,12 +28851,13 @@ def run():
                 _n995_sec = SECTOR_MAP.get(tk, "other")
                 if _n995_sec == "speculative":
                     _ng_strikes += 3; _ng_reasons.append(f"speculative/meme sector: auto-veto (AMC/GME-type)")
-                # N999: other-sector + light/no accum = 2 strikes (CMPS/SAIC-type: worst risk-adjusted entries)
+                # N999: other sector = automatic 3-strike veto (14%WR n=14, Wave 95)
+                # All accum levels equally bad for unclassified stocks — hard block
                 _n999_sec = _n995_sec  # reuse already computed sector
                 _n999_accum = int(_tk_sig.get("accum_score", 0) or 0)
                 _n999_acperf = _ALL_NEURON_PERFS.get("accum_perf", {}).get("none", {})
-                if _n999_sec == "other" and _n999_accum <= 2:
-                    _ng_strikes += 2; _ng_reasons.append(f"other sector + light accum={_n999_accum} (2 strikes: unknown setup quality)")
+                if _n999_sec == "other":
+                    _ng_strikes += 3; _ng_reasons.append(f"other sector: auto-veto (14%WR n=14, Wave 95)")
                 # N998: zero accum + historically proven bad
                 elif (_n999_acperf.get("total", 0) >= 5 and float(_n999_acperf.get("win_rate", 50)) < 35
                       and _n999_accum == 0):
