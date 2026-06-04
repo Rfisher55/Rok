@@ -29242,7 +29242,7 @@ def run():
                     _learned_bonus += _npen("signal_performance", "orb_breakout", 25, -3)  # direct signal WR also 14%
                 # chart_pattern single (1 pattern): WR=38.5% n=13 — weak single-trigger, real moves need multi-pattern
                 if bool(_tk_sig_sc.get("vwap_reclaim", False)):
-                    pass  # vwap_reclaim_perf state "reclaim" doesn't match dict keys — dead bonus removed
+                    _learned_bonus += _npen("signal_performance", "vwap_reclaim", 30, -3)  # 28.6%WR n=7 tlog — add penalty (Wave 110)
                 if bool(_tk_sig_sc.get("ema_stacked_bull", False)):
                     _learned_bonus += _nbns("ema_stack_quality_perf", "full_ema_stack", 65, 1)
                     if bool(_tk_sig_sc.get("ichimoku_above", False)):
@@ -29429,7 +29429,7 @@ def run():
                 _bb_pos_raw = float(_tk_sig_sc.get("bb_pos", 50) or 50)
                 _bb_pos_lb = _bb_pos_raw / 100.0
                 if _bb_pos_lb > 0.85:
-                    _learned_bonus += _npen("bb_zone_perf", "upper", 58, -6)  # 38.5%WR n=13 — pts -3→-6 (Wave 84: still too weak)
+                    _learned_bonus += _npen("bb_zone_perf", "upper", 54, -6)  # 55.6%WR n=9 tlog — threshold lowered 58→54 to stop firing on 55.6%WR (Wave 110)
                 _intra_mom_lb = float(_tk_sig_sc.get("intraday", _tk_sig_sc.get("intraday_mom_pct", 0)) or 0)
                 _intra_mom_bkt_lb = ("extended" if _intra_mom_lb > 5.0 else "runner" if _intra_mom_lb > 2.0 else "early")
                 if _intra_mom_lb < 0:
@@ -29486,7 +29486,7 @@ def run():
                 _pr_lb2 = float(_tk_sig_sc.get("price", _tk_sig_sc.get("last", 0)) or 0)
                 _ptier_lb = "micro" if _pr_lb2 < 10 else "small" if _pr_lb2 < 30 else "mid" if _pr_lb2 < 100 else "large"
                 if _ptier_lb == "micro":
-                    _learned_bonus += _npen("price_tier_perf", "micro", 10, -8)  # 0%WR n=8 — near-block (raised from -2)
+                    _learned_bonus += _npen("price_tier_perf", "micro", 18, -8)  # 16.7%WR n=12 tlog — threshold raised 10→18 (Wave 110)
                 elif _ptier_lb == "small":
                     _learned_bonus += _npen("price_tier_perf", "small", 42, -5)  # 36.4% WR n=11 — pts -2→-5, thr 40→42 (Wave 84)
                 # Ichimoku: derive position from flags (ichimoku_state/pos not in fetch_batch)
@@ -29636,7 +29636,7 @@ def run():
                     elif _rsi_lb >= 70:
                         _learned_bonus += _npen("rsi_entry_perf", "overbought", 48, -6)  # 46%WR n=28 empirical — raised threshold 33→48, penalty -3→-6 (Wave 100)
                     elif 40 <= _rsi_lb < 55:
-                        _learned_bonus += _npen("rsi_entry_perf", "neutral", 30, -3)    # 25% WR n=12 — severe trap zone
+                        _learned_bonus += _npen("rsi_entry_perf", "neutral", 32, -3)    # 30.8%WR n=13 tlog — threshold raised 30→32 (Wave 110)
                 # ST gap: st_gap/supertrend_gap not in fetch_batch → removed stale fallback
                 # Correct st_gap_perf logic handled below at supertrend_bull/bear check
                 # Catalyst type other: 71.1% WR n=38 bonus (must not be technical_catalyst or none)
@@ -30073,7 +30073,7 @@ def run():
                     # rs_mom_perf["leading"] = 44.1% WR n=34 — wrong bonus removed; coin flip or worse
                     _learned_bonus += _npen("rs_mom_perf", "leading", 46, -1)  # 44.1% WR n=34
                 elif _rs5_acc is not None and _rs63_acc is not None and float(_rs5_acc) <= 0 and float(_rs63_acc) <= 0:
-                    _learned_bonus += _npen("rs_mom_perf", "lagging", 35, -5)   # 12%WR n=8 — raised from -1
+                    _learned_bonus += _npen("rs_mom_perf", "lagging", 39, -5)   # 37.6%WR n=93 tlog — threshold raised 35→39 (Wave 110)
                     if _ha_bear_flag:
                         _learned_bonus += _npen("signal_synergy", "rs_lagging+ha_bear", 20, -3)  # 14%WR n=7 — lagging RS + HA bearish = double weakness
                 # Signal freshness: building_signal=45.5% WR n=77 — compute directly (persist_count/consecutive_strong_scans injected after this block)
@@ -30099,7 +30099,7 @@ def run():
                 except Exception:
                     _sp_type_lb = "new_entry"
                 if _pers_runs_lb <= 0:
-                    _learned_bonus += _npen("score_persistence_perf", "first_appear", 15, -8)  # 9.1% WR n=77
+                    _learned_bonus += _npen("score_persistence_perf", "first_appear", 21, -8)  # 19.5%WR n=133 tlog — threshold raised 15→21 (Wave 110)
                 if _sp_type_lb == "new_entry":
                     _learned_bonus += _nbns("score_persistence_perf", "new_entry", 58, 2)  # 60.9% WR n=46
                 elif _sp_type_lb == "persistent_strong":
@@ -30156,6 +30156,8 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "tech+ha_bull+higher_lows", 80, 2)  # 86%WR n=7 — triple winner profile: tech + HA bull + structure confirmed
                     if _ha_bear_flag:
                         _learned_bonus += _npen("signal_synergy", "tech+ha_bear", 45, -2)  # 43%WR n=7 — tech bearish HA = losing setup
+                elif _sec_perf_lb in ("biotech", "utilities"):
+                    _learned_bonus += _npen("sector_performance", _sec_perf_lb, 13, -6)  # 11.1%WR n=9 each — add penalty (Wave 110)
                 elif _sec_perf_lb == "other":
                     _learned_bonus += _npen("sector_performance", "other", 60, -5)  # 17%WR recent — thr 47→60 (Wave 72: live data confirms catastrophic)
                     if not bool(_tk_sig_sc.get("higher_lows", False)):
@@ -30208,7 +30210,7 @@ def run():
                 if _tm_wstrk == -1:
                     _learned_bonus += _npen("trade_momentum_perf", "losing_1", 7, -7)   # 4.4% WR n=45 → escalated
                 elif _tm_wstrk == 0:
-                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 18, -5)   # 15.6% WR n=32 → escalated
+                    _learned_bonus += _npen("trade_momentum_perf", "neutral", 27, -5)   # 25.9%WR n=85 tlog — threshold raised 18→27 (Wave 110)
                 elif _tm_wstrk == 1:
                     _learned_bonus += _npen("trade_momentum_perf", "win_1", 41, -3)     # 39%WR n=23 — after one win, next often loses
                 # Position count: 4-7=14.7% WR n=34; 13+=4.7% WR n=43; 8-12=60.9% n=46
@@ -30217,9 +30219,9 @@ def run():
                 if _pos_bkt_lb == "13+":
                     _learned_bonus += _npen("position_count_perf", "13+", 20, -12)  # 7% WR n=44 — strong penalty
                 elif _pos_bkt_lb == "4-7":
-                    _learned_bonus += _npen("position_count_perf", "4-7", 20, -5)  # 15% WR n=34
+                    _learned_bonus += _npen("position_count_perf", "4-7", 27, -5)  # 25.3%WR n=87 tlog — threshold raised 20→27 (Wave 110)
                 elif _pos_bkt_lb == "8-12":
-                    _learned_bonus += _nbns("position_count_perf", "medium_book", 61, 1)  # 60.9% WR n=46
+                    _learned_bonus += _nbns("position_count_perf", "medium_book", 60, 1)  # 60.9%WR n=46 tlog — threshold lowered 61→60 (Wave 110)
                 # Sector breadth: compute directly (injection runs after this block)
                 _sec_adv_lb = sum(1 for sv in tlog.get("sector_etf_trends", {}).values()
                                   if isinstance(sv, dict) and float(sv.get("chg1d", 0) or 0) > 0)
@@ -30228,7 +30230,7 @@ def run():
                 elif 4 <= _sec_adv_lb <= 5:
                     _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 28, -5)  # 26.2%WR n=84 tlog — threshold raised 17→28 (Wave 109)
                 elif 6 <= _sec_adv_lb <= 7:
-                    _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
+                    _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 58, 1)  # 59.6%WR n=47 tlog — threshold lowered 61→58 (Wave 110)
                 # Power-hour (3PM-3:35PM ET): last-hour entries often become overnight holds → 31%WR n=16 (Wave 102)
                 if _mkt_sess == "power-hour":
                     _ph_sec = str(_tk_sig_sc.get("sector","")).lower()
