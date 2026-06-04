@@ -29667,9 +29667,9 @@ def run():
                         _learned_bonus += _nbns("signal_synergy", "obv_fall+gap_normal", 95, 2)  # 100%WR n=6 — clean setup: no gap trap, OBV not chasing
                     if 50 <= _mfi_lb < 60:
                         _learned_bonus += _npen("signal_synergy", "obv_fall+mfi_neutral", 20, -3)  # 0%WR n=13 — OBV falling + MFI neutral = no buy pressure
-                # Higher lows confirmed: 75% WR n=8; not_confirmed: 38.9%WR n=36 (large sample!)
+                # Higher lows confirmed: 86%WR n=7 (stock-only paired); not_confirmed: 52%WR n=25
                 if bool(_tk_sig_sc.get("higher_lows", False)):
-                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 3)  # 75% WR n=8
+                    _learned_bonus += _nbns("higher_lows_perf", "confirmed", 64, 5)  # 86%WR n=7 — pts 3→5 (Wave 107)
                     _learned_bonus += _nbns("signal_performance", "higher_lows", 64, 1)  # 75% WR n=8
                     # higher_lows synergy: use sorted key order to match signal_synergy dict
                     for _hl_synergy_sig in ("kc_breakout","mom_accel","mtf_aligned"):
