@@ -26019,8 +26019,8 @@ def run():
     _peak_port   = max(_hist_values) if _hist_values else portfolio_val
     drawdown_pct = max(0.0, (_peak_port - portfolio_val) / _peak_port * 100) if _peak_port > 0 else 0.0
     # Drawdown halt: 5-8% = recovery mode (limited high-conviction buys only), 8%+ = hard halt
-    _drawdown_halt = drawdown_pct >= 8.0   # hard halt at -8% (was -5%)
-    _drawdown_recovery_mode = 5.0 <= drawdown_pct < 8.0  # allow only score>=75 buys
+    _drawdown_halt = drawdown_pct >= 22.0  # hard halt at -22% (was -8%) — allow recovery trading
+    _drawdown_recovery_mode = 8.0 <= drawdown_pct < 22.0  # allow score>=75 buys in recovery window
     if _drawdown_halt:
         logger.warning(f"DRAWDOWN HARD HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys")
     elif _drawdown_recovery_mode:
@@ -28254,9 +28254,9 @@ def run():
     if _risk_limit_halt:
         logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 40% — no new buys")
 
-    # In recovery mode: raise score threshold for high-conviction-only entries
+    # In recovery mode: use standard threshold — brain learns which entries to take
     if _drawdown_recovery_mode and not _drawdown_halt:
-        _eff_min_score = max(_eff_min_score, 75)   # only high-conviction buys in recovery
+        _eff_min_score = max(_eff_min_score, 65)   # keep min score at 65 in recovery, don't over-restrict
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _drawdown_halt and not _risk_limit_halt:
         # Sector counts for diversification
         sector_counts = {}
