@@ -30197,6 +30197,13 @@ def run():
                     _learned_bonus += _npen("sector_breadth_perf", "healthy_4-5", 17, -5)  # 16.1% WR n=31
                 elif 6 <= _sec_adv_lb <= 7:
                     _learned_bonus += _nbns("sector_breadth_perf", "sector_middle", 61, 1)  # 60.9% WR n=46
+                # Power-hour (3PM-3:35PM ET): last-hour entries often become overnight holds → 31%WR n=16 (Wave 102)
+                if _mkt_sess == "power-hour":
+                    _ph_sec = str(_tk_sig_sc.get("sector","")).lower()
+                    if _ph_sec in ("tech", "consumer_tech"):
+                        _learned_bonus -= 3   # tech last hour: ~50%WR n=8 — mild caution (Wave 102)
+                    else:
+                        _learned_bonus -= 7   # non-tech last hour: 0-17%WR — strong block (Wave 102)
                 _learned_bonus = max(-35, min(18, _learned_bonus))  # expanded penalty floor: -24→-35 (more stacking room)
             except Exception:
                 _learned_bonus = 0
