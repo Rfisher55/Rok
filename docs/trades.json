@@ -48747,15 +48747,15 @@
       "ticker": "BBY",
       "qty": 144.274382489,
       "cost": 74.616266,
-      "price": 71.85,
-      "market_val": 10366.114382,
-      "pnl_usd": -399.1,
-      "pnl_pct": -3.707,
+      "price": 71.54,
+      "market_val": 10321.389323,
+      "pnl_usd": -443.83,
+      "pnl_pct": -4.123,
       "side": "long",
       "entry_date": "2026-06-05",
       "entry_ts": "2026-06-05T20:04:01.299435+00:00",
       "recommendation": "TIGHTEN",
-      "rec_reason": "only 2.4% from stop",
+      "rec_reason": "only 2.0% from stop",
       "stop_price": 70.14,
       "target_price": 83.57,
       "peak_price": 74.68,
@@ -49419,15 +49419,15 @@
       "ticker": "CRM",
       "qty": 40.814899006,
       "cost": 198.968599,
-      "price": 184.89,
-      "market_val": 7546.266677,
-      "pnl_usd": -574.62,
-      "pnl_pct": -7.076,
+      "price": 185.66,
+      "market_val": 7577.694149,
+      "pnl_usd": -543.19,
+      "pnl_pct": -6.689,
       "side": "long",
       "entry_date": "2026-06-05",
       "entry_ts": "2026-06-05T20:04:01.299435+00:00",
       "recommendation": "REVIEW",
-      "rec_reason": "approaching stop (-7.1%)",
+      "rec_reason": "approaching stop (-6.7%)",
       "stop_price": 187.03,
       "target_price": 222.84,
       "peak_price": 201.29,
@@ -50399,15 +50399,15 @@
       "ticker": "GENI",
       "qty": 1123.299159663,
       "cost": 5.929104,
-      "price": 5.9959,
-      "market_val": 6735.189431,
-      "pnl_usd": 75.03,
-      "pnl_pct": 1.127,
+      "price": 5.93,
+      "market_val": 6661.164017,
+      "pnl_usd": 1.01,
+      "pnl_pct": 0.015,
       "side": "long",
       "entry_date": "2026-06-05",
       "entry_ts": "2026-06-05T20:04:01.299435+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+1.1%)",
+      "rec_reason": "position healthy (+0.0%)",
       "stop_price": 5.57,
       "target_price": 6.64,
       "peak_price": 5.95,
@@ -51772,15 +51772,15 @@
       "ticker": "ORCL",
       "qty": 2.6184e-05,
       "cost": 245.279999,
-      "price": 210.91,
-      "market_val": 0.005522,
+      "price": 213.68,
+      "market_val": 0.005595,
       "pnl_usd": -0.0,
-      "pnl_pct": -14.014,
+      "pnl_pct": -12.878,
       "side": "long",
       "entry_date": "2026-06-05",
       "entry_ts": "2026-06-05T20:04:01.299435+00:00",
       "recommendation": "REVIEW",
-      "rec_reason": "approaching stop (-14.0%)",
+      "rec_reason": "approaching stop (-12.9%)",
       "stop_price": 230.56,
       "target_price": 274.71,
       "peak_price": 213.2,
@@ -53601,9 +53601,9 @@
       "pos_health": 5
     }
   ],
-  "last_updated": "2026-06-05T23:00:03.929613+00:00",
-  "portfolio_value": 74560.0,
-  "buying_power": 16672.6,
+  "last_updated": "2026-06-05T23:00:08.450544+00:00",
+  "portfolio_value": 74468.64,
+  "buying_power": 16476.01,
   "status": "crypto-only",
   "neurons_active": 894,
   "neurons_total": 860,
@@ -53656,25 +53656,25 @@
   },
   "bot_activity_log": [
     {
-      "ts": "2026-06-05T22:59:59.237124+00:00",
+      "ts": "2026-06-05T23:00:04.864357+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 30 positions | P&L $-12,334 | portfolio $74,560"
+      "msg": "Crypto-only run \u2014 30 positions | P&L $-12,421 | portfolio $74,469"
     },
     {
-      "ts": "2026-06-05T22:56:46.904156+00:00",
-      "type": "CLOSED",
-      "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 30 positions | P&L $-12,332 | portfolio $74,558"
-    },
-    {
-      "ts": "2026-06-05T22:54:23.997724+00:00",
+      "ts": "2026-06-05T22:57:05.454758+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
       "msg": "Crypto-only run \u2014 30 positions | P&L $-12,332 | portfolio $74,558"
     },
     {
-      "ts": "2026-06-05T22:51:24.919112+00:00",
+      "ts": "2026-06-05T22:54:11.467701+00:00",
+      "type": "CLOSED",
+      "icon": "\ud83e\ude99",
+      "msg": "Crypto-only run \u2014 30 positions | P&L $-12,332 | portfolio $74,558"
+    },
+    {
+      "ts": "2026-06-05T22:51:19.547134+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
       "msg": "Crypto-only run \u2014 30 positions | P&L $-12,437 | portfolio $74,453"
@@ -53846,56 +53846,56 @@
       "priority": "low",
       "title": "\u2705 AUTO TRADING ACTIVE",
       "body": "Bot running 24/7 \u2014 30 positions via Alpaca paper account. Crypto runs every 15 min. Stocks resume Mon 9:30 AM ET.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 AAVEUSD DOWN 16.8%",
       "body": "AAVEUSD down 16.8% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 AMKR DOWN 14.3%",
       "body": "AMKR down 14.3% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ARM DOWN 14.4%",
       "body": "ARM down 14.4% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ASYS DOWN 18.2%",
       "body": "ASYS down 18.2% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 BTCUSD DOWN 13.0%",
       "body": "BTCUSD down 13.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CMPS DOWN 15.0%",
       "body": "CMPS down 15.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
-      "title": "\u26a0 CRM DOWN 7.1%",
-      "body": "CRM down 7.1% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-05T23:00:03.929762+00:00"
+      "title": "\u26a0 CRM DOWN 6.7%",
+      "body": "CRM down 6.7% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
+      "ts": "2026-06-05T23:00:08.450691+00:00"
     }
   ],
   "market_open": true,
@@ -55398,7 +55398,7 @@
     {
       "ticker": "BBY",
       "cost": 74.616266,
-      "pnl_pct": -3.71,
+      "pnl_pct": -4.12,
       "stop_price": 70.14,
       "target_price": 83.57
     },
@@ -55419,7 +55419,7 @@
     {
       "ticker": "CRM",
       "cost": 198.968599,
-      "pnl_pct": -7.08,
+      "pnl_pct": -6.69,
       "stop_price": 187.03,
       "target_price": 222.84
     },
@@ -55454,7 +55454,7 @@
     {
       "ticker": "GENI",
       "cost": 5.929104,
-      "pnl_pct": 1.13,
+      "pnl_pct": 0.01,
       "stop_price": 5.57,
       "target_price": 6.64
     },
@@ -55503,7 +55503,7 @@
     {
       "ticker": "ORCL",
       "cost": 245.279999,
-      "pnl_pct": -14.01,
+      "pnl_pct": -12.88,
       "stop_price": 230.56,
       "target_price": 274.71
     },
@@ -84811,61 +84811,61 @@
   ],
   "crypto_errors": [
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "AVAX/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "BTC/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "DOGE/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "DOT/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "ETH/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "LINK/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "LTC/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "SOL/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "UNI/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
     },
     {
-      "ts": "2026-06-05T22:59:59.989746+00:00",
+      "ts": "2026-06-05T23:00:05.349433+00:00",
       "sym": "XRP/USD",
       "err": "cannot access local variable '_lp_cth' where it is not associated with a value",
       "tb": "Traceback (most recent call last):\n  File \"/home/runner/work/Rok/Rok/rok_trader.py\", line 19059, in run_crypto_trades\n    _coin_key_sell = sym.split(\"/\")[0] if \"/\" in sym else sym.replace(\"USD\",\"\")\n    ^^^^^^^^^^^^^^\nUnboundLocalError: cannot access local variable '_lp_cth' where it is not associate"
