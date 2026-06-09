@@ -19006,6 +19006,8 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 _bl[_stuck_sym] = now_utc.isoformat()
 
     # ── Sell / manage open crypto positions ──────────────────────────────
+    # _lp_cth needed in sell loop (coin_reduce tightening) — must be defined before the loop
+    _lp_cth = tlog.get("bot_learned_params", {})
     _sold_this_call = set()  # re-entry cooldown: coins sold this call can't be immediately re-bought
     for sym, pos in list(held_crypto.items()):
         try:
