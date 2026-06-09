@@ -26035,8 +26035,8 @@ def run():
     _peak_port   = max(_hist_values) if _hist_values else portfolio_val
     drawdown_pct = max(0.0, (_peak_port - portfolio_val) / _peak_port * 100) if _peak_port > 0 else 0.0
     # Drawdown halt: 5-8% = recovery mode (limited high-conviction buys only), 8%+ = hard halt
-    _drawdown_halt = drawdown_pct >= 22.0  # hard halt at -22% (was -8%) — allow recovery trading
-    _drawdown_recovery_mode = 8.0 <= drawdown_pct < 22.0  # allow score>=75 buys in recovery window
+    _drawdown_halt = drawdown_pct >= 40.0  # hard halt only at -40% — bot needs to trade to recover
+    _drawdown_recovery_mode = 10.0 <= drawdown_pct < 40.0  # recovery mode: still trade with score>=65
     if _drawdown_halt:
         logger.warning(f"DRAWDOWN HARD HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys")
     elif _drawdown_recovery_mode:
