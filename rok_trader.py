@@ -28962,10 +28962,19 @@ def run():
                     _eff_min_score = max(MIN_BUY_SCORE, _eff_min_score - 3)  # green light lowers bar
                     logger.debug(f"Neural green light: {tk} ({_ng_green_lights} green signals)")
                 # VETO: 3+ strikes = neural gate fires
-                if _ng_strikes >= 3:
+                # Score-based bypass: elite raw signals (>=120) from classified sectors override
+                # accumulated bear-market pessimism. In sustained drawdowns all environmental
+                # neurons fire together (VIX, cold streak, risk_off, breadth, consecutive losses,
+                # SPY intraday, sector trend) — treating one macro condition as 7+ independent
+                # strikes. High-conviction technical setups should not be blocked by this.
+                _score_override = (tech_sc >= 120 and
+                                   SECTOR_MAP.get(tk, "other") not in ("other", "speculative"))
+                if _ng_strikes >= 3 and not _score_override:
                     logger.info(f"NEURAL GATE: {tk} vetoed ({_ng_strikes} strikes: {', '.join(_ng_reasons)})")
                     _rejected_log.append({"ticker": tk, "score": tech_sc, "reason": f"neural gate ({_ng_strikes} strikes)"})
                     continue
+                elif _score_override and _ng_strikes >= 3:
+                    logger.info(f"NEURAL GATE OVERRIDE: {tk} score={tech_sc} bypasses {_ng_strikes} strikes (bear-market fitted)")
             except Exception:
                 pass
             # Use Sonnet for top 3 candidates (better reasoning), Haiku for rest
