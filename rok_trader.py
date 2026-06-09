@@ -73,7 +73,7 @@ STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cy
 PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
-MIN_BUY_SCORE      = 95      # raised 90→95 (Wave 81): recent 30 trades 27%WR; accum_mod(0%)/rs_avg(12%) score 92-94, need 95
+MIN_BUY_SCORE      = 62      # lowered 95→62: bot needs to trade to learn; buying_power gate is the real filter
 MIN_SHORT_SCORE    = 14      # short threshold lowered for more bearish learning
 MAX_HOLD_DAYS      = 1       # exit same-day — cycle capital fast for 100+ trades/day
 MAX_SECTOR_LONGS   = 12      # raised from 6 — 12 per sector for high-volume trading; "other" uncapped below
@@ -277,6 +277,22 @@ def alpaca_post(path, data):
     r = requests.post(f"{ALPACA_BASE}{path}", headers=_h(), json=data, timeout=15)
     r.raise_for_status()
     return r.json()
+
+
+def close_equity_position(sym: str) -> tuple:
+    """Close an equity position using DELETE /v2/positions/{sym}.
+    Returns (success: bool, status_code: int, error_text: str).
+    More reliable than sell orders — avoids fractional qty precision rejections.
+    """
+    try:
+        r = requests.delete(f"{ALPACA_BASE}/v2/positions/{sym}", headers=_h(), timeout=10)
+        if r.status_code in (200, 201, 204):
+            return True, r.status_code, ""
+        if r.status_code == 404:
+            return True, 404, "already_closed"
+        return False, r.status_code, r.text[:150]
+    except Exception as e:
+        return False, 0, str(e)[:150]
 
 
 def alpaca_snapshots(symbols: list) -> dict:
@@ -26498,15 +26514,24 @@ def run():
                 _cx_reason = f"stale overnight exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FORCE_SELL {sym} — {_cx_reason}")
                 try:
-                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                               "side": "sell", "type": "market", "time_in_force": "day"})
-                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_cx_reason)
-                    made_trades = True
-                    del longs[sym]
-                    del held[sym]
-                    peaks.pop(sym, None)
+                    # Use DELETE /v2/positions to close — avoids all fractional qty precision errors
+                    import requests as _req
+                    _del_r = _req.delete(f"{ALPACA_BASE}/v2/positions/{sym}", headers=_h(), timeout=10)
+                    if _del_r.status_code in (200, 201, 204):
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_cx_reason)
+                        made_trades = True
+                        longs.pop(sym, None)
+                        held.pop(sym, None)
+                        peaks.pop(sym, None)
+                    elif _del_r.status_code == 404:
+                        logger.info(f"Position {sym} already closed (404)")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Cross-day force sell {sym}: HTTP {_del_r.status_code} {_del_r.text[:120]}")
+                        tlog.setdefault("sell_errors", []).append({"sym": sym, "err": f"HTTP {_del_r.status_code}", "ts": run_start.isoformat()})
                 except Exception as _cxe:
                     logger.warning(f"Cross-day force sell failed {sym}: {_cxe}")
+                    tlog.setdefault("sell_errors", []).append({"sym": sym, "err": str(_cxe)[:100], "ts": run_start.isoformat()})
                 continue
 
             # Overnight grace window: positions held >4h with strong P&L get a 30min extension.
@@ -26514,17 +26539,20 @@ def run():
             _is_overnight = _fast_age_min >= 240  # held 4+ hours = overnight hold (reduced from 6h)
             _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
             if _fast_age_min >= 60 and not _grace_override:
-                # 60min hard limit (reduced from 120min) — cycle capital faster for 500 trades/day
+                # 60min hard limit — cycle capital faster for 500 trades/day
                 _fast_reason = f"60min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
-                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                               "side": "sell", "type": "market", "time_in_force": "day"})
-                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
-                    made_trades = True
-                    del longs[sym]
-                    del held[sym]
-                    peaks.pop(sym, None)
+                    import requests as _req
+                    _del_r = _req.delete(f"{ALPACA_BASE}/v2/positions/{sym}", headers=_h(), timeout=10)
+                    if _del_r.status_code in (200, 201, 204):
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                        made_trades = True
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    elif _del_r.status_code == 404:
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Fast sell {sym}: HTTP {_del_r.status_code} {_del_r.text[:100]}")
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
@@ -26539,16 +26567,13 @@ def run():
                 else:
                     _fast_reason = f"45min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]
-                        del held[sym]
-                        peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"Fast sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Fast sell {sym}: {_sc} {_err}")
                     continue
             elif _grace_override:
                 # Overnight winner: position held 6h+ with ≥3% gain — extend cycle
@@ -26561,52 +26586,48 @@ def run():
                         # Gave back 1.5% from peak — lock in the gain
                         _g_reason = f"overnight winner trailing exit ({pnl_pct:+.1f}%, peak {_grace_peak:+.1f}%)"
                         logger.info(f"FAST_SELL {sym} (grace exit) — {_g_reason}")
-                        try:
-                            alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                       "side": "sell", "type": "market", "time_in_force": "day"})
+                        _ok, _sc, _err = close_equity_position(sym)
+                        if _ok:
                             log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_g_reason)
                             made_trades = True
-                            del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                        except Exception as _ge:
-                            logger.warning(f"Grace sell failed {sym}: {_ge}")
+                            longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                        else:
+                            logger.warning(f"Grace sell {sym}: {_sc} {_err}")
                         continue
                     elif _fast_age_min >= 360 + 120:  # 8h max then exit regardless
                         _g_reason = f"overnight 8h max hold ({pnl_pct:+.1f}%)"
                         logger.info(f"FAST_SELL {sym} (grace 8h) — {_g_reason}")
-                        try:
-                            alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                       "side": "sell", "type": "market", "time_in_force": "day"})
+                        _ok, _sc, _err = close_equity_position(sym)
+                        if _ok:
                             log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_g_reason)
                             made_trades = True
-                            del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                        except Exception as _ge:
-                            logger.warning(f"Grace 8h sell failed {sym}: {_ge}")
+                            longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                        else:
+                            logger.warning(f"Grace 8h sell {sym}: {_sc} {_err}")
                         continue
             elif _fast_age_min >= 5 and _fast_age_min < 15 and pnl_pct >= 2.0:
                 # Flash winner: up 2%+ in first 5-15 min — clean scalp, take it and free slot
                 _fast_reason = f"flash winner ({pnl_pct:+.1f}% in {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                try:
-                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                _ok, _sc, _err = close_equity_position(sym)
+                if _ok:
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                     made_trades = True
-                    del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                except Exception as _fe:
-                    logger.warning(f"Flash winner sell failed {sym}: {_fe}")
+                    longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                else:
+                    logger.warning(f"Fast sell {sym}: {_sc} {_err}")
                 continue
             elif _fast_age_min >= 5 and _fast_age_min < 10 and not _fast_half_out and pnl_pct <= -1.5:
                 # 5-10min rapid loser: down -1.5%+ in first 5-10 min = entry thesis immediately broken
                 _fast_reason = f"5min rapid loser ({pnl_pct:+.1f}%)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                try:
-                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                _ok, _sc, _err = close_equity_position(sym)
+                if _ok:
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                     made_trades = True
-                    del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                except Exception as _fe:
-                    logger.warning(f"5min rapid loser sell failed {sym}: {_fe}")
+                    longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                else:
+                    logger.warning(f"Fast sell {sym}: {_sc} {_err}")
                 continue
             elif _fast_age_min >= 10 and _fast_age_min < 20 and not _fast_half_out and pnl_pct <= -1.0:
                 # 10-20min early loser: down >1% in first 10-20 min with failed score → cut it
@@ -26759,16 +26780,13 @@ def run():
                 else:
                     _fast_reason = f"60min cycle exit ({pnl_pct:+.1f}%)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]
-                        del held[sym]
-                        peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"Fast sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Fast sell {sym}: {_sc} {_err}")
                     continue
 
             # ── Position rebalancing: trim oversized positions ──────────────
@@ -27637,28 +27655,23 @@ def run():
                 except Exception:
                     pass
                 logger.info(f"SELL {sym} — {reason}")
-                # Wave 85: catastrophic loss (>20%) — try limit order first, fallback to market
-                # Avoids OTC/illiquid market order rejections for deeply stuck positions
-                _sell_order_payload = {"symbol": sym, "qty": str(qty), "side": "sell", "time_in_force": "day"}
-                if pnl_pct <= -20.0 and current > 0:
-                    _limit_px = round(current * 0.97, 2)  # 3% below current — aggressive limit to ensure fill
-                    _sell_order_payload["type"] = "limit"
-                    _sell_order_payload["limit_price"] = str(_limit_px)
-                    logger.warning(f"CATASTROPHIC SELL {sym} {pnl_pct:+.1f}% — using limit ${_limit_px:.2f} (market may fail for illiquid/OTC)")
-                else:
-                    _sell_order_payload["type"] = "market"
-                _sell_result = alpaca_post("/v2/orders", _sell_order_payload)
-                if not _sell_result and pnl_pct <= -20.0:
-                    # Limit failed — try market as last resort
-                    _sell_order_payload["type"] = "market"
-                    _sell_order_payload.pop("limit_price", None)
-                    logger.warning(f"LIMIT SELL failed for {sym} — retrying market order")
-                    _sell_result = alpaca_post("/v2/orders", _sell_order_payload)
-                log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
-                made_trades = True
-                del longs[sym]
-                del held[sym]
-                peaks.pop(sym, None)
+                # Use DELETE /v2/positions to close position — avoids all fractional qty precision errors
+                try:
+                    import requests as _req
+                    _del_r = _req.delete(f"{ALPACA_BASE}/v2/positions/{sym}", headers=_h(), timeout=10)
+                    if _del_r.status_code in (200, 201, 204):
+                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=reason)
+                        made_trades = True
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    elif _del_r.status_code == 404:
+                        logger.info(f"Position {sym} already closed (404) — removing from tracking")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"SELL {sym} HTTP {_del_r.status_code}: {_del_r.text[:150]}")
+                        tlog.setdefault("sell_errors", []).append({"sym": sym, "reason": reason, "err": f"HTTP {_del_r.status_code}: {_del_r.text[:80]}", "ts": run_start.isoformat()})
+                except Exception as _sell_e:
+                    logger.warning(f"SELL {sym} exception: {_sell_e}")
+                    tlog.setdefault("sell_errors", []).append({"sym": sym, "reason": reason, "err": str(_sell_e)[:100], "ts": run_start.isoformat()})
             else:
                 logger.info(
                     f"HOLD {sym} — {pnl_pct:+.1f}% | peak ${peak:.2f} "
@@ -28254,9 +28267,38 @@ def run():
     if _risk_limit_halt:
         logger.warning(f"RISK LIMIT: total stop-loss exposure {_total_risk_pct_now:.1f}% > 40% — no new buys")
 
-    # In recovery mode: use standard threshold — brain learns which entries to take
+    # In recovery mode: allow normal scoring — learning needs real trades
     if _drawdown_recovery_mode and not _drawdown_halt:
-        _eff_min_score = max(_eff_min_score, 65)   # keep min score at 65 in recovery, don't over-restrict
+        _eff_min_score = min(_eff_min_score, 65)   # cap at 65 in recovery so we can actually trade
+
+    # Force-free capital: if buying_power < $500 and we have equity longs, sell the worst one
+    if buying_power < 500 and longs and not _drawdown_halt:
+        try:
+            _worst_sym = None
+            _worst_pnl = 999.0
+            for _fs, _fp in longs.items():
+                _fc = float(_fp.get("current_price") or _fp.get("avg_entry_price", 0))
+                _fe = float(_fp.get("avg_entry_price", 0))
+                _fq = abs(float(_fp.get("qty", 0)))
+                if _fe > 0 and _fq > 0:
+                    _fpnl = (_fc - _fe) / _fe * 100
+                    if _fpnl < _worst_pnl:
+                        _worst_pnl = _fpnl
+                        _worst_sym = _fs
+                        _worst_qty = _fq
+            if _worst_sym:
+                logger.warning(f"FORCE-FREE CAPITAL: bp=${buying_power:.0f}, selling worst position {_worst_sym} ({_worst_pnl:+.1f}%)")
+                alpaca_post("/v2/orders", {"symbol": _worst_sym, "qty": str(round(_worst_qty, 4)),
+                    "side": "sell", "type": "market", "time_in_force": "day"})
+                _worst_cost = float(longs[_worst_sym].get("avg_entry_price", 0))
+                log_trade(tlog, "SELL", _worst_sym, float(longs[_worst_sym].get("current_price") or _worst_cost),
+                          _worst_qty, pnl=_worst_pnl, reason=f"force-free capital (bp=${buying_power:.0f})")
+                made_trades = True
+                buying_power += _worst_qty * float(longs[_worst_sym].get("current_price") or _worst_cost)
+                del longs[_worst_sym]
+        except Exception as _ffe:
+            logger.warning(f"Force-free capital failed: {_ffe}")
+
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _drawdown_halt and not _risk_limit_halt:
         # Sector counts for diversification
         sector_counts = {}
