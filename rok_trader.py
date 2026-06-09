@@ -26462,9 +26462,12 @@ def run():
             if cost <= 0 or qty <= 0:
                 continue
             # Skip ghost positions with negligible notional (< $0.50)
+            # Remove from longs/held tracking so they don't consume position slots
             if current * qty < 0.50:
                 logger.info(f"SKIP ghost position {sym}: notional=${current*qty:.4f}")
                 peaks.pop(sym, None)
+                longs.pop(sym, None)
+                held.pop(sym, None)
                 continue
             pnl_pct = (current - cost) / cost * 100
 
