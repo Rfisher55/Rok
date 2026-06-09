@@ -26636,14 +26636,13 @@ def run():
                 if _fast_sc_10 < 45:
                     _fast_reason = f"10min early loser ({pnl_pct:+.1f}%, score={_fast_sc_10})"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"10min early loser sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 20 and _fast_age_min < 30 and not _fast_half_out and pnl_pct <= -0.4:
                 # 20min failed-setup check: losing after 20min with deteriorated score → free slot
@@ -26652,14 +26651,13 @@ def run():
                 if _fast_sc_20 < 48:
                     _fast_reason = f"20min failed setup ({pnl_pct:+.1f}%, score={_fast_sc_20})"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"20min failed setup sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 25 and _fast_age_min < 45 and not _fast_half_out and -1.0 <= pnl_pct <= -0.5:
                 # 25-45min moderate loser: stuck negative with failed score → free slot faster
@@ -26668,14 +26666,13 @@ def run():
                 if _fast_sc_25 < 50:
                     _fast_reason = f"25min moderate loser ({pnl_pct:+.1f}%, score={_fast_sc_25})"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"25min moderate loser sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 30 and _fast_age_min < 45 and not _fast_half_out and 0.5 <= pnl_pct < 1.5:
                 # 30-45min fading winner: profitable but momentum gone → lock in gain, free slot
@@ -26684,14 +26681,13 @@ def run():
                 if _fast_sc_30w < 55:
                     _fast_reason = f"30min fading profit ({pnl_pct:+.1f}%, score={_fast_sc_30w} — take it)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"30min fading profit sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 45 and _fast_age_min < 60 and not _fast_half_out and 0 < pnl_pct < 0.5:
                 # 45min stalling-winner check: small profit but losing steam → free slot for better setup
@@ -26700,14 +26696,13 @@ def run():
                 if _fast_sc_45 < 52:
                     _fast_reason = f"45min stalling exit ({pnl_pct:+.1f}%, score={_fast_sc_45} — momentum gone)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"45min stalling sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 35 and _fast_age_min < 60 and not _fast_half_out and pnl_pct <= -1.5:
                 # 35min deep-loss exit: bleeding >1.5% after 35min with no recovery = cut losses early
@@ -26716,14 +26711,13 @@ def run():
                 if _fast_sc_35 < 45:
                     _fast_reason = f"35min deep loss ({pnl_pct:+.1f}%, score={_fast_sc_35} — stop the bleed)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"35min deep loss sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 40 and _fast_age_min < 60 and not _fast_half_out and -1.5 < pnl_pct <= -0.5:
                 # 40min moderate loss: losing but not deep enough for 35min exit — check if setup still valid
@@ -26732,27 +26726,25 @@ def run():
                 if _fast_sc_40 < 45:
                     _fast_reason = f"40min losing exit ({pnl_pct:+.1f}%, score={_fast_sc_40} — cut moderate loss)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"40min moderate loss sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 20 and not _fast_half_out and -0.5 <= pnl_pct <= 0.5:
                 # 20min flat/drifting exit: -0.5% to +0.5% after 20min = not breaking out, free the slot
                 _fast_reason = f"20min flat exit ({pnl_pct:+.1f}% — flat slot cleared)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                try:
-                    alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                               "side": "sell", "type": "market", "time_in_force": "day"})
+                _ok, _sc, _err = close_equity_position(sym)
+                if _ok:
                     log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                     made_trades = True
-                    del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                except Exception as _fe:
-                    logger.warning(f"Fast sell failed {sym}: {_fe}")
+                    longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                else:
+                    logger.warning(f"Sell {sym}: {_sc} {_err}")
                 continue
             elif _fast_age_min >= 75 and _fast_age_min < 90 and not _fast_half_out and 0.3 <= pnl_pct < 1.5:
                 # 75min moderate-winner: up but not moving — free slot for fresh momentum
@@ -26761,14 +26753,13 @@ def run():
                 if _fast_sc_75 < 52:
                     _fast_reason = f"75min stalling winner ({pnl_pct:+.1f}%, score={_fast_sc_75} — take profit)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    try:
-                        alpaca_post("/v2/orders", {"symbol": sym, "qty": str(round(qty, 4)),
-                                                   "side": "sell", "type": "market", "time_in_force": "day"})
+                    _ok, _sc, _err = close_equity_position(sym)
+                    if _ok:
                         log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
                         made_trades = True
-                        del longs[sym]; del held[sym]; peaks.pop(sym, None)
-                    except Exception as _fe:
-                        logger.warning(f"75min stalling sell failed {sym}: {_fe}")
+                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                    else:
+                        logger.warning(f"Sell {sym}: {_sc} {_err}")
                     continue
             elif _fast_age_min >= 60 and not _fast_half_out and pnl_pct <= 0.7:
                 # 60min exit for losers/flat/small winners — big winners (>0.7%) ride to 90min
