@@ -1,7 +1,7 @@
 {
   "trades": [
     {
-      "time": "2026-06-10T12:54:52.416053+00:00",
+      "time": "2026-06-10T12:54:56.472126+00:00",
       "action": "SELL",
       "ticker": "AVAX/USD",
       "price": 6.54,
@@ -50939,15 +50939,15 @@
       "ticker": "BMNR",
       "qty": -12.0,
       "cost": 16.545,
-      "price": 16.01,
-      "market_val": -192.12,
-      "pnl_usd": 6.42,
-      "pnl_pct": 3.234,
+      "price": 16.0,
+      "market_val": -192.0,
+      "pnl_usd": 6.54,
+      "pnl_pct": 3.294,
       "side": "short",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "TIGHTEN",
-      "rec_reason": "only 2.9% from stop",
+      "rec_reason": "only 2.8% from stop",
       "stop_price": 15.55,
       "target_price": 18.53,
       "peak_price": 16.5,
@@ -52740,15 +52740,15 @@
       "ticker": "DKNG",
       "qty": 490.344785155,
       "cost": 25.395175,
-      "price": 27.85,
-      "market_val": 13656.102267,
-      "pnl_usd": 1203.71,
-      "pnl_pct": 9.667,
+      "price": 27.97,
+      "market_val": 13714.943641,
+      "pnl_usd": 1262.55,
+      "pnl_pct": 10.139,
       "side": "long",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "LOCK",
-      "rec_reason": "near target (+9.7%) \u2014 protect gains",
+      "rec_reason": "near target (+10.1%) \u2014 protect gains",
       "stop_price": 23.87,
       "target_price": 28.44,
       "peak_price": 25.68,
@@ -53747,15 +53747,15 @@
       "ticker": "IBIT",
       "qty": -44.0,
       "cost": 35.988409,
-      "price": 34.9287,
-      "market_val": -1536.8628,
-      "pnl_usd": 46.63,
-      "pnl_pct": 2.945,
+      "price": 34.905,
+      "market_val": -1535.82,
+      "pnl_usd": 47.67,
+      "pnl_pct": 3.01,
       "side": "short",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+2.9%)",
+      "rec_reason": "position healthy (+3.0%)",
       "stop_price": 33.83,
       "target_price": 40.31,
       "peak_price": 35.93,
@@ -54783,15 +54783,15 @@
       "ticker": "ORCL",
       "qty": 2.6184e-05,
       "cost": 245.279999,
-      "price": 201.71,
-      "market_val": 0.005282,
+      "price": 201.8,
+      "market_val": 0.005284,
       "pnl_usd": -0.0,
-      "pnl_pct": -17.751,
+      "pnl_pct": -17.72,
       "side": "long",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "REVIEW",
-      "rec_reason": "approaching stop (-17.8%)",
+      "rec_reason": "approaching stop (-17.7%)",
       "stop_price": 230.56,
       "target_price": 274.71,
       "peak_price": 205.78,
@@ -56400,15 +56400,15 @@
       "ticker": "SPCE",
       "qty": 0.0001,
       "cost": 7.11,
-      "price": 4.54,
-      "market_val": 0.000454,
+      "price": 4.5303,
+      "market_val": 0.000453,
       "pnl_usd": -0.0,
-      "pnl_pct": -36.146,
+      "pnl_pct": -36.287,
       "side": "long",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "REVIEW",
-      "rec_reason": "approaching stop (-36.1%)",
+      "rec_reason": "approaching stop (-36.3%)",
       "stop_price": 6.68,
       "target_price": 7.96,
       "peak_price": 4.59,
@@ -58411,9 +58411,9 @@
       "pos_health": 2
     }
   ],
-  "last_updated": "2026-06-10T12:54:53.087673+00:00",
-  "portfolio_value": 76265.11,
-  "buying_power": 221532.44,
+  "last_updated": "2026-06-10T12:54:56.753344+00:00",
+  "portfolio_value": 76325.12,
+  "buying_power": 221703.1,
   "status": "crypto-only",
   "neurons_active": 894,
   "neurons_total": 860,
@@ -58466,10 +58466,10 @@
   },
   "bot_activity_log": [
     {
-      "ts": "2026-06-10T12:54:42.950124+00:00",
+      "ts": "2026-06-10T12:54:52.921399+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 30 positions | P&L $+325 | portfolio $76,265"
+      "msg": "Crypto-only run \u2014 30 positions | P&L $+385 | portfolio $76,325"
     },
     {
       "ts": "2026-06-10T12:49:01.008289+00:00",
@@ -58656,56 +58656,56 @@
       "priority": "low",
       "title": "\u2705 AUTO TRADING ACTIVE",
       "body": "Bot running 24/7 \u2014 30 positions via Alpaca paper account. Crypto runs every 15 min. Stocks resume Mon 9:30 AM ET.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 AMKR DOWN 6.5%",
       "body": "AMKR down 6.5% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ARM DOWN 19.7%",
       "body": "ARM down 19.7% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ASYS DOWN 18.2%",
       "body": "ASYS down 18.2% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CMPS DOWN 21.0%",
       "body": "CMPS down 21.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CRM DOWN 13.1%",
       "body": "CRM down 13.1% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
+    },
+    {
+      "type": "win",
+      "priority": "medium",
+      "title": "\ud83d\ude80 DKNG UP 10.1%",
+      "body": "DKNG up 10.1% \u2014 trailing stop protecting gains. Plan partial exit for Monday open.",
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     },
     {
       "type": "win",
       "priority": "medium",
       "title": "\ud83d\ude80 GENI UP 12.8%",
       "body": "GENI up 12.8% \u2014 trailing stop protecting gains. Plan partial exit for Monday open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
-    },
-    {
-      "type": "risk",
-      "priority": "high",
-      "title": "\u26a0 HIMX DOWN 25.3%",
-      "body": "HIMX down 25.3% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T12:54:53.087841+00:00"
+      "ts": "2026-06-10T12:54:56.753480+00:00"
     }
   ],
   "market_open": true,
@@ -60215,7 +60215,7 @@
     {
       "ticker": "BMNR",
       "cost": 16.545,
-      "pnl_pct": 3.23,
+      "pnl_pct": 3.29,
       "stop_price": 15.55,
       "target_price": 18.53
     },
@@ -60250,7 +60250,7 @@
     {
       "ticker": "DKNG",
       "cost": 25.395175,
-      "pnl_pct": 9.67,
+      "pnl_pct": 10.14,
       "stop_price": 23.87,
       "target_price": 28.44
     },
@@ -60271,7 +60271,7 @@
     {
       "ticker": "IBIT",
       "cost": 35.988409,
-      "pnl_pct": 2.94,
+      "pnl_pct": 3.01,
       "stop_price": 33.83,
       "target_price": 40.31
     },
@@ -60299,7 +60299,7 @@
     {
       "ticker": "ORCL",
       "cost": 245.279999,
-      "pnl_pct": -17.75,
+      "pnl_pct": -17.72,
       "stop_price": 230.56,
       "target_price": 274.71
     },
@@ -60334,7 +60334,7 @@
     {
       "ticker": "SPCE",
       "cost": 7.11,
-      "pnl_pct": -36.15,
+      "pnl_pct": -36.29,
       "stop_price": 6.68,
       "target_price": 7.96
     },
@@ -92368,7 +92368,7 @@
   "var_95_usd": 5049.74,
   "cvar_95_usd": 6742.37,
   "crypto_recently_sold": {
-    "AVAX/USD": "2026-06-10T12:54:44.129872+00:00"
+    "AVAX/USD": "2026-06-10T12:54:53.254150+00:00"
   },
   "held_crypto": {}
 }
