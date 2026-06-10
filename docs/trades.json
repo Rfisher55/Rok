@@ -1,7 +1,7 @@
 {
   "trades": [
     {
-      "time": "2026-06-10T11:32:45.090919+00:00",
+      "time": "2026-06-10T11:32:58.555570+00:00",
       "action": "SELL",
       "ticker": "AVAX/USD",
       "price": 6.45,
@@ -11,7 +11,7 @@
       "qty": 1e-09
     },
     {
-      "time": "2026-06-10T11:26:08.685267+00:00",
+      "time": "2026-06-10T11:27:23.824373+00:00",
       "action": "SELL",
       "ticker": "AVAX/USD",
       "price": 6.46,
@@ -51196,10 +51196,10 @@
       "ticker": "CDE",
       "qty": -116.0,
       "cost": 16.930345,
-      "price": 15.475,
-      "market_val": -1795.1,
-      "pnl_usd": 168.82,
-      "pnl_pct": 8.596,
+      "price": 15.48,
+      "market_val": -1795.68,
+      "pnl_usd": 168.24,
+      "pnl_pct": 8.567,
       "side": "short",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
@@ -52600,15 +52600,15 @@
       "ticker": "DKNG",
       "qty": 490.344785155,
       "cost": 25.395175,
-      "price": 27.5,
-      "market_val": 13484.481592,
-      "pnl_usd": 1032.09,
-      "pnl_pct": 8.288,
+      "price": 27.45,
+      "market_val": 13459.964353,
+      "pnl_usd": 1007.57,
+      "pnl_pct": 8.091,
       "side": "long",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "HOLD",
-      "rec_reason": "position healthy (+8.3%)",
+      "rec_reason": "position healthy (+8.1%)",
       "stop_price": 23.87,
       "target_price": 28.44,
       "peak_price": 25.68,
@@ -53607,15 +53607,15 @@
       "ticker": "IBIT",
       "qty": -44.0,
       "cost": 35.988409,
-      "price": 34.52,
-      "market_val": -1518.88,
-      "pnl_usd": 64.61,
-      "pnl_pct": 4.08,
+      "price": 34.47,
+      "market_val": -1516.68,
+      "pnl_usd": 66.81,
+      "pnl_pct": 4.219,
       "side": "short",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "TIGHTEN",
-      "rec_reason": "only 2.0% from stop",
+      "rec_reason": "only 1.9% from stop",
       "stop_price": 33.83,
       "target_price": 40.31,
       "peak_price": 35.93,
@@ -54217,7 +54217,7 @@
       "ticker": "MSFT",
       "qty": 9.99e-07,
       "cost": 444.03,
-      "price": 397.42,
+      "price": 397.23,
       "market_val": 0.000397,
       "pnl_usd": -0.0,
       "pnl_pct": -10.586,
@@ -54643,15 +54643,15 @@
       "ticker": "ORCL",
       "qty": 2.6184e-05,
       "cost": 245.279999,
-      "price": 198.05,
-      "market_val": 0.005186,
+      "price": 198.04,
+      "market_val": 0.005185,
       "pnl_usd": -0.0,
-      "pnl_pct": -19.246,
+      "pnl_pct": -19.262,
       "side": "long",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
       "recommendation": "REVIEW",
-      "rec_reason": "approaching stop (-19.2%)",
+      "rec_reason": "approaching stop (-19.3%)",
       "stop_price": 230.56,
       "target_price": 274.71,
       "peak_price": 205.78,
@@ -58271,9 +58271,9 @@
       "pos_health": 2
     }
   ],
-  "last_updated": "2026-06-10T11:32:45.715180+00:00",
-  "portfolio_value": 75974.31,
-  "buying_power": 220859.04,
+  "last_updated": "2026-06-10T11:32:58.893354+00:00",
+  "portfolio_value": 75950.98,
+  "buying_power": 220797.22,
   "status": "crypto-only",
   "neurons_active": 894,
   "neurons_total": 860,
@@ -58326,16 +58326,16 @@
   },
   "bot_activity_log": [
     {
-      "ts": "2026-06-10T11:32:36.316371+00:00",
+      "ts": "2026-06-10T11:32:54.727342+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 30 positions | P&L $+35 | portfolio $75,974"
+      "msg": "Crypto-only run \u2014 30 positions | P&L $+12 | portfolio $75,951"
     },
     {
-      "ts": "2026-06-10T11:26:04.729787+00:00",
+      "ts": "2026-06-10T11:27:14.081183+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 30 positions | P&L $+21 | portfolio $75,960"
+      "msg": "Crypto-only run \u2014 30 positions | P&L $+10 | portfolio $75,950"
     },
     {
       "ts": "2026-06-10T11:20:26.807091+00:00",
@@ -58516,56 +58516,56 @@
       "priority": "low",
       "title": "\u2705 AUTO TRADING ACTIVE",
       "body": "Bot running 24/7 \u2014 30 positions via Alpaca paper account. Crypto runs every 15 min. Stocks resume Mon 9:30 AM ET.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 AMKR DOWN 9.2%",
       "body": "AMKR down 9.2% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ARM DOWN 21.4%",
       "body": "ARM down 21.4% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ASYS DOWN 20.3%",
       "body": "ASYS down 20.3% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CMPS DOWN 23.6%",
       "body": "CMPS down 23.6% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CRM DOWN 14.3%",
       "body": "CRM down 14.3% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "win",
       "priority": "medium",
       "title": "\ud83d\ude80 GENI UP 12.8%",
       "body": "GENI up 12.8% \u2014 trailing stop protecting gains. Plan partial exit for Monday open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 HIMX DOWN 28.3%",
       "body": "HIMX down 28.3% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T11:32:45.715339+00:00"
+      "ts": "2026-06-10T11:32:58.893495+00:00"
     }
   ],
   "market_open": true,
@@ -60082,7 +60082,7 @@
     {
       "ticker": "CDE",
       "cost": 16.930345,
-      "pnl_pct": 8.6,
+      "pnl_pct": 8.57,
       "stop_price": 15.91,
       "target_price": 18.96
     },
@@ -60110,7 +60110,7 @@
     {
       "ticker": "DKNG",
       "cost": 25.395175,
-      "pnl_pct": 8.29,
+      "pnl_pct": 8.09,
       "stop_price": 23.87,
       "target_price": 28.44
     },
@@ -60131,7 +60131,7 @@
     {
       "ticker": "IBIT",
       "cost": 35.988409,
-      "pnl_pct": 4.08,
+      "pnl_pct": 4.22,
       "stop_price": 33.83,
       "target_price": 40.31
     },
@@ -60159,7 +60159,7 @@
     {
       "ticker": "ORCL",
       "cost": 245.279999,
-      "pnl_pct": -19.25,
+      "pnl_pct": -19.26,
       "stop_price": 230.56,
       "target_price": 274.71
     },
@@ -92212,7 +92212,7 @@
   "var_95_usd": 5049.74,
   "cvar_95_usd": 6742.37,
   "crypto_recently_sold": {
-    "AVAX/USD": "2026-06-10T11:32:37.072074+00:00"
+    "AVAX/USD": "2026-06-10T11:32:55.102372+00:00"
   },
   "held_crypto": {}
 }
