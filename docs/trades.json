@@ -1,7 +1,7 @@
 {
   "trades": [
     {
-      "time": "2026-06-10T00:00:42.792235+00:00",
+      "time": "2026-06-10T00:00:54.442510+00:00",
       "action": "SELL",
       "ticker": "AVAX/USD",
       "price": 6.6,
@@ -11,7 +11,7 @@
       "qty": 1e-09
     },
     {
-      "time": "2026-06-09T23:55:25.637736+00:00",
+      "time": "2026-06-09T23:55:37.798817+00:00",
       "action": "SELL",
       "ticker": "AVAX/USD",
       "price": 6.6,
@@ -51390,15 +51390,15 @@
       "ticker": "DKNG",
       "qty": 490.344785155,
       "cost": 25.395175,
-      "price": 27.68,
-      "market_val": 13572.743653,
-      "pnl_usd": 1120.35,
-      "pnl_pct": 8.997,
+      "price": 27.84,
+      "market_val": 13651.198819,
+      "pnl_usd": 1198.81,
+      "pnl_pct": 9.627,
       "side": "long",
       "entry_date": "2026-06-09",
       "entry_ts": "2026-06-09T20:08:19.120336+00:00",
-      "recommendation": "HOLD",
-      "rec_reason": "position healthy (+9.0%)",
+      "recommendation": "LOCK",
+      "rec_reason": "near target (+9.6%) \u2014 protect gains",
       "stop_price": 23.87,
       "target_price": 28.44,
       "peak_price": 25.68,
@@ -53220,7 +53220,7 @@
       "ticker": "NVTS",
       "qty": 1.2846e-05,
       "cost": 31.616623,
-      "price": 22.29,
+      "price": 22.26,
       "market_val": 0.000286,
       "pnl_usd": -0.0,
       "pnl_pct": -29.557,
@@ -57061,9 +57061,9 @@
       "pos_health": 2
     }
   ],
-  "last_updated": "2026-06-10T00:00:43.150975+00:00",
-  "portfolio_value": 76426.82,
-  "buying_power": 221392.37,
+  "last_updated": "2026-06-10T00:00:54.738030+00:00",
+  "portfolio_value": 76505.28,
+  "buying_power": 221612.05,
   "status": "crypto-only",
   "neurons_active": 894,
   "neurons_total": 860,
@@ -57116,13 +57116,13 @@
   },
   "bot_activity_log": [
     {
-      "ts": "2026-06-10T00:00:39.035562+00:00",
+      "ts": "2026-06-10T00:00:50.921522+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
-      "msg": "Crypto-only run \u2014 30 positions | P&L $+487 | portfolio $76,427"
+      "msg": "Crypto-only run \u2014 30 positions | P&L $+565 | portfolio $76,505"
     },
     {
-      "ts": "2026-06-09T23:55:22.499442+00:00",
+      "ts": "2026-06-09T23:55:32.779449+00:00",
       "type": "CLOSED",
       "icon": "\ud83e\ude99",
       "msg": "Crypto-only run \u2014 30 positions | P&L $+484 | portfolio $76,425"
@@ -57306,56 +57306,56 @@
       "priority": "low",
       "title": "\u2705 AUTO TRADING ACTIVE",
       "body": "Bot running 24/7 \u2014 30 positions via Alpaca paper account. Crypto runs every 15 min. Stocks resume Mon 9:30 AM ET.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 AMKR DOWN 5.8%",
       "body": "AMKR down 5.8% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ARM DOWN 18.7%",
       "body": "ARM down 18.7% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 ASYS DOWN 17.5%",
       "body": "ASYS down 17.5% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CMPS DOWN 20.0%",
       "body": "CMPS down 20.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 CRM DOWN 12.0%",
       "body": "CRM down 12.0% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "win",
       "priority": "medium",
       "title": "\ud83d\ude80 GENI UP 15.0%",
       "body": "GENI up 15.0% \u2014 trailing stop protecting gains. Plan partial exit for Monday open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     },
     {
       "type": "risk",
       "priority": "high",
       "title": "\u26a0 HIMX DOWN 24.7%",
       "body": "HIMX down 24.7% \u2014 stop-loss protecting downside. Will execute if stop breached at market open.",
-      "ts": "2026-06-10T00:00:43.151120+00:00"
+      "ts": "2026-06-10T00:00:54.738175+00:00"
     }
   ],
   "market_open": true,
@@ -58900,7 +58900,7 @@
     {
       "ticker": "DKNG",
       "cost": 25.395175,
-      "pnl_pct": 9.0,
+      "pnl_pct": 9.63,
       "stop_price": 23.87,
       "target_price": 28.44
     },
@@ -90819,7 +90819,7 @@
   "var_95_usd": 5049.74,
   "cvar_95_usd": 6742.37,
   "crypto_recently_sold": {
-    "AVAX/USD": "2026-06-10T00:00:39.529372+00:00"
+    "AVAX/USD": "2026-06-10T00:00:51.314863+00:00"
   },
   "held_crypto": {}
 }
