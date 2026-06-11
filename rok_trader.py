@@ -58218,19 +58218,19 @@ def run():
     # Groups snapshots by date, takes opening and closing values per day
     try:
         _day_map: dict = {}
-        for _h in tlog["perf_history"]:
-            _hday = (_h.get("t") or "")[:10]
-            if not _hday or not _h.get("v"):
+        for _ph in tlog["perf_history"]:
+            _hday = (_ph.get("t") or "")[:10]
+            if not _hday or not _ph.get("v"):
                 continue
             if _hday not in _day_map:
-                _day_map[_hday] = {"open": _h["v"], "close": _h["v"],
-                                   "high": _h["v"], "low": _h["v"],
-                                   "positions": _h.get("p", 0)}
+                _day_map[_hday] = {"open": _ph["v"], "close": _ph["v"],
+                                   "high": _ph["v"], "low": _ph["v"],
+                                   "positions": _ph.get("p", 0)}
             else:
-                _day_map[_hday]["close"] = _h["v"]
-                _day_map[_hday]["high"]  = max(_day_map[_hday]["high"], _h["v"])
-                _day_map[_hday]["low"]   = min(_day_map[_hday]["low"],  _h["v"])
-                _day_map[_hday]["positions"] = _h.get("p", 0)
+                _day_map[_hday]["close"] = _ph["v"]
+                _day_map[_hday]["high"]  = max(_day_map[_hday]["high"], _ph["v"])
+                _day_map[_hday]["low"]   = min(_day_map[_hday]["low"],  _ph["v"])
+                _day_map[_hday]["positions"] = _ph.get("p", 0)
         _daily_pnl = []
         for _dk in sorted(_day_map.keys())[-60:]:   # keep last 60 trading days
             _dv = _day_map[_dk]
