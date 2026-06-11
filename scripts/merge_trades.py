@@ -62,6 +62,25 @@ if len(merged_trades) < max(main_count, bot_count):
 result = dict(bot)
 result["trades"] = merged_trades
 
+# Merge neuron perf dicts: learning counters are cumulative, so a stale bot run
+# must never regress buckets that main has already advanced. Per bucket, keep
+# whichever version has more observations.
+def _obs(x):
+    return (x.get("total", x.get("trades", 0)) or 0) if isinstance(x, dict) else -1
+
+for k in set(main) | set(bot):
+    if not k.endswith("_perf"):
+        continue
+    mv, bv = main.get(k), bot.get(k)
+    if isinstance(mv, dict) and isinstance(bv, dict):
+        merged_perf = {}
+        for bk in set(mv) | set(bv):
+            a, b = mv.get(bk), bv.get(bk)
+            merged_perf[bk] = a if _obs(a) > _obs(b) else b
+        result[k] = merged_perf
+    elif isinstance(mv, dict) and bv is None:
+        result[k] = mv  # main has learning the bot version lacks entirely
+
 try:
     with open(main_path, "w") as f:
         json.dump(result, f)
