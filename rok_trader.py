@@ -28389,6 +28389,18 @@ def run():
             logger.warning(f"Force-free capital failed: {_ffe}")
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _drawdown_halt and not _risk_limit_halt:
+        # Daily target gate: once 500 trades logged today, skip new buys entirely
+        # (avoids spread bleed from pure churn — exits still proceed normally)
+        try:
+            _buy_gate_today = now_utc.strftime("%Y-%m-%d")
+            _buy_gate_count = sum(1 for _t in (tlog.get("trades") or [])
+                                  if _t.get("time","")[:10] == _buy_gate_today
+                                  and not (_t.get("qty") is not None and abs(float(_t.get("qty") or 0)) < 1e-4))
+            if _buy_gate_count >= 500:
+                logger.info(f"BUY GATE: {_buy_gate_count} trades today ≥ 500 — skipping new buys, letting positions exit")
+                open_long_slots = 0
+        except Exception:
+            pass
         # Sector counts for diversification
         sector_counts = {}
         for sym in longs:
