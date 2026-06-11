@@ -28388,10 +28388,18 @@ def run():
         # Avoids "falling knife" repeats — same thesis that broke is unlikely to immediately recover
         _loss_cooldown: set = set()
         _loss_cutoff = now_utc - timedelta(hours=2)  # 2h cooldown: allow fast re-entry for scalp cycling
+        # Cover cooldown: any recently-covered short is blocked for 60 min to prevent cover-then-rebuy loops
+        _cover_cutoff = now_utc - timedelta(hours=1)
         for t in tlog.get("trades", []):
             if t.get("action") in ("SELL", "COVER") and (t.get("pnl_pct") or 0) < -3:  # only block on bigger losses
                 try:
                     if datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > _loss_cutoff:
+                        _loss_cooldown.add(t.get("ticker", ""))
+                except Exception:
+                    pass
+            if t.get("action") == "COVER":  # block re-entry on any covered short for 60 min
+                try:
+                    if datetime.fromisoformat(t["time"].replace("Z", "+00:00")) > _cover_cutoff:
                         _loss_cooldown.add(t.get("ticker", ""))
                 except Exception:
                     pass
