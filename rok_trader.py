@@ -65,7 +65,7 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 35      # raised 25→35: need 27+ slots in bear+drawdown for 500 trades/day
+MAX_POSITIONS      = 40      # raised 35→40: more cycling slots for 500 trades/day target
 MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
 MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
@@ -26052,7 +26052,7 @@ def run():
     if _drawdown_halt:
         logger.warning(f"DRAWDOWN HARD HALT: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — no new buys")
     elif _drawdown_recovery_mode:
-        logger.warning(f"DRAWDOWN RECOVERY MODE: -{drawdown_pct:.1f}% — only score>=75 buys, max 3/run")
+        logger.warning(f"DRAWDOWN RECOVERY MODE: -{drawdown_pct:.1f}% — max 25/run for 500 trades/day target")
     elif drawdown_pct > 2:
         logger.info(f"Portfolio drawdown: -{drawdown_pct:.1f}% from peak ${_peak_port:,.0f} — risk reduced")
 
@@ -28168,7 +28168,8 @@ def run():
     DAILY_TRADE_TARGET = 500  # raised from 300 — 500 trades/day target
     _today_str = now_utc.strftime("%Y-%m-%d")
     _all_trades_today = [t for t in tlog.get("trades", [])
-                         if t.get("time", "")[:10] == _today_str]
+                         if t.get("time", "")[:10] == _today_str
+                         and not (t.get("qty") is not None and abs(float(t.get("qty") or 0)) < 1e-4)]
     _trades_today_count = len(_all_trades_today)
     # Hours elapsed today (market portion: 6.5h total)
     _hours_market_elapsed = min(6.5, max(0, _minutes_since_open / 60.0)) if market_open else 0
@@ -28176,8 +28177,8 @@ def run():
     _trade_deficit = max(0, _paced_target - _trades_today_count)
     _pace_regime_ok = regime.get("regime", "neutral") not in ("bear",)  # don't push volume in bear market
     if _trade_deficit >= 50 and _pace_regime_ok:
-        _pace_adj = -15  # far behind 500/day target: lower aggressively toward 500
-        _pace_floor = 20 if not _vix_spike else max(MIN_BUY_SCORE, 30)
+        _pace_adj = -20  # far behind 500/day target: lower aggressively
+        _pace_floor = 15 if not _vix_spike else max(MIN_BUY_SCORE, 25)
         _eff_min_score = max(_pace_floor, _eff_min_score + _pace_adj)
         logger.info(f"Trade pace EMERGENCY: {_trades_today_count}/{_paced_target} today — deficit {_trade_deficit}, threshold → {_eff_min_score}")
     elif _trade_deficit >= 50:
@@ -36358,9 +36359,9 @@ def run():
         else:
             # Per-run buy cap: up to 20 new positions per scan — 300-ticker universe supports this
             # Target 500 trades/day: 50 max_pos × 5 cycles × 2 (buy+sell) = 500 trades
-            _per_run_cap = min(30, open_long_slots)
+            _per_run_cap = min(40, open_long_slots)
             if _drawdown_recovery_mode:
-                _per_run_cap = min(_per_run_cap, 12)  # recovery: cap at 12 (was 3) for 500 trades/day throughput
+                _per_run_cap = min(_per_run_cap, 25)  # recovery: cap at 25 for 500 trades/day throughput
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
