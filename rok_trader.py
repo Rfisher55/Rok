@@ -65,12 +65,12 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 20      # reduced 50→20 (Wave 78): 32 open positions caused over-leveraging ($132k on $86k equity)
+MAX_POSITIONS      = 25      # raised 20→25 for 500 trades/day target (22 slots in bear market)
 MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
 MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
 STOP_LOSS_PCT      = 0.06    # hard stop: sell if down 6% (tighter for faster cycling)
-PROFIT_TARGET_PCT  = 0.12    # take full profit at +12% (faster turnover = more trades)
+PROFIT_TARGET_PCT  = 0.05    # take full profit at +5% — faster slot recycling for 500 trades/day
 PARTIAL_PROFIT_PCT = 0.06    # take half profit at +6%
 TRAILING_STOP_PCT  = 0.04    # trailing stop: sell if falls 4% from peak
 MIN_BUY_SCORE      = 62      # lowered 95→62: bot needs to trade to learn; buying_power gate is the real filter
@@ -92,7 +92,7 @@ PRICES_FILE  = Path("docs/prices.json")
 
 # ── Crypto config ─────────────────────────────────────────────────────────────
 ENABLE_CRYPTO    = True
-MAX_CRYPTO_POS   = 4        # reduced 10→4 (Wave 80): 6 alts simultaneously = over-correlated mass loss
+MAX_CRYPTO_POS   = 10       # raised 4→10 for 500 trades/day (stop-losses now fixed — circuit breakers protect)
 CRYPTO_MAX_PCT   = 0.05     # reduced 6%→5% (Wave 80): smaller positions to limit total exposure
 # Alpaca crypto symbols → yfinance equivalents
 CRYPTO_UNIVERSE  = {
@@ -19124,9 +19124,9 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                   and _sig_mslp < 0 and _sig_roc5 < 0):
                 # Completely stuck: no gain after 75min AND momentum deteriorating → free capital
                 reason = f"crypto flat-stuck exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 240:
-                # 4h absolute timeout — exit regardless of PnL to free capital
-                reason = f"crypto 4h exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 90:
+                # 90min absolute timeout — exit regardless of PnL to free capital (reduced 4h→90min)
+                reason = f"crypto 90min timeout ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= 20 and pnl_pct >= 3.0:
                 # Flash crypto win: up 3%+ after 20min — lock it in, free slot for next move
                 reason = f"crypto flash win ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
@@ -19137,14 +19137,12 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 # 1h profit exit: only trigger at 1%+ — winners ride, not cycle-exited
                 # MOVED before cycle exit so profitable exits get correct category
                 reason = f"crypto 1h profit exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 60 and pnl_pct <= 0.3:
-                # 60min hard exit for losers/flat: data shows >120min crypto holds = 11%WR avg -0.38%
-                # Only let winners (>0.3%) ride toward 90min
-                reason = f"crypto 60min flat/loss exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
-            elif _crypto_age_min >= 90 and pnl_pct <= 0.9:
-                # 90min hard exit for small winners/flat: take 0.3-0.9% and free slot
-                # Wave 92: raised threshold 0.7→0.9% to capture more reversals before they go negative
-                reason = f"crypto 90min exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 30 and pnl_pct <= 0.3:
+                # 30min hard exit for losers/flat (halved from 60 for 500 trades/day target)
+                reason = f"crypto 30min flat/loss exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
+            elif _crypto_age_min >= 45 and pnl_pct <= 0.9:
+                # 45min exit for small winners/flat (reduced from 90min for faster cycling)
+                reason = f"crypto 45min exit ({pnl_pct:+.1f}% after {_crypto_age_min:.0f}min)"
             elif _crypto_age_min >= _learned_cycle_min and -1.5 <= pnl_pct < 1.0:
                 # Brain-adaptive cycle exit — only for flat/slightly-negative positions.
                 # Winners (pnl >= 1%) are handled above; don't preempt them with a "cycle exit"
@@ -26543,9 +26541,9 @@ def run():
             # Let winners run at market open instead of dumping immediately on the timer.
             _is_overnight = _fast_age_min >= 240  # held 4+ hours = overnight hold (reduced from 6h)
             _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
-            if _fast_age_min >= 60 and not _grace_override:
-                # 60min hard limit — cycle capital faster for 500 trades/day
-                _fast_reason = f"60min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+            if _fast_age_min >= 20 and not _grace_override:
+                # 20min hard limit — aggressive cycling for 500 trades/day target
+                _fast_reason = f"20min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
                     import requests as _req
@@ -26561,16 +26559,16 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
-            elif _fast_age_min >= 45 and not _grace_override:
-                # 45min check (reduced from 90min): exit flat/losing positions; allow super-momentum to ride to 60min
+            elif _fast_age_min >= 15 and not _grace_override:
+                # 15min check: exit flat/losing positions early; allow super-momentum to ride to 20min
                 _fast_d_90 = live.get(sym, {}) or {}
                 _fast_sc_90 = score(sym, _fast_d_90) if _fast_d_90 else 0
                 _fast_rvol_90 = float(_fast_d_90.get("rvol", 1.0) or 1.0)
                 # Super-momentum extension: pnl>1.5% AND score>=70 AND rvol>2.0 = still running strong
                 if pnl_pct >= 2.0 and _fast_sc_90 >= 72 and _fast_rvol_90 >= 2.5 and not _close_guard:
-                    logger.info(f"HOLD {sym} 45min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 60min)")
+                    logger.info(f"HOLD {sym} 15min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 20min)")
                 else:
-                    _fast_reason = f"45min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+                    _fast_reason = f"15min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                     logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                     _ok, _sc, _err = close_equity_position(sym)
                     if _ok:
