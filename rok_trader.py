@@ -65,7 +65,7 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 50      # raised 40→50: more cycling slots for 500 trades/day target
+MAX_POSITIONS      = 30      # brain data: 30-60min holds win 67% — 30 pos × 30min = 500 trades/day
 MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
 MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
@@ -26511,9 +26511,9 @@ def run():
     except Exception:
         _tt_count = 0
     _target_hit = _tt_count >= 500
-    _fast_exit_min = 60 if _target_hit else 15
+    _fast_exit_min = 60 if _target_hit else 30  # brain: 30-60min holds have 67% win rate vs 42% for <30min
     if _target_hit:
-        logger.info(f"DAILY TARGET HIT ({_tt_count}/500) — fast-cycle exit relaxed to {_fast_exit_min}min, buys throttled")
+        logger.info(f"DAILY TARGET HIT ({_tt_count}/500) — exits relaxed to {_fast_exit_min}min, buys blocked")
     for sym, pos in list(longs.items()):
         try:
             cost    = float(pos.get("avg_entry_price", 0))
@@ -26622,25 +26622,18 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
-            elif _fast_age_min >= 15 and not _grace_override and not _target_hit:
-                # 15min check: exit flat/losing positions early; allow super-momentum to ride to 20min
-                _fast_d_90 = live.get(sym, {}) or {}
-                _fast_sc_90 = score(sym, _fast_d_90) if _fast_d_90 else 0
-                _fast_rvol_90 = float(_fast_d_90.get("rvol", 1.0) or 1.0)
-                # Super-momentum extension: pnl>1.5% AND score>=70 AND rvol>2.0 = still running strong
-                if pnl_pct >= 2.0 and _fast_sc_90 >= 72 and _fast_rvol_90 >= 2.5 and not _close_guard:
-                    logger.info(f"HOLD {sym} 15min super-momentum extension — score={_fast_sc_90} rvol={_fast_rvol_90:.1f}x pnl={pnl_pct:+.1f}% (ride to 20min)")
+            elif _fast_age_min >= 15 and pnl_pct <= -3.0 and not _grace_override:
+                # Early loss cut: position held ≥15min and down ≥3% — don't wait for the 30min timer
+                _fast_reason = f"early loss cut ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+                logger.info(f"FAST_SELL {sym} — {_fast_reason}")
+                _ok, _sc, _err = close_equity_position(sym)
+                if _ok:
+                    log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
+                    made_trades = True
+                    longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
                 else:
-                    _fast_reason = f"15min cycle exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
-                    logger.info(f"FAST_SELL {sym} — {_fast_reason}")
-                    _ok, _sc, _err = close_equity_position(sym)
-                    if _ok:
-                        log_trade(tlog, "SELL", sym, current, qty, pnl=pnl_pct, reason=_fast_reason)
-                        made_trades = True
-                        longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
-                    else:
-                        logger.warning(f"Fast sell {sym}: {_sc} {_err}")
-                    continue
+                    logger.warning(f"Early loss cut {sym}: {_sc} {_err}")
+                continue
             elif _grace_override:
                 # Overnight winner: position held 6h+ with ≥3% gain — extend cycle
                 # Exit when P&L drops by 1.5% from current high (protect gains) or at 4h mark
