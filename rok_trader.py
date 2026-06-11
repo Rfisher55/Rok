@@ -45507,16 +45507,16 @@ def run():
                     # N821: Market Hour Context (ET hour, not UTC)
                     try:
                         _n821_s = "midday"
-                        _h = sc.get("et_hour", _et_hour if '_et_hour' in dir() else (now_utc.hour - 4) % 24)
-                        if 9 <= _h < 10:
+                        _n821_h = sc.get("et_hour", _et_hour if '_et_hour' in dir() else (now_utc.hour - 4) % 24)
+                        if 9 <= _n821_h < 10:
                             _n821_s = "prime_open"
-                        elif 10 <= _h < 11:
+                        elif 10 <= _n821_h < 11:
                             _n821_s = "morning_run"
-                        elif 11 <= _h < 14:
+                        elif 11 <= _n821_h < 14:
                             _n821_s = "midday"
-                        elif 14 <= _h < 15:
+                        elif 14 <= _n821_h < 15:
                             _n821_s = "afternoon"
-                        elif 15 <= _h < 16:
+                        elif 15 <= _n821_h < 16:
                             _n821_s = "power_hour"
                         else:
                             _n821_s = "after_hours"
