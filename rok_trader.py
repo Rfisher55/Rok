@@ -28389,16 +28389,36 @@ def run():
             logger.warning(f"Force-free capital failed: {_ffe}")
 
     if open_long_slots > 0 and vix <= VIX_EXTREME_THRESH and not _open_guard and not _close_guard and not _drawdown_halt and not _risk_limit_halt:
-        # Daily target gate: once 500 trades logged today, skip new buys entirely
-        # (avoids spread bleed from pure churn — exits still proceed normally)
+        # Daily pace governor: spread 500 trades evenly across the session.
+        # Computes how many buys are allowed THIS run based on trades remaining
+        # and time remaining to market close. Hard gate triggers at 500.
+        _pace_cap_today = open_long_slots  # default: no extra cap
         try:
-            _buy_gate_today = now_utc.strftime("%Y-%m-%d")
-            _buy_gate_count = sum(1 for _t in (tlog.get("trades") or [])
-                                  if _t.get("time","")[:10] == _buy_gate_today
-                                  and not (_t.get("qty") is not None and abs(float(_t.get("qty") or 0)) < 1e-4))
-            if _buy_gate_count >= 500:
-                logger.info(f"BUY GATE: {_buy_gate_count} trades today ≥ 500 — skipping new buys, letting positions exit")
+            _pg_today = now_utc.strftime("%Y-%m-%d")
+            _pg_count = sum(1 for _t in (tlog.get("trades") or [])
+                            if _t.get("time","")[:10] == _pg_today
+                            and not (_t.get("qty") is not None and abs(float(_t.get("qty") or 0)) < 1e-4))
+            DAILY_TRADE_TARGET = 500
+            if _pg_count >= DAILY_TRADE_TARGET:
+                # Hard gate: target hit, no more buys today
+                logger.info(f"BUY GATE: {_pg_count} trades ≥ {DAILY_TRADE_TARGET} — blocking buys, letting positions exit")
                 open_long_slots = 0
+            else:
+                # Pace governor: compute allowed buys this run
+                # Market open 13:30-20:00 UTC = 390 min. Runs every ~5 min = ~78 runs/day.
+                _mkt_open  = now_utc.replace(hour=13, minute=30, second=0, microsecond=0)
+                _mkt_close = now_utc.replace(hour=20, minute=0,  second=0, microsecond=0)
+                _elapsed   = max(0.0, (now_utc - _mkt_open).total_seconds() / 60)
+                _remaining = max(1.0, (_mkt_close - now_utc).total_seconds() / 60)
+                _total_min = 390.0  # full session length
+                # Ideal pace: trades_remaining / runs_remaining (each buy → 1 buy + 1 sell)
+                _runs_remaining = max(1.0, _remaining / 5.0)
+                _trades_remaining = max(0, DAILY_TRADE_TARGET - _pg_count)
+                _buys_remaining   = _trades_remaining // 2  # buy+sell pairs
+                _pace_cap_today   = max(1, int(_buys_remaining / _runs_remaining + 0.5))
+                _pace_cap_today   = min(_pace_cap_today, 8)  # hard cap: max 8 buys/run even if behind pace
+                if _pg_count > 0 or _elapsed > 10:
+                    logger.info(f"Pace gov: {_pg_count}/{DAILY_TRADE_TARGET} trades | {_remaining:.0f}min left | {_runs_remaining:.0f} runs | cap={_pace_cap_today}/run")
         except Exception:
             pass
         # Sector counts for diversification
@@ -36383,16 +36403,10 @@ def run():
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
-            # Per-run buy cap: fill all open slots each scan — 300-ticker universe supports this
-            # Target 500 trades/day: 50 max_pos × 4 cycles/hr × 2.5hr × 2 (buy+sell) = 1000 trades
-            _per_run_cap = min(50, open_long_slots)
+            # Per-run buy cap: pace governor sets the allowed buys this run
+            _per_run_cap = min(open_long_slots, _pace_cap_today)
             if _drawdown_recovery_mode:
-                _per_run_cap = min(_per_run_cap, 25)  # recovery: cap at 25 for 500 trades/day throughput
-            try:
-                if _target_hit:
-                    _per_run_cap = min(_per_run_cap, 8)  # 500/day already hit: only top-conviction adds
-            except NameError:
-                pass
+                _per_run_cap = min(_per_run_cap, 6)  # recovery: tighter cap to preserve capital
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
