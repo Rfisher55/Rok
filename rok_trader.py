@@ -26111,10 +26111,13 @@ def run():
     # Separate longs and shorts — exclude crypto (slash symbols) from equity loop
     # Crypto is managed exclusively by run_crypto_trades with gtc orders
     # Ghost filter: exclude dust residuals (notional < $0.50) so they don't consume slots
+    # Alpaca paper trading returns POSITIVE qty with side="short" for short positions
+    # Use side field as primary indicator; qty<0 as fallback for live-account compatibility
+    _is_short = lambda p: (p.get("side") == "short" or float(p.get("qty", 0)) < 0)
     longs  = {s: p for s, p in held.items()
-              if float(p.get("qty", 0)) > 0 and "/" not in s and "USD" not in s[-3:]
+              if not _is_short(p) and float(p.get("qty", 0)) > 0 and "/" not in s and "USD" not in s[-3:]
               and abs(float(p.get("market_value") or 0)) >= 0.50}
-    shorts = {s: p for s, p in held.items() if float(p.get("qty", 0)) < 0 and "/" not in s and "USD" not in s[-3:]}
+    shorts = {s: p for s, p in held.items() if _is_short(p) and "/" not in s and "USD" not in s[-3:]}
     peaks  = _load(PEAK_FILE, {})
     # Clean up no-slash crypto ghost entries from peaks (e.g. "DOGEUSD" → remove)
     _ghost_peaks = [k for k in list(peaks.keys())
