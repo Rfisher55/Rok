@@ -69,9 +69,18 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          # Restore bot output files on top of latest main
+          # Merge trades.json to prevent race-condition data loss from concurrent runs.
+          # scripts/merge_trades.py unions all trades from both versions (dedup by time+ticker).
           changed=false
-          for f in trades.json peaks.json equity.json prices.json; do
+          if [ -f "/tmp/bot-output/trades.json" ]; then
+            python3 scripts/merge_trades.py /tmp/bot-output && echo "Merge OK" || \
+              cp "/tmp/bot-output/trades.json" "docs/trades.json"
+            git add "docs/trades.json"
+            changed=true
+          fi
+
+          # Restore other output files (peaks, equity, prices — bot version wins)
+          for f in peaks.json equity.json prices.json; do
             if [ -f "/tmp/bot-output/$f" ]; then
               cp "/tmp/bot-output/$f" "docs/$f"
               git add "docs/$f"
@@ -93,10 +102,15 @@ jobs:
             git push origin HEAD:main && echo "Push OK attempt $attempt" && break
             echo "Push attempt $attempt failed, retrying..."
             sleep $((attempt * 2))
-            # Re-sync and re-apply if push failed (someone else pushed)
+            # Re-sync and re-merge if push failed (someone else pushed)
             git fetch origin main
             git reset --hard origin/main
-            for f in trades.json peaks.json equity.json prices.json; do
+            if [ -f "/tmp/bot-output/trades.json" ]; then
+              python3 scripts/merge_trades.py /tmp/bot-output && echo "Retry merge OK" || \
+                cp "/tmp/bot-output/trades.json" "docs/trades.json"
+              git add "docs/trades.json"
+            fi
+            for f in peaks.json equity.json prices.json; do
               [ -f "/tmp/bot-output/$f" ] && cp "/tmp/bot-output/$f" "docs/$f" && git add "docs/$f" || true
             done
             git diff --staged --quiet || git commit --amend --no-edit
