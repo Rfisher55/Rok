@@ -3,6 +3,8 @@ Used in CI to prevent race-condition data loss when concurrent bot runs overwrit
 each other's commits.
 
 Usage: python3 scripts/merge_trades.py <bot_output_dir>
+
+Never exits with non-zero status — failure is silent (main file unchanged).
 """
 import json, sys, os
 
@@ -11,11 +13,18 @@ bot_path  = os.path.join(bot_dir, "trades.json")
 main_path = "docs/trades.json"
 
 try:
-    with open(bot_path)  as f: bot  = json.load(f)
-    with open(main_path) as f: main = json.load(f)
+    with open(bot_path)  as f: bot_raw  = f.read()
+    with open(main_path) as f: main_raw = f.read()
 except Exception as e:
-    print(f"Merge load error: {e}", flush=True)
-    sys.exit(1)
+    print(f"Merge read error: {e}", flush=True)
+    sys.exit(0)  # Leave main unchanged — no fallback cp
+
+try:
+    bot  = json.loads(bot_raw)
+    main = json.loads(main_raw)
+except Exception as e:
+    print(f"Merge JSON parse error: {e}", flush=True)
+    sys.exit(0)  # Leave main unchanged — no fallback cp
 
 # Union of all trades deduped by (time, ticker, action)
 seen = {}
@@ -28,11 +37,36 @@ for t in bot.get("trades", []):
 
 merged_trades = sorted(seen.values(), key=lambda x: x.get("time",""))
 
+# Sanity check: merged must not have fewer trades than either input
+main_count = len(main.get("trades", []))
+bot_count  = len(bot.get("trades", []))
+if len(merged_trades) < max(main_count, bot_count):
+    print(f"Merge sanity FAIL: {len(merged_trades)} < max({main_count},{bot_count}) — keeping larger version", flush=True)
+    # Keep whichever has more trades
+    if main_count >= bot_count:
+        print(f"Keeping main ({main_count} trades)", flush=True)
+        sys.exit(0)
+    else:
+        # Write bot version as-is
+        result = dict(bot)
+        result["trades"] = sorted(bot.get("trades",[]), key=lambda x: x.get("time",""))
+        try:
+            with open(main_path, "w") as f:
+                json.dump(result, f)
+            print(f"Wrote bot version: {bot_count} trades", flush=True)
+        except Exception as e:
+            print(f"Write error: {e}", flush=True)
+        sys.exit(0)
+
 # Use bot's metadata (more recent state), merged trade list
 result = dict(bot)
 result["trades"] = merged_trades
 
-with open(main_path, "w") as f:
-    json.dump(result, f)
+try:
+    with open(main_path, "w") as f:
+        json.dump(result, f)
+except Exception as e:
+    print(f"Merge write error: {e}", flush=True)
+    sys.exit(0)
 
-print(f"Merged: main={len(main.get('trades',[]))} bot={len(bot.get('trades',[]))} result={len(merged_trades)}", flush=True)
+print(f"Merged: main={main_count} bot={bot_count} result={len(merged_trades)}", flush=True)

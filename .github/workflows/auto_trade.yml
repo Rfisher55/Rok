@@ -73,8 +73,7 @@ jobs:
           # scripts/merge_trades.py unions all trades from both versions (dedup by time+ticker).
           changed=false
           if [ -f "/tmp/bot-output/trades.json" ]; then
-            python3 scripts/merge_trades.py /tmp/bot-output && echo "Merge OK" || \
-              cp "/tmp/bot-output/trades.json" "docs/trades.json"
+            python3 scripts/merge_trades.py /tmp/bot-output
             git add "docs/trades.json"
             changed=true
           fi
@@ -106,8 +105,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             if [ -f "/tmp/bot-output/trades.json" ]; then
-              python3 scripts/merge_trades.py /tmp/bot-output && echo "Retry merge OK" || \
-                cp "/tmp/bot-output/trades.json" "docs/trades.json"
+              python3 scripts/merge_trades.py /tmp/bot-output
               git add "docs/trades.json"
             fi
             for f in peaks.json equity.json prices.json; do
