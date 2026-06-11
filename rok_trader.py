@@ -36357,9 +36357,9 @@ def run():
             if candidates_buy:
                 logger.info(f"  Top rejected: {' | '.join(f'{t}:{s}' for t,s in candidates_buy[:5])}")
         else:
-            # Per-run buy cap: up to 20 new positions per scan — 300-ticker universe supports this
-            # Target 500 trades/day: 50 max_pos × 5 cycles × 2 (buy+sell) = 500 trades
-            _per_run_cap = min(40, open_long_slots)
+            # Per-run buy cap: fill all open slots each scan — 300-ticker universe supports this
+            # Target 500 trades/day: 50 max_pos × 4 cycles/hr × 2.5hr × 2 (buy+sell) = 1000 trades
+            _per_run_cap = min(50, open_long_slots)
             if _drawdown_recovery_mode:
                 _per_run_cap = min(_per_run_cap, 25)  # recovery: cap at 25 for 500 trades/day throughput
             _this_run_buys = 0
