@@ -26500,6 +26500,20 @@ def run():
                 order_entry_times[_tlt_sym] = _tlt_ts
     except Exception:
         pass
+    # Daily trade target check: once 500 real trades are logged today, relax the
+    # fast-cycle hard exit (15min → 60min). Churning past the target only bleeds
+    # spread; resets automatically at midnight UTC so tomorrow paces normally.
+    try:
+        _tt_today = now_utc.strftime("%Y-%m-%d")
+        _tt_count = sum(1 for _t in (tlog.get("trades") or [])
+                        if _t.get("time", "")[:10] == _tt_today
+                        and not (_t.get("qty") is not None and abs(float(_t.get("qty") or 0)) < 1e-4))
+    except Exception:
+        _tt_count = 0
+    _target_hit = _tt_count >= 500
+    _fast_exit_min = 60 if _target_hit else 15
+    if _target_hit:
+        logger.info(f"DAILY TARGET HIT ({_tt_count}/500) — fast-cycle exit relaxed to {_fast_exit_min}min, buys throttled")
     for sym, pos in list(longs.items()):
         try:
             cost    = float(pos.get("avg_entry_price", 0))
@@ -26590,9 +26604,9 @@ def run():
             # Let winners run at market open instead of dumping immediately on the timer.
             _is_overnight = _fast_age_min >= 240  # held 4+ hours = overnight hold (reduced from 6h)
             _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
-            if _fast_age_min >= 15 and not _grace_override:
-                # 15min hard limit — faster cycling for 500 trades/day target
-                _fast_reason = f"15min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+            if _fast_age_min >= _fast_exit_min and not _grace_override:
+                # Hard cycle limit: 15min while chasing 500/day, 60min once target hit
+                _fast_reason = f"{_fast_exit_min:.0f}min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
                     import requests as _req
@@ -26608,7 +26622,7 @@ def run():
                 except Exception as _fe:
                     logger.warning(f"Fast sell failed {sym}: {_fe}")
                 continue
-            elif _fast_age_min >= 15 and not _grace_override:
+            elif _fast_age_min >= 15 and not _grace_override and not _target_hit:
                 # 15min check: exit flat/losing positions early; allow super-momentum to ride to 20min
                 _fast_d_90 = live.get(sym, {}) or {}
                 _fast_sc_90 = score(sym, _fast_d_90) if _fast_d_90 else 0
@@ -36362,6 +36376,11 @@ def run():
             _per_run_cap = min(50, open_long_slots)
             if _drawdown_recovery_mode:
                 _per_run_cap = min(_per_run_cap, 25)  # recovery: cap at 25 for 500 trades/day throughput
+            try:
+                if _target_hit:
+                    _per_run_cap = min(_per_run_cap, 8)  # 500/day already hit: only top-conviction adds
+            except NameError:
+                pass
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
