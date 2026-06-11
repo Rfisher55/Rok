@@ -65,7 +65,7 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 25      # raised 20→25 for 500 trades/day target (22 slots in bear market)
+MAX_POSITIONS      = 35      # raised 25→35: need 27+ slots in bear+drawdown for 500 trades/day
 MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
 MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
@@ -19022,6 +19022,12 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                         or cost)
             if cost <= 0 or qty <= 0 or current <= 0:
                 continue
+            # Skip ghost crypto positions (dust residuals < $0.50 notional) — can't trade them
+            if qty * current < 0.50:
+                logger.info(f"SKIP crypto ghost {sym}: notional=${qty*current:.6f} qty={qty:.2e} — removing from tracking")
+                peaks.pop(sym, None)
+                held_crypto.pop(sym, None)
+                continue
             pnl_pct = (current - cost) / cost * 100
 
             prev_peak  = peaks.get(sym, {}).get("peak", current) if isinstance(peaks.get(sym), dict) else current
@@ -26098,7 +26104,10 @@ def run():
     held      = {p["symbol"]: p for p in positions}
     # Separate longs and shorts — exclude crypto (slash symbols) from equity loop
     # Crypto is managed exclusively by run_crypto_trades with gtc orders
-    longs  = {s: p for s, p in held.items() if float(p.get("qty", 0)) > 0 and "/" not in s and "USD" not in s[-3:]}
+    # Ghost filter: exclude dust residuals (notional < $0.50) so they don't consume slots
+    longs  = {s: p for s, p in held.items()
+              if float(p.get("qty", 0)) > 0 and "/" not in s and "USD" not in s[-3:]
+              and abs(float(p.get("market_value") or 0)) >= 0.50}
     shorts = {s: p for s, p in held.items() if float(p.get("qty", 0)) < 0 and "/" not in s and "USD" not in s[-3:]}
     peaks  = _load(PEAK_FILE, {})
     # Clean up no-slash crypto ghost entries from peaks (e.g. "DOGEUSD" → remove)
@@ -27856,8 +27865,8 @@ def run():
     elif _reg_str == "bear":                       _regime_max = max(MAX_POSITIONS - 3, 6)
     else:                                          _regime_max = MAX_POSITIONS
     # Drawdown shrinks max further (recovery mode = smaller book)
-    if   drawdown_pct >= 5:  _regime_max = max(_regime_max - 4, 2)
-    elif drawdown_pct >= 3:  _regime_max = max(_regime_max - 2, 4)
+    if   drawdown_pct >= 5:  _regime_max = max(_regime_max - 2, 4)
+    elif drawdown_pct >= 3:  _regime_max = max(_regime_max - 1, 6)
     if _regime_max != MAX_POSITIONS:
         logger.info(f"Regime-adjusted max positions: {_regime_max} (regime={_reg_str}, score={_reg_score}, dd={drawdown_pct:.1f}%)")
     open_long_slots = _regime_max - len(longs)
@@ -28970,7 +28979,7 @@ def run():
                 # neurons fire together (VIX, cold streak, risk_off, breadth, consecutive losses,
                 # SPY intraday, sector trend) — treating one macro condition as 7+ independent
                 # strikes. High-conviction technical setups should not be blocked by this.
-                _score_override = (tech_sc >= 120 and
+                _score_override = (tech_sc >= 95 and
                                    SECTOR_MAP.get(tk, "other") not in ("other", "speculative"))
                 if _ng_strikes >= 3 and not _score_override:
                     logger.info(f"NEURAL GATE: {tk} vetoed ({_ng_strikes} strikes: {', '.join(_ng_reasons)})")
@@ -36270,9 +36279,9 @@ def run():
         else:
             # Per-run buy cap: up to 20 new positions per scan — 300-ticker universe supports this
             # Target 500 trades/day: 50 max_pos × 5 cycles × 2 (buy+sell) = 500 trades
-            _per_run_cap = min(20, open_long_slots)
+            _per_run_cap = min(30, open_long_slots)
             if _drawdown_recovery_mode:
-                _per_run_cap = min(_per_run_cap, 3)  # max 3 buys/run while recovering
+                _per_run_cap = min(_per_run_cap, 12)  # recovery: cap at 12 (was 3) for 500 trades/day throughput
             _this_run_buys = 0
             for tk, sc, sent, sec, catalyst in final_scores[:_per_run_cap]:
                 try:
