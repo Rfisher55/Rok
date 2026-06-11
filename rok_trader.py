@@ -26405,9 +26405,10 @@ def run():
             # For shorts: profit when price drops
             pnl_pct = (cost - current) / cost * 100
 
-            # Short hold age
+            # Short hold age — check peaks["time"] as fallback since Alpaca positions have no entry_time
             _sh_entry_ts = (held.get(sym, {}).get("entry_time") or
-                            held.get(sym, {}).get("time") or "")
+                            held.get(sym, {}).get("time") or
+                            (peaks.get(sym, {}).get("time") if isinstance(peaks.get(sym), dict) else None) or "")
             _sh_age_min = 0.0
             try:
                 if _sh_entry_ts:
@@ -26421,6 +26422,9 @@ def run():
                 reason = f"short stop loss ({pnl_pct:+.1f}%)"
             elif pnl_pct >= (PROFIT_TARGET_PCT * 100):
                 reason = f"short profit target ({pnl_pct:+.1f}%)"
+            elif _sh_age_min >= 360:
+                # Cross-day short: force cover after 6h — should never hold shorts overnight
+                reason = f"short cross-day force cover ({pnl_pct:+.1f}% after {_sh_age_min/60:.1f}h)"
             elif regime["regime"] == "bull":
                 # Wave 96: require confirmed bull (2x consecutive) OR 20min+ hold to avoid whipsaw
                 _rh_cover = [r.get("r") for r in tlog.get("regime_history", [])[-2:] if r.get("r")]
@@ -26445,7 +26449,8 @@ def run():
                 })
                 log_trade(tlog, "COVER", sym, current, qty, pnl=pnl_pct, reason=reason)
                 made_trades = True
-                del held[sym]
+                held.pop(sym, None)
+                shorts.pop(sym, None)
                 peaks.pop(sym, None)
             else:
                 logger.info(f"HOLD SHORT {sym} — P&L {pnl_pct:+.1f}%")
@@ -28279,6 +28284,37 @@ def run():
     # In recovery mode: allow normal scoring — learning needs real trades
     if _drawdown_recovery_mode and not _drawdown_halt:
         _eff_min_score = min(_eff_min_score, 65)   # cap at 65 in recovery so we can actually trade
+
+    # Force-free capital from losing shorts: cover worst short when buying_power < $3000
+    # Shorts consume 150% margin; covering one position frees significant capital for longs
+    if buying_power < 3000 and shorts:
+        try:
+            _worst_sh_sym = None
+            _worst_sh_pnl = 999.0
+            for _fss, _fsp in shorts.items():
+                _fsc = float(_fsp.get("current_price") or _fsp.get("avg_entry_price", 0))
+                _fse = float(_fsp.get("avg_entry_price", 0))
+                _fsq = abs(float(_fsp.get("qty", 0)))
+                if _fse > 0 and _fsq > 0:
+                    _fspnl = (_fse - _fsc) / _fse * 100  # short pnl: positive when price drops
+                    if _fspnl < _worst_sh_pnl:
+                        _worst_sh_pnl = _fspnl
+                        _worst_sh_sym = _fss
+                        _worst_sh_qty = _fsq
+            if _worst_sh_sym:
+                logger.warning(f"FORCE-FREE CAPITAL (shorts): bp=${buying_power:.0f}, covering worst short {_worst_sh_sym} ({_worst_sh_pnl:+.1f}%)")
+                alpaca_post("/v2/orders", {"symbol": _worst_sh_sym, "qty": str(int(_worst_sh_qty)),
+                    "side": "buy", "type": "market", "time_in_force": "day"})
+                _fsc_price = float(shorts[_worst_sh_sym].get("current_price") or
+                                   shorts[_worst_sh_sym].get("avg_entry_price", 0))
+                log_trade(tlog, "COVER", _worst_sh_sym, _fsc_price, _worst_sh_qty,
+                          pnl=_worst_sh_pnl, reason=f"force-free capital from short (bp=${buying_power:.0f})")
+                made_trades = True
+                del held[_worst_sh_sym]
+                shorts.pop(_worst_sh_sym, None)
+                buying_power += _worst_sh_qty * _fsc_price * 1.5  # margin freed ~150%
+        except Exception as _ffse:
+            logger.warning(f"Force-free capital from short failed: {_ffse}")
 
     # Force-free capital: if buying_power < $500 and we have equity longs, sell the worst one
     if buying_power < 500 and longs and not _drawdown_halt:
@@ -46474,7 +46510,13 @@ def run():
 
     # ── SHORT: bearish positions in bear/neutral regime ───────────────────
     if ENABLE_SHORTS and regime["regime"] == "bear" and not _open_guard and not _close_guard:  # Wave 96: bear only (not neutral) to reduce whipsaw
-        open_short_slots = MAX_SHORTS - len(shorts)
+        # Cap total short exposure at 12% of portfolio to preserve buying power for long cycling
+        _cur_short_notional = sum(abs(float(p.get("qty", 0))) * float(p.get("current_price") or p.get("avg_entry_price", 0))
+                                  for p in shorts.values())
+        _max_short_notional = portfolio_val * 0.12
+        if _cur_short_notional >= _max_short_notional:
+            logger.info(f"SHORT EXPOSURE CAP: ${_cur_short_notional:.0f} >= 12% of portfolio (${_max_short_notional:.0f}) — no new shorts")
+        open_short_slots = MAX_SHORTS - len(shorts) if _cur_short_notional < _max_short_notional else 0
         if open_short_slots > 0:
             short_scores = {
                 tk: bearish_score(tk, live[tk])
