@@ -18957,6 +18957,12 @@ def run_crypto_trades(tlog: dict, peaks: dict, portfolio_val: float,
                 norm_sym = raw_sym[:-3] + "/USD"
             else:
                 continue  # not a crypto position
+            # Skip ghost crypto positions (dust residuals) at load time — can't trade them
+            _ghost_qty = abs(float(p.get("qty", 0) or 0))
+            _ghost_px  = float(p.get("current_price") or p.get("avg_entry_price") or 0)
+            if _ghost_qty * _ghost_px < 0.50:
+                logger.info(f"SKIP crypto ghost at load: {norm_sym} notional=${_ghost_qty*_ghost_px:.6f}")
+                continue
             held_crypto[norm_sym] = p
     except Exception as e:
         logger.warning(f"Crypto positions fetch failed: {e}")
