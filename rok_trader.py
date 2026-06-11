@@ -26460,6 +26460,32 @@ def run():
         except Exception as e:
             logger.warning(f"Short management error {sym}: {e}")
 
+    # ── OVERSIZE POSITION EMERGENCY EXIT ──────────────────────────────────
+    # If any position exceeds 8% of portfolio (> 2× MAX_POSITION_PCT), close immediately.
+    # Prevents cover-then-rebuy loops from creating outsized exposures.
+    _oversize_thresh = portfolio_val * 0.08
+    for sym, pos in list(longs.items()):
+        try:
+            _os_mv = abs(float(pos.get("market_value") or 0))
+            if _os_mv >= _oversize_thresh:
+                logger.warning(f"OVERSIZE EXIT {sym}: mv=${_os_mv:.0f} >= 8% (${_oversize_thresh:.0f}) of portfolio")
+                import requests as _req
+                _del_r = _req.delete(f"{ALPACA_BASE}/v2/positions/{sym}", headers=_h(), timeout=10)
+                if _del_r.status_code in (200, 201, 204):
+                    _os_qty = abs(float(pos.get("qty", 0)))
+                    _os_px  = float(pos.get("current_price") or pos.get("avg_entry_price", 0))
+                    _os_cost = float(pos.get("avg_entry_price", 0))
+                    _os_pnl = (_os_px - _os_cost) / _os_cost * 100 if _os_cost > 0 else 0
+                    log_trade(tlog, "SELL", sym, _os_px, _os_qty, pnl=_os_pnl, reason=f"oversize exit (mv=${_os_mv:.0f})")
+                    made_trades = True
+                    longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                elif _del_r.status_code == 404:
+                    longs.pop(sym, None); held.pop(sym, None); peaks.pop(sym, None)
+                else:
+                    logger.warning(f"Oversize exit {sym}: HTTP {_del_r.status_code}")
+        except Exception as _ose:
+            logger.warning(f"Oversize exit failed {sym}: {_ose}")
+
     # ── MANAGE EXISTING LONGS ─────────────────────────────────────────────
     order_entry_times = get_position_entry_times()
     # Supplement with tlog trade history so positions older than 200 orders aren't missed.
