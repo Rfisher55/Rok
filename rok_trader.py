@@ -65,7 +65,7 @@ ALPACA_BASE      = "https://paper-api.alpaca.markets"
 ALPACA_DATA_BASE = "https://data.alpaca.markets"
 
 # ── Trading parameters ────────────────────────────────────────────────────────
-MAX_POSITIONS      = 40      # raised 35→40: more cycling slots for 500 trades/day target
+MAX_POSITIONS      = 50      # raised 40→50: more cycling slots for 500 trades/day target
 MAX_SHORTS         = 10      # max open short positions — raised from 8 for more data
 MAX_POSITION_PCT   = 0.035   # max 3.5% of portfolio per position (reduced from 5% for more positions)
 RISK_PER_TRADE_PCT = 0.008   # risk 0.8% per trade (tighter = more simultaneous positions)
@@ -26590,9 +26590,9 @@ def run():
             # Let winners run at market open instead of dumping immediately on the timer.
             _is_overnight = _fast_age_min >= 240  # held 4+ hours = overnight hold (reduced from 6h)
             _grace_override = _is_overnight and pnl_pct >= 3.0 and not _fast_half_out
-            if _fast_age_min >= 20 and not _grace_override:
-                # 20min hard limit — aggressive cycling for 500 trades/day target
-                _fast_reason = f"20min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
+            if _fast_age_min >= 15 and not _grace_override:
+                # 15min hard limit — faster cycling for 500 trades/day target
+                _fast_reason = f"15min hard exit ({pnl_pct:+.1f}% after {_fast_age_min:.0f}min)"
                 logger.info(f"FAST_SELL {sym} — {_fast_reason}")
                 try:
                     import requests as _req
