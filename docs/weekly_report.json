@@ -1,110 +1,411 @@
 {
-  "generated_at": "2026-06-02T11:17:48.120176+00:00",
+  "generated_at": "2026-06-12T14:23:51.688209+00:00",
   "period": "Last 7 days",
-  "week_start": "2026-05-26",
-  "week_end": "2026-06-02",
-  "trades_total": 47,
+  "week_start": "2026-06-05",
+  "week_end": "2026-06-12",
+  "trades_total": 1048,
   "trades_wins": 0,
-  "trades_losses": 47,
+  "trades_losses": 1048,
   "win_rate": 0.0,
   "total_pnl": 0,
   "avg_pnl_per_trade": 0.0,
   "best_trades": [
     {
-      "ticker": "SOL/USD",
+      "ticker": "AVAX/USD",
       "pnl": null
     },
     {
-      "ticker": "DOGE/USD",
+      "ticker": "AVAX/USD",
       "pnl": null
     },
     {
-      "ticker": "UNI/USD",
+      "ticker": "AVAX/USD",
       "pnl": null
     }
   ],
   "worst_trades": [],
-  "neurons_active": 0,
+  "neurons_active": 895,
   "neurons_total": 860,
-  "top_neurons": [],
+  "top_neurons": [
+    {
+      "neuron": "N172 Exit Trigger",
+      "best_state": "profit_target",
+      "win_rate": 100.0,
+      "samples": 11
+    },
+    {
+      "neuron": "N109 RVOL Tier",
+      "best_state": "elevated",
+      "win_rate": 85.7,
+      "samples": 7
+    },
+    {
+      "neuron": "N249 Recent Buy Count",
+      "best_state": "first_buy",
+      "win_rate": 85.7,
+      "samples": 7
+    },
+    {
+      "neuron": "N564 Volume vs 50d Avg",
+      "best_state": "above_avg_vol",
+      "win_rate": 85.7,
+      "samples": 14
+    },
+    {
+      "neuron": "N462 Price vs EMA50 Entry",
+      "best_state": "below_50",
+      "win_rate": 81.8,
+      "samples": 11
+    },
+    {
+      "neuron": "N128 Score Tier",
+      "best_state": "moderate",
+      "win_rate": 80.0,
+      "samples": 5
+    },
+    {
+      "neuron": "N150 Exit Hour",
+      "best_state": "17",
+      "win_rate": 80.0,
+      "samples": 10
+    },
+    {
+      "neuron": "N526 Price vs 52W Entry",
+      "best_state": "near_52w_low",
+      "win_rate": 75.0,
+      "samples": 8
+    },
+    {
+      "neuron": "N590 Price Range Percentile",
+      "best_state": "lower_range",
+      "win_rate": 75.0,
+      "samples": 8
+    },
+    {
+      "neuron": "N290 Beta Bucket",
+      "best_state": "high_beta",
+      "win_rate": 71.4,
+      "samples": 7
+    }
+  ],
   "equity_curve": [],
   "strategy_insights": {
-    "top_alpha": [],
+    "top_alpha": [
+      {
+        "neuron": "N172 Exit Trigger",
+        "state": "profit_target",
+        "win_rate": 100.0,
+        "alpha": 100.0,
+        "samples": 11,
+        "avg_pnl": 3.3
+      },
+      {
+        "neuron": "N172 Exit Trigger",
+        "state": "take_profit",
+        "win_rate": 100.0,
+        "alpha": 100.0,
+        "samples": 5,
+        "avg_pnl": 2.56
+      },
+      {
+        "neuron": "N109 RVOL Tier",
+        "state": "elevated",
+        "win_rate": 85.7,
+        "alpha": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.33
+      },
+      {
+        "neuron": "N249 Recent Buy Count",
+        "state": "first_buy",
+        "win_rate": 85.7,
+        "alpha": 85.7,
+        "samples": 7,
+        "avg_pnl": 0.33
+      },
+      {
+        "neuron": "N564 Volume vs 50d Avg",
+        "state": "above_avg_vol",
+        "win_rate": 85.7,
+        "alpha": 85.7,
+        "samples": 14,
+        "avg_pnl": 0.33
+      },
+      {
+        "neuron": "N462 Price vs EMA50 Entry",
+        "state": "below_50",
+        "win_rate": 81.8,
+        "alpha": 81.8,
+        "samples": 11,
+        "avg_pnl": 0.01
+      }
+    ],
     "top_drag": [],
     "key_combos": [
       {
-        "pair": "ichimoku_above+mom_accel",
+        "pair": "at_demand_zone+supertrend_bull",
         "win_rate": 100.0,
+        "samples": 3,
+        "avg_pnl": 0.26
+      },
+      {
+        "pair": "above_poc+ha_bull",
+        "win_rate": 100.0,
+        "samples": 3,
+        "avg_pnl": 0.33
+      },
+      {
+        "pair": "at_demand_zone+ichimoku_above",
+        "win_rate": 87.5,
+        "samples": 8,
+        "avg_pnl": 0.33
+      },
+      {
+        "pair": "ema_stacked_bull+poc_breakout",
+        "win_rate": 80.0,
         "samples": 5,
-        "avg_pnl": 0.7
+        "avg_pnl": 0.41
       },
       {
-        "pair": "at_breakout+higher_lows",
-        "win_rate": 85.7,
-        "samples": 7,
-        "avg_pnl": 0.88
+        "pair": "ema_stacked_bull+macd_bull_div",
+        "win_rate": 80.0,
+        "samples": 5,
+        "avg_pnl": 0.06
       },
       {
-        "pair": "ema_stacked_bull+higher_lows",
-        "win_rate": 85.7,
-        "samples": 7,
-        "avg_pnl": 0.88
-      },
-      {
-        "pair": "higher_lows+kc_breakout",
-        "win_rate": 85.7,
-        "samples": 7,
-        "avg_pnl": 0.88
-      },
-      {
-        "pair": "higher_lows+mom_accel",
-        "win_rate": 85.7,
-        "samples": 7,
-        "avg_pnl": 0.88
-      },
-      {
-        "pair": "higher_lows+mtf_aligned",
-        "win_rate": 85.7,
-        "samples": 7,
-        "avg_pnl": 0.88
+        "pair": "ichimoku_above+macd_bull_div",
+        "win_rate": 77.8,
+        "samples": 9,
+        "avg_pnl": 0.05
       }
     ]
   },
-  "learn_log": [],
-  "strategy_mode": "MOMENTUM",
+  "learn_log": [
+    "N133 beta tiers: normal:19%WR",
+    "N134 sector leadership: mid:9%WR | leader:43%WR",
+    "N135 PM volume: best=normal(19%WR)",
+    "N136 accumulation entries: 40%WR",
+    "N138 score persistence: new_entry:16%WR",
+    "N139 overnight gap volatility: best=stable(19%WR)",
+    "N140 microstructure: best=normal(19%WR)",
+    "Earnings growth tiers: negative:19%WR | positive:41%WR",
+    "ST stop gap tiers: no_st:44%WR | normal:6%WR | wide:54%WR",
+    "Premium signal tiers: normal:43%WR | strong:54%WR | weak:14%WR"
+  ],
+  "strategy_mode": "DEFENSIVE",
   "recovery_mode": false,
-  "effective_min_score": 15,
+  "effective_min_score": 65,
   "cross_asset_risk_off": false,
-  "portfolio_value": 97338.88,
-  "drawdown_pct": 0.27,
-  "profit_factor": 3.21,
+  "portfolio_value": 68094.3,
+  "drawdown_pct": 31.36,
+  "profit_factor": 0.91,
   "brain_analytics": {
+    "best_day_of_week": {
+      "state": "wednesday",
+      "win_rate": 60.9,
+      "samples": 46
+    },
+    "best_session": {
+      "state": "afternoon_session",
+      "win_rate": 61.5,
+      "samples": 26
+    },
+    "best_momentum_state": {
+      "state": "strong_momentum",
+      "win_rate": 55.0,
+      "samples": 80
+    },
+    "best_volume_state": {
+      "state": "low_persistent_volume",
+      "win_rate": 43.3,
+      "samples": 240
+    },
+    "best_vix_regime": {
+      "state": "normal_vix_regime",
+      "win_rate": 22.9,
+      "samples": 776
+    },
+    "top_edge_neurons": [
+      {
+        "neuron": "N172 Exit Trigger",
+        "best_state": "profit_target",
+        "win_rate": 100.0,
+        "samples": 11
+      },
+      {
+        "neuron": "N109 RVOL Tier",
+        "best_state": "elevated",
+        "win_rate": 85.7,
+        "samples": 7
+      },
+      {
+        "neuron": "N249 Recent Buy Count",
+        "best_state": "first_buy",
+        "win_rate": 85.7,
+        "samples": 7
+      }
+    ],
     "best_entry_hour": {
-      "hour_et": 13,
-      "win_rate": 78,
-      "samples": 9
+      "hour_et": 15,
+      "win_rate": 50,
+      "samples": 284
     },
     "hourly_win_rates": [
       {
+        "hour": 0,
+        "win_rate": 0,
+        "samples": 21
+      },
+      {
+        "hour": 1,
+        "win_rate": 0,
+        "samples": 19
+      },
+      {
+        "hour": 2,
+        "win_rate": 0,
+        "samples": 20
+      },
+      {
+        "hour": 3,
+        "win_rate": 0,
+        "samples": 19
+      },
+      {
+        "hour": 4,
+        "win_rate": 0,
+        "samples": 20
+      },
+      {
+        "hour": 5,
+        "win_rate": 0,
+        "samples": 19
+      },
+      {
+        "hour": 6,
+        "win_rate": 0,
+        "samples": 20
+      },
+      {
+        "hour": 7,
+        "win_rate": 0,
+        "samples": 19
+      },
+      {
+        "hour": 8,
+        "win_rate": 0,
+        "samples": 19
+      },
+      {
+        "hour": 9,
+        "win_rate": 15,
+        "samples": 27
+      },
+      {
+        "hour": 10,
+        "win_rate": 33,
+        "samples": 58
+      },
+      {
+        "hour": 11,
+        "win_rate": 10,
+        "samples": 39
+      },
+      {
+        "hour": 12,
+        "win_rate": 29,
+        "samples": 45
+      },
+      {
         "hour": 13,
-        "win_rate": 78,
-        "samples": 9
+        "win_rate": 47,
+        "samples": 91
+      },
+      {
+        "hour": 14,
+        "win_rate": 37,
+        "samples": 324
       },
       {
         "hour": 15,
-        "win_rate": 60,
-        "samples": 30
+        "win_rate": 50,
+        "samples": 284
+      },
+      {
+        "hour": 16,
+        "win_rate": 0,
+        "samples": 9
       },
       {
         "hour": 17,
-        "win_rate": 67,
-        "samples": 3
+        "win_rate": 15,
+        "samples": 13
       },
       {
         "hour": 18,
-        "win_rate": 25,
-        "samples": 4
+        "win_rate": 0,
+        "samples": 13
+      },
+      {
+        "hour": 19,
+        "win_rate": 0,
+        "samples": 19
+      },
+      {
+        "hour": 20,
+        "win_rate": 0,
+        "samples": 21
+      },
+      {
+        "hour": 21,
+        "win_rate": 0,
+        "samples": 20
+      },
+      {
+        "hour": 22,
+        "win_rate": 0,
+        "samples": 22
+      },
+      {
+        "hour": 23,
+        "win_rate": 0,
+        "samples": 19
       }
-    ]
+    ],
+    "weekly_wr_trend": {
+      "weeks": [
+        {
+          "week": "2026-W22",
+          "win_rate": 40,
+          "samples": 133
+        },
+        {
+          "week": "2026-W23",
+          "win_rate": 28,
+          "samples": 1048
+        }
+      ],
+      "trend": "declining",
+      "first_wr": 40,
+      "latest_wr": 28
+    },
+    "best_hold_duration": {
+      "state": "overnight",
+      "win_rate": 42.9,
+      "samples": 7,
+      "avg_pnl": -0.03
+    },
+    "best_catalyst_type": {
+      "state": "recent",
+      "win_rate": 60.9,
+      "samples": 46
+    },
+    "grade_performance": {
+      "": {
+        "win_rate": 30.8,
+        "samples": 13,
+        "avg_pnl": -0.01
+      }
+    }
   }
 }
