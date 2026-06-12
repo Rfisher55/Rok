@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-12T14:23:51.211188+00:00",
+  "generated_at": "2026-06-12T19:43:52.157480+00:00",
   "market_regime": "ROTATION",
   "market_sentiment": "MIXED",
   "sentiment_score": 6,
@@ -62,7 +62,7 @@
         132.07,
         130.21,
         131.08,
-        128.21
+        128.15
       ],
       "sector": "Technology",
       "vol_ratio": 1.15,
@@ -122,7 +122,7 @@
         119.96,
         114.92,
         117.5,
-        116.71
+        116.52
       ],
       "sector": "Technology",
       "vol_ratio": 2.33,
@@ -182,7 +182,7 @@
         106.97,
         106.06,
         103.08,
-        99.72
+        101.94
       ],
       "sector": "Technology",
       "vol_ratio": 1.28,
@@ -242,7 +242,7 @@
         208.19,
         200.42,
         204.87,
-        205.68
+        204.24
       ],
       "sector": "Technology",
       "vol_ratio": 0.44,
@@ -302,7 +302,7 @@
         16.47,
         15.87,
         16.67,
-        16.49
+        16.53
       ],
       "sector": "Financial Services",
       "vol_ratio": 1.36,
@@ -362,7 +362,7 @@
         449.19,
         450.62,
         450.38,
-        457.28
+        458.1
       ],
       "sector": "Financial Services",
       "vol_ratio": 0.67,
@@ -422,7 +422,7 @@
         392.16,
         372.1,
         385.57,
-        379.95
+        381.07
       ],
       "sector": "Technology",
       "vol_ratio": 2.12,
@@ -472,7 +472,7 @@
         21.66,
         21.1,
         21.86,
-        21.99
+        22.01
       ],
       "price_target": 30.3,
       "stop_loss": 19.16,
@@ -525,7 +525,7 @@
         88.71,
         87.32,
         97.56,
-        86.16
+        83.2
       ],
       "price_target": 83.47,
       "stop_loss": 103.32,
@@ -578,7 +578,7 @@
         65.75,
         62.63,
         65.8,
-        67.6
+        67.73
       ],
       "price_target": 87.92,
       "stop_loss": 67.67,
@@ -631,7 +631,7 @@
         4.59,
         4.71,
         5.73,
-        4.32
+        3.92
       ],
       "price_target": 3.55,
       "stop_loss": 4.82,
@@ -681,7 +681,7 @@
         644.93,
         647.74,
         691.53,
-        692.19
+        683.28
       ],
       "signal_strength": 6,
       "risk_level": "Medium",
@@ -730,7 +730,7 @@
         260.52,
         263.22,
         279.53,
-        279.38
+        278.5
       ],
       "signal_strength": 6,
       "risk_level": "Medium",
@@ -779,7 +779,7 @@
         968.59,
         983.37,
         975.69,
-        974.57
+        980.08
       ],
       "current_price": 948.55,
       "price_target": 1076.97,
@@ -829,7 +829,7 @@
         121.36,
         118.93,
         121.84,
-        118.82
+        119.05
       ],
       "signal_strength": 6,
       "risk_level": "Medium",
@@ -872,7 +872,7 @@
         109.38,
         109.96,
         114.34,
-        115.58
+        115.16
       ],
       "signal_strength": 6,
       "risk_level": "Medium",
@@ -987,31 +987,31 @@
     }
   ],
   "fear_greed": {
-    "score": 32.7,
+    "score": 33.9,
     "rating": "fear",
-    "previous_score": 29.7,
+    "previous_score": 29.6,
     "direction": "up"
   },
   "market_indices": {
     "S&P 500": {
-      "price": 739.42,
-      "change_pct": 0.23
+      "price": 741.06,
+      "change_pct": 0.45
     },
     "NASDAQ": {
-      "price": 718.28,
-      "change_pct": 0.16
+      "price": 721.23,
+      "change_pct": 0.57
     },
     "DOW": {
-      "price": 510.95,
-      "change_pct": 0.31
+      "price": 512.98,
+      "change_pct": 0.71
     },
     "Russell 2000": {
-      "price": 293.58,
-      "change_pct": 1.09
+      "price": 293.48,
+      "change_pct": 1.06
     },
     "VIX": {
-      "price": 18.73,
-      "change_pct": -3.65
+      "price": 18.22,
+      "change_pct": -6.28
     }
   },
   "market_breadth": {
@@ -1021,47 +1021,47 @@
     "top_sectors": [
       {
         "sector": "Materials",
-        "change_pct": 1.5
+        "change_pct": 1.77
       },
       {
-        "sector": "Energy",
-        "change_pct": 1.4
+        "sector": "Financials",
+        "change_pct": 1.29
       },
       {
-        "sector": "Utilities",
-        "change_pct": 1.16
+        "sector": "Technology",
+        "change_pct": 0.97
       }
     ],
     "worst_sectors": [
       {
-        "sector": "Consumer Disc",
+        "sector": "Comm Services",
         "change_pct": -0.8
       },
       {
-        "sector": "Comm Services",
-        "change_pct": -0.46
+        "sector": "Healthcare",
+        "change_pct": -0.25
       },
       {
-        "sector": "Healthcare",
-        "change_pct": -0.42
+        "sector": "Consumer Disc",
+        "change_pct": -0.03
       }
     ],
     "sector_performance": {
-      "Technology": 0.55,
-      "Financials": 0.79,
-      "Energy": 1.4,
-      "Healthcare": -0.42,
-      "Consumer Disc": -0.8,
-      "Consumer Staples": 0.11,
-      "Industrials": 0.27,
-      "Materials": 1.5,
-      "Utilities": 1.16,
-      "Real Estate": 1.07,
-      "Comm Services": -0.46
+      "Technology": 0.97,
+      "Financials": 1.29,
+      "Energy": 0.81,
+      "Healthcare": -0.25,
+      "Consumer Disc": -0.03,
+      "Consumer Staples": 0.42,
+      "Industrials": 0.53,
+      "Materials": 1.77,
+      "Utilities": 0.94,
+      "Real Estate": 0.63,
+      "Comm Services": -0.8
     }
   },
   "put_call_ratio": {
-    "total": 0.887,
+    "total": 0.882,
     "equity": null,
     "signal": "NEUTRAL",
     "note": "estimated from VIX"
@@ -1120,166 +1120,170 @@
       10
     ],
     [
-      "COM",
-      78
+      "HTTPS",
+      84
     ],
     [
       "HREF",
-      71
+      84
     ],
     [
-      "HTTPS",
-      71
+      "COM",
+      83
     ],
     [
       "AMP",
-      55
-    ],
-    [
-      "AI",
-      51
+      57
     ],
     [
       "AS",
-      44
+      54
+    ],
+    [
+      "WWW",
+      53
+    ],
+    [
+      "AI",
+      50
     ],
     [
       "POST",
       43
     ],
     [
-      "WWW",
-      42
+      "BR",
+      41
+    ],
+    [
+      "SPAN",
+      38
     ],
     [
       "LINK",
-      30
-    ],
-    [
-      "TIPS",
-      29
-    ],
-    [
-      "BR",
-      24
+      38
     ]
   ],
   "stocktwits_trending": [],
-  "congressional_buys": [],
+  "congressional_buys": [
+    {
+      "ticker": "TDG",
+      "buy_count": 6,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "April Mcclain Delaney",
+      "latest_date": "2026-05-22"
+    },
+    {
+      "ticker": "LPLA",
+      "buy_count": 5,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Gilbert Cisneros",
+      "latest_date": "2026-05-19"
+    },
+    {
+      "ticker": "STE",
+      "buy_count": 5,
+      "sell_count": 0,
+      "member_count": 2,
+      "members_preview": "April Mcclain Delaney, Gilbert Cisneros",
+      "latest_date": "2026-05-13"
+    },
+    {
+      "ticker": "HUBB",
+      "buy_count": 5,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "April Mcclain Delaney",
+      "latest_date": "2026-05-29"
+    },
+    {
+      "ticker": "DASH",
+      "buy_count": 4,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Gilbert Cisneros",
+      "latest_date": "2026-05-29"
+    },
+    {
+      "ticker": "ST",
+      "buy_count": 4,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "Gilbert Cisneros",
+      "latest_date": "2026-05-12"
+    },
+    {
+      "ticker": "T",
+      "buy_count": 4,
+      "sell_count": 1,
+      "member_count": 2,
+      "members_preview": "David J. Taylor, Tim Moore",
+      "latest_date": "2026-06-04"
+    },
+    {
+      "ticker": "BWXT",
+      "buy_count": 4,
+      "sell_count": 0,
+      "member_count": 1,
+      "members_preview": "April Mcclain Delaney",
+      "latest_date": "2026-05-15"
+    }
+  ],
   "insider_buys": [],
   "track_record": [
     {
-      "ticker": "NOW",
-      "entry_price": 123.48,
-      "current_price": 99.72,
-      "pct_change": -19.2,
-      "date": "2026-06-02"
-    },
-    {
       "ticker": "PLTR",
       "entry_price": 156.41,
-      "current_price": 128.21,
-      "pct_change": -18.0,
-      "date": "2026-06-02"
+      "current_price": 128.15,
+      "pct_change": -18.1,
+      "date": "2026-06-12"
+    },
+    {
+      "ticker": "NOW",
+      "entry_price": 123.48,
+      "current_price": 101.94,
+      "pct_change": -17.4,
+      "date": "2026-06-12"
     },
     {
       "ticker": "AVGO",
       "entry_price": 446.77,
-      "current_price": 379.95,
-      "pct_change": -15.0,
-      "date": "2026-06-02"
+      "current_price": 381.07,
+      "pct_change": -14.7,
+      "date": "2026-06-12"
     },
     {
       "ticker": "SOFI",
       "entry_price": 18.32,
-      "current_price": 16.49,
-      "pct_change": -10.0,
-      "date": "2026-06-02"
+      "current_price": 16.53,
+      "pct_change": -9.8,
+      "date": "2026-06-12"
     },
     {
       "ticker": "NVDA",
       "entry_price": 216.01,
-      "current_price": 205.65,
-      "pct_change": -4.8,
-      "date": "2026-06-02"
+      "current_price": 204.24,
+      "pct_change": -5.4,
+      "date": "2026-06-12"
     },
     {
       "ticker": "OKTA",
       "entry_price": 120.8,
-      "current_price": 116.71,
-      "pct_change": -3.4,
-      "date": "2026-06-02"
+      "current_price": 116.52,
+      "pct_change": -3.5,
+      "date": "2026-06-12"
     },
     {
       "ticker": "AMP",
       "entry_price": 444.67,
-      "current_price": 457.14,
-      "pct_change": 2.8,
-      "date": "2026-06-02"
+      "current_price": 458.24,
+      "pct_change": 3.1,
+      "date": "2026-06-12"
     }
   ],
   "recent_runs": [
-    {
-      "date": "2026-06-01",
-      "timestamp": "2026-06-01T01:42:47.114605",
-      "sentiment": "MIXED",
-      "regime": "ROTATION",
-      "buy_signals": [
-        {
-          "ticker": "PLTR",
-          "price": 156.41,
-          "target": 183.73
-        },
-        {
-          "ticker": "OKTA",
-          "price": 120.8,
-          "target": 102.07
-        },
-        {
-          "ticker": "NOW",
-          "price": 123.48,
-          "target": 142.5
-        },
-        {
-          "ticker": "NVDA",
-          "price": 216.01,
-          "target": 296.81
-        },
-        {
-          "ticker": "SOFI",
-          "price": 18.32,
-          "target": 21.0
-        },
-        {
-          "ticker": "AMP",
-          "price": 444.67,
-          "target": 540.82
-        },
-        {
-          "ticker": "AVGO",
-          "price": null,
-          "target": null
-        }
-      ],
-      "sell_signals": [
-        {
-          "ticker": "GAP",
-          "price": 20.83
-        },
-        {
-          "ticker": "ASTS",
-          "price": 112.3
-        },
-        {
-          "ticker": "AMBA",
-          "price": 73.55
-        },
-        {
-          "ticker": "SPCE",
-          "price": 5.24
-        }
-      ]
-    },
     {
       "date": "2026-06-01",
       "timestamp": "2026-06-01T06:35:19.800350",
@@ -1706,229 +1710,290 @@
           "price": 5.24
         }
       ]
+    },
+    {
+      "date": "2026-06-12",
+      "timestamp": "2026-06-12T19:43:51.222314",
+      "sentiment": "MIXED",
+      "regime": "ROTATION",
+      "buy_signals": [
+        {
+          "ticker": "PLTR",
+          "price": 156.41,
+          "target": 183.73
+        },
+        {
+          "ticker": "OKTA",
+          "price": 120.8,
+          "target": 102.07
+        },
+        {
+          "ticker": "NOW",
+          "price": 123.48,
+          "target": 142.5
+        },
+        {
+          "ticker": "NVDA",
+          "price": 216.01,
+          "target": 296.81
+        },
+        {
+          "ticker": "SOFI",
+          "price": 18.32,
+          "target": 21.0
+        },
+        {
+          "ticker": "AMP",
+          "price": 444.67,
+          "target": 540.82
+        },
+        {
+          "ticker": "AVGO",
+          "price": 446.77,
+          "target": 481.97
+        }
+      ],
+      "sell_signals": [
+        {
+          "ticker": "GAP",
+          "price": 20.83
+        },
+        {
+          "ticker": "ASTS",
+          "price": 112.3
+        },
+        {
+          "ticker": "AMBA",
+          "price": 73.55
+        },
+        {
+          "ticker": "SPCE",
+          "price": 5.24
+        }
+      ]
     }
   ],
   "news_items": [
     {
-      "title": "Stock market today: Dow, S&P 500, Nasdaq fade in wait for historic SpaceX debut",
+      "title": "What Retirement Looks Like With $2.4 Million After Your Spouse\u2019s Alzheimer\u2019s Diagnosis",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/live/stock-market-today-friday-june-12-dow-sp-500-nasdaq-spacex-ipo-230015001.html",
+      "url": "https://finance.yahoo.com/markets/options/articles/retirement-looks-2-4-million-094800175.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "3 Nuclear Energy Stocks Powering the AI Boom in June",
+      "title": "Is Equifax Stock Underperforming the Nasdaq?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/energy/articles/3-nuclear-energy-stocks-powering-140746969.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/equifax-stock-underperforming-nasdaq-093946751.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Is Broadcom (AVGO) Still Undervalued?",
+      "title": "SpaceX IPO (SPCX): Why This Could Be the Biggest Trading Story of 2026",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/broadcom-avgo-still-undervalued-140200331.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/spacex-ipo-spcx-why-could-093730460.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Anthropic v. OpenAI: Behind the bitter battle for the future of AI",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/technology/articles/anthropic-v-openai-behind-bitter-100123145.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Best CD rates today, Thursday, June 11, 2026: Lock in up to 4% APY",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-cd-rates-today-thursday-june-11-2026-100000519.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Zepto files updated DRHP for IPO with Rs80.10bn fresh issue",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/quick-commerce-company-zepto-targets-094837090.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "'Magnificent 7' stocks have lost $2 trillion so far this month, driving the S&P 500 decline: Chart of the Day",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/article/magnificent-7-stocks-have-lost-2-trillion-so-far-this-month-driving-the-sp-500-decline-chart-of-the-day-100000483.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Best money market account rates today, Thursday, June 11, 2026: Earn up to 4.01% APY",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/money-market-account-rates-today-thursday-june-11-2026-100000040.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "A US soldier was arrested for betting with classified intel \u2014 now regulators want to crack down on prediction markets",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/options/articles/us-soldier-arrested-betting-classified-100000519.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Best high-yield savings interest rates today, Thursday, June 11, 2026: Top account pays 4.10% APY",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/personal-finance/banking/article/best-high-yield-savings-interest-rates-today-thursday-june-11-2026-100000670.html",
+      "sentiment": -1.0,
+      "tickers": []
+    },
+    {
+      "title": "Market Update: MKTX, VMC",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/research/reports/ARGUS_47319_MarketUpdate_1781286330000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Market Fear Index Dips as Tech Stocks Rebound",
+      "source": "Yahoo Finance",
+      "url": "https://www.barrons.com/livecoverage/stock-market-news-today-061126/card/market-fear-index-dips-as-tech-stocks-rebound-mZqnd30Sm90dlTlaN8Lq?siteid=yhoof2&yptr=yahoo",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "SpaceX by the numbers: Six charts map businesses behind the largest-ever IPO",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/spacex-numbers-six-charts-mapping-100505621.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Japan Taps Reserves and New Suppliers to Beat the Oil Blockade",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/energy/articles/japan-taps-reserves-suppliers-beat-093000437.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Can Microsoft (MSFT) Stock Rebound in 2026?",
+      "title": "Is VICI Properties Stock Underperforming the Nasdaq?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/microsoft-msft-stock-rebound-2026-135726509.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/vici-properties-stock-underperforming-nasdaq-101454827.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "A 'small' $5M: Bobbi Althoff asked Mark Cuban to buy her a house. His answer shows why homeownership is out of reach",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/small-5m-bobbi-althoff-asked-101500473.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Harvard University AI Stock Portfolio: Alphabet (GOOGL)",
+      "title": "Digital Turbine Resurgence: Software Maker Spins To A 114% Gain",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/harvard-university-ai-stock-portfolio-135649828.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/digital-turbine-resurgence-software-maker-093638963.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Analyst Report: Oracle Corp",
+      "title": "Crinetics Pharmaceuticals (CRNX) is One of the Best AI Driven Biotech Stocks, Here is Why",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/research/reports/ARGUS_3282_AnalystReport_1781263588000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/crinetics-pharmaceuticals-crnx-one-best-102027921.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Harvard University\u2019s Favorite AI Stock Pick: Taiwan Semiconductor (TSM)",
+      "title": "BTIG Reaffirms Buy Rating for Praxis Precision Medicines (PRAX)",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/harvard-university-favorite-ai-stock-135554831.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Maggi back in spotlight as India food regulator issues new notice",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/healthcare/articles/maggi-back-spotlight-india-food-140141740.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Massive Gap-Up Propels This Monster To Record High. These Clues Point To More Gains Ahead.",
-      "source": "Yahoo Finance",
-      "url": "https://www.investors.com/research/ibd-stock-analysis/monster-stock-mnst-coke-global-distribution-fuels-growth/?src=A00220&yptr=yahoo",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/btig-reaffirms-buy-rating-praxis-102029494.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "SpaceX Set To Soar Above IPO Price. Other Space Stocks Retreat.",
+      "title": "What Makes Denali Therapeutics (DNLI) One of the Best AI Driven Biotech Names",
       "source": "Yahoo Finance",
-      "url": "https://www.investors.com/news/spacex-stock-ipo-price-spcx-stock-space-stocks-rocket-lab/?src=A00220&yptr=yahoo",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/makes-denali-therapeutics-dnli-one-102035790.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Mineralys Therapeutics (MLYS) to Repurchase Potential Royalties for Lorundrostat",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/mineralys-therapeutics-mlys-repurchase-potential-102032829.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Catalyst and Momentum Trials Data Fuels Optimism for Corcept Therapeutics (CORT)",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/catalyst-momentum-trials-data-fuels-102041043.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Stock Market Today: Dow Rises On Iran Peace Deal Hopes; SpaceX May Surge 27% In Debut (Live Coverage)",
+      "title": "Dyne Therapeutics (DYN) Concludes Phase 1/2 ACHIEVE Trial Enrollment",
       "source": "Yahoo Finance",
-      "url": "https://www.investors.com/market-trend/stock-market-today/dow-jones-sp500-nasdaq-iran-deal-spacex-ipo-spcx-stock/?src=A00220&yptr=yahoo",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/dyne-therapeutics-dyn-concludes-phase-102030149.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Erasca (ERAS) Receives Encouraging Expert Feedback on ERAS-0015 Clinical Trials",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/erasca-eras-receives-encouraging-expert-102037390.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Relay Therapeutics (RLAY) is One of the Best AI Driven Biotech Stocks, Here is Why",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/relay-therapeutics-rlay-one-best-102038031.html",
+      "sentiment": 0.0,
+      "tickers": []
+    },
+    {
+      "title": "Molinos R\u00edo de la Plata to buy NotCo units in Argentina, Uruguay",
+      "source": "Yahoo Finance",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/molinos-r-o-la-plata-094402409.html",
       "sentiment": 1.0,
       "tickers": []
     },
     {
-      "title": "Analyst Report: Thor Industries Inc",
+      "title": "Is First Solar Stock Outperforming the S&P 500?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/research/reports/ARGUS_3443_AnalystReport_1781263588000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/first-solar-stock-outperforming-p-090648045.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Standard Chartered Says Crypto Market Has Bottomed",
+      "title": "Wall Street buckles up for SpaceX liftoff, hoping for a glitch-free ride",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/standard-chartered-says-crypto-market-134500617.html",
+      "url": "https://finance.yahoo.com/markets/stocks/articles/wall-street-buckles-spacex-liftoff-090301250.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "7 Reasons I'm Avoiding the SpaceX IPO Like the Plague -- and You Should, Too!",
+      "title": "Ask an Advisor: I'm 60 With $1.1 Million in Cash, Retirement Savings and Pensions. Can I Afford to Retire?",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/7-reasons-im-avoiding-spacex-135600777.html",
+      "url": "https://finance.yahoo.com/news/ask-advisor-am-60-years-154214529.html",
       "sentiment": 0.0,
       "tickers": []
     },
     {
-      "title": "Is Delta Air Lines, Inc. (DAL) A Good Stock To Buy Now?",
+      "title": "Gold prices today, Thursday, June 11, 2026: Lowest opening since Nov. '25 following U.S. airstrikes",
       "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/delta-air-lines-inc-dal-134448495.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Ellington Financial Inc. (EFC) A Good Stock To Buy Now?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/ellington-financial-inc-efc-good-134434681.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Is The Home Depot, Inc. (HD) A Good Stock To Buy Now?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/home-depot-inc-hd-good-134413944.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Analyst Report: BJ's Wholesale Club Hldg Inc",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/research/reports/ARGUS_2775_AnalystReport_1781263588000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Space stocks drop on SpaceX's massive $75 billion IPO",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/article/space-stocks-drop-on-spacexs-massive-75-billion-ipo-122907267.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Meta unwinds $2 billion Manus acquisition after China order",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/sectors/technology/articles/meta-unwinds-2-billion-manus-135056109.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Intuit Inc. (INTU) A Good Stock To Buy Now?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/intuit-inc-intu-good-stock-134356996.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Alignment Healthcare (ALHC) Gets KeyBanc Backing, 36% PT Hike, Shares Jump",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/alignment-healthcare-alhc-gets-keybanc-021945277.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Is MercadoLibre, Inc. (MELI) A Good Stock To Buy Now?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/mercadolibre-inc-meli-good-stock-134321583.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Daily Spotlight: Argus Adjusts Sector Ratings",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/research/reports/ARGUS_47316_MarketOutlook_1781262787000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Applied Optoelectronics (AAOI) Soars Anew on AI Optimism",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/applied-optoelectronics-aaoi-soars-anew-022150957.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Is Archer Aviation Stock Your Ticket to Becoming a Millionaire?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/archer-aviation-stock-ticket-becoming-135000145.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Is The Magnum Ice Cream Company N.V. (MICC) A Good Stock To Buy Now?",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/magnum-ice-cream-company-n-134303141.html",
-      "sentiment": 1.0,
-      "tickers": []
-    },
-    {
-      "title": "Ethereum Staking Demand Soars As Investors Chase Rewards",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/crypto/articles/ethereum-staking-demand-soars-investors-134300898.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "AXT Inc. (AXTI) Gets 8.8% Jump from AI Optimism",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/markets/stocks/articles/axt-inc-axti-gets-8-022410347.html",
-      "sentiment": 0.0,
-      "tickers": []
-    },
-    {
-      "title": "Daily \u2013 Vickers Top Buyers & Sellers for 06/12/2026",
-      "source": "Yahoo Finance",
-      "url": "https://finance.yahoo.com/research/reports/ARGUS_47312_TopBottomInsiderActivity_1781260383000?yptr=yahoo&ncid=yahooproperties_plusresear_nm5q6ze1cei",
+      "url": "https://finance.yahoo.com/personal-finance/investing/article/gold-prices-today-thursday-june-11-2026-lowest-opening-since-nov-25-following-us-airstrikes-104629921.html",
       "sentiment": 0.0,
       "tickers": []
     }
   ],
   "source_stats": {
-    "reddit": 25,
-    "news": 250,
-    "stocks": 35,
+    "reddit": 40,
+    "news": 253,
+    "stocks": 36,
     "sec": 40,
     "earnings_upcoming": 25,
     "unusual_options": 20,
-    "congress_trades": 0,
-    "technical": 12,
+    "congress_trades": 15,
+    "technical": 13,
     "insider_buys": 0
   },
   "buy_count": 7,
